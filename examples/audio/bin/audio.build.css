@@ -1,0 +1,42 @@
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: #000;
+  margin: 0; }
+
+canvas {
+  display: block; }
+
+#foreground {
+  position: absolute;
+  top: 12.5%;
+  left: 0; }
+
+#content {
+  position: relative; }
+  #content .form {
+    background: rgba(255, 255, 255, 0.5);
+    text-align: left;
+    padding: 16px;
+    position: absolute;
+    bottom: 32px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    width: 450px; }
+    #content .form .row {
+      display: block;
+      margin-bottom: 16px;
+      overflow: hidden; }
+      #content .form .row:last-child {
+        margin-bottom: 0; }
+      #content .form .row .label {
+        float: left;
+        width: 120px;
+        font-weight: 700; }
+      #content .form .row .field {
+        width: 250px;
+        float: left; }
+      #content .form .row .play {
+        margin-left: 16px;
+        font-weight: 700;
+        float: left; }

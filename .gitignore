@@ -1,0 +1,6 @@
+.idea
+.vscode
+.sass-cache
+node_modules
+cache/*
+!.gitignore
