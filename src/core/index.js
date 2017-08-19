@@ -5,13 +5,13 @@ import * as Utils from './Utils';
 export { Utils };
 
 export { default as EventEmitter } from './EventEmitter';
+export { default as Shape } from './Shape';
 export { default as Vector } from './Vector';
 export { default as Rectangle } from './Rectangle';
 export { default as Circle } from './Circle';
 export { default as Polygon } from './Polygon';
 export { default as Color } from './Color';
 export { default as Transformable } from './Transformable';
-export { default as Collision } from './Collision';
 export { default as RC4 } from './RC4';
 export { default as Random } from './Random';
 

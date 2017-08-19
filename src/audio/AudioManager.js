@@ -80,10 +80,10 @@ export default class AudioManager {
          */
         this._soundVolume = 1;
 
-        game.on('audio:play', this.onPlay, this)
-            .on('audio:volume:master', this.onVolumeMaster, this)
-            .on('audio:volume:sound', this.onVolumeSound, this)
-            .on('audio:volume:music', this.onVolumeMusic, this);
+        game.on('audio:play', this.play, this)
+            .on('audio:volume:master', this.setMasterVolume, this)
+            .on('audio:volume:sound', this.setSoundVolume, this)
+            .on('audio:volume:music', this.setMusicVolume, this);
     }
 
     /**
@@ -142,11 +142,7 @@ export default class AudioManager {
     }
 
     set masterVolume(value) {
-        const volume = clamp(value, 0, 1);
-
-        if (this._masterVolume !== volume) {
-            this._masterGain.gain.value = this._masterVolume = volume;
-        }
+        this.setMasterVolume(value);
     }
 
     /**
@@ -159,11 +155,7 @@ export default class AudioManager {
     }
 
     set soundVolume(value) {
-        const volume = clamp(value, 0, 1);
-
-        if (this._soundVolume !== volume) {
-            this._soundGain.gain.value = this._soundVolume = volume;
-        }
+        this.setSoundVolume(value);
     }
 
     /**
@@ -176,10 +168,56 @@ export default class AudioManager {
     }
 
     set musicVolume(value) {
-        const volume = clamp(value, 0, 1);
+        this.setMusicVolume(value);
+    }
 
-        if (this._musicVolume !== volume) {
-            this._musicGain.gain.value = this._musicVolume = volume;
+    /**
+     * @public
+     * @param {Exo.Music|Exo.Sound|Exo.Audio|Exo.Playable} playable
+     * @param {Object} [options]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
+     */
+    play(playable, options) {
+        playable.connect(this);
+        playable.play(options);
+    }
+
+    /**
+     * @public
+     * @param {Number} volume
+     */
+    setMasterVolume(volume) {
+        const vol = clamp(volume, 0, 1);
+
+        if (this._masterVolume !== vol) {
+            this._masterGain.gain.value = this._masterVolume = vol;
+        }
+    }
+
+    /**
+     * @public
+     * @param {Number} volume
+     */
+    setSoundVolume(volume) {
+        const vol = clamp(volume, 0, 1);
+
+        if (this._soundVolume !== vol) {
+            this._soundGain.gain.value = this._soundVolume = volume;
+        }
+    }
+
+    /**
+     * @public
+     * @param {Number} volume
+     */
+    setMusicVolume(volume) {
+        const vol = clamp(volume, 0, 1);
+
+        if (this._musicVolume !== vol) {
+            this._musicGain.gain.value = this._musicVolume = vol;
         }
     }
 
@@ -205,49 +243,11 @@ export default class AudioManager {
         this._context = null;
 
         this._game
-            .off('audio:play', this.onPlay, this)
-            .off('audio:volume:master', this.onVolumeMaster, this)
-            .off('audio:volume:sound', this.onVolumeSound, this)
-            .off('audio:volume:music', this.onVolumeMusic, this);
+            .off('audio:play', this.play, this)
+            .off('audio:volume:master', this.setMasterVolume, this)
+            .off('audio:volume:sound', this.setSoundVolume, this)
+            .off('audio:volume:music', this.setMusicVolume, this);
 
         this._game = null;
-    }
-
-    /**
-     * @private
-     * @param {Exo.Music|Exo.Sound|Exo.Audio|Exo.Playable} playable
-     * @param {Object} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.playbackRate]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
-     */
-    onPlay(playable, options) {
-        playable.connect(this);
-        playable.play(options);
-    }
-
-    /**
-     * @private
-     * @param {Number} volume
-     */
-    onVolumeMaster(volume) {
-        this.masterVolume = volume;
-    }
-
-    /**
-     * @private
-     * @param {Number} volume
-     */
-    onVolumeSound(volume) {
-        this.soundVolume = volume;
-    }
-
-    /**
-     * @private
-     * @param {Number} volume
-     */
-    onVolumeMusic(volume) {
-        this.musicVolume = volume;
     }
 }

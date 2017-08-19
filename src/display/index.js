@@ -29,9 +29,3 @@ export { default as ParticleModifier } from './particle/ParticleModifier';
 export { default as ForceModifier } from './particle/modifiers/ForceModifier';
 export { default as ScaleModifier } from './particle/modifiers/ScaleModifier';
 export { default as TorqueModifier } from './particle/modifiers/TorqueModifier';
-
-// Constants
-export { default as BlendModes } from './constants/BlendModes';
-export { default as ScaleModes } from './constants/ScaleModes';
-export { default as UniformType } from './constants/UniformType';
-export { default as WrapModes } from './constants/WrapModes';

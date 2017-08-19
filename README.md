@@ -1,15 +1,28 @@
-# ExoJS
+# ExoJS #
+A lightweight, flexibile and powerful game engine.
 
-## Events
+### Features ###
+* WebGL rendering supporting text
+* Web Audio integration for audio playback and analysis
+* Smart input management supports up to 8 gamepads
+* IndexedDB integration for offline storage
+* Powerful Asset Loader
+* Particle system
+* Animation system
+* Modular design
+* Seeded pseudo random generator
 
-#### Scene
-* scene:change (Scene)
-* scene:start
-* scene:stop
-
-#### Audio
-* audio:play (Playable audio[, Object opts])
-* audio:stop
-* audio:volume:master
-* audio:volume:sound
-* audio:volume:music
+### WIP / Planned ###
+* Collision detection/response by SAT
+* Primitive rendering
+* Video rendering
+* Rendertarget / Rendertexture
+* Filters
+* Masking
+* 9-Sclice integration
+* Pointer / Multi-Touch support
+* Premultiplied alpha support
+* Mesh rendering
+* Shapes
+* Quadtree implementation
+* Tilemap with Autotiles

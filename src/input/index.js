@@ -4,7 +4,6 @@
 export { default as ChannelHandler } from './ChannelHandler';
 export { default as Input } from './Input';
 export { default as InputManager } from './InputManager';
-export { default as InputDevice } from './InputDevice';
 export { default as Keyboard } from './Keyboard';
 export { default as Mouse } from './Mouse';
 export { default as GamepadButton } from './gamepad/GamepadButton';

@@ -1,6 +1,7 @@
 import EventEmitter from './EventEmitter';
-import Vector from './Vector';
+import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
+import { DEG_TO_RAD } from './Utils';
 
 /**
  * @class Transformable
@@ -23,27 +24,27 @@ export default class Transformable extends EventEmitter {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Exo.ObservableVector}
          */
-        this._position = new Vector();
+        this._position = new ObservableVector(this._setDirty, this);
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Exo.ObservableVector}
          */
-        this._scale = new Vector(1, 1);
+        this._scale = new ObservableVector(this._setDirty, this, 1, 1);
+
+        /**
+         * @private
+         * @member {Exo.ObservableVector}
+         */
+        this._origin = new ObservableVector(this._setDirty, this, 0, 0);
 
         /**
          * @private
          * @member {Number}
          */
         this._rotation = 0;
-
-        /**
-         * @private
-         * @member {Exo.Vector}
-         */
-        this._origin = new Vector();
 
         /**
          * @private
@@ -62,7 +63,6 @@ export default class Transformable extends EventEmitter {
 
     set x(value) {
         this._position.x = value;
-        this._dirtyTransform = true;
     }
 
     /**
@@ -75,7 +75,6 @@ export default class Transformable extends EventEmitter {
 
     set y(value) {
         this._position.y = value;
-        this._dirtyTransform = true;
     }
 
     /**
@@ -88,7 +87,6 @@ export default class Transformable extends EventEmitter {
 
     set position(value) {
         this._position.copy(value);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -100,7 +98,19 @@ export default class Transformable extends EventEmitter {
     }
 
     set scale(value) {
-        this.setScale(value.x, value.y);
+        this._scale.copy(value);
+    }
+
+    /**
+     * @public
+     * @member {Exo.Vector}
+     */
+    get origin() {
+        return this._origin;
+    }
+
+    set origin(value) {
+        this._origin.copy(value);
     }
 
     /**
@@ -113,18 +123,6 @@ export default class Transformable extends EventEmitter {
 
     set rotation(value) {
         this.setRotation(value);
-    }
-
-    /**
-     * @public
-     * @member {Exo.Vector}
-     */
-    get origin() {
-        return this._origin;
-    }
-
-    set origin(value) {
-        this.setOrigin(value.x, value.y);
     }
 
     /**
@@ -151,7 +149,6 @@ export default class Transformable extends EventEmitter {
      */
     setPosition(x, y) {
         this._position.set(x, y);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -161,7 +158,6 @@ export default class Transformable extends EventEmitter {
      */
     setScale(x, y) {
         this._scale.set(x, y);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -171,7 +167,6 @@ export default class Transformable extends EventEmitter {
      */
     setOrigin(x, y) {
         this._origin.set(x, y);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -210,7 +205,7 @@ export default class Transformable extends EventEmitter {
             pos = this._position,
             scale = this._scale,
             origin = this._origin,
-            angle = this._rotation * Math.PI / -180,
+            angle = this._rotation * DEG_TO_RAD,
             cos = Math.cos(angle),
             sin = Math.sin(angle),
 
@@ -228,12 +223,28 @@ export default class Transformable extends EventEmitter {
         transform.y = (origin.x * sxs) - (origin.y * syc) + pos.y;
     }
 
+    /**
+     * @public
+     */
     destroy() {
         this.off();
 
+        this._position.destroy();
         this._position = null;
+
+        this._scale.destroy();
         this._scale = null;
+
+        this._origin.destroy();
         this._origin = null;
+
         this._transform = null;
+    }
+
+    /**
+     * @private
+     */
+    _setDirty() {
+        this._dirtyTransform = true;
     }
 }

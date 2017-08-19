@@ -1,8 +1,14 @@
+import Vector from './Vector';
+import Shapes from '../const/Shapes';
+import Shape from './Shape';
+import { inRange } from './Utils';
+
 /**
  * @class Rectangle
+ * @implements {Exo.Shape}
  * @memberof Exo
  */
-export default class Rectangle {
+export default class Rectangle extends Shape {
 
     /**
      * @constructor
@@ -12,30 +18,100 @@ export default class Rectangle {
      * @param {Number} [height=1]
      */
     constructor(x = 0, y = 0, width = 1, height = 1) {
+        super();
 
         /**
          * @public
-         * @member {Number}
+         * @member {Exo.Vector}
          */
-        this.x = x;
+        this._position = new Vector(x, y);
 
         /**
          * @public
-         * @member {Number}
+         * @member {Exo.Vector}
          */
-        this.y = y;
+        this._size = new Vector(width, height);
+    }
 
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.width = width;
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get type() {
+        return Shapes.Rectangle;
+    }
 
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.height = height;
+    /**
+     * @public
+     * @member {Exo.Vector}
+     */
+    get position() {
+        return this._position;
+    }
+
+    set position(value) {
+        this._position.copy(value);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get x() {
+        return this._position.x;
+    }
+
+    set x(value) {
+        this._position.x = value;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get y() {
+        return this._position.y;
+    }
+
+    set y(value) {
+        this._position.y = value;
+    }
+
+    /**
+     * @public
+     * @member {Exo.Vector}
+     */
+    get size() {
+        return this._size;
+    }
+
+    set size(value) {
+        this._size.copy(value);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get width() {
+        return this._size.x;
+    }
+
+    set width(value) {
+        this._size.x = value;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get height() {
+        return this._size.y;
+    }
+
+    set height(value) {
+        this._size.y = value;
     }
 
     /**
@@ -87,65 +163,75 @@ export default class Rectangle {
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Number} x
-     * @param {Number} y
-     * @param {Number} width
-     * @param {Number} height
-     * @returns {Exo.Rectangle}
+     * @override
      */
-    set(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+    set (x, y, width, height) {
+        this._position.set(x, y);
+        this._size.set(width, height);
 
         return this;
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Exo.Rectangle} rectangle
-     * @returns {Exo.Rectangle}
+     * @override
      */
     copy(rectangle) {
-        this.x = rectangle.x;
-        this.y = rectangle.y;
-        this.width = rectangle.width;
-        this.height = rectangle.height;
+        this._position.copy(rectangle.position);
+        this._size.copy(rectangle.size);
 
         return this;
     }
 
     /**
-     * @public
-     * @returns {Exo.Rectangle}
+     * @override
      */
     clone() {
         return new Rectangle(this.x, this.y, this.width, this.height);
     }
 
     /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {Boolean}
+     * @override
+     */
+    toArray() {
+        return [
+            this.x,
+            this.y,
+            this.width,
+            this.height,
+        ];
+    }
+
+    /**
+     * @override
      */
     contains(x, y) {
-        if (this.width <= 0 || this.height <= 0) {
-            return false;
-        }
+        return inRange(x, this.left, this.right) && inRange(y, this.top, this.bottom);
+    }
 
-        return (x >= this.x && x < this.x + this.width) && (y >= this.y && y < this.y + this.height);
+    /**
+     * @override
+     */
+    getBounds() {
+        return this.clone();
+    }
+
+    /**
+     * @override
+     */
+    destroy() {
+        this._position.destroy();
+        this._position = null;
+
+        this._size.destroy();
+        this._size = null;
+    }
+
+    /**
+     * @public
+     * @static
+     * @returns {Exo.Rectangle}
+     */
+    static get Empty() {
+        return new Rectangle(0, 0, 0, 0);
     }
 }
-
-/**
- * @public
- * @static
- * @readonly
- * @member {Exo.Rectangle}
- */
-Rectangle.Empty = new Rectangle(0, 0, 0, 0);

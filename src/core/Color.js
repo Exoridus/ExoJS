@@ -281,6 +281,15 @@ export default class Color {
 
         return array;
     }
+
+    /**
+     * @public
+     * @static
+     * @returns {Exo.Color}
+     */
+    static get Empty() {
+        return new Color(0, 0, 0, 0);
+    }
 }
 
 /**

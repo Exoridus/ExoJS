@@ -1,8 +1,13 @@
+import Shapes from '../const/Shapes';
+import Shape from './Shape';
+import Rectangle from './Rectangle';
+
 /**
  * @class Vector
+ * @implements {Exo.Shape}
  * @memberof Exo
  */
-export default class Vector {
+export default class Vector extends Shape {
 
     /**
      * @constructor
@@ -10,33 +15,117 @@ export default class Vector {
      * @param {Number} [y=0]
      */
     constructor(x = 0, y = 0) {
+        super();
 
         /**
          * @public
          * @member {Number}
          */
-        this.x = x;
+        this._x = x;
 
         /**
          * @public
          * @member {Number}
          */
-        this.y = y;
+        this._y = y;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get type() {
+        return Shapes.Point;
     }
 
     /**
      * @public
      * @member {Number}
      */
-    get magnitude() {
-        return Math.sqrt((this.x * this.x) + (this.y * this.y));
+    get x() {
+        return this._x;
     }
 
-    set magnitude(value) {
-        const direction = this.direction;
+    set x(value) {
+        return this._x = value;
+    }
 
-        this.x = Math.cos(direction) * value;
-        this.y = Math.sin(direction) * value;
+    /**
+     * @public
+     * @member {Number}
+     */
+    get y() {
+        return this._y;
+    }
+
+    set y(value) {
+        return this._y = value;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get magnitude() {
+        return Math.sqrt((this._x * this._x) + (this._y * this._y));
+    }
+
+    /**
+     * @override
+     */
+    set(x, y) {
+        this._x = (typeof x === 'number') ? x : this._x;
+        this._y = (typeof y === 'number') ? y : this._y;
+
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    copy(vector) {
+        this._x = vector.x;
+        this._y = vector.y;
+
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    clone() {
+        return new Vector(this._x, this._y);
+    }
+
+    /**
+     * @override
+     */
+    toArray() {
+        return [
+            this._x,
+            this._y,
+        ];
+    }
+
+    /**
+     * @override
+     */
+    contains(x, y) {
+        return this._x === x && this._y === y;
+    }
+
+    /**
+     * @public
+     * @param {Exo.Vector} vector
+     * @returns {Number}
+     */
+    distanceTo(vector) {
+        const x = this._x - vector.x,
+            y = this._y - vector.y;
+
+        return Math.sqrt((x * x) + (y * y));
     }
 
     /**
@@ -46,30 +135,9 @@ export default class Vector {
      * @param {Number} y
      * @returns {Exo.Vector}
      */
-    set(x, y) {
-        this.x = (typeof x === 'number') ? x : this.x;
-        this.y = (typeof y === 'number') ? y : this.y;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Exo.Vector|Number} x
-     * @param {Number} y
-     * @returns {Exo.Vector}
-     */
     add(x, y) {
-        if (x instanceof Exo.Vector) {
-            this.x += x.x;
-            this.y += x.y;
-
-            return this;
-        }
-
-        this.x += (typeof x === 'number') ? x : 0;
-        this.y += (typeof y === 'number') ? y : 0;
+        this._x += (typeof x === 'number') ? x : 0;
+        this._y += (typeof y === 'number') ? y : 0;
 
         return this;
     }
@@ -77,20 +145,13 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Exo.Vector|Number} x
+     * @param {Number} x
      * @param {Number} y
      * @returns {Exo.Vector}
      */
     subtract(x, y) {
-        if (x instanceof Exo.Vector) {
-            this.x -= x.x;
-            this.y -= x.y;
-
-            return this;
-        }
-
-        this.x -= (typeof x === 'number') ? x : 0;
-        this.y -= (typeof y === 'number') ? y : 0;
+        this._x -= (typeof x === 'number') ? x : 0;
+        this._y -= (typeof y === 'number') ? y : 0;
 
         return this;
     }
@@ -98,20 +159,13 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Exo.Vector|Number} x
+     * @param {Number} x
      * @param {Number} y
      * @returns {Exo.Vector}
      */
     multiply(x, y) {
-        if (x instanceof Exo.Vector) {
-            this.x *= x.x;
-            this.y *= x.y;
-
-            return this;
-        }
-
-        this.x *= (typeof x === 'number') ? x : 1;
-        this.y *= (typeof y === 'number') ? y : 1;
+        this._x *= (typeof x === 'number') ? x : 1;
+        this._y *= (typeof y === 'number') ? y : 1;
 
         return this;
     }
@@ -119,46 +173,13 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Exo.Vector|Number} x
+     * @param {Number} x
      * @param {Number} y
      * @returns {Exo.Vector}
      */
     divide(x, y) {
-        if (x instanceof Exo.Vector) {
-            this.x /= x.x;
-            this.y /= x.y;
-
-            return this;
-        }
-
-        this.x /= (typeof x === 'number') ? x : 1;
-        this.y /= (typeof y === 'number') ? y : 1;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Exo.Vector} vector
-     * @returns {Exo.Vector}
-     */
-    min(vector) {
-        this.x = Math.min(this.x, vector.x);
-        this.y = Math.min(this.y, vector.y);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Exo.Vector} vector
-     * @returns {Exo.Vector}
-     */
-    max(vector) {
-        this.x = Math.max(this.x, vector.x);
-        this.y = Math.max(this.y, vector.y);
+        this._x /= (typeof x === 'number') ? x : 1;
+        this._y /= (typeof y === 'number') ? y : 1;
 
         return this;
     }
@@ -171,49 +192,33 @@ export default class Vector {
     normalize() {
         const mag = this.magnitude;
 
-        this.x /= mag;
-        this.y /= mag;
+        this._x /= mag;
+        this._y /= mag;
 
         return this;
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Exo.Vector} vector
-     * @returns {Exo.Vector}
+     * @override
      */
-    copy(vector) {
-        this.x = vector.x;
-        this.y = vector.y;
-
-        return this;
+    getBounds() {
+        return new Rectangle(this.x, this.y, 0, 0);
     }
 
     /**
-     * @public
-     * @returns {Exo.Vector}
-     */
-    clone() {
-        return new Vector(this.x, this.y);
-    }
-
-    /**
-     * @public
-     * @returns {Number[]}
-     */
-    toArray() {
-        return [
-            this.x,
-            this.y,
-        ];
-    }
-
-    /**
-     * @public
+     * @override
      */
     destroy() {
-        this.x = null;
-        this.y = null;
+        this._x = null;
+        this._y = null;
+    }
+
+    /**
+     * @public
+     * @static
+     * @returns {Exo.Vector}
+     */
+    static get Empty() {
+        return new Vector(0, 0);
     }
 }

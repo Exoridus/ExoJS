@@ -1,5 +1,5 @@
 import ChannelHandler from './ChannelHandler';
-import InputDevice from './InputDevice';
+import InputDevice from '../const/InputDevice';
 import Vector from '../core/Vector';
 
 const device = InputDevice.Mouse << 8,

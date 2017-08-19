@@ -213,6 +213,22 @@ export default class Matrix {
 
     /**
      * @public
+     * @returns {Exo.Matrix}
+     */
+    destroy() {
+        this.a = null;
+        this.b = null;
+        this.x = null;
+        this.c = null;
+        this.d = null;
+        this.y = null;
+        this.e = null;
+        this.f = null;
+        this.z = null;
+    }
+
+    /**
+     * @public
      * @static
      * @param {Exo.Matrix[]|Exo.Matrix} matrices
      * @returns {Exo.Matrix}
@@ -258,12 +274,13 @@ export default class Matrix {
 
         return result;
     }
-}
 
-/**
- * @public
- * @static
- * @readonly
- * @member {Exo.Matrix}
- */
-Matrix.Identity = new Matrix();
+    /**
+     * @public
+     * @static
+     * @returns {Exo.Matrix}
+     */
+    static get Identity() {
+        return new Matrix(1, 0, 0, 0, 1, 0, 1, 0, 0);
+    }
+}

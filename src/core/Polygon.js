@@ -1,14 +1,18 @@
+import Shape from './Shape';
+
 /**
  * @class Polygon
+ * @implements {Exo.Shape}
  * @memberof Exo
  */
-export default class Polygon {
+export default class Polygon extends Shape {
 
     /**
      * @constructor
      * @param {Exo.Vector[]|Exo.Vector} vectors
      */
     constructor(...vectors) {
+        super();
 
         /**
          * @private
@@ -19,30 +23,85 @@ export default class Polygon {
 
     /**
      * @public
-     * @returns {Exo.Polygon}
+     * @readonly
+     * @member {Number}
+     */
+    get type() {
+        return Shapes.Polygon;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Exo.Vector[]}
+     */
+    get vectors() {
+        return this._vectors;
+    }
+
+    /**
+     * @override
+     */
+    set(...newVectors) {
+        const vectors = this._vectors,
+            oldLen = vectors.length,
+            newLen = newVectors.length;
+
+        if (oldLen > newLen) {
+            vectors.length = newLen;
+        } else if (newLen > oldLen) {
+            for (let i = oldLen; i < newLen; i++) {
+                vectors.push(newVectors[i].clone());
+            }
+        }
+
+        for (let i = 0; i < oldLen; i++) {
+            vectors[i].copy(newVectors[i]);
+        }
+    }
+
+    /**
+     * @override
+     */
+    copy(polygon) {
+        this.set(polygon.vectors);
+    }
+
+    /**
+     * @override
      */
     clone() {
         return new Polygon(this._vectors.map((vector) => vector.clone()));
     }
 
     /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {Boolean}
+     * @override
+     */
+    toArray() {
+        const array = [];
+
+        this._vectors.forEach((vector) => {
+            array.push(vector.x);
+            array.push(vector.y);
+        });
+
+        return array;
+    }
+
+    /**
+     * @override
      */
     contains(x, y) {
-        const length = this.points.length / 2;
+        const vectors = this._vectors,
+            length = vectors.length;
+
         let inside = false;
 
         for (let i = 0, j = length - 1; i < length; j = i++) {
-            const xi = this.points[i * 2],
-                yi = this.points[(i * 2) + 1],
-                xj = this.points[j * 2],
-                yj = this.points[(j * 2) + 1],
-                intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * ((y - yi) / (yj - yi))) + xi);
+            const a = vectors[i],
+                b = vectors[j];
 
-            if (intersect) {
+            if (((a.y > y) !== (b.y > y)) && (x < ((b.x - a.x) * ((y - a.y) / (b.y - a.y))) + a.x)) {
                 inside = !inside;
             }
         }

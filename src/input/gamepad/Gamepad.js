@@ -1,5 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import InputDevice from '../InputDevice';
+import InputDevice from '../../const/InputDevice';
 import GamepadDefaultMapping from './GamepadDefaultMapping';
 
 const device = InputDevice.Gamepad << 8,

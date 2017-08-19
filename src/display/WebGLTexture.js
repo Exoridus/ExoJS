@@ -1,5 +1,5 @@
-import ScaleModes from './constants/ScaleModes';
-import WrapModes from './constants/WrapModes';
+import ScaleModes from '../const/ScaleModes';
+import WrapModes from '../const/WrapModes';
 
 /**
  * Helper class to create a WebGL Texture

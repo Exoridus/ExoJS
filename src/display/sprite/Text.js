@@ -1,6 +1,6 @@
 import Sprite from './Sprite';
 import Texture from '../Texture';
-import ScaleModes from '../constants/ScaleModes';
+import ScaleModes from '../../const/ScaleModes';
 import Color from '../../core/Color';
 
 const defaultStyle = {

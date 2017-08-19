@@ -1,5 +1,5 @@
 import Shader from '../Shader';
-import UniformType from '../constants/UniformType';
+import UniformType from '../../const/UniformType';
 
 /**
  * @class ParticleShader

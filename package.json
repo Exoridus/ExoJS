@@ -1,11 +1,11 @@
 {
   "name": "ExoJS",
-  "description": "A lightweight, powerful and flexibile game engine.",
+  "description": "A lightweight, flexibile and powerful game engine.",
   "version": "1.0.0",
   "license": "MIT",
   "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
-  "homepage": "http://google.com/",
-  "repository": "http://github.com/",
+  "homepage": "https://github.com/Exoridus/ExoJS",
+  "repository": "https://github.com/Exoridus/ExoJS",
   "devDependencies": {
     "babel-cli": "^6.24.1",
     "babel-core": "^6.25.0",

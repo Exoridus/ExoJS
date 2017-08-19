@@ -1,6 +1,6 @@
 import Gamepad from './Gamepad';
 import ChannelHandler from '../ChannelHandler';
-import InputDevice from '../InputDevice';
+import InputDevice from '../../const/InputDevice';
 
 const offset = InputDevice.Gamepad << 8,
     bufferSize = 1 << 8;

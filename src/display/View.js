@@ -1,6 +1,7 @@
-import Vector from '../core/Vector';
+import ObservableVector from '../core/ObservableVector';
 import Rectangle from '../core/Rectangle';
 import Matrix from '../core/Matrix';
+import { DEG_TO_RAD } from '../core/Utils';
 
 /**
  * @class View
@@ -16,15 +17,15 @@ export default class View {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Exo.ObservableVector}
          */
-        this._center = new Vector();
+        this._center = new ObservableVector(this._setDirty, this);
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Exo.ObservableVector}
          */
-        this._size = new Vector();
+        this._size = new ObservableVector(this._setDirty, this);
 
         /**
          * @private
@@ -117,7 +118,6 @@ export default class View {
 
     set center(value) {
         this._center.copy(value);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -130,7 +130,6 @@ export default class View {
 
     set size(value) {
         this._size.copy(value);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -182,7 +181,6 @@ export default class View {
      */
     setCenter(x, y) {
         this._center.set(x, y);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -192,7 +190,6 @@ export default class View {
      */
     setSize(width, height) {
         this._size.set(width, height);
-        this._dirtyTransform = true;
     }
 
     /**
@@ -255,7 +252,7 @@ export default class View {
      */
     updateTransform() {
         const transform = this._transform,
-            angle = this._rotation * Math.PI / -180,
+            angle = this._rotation * DEG_TO_RAD,
             center = this._center,
             size = this._size,
             cos = Math.cos(angle),
@@ -276,5 +273,12 @@ export default class View {
         transform.c = -b * sin;
         transform.d = b * cos;
         transform.y = (b * ty) + d;
+    }
+
+    /**
+     * @private
+     */
+    _setDirty() {
+        this._dirtyTransform = true;
     }
 }

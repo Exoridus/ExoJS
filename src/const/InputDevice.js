@@ -6,6 +6,8 @@ export default class InputDevice {
 
     /**
      * @public
+     * @static
+     * @readonly
      * @member {Number}
      */
     static get Keyboard() {
@@ -14,6 +16,8 @@ export default class InputDevice {
 
     /**
      * @public
+     * @static
+     * @readonly
      * @member {Number}
      */
     static get Mouse() {
@@ -22,6 +26,8 @@ export default class InputDevice {
 
     /**
      * @public
+     * @static
+     * @readonly
      * @member {Number}
      */
     static get Gamepad() {
@@ -30,6 +36,8 @@ export default class InputDevice {
 
     /**
      * @public
+     * @static
+     * @readonly
      * @member {Number}
      */
     static get Pointer() {

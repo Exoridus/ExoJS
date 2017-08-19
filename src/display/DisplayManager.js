@@ -1,5 +1,5 @@
 import RenderTarget from './RenderTarget';
-import BlendModes from './constants/BlendModes';
+import BlendModes from '../const/BlendModes';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from './particle/ParticleRenderer';
 import Matrix from '../core/Matrix';
@@ -121,7 +121,7 @@ export default class DisplayManager {
         game.on('display:begin', this.onBegin, this)
             .on('display:render', this.onRender, this)
             .on('display:end', this.onEnd, this)
-            .on('display:clear', this.onClear, this)
+            .on('display:clear', this.clear, this)
             .on('display:resize', this.resize, this);
     }
 
@@ -319,9 +319,9 @@ export default class DisplayManager {
 
     /**
      * @private
-     * @param {Exo.Color} color
+     * @param {Exo.Color} [color]
      */
-    onClear(color) {
+    clear(color) {
         const gl = this._context;
 
         if (color) {
@@ -342,13 +342,13 @@ export default class DisplayManager {
         this._isDrawing = true;
 
         if (this._clearBeforeRender) {
-            this.onClear();
+            this.clear();
         }
     }
 
     /**
      * @private
-     * @param {Exo.Drawable|Object} drawable
+     * @param {Exo.Drawable} drawable
      */
     onRender(drawable) {
         if (!this._isDrawing) {

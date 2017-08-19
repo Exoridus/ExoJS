@@ -2,9 +2,9 @@ import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
 import WebGLTexture from './WebGLTexture';
 import Matrix from '../core/Matrix';
-import UniformType from './constants/UniformType';
-import ScaleModes from './constants/ScaleModes';
-import WrapModes from './constants/WrapModes';
+import UniformType from '../const/UniformType';
+import ScaleModes from '../const/ScaleModes';
+import WrapModes from '../const/WrapModes';
 
 /**
  * @class Shader

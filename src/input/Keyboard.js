@@ -1,5 +1,5 @@
 import ChannelHandler from './ChannelHandler';
-import InputDevice from './InputDevice';
+import InputDevice from '../const/InputDevice';
 
 const device = InputDevice.Keyboard << 8,
     bufferSize = 1 << 8;

@@ -1,7 +1,7 @@
 import Drawable from '../Drawable';
-import Vector from '../../core/Vector';
 import Rectangle from '../../core/Rectangle';
 import Color from '../../core/Color';
+import ObservableVector from '../../core/ObservableVector';
 
 /**
  * @class Sprite
@@ -45,7 +45,7 @@ export default class Sprite extends Drawable {
          * @private
          * @member {Exo.Vector}
          */
-        this._size = new Vector();
+        this._size = new ObservableVector(this._updatePositions, this);
 
         /**
          * @private
@@ -77,8 +77,6 @@ export default class Sprite extends Drawable {
 
     set size(value) {
         this._size.copy(value);
-
-        this._updatePositions();
     }
 
     /**
@@ -91,8 +89,6 @@ export default class Sprite extends Drawable {
 
     set width(value) {
         this._size.x = value;
-
-        this._updatePositions();
     }
 
     /**
@@ -105,8 +101,6 @@ export default class Sprite extends Drawable {
 
     set height(value) {
         this._size.y = value;
-
-        this._updatePositions();
     }
 
     /**
@@ -237,8 +231,6 @@ export default class Sprite extends Drawable {
      */
     setSize(width, height) {
         this._size.set(width, height);
-
-        this._updatePositions();
     }
 
     /**

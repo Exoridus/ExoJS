@@ -155,7 +155,7 @@ export const emptyFunction = () => { /* do nothing */ },
      * @param {Number} max
      * @returns {Number}
      */
-    clamp = (value, min, max) => Math.max(min, Math.min(max, value)),
+    clamp = (value, min, max) => Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max)),
 
     /**
      * @static
@@ -177,6 +177,31 @@ export const emptyFunction = () => { /* do nothing */ },
      * @returns {Number}
      */
     dotProduct = (vecA, vecB) => ((vecA.x * vecB.x) + (vecA.y * vecB.y)),
+
+    /**
+     * @static
+     * @constant
+     * @member {Function}
+     * @memberof Exo.Utils
+     * @param {Number} value
+     * @param {Number} min
+     * @param {Number} max
+     * @returns {Boolean}
+     */
+    inRange = (value, min, max) => (value >= Math.min(min, max)) && (value <= Math.max(min, max)),
+
+    /**
+     * @static
+     * @constant
+     * @member {Function}
+     * @memberof Exo.Utils
+     * @param {Number} minA
+     * @param {Number} maxA
+     * @param {Number} minB
+     * @param {Number} maxB
+     * @returns {Boolean}
+     */
+    rangeIntersect = (minA, maxA, minB, maxB) => Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB),
 
     /**
      * @static

@@ -1,4 +1,4 @@
-import BlendMode from '../BlendMode';
+import BlendMode from '../display/BlendMode';
 
 const context = window.WebGLRenderingContext,
     one = context.ONE,
@@ -31,6 +31,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -40,6 +41,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -49,6 +51,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -58,6 +61,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -67,6 +71,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -76,6 +81,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -85,6 +91,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -94,6 +101,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -103,6 +111,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -112,6 +121,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -121,6 +131,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -130,6 +141,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -139,6 +151,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -148,6 +161,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -157,6 +171,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -166,6 +181,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -175,6 +191,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */
@@ -184,6 +201,7 @@ export default class BlendModes {
 
     /**
      * @public
+     * @static
      * @readonly
      * @member {Exo.BlendMode}
      */

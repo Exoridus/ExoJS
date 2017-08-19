@@ -136,21 +136,25 @@ export default class RenderTarget {
      */
     resize(width, height) {
         this._size.set(width, height);
-        this.setViewport();
+        this.updateViewport();
     }
 
     /**
      * @public
      */
-    setViewport() {
+    updateViewport() {
         const viewport = this.getViewport(this._view);
 
         this._context.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
     }
 
+    /**
+     * @public
+     * @param {Exo.View} view
+     */
     setView(view) {
         this._view = view;
-        this.setViewport();
+        this.updateViewport();
     }
 
     getProjection() {
