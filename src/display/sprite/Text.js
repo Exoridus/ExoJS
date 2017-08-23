@@ -1,7 +1,7 @@
 import Sprite from './Sprite';
 import Texture from '../Texture';
-import ScaleModes from '../../const/ScaleModes';
 import Color from '../../core/Color';
+import {SCALE_MODE, WRAP_MODE} from '../../const';
 
 const defaultStyle = {
         align: 'left',
@@ -26,12 +26,13 @@ export default class Text extends Sprite {
 
     /**
      * @constructor
-     * @param {String} text
-     * @param {Object} style
-     * @param {Number} scaleMode
+     * @param {String} [text='']
+     * @param {?Object} [style=null]
+     * @param {Number} [scaleMode=SCALE_MODE.NEAREST]
+     * @param {Number} [wrapMode=WRAP_MODE.CLAMP_TO_EDGE]
      */
-    constructor(text, style, scaleMode) {
-        super(new Texture(document.createElement('canvas'), scaleMode));
+    constructor(text = '', style = null, scaleMode = SCALE_MODE.NEAREST, wrapMode = WRAP_MODE.CLAMP_TO_EDGE) {
+        super(new Texture(document.createElement('canvas'), scaleMode, wrapMode));
 
         /**
          * @private
@@ -41,27 +42,33 @@ export default class Text extends Sprite {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._scaleMode = this._texture.scaleMode;
-
-        /**
-         * @private
          * @member {CanvasRenderingContext2D}
          */
         this._context = this._canvas.getContext('2d');
 
         /**
          * @private
-         * @member {CanvasRenderingContext2D}
+         * @member {Number}
          */
-        this._text = text || '';
+        this._scaleMode = scaleMode;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._wrapMode = wrapMode;
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._text = text;
 
         /**
          * @private
          * @member {Object}
          */
-        this._style = Object.assign(Object.create(defaultStyle), style || null);
+        this._style = Object.assign(Object.create(defaultStyle), style);
 
         this._updateCanvas();
     }
@@ -84,7 +91,20 @@ export default class Text extends Sprite {
     }
 
     set scaleMode(scaleMode) {
-        this._scaleMode = (typeof scaleMode === 'number') ? scaleMode : ScaleModes.Default;
+        this._scaleMode = scaleMode;
+        this._updateCanvas();
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get wrapMode() {
+        return this._wrapMode;
+    }
+
+    set wrapMode(scaleMode) {
+        this._wrapMode = scaleMode;
         this._updateCanvas();
     }
 

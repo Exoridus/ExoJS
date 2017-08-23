@@ -1,14 +1,14 @@
-import Drawable from '../Drawable';
+import Renderable from '../Renderable';
 import Rectangle from '../../core/Rectangle';
 import Color from '../../core/Color';
 import ObservableVector from '../../core/ObservableVector';
 
 /**
  * @class Sprite
- * @extends {Exo.Drawable}
+ * @extends {Exo.Renderable}
  * @memberof Exo
  */
-export default class Sprite extends Drawable {
+export default class Sprite extends Renderable {
 
     /**
      * @constructor
@@ -19,7 +19,7 @@ export default class Sprite extends Drawable {
 
         /**
          * @private
-         * @member {Exo.Texture|null}
+         * @member {?Exo.Texture}
          */
         this._texture = null;
 
@@ -236,7 +236,7 @@ export default class Sprite extends Drawable {
     /**
      * @override
      */
-    draw(displayManager, parentTransform) {
+    render(displayManager, parentTransform) {
         if (!this.visible) {
             return;
         }
@@ -245,7 +245,7 @@ export default class Sprite extends Drawable {
         this._worldTransform.multiply(this.transform);
 
         displayManager.setCurrentRenderer('sprite');
-        displayManager.getCurrentRenderer().draw(this);
+        displayManager.getCurrentRenderer().render(this);
     }
 
     /**

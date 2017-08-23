@@ -78,7 +78,7 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {WebGLRenderingContext|null}
+         * @member {?WebGLRenderingContext}
          */
         this._context = null;
 
@@ -86,7 +86,7 @@ export default class SpriteRenderer extends Renderer {
          * Vertex buffer that will be fed by the vertexData.
          *
          * @private
-         * @member {WebGLBuffer|null}
+         * @member {?WebGLBuffer}
          */
         this._vertexBuffer = null;
 
@@ -94,7 +94,7 @@ export default class SpriteRenderer extends Renderer {
          * Index buffer that will be fed by the indexData.
          *
          * @private
-         * @member {WebGLBuffer|null}
+         * @member {?WebGLBuffer}
          */
         this._indexBuffer = null;
 
@@ -105,8 +105,8 @@ export default class SpriteRenderer extends Renderer {
         this._shader = new SpriteShader();
 
         /**
-         * @member {Exo.Texture|null}
          * @private
+         * @member {?Exo.Texture}
          */
         this._currentTexture = null;
     }
@@ -137,7 +137,7 @@ export default class SpriteRenderer extends Renderer {
      * @override
      * @param {Exo.Sprite} sprite
      */
-    draw(sprite) {
+    render(sprite) {
         const vertexBuffer = this._vertexView,
             colorBuffer = this._colorView,
             transform = sprite.worldTransform,

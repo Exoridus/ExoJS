@@ -7,7 +7,7 @@ export { default as Texture } from './Texture';
 export { default as View } from './View';
 export { default as WebGLTexture } from './WebGLTexture';
 export { default as BlendMode } from './BlendMode';
-export { default as Drawable } from './Drawable';
+export { default as Renderable } from './Renderable';
 export { default as Container } from './Container';
 export { default as Renderer } from './Renderer';
 export { default as Shader } from './Shader';

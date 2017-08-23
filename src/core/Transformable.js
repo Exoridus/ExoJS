@@ -1,7 +1,7 @@
 import EventEmitter from './EventEmitter';
 import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
-import { DEG_TO_RAD } from './Utils';
+import {DEG_TO_RAD} from '../const';
 
 /**
  * @class Transformable
@@ -202,7 +202,7 @@ export default class Transformable extends EventEmitter {
      */
     updateTransform() {
         const transform = this._transform,
-            pos = this._position,
+            position = this._position,
             scale = this._scale,
             origin = this._origin,
             angle = this._rotation * DEG_TO_RAD,
@@ -216,18 +216,21 @@ export default class Transformable extends EventEmitter {
 
         transform.a = sxc;
         transform.b = sys;
-        transform.x = (-origin.x * sxc) - (origin.y * sys) + pos.x;
+        transform.x = (origin.x * -sxc) - (origin.y * sys) + position.x;
 
         transform.c = -sxs;
         transform.d = syc;
-        transform.y = (origin.x * sxs) - (origin.y * syc) + pos.y;
+        transform.y = (origin.x * sxs) - (origin.y * syc) + position.y;
     }
 
     /**
      * @public
      */
     destroy() {
-        this.off();
+        super.destroy();
+
+        this._transform.destroy();
+        this._transform = null;
 
         this._position.destroy();
         this._position = null;
@@ -238,7 +241,8 @@ export default class Transformable extends EventEmitter {
         this._origin.destroy();
         this._origin = null;
 
-        this._transform = null;
+        this._rotation = null;
+        this._dirtyTransform = null;
     }
 
     /**

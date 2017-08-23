@@ -1,7 +1,7 @@
 import ObservableVector from '../core/ObservableVector';
 import Rectangle from '../core/Rectangle';
 import Matrix from '../core/Matrix';
-import { DEG_TO_RAD } from '../core/Utils';
+import {DEG_TO_RAD} from '../const';
 
 /**
  * @class View

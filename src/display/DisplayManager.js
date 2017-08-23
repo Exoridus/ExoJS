@@ -1,8 +1,10 @@
 import RenderTarget from './RenderTarget';
-import BlendModes from '../const/BlendModes';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from './particle/ParticleRenderer';
 import Matrix from '../core/Matrix';
+import {webGLSupport} from '../utils';
+import {BLEND_MODE} from '../const';
+import BlendMode from './BlendMode';
 
 /**
  * @class DisplayManager
@@ -16,6 +18,10 @@ export default class DisplayManager {
      */
     constructor(game) {
         const config = game.config;
+
+        if (!webGLSupport) {
+            throw new Error('This browser or hardware does not support WebGL.');
+        }
 
         /**
          * @private
@@ -53,13 +59,13 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map<String, Renderer>}
+         * @member {Map.<String, Renderer>}
          */
         this._renderers = new Map();
 
         /**
          * @private
-         * @member {Exo.Renderer|null}
+         * @member {?Exo.Renderer}
          */
         this._currentRenderer = null;
 
@@ -83,19 +89,25 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Exo.RenderTarget}
+         * @member {?Exo.RenderTarget}
          */
         this._renderTarget = null;
 
         /**
          * @private
-         * @member {Exo.BlendMode|null}
+         * @member {Map.<Number, Exo.BlendMode>}
          */
-        this._blendMode = null;
+        this._blendModes = this._createBlendModes(this._context);
 
         /**
          * @private
-         * @member {Exo.Shader|null}
+         * @member {?Number}
+         */
+        this._currentBlendMode = null;
+
+        /**
+         * @private
+         * @member {?Exo.Shader}
          */
         this._shader = null;
 
@@ -108,7 +120,7 @@ export default class DisplayManager {
         this._addEvents();
         this._setGLFlags();
 
-        this.setBlendMode(BlendModes.Default);
+        this.setBlendMode(BLEND_MODE.SOURCE_OVER);
         this.setClearColor(this._clearColor);
         this.setRenderTarget(this._rootRenderTarget);
 
@@ -118,9 +130,9 @@ export default class DisplayManager {
 
         this.resize(config.width, config.height);
 
-        game.on('display:begin', this.onBegin, this)
-            .on('display:render', this.onRender, this)
-            .on('display:end', this.onEnd, this)
+        game.on('display:begin', this.begin, this)
+            .on('display:render', this.render, this)
+            .on('display:end', this.end, this)
             .on('display:clear', this.clear, this)
             .on('display:resize', this.resize, this);
     }
@@ -148,13 +160,13 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @member {Exo.BlendMode}
+     * @member {Number}
      */
-    get blendMode() {
-        return this._blendMode;
+    get currentBlendMode() {
+        return this._currentBlendMode;
     }
 
-    set blendMode(value) {
+    set currentBlendMode(value) {
         this.setBlendMode(value);
     }
 
@@ -203,7 +215,8 @@ export default class DisplayManager {
      */
     removeRenderer(name) {
         if (this._renderers.has(name)) {
-            this._renderers.get(name).destroy();
+            this._renderers.get(name)
+                .destroy();
             this._renderers.delete(name);
         }
     }
@@ -230,7 +243,7 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @returns {Exo.Renderer|null}
+     * @returns {?Exo.Renderer}
      */
     getCurrentRenderer() {
         return this._currentRenderer;
@@ -238,7 +251,7 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Exo.RenderTarget|null} renderTarget
+     * @param {?Exo.RenderTarget} renderTarget
      */
     setRenderTarget(renderTarget) {
         const newTarget = renderTarget || this._rootRenderTarget;
@@ -255,12 +268,18 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Exo.BlendMode} blendMode
+     * @param {Number} blendMode
      */
     setBlendMode(blendMode) {
-        if (blendMode !== this._blendMode) {
-            this._blendMode = blendMode;
-            this._context.blendFunc(blendMode.sFactor, blendMode.dFactor);
+        if (!this._blendModes.has(blendMode)) {
+            throw new Error(`Blendmode "${blendMode}" is not supported.`)
+        }
+
+        if (blendMode !== this._currentBlendMode) {
+            const blending = this._blendModes.get(blendMode);
+
+            this._currentBlendMode = blendMode;
+            this._context.blendFunc(blending.sFactor, blending.dFactor);
         }
     }
 
@@ -318,7 +337,7 @@ export default class DisplayManager {
     }
 
     /**
-     * @private
+     * @public
      * @param {Exo.Color} [color]
      */
     clear(color) {
@@ -332,9 +351,19 @@ export default class DisplayManager {
     }
 
     /**
-     * @private
+     * @public
+     * @param {Exo.Color} color
+     * @param {Boolean} [override=true]
      */
-    onBegin() {
+    setClearColor(color) {
+        this._clearColor.copy(color);
+        this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+    }
+
+    /**
+     * @public
+     */
+    begin() {
         if (this._isDrawing) {
             throw new Error('Renderer has already begun!');
         }
@@ -347,23 +376,23 @@ export default class DisplayManager {
     }
 
     /**
-     * @private
-     * @param {Exo.Drawable} drawable
+     * @public
+     * @param {*} renderable
      */
-    onRender(drawable) {
+    render(renderable) {
         if (!this._isDrawing) {
             throw new Error('Renderer needs to begin first!');
         }
 
         if (!this._contextLost) {
-            drawable.draw(this, this._worldTransform);
+            renderable.render(this, this._worldTransform);
         }
     }
 
     /**
-     * @private
+     * @public
      */
-    onEnd() {
+    end() {
         if (!this._isDrawing) {
             throw new Error('Renderer needs to begin first!');
         }
@@ -373,13 +402,6 @@ export default class DisplayManager {
         if (!this._contextLost) {
             this._currentRenderer.flush();
         }
-    }
-
-    /**
-     * @param {Exo.Color} color
-     */
-    setClearColor(color) {
-        this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
     }
 
     /**
@@ -418,6 +440,36 @@ export default class DisplayManager {
         } catch (e) {
             return null;
         }
+    }
+
+    /**
+     * @override
+     */
+    _createBlendModes(gl) {
+        const one = gl.ONE,
+            srcAlpha = gl.SRC_ALPHA,
+            dstAlpha = gl.DST_ALPHA,
+            oneMinusSrcAlpha = gl.ONE_MINUS_SRC_ALPHA;
+
+        return new Map([
+            [BLEND_MODE.SOURCE_OVER, new BlendMode(one, oneMinusSrcAlpha, 'source-over')],
+            [BLEND_MODE.ADD, new BlendMode(srcAlpha, dstAlpha, 'lighter')],
+            [BLEND_MODE.MULTIPLY, new BlendMode(dstAlpha, oneMinusSrcAlpha, 'multiply')],
+            [BLEND_MODE.SCREEN, new BlendMode(srcAlpha, one, 'screen')],
+            [BLEND_MODE.OVERLAY, new BlendMode(one, oneMinusSrcAlpha, 'overlay')],
+            [BLEND_MODE.DARKEN, new BlendMode(one, oneMinusSrcAlpha, 'darken')],
+            [BLEND_MODE.LIGHTEN, new BlendMode(one, oneMinusSrcAlpha, 'lighten')],
+            [BLEND_MODE.COLOR_DODGE, new BlendMode(one, oneMinusSrcAlpha, 'color-dodge')],
+            [BLEND_MODE.COLOR_BURN, new BlendMode(one, oneMinusSrcAlpha, 'color-burn')],
+            [BLEND_MODE.HARD_LIGHT, new BlendMode(one, oneMinusSrcAlpha, 'hard-light')],
+            [BLEND_MODE.SOFT_LIGHT, new BlendMode(one, oneMinusSrcAlpha, 'soft-light')],
+            [BLEND_MODE.DIFFERENCE, new BlendMode(one, oneMinusSrcAlpha, 'difference')],
+            [BLEND_MODE.EXCLUSION, new BlendMode(one, oneMinusSrcAlpha, 'exclusion')],
+            [BLEND_MODE.HUE, new BlendMode(one, oneMinusSrcAlpha, 'hue')],
+            [BLEND_MODE.SATURATION, new BlendMode(one, oneMinusSrcAlpha, 'saturation')],
+            [BLEND_MODE.COLOR, new BlendMode(one, oneMinusSrcAlpha, 'color')],
+            [BLEND_MODE.LUMINOSITY, new BlendMode(one, oneMinusSrcAlpha, 'luminosity')],
+        ]);
     }
 
     /**

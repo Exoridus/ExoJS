@@ -1,8 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import InputDevice from '../../const/InputDevice';
-
-const offset = InputDevice.Pointer << 8,
-    bufferSize = 1 << 8;
+import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
 
 /**
  * @class PointerManager
@@ -17,7 +14,7 @@ export default class PointerManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, offset, bufferSize);
+        super(channelBuffer, INPUT_DEVICE.POINTER * CHANNEL_RANGE_DEVICE, CHANNEL_RANGE_DEVICE);
 
         /**
          * @private

@@ -1,4 +1,4 @@
-import { clamp, hueToRgb, rgbToHex } from './Utils';
+import {clamp, hueToRgb, rgbToHex} from '../utils';
 
 /**
  * @class Color
@@ -146,7 +146,7 @@ export default class Color {
 
     /**
      * @public
-     * @returns {Object<String, Number>}
+     * @returns {Object.<String, Number>}
      */
     getHsl() {
         const r = this.r / 255,

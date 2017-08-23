@@ -1,0 +1,24 @@
+$font-size: 14;
+
+$dir-assets: '../assets';
+$dir-image: '#{$dir-assets}/image';
+$dir-font: '#{$dir-assets}/font';
+
+$color-white: #FFFFFF;
+$color-black: #000000;
+$color-red: #DD2C00;
+$color-orange: #F57F17;
+$color-green: #00C853;
+$color-yellow: #ff0;
+$color-blue: #2196F3;
+
+$color-text: rgba($color-black, 0.87);
+$color-text-secondary: rgba($color-black, 0.54);
+$color-text-disabled: rgba($color-black, 0.26);
+
+$font-weight-thin: 100;
+$font-weight-light: 300;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+$font-weight-black: 900;

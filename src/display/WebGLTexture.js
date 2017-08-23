@@ -1,5 +1,4 @@
-import ScaleModes from '../const/ScaleModes';
-import WrapModes from '../const/WrapModes';
+import {getScaleModeEnum, getWrapModeEnum} from '../utils';
 
 /**
  * Helper class to create a WebGL Texture
@@ -109,9 +108,9 @@ export default class WebGLTexture {
      * @public
      * @param {Number} scaleMode
      */
-    setScaleMode(scaleMode) {
+    setScaleMode(scaleMode ) {
         const gl = this._context,
-            scale = ScaleModes.getGLEnum(scaleMode);
+            scale = getScaleModeEnum(gl, scaleMode);
 
         this.bind();
 
@@ -125,7 +124,7 @@ export default class WebGLTexture {
      */
     setWrapMode(wrapMode) {
         const gl = this._context,
-            wrap = WrapModes.getGLEnum(wrapMode);
+            wrap = getWrapModeEnum(gl, wrapMode);
 
         this.bind();
 

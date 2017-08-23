@@ -2,7 +2,7 @@ import Particle from './Particle';
 import Rectangle from '../../core/Rectangle';
 import Vector from '../../core/Vector';
 import Color from '../../core/Color';
-import Time from '../../core/time/Time';
+import Time from '../../core/Time';
 
 /**
  * @class ParticleEmitter
@@ -316,8 +316,8 @@ export default class ParticleEmitter {
         particle.rotation += (seconds * particle.rotationSpeed);
     }
 
-    draw(displayManager) {
+    render(displayManager) {
         displayManager.setCurrentRenderer('particle');
-        displayManager.getCurrentRenderer().draw(this);
+        displayManager.getCurrentRenderer().render(this);
     }
 }

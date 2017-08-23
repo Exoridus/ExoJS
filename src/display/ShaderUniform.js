@@ -7,6 +7,56 @@
 export default class ShaderUniform {
 
     /**
+     * @constructor
+     * @param {String} name
+     * @param {Number} type
+     */
+    constructor(name, type) {
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._name = name;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._type = type;
+
+        /**
+         * @private
+         * @member {?Number|?Number[]|?Exo.Vector|?Exo.Matrix|?Exo.Texture}
+         */
+        this._value = null;
+
+        /**
+         * @private
+         * @member {?WebGLUniformLocation}
+         */
+        this._location = null;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._textureUnit = -1;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._dirty = false;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._textureUnitChanged = false;
+    }
+
+    /**
      * @public
      * @readonly
      * @member {String}
@@ -38,7 +88,7 @@ export default class ShaderUniform {
 
     /**
      * @public
-     * @member {Number|Number[]|Vector|Matrix|Texture|null}
+     * @member {Number|Number[]|Vector|Matrix|Texture}
      */
     get value() {
         return this._value;
@@ -87,57 +137,6 @@ export default class ShaderUniform {
     set textureUnitChanged(value) {
         this._textureUnitChanged = !!value;
     }
-
-    /**
-     * @constructor
-     * @param {String} name
-     * @param {Number} type
-     */
-    constructor(name, type) {
-
-        /**
-         * @private
-         * @member {String}
-         */
-        this._name = name;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._type = type;
-
-        /**
-         * @private
-         * @member {Number|Number[]|Vector|Matrix|Texture|null}
-         */
-        this._value = null;
-
-        /**
-         * @private
-         * @member {WebGLUniformLocation|null}
-         */
-        this._location = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._textureUnit = -1;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._dirty = false;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._textureUnitChanged = false;
-    }
-
     /**
      * @public
      */

@@ -128,7 +128,7 @@ export default class Matrix {
         return this.set(
             matrix.a, matrix.b, matrix.x,
             matrix.c, matrix.d, matrix.y,
-            matrix.e, matrix.f, matrix.z
+            matrix.e, matrix.f, matrix.z,
         );
     }
 
@@ -140,7 +140,7 @@ export default class Matrix {
         return new Matrix(
             this.a, this.b, this.x,
             this.c, this.d, this.y,
-            this.e, this.f, this.z
+            this.e, this.f, this.z,
         );
     }
 
@@ -162,7 +162,7 @@ export default class Matrix {
 
             (this.a * matrix.e) + (this.c * matrix.f) + (this.e * matrix.z),
             (this.b * matrix.e) + (this.d * matrix.f) + (this.f * matrix.z),
-            (this.x * matrix.e) + (this.y * matrix.f) + (this.z * matrix.z)
+            (this.x * matrix.e) + (this.y * matrix.f) + (this.z * matrix.z),
         );
     }
 
@@ -178,9 +178,11 @@ export default class Matrix {
             array[0] = this.a;
             array[1] = this.b;
             array[2] = this.x;
+
             array[3] = this.c;
             array[4] = this.d;
             array[5] = this.y;
+
             array[6] = this.e;
             array[7] = this.f;
             array[8] = this.z;
@@ -188,9 +190,11 @@ export default class Matrix {
             array[0] = this.a;
             array[1] = this.c;
             array[2] = this.e;
+
             array[3] = this.b;
             array[4] = this.d;
             array[5] = this.f;
+
             array[6] = this.x;
             array[7] = this.y;
             array[8] = this.z;
@@ -207,7 +211,7 @@ export default class Matrix {
         return this.set(
             1, 0, 0,
             0, 1, 0,
-            0, 0, 1
+            0, 0, 1,
         );
     }
 
@@ -219,9 +223,11 @@ export default class Matrix {
         this.a = null;
         this.b = null;
         this.x = null;
+
         this.c = null;
         this.d = null;
         this.y = null;
+
         this.e = null;
         this.f = null;
         this.z = null;
@@ -230,39 +236,7 @@ export default class Matrix {
     /**
      * @public
      * @static
-     * @param {Exo.Matrix[]|Exo.Matrix} matrices
-     * @returns {Exo.Matrix}
-     */
-    static add(...matrices) {
-        const result = new Matrix();
-
-        matrices.forEach((matrix) => {
-            result.add(matrix);
-        });
-
-        return result;
-    }
-
-    /**
-     * @public
-     * @static
-     * @param {Exo.Matrix[]|Exo.Matrix} matrices
-     * @returns {Exo.Matrix}
-     */
-    static subtract(...matrices) {
-        const result = new Matrix();
-
-        matrices.forEach((matrix) => {
-            result.subtract(matrix);
-        });
-
-        return result;
-    }
-
-    /**
-     * @public
-     * @static
-     * @param {Exo.Matrix[]|Exo.Matrix} matrices
+     * @param {...Exo.Matrix} matrices
      * @returns {Exo.Matrix}
      */
     static multiply(...matrices) {
@@ -278,9 +252,9 @@ export default class Matrix {
     /**
      * @public
      * @static
-     * @returns {Exo.Matrix}
+     * @member {Exo.Matrix}
      */
     static get Identity() {
-        return new Matrix(1, 0, 0, 0, 1, 0, 1, 0, 0);
+        return new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
     }
 }

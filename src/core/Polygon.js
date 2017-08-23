@@ -1,4 +1,5 @@
 import Shape from './Shape';
+import {SHAPE} from '../const';
 
 /**
  * @class Polygon
@@ -9,7 +10,7 @@ export default class Polygon extends Shape {
 
     /**
      * @constructor
-     * @param {Exo.Vector[]|Exo.Vector} vectors
+     * @param {...Exo.Vector} vectors
      */
     constructor(...vectors) {
         super();
@@ -27,7 +28,7 @@ export default class Polygon extends Shape {
      * @member {Number}
      */
     get type() {
-        return Shapes.Polygon;
+        return SHAPE.POLYGON;
     }
 
     /**

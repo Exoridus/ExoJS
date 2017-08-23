@@ -1,8 +1,7 @@
 import ChannelHandler from './ChannelHandler';
-import InputDevice from '../const/InputDevice';
+import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../const';
 
-const device = InputDevice.Keyboard << 8,
-    bufferSize = 1 << 8;
+const offset = INPUT_DEVICE.KEYBOARD * CHANNEL_RANGE_DEVICE;
 
 /**
  * @class Keyboard
@@ -17,7 +16,7 @@ export default class Keyboard extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, device, bufferSize);
+        super(channelBuffer, offset, CHANNEL_RANGE_DEVICE);
 
         /**
          * @private
@@ -66,14 +65,13 @@ export default class Keyboard extends ChannelHandler {
      * @param {Event} event
      */
     _onKeyDown(event) {
-        const keyCode = event.keyCode;
-
         if (!this.active) {
             return;
         }
 
-        this._channels[keyCode] = 1;
+        const keyCode = event.keyCode;
 
+        this._channels[keyCode] = 1;
         this.trigger('keyboard:down', Keyboard.getChannelCode(keyCode), this);
     }
 
@@ -82,14 +80,13 @@ export default class Keyboard extends ChannelHandler {
      * @param {Event} event
      */
     _onKeyUp(event) {
-        const keyCode = event.keyCode;
-
         if (!this.active) {
             return;
         }
 
-        this._channels[keyCode] = 0;
+        const keyCode = event.keyCode;
 
+        this._channels[keyCode] = 0;
         this.trigger('keyboard:up', Keyboard.getChannelCode(keyCode), this);
     }
 
@@ -100,7 +97,7 @@ export default class Keyboard extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(keyCode) {
-        return device | (keyCode & 255);
+        return offset | (keyCode & 255);
     }
 }
 
@@ -109,690 +106,690 @@ export default class Keyboard extends ChannelHandler {
  * @static
  * @member {Number}
  */
-Keyboard.Backspace = device | 8;
+Keyboard.Backspace = offset | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tab = device | 9;
+Keyboard.Tab = offset | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Clear = device | 12;
+Keyboard.Clear = offset | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Enter = device | 13;
+Keyboard.Enter = offset | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Shift = device | 16;
+Keyboard.Shift = offset | 16;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Control = device | 17;
+Keyboard.Control = offset | 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Alt = device | 18;
+Keyboard.Alt = offset | 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Pause = device | 19;
+Keyboard.Pause = offset | 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.CapsLock = device | 20;
+Keyboard.CapsLock = offset | 20;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Escape = device | 27;
+Keyboard.Escape = offset | 27;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Space = device | 32;
+Keyboard.Space = offset | 32;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageUp = device | 33;
+Keyboard.PageUp = offset | 33;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageDown = device | 34;
+Keyboard.PageDown = offset | 34;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.End = device | 35;
+Keyboard.End = offset | 35;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Home = device | 36;
+Keyboard.Home = offset | 36;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Left = device | 37;
+Keyboard.Left = offset | 37;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Up = device | 38;
+Keyboard.Up = offset | 38;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Right = device | 39;
+Keyboard.Right = offset | 39;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Down = device | 40;
+Keyboard.Down = offset | 40;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Insert = device | 45;
+Keyboard.Insert = offset | 45;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Delete = device | 46;
+Keyboard.Delete = offset | 46;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Help = device | 47;
+Keyboard.Help = offset | 47;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Zero = device | 48;
+Keyboard.Zero = offset | 48;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.One = device | 49;
+Keyboard.One = offset | 49;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Two = device | 50;
+Keyboard.Two = offset | 50;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Three = device | 51;
+Keyboard.Three = offset | 51;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Four = device | 52;
+Keyboard.Four = offset | 52;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Five = device | 53;
+Keyboard.Five = offset | 53;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Six = device | 54;
+Keyboard.Six = offset | 54;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Seven = device | 55;
+Keyboard.Seven = offset | 55;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Eight = device | 56;
+Keyboard.Eight = offset | 56;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Nine = device | 57;
+Keyboard.Nine = offset | 57;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.A = device | 65;
+Keyboard.A = offset | 65;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.B = device | 66;
+Keyboard.B = offset | 66;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.C = device | 67;
+Keyboard.C = offset | 67;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.D = device | 68;
+Keyboard.D = offset | 68;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.E = device | 69;
+Keyboard.E = offset | 69;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F = device | 70;
+Keyboard.F = offset | 70;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.G = device | 71;
+Keyboard.G = offset | 71;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.H = device | 72;
+Keyboard.H = offset | 72;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.I = device | 73;
+Keyboard.I = offset | 73;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.J = device | 74;
+Keyboard.J = offset | 74;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.K = device | 75;
+Keyboard.K = offset | 75;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.L = device | 76;
+Keyboard.L = offset | 76;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.M = device | 77;
+Keyboard.M = offset | 77;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.N = device | 78;
+Keyboard.N = offset | 78;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.O = device | 79;
+Keyboard.O = offset | 79;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.P = device | 80;
+Keyboard.P = offset | 80;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Q = device | 81;
+Keyboard.Q = offset | 81;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.R = device | 82;
+Keyboard.R = offset | 82;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.S = device | 83;
+Keyboard.S = offset | 83;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.T = device | 84;
+Keyboard.T = offset | 84;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.U = device | 85;
+Keyboard.U = offset | 85;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.V = device | 86;
+Keyboard.V = offset | 86;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.W = device | 87;
+Keyboard.W = offset | 87;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.X = device | 88;
+Keyboard.X = offset | 88;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Y = device | 89;
+Keyboard.Y = offset | 89;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Z = device | 90;
+Keyboard.Z = offset | 90;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad0 = device | 96;
+Keyboard.NumPad0 = offset | 96;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad1 = device | 97;
+Keyboard.NumPad1 = offset | 97;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad2 = device | 98;
+Keyboard.NumPad2 = offset | 98;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad3 = device | 99;
+Keyboard.NumPad3 = offset | 99;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad4 = device | 100;
+Keyboard.NumPad4 = offset | 100;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad5 = device | 101;
+Keyboard.NumPad5 = offset | 101;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad6 = device | 102;
+Keyboard.NumPad6 = offset | 102;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad7 = device | 103;
+Keyboard.NumPad7 = offset | 103;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad8 = device | 104;
+Keyboard.NumPad8 = offset | 104;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad9 = device | 105;
+Keyboard.NumPad9 = offset | 105;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadMultiply = device | 106;
+Keyboard.NumPadMultiply = offset | 106;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadAdd = device | 107;
+Keyboard.NumPadAdd = offset | 107;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadEnter = device | 108;
+Keyboard.NumPadEnter = offset | 108;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadSubtract = device | 109;
+Keyboard.NumPadSubtract = offset | 109;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDecimal = device | 110;
+Keyboard.NumPadDecimal = offset | 110;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDivide = device | 111;
+Keyboard.NumPadDivide = offset | 111;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F1 = device | 112;
+Keyboard.F1 = offset | 112;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F2 = device | 113;
+Keyboard.F2 = offset | 113;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F3 = device | 114;
+Keyboard.F3 = offset | 114;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F4 = device | 115;
+Keyboard.F4 = offset | 115;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F5 = device | 116;
+Keyboard.F5 = offset | 116;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F6 = device | 117;
+Keyboard.F6 = offset | 117;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F7 = device | 118;
+Keyboard.F7 = offset | 118;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F8 = device | 119;
+Keyboard.F8 = offset | 119;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F9 = device | 120;
+Keyboard.F9 = offset | 120;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F10 = device | 121;
+Keyboard.F10 = offset | 121;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F11 = device | 122;
+Keyboard.F11 = offset | 122;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F12 = device | 123;
+Keyboard.F12 = offset | 123;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumLock = device | 144;
+Keyboard.NumLock = offset | 144;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ScrollLock = device | 145;
+Keyboard.ScrollLock = offset | 145;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Colon = device | 186;
+Keyboard.Colon = offset | 186;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Equals = device | 187;
+Keyboard.Equals = offset | 187;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Comma = device | 188;
+Keyboard.Comma = offset | 188;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Dash = device | 189;
+Keyboard.Dash = offset | 189;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Period = device | 190;
+Keyboard.Period = offset | 190;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.QuestionMark = device | 191;
+Keyboard.QuestionMark = offset | 191;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tilde = device | 192;
+Keyboard.Tilde = offset | 192;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.OpenBracket = device | 219;
+Keyboard.OpenBracket = offset | 219;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.BackwardSlash = device | 220;
+Keyboard.BackwardSlash = offset | 220;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ClosedBracket = device | 221;
+Keyboard.ClosedBracket = offset | 221;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Quotes = device | 222;
+Keyboard.Quotes = offset | 222;

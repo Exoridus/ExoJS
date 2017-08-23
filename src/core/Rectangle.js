@@ -1,7 +1,7 @@
 import Vector from './Vector';
-import Shapes from '../const/Shapes';
 import Shape from './Shape';
-import { inRange } from './Utils';
+import {inRange} from '../utils';
+import {SHAPE} from '../const';
 
 /**
  * @class Rectangle
@@ -39,7 +39,7 @@ export default class Rectangle extends Shape {
      * @member {Number}
      */
     get type() {
-        return Shapes.Rectangle;
+        return SHAPE.RECTANGLE;
     }
 
     /**
@@ -165,7 +165,7 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    set (x, y, width, height) {
+    set(x, y, width, height) {
         this._position.set(x, y);
         this._size.set(width, height);
 

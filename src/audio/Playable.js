@@ -1,4 +1,4 @@
-import { clamp } from '../core/Utils';
+import {clamp} from '../utils';
 
 /**
  * @abstract
@@ -119,9 +119,10 @@ export default class Playable {
     }
 
     /**
-     * @readonly
+     * @public
      * @abstract
-     * @member {AudioNode|null}
+     * @readonly
+     * @member {?AudioNode}
      */
     get analyserTarget() {
         return null;
@@ -140,6 +141,10 @@ export default class Playable {
      * @public
      * @abstract
      * @param {Object} [options]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
      */
     play(options) {
         if (this.paused) {
@@ -188,25 +193,21 @@ export default class Playable {
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
-    applyOptions(options) {
-        if (!options) {
-            return;
+    applyOptions({ loop, playbackRate, volume, time }) {
+        if (typeof loop === 'boolean') {
+            this.loop = loop;
         }
 
-        if (typeof options.loop === 'boolean') {
-            this.loop = options.loop;
+        if (typeof playbackRate === 'number') {
+            this.playbackRate = playbackRate;
         }
 
-        if (typeof options.playbackRate === 'number') {
-            this.playbackRate = options.playbackRate;
+        if (typeof volume === 'number') {
+            this.volume = volume;
         }
 
-        if (typeof options.volume === 'number') {
-            this.volume = options.volume;
-        }
-
-        if (typeof options.time === 'number') {
-            this.currentTime = options.time;
+        if (typeof time === 'number') {
+            this.currentTime = time;
         }
     }
 
@@ -216,6 +217,7 @@ export default class Playable {
      */
     destroy() {
         this.stop();
+
         this._source = null;
     }
 }

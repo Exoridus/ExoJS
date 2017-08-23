@@ -1,9 +1,6 @@
 import Gamepad from './Gamepad';
 import ChannelHandler from '../ChannelHandler';
-import InputDevice from '../../const/InputDevice';
-
-const offset = InputDevice.Gamepad << 8,
-    bufferSize = 1 << 8;
+import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
 
 /**
  * @class GamepadManager
@@ -18,7 +15,7 @@ export default class GamepadManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, offset, bufferSize);
+        super(channelBuffer, INPUT_DEVICE.GAMEPAD * CHANNEL_RANGE_DEVICE, CHANNEL_RANGE_DEVICE);
 
         /**
          * @private
@@ -35,18 +32,19 @@ export default class GamepadManager extends ChannelHandler {
 
     /**
      * @public
-     * @returns {Array}
+     * @readonly
+     * @member {Exo.Gamepad[]}
      */
-    getGamepads() {
+    get gamepads() {
         return this._gamepads;
     }
 
     /**
      * @public
-     * @param {Number} index
-     * @returns {Exo.Gamepad|null}
+     * @param {Number} [index=0]
+     * @returns {?Exo.Gamepad}
      */
-    getGamepad(index) {
+    getGamepad(index = 0) {
         return this._gamepads[index] || null;
     }
 
@@ -60,9 +58,9 @@ export default class GamepadManager extends ChannelHandler {
             return;
         }
 
-        this._gamepads.forEach((gamepad) => {
-            gamepad.update();
-        });
+        for (let i = 0, len = this._gamepads.length; i < len; i++) {
+            this._gamepads[i].update();
+        }
     }
 
     /**

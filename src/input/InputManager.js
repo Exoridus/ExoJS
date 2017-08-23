@@ -3,8 +3,7 @@ import Keyboard from './Keyboard';
 import Mouse from './Mouse';
 import GamepadManager from './gamepad/GamepadManager';
 import PointerManager from './pointer/PointerManager';
-
-const bufferSize = 4 << 8;
+import {CHANNEL_RANGE_DEVICE} from '../const';
 
 /**
  * @class InputManager
@@ -18,7 +17,7 @@ export default class InputManager extends ChannelHandler {
      * @param {Exo.Game} game
      */
     constructor(game) {
-        super(new ArrayBuffer(bufferSize * 4), 0, bufferSize);
+        super(new ArrayBuffer(CHANNEL_RANGE_DEVICE * 16), 0, CHANNEL_RANGE_DEVICE * 4);
 
         /**
          * @private
@@ -28,7 +27,7 @@ export default class InputManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Set<Input>}
+         * @member {Set.<Exo.Input>}
          */
         this._inputs = new Set();
 
@@ -56,21 +55,20 @@ export default class InputManager extends ChannelHandler {
          */
         this._pointerManager = new PointerManager(game, this._channelBuffer);
 
-        game.on('input:add', this.onInputAdd, this)
-            .on('input:remove', this.onInputRemove, this)
-            .on('input:clear', this.onInputClear, this);
+        game.on('input:add', this.add, this)
+            .on('input:remove', this.remove, this)
+            .on('input:clear', this.clear, this);
     }
 
     /**
      * @public
      * @param {Exo.Input|Exo.Input[]} input
      */
-    onInputAdd(input) {
+    add(input) {
         if (Array.isArray(input)) {
             input.forEach((input) => {
                 this._inputs.add(input);
             });
-
             return;
         }
 
@@ -80,19 +78,13 @@ export default class InputManager extends ChannelHandler {
     /**
      * @public
      * @param {Exo.Input|Exo.Input[]} input
-     * @param {Boolean} [destroyInput=false]
      */
-    onInputRemove(input, destroyInput = false) {
+    remove(input) {
         if (Array.isArray(input)) {
             input.forEach((input) => {
-                this.onInputRemove(input, destroyInput);
+                this._inputs.delete(input);
             });
-
             return;
-        }
-
-        if (destroyInput) {
-            input.destroy();
         }
 
         this._inputs.delete(input);
@@ -102,7 +94,7 @@ export default class InputManager extends ChannelHandler {
      * @public
      * @param {Boolean} [destroyInputs=false]
      */
-    onInputClear(destroyInputs = false) {
+    clear(destroyInputs = false) {
         if (destroyInputs) {
             this._inputs.forEach((input) => {
                 input.destroy();
@@ -129,9 +121,14 @@ export default class InputManager extends ChannelHandler {
      * @public
      */
     destroy() {
-        super.destroy(true);
+        super.destroy();
 
-        this._game.trigger('input:clear');
+        this._game
+            .off('input:add', this.add, this)
+            .off('input:remove', this.remove, this)
+            .off('input:clear', this.clear, this);
+
+        this._inputs.clear();
         this._inputs = null;
 
         this._keyboard.destroy();

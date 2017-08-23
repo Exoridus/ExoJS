@@ -1,5 +1,5 @@
 import Playable from './Playable';
-import { clamp, webAudioSupported } from '../core/Utils';
+import {clamp, webAudioSupport} from '../utils';
 
 /**
  * @class Music
@@ -15,25 +15,25 @@ export default class Music extends Playable {
     constructor(audio) {
         super(audio);
 
-        if (!webAudioSupported) {
+        if (!webAudioSupport) {
             throw new Error('Web Audio API is not supported, use the fallback Exo.Audio instead.');
         }
 
         /**
          * @private
-         * @member {AudioContext|null}
+         * @member {?AudioContext}
          */
         this._context = null;
 
         /**
          * @private
-         * @member {MediaElementAudioSourceNode|null}
+         * @member {?MediaElementAudioSourceNode}
          */
         this._sourceNode = null;
 
         /**
          * @private
-         * @member {GainNode|null}
+         * @member {?GainNode}
          */
         this._gainNode = null;
     }
@@ -41,7 +41,7 @@ export default class Music extends Playable {
     /**
      * @public
      * @readonly
-     * @member {AudioContext|null}
+     * @member {?AudioContext}
      */
     get context() {
         return this._context;
@@ -66,7 +66,7 @@ export default class Music extends Playable {
      * @public
      * @override
      * @readonly
-     * @member {GainNode|null}
+     * @member {?GainNode}
      */
     get analyserTarget() {
         return this._gainNode;

@@ -1,13 +1,13 @@
-import Drawable from './Drawable';
+import Renderable from './Renderable';
 import Vector from '../core/Vector';
-import { removeItems } from '../core/Utils';
+import {removeItems} from '../utils';
 
 /**
  * @class Container
- * @extends {Exo.Drawable}
+ * @extends {Exo.Renderable}
  * @memberof Exo
  */
-export default class Container extends Drawable {
+export default class Container extends Renderable {
 
     /**
      * @constructor
@@ -17,7 +17,7 @@ export default class Container extends Drawable {
 
         /**
          * @private
-         * @member {Exo.Drawable[]}
+         * @member {Exo.Renderable[]}
          */
         this._children = [];
 
@@ -31,10 +31,22 @@ export default class Container extends Drawable {
     /**
      * @public
      * @readonly
-     * @member {Exo.Drawable[]}
+     * @member {Exo.Renderable[]}
      */
     get children() {
         return this._children;
+    }
+
+    /**
+     * @public
+     * @member {Exo.Renderable|Exo.Container}
+     */
+    get parent() {
+        return this._parent;
+    }
+
+    set parent(value) {
+        this._parent = value;
     }
 
     /**
@@ -76,7 +88,7 @@ export default class Container extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Drawable} child
+     * @param {Exo.Renderable} child
      * @returns {Exo.Container}
      */
     addChild(child) {
@@ -98,7 +110,7 @@ export default class Container extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Drawable} child
+     * @param {Exo.Renderable} child
      * @param {Number} index
      * @returns {Exo.Container}
      */
@@ -125,8 +137,8 @@ export default class Container extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Drawable} firstChild
-     * @param {Exo.Drawable} secondChild
+     * @param {Exo.Renderable} firstChild
+     * @param {Exo.Renderable} secondChild
      * @returns {Exo.Container}
      */
     swapChildren(firstChild, secondChild) {
@@ -142,14 +154,14 @@ export default class Container extends Drawable {
 
     /**
      * @public
-     * @param {Exo.Drawable} child
+     * @param {Exo.Renderable} child
      * @returns {Number}
      */
     getChildIndex(child) {
         const index = this._children.indexOf(child);
 
         if (index === -1) {
-            throw new Error('Drawable is not a child of the container.');
+            throw new Error('Renderable is not a child of the container.');
         }
 
         return index;
@@ -158,7 +170,7 @@ export default class Container extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Drawable} child
+     * @param {Exo.Renderable} child
      * @param {Number} index
      * @returns {Exo.Container}
      */
@@ -176,7 +188,7 @@ export default class Container extends Drawable {
     /**
      * @public
      * @param {Number} index
-     * @returns {Exo.Drawable}
+     * @returns {Exo.Renderable}
      */
     getChildAt(index) {
         if (index < 0 || index >= this._children.length) {
@@ -189,7 +201,7 @@ export default class Container extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Drawable} child
+     * @param {Exo.Renderable} child
      * @returns {Exo.Container}
      */
     removeChild(child) {
@@ -246,7 +258,7 @@ export default class Container extends Drawable {
     /**
      * @override
      */
-    draw(displayManager, parentTransform) {
+    render(displayManager, parentTransform) {
         if (!this.visible) {
             return;
         }
@@ -255,7 +267,7 @@ export default class Container extends Drawable {
         this._worldTransform.multiply(this.transform);
 
         for (let i = 0, len = this._children.length; i < len; i++) {
-            this._children[i].draw(displayManager, this._worldTransform);
+            this._children[i].render(displayManager, this._worldTransform);
         }
     }
 

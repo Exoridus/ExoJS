@@ -52,7 +52,6 @@ export default class GamepadMapping {
      */
     setButtons(buttons) {
         const mappingButtons = this._buttons;
-
         mappingButtons.length = 0;
 
         buttons.forEach((button) => {
@@ -66,7 +65,6 @@ export default class GamepadMapping {
      */
     setAxes(axes) {
         const mappingAxes = this._axes;
-
         mappingAxes.length = 0;
 
         axes.forEach((axis) => {

@@ -18,13 +18,13 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {WebGLRenderingContext|null}
+         * @member {?WebGLRenderingContext}
          */
         this._context = null;
 
         /**
          * @private
-         * @member {WebGLFramebuffer|null}
+         * @member {?WebGLFramebuffer}
          */
         this._frameBuffer = null;
 

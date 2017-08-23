@@ -45,19 +45,19 @@ export default class AudioAnalyser {
 
         /**
          * @private
-         * @member {Uint8Array|null}
+         * @member {Uint8Array}
          */
         this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
 
         /**
          * @private
-         * @member {Float32Array|null}
+         * @member {Float32Array}
          */
         this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
 
         /**
          * @private
-         * @member {Float32Array|null}
+         * @member {Float32Array}
          */
         this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
     }

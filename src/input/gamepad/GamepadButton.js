@@ -1,4 +1,4 @@
-import { clamp } from '../../core/Utils';
+import {clamp} from '../../utils';
 
 /**
  * @class GamepadButton

@@ -5,7 +5,10 @@
   "license": "MIT",
   "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
   "homepage": "https://github.com/Exoridus/ExoJS",
-  "repository": "https://github.com/Exoridus/ExoJS",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Exoridus/ExoJS.git"
+  },
   "devDependencies": {
     "babel-cli": "^6.24.1",
     "babel-core": "^6.25.0",

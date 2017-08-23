@@ -37,6 +37,14 @@ export default class ChannelHandler extends EventEmitter {
 
     /**
      * @public
+     * @member {Float32Array}
+     */
+    get channels() {
+        return this._channels;
+    }
+
+    /**
+     * @public
      * @member {Boolean}
      */
     get active() {
@@ -45,14 +53,6 @@ export default class ChannelHandler extends EventEmitter {
 
     set active(value) {
         this._active = !!value;
-    }
-
-    /**
-     * @public
-     * @member {Float32Array}
-     */
-    get channels() {
-        return this._channels;
     }
 
     /**
@@ -72,16 +72,14 @@ export default class ChannelHandler extends EventEmitter {
     }
 
     /**
-     * @public
-     * @param {Boolean} [resetChannels=false]
+     * @override
      */
-    destroy(resetChannels = false) {
-        if (resetChannels) {
-            this.resetChannels();
-        }
+    destroy() {
+        super.destroy();
 
+        this.resetChannels();
         this._channelBuffer = null;
         this._channels = null;
-        this.off();
+        this._active = null;
     }
 }

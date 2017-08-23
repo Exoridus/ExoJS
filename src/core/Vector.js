@@ -1,6 +1,6 @@
-import Shapes from '../const/Shapes';
 import Shape from './Shape';
 import Rectangle from './Rectangle';
+import {SHAPE} from '../const';
 
 /**
  * @class Vector
@@ -36,7 +36,7 @@ export default class Vector extends Shape {
      * @member {Number}
      */
     get type() {
-        return Shapes.Point;
+        return SHAPE.POINT;
     }
 
     /**

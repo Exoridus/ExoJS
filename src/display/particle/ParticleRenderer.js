@@ -1,6 +1,6 @@
 import Renderer from '../Renderer';
 import ParticleShader from './ParticleShader';
-import { degreesToRadians } from '../../core/Utils';
+import {degreesToRadians} from '../../utils';
 
 /**
  * @class ParticleRenderer
@@ -101,7 +101,7 @@ export default class ParticleRenderer extends Renderer {
          * Vertex buffer that will be fed by the vertexData.
          *
          * @private
-         * @member {Buffer|null}
+         * @member {?WebGLBuffer}
          */
         this._vertexBuffer = null;
 
@@ -109,18 +109,18 @@ export default class ParticleRenderer extends Renderer {
          * Index buffer that will be fed by the indexData.
          *
          * @private
-         * @member {Buffer|null}
+         * @member {?WebGLBuffer}
          */
         this._indexBuffer = null;
 
         /**
          * @private
-         * @member {Exo.ParticleShader}
+         * @member {?Exo.ParticleShader}
          */
         this._shader = new ParticleShader();
 
         /**
-         * @member {Exo.Texture|null}
+         * @member {?Exo.Texture}
          * @private
          */
         this._currentTexture = null;
@@ -152,9 +152,9 @@ export default class ParticleRenderer extends Renderer {
 
     /**
      * @override
-     * @param {ParticleEmitter} emitter
+     * @param {Exo.ParticleEmitter} emitter
      */
-    draw(emitter) {
+    render(emitter) {
         const vertexData = this._vertexView,
             colorData = this._colorView,
             particles = emitter.particles,

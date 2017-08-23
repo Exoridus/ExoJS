@@ -1,5 +1,5 @@
-import Shapes from '../const/Shapes';
-import { rangeIntersect } from './Utils';
+import {rangeIntersect} from '../utils';
+import {SHAPE} from '../const';
 
 /**
  * @interface Shape
@@ -14,7 +14,7 @@ export default class Shape {
      * @member {Number}
      */
     get type() {
-        return Shapes.None;
+        throw new Error('Type member should be overidden!');
     }
 
     /**
@@ -77,13 +77,13 @@ export default class Shape {
      */
     collidesWith(shape) {
         switch (shape.type) {
-            case Shapes.Point:
+            case SHAPE.POINT:
                 return this.contains(shape.x, shape.y);
-            case Shapes.Circle:
+            case SHAPE.CIRCLE:
                 return this._position.distanceTo(shape.position) < (this._radius + shape.radius);
-            case Shapes.Rectangle:
+            case SHAPE.RECTANGLE:
                 return rangeIntersect(this.left, this.right, shape.left, shape.right) && rangeIntersect(this.top, this.bottom, shape.top, shape.bottom);
-            case Shapes.None:
+            case SHAPE.POLYGON:
             default:
                 return false;
         }

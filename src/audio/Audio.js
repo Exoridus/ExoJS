@@ -1,5 +1,5 @@
 import Playable from './Playable';
-import { clamp } from '../core/Utils';
+import {clamp} from '../utils';
 
 /**
  * @class Audio

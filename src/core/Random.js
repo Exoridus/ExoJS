@@ -7,6 +7,25 @@ import RC4 from './RC4';
 export default class Random {
 
     /**
+     * @constructor
+     * @param {String} [seed]
+     */
+    constructor(seed = this.generateSeed()) {
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._seed = seed;
+
+        /**
+         * @private
+         * @member {RC4}
+         */
+        this._rc4 = new RC4(this.getMixedKeys(this.flatten(this._seed, 3), []));
+    }
+
+    /**
      * @public
      * @member {String}
      */
@@ -17,25 +36,6 @@ export default class Random {
     set seed(value) {
         this._seed = (value === null) ? this.generateSeed() : value;
         this._rc4.setKeys(this.getMixedKeys(this.flatten(this._seed, 3), []));
-    }
-
-    /**
-     * @constructor
-     * @param {String} [seed]
-     */
-    constructor(seed) {
-
-        /**
-         * @private
-         * @member {String}
-         */
-        this._seed = (typeof seed === 'undefined') ? this.generateSeed() : seed;
-
-        /**
-         * @private
-         * @member {RC4}
-         */
-        this._rc4 = new RC4(this.getMixedKeys(this.flatten(this._seed, 3), []));
     }
 
     /**
@@ -54,7 +54,7 @@ export default class Random {
         }
 
         if (result.length) {
-            return this.arrayToString(result);
+            return String.fromCharCode(...result);
         }
 
         return (typeof obj === 'string') ? obj : `${obj}\0`;
@@ -71,9 +71,7 @@ export default class Random {
             seedString = `${seed}`,
             len = seedString.length;
 
-        let smear = 0;
-
-        for (let i = 0; i < len; i++) {
+        for (let i = 0, smear = 0; i < len; i++) {
             result[255 & i] = 255 & ((smear ^= keys[255 & i] * 19) + seedString.charCodeAt(i));
         }
 
@@ -95,16 +93,7 @@ export default class Random {
             });
         }
 
-        return this.arrayToString(seed);
-    }
-
-    /**
-     * @private
-     * @param {Uint8Array|Number[]} array
-     * @returns {String}
-     */
-    arrayToString(array) {
-        return String.fromCharCode(...array);
+        return String.fromCharCode(...seed);
     }
 
     /**

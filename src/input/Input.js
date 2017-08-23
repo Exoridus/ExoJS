@@ -9,14 +9,20 @@ export default class Input extends EventEmitter {
 
     /**
      * @constructor
-     * @param {Number[]} channels
+     * @param {Number[]} [channels=[]]
+     * @param {Object.<String, Function>} [events={}]
+     * @param {Function} [events.start]
+     * @param {Function} [events.stop]
+     * @param {Function} [events.active]
+     * @param {Function} [events.trigger]
+     * @param {*} [context]
      */
-    constructor(channels) {
+    constructor(channels = [], { start, stop, active, trigger } = {}, context) {
         super();
 
         /**
          * @private
-         * @member {Set<Number>}
+         * @member {Set.<Number>}
          */
         this._channels = new Set(channels);
 
@@ -43,12 +49,28 @@ export default class Input extends EventEmitter {
          * @member {number}
          */
         this._triggerThreshold = 300;
+
+        if (start) {
+            this.on('start', start, context);
+        }
+
+        if (stop) {
+            this.on('stop', stop, context);
+        }
+
+        if (active) {
+            this.on('active', active, context);
+        }
+
+        if (trigger) {
+            this.on('trigger', trigger, context);
+        }
     }
 
     /**
      * @public
      * @readonly
-     * @member {Set<Number>}
+     * @member {Set.<Number>}
      */
     get channels() {
         return this._channels;

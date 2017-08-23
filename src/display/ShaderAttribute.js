@@ -25,7 +25,7 @@ export default class ShaderAttribute {
 
         /**
          * @private
-         * @member {Number|null}
+         * @member {?Number}
          */
         this._location = null;
     }
@@ -41,7 +41,7 @@ export default class ShaderAttribute {
 
     /**
      * @public
-     * @member {Number}
+     * @member {?Number}
      */
     get location() {
         return this._location;

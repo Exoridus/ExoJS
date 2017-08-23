@@ -1,9 +1,8 @@
 import ChannelHandler from './ChannelHandler';
-import InputDevice from '../const/InputDevice';
 import Vector from '../core/Vector';
+import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../const';
 
-const device = InputDevice.Mouse << 8,
-    bufferSize = 1 << 8;
+const offset = INPUT_DEVICE.MOUSE * CHANNEL_RANGE_DEVICE;
 
 /**
  * @class Mouse
@@ -18,7 +17,7 @@ export default class Mouse extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, device, bufferSize);
+        super(channelBuffer, offset, CHANNEL_RANGE_DEVICE);
 
         /**
          * @private
@@ -243,10 +242,9 @@ export default class Mouse extends ChannelHandler {
 
     /**
      * @public
-     * @param {Boolean} [resetChannels=false]
      */
-    destroy(resetChannels = false) {
-        super.destroy(resetChannels);
+    destroy() {
+        super.destroy();
 
         this._removeEventListeners();
         this._stateChanged = null;
@@ -435,7 +433,7 @@ export default class Mouse extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(keyCode) {
-        return device | (keyCode & 255);
+        return offset | (keyCode & 255);
     }
 }
 
@@ -444,116 +442,116 @@ export default class Mouse extends ChannelHandler {
  * @static
  * @member {Number}
  */
-Mouse.LeftButton = device | 0;
+Mouse.LeftButton = offset | 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MiddleButton = device | 1;
+Mouse.MiddleButton = offset | 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.RightButton = device | 2;
+Mouse.RightButton = offset | 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.BackButton = device | 3;
+Mouse.BackButton = offset | 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ForwardButton = device | 4;
+Mouse.ForwardButton = offset | 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollLeft = device | 5;
+Mouse.ScrollLeft = offset | 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollRight = device | 6;
+Mouse.ScrollRight = offset | 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollUp = device | 7;
+Mouse.ScrollUp = offset | 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollDown = device | 8;
+Mouse.ScrollDown = offset | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollForward = device | 9;
+Mouse.ScrollForward = offset | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollBackward = device | 10;
+Mouse.ScrollBackward = offset | 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveLeft = device | 11;
+Mouse.MoveLeft = offset | 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveRight = device | 12;
+Mouse.MoveRight = offset | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveUp = device | 13;
+Mouse.MoveUp = offset | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveDown = device | 14;
+Mouse.MoveDown = offset | 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.EnterWindow = device | 15;
+Mouse.EnterWindow = offset | 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.LeaveWindow = device | 16;
+Mouse.LeaveWindow = offset | 16;

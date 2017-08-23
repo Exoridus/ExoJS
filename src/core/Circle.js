@@ -1,7 +1,7 @@
 import Rectangle from './Rectangle';
 import Vector from './Vector';
-import Shapes from '../const/Shapes';
 import Shape from './Shape';
+import {SHAPE} from '../const';
 
 /**
  * @class Circle
@@ -38,7 +38,7 @@ export default class Circle extends Shape {
      * @member {Number}
      */
     get type() {
-        return Shapes.Circle;
+        return SHAPE.CIRCLE;
     }
 
     /**

@@ -2,9 +2,8 @@ import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
 import WebGLTexture from './WebGLTexture';
 import Matrix from '../core/Matrix';
-import UniformType from '../const/UniformType';
-import ScaleModes from '../const/ScaleModes';
-import WrapModes from '../const/WrapModes';
+import {SCALE_MODE, UNIFORM_TYPE, WRAP_MODE} from '../const';
+import {getScaleModeEnum, getWrapModeEnum} from '../utils';
 
 /**
  * @class Shader
@@ -13,9 +12,65 @@ import WrapModes from '../const/WrapModes';
 export default class Shader {
 
     /**
+     * @constructor
+     * @param {?String} vertexSource
+     * @param {?String} fragmentSource
+     */
+    constructor(vertexSource = null, fragmentSource = null) {
+
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
+
+        /**
+         * @private
+         * @member {?WebGLProgram}
+         */
+        this._program = null;
+
+        /**
+         * @private
+         * @member {?String}
+         */
+        this._vertexSource = vertexSource;
+
+        /**
+         * @private
+         * @member {?String}
+         */
+        this._fragmentSource = fragmentSource;
+
+        /**
+         * @private
+         * @member {Map.<String, Exo.ShaderUniform>}
+         */
+        this._uniforms = new Map();
+
+        /**
+         * @private
+         * @member {Map.<String, Exo.ShaderAttribute>}
+         */
+        this._attributes = new Map();
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._inUse = false;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._currentTextureUnit = -1;
+    }
+
+    /**
      * @public
      * @readonly
-     * @member {WebGLProgram|null}
+     * @member {?WebGLProgram}
      */
     get program() {
         return this._program;
@@ -34,57 +89,27 @@ export default class Shader {
     }
 
     /**
-     * @constructor
+     * @public
+     * @member {String} value
      */
-    constructor() {
+    get vertexSource() {
+        return this._vertexSource;
+    }
 
-        /**
-         * @private
-         * @member {WebGLRenderingContext|null}
-         */
-        this._context = null;
+    set vertexSource(value) {
+        this._vertexSource = Array.isArray(value) ? value.join('\n') : value;
+    }
 
-        /**
-         * @private
-         * @member {WebGLProgram|null}
-         */
-        this._program = null;
+    /**
+     * @public
+     * @member {String} value
+     */
+    get fragmentSource() {
+        return this._fragmentSource;
+    }
 
-        /**
-         * @private
-         * @member {String}
-         */
-        this._vertexSource = '';
-
-        /**
-         * @private
-         * @member {String}
-         */
-        this._fragmentSource = '';
-
-        /**
-         * @private
-         * @member {Object<String, ShaderUniform>}
-         */
-        this._uniforms = {};
-
-        /**
-         * @private
-         * @member {Object<String, ShaderAttribute>}
-         */
-        this._attributes = {};
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._inUse = false;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._currentTextureUnit = -1;
+    set fragmentSource(value) {
+        this._fragmentSource = Array.isArray(value) ? value.join('\n') : value;
     }
 
     /**
@@ -106,10 +131,8 @@ export default class Shader {
      */
     compileProgram() {
         const gl = this._context,
-            vertexSource = this._vertexSource,
-            fragmentSource = this._fragmentSource,
-            vertexShader = this.compileShader(vertexSource, gl.VERTEX_SHADER),
-            fragmentShader = this.compileShader(fragmentSource, gl.FRAGMENT_SHADER),
+            vertexShader = this.compileShader(this._vertexSource, gl.VERTEX_SHADER),
+            fragmentShader = this.compileShader(this._fragmentSource, gl.FRAGMENT_SHADER),
             program = gl.createProgram();
 
         gl.attachShader(program, vertexShader);
@@ -122,6 +145,7 @@ export default class Shader {
 
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
             gl.deleteProgram(program);
+
             throw new Error('Error: Could not initialize shader.', gl.getError());
         }
 
@@ -171,31 +195,15 @@ export default class Shader {
 
     /**
      * @public
-     * @param {String|Array} source
-     */
-    setVertexSource(source) {
-        this._vertexSource = (source instanceof Array) ? source.join('\n') : source;
-    }
-
-    /**
-     * @public
-     * @param {String|Array} source
-     */
-    setFragmentSource(source) {
-        this._fragmentSource = (source instanceof Array) ? source.join('\n') : source;
-    }
-
-    /**
-     * @public
      * @param {String} name
      * @param {Boolean} [active=true]
      */
-    addAttribute(name, active) {
-        if (name in this._attributes) {
+    addAttribute(name, active = true) {
+        if (this._attributes.has(name)) {
             throw new Error(`Attribute "${name}" was already added.`);
         }
 
-        this._attributes[name] = new ShaderAttribute(name, active !== false);
+        this._attributes.set(name, new ShaderAttribute(name, active));
     }
 
     /**
@@ -204,20 +212,11 @@ export default class Shader {
      * @returns {Exo.ShaderAttribute}
      */
     getAttribute(name) {
-        if (!(name in this._attributes)) {
+        if (!this._attributes.has(name)) {
             throw new Error(`Attribute "${name}" is missing.`);
         }
 
-        return this._attributes[name];
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Boolean} active
-     */
-    setAttributeActive(name, active) {
-        this.getAttribute(name).active = active;
+        return this._attributes.get(name);
     }
 
     /**
@@ -225,9 +224,9 @@ export default class Shader {
      * @param {String} name
      */
     removeAttribute(name) {
-        if (name in this._attributes) {
-            this._attributes[name].destroy();
-            delete this._attributes[name];
+        if (this._attributes.has(name)) {
+            this._attributes.get(name).destroy();
+            this._attributes.delete(name);
         }
     }
 
@@ -235,14 +234,11 @@ export default class Shader {
      * @public
      */
     syncAttributes() {
-        const gl = this._context,
-            attributes = this._attributes;
+        const gl = this._context;
 
-        Object.keys(attributes).forEach((name) => {
-            const attribute = attributes[name];
-
+        this._attributes.forEach((attribute, name) => {
             if (attribute.location === null) {
-                attribute.location = this.getAttributeLocation(name);
+                attribute.location = gl.getAttribLocation(this._program, name);
             }
 
             if (attribute.active) {
@@ -259,11 +255,11 @@ export default class Shader {
      * @param {Number} type
      */
     addUniform(name, type) {
-        if (name in this._uniforms) {
+        if (this._uniforms.has(name)) {
             throw new Error(`Uniform "${name}" was already added.`);
         }
 
-        this._uniforms[name] = new ShaderUniform(name, type);
+        this._uniforms.set(name, new ShaderUniform(name, type));
     }
 
     /**
@@ -272,11 +268,11 @@ export default class Shader {
      * @returns {Exo.ShaderUniform}
      */
     getUniform(name) {
-        if (!(name in this._uniforms)) {
+        if (!this._uniforms.has(name)) {
             throw new Error(`Uniform "${name}" is missing.`);
         }
 
-        return this._uniforms[name];
+        return this._uniforms.get(name);
     }
 
     /**
@@ -304,9 +300,9 @@ export default class Shader {
      * @param {String} name
      */
     removeUniform(name) {
-        if (name in this._uniforms) {
-            this._uniforms[name].destroy();
-            delete this._uniforms[name];
+        if (this._uniforms.has(name)) {
+            this._uniforms.get(name).destroy();
+            this._uniforms.delete(name);
         }
     }
 
@@ -314,10 +310,8 @@ export default class Shader {
      * @public
      */
     syncUniforms() {
-        const uniforms = this._uniforms;
-
-        Object.keys(uniforms).forEach((name) => {
-            this._uploadUniform(uniforms[name]);
+        this._uniforms.forEach((uniform) => {
+            this._uploadUniform(uniform);
         });
     }
 
@@ -362,10 +356,10 @@ export default class Shader {
      * @public
      * @param {String} name
      * @param {Exo.Texture} texture
-     * @param {Number} textureUnit
+     * @param {Number} [textureUnit=0]
      */
-    setUniformTexture(name, texture, textureUnit) {
-        this.setUniformValue(name, texture, textureUnit || 0);
+    setUniformTexture(name, texture, textureUnit = 0) {
+        this.setUniformValue(name, texture, textureUnit);
     }
 
     /**
@@ -378,33 +372,15 @@ export default class Shader {
 
     /**
      * @public
-     * @param {String} name
-     * @returns {Number}
-     */
-    getAttributeLocation(name) {
-        return this._context.getAttribLocation(this._program, name);
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @returns {WebGLUniformLocation}
-     */
-    getUniformLocation(name) {
-        return this._context.getUniformLocation(this._program, name);
-    }
-
-    /**
-     * @public
      * @param {HTMLImageElement|HTMLCanvasElement} source
-     * @param {Number} scaleMode
-     * @param {Number} wrapMode
+     * @param {Number} [scaleMode=SCALE_MODE.NEAREST]
+     * @param {Number} [wrapMode=WRAP_MODE.CLAMP_TO_EDGE]
      * @returns {WebGLTexture}
      */
-    createWebGLTexture(source, scaleMode, wrapMode) {
+    createWebGLTexture(source, scaleMode = SCALE_MODE.NEAREST, wrapMode = WRAP_MODE.CLAMP_TO_EDGE) {
         const gl = this._context,
-            scale = ScaleModes.getGLEnum(gl, scaleMode),
-            wrap = WrapModes.getGLEnum(gl, wrapMode),
+            wrap = getWrapModeEnum(gl, wrapMode),
+            scale = getScaleModeEnum(gl, scaleMode),
             texture = gl.createTexture();
 
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -427,13 +403,17 @@ export default class Shader {
      * @public
      */
     destroy() {
-        Object.keys(this._uniforms).forEach((name) => {
+        this._uniforms.forEach((uniform, name) => {
             this.removeUniform(name);
         });
+        this._uniforms.clear();
+        this._uniforms = null;
 
-        Object.keys(this._attributes).forEach((name) => {
+        this._attributes.forEach((attribute, name) => {
             this.removeAttribute(name);
         });
+        this._attributes.clear();
+        this._attributes = null;
 
         if (this._program) {
             this._context.deleteProgram(this._program);
@@ -443,8 +423,6 @@ export default class Shader {
         this._context = null;
         this._vertexSource = null;
         this._fragmentSource = null;
-        this._uniforms = null;
-        this._attributes = null;
     }
 
     /**
@@ -486,7 +464,7 @@ export default class Shader {
      */
     _uploadUniform(uniform) {
         const gl = this._context,
-            location = uniform.location || (uniform.location = this.getUniformLocation(uniform.name)),
+            location = uniform.location || (uniform.location = gl.getUniformLocation(this._program, uniform.name)),
             value = uniform.value;
 
         let textureUnit;
@@ -496,17 +474,17 @@ export default class Shader {
         }
 
         switch (uniform.type) {
-            case UniformType.Int:
+            case UNIFORM_TYPE.INT:
                 gl.uniform1i(location, value);
 
                 return;
 
-            case UniformType.Float:
+            case UNIFORM_TYPE.FLOAT:
                 gl.uniform1f(location, value);
 
                 return;
 
-            case UniformType.Vector:
+            case UNIFORM_TYPE.VECTOR:
                 if (value instanceof Array) {
                     switch (this._getLength(value)) {
                         case 1:
@@ -550,7 +528,7 @@ export default class Shader {
                 }
 
                 return;
-            case UniformType.IntVector:
+            case UNIFORM_TYPE.VECTOR_INT:
                 if (value instanceof Array) {
                     switch (this._getLength(value)) {
                         case 1:
@@ -595,7 +573,7 @@ export default class Shader {
 
                 return;
 
-            case UniformType.Matrix:
+            case UNIFORM_TYPE.MATRIX:
                 switch (value.length) {
                     case 4:
                         gl.uniformMatrix2fv(location, false, value);
@@ -613,7 +591,7 @@ export default class Shader {
 
                 return;
 
-            case UniformType.Texture:
+            case UNIFORM_TYPE.TEXTURE:
                 textureUnit = uniform.textureUnit;
 
                 if (textureUnit !== this._currentTextureUnit) {
@@ -634,7 +612,7 @@ export default class Shader {
 
                 return;
 
-            case UniformType.None:
+            case UNIFORM_TYPE:
                 textureUnit = uniform.textureUnit;
 
                 if (textureUnit !== this._currentTextureUnit) {
@@ -660,7 +638,7 @@ export default class Shader {
                 return;
 
             default:
-                throw new Error(`Wrong UniformType set! Uniform: ${uniform.name}`);
+                throw new Error(`Wrong Uniform Type set! Uniform: ${uniform.name}`);
         }
     }
 }

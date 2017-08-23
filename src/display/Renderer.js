@@ -11,7 +11,7 @@ export default class Renderer {
 
         /**
          * @private
-         * @member {WebGLRenderingContext|null}
+         * @member {?WebGLRenderingContext}
          */
         this._context = null;
     }
@@ -60,9 +60,9 @@ export default class Renderer {
 
     /**
      * @public
-     * @param {Exo.Drawable} drawable
+     * @param {*} renderable
      */
-    draw(drawable) {
+    render(renderable) {
         // do nothing
     }
 

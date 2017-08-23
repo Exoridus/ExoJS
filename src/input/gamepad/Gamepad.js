@@ -1,9 +1,8 @@
 import ChannelHandler from '../ChannelHandler';
-import InputDevice from '../../const/InputDevice';
 import GamepadDefaultMapping from './GamepadDefaultMapping';
+import {CHANNEL_RANGE_HANDLER, CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
 
-const device = InputDevice.Gamepad << 8,
-    bufferSize = 1 << 5;
+const offset = INPUT_DEVICE.GAMEPAD * CHANNEL_RANGE_DEVICE;
 
 /**
  * @class Gamepad
@@ -11,6 +10,34 @@ const device = InputDevice.Gamepad << 8,
  * @memberof Exo
  */
 export default class Gamepad extends ChannelHandler {
+
+    /**
+     * @constructor
+     * @param {ArrayBuffer} channelBuffer
+     * @param {Number} [index=0]
+     * @param {Gamepad} [gamepad]
+     */
+    constructor(channelBuffer, index, gamepad) {
+        super(channelBuffer, offset | (index * CHANNEL_RANGE_HANDLER), CHANNEL_RANGE_HANDLER);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._index = index | 0;
+
+        /**
+         * @private
+         * @member {Gamepad}
+         */
+        this._rawGamepad = gamepad;
+
+        /**
+         * @private
+         * @member {Exo.GamepadMapping}
+         */
+        this._mapping = new GamepadDefaultMapping();
+    }
 
     /**
      * @public
@@ -35,7 +62,7 @@ export default class Gamepad extends ChannelHandler {
     set index(value) {
         if (this._index !== value) {
             this._index = value | 0;
-            this.setChannelOffset(device | (this._index << 5), bufferSize);
+            this.setChannelOffset(offset | (this._index * CHANNEL_RANGE_HANDLER), CHANNEL_RANGE_HANDLER);
         }
     }
 
@@ -49,34 +76,6 @@ export default class Gamepad extends ChannelHandler {
 
     set mapping(value) {
         this._mapping = value;
-    }
-
-    /**
-     * @constructor
-     * @param {ArrayBuffer} channelBuffer
-     * @param {Number} index
-     * @param {Exo.Gamepad} rawGamepad
-     */
-    constructor(channelBuffer, index, rawGamepad) {
-        super(channelBuffer, (device | (index << 5)), bufferSize);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._index = index | 0;
-
-        /**
-         * @private
-         * @member {Exo.Gamepad}
-         */
-        this._rawGamepad = rawGamepad;
-
-        /**
-         * @private
-         * @member {Exo.GamepadMapping}
-         */
-        this._mapping = new GamepadDefaultMapping();
     }
 
     /**
@@ -127,11 +126,11 @@ export default class Gamepad extends ChannelHandler {
      * @public
      * @static
      * @param {Number} key
-     * @param {Number} gamepadIndex
+     * @param {Number} [index=0]
      * @returns {Number}
      */
-    static getChannelCode(key, gamepadIndex) {
-        return device | ((key & 255) | (gamepadIndex << 5));
+    static getChannelCode(key, index = 0) {
+        return offset | ((index * CHANNEL_RANGE_HANDLER) | (key & 255));
     }
 }
 
@@ -140,119 +139,119 @@ export default class Gamepad extends ChannelHandler {
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonBottom = device | 0;
+Gamepad.FaceButtonBottom = offset | 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonLeft = device | 1;
+Gamepad.FaceButtonLeft = offset | 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonRight = device | 2;
+Gamepad.FaceButtonRight = offset | 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonTop = device | 3;
+Gamepad.FaceButtonTop = offset | 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftTriggerBottom = device | 4;
+Gamepad.LeftTriggerBottom = offset | 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightTriggerBottom = device | 5;
+Gamepad.RightTriggerBottom = offset | 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftTriggerTop = device | 6;
+Gamepad.LeftTriggerTop = offset | 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightTriggerTop = device | 7;
+Gamepad.RightTriggerTop = offset | 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Select = device | 8;
+Gamepad.Select = offset | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Start = device | 9;
+Gamepad.Start = offset | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickButton = device | 10;
+Gamepad.LeftStickButton = offset | 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickButton = device | 11;
+Gamepad.RightStickButton = offset | 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadUp = device | 12;
+Gamepad.DPadUp = offset | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadDown = device | 13;
+Gamepad.DPadDown = offset | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadLeft = device | 14;
+Gamepad.DPadLeft = offset | 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadRight = device | 15;
+Gamepad.DPadRight = offset | 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Special = device | 16;
+Gamepad.Special = offset | 16;
 
 /**
  * Left analogue stick
@@ -263,28 +262,28 @@ Gamepad.Special = device | 16;
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickLeft = device | 17;
+Gamepad.LeftStickLeft = offset | 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickRight = device | 18;
+Gamepad.LeftStickRight = offset | 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickUp = device | 19;
+Gamepad.LeftStickUp = offset | 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickDown = device | 20;
+Gamepad.LeftStickDown = offset | 20;
 
 /**
  * Right analogue stick
@@ -295,25 +294,25 @@ Gamepad.LeftStickDown = device | 20;
  * @static
  * @member {Number}
  */
-Gamepad.RightStickLeft = device | 21;
+Gamepad.RightStickLeft = offset | 21;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickRight = device | 22;
+Gamepad.RightStickRight = offset | 22;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickUp = device | 23;
+Gamepad.RightStickUp = offset | 23;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickDown = device | 24;
+Gamepad.RightStickDown = offset | 24;

@@ -1,5 +1,5 @@
 import Shader from '../Shader';
-import UniformType from '../../const/UniformType';
+import {UNIFORM_TYPE} from '../../const';
 
 /**
  * @class ParticleShader
@@ -14,7 +14,7 @@ export default class ParticleShader extends Shader {
     constructor() {
         super();
 
-        this.setVertexSource([
+        this.vertexSource = [
             'precision lowp float;',
             'attribute vec2 aVertexPosition;',
             'attribute vec2 aTextureCoord;',
@@ -40,9 +40,9 @@ export default class ParticleShader extends Shader {
 
             'gl_Position = vec4((projectionMatrix * vec3(vp, 1.0)).xy, 0.0, 1.0);',
             '}',
-        ]);
+        ].join('\n');
 
-        this.setFragmentSource([
+        this.fragmentSource = [
             'precision lowp float;',
 
             'varying vec2 vTextureCoord;',
@@ -53,7 +53,7 @@ export default class ParticleShader extends Shader {
             'void main(void) {',
             'gl_FragColor = texture2D(uSampler, vTextureCoord) * vColor;',
             '}',
-        ]);
+        ].join('\n');
 
         this.addAttribute('aVertexPosition', true);
         this.addAttribute('aTextureCoord', true);
@@ -62,7 +62,7 @@ export default class ParticleShader extends Shader {
         this.addAttribute('aRotation', true);
         this.addAttribute('aColor', true);
 
-        this.addUniform('uSampler', UniformType.Texture);
-        this.addUniform('projectionMatrix', UniformType.Matrix);
+        this.addUniform('uSampler', UNIFORM_TYPE.TEXTURE);
+        this.addUniform('projectionMatrix', UNIFORM_TYPE.MATRIX);
     }
 }

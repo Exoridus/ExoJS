@@ -1,8 +1,7 @@
 import ChannelHandler from '../ChannelHandler';
-import InputDevice from '../../const/InputDevice';
+import {CHANNEL_RANGE_HANDLER, CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
 
-const device = InputDevice.Pointer << 8,
-    bufferSize = 1 << 5;
+const offset = INPUT_DEVICE.POINTER * CHANNEL_RANGE_DEVICE;
 
 /**
  * @class Pointer
@@ -15,8 +14,8 @@ export default class Pointer extends ChannelHandler {
      * @constructor
      * @param {ArrayBuffer} channelBuffer
      */
-    constructor(channelBuffer) {
-        super(channelBuffer, device, bufferSize);
+    constructor(channelBuffer, index) {
+        super(channelBuffer, offset | (index * CHANNEL_RANGE_HANDLER), CHANNEL_RANGE_HANDLER);
     }
 
     /**
@@ -58,15 +57,12 @@ export default class Pointer extends ChannelHandler {
 
     /**
      * @public
-     * @param {Boolean} [resetChannels=false]
+     * @static
+     * @param {Number} key
+     * @param {Number} [index=0]
+     * @returns {Number}
      */
-    destroy(resetChannels = false) {
-        super.destroy(resetChannels);
+    static getChannelCode(key, index = 0) {
+        return offset | ((index * CHANNEL_RANGE_HANDLER) | (key & 255));
     }
 }
-
-Pointer.Down = device | 0;
-Pointer.SwipeLeft = device | 0;
-Pointer.SwipeRight = device | 0;
-Pointer.SwipeUp = device | 0;
-Pointer.SwipeDown = device | 0;

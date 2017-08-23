@@ -1,3 +1,5 @@
+import {removeItems} from '../utils';
+
 /**
  * @class EventEmitter
  * @memberof Exo
@@ -11,125 +13,133 @@ export default class EventEmitter {
 
         /**
          * @private
-         * @member {Map<String, Function>}
+         * @member {Map.<String, Object[]>}
          */
         this._events = new Map();
     }
 
     /**
      * @public
-     * @param {String} eventName
+     * @readonly
+     * @member {Map.<String, Object[]>}
+     */
+    get events() {
+        return this._events;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} event
      * @param {Function} callback
-     * @param {*} [context]
+     * @param {*} [context=this]
      * @returns {Exo.EventEmitter}
      */
-    on(eventName, callback, context) {
-        if (!this._events.has(eventName)) {
-            this._events.set(eventName, []);
-        }
+    on(event, callback, context = this) {
+        const events = this._events.get(event);
 
-        this._events.get(eventName).push({
-            callback,
-            context: context || this,
-        });
+        if (!events) {
+            this._events.set(event, [{
+                callback,
+                context,
+            }]);
+        } else {
+            events.push({
+                callback,
+                context,
+            });
+        }
 
         return this;
     }
 
     /**
      * @public
-     * @param {String} eventName
+     * @chainable
+     * @param {String} event
      * @param {Function} callback
-     * @param {*} [context]
+     * @param {*} [context=this]
      * @returns {Exo.EventEmitter}
      */
-    once(eventName, callback, context) {
-        const once = () => {
-            this.off(eventName, once, context);
-            callback.apply(this, arguments);
+    once(event, callback, context = this) {
+        const once = (...args) => {
+            this.off(event, once, context);
+            callback.call(context, ...args);
         };
 
-        return this.on(eventName, once, context);
+        return this.on(event, once, context);
     }
 
     /**
      * @public
-     * @param {String} [eventName='*']
+     * @chainable
+     * @param {String} [event='*']
      * @param {Function} [callback]
      * @param {*} [context]
      * @returns {Exo.EventEmitter}
      */
-    off(eventName = '*', callback, context) {
-        const eventNames = (eventName === '*') ? Object.keys(this._events) : [
-            eventName,
-        ];
+    off(event = '*', callback, context) {
+        const mapping = this._events,
+            names = (event === '*') ? Object.keys(mapping) : [event],
+            lenNames = names.length;
 
-        eventNames.forEach((name) => { // eslint-disable-line
-            const eventList = this._events.get(name);
+        for (let i = 0; i < lenNames; i++) {
+            const name = names[i],
+                events = mapping.get(name);
 
             /**
-             * Break foreach because only the one passed
+             * Break for loop because only the one passed
              * event name can be wrong / not available.
              */
-            if (!eventList) {
-                return false;
+            if (!events) {
+                break;
+            }
+
+            if (!events.length) {
+                mapping.delete(name);
+                continue;
             }
 
             if (!callback && !context) {
-                eventList.length = 0;
-                this._events.delete(name);
-
-                return true;
+                removeItems(events, 0, events.length);
+                mapping.delete(name);
+                continue;
             }
 
-            for (let i = eventList.length - 1; i >= 0; i--) {
-                const event = eventList[i];
-
-                if ((callback && callback !== event.callback) || (context && context !== event.context)) {
+            for (let j = events.length - 1; j >= 0; j--) {
+                if (callback && (callback !== events[j].callback)) {
                     continue;
                 }
 
-                eventList.splice(i, 1);
+                if (context && (context !== events[j].context)) {
+                    continue;
+                }
+
+                removeItems(events, j, 1);
             }
-        });
+
+            if (!events.length) {
+                mapping.delete(name);
+            }
+        }
 
         return this;
     }
 
     /**
      * @public
-     * @param {String} eventName
+     * @chainable
+     * @param {String} event
+     * @param {...*} args
      * @returns {Exo.EventEmitter}
      */
-    trigger(eventName) {
-        if (!this._events.has(eventName)) {
-            return this;
-        }
+    trigger(event, ...args) {
+        const events = this._events.get(event);
 
-        const events = this._events.get(eventName),
-            length = events.length,
-            args = Array.prototype.slice.call(arguments, 1);
-
-        for (let i = 0; i < length; i++) {
-            const event = events[i];
-
-            switch (args.length) {
-                case 0:
-                    event.callback.call(event.context);
-                    break;
-                case 1:
-                    event.callback.call(event.context, args[0]);
-                    break;
-                case 2:
-                    event.callback.call(event.context, args[0], args[1]);
-                    break;
-                case 3:
-                    event.callback.call(event.context, args[0], args[1], args[2]);
-                    break;
-                default:
-                    event.callback.apply(event.context, args);
-                    break;
-            }
+        if (events) {
+            events.forEach((event) => {
+                event.callback.call(event.context, ...args);
+            });
         }
 
         return this;
@@ -139,6 +149,15 @@ export default class EventEmitter {
      * @public
      */
     destroy() {
-        this.off();
+        this._events.forEach((events) => {
+            events.forEach((event) => {
+                event.callback = null;
+                event.context = null;
+            });
+
+            events.length = 0;
+        });
+        this._events.clear();
+        this._events = null;
     }
 }

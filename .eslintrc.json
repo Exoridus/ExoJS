@@ -5,7 +5,8 @@
         "node": true
     },
     "globals": {
-        "Exo": true
+        "Exo": true,
+        "__VERSION__": false
     },
     "parserOptions": {
         "ecmaVersion": 6,
