@@ -79,4 +79,13 @@ export default class Renderer {
     stop() {
         this.flush();
     }
+
+    /**
+     * @public
+     */
+    destroy() {
+        this._context = null;
+        this._indexBuffer = null;
+        this._vertexBuffer = null;
+    }
 }

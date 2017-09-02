@@ -1,0 +1,12 @@
+.card {
+    @include border-radius();
+    @include depth-shadow(1);
+    background: $color-white;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+
+    .card-content {
+        @include unitize(padding, 16, 16, 24);
+    }
+}

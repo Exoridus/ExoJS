@@ -1,0 +1,10 @@
+.toolbar {
+    @include unitize(height, 64);
+    @include unitize(padding, 8, 12);
+    @include depth-shadow(1);
+    background-color: $color-toolbar;
+    white-space: nowrap;
+    position: relative;
+    display: block;
+    width: 100%;
+}

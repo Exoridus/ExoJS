@@ -199,6 +199,6 @@ export default class GameScene extends Exo.Scene {
             clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight),
         );
 
-        this.game.trigger('view:update', camera);
+        this.game.trigger('display:view', camera);
     }
 }

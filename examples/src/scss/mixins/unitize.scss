@@ -1,0 +1,31 @@
+@function strip-unit($num) {
+    @return $num / ($num * 0 + 1);
+}
+
+@mixin unitize($property, $params...) {
+    $max: length($params);
+    $pxValues: '';
+    $remValues: '';
+    $size: strip-unit($font-size);
+
+    @for $i from 1 through $max {
+        $param: nth($params, $i);
+
+        @if type-of($param) == number and (unit($param) == px or unitless($param)) {
+            $value: strip-unit($param);
+            $pxValues: #{$pxValues + $value}px;
+            $remValues: #{$remValues + $value / $size}rem;
+        } @else {
+            $pxValues: #{$pxValues + $param};
+            $remValues: #{$remValues + $param};
+        }
+
+        @if $i < $max {
+            $pxValues: #{$pxValues + ' '};
+            $remValues: #{$remValues + ' '};
+        }
+    }
+
+    #{$property}: $pxValues;
+    //#{$property}: $remValues;
+}

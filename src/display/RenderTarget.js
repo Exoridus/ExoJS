@@ -55,6 +55,18 @@ export default class RenderTarget {
 
     /**
      * @public
+     * @member {Exo.Vector}
+     */
+    get size() {
+        return this._size;
+    }
+
+    set size(value) {
+        this._size.copy(value);
+    }
+
+    /**
+     * @public
      * @member {Number}
      */
     get width() {
@@ -79,14 +91,10 @@ export default class RenderTarget {
 
     /**
      * @public
-     * @member {Exo.Vector}
      */
-    get size() {
-        return this._size;
-    }
-
-    set size(value) {
-        this._size.copy(value);
+    init() {
+        this._defaultView.reset(new Rectangle(0, 0, this._size.x, this._size.y));
+        this._view = this._defaultView;
     }
 
     /**
@@ -117,8 +125,8 @@ export default class RenderTarget {
      * @returns {Exo.Rectangle}
      */
     getViewport(view) {
-        const width = this.width,
-            height = this.height,
+        const width = this._size.x,
+            height = this._size.y,
             viewport = view.viewport;
 
         return new Rectangle(

@@ -1,0 +1,53 @@
+.page-wrap {
+  @include unitize(min-width, 1184);
+  @include transition(transform 350ms ease);
+  @include unitize(padding-left, 320);
+  width: 100%;
+  position: absolute;
+  display: block;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  .main {
+    @include unitize(max-width, 800);
+    @include unitize(min-width, 800);
+    @include unitize(margin, 96, auto, 0);
+    @include depth-shadow(1);
+    @include border-radius();
+    background: $color-white;
+    position: relative;
+    overflow: hidden;
+    width: calc(100% - 64px);
+
+    .main-content {
+      background-color: $color-grey-medium;
+      overflow: auto;
+      overflow-x: hidden;
+    }
+  }
+
+  .header-main {
+    @include depth-shadow(1);
+    background: $color-header;
+    position: fixed;
+    width: 100%;
+
+    .header-content {
+      @include depth-shadow(0);
+      background: $color-header;
+      margin: 0 auto;
+      width: 100%;
+      display: block;
+      position: relative;
+
+      .header-title {
+        @include unitize(font-size, 20);
+        @include unitize(line-height, 48);
+        @include unitize(margin-left, 28);
+        color: $color-white;
+        cursor: default;
+      }
+    }
+  }
+}

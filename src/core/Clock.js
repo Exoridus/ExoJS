@@ -138,4 +138,16 @@ export default class Clock {
     getElapsedTime() {
         return this._time.setMilliseconds(this.getElapsedMilliseconds());
     }
+
+    /**
+     * @public
+     */
+    destroy() {
+        this._startTime = null;
+        this._timeBuffer = null;
+        this._isRunning = null;
+
+        this._time.destroy();
+        this._time = null;
+    }
 }

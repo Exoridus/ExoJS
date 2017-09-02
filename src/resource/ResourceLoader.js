@@ -292,8 +292,7 @@ export default class ResourceLoader extends EventEmitter {
     destroy() {
         super.destroy();
 
-        this.reset();
-
+        this._queue.length = 0;
         this._queue = null;
 
         this._resources.destroy();

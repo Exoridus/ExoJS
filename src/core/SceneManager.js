@@ -96,8 +96,6 @@ export default class SceneManager {
      * @public
      */
     destroy() {
-        super.destroy();
-
         this._game.trigger('scene:stop')
             .off('scene:change', this.onSceneChange, this)
             .off('scene:start', this.onSceneStart, this)

@@ -151,9 +151,6 @@ export default class GamepadManager extends ChannelHandler {
         this._gamepads.length = 0;
         this._gamepads = null;
 
-        this._defaultMapping.destroy();
-        this._defaultMapping = null;
-
         this._game = null;
     }
 }

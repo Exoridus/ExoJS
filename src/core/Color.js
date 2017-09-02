@@ -259,6 +259,17 @@ export default class Color {
         return new Color(this._r, this._g, this._b, this._a);
     }
 
+
+    /**
+     * @public
+     * @returns {Boolean}
+     * @param {Exo.Color} color
+     * @param {Boolean} [ignoreAlpha=false]
+     */
+    equals(color, ignoreAlpha = false) {
+        return (this._r === color.r && this._g === color.g && this._b === color.b) && (ignoreAlpha || this._a === color.a);
+    }
+
     /**
      * @public
      * @param {Boolean} [normalized=false]

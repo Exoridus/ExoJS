@@ -1,9 +1,11 @@
-const game = new Exo.Game({
+window.game = new Exo.Game({
     basePath: 'assets/',
-    canvasParent: '#canvas-container',
+    canvasParent: '.container-canvas',
+    width: 800,
+    height: 600,
 });
 
-game.start(new Exo.Scene({
+window.game.start(new Exo.Scene({
 
     load(loader) {
         loader.add('texture', 'particle', 'image/particle.png')

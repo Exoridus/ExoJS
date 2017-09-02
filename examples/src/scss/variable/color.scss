@@ -1,0 +1,55 @@
+$color-theme-50: #E3F2FD;
+$color-theme-100: #BBDEFB;
+$color-theme-200: #90CAF9;
+$color-theme-300: #64B5F6;
+$color-theme-400: #42A5F5;
+$color-theme-500: #2196F3;
+$color-theme-600: #1E88E5;
+$color-theme-700: #1976D2;
+$color-theme-800: #1565C0;
+$color-theme-900: #0D47A1;
+$color-theme-100a: #82B1FF;
+$color-theme-200a: #448AFF;
+$color-theme-400a: #2979FF;
+$color-theme-700a: #2962FF;
+
+$color-primary: $color-theme-500;
+$color-accent: #FFEB3B;
+
+$color-white: #FFFFFF;
+$color-grey-light: #FAFAFA;
+$color-grey-medium: #F5F5F5;
+$color-grey-dark: #E0E0E0;
+$color-grey-darker: #D6D6D6;
+$color-black: #000000;
+$color-red: #DD2C00;
+$color-orange: #F57F17;
+$color-green: #00C853;
+$color-yellow: #ff0;
+$color-blue: $color-theme-500;
+
+$color-text: rgba($color-black, 0.87);
+$color-text-secondary: rgba($color-black, 0.54);
+$color-text-helper: rgba($color-black, 0.38);
+$color-text-disabled: rgba($color-black, 0.26);
+$color-divider: rgba($color-black, 0.12);
+
+$color-text-white: rgba($color-white, 1.00);
+$color-text-secondary-white: rgba($color-white, 0.70);
+$color-text-disabled-white: rgba($color-white, 0.30);
+$color-divider-white: rgba($color-white, 0.12);
+
+$color-button-hover: $color-theme-600;
+$color-button-active: $color-theme-700;
+$color-button-disabled: $color-divider;
+$color-button-disabled-white: $color-divider-white;
+
+$color-body: $color-grey-light;
+
+$color-header: $color-primary;
+$color-footer: $color-primary;
+
+$color-toolbar: $color-primary;
+
+$color-border: #CCCCCC;
+$list-item-hover: #E8E8E8;

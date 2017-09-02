@@ -59,7 +59,7 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map.<String, Renderer>}
+         * @member {Map.<String, Exo.Renderer>}
          */
         this._renderers = new Map();
 
@@ -134,7 +134,8 @@ export default class DisplayManager {
             .on('display:render', this.render, this)
             .on('display:end', this.end, this)
             .on('display:clear', this.clear, this)
-            .on('display:resize', this.resize, this);
+            .on('display:resize', this.resize, this)
+            .on('display:view', this.setView, this);
     }
 
     /**
@@ -215,8 +216,7 @@ export default class DisplayManager {
      */
     removeRenderer(name) {
         if (this._renderers.has(name)) {
-            this._renderers.get(name)
-                .destroy();
+            this._renderers.get(name).destroy();
             this._renderers.delete(name);
         }
     }
@@ -356,8 +356,10 @@ export default class DisplayManager {
      * @param {Boolean} [override=true]
      */
     setClearColor(color) {
-        this._clearColor.copy(color);
-        this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+        if (!this._clearColor.equals(color)) {
+            this._clearColor.copy(color);
+            this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+        }
     }
 
     /**

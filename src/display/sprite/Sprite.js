@@ -12,7 +12,7 @@ export default class Sprite extends Renderable {
 
     /**
      * @constructor
-     * @param {Exo.Texture|HTMLImageElement|HTMLCanvasElement} texture
+     * @param {?Exo.Texture|?HTMLImageElement|?HTMLCanvasElement} texture
      */
     constructor(texture) {
         super();
@@ -27,8 +27,8 @@ export default class Sprite extends Renderable {
          * 4 vertices with 5 properties:
          *
          * 2 = posCoordinates (x, y) +
-         * 2 = texCoordinates (x, y) +
-         * 1 = color      (ARGB int)
+         * 2 = texCoordinates (u, v) +
+         * 1 = color     (ARGB uint)
          *
          * @private
          * @type {Float32Array}

@@ -1,22 +1,58 @@
 <!doctype html>
-<html lang="en">
+<html>
     <head>
         <meta charset="utf-8">
+
         <title>Examples</title>
-        <link href="vendor/normalize.css" rel="stylesheet" type="text/css">
-        <link href="bin/examples.build.css" rel="stylesheet" type="text/css">
+
+        <meta name="format-detection" content="telephone-no">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, minimal-ui">
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+
+        <link href="bin/examples.min.css" rel="stylesheet" type="text/css">
+
         <script src="vendor/jquery.js"></script>
-        <script src="vendor/Stats.js"></script>
+        <script src="vendor/stats.js"></script>
+
+        <script src="../bin/exo.build.js"></script>
+        <script src="bin/examples.build.js"></script>
     </head>
 
     <body>
-        <div id="main">
-            <div id="content">
-                <div id="canvas-container"></div>
+        <main class="page-wrap">
+            <header class="header-main">
+                <div class="toolbar header-content">
+                    <span class="header-title">ExoJS Examples</span>
+                </div>
+            </header>
+            <div class="main">
+                <div class="main-content">
+                    <div class="container-canvas"></div>
+                </div>
             </div>
-        </div>
+        </main>
 
-        <script src="../../bin/exo.build.js"></script>
-        <script src="examples.build.js"></script>
+        <aside class="navigation">
+            <div class="navigation-content">
+                <nav class="list">
+                    <div class="list-sub-header">
+                        <span class="item-text">Navigation</span>
+                    </div>
+
+                    <a href="#basic" class="navigation-item list-item">
+                        <span class="item-text">Basic</span>
+                    </a>
+                    <a href="#benchmark" class="navigation-item list-item">
+                        <span class="item-text">Benchmark</span>
+                    </a>
+                    <a href="#audio" class="navigation-item list-item">
+                        <span class="item-text">Audio Visualisation</span>
+                    </a>
+                    <a href="#particles" class="navigation-item list-item">
+                        <span class="item-text">Particle Emitter</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
     </body>
 </html>

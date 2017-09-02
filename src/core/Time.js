@@ -151,6 +151,13 @@ export default class Time {
 
     /**
      * @public
+     */
+    destroy() {
+        this._milliseconds = null;
+    }
+
+    /**
+     * @public
      * @static
      * @readonly
      * @member {Number}

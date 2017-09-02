@@ -212,4 +212,20 @@ export default class SpriteRenderer extends Renderer {
 
         this._currentBatchSize = 0;
     }
+
+    /**
+     * @override
+     */
+    destroy() {
+        super.destroy();
+
+        this._shader.destroy();
+        this._shader = null;
+
+        this._vertexData = null;
+        this._indexData = null;
+        this._vertexView = null;
+        this._colorView = null;
+        this._currentTexture = null;
+    }
 }

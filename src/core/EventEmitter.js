@@ -36,6 +36,10 @@ export default class EventEmitter {
      * @returns {Exo.EventEmitter}
      */
     on(event, callback, context = this) {
+        if (!this._events) {
+            return this;
+        }
+
         const events = this._events.get(event);
 
         if (!events) {
@@ -79,6 +83,10 @@ export default class EventEmitter {
      * @returns {Exo.EventEmitter}
      */
     off(event = '*', callback, context) {
+        if (!this._events) {
+            return this;
+        }
+
         const mapping = this._events,
             names = (event === '*') ? Object.keys(mapping) : [event],
             lenNames = names.length;
@@ -134,6 +142,10 @@ export default class EventEmitter {
      * @returns {Exo.EventEmitter}
      */
     trigger(event, ...args) {
+        if (!this._events) {
+            return this;
+        }
+
         const events = this._events.get(event);
 
         if (events) {

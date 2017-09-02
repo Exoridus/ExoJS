@@ -1,5 +1,6 @@
 module.exports = (grunt) => {
     grunt.loadNpmTasks('grunt-contrib-uglify');
+    grunt.loadNpmTasks('grunt-contrib-cssmin');
     grunt.loadNpmTasks('grunt-contrib-sass');
     grunt.loadNpmTasks('grunt-webpack');
     grunt.loadNpmTasks('grunt-babel');
@@ -12,21 +13,6 @@ module.exports = (grunt) => {
             examples: './examples',
             game: './game',
         },
-        files: {
-            source: '<%= dirs.src %>/index.js',
-            build: '<%= dirs.build %>/exo.build.js',
-            buildMin: '<%= dirs.build %>/exo.min.js',
-        },
-        uglify: {
-            options: {
-                sourceMap: true,
-                mangle: true,
-            },
-            dist: {
-                src: '<%= files.build %>',
-                dest: '<%= files.buildMin %>',
-            },
-        },
         babel: {
             options: {
                 sourceRoot: '<%= dirs.src %>',
@@ -37,7 +23,7 @@ module.exports = (grunt) => {
             },
             dist: {
                 files: {
-                    '<%= files.build %>': '<%= files.source %>',
+                    '<%= dirs.build %>/exo.build.js': '<%= dirs.src %>/index.js',
                 },
             },
         },
@@ -54,16 +40,13 @@ module.exports = (grunt) => {
                 },
             },
             dist: {
-                entry: '<%= files.source %>',
+                entry: '<%= dirs.src %>/index.js',
                 output: {
                     path: __dirname + '/bin',
                     filename: 'exo.build.js',
                     sourceMapFilename: 'exo.build.js.map',
                     library: 'Exo',
                 },
-                // plugins: [{
-                //     __VERSION__: '<%= pkg.version %>',
-                // }],
             },
             examples: {
                 entry: '<%= dirs.examples %>/src/js/index.js',
@@ -96,19 +79,47 @@ module.exports = (grunt) => {
                 dest: '<%= dirs.game %>/bin/game.build.css',
             },
         },
+        uglify: {
+            options: {
+                sourceMap: true,
+                mangle: true,
+            },
+            dist: {
+                src: '<%= dirs.build %>/exo.build.js',
+                dest: '<%= dirs.build %>/exo.min.js',
+            },
+            examples: {
+                src: '<%= dirs.examples %>/bin/examples.build.js',
+                dest: '<%= dirs.examples %>/bin/examples.min.js',
+            },
+        },
+        cssmin: {
+            examples: {
+                src: '<%= dirs.examples %>/bin/examples.build.css',
+                dest: '<%= dirs.examples %>/bin/examples.min.css'
+            }
+        },
     });
 
     grunt.registerTask('default', ['build']);
+
     grunt.registerTask('build', ['webpack:dist']);
-    grunt.registerTask('build-full', [
+    grunt.registerTask('build-deploy', [
         'build',
         'uglify'
     ]);
-    grunt.registerTask('build-examples', [
+
+    grunt.registerTask('examples', [
         'webpack:examples',
         'sass:examples',
     ]);
-    grunt.registerTask('build-game', [
+    grunt.registerTask('examples-deploy', [
+        'examples',
+        'uglify:examples',
+        'cssmin:examples',
+    ]);
+
+    grunt.registerTask('game', [
         'webpack:game',
         'sass:game',
     ]);

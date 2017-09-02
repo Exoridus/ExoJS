@@ -1,19 +1,23 @@
-export default class ExampleScene extends Exo.Scene({
+window.game = new Exo.Game({
+    basePath: 'assets/',
+    canvasParent: '.container-canvas',
+    width: 800,
+    height: 600,
+});
 
-    /**
-     * @override
-     */
+window.game.start(new Exo.Scene({
+
     load(loader) {
         loader.add('music', 'example', 'audio/example.ogg')
             .load()
             .then(() => this.game.trigger('scene:start'));
     },
 
-    /**
-     * @override
-     */
     init() {
-        const game = this.game;
+        const game = this.game,
+            canvas = game.canvas,
+            width = canvas.width,
+            height = canvas.height;
 
         /**
          * @private
@@ -32,12 +36,32 @@ export default class ExampleScene extends Exo.Scene({
          * @member {HTMLCanvasElement}
          */
         this._canvas = document.createElement('canvas');
+        this._canvas.style.position = 'absolute';
+        this._canvas.style.top = '12.5%';
+        this._canvas.style.left = 0;
+        this._canvas.width = width;
+        this._canvas.height = height * 0.75 | 0;
 
         /**
          * @private
          * @member {CanvasRenderingContext2D}
          */
         this._context = this._canvas.getContext('2d');
+        this._context.strokeStyle = '#fff';
+        this._context.lineWidth = 4;
+        this._context.lineCap = 'round';
+        this._context.lineJoin = 'round';
+
+        /**
+         * @private
+         * @member {CanvasGradient}
+         */
+        this._gradient = this._context.createLinearGradient(0, 0, 0, this._canvas.height);
+        this._gradient.addColorStop(0, '#f70');
+        this._gradient.addColorStop(0.5, '#f30');
+        this._gradient.addColorStop(1, '#f70');
+
+        this._context.fillStyle = this._gradient;
 
         /**
          * @private
@@ -56,26 +80,46 @@ export default class ExampleScene extends Exo.Scene({
          * @member {Exo.Input}
          */
         this._input = new Exo.Input([
-            Exo.Keyboard.Space,
+            Exo.Keyboard.Space
         ], {
             trigger() {
                 this._music.toggle();
-            }
+            },
         });
 
-        window.addEventListener('resize', this._updateCanvas.bind(this));
-
-        this._updateCanvas();
+        canvas.parentNode.appendChild(this._canvas);
 
         game.trigger('input:add', this._input)
-            .trigger('audio:play', this._music, {
-                loop: true,
-            });
+            .trigger('audio:play', this._music, { loop: true });
     },
 
     /**
-     * @override
+     * @private
      */
+    _updateCanvas() {
+        const canvas = this._canvas,
+            context = this._context,
+            width = window.innerWidth,
+            height = window.innerHeight,
+            effectHeight = height * 0.75 | 0,
+            gradient = context.createLinearGradient(0, 0, 0, effectHeight);
+
+        gradient.addColorStop(0, '#f70');
+        gradient.addColorStop(0.5, '#f30');
+        gradient.addColorStop(1, '#f70');
+
+        this.game.trigger('display:resize', width, height);
+
+        canvas.width = width;
+        canvas.height = effectHeight;
+
+        context.fillStyle = gradient;
+        context.strokeStyle = '#fff';
+        context.lineWidth = 4;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+    },
+
     update(delta) {
         if (this._music.paused) {
             return;
@@ -126,38 +170,4 @@ export default class ExampleScene extends Exo.Scene({
 
         context.stroke();
     },
-
-    /**
-     * @override
-     */
-    unload() {
-
-    },
-
-    /**
-     * @private
-     */
-    _updateCanvas() {
-        const canvas = this._canvas,
-            context = this._context,
-            width = window.innerWidth,
-            height = window.innerHeight,
-            effectHeight = height * 0.75 | 0,
-            gradient = context.createLinearGradient(0, 0, 0, effectHeight);
-
-        gradient.addColorStop(0, '#f70');
-        gradient.addColorStop(0.5, '#f30');
-        gradient.addColorStop(1, '#f70');
-
-        this.game.trigger('display:resize', width, height);
-
-        canvas.width = width;
-        canvas.height = effectHeight;
-
-        context.fillStyle = gradient;
-        context.strokeStyle = '#fff';
-        context.lineWidth = 4;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-    },
-});
+}));
