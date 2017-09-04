@@ -19,25 +19,25 @@ export default class Color {
          * @private
          * @member {Number}
          */
-        this._r = clamp(r | 0, 0, 255) || 0;
+        this._r = r & 255;
 
         /**
          * @private
          * @member {Number}
          */
-        this._g = clamp(g | 0, 0, 255) || 0;
+        this._g = g & 255;
 
         /**
          * @private
          * @member {Number}
          */
-        this._b = clamp(b | 0, 0, 255) || 0;
+        this._b = b & 255;
 
         /**
          * @private
          * @member {Number}
          */
-        this._a = clamp(a, 0, 1) || 1;
+        this._a = clamp(a, 0, 1);
     }
 
     /**
@@ -49,7 +49,7 @@ export default class Color {
     }
 
     set r(value) {
-        this._r = clamp(value | 0, 0, 255) || 0;
+        this._r = value & 255;
     }
 
     /**
@@ -61,7 +61,7 @@ export default class Color {
     }
 
     set g(value) {
-        this._g = clamp(value | 0, 0, 255) || 0;
+        this._g = value & 255;
     }
 
     /**
@@ -73,7 +73,7 @@ export default class Color {
     }
 
     set b(value) {
-        this._b = clamp(value | 0, 0, 255) || 0;
+        this._b = value & 255;
     }
 
     /**
@@ -85,7 +85,7 @@ export default class Color {
     }
 
     set a(value) {
-        this._a = clamp(value, 0, 1) || 0;
+        this._a = clamp(value, 0, 1);
     }
 
     /**
@@ -229,9 +229,9 @@ export default class Color {
     lighten(percentage) {
         const value = Math.round(255 / 100 * percentage);
 
-        this.r = Math.max(255, this.r + value);
-        this.g = Math.max(255, this.g + value);
-        this.b = Math.max(255, this.b + value);
+        this.r = Math.min(255, this.r + value);
+        this.g = Math.min(255, this.g + value);
+        this.b = Math.min(255, this.b + value);
 
         return this;
     }

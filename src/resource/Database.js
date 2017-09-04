@@ -97,11 +97,11 @@ export default class Database {
             request.onupgradeneeded = (event) => {
                 const database = event.target.result;
 
-                this._types.forEach((type) => {
+                for (const type of this._types) {
                     database.createObjectStore(type, {
                         keyPath: 'key',
                     });
-                });
+                }
             };
 
             request.onsuccess = (event) => {

@@ -113,7 +113,7 @@ export const
      * @memberof Exo.utils
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
-     * @returns {Promise}
+     * @returns {Promise<AudioBuffer>}
      */
     decodeAudioBuffer = (arrayBuffer) => {
         if (!webAudioSupport) {
@@ -239,14 +239,15 @@ export const
      * @param {Number} r
      * @param {Number} g
      * @param {Number} b
+     * @param {Boolean} [prefixed=true]
      * @returns {String}
      */
-    rgbToHex = (r, g, b) => {
+    rgbToHex = (r, g, b, prefixed = true) => {
         const color = ((1 << 24) + (r << 16) + (g << 8) + b)
             .toString(16)
             .substr(1);
 
-        return `#${color}`;
+        return prefixed ? `#${color}` : color;
     },
 
     /**
@@ -305,4 +306,26 @@ export const
         }
 
         return (wrapMode === WRAP_MODE.REPEAT) ? gl.REPEAT : gl.MIRRORED_REPEAT;
-    };
+    },
+
+    /**
+     * @public
+     * @static
+     * @constant
+     * @memberof Exo.utils
+     * @type [Function}
+     * @returns {String}
+     */
+    getExtension = (url) => url.substring(url.lastIndexOf('.') + 1).toLowerCase(),
+
+    /**
+     * @public
+     * @static
+     * @constant
+     * @memberof Exo.utils
+     * @type [Function}
+     * @param {Response} response
+     * @param {String} type
+     * @returns {?String}
+     */
+    getMimeType = (response, type) => response.headers.get('Content-Type') || `${type}/${getExtension(response.url)}`;

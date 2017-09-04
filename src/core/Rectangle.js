@@ -1,6 +1,6 @@
 import Vector from './Vector';
 import Shape from './Shape';
-import {inRange} from '../utils';
+import {inRange, rangeIntersect} from '../utils';
 import {SHAPE} from '../const';
 
 /**
@@ -204,8 +204,44 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    contains(x, y) {
-        return inRange(x, this.left, this.right) && inRange(y, this.top, this.bottom);
+    contains(shape) {
+        switch (shape.type) {
+            case SHAPE.POINT:
+                return inRange(shape.x, this.left, this.right) &&
+                    inRange(shape.y, this.top, this.bottom);
+            case SHAPE.CIRCLE:
+                return this.contains(shape.bounds);
+            case SHAPE.RECTANGLE:
+                return inRange(shape.left, this.left, this.right) &&
+                    inRange(shape.right, this.left, this.right) &&
+                    inRange(shape.top, this.top, this.bottom) &&
+                    inRange(shape.bottom, this.top, this.bottom);
+            case SHAPE.POLYGON: // todo
+            default:
+                return false;
+        }
+
+        throw new Error('Passed item is not a valid shape!', shape);
+    }
+
+    /**
+     * @override
+     */
+    intersects(shape) {
+        switch (shape.type) {
+            case SHAPE.POINT:
+                return this.contains(shape);
+            case SHAPE.CIRCLE:
+                return this.intersects(shape.bounds);
+            case SHAPE.RECTANGLE:
+                return rangeIntersect(this.left, this.right, shape.left, shape.right) &&
+                    rangeIntersect(this.top, this.bottom, shape.top, shape.bottom);
+            case SHAPE.POLYGON: // todo
+            default:
+                return false;
+        }
+
+        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**

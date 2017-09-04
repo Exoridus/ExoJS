@@ -12,16 +12,9 @@ export default class SpriteType extends TextureType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super.loadSource(path, request);
-    }
-
-    /**
-     * @override
-     */
-    create(source, { mimeType = 'image/png', scaleMode = SCALE_MODE.NEAREST, wrapMode = WRAP_MODE.CLAMP_TO_EDGE } = {}) {
+    create(response, options) {
         return super
-            .create(source, { mimeType, scaleMode, wrapMode })
+            .create(response, options)
             .then((texture) => new Sprite(texture));
     }
 }

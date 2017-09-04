@@ -1024,37 +1024,37 @@ var MenuManager = function () {
                     this._currentMenu.onInputUp();
                 }
             }
-        }), new Exo.Input([Keyboard.Down, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+        }, this), new Exo.Input([Keyboard.Down, Gamepad.LeftStickDown, Gamepad.DPadDown], {
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
-        }), new Exo.Input([Keyboard.Left, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+        }, this), new Exo.Input([Keyboard.Left, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
-        }), new Exo.Input([Keyboard.Right, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+        }, this), new Exo.Input([Keyboard.Right, Gamepad.LeftStickRight, Gamepad.DPadRight], {
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
-        }), new Exo.Input([Keyboard.Enter, Gamepad.FaceButtonBottom], {
+        }, this), new Exo.Input([Keyboard.Enter, Gamepad.FaceButtonBottom], {
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
-        }), new Exo.Input([Keyboard.Backspace, Gamepad.FaceButtonRight], {
+        }, this), new Exo.Input([Keyboard.Backspace, Gamepad.FaceButtonRight], {
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputBack();
                 }
             }
-        })];
+        }, this)];
     }
 
     /**
@@ -1906,30 +1906,30 @@ var GameScene = function (_Exo$Scene) {
                             // hide pause menu
                         }
                 }
-            }), new Exo.Input([Keyboard.Up, Keyboard.W, Gamepad.LeftStickUp, Gamepad.DPadUp], {
+            }, this), new Exo.Input([Keyboard.Up, Keyboard.W, Gamepad.LeftStickUp, Gamepad.DPadUp], {
                 active: function active(value) {
                     this._movePlayer(0, value * -1);
                 }
-            }), new Exo.Input([Keyboard.Down, Keyboard.S, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+            }, this), new Exo.Input([Keyboard.Down, Keyboard.S, Gamepad.LeftStickDown, Gamepad.DPadDown], {
                 active: function active(value) {
                     this._movePlayer(0, value);
                 }
-            }), new Exo.Input([Keyboard.Left, Keyboard.A, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+            }, this), new Exo.Input([Keyboard.Left, Keyboard.A, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
                 active: function active(value) {
                     this._movePlayer(value * -1, 0);
                 }
-            }), new Exo.Input([Keyboard.Right, Keyboard.D, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+            }, this), new Exo.Input([Keyboard.Right, Keyboard.D, Gamepad.LeftStickRight, Gamepad.DPadRight], {
                 active: function active(value) {
                     this._movePlayer(value, 0);
                 }
-            }), new Exo.Input([Keyboard.Shift, Gamepad.RightTriggerTop], {
+            }, this), new Exo.Input([Keyboard.Shift, Gamepad.RightTriggerTop], {
                 start: function start() {
                     this._player.running = true;
                 },
                 stop: function stop() {
                     this._player.running = false;
                 }
-            })];
+            }, this)];
 
             this.game.trigger('input:add', this._inputs);
 
@@ -2011,7 +2011,7 @@ var GameScene = function (_Exo$Scene) {
 
             camera.setCenter(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight));
 
-            this.game.trigger('view:update', camera);
+            this.game.trigger('display:view', camera);
         }
     }]);
 

@@ -122,11 +122,11 @@ export default class Input extends EventEmitter {
     update(activeChannels) {
         this._value = 0;
 
-        this._channels.forEach((channel) => {
+        for (const channel of this._channels) {
             if (activeChannels[channel]) {
                 this._value = Math.max(activeChannels[channel], this._value);
             }
-        });
+        }
 
         if (this.active) {
             if (!this._triggered) {

@@ -279,9 +279,9 @@ export default class Container extends Renderable {
         super.destroy();
 
         if (destroyChildren) {
-            this._children.forEach((child) => {
+            for (const child of this._children) {
                 child.destroy();
-            });
+            }
         }
 
         this._children.length = 0;

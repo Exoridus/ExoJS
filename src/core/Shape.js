@@ -1,6 +1,3 @@
-import {rangeIntersect} from '../utils';
-import {SHAPE} from '../const';
-
 /**
  * @interface Shape
  * @memberof Exo
@@ -15,6 +12,16 @@ export default class Shape {
      */
     get type() {
         throw new Error('Type member should be overidden!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
+    get bounds() {
+        return this.getBounds();
     }
 
     /**
@@ -36,7 +43,7 @@ export default class Shape {
     /**
      * @public
      * @virtual
-     * @returns {Exo.Vector}
+     * @returns {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape}
      */
     clone() {
         throw new Error('Method not implemented!');
@@ -53,17 +60,6 @@ export default class Shape {
     /**
      * @public
      * @virtual
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {Boolean}
-     */
-    contains(x, y) {
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
-     * @virtual
      * @returns {Exo.Rectangle}
      */
     getBounds() {
@@ -72,23 +68,22 @@ export default class Shape {
 
     /**
      * @public
-     * @param {Exo.Shape} shape
+     * @virtual
+     * @param {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape} shape
      * @returns {Boolean}
      */
-    collidesWith(shape) {
-        switch (shape.type) {
-            case SHAPE.POINT:
-                return this.contains(shape.x, shape.y);
-            case SHAPE.CIRCLE:
-                return this._position.distanceTo(shape.position) < (this._radius + shape.radius);
-            case SHAPE.RECTANGLE:
-                return rangeIntersect(this.left, this.right, shape.left, shape.right) && rangeIntersect(this.top, this.bottom, shape.top, shape.bottom);
-            case SHAPE.POLYGON:
-            default:
-                return false;
-        }
+    contains(shape) {
+        throw new Error('Method not implemented!');
+    }
 
-        throw new Error('Passed item is not a valid shape!', shape);
+    /**
+     * @public
+     * @virtual
+     * @param {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape} shape
+     * @returns {Boolean}
+     */
+    intersects(shape) {
+        throw new Error('Method not implemented!');
     }
 
     /**

@@ -61,7 +61,7 @@ var Exo =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 60);
+/******/ 	return __webpack_require__(__webpack_require__.s = 59);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -84,7 +84,7 @@ var
  * @memberof Exo
  * @type {String}
  */
-VERSION = exports.VERSION = '__VERSION__',
+VERSION = exports.VERSION = "1.0.0",
 
 
 /**
@@ -196,20 +196,36 @@ INPUT_DEVICE = exports.INPUT_DEVICE = {
  * @public
  * @constant
  * @memberOf Exo
- * @name CHANNEL_RANGE_DEVICE
- * @type {Number}
+ * @name CHANNEL_OFFSET
+ * @type {Object.<String, Number>}
+ * @property {Number} KEYBOARD
+ * @property {Number} MOUSE
+ * @property {Number} GAMEPAD
+ * @property {Number} POINTER
  */
-CHANNEL_RANGE_DEVICE = exports.CHANNEL_RANGE_DEVICE = 256,
+CHANNEL_OFFSET = exports.CHANNEL_OFFSET = {
+  KEYBOARD: INPUT_DEVICE.KEYBOARD << 8,
+  MOUSE: INPUT_DEVICE.MOUSE << 8,
+  GAMEPAD: INPUT_DEVICE.GAMEPAD << 8,
+  POINTER: INPUT_DEVICE.POINTER << 8
+},
 
 
 /**
  * @public
  * @constant
  * @memberOf Exo
- * @name CHANNEL_RANGE_HANDLER
- * @type {Number}
+ * @name CHANNEL_LENGTH
+ * @type {Object}
+ * @property {Number} GLOBAL
+ * @property {Number} DEVICE
+ * @property {Number} CHILD
  */
-CHANNEL_RANGE_HANDLER = exports.CHANNEL_RANGE_HANDLER = 32,
+CHANNEL_LENGTH = exports.CHANNEL_LENGTH = {
+  GLOBAL: 1024,
+  DEVICE: 256,
+  CHILD: 32
+},
 
 
 /**
@@ -277,7 +293,27 @@ BLEND_MODE = exports.BLEND_MODE = {
   SATURATION: 14,
   COLOR: 15,
   LUMINOSITY: 16
-};
+},
+
+
+/**
+ * @public
+ * @constant
+ * @memberOf Exo
+ * @name QUAD_TREE_MAX_LEVEL
+ * @type {Number}
+ */
+QUAD_TREE_MAX_LEVEL = exports.QUAD_TREE_MAX_LEVEL = 5,
+
+
+/**
+ * @public
+ * @constant
+ * @memberOf Exo
+ * @name QUAD_TREE_MAX_ENTITIES
+ * @type {Number}
+ */
+QUAD_TREE_MAX_ENTITIES = exports.QUAD_TREE_MAX_ENTITIES = 10;
 
 /***/ }),
 /* 1 */
@@ -287,9 +323,9 @@ BLEND_MODE = exports.BLEND_MODE = {
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
-exports.getWrapModeEnum = exports.getScaleModeEnum = exports.removeItems = exports.rgbToHex = exports.hueToRgb = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.average = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportedCodecs = exports.isCodecSupported = exports.audioContext = exports.audio = exports.webGLSupport = exports.indexedDBSupport = exports.webAudioSupport = undefined;
+exports.getMimeType = exports.getExtension = exports.getWrapModeEnum = exports.getScaleModeEnum = exports.removeItems = exports.rgbToHex = exports.hueToRgb = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.average = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportedCodecs = exports.isCodecSupported = exports.audioContext = exports.audio = exports.webGLSupport = exports.indexedDBSupport = exports.webAudioSupport = undefined;
 
 var _const = __webpack_require__(0);
 
@@ -328,14 +364,14 @@ indexedDBSupport = exports.indexedDBSupport = 'indexedDB' in window,
  * @type {Boolean}
  */
 webGLSupport = exports.webGLSupport = function () {
-    var canvas = document.createElement('canvas'),
-        supports = 'probablySupportsContext' in canvas ? 'probablySupportsContext' : 'supportsContext';
+  var canvas = document.createElement('canvas'),
+      supports = 'probablySupportsContext' in canvas ? 'probablySupportsContext' : 'supportsContext';
 
-    if (supports in canvas) {
-        return canvas[supports]('webgl') || canvas[supports]('experimental-webgl');
-    }
+  if (supports in canvas) {
+    return canvas[supports]('webgl') || canvas[supports]('experimental-webgl');
+  }
 
-    return 'WebGLRenderingContext' in window;
+  return 'WebGLRenderingContext' in window;
 }(),
 
 
@@ -371,21 +407,21 @@ audioContext = exports.audioContext = webAudioSupport ? new AudioContext() : nul
  * @returns {Boolean}
  */
 isCodecSupported = exports.isCodecSupported = function isCodecSupported() {
-    for (var _len = arguments.length, codecs = Array(_len), _key = 0; _key < _len; _key++) {
-        codecs[_key] = arguments[_key];
+  for (var _len = arguments.length, codecs = Array(_len), _key = 0; _key < _len; _key++) {
+    codecs[_key] = arguments[_key];
+  }
+
+  var len = codecs.length;
+
+  for (var i = 0; i < len; i++) {
+    var support = audio.canPlayType(codecs[i]);
+
+    if (support) {
+      return !!support.replace(audioSupportRegex, '');
     }
+  }
 
-    var len = codecs.length;
-
-    for (var i = 0; i < len; i++) {
-        var support = audio.canPlayType(codecs[i]);
-
-        if (support) {
-            return !!support.replace(audioSupportRegex, '');
-        }
-    }
-
-    return false;
+  return false;
 },
 
 
@@ -397,16 +433,16 @@ isCodecSupported = exports.isCodecSupported = function isCodecSupported() {
  * @type {Object.<String, Boolean>}
  */
 supportedCodecs = exports.supportedCodecs = {
-    'mp3': isCodecSupported('audio/mpeg;', 'audio/mp3;'),
-    'mpeg': isCodecSupported('audio/mpeg;'),
-    'opus': isCodecSupported('audio/ogg; codecs="opus"'),
-    'ogg': isCodecSupported('audio/ogg; codecs="vorbis"'),
-    'wav': isCodecSupported('audio/wav; codecs="1"'),
-    'aac': isCodecSupported('audio/aac;'),
-    'm4a': isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
-    'mp4': isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
-    'weba': isCodecSupported('audio/webm; codecs="vorbis"'),
-    'webm': isCodecSupported('audio/webm; codecs="vorbis"')
+  'mp3': isCodecSupported('audio/mpeg;', 'audio/mp3;'),
+  'mpeg': isCodecSupported('audio/mpeg;'),
+  'opus': isCodecSupported('audio/ogg; codecs="opus"'),
+  'ogg': isCodecSupported('audio/ogg; codecs="vorbis"'),
+  'wav': isCodecSupported('audio/wav; codecs="1"'),
+  'aac': isCodecSupported('audio/aac;'),
+  'm4a': isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
+  'mp4': isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
+  'weba': isCodecSupported('audio/webm; codecs="vorbis"'),
+  'webm': isCodecSupported('audio/webm; codecs="vorbis"')
 },
 
 
@@ -417,16 +453,16 @@ supportedCodecs = exports.supportedCodecs = {
  * @memberof Exo.utils
  * @type {Function}
  * @param {ArrayBuffer} arrayBuffer
- * @returns {Promise}
+ * @returns {Promise<AudioBuffer>}
  */
 decodeAudioBuffer = exports.decodeAudioBuffer = function decodeAudioBuffer(arrayBuffer) {
-    if (!webAudioSupport) {
-        return Promise.reject();
-    }
+  if (!webAudioSupport) {
+    return Promise.reject();
+  }
 
-    return new Promise(function (resolve, reject) {
-        audioContext.decodeAudioData(arrayBuffer, resolve, reject);
-    });
+  return new Promise(function (resolve, reject) {
+    audioContext.decodeAudioData(arrayBuffer, resolve, reject);
+  });
 },
 
 
@@ -440,7 +476,7 @@ decodeAudioBuffer = exports.decodeAudioBuffer = function decodeAudioBuffer(array
  * @returns {Number}
  */
 degreesToRadians = exports.degreesToRadians = function degreesToRadians(degree) {
-    return degree * _const.DEG_TO_RAD;
+  return degree * _const.DEG_TO_RAD;
 },
 
 
@@ -454,7 +490,7 @@ degreesToRadians = exports.degreesToRadians = function degreesToRadians(degree) 
  * @returns {Number}
  */
 radiansToDegrees = exports.radiansToDegrees = function radiansToDegrees(radian) {
-    return radian * _const.RAD_TO_DEG;
+  return radian * _const.RAD_TO_DEG;
 },
 
 
@@ -468,13 +504,13 @@ radiansToDegrees = exports.radiansToDegrees = function radiansToDegrees(radian) 
  * @returns {Number}
  */
 average = exports.average = function average() {
-    for (var _len2 = arguments.length, values = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-        values[_key2] = arguments[_key2];
-    }
+  for (var _len2 = arguments.length, values = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    values[_key2] = arguments[_key2];
+  }
 
-    return values.reduce(function (sum, value) {
-        return sum + value;
-    }, 0) / values.length;
+  return values.reduce(function (sum, value) {
+    return sum + value;
+  }, 0) / values.length;
 },
 
 
@@ -490,7 +526,7 @@ average = exports.average = function average() {
  * @returns {Number}
  */
 clamp = exports.clamp = function clamp(value, min, max) {
-    return Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max));
+  return Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max));
 },
 
 
@@ -504,7 +540,7 @@ clamp = exports.clamp = function clamp(value, min, max) {
  * @returns {Boolean}
  */
 isPowerOfTwo = exports.isPowerOfTwo = function isPowerOfTwo(value) {
-    return value !== 0 && (value & value - 1) === 0;
+  return value !== 0 && (value & value - 1) === 0;
 },
 
 
@@ -520,7 +556,7 @@ isPowerOfTwo = exports.isPowerOfTwo = function isPowerOfTwo(value) {
  * @returns {Boolean}
  */
 inRange = exports.inRange = function inRange(value, min, max) {
-    return value >= Math.min(min, max) && value <= Math.max(min, max);
+  return value >= Math.min(min, max) && value <= Math.max(min, max);
 },
 
 
@@ -537,7 +573,7 @@ inRange = exports.inRange = function inRange(value, min, max) {
  * @returns {Boolean}
  */
 rangeIntersect = exports.rangeIntersect = function rangeIntersect(minA, maxA, minB, maxB) {
-    return Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB);
+  return Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB);
 },
 
 
@@ -553,13 +589,13 @@ rangeIntersect = exports.rangeIntersect = function rangeIntersect(minA, maxA, mi
  * @returns {Number}
  */
 hueToRgb = exports.hueToRgb = function hueToRgb(p, q, t) {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return (p + (q - p)) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return (p + (q - p)) * (2 / 3 - t) * 6;
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return (p + (q - p)) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return (p + (q - p)) * (2 / 3 - t) * 6;
 
-    return p;
+  return p;
 },
 
 
@@ -572,12 +608,15 @@ hueToRgb = exports.hueToRgb = function hueToRgb(p, q, t) {
  * @param {Number} r
  * @param {Number} g
  * @param {Number} b
+ * @param {Boolean} [prefixed=true]
  * @returns {String}
  */
 rgbToHex = exports.rgbToHex = function rgbToHex(r, g, b) {
-    var color = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).substr(1);
+  var prefixed = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
 
-    return '#' + color;
+  var color = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).substr(1);
+
+  return prefixed ? '#' + color : color;
 },
 
 
@@ -592,19 +631,19 @@ rgbToHex = exports.rgbToHex = function rgbToHex(r, g, b) {
  * @param {Number} amount
  */
 removeItems = exports.removeItems = function removeItems(array, startIndex, amount) {
-    if (startIndex >= array.length || !amount) {
-        return;
-    }
+  if (startIndex >= array.length || !amount) {
+    return;
+  }
 
-    var length = array.length,
-        removeCount = startIndex + amount > length ? length - startIndex : amount,
-        newLen = length - removeCount;
+  var length = array.length,
+      removeCount = startIndex + amount > length ? length - startIndex : amount,
+      newLen = length - removeCount;
 
-    for (var i = startIndex; i < newLen; i++) {
-        array[i] = array[i + removeCount];
-    }
+  for (var i = startIndex; i < newLen; i++) {
+    array[i] = array[i + removeCount];
+  }
 
-    array.length = newLen;
+  array.length = newLen;
 },
 
 
@@ -619,7 +658,7 @@ removeItems = exports.removeItems = function removeItems(array, startIndex, amou
  * @returns {Number}
  */
 getScaleModeEnum = exports.getScaleModeEnum = function getScaleModeEnum(gl, scaleMode) {
-    return scaleMode === _const.SCALE_MODE.LINEAR ? gl.LINEAR : gl.NEAREST;
+  return scaleMode === _const.SCALE_MODE.LINEAR ? gl.LINEAR : gl.NEAREST;
 },
 
 
@@ -634,11 +673,39 @@ getScaleModeEnum = exports.getScaleModeEnum = function getScaleModeEnum(gl, scal
  * @returns {Number}
  */
 getWrapModeEnum = exports.getWrapModeEnum = function getWrapModeEnum(gl, wrapMode) {
-    if (wrapMode === _const.WRAP_MODE.CLAMP_TO_EDGE) {
-        return gl.CLAMP_TO_EDGE;
-    }
+  if (wrapMode === _const.WRAP_MODE.CLAMP_TO_EDGE) {
+    return gl.CLAMP_TO_EDGE;
+  }
 
-    return wrapMode === _const.WRAP_MODE.REPEAT ? gl.REPEAT : gl.MIRRORED_REPEAT;
+  return wrapMode === _const.WRAP_MODE.REPEAT ? gl.REPEAT : gl.MIRRORED_REPEAT;
+},
+
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @memberof Exo.utils
+ * @type [Function}
+ * @returns {String}
+ */
+getExtension = exports.getExtension = function getExtension(url) {
+  return url.substring(url.lastIndexOf('.') + 1).toLowerCase();
+},
+
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @memberof Exo.utils
+ * @type [Function}
+ * @param {Response} response
+ * @param {String} type
+ * @returns {?String}
+ */
+getMimeType = exports.getMimeType = function getMimeType(response, type) {
+  return response.headers.get('Content-Type') || type + '/' + getExtension(response.url);
 };
 
 /***/ }),
@@ -767,8 +834,8 @@ var Vector = function (_Shape) {
 
     }, {
         key: 'contains',
-        value: function contains(x, y) {
-            return this._x === x && this._y === y;
+        value: function contains(shape) {
+            return shape.type === _const.SHAPE.POINT && this._x === shape.x && this._y === shape.y;
         }
 
         /**
@@ -878,7 +945,7 @@ var Vector = function (_Shape) {
     }, {
         key: 'getBounds',
         value: function getBounds() {
-            return new _Rectangle2.default(this.x, this.y, 0, 0);
+            return new _Rectangle2.default(this._x, this._y, 0, 0);
         }
 
         /**
@@ -1087,8 +1154,42 @@ var Rectangle = function (_Shape) {
 
     }, {
         key: 'contains',
-        value: function contains(x, y) {
-            return (0, _utils.inRange)(x, this.left, this.right) && (0, _utils.inRange)(y, this.top, this.bottom);
+        value: function contains(shape) {
+            switch (shape.type) {
+                case _const.SHAPE.POINT:
+                    return (0, _utils.inRange)(shape.x, this.left, this.right) && (0, _utils.inRange)(shape.y, this.top, this.bottom);
+                case _const.SHAPE.CIRCLE:
+                    return this.contains(shape.bounds);
+                case _const.SHAPE.RECTANGLE:
+                    return (0, _utils.inRange)(shape.left, this.left, this.right) && (0, _utils.inRange)(shape.right, this.left, this.right) && (0, _utils.inRange)(shape.top, this.top, this.bottom) && (0, _utils.inRange)(shape.bottom, this.top, this.bottom);
+                case _const.SHAPE.POLYGON: // todo
+                default:
+                    return false;
+            }
+
+            throw new Error('Passed item is not a valid shape!', shape);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'intersects',
+        value: function intersects(shape) {
+            switch (shape.type) {
+                case _const.SHAPE.POINT:
+                    return this.contains(shape);
+                case _const.SHAPE.CIRCLE:
+                    return this.intersects(shape.bounds);
+                case _const.SHAPE.RECTANGLE:
+                    return (0, _utils.rangeIntersect)(this.left, this.right, shape.left, shape.right) && (0, _utils.rangeIntersect)(this.top, this.bottom, shape.top, shape.bottom);
+                case _const.SHAPE.POLYGON: // todo
+                default:
+                    return false;
+            }
+
+            throw new Error('Passed item is not a valid shape!', shape);
         }
 
         /**
@@ -1598,10 +1699,6 @@ var EventEmitter = function () {
     }, {
         key: 'trigger',
         value: function trigger(event) {
-            for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-                args[_key2 - 1] = arguments[_key2];
-            }
-
             if (!this._events) {
                 return this;
             }
@@ -1609,11 +1706,36 @@ var EventEmitter = function () {
             var events = this._events.get(event);
 
             if (events) {
-                events.forEach(function (event) {
-                    var _event$callback;
+                for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+                    args[_key2 - 1] = arguments[_key2];
+                }
 
-                    (_event$callback = event.callback).call.apply(_event$callback, [event.context].concat(args));
-                });
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
+
+                try {
+                    for (var _iterator = events[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var _event$callback;
+
+                        var _event = _step.value;
+
+                        (_event$callback = _event.callback).call.apply(_event$callback, [_event.context].concat(args));
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
             }
 
             return this;
@@ -1626,14 +1748,56 @@ var EventEmitter = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            this._events.forEach(function (events) {
-                events.forEach(function (event) {
-                    event.callback = null;
-                    event.context = null;
-                });
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
-                events.length = 0;
-            });
+            try {
+                for (var _iterator2 = this._events.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var events = _step2.value;
+                    var _iteratorNormalCompletion3 = true;
+                    var _didIteratorError3 = false;
+                    var _iteratorError3 = undefined;
+
+                    try {
+                        for (var _iterator3 = events[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                            var event = _step3.value;
+
+                            event.callback = null;
+                            event.context = null;
+                        }
+                    } catch (err) {
+                        _didIteratorError3 = true;
+                        _iteratorError3 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                _iterator3.return();
+                            }
+                        } finally {
+                            if (_didIteratorError3) {
+                                throw _iteratorError3;
+                            }
+                        }
+                    }
+
+                    events.length = 0;
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
             this._events.clear();
             this._events = null;
         }
@@ -1691,25 +1855,25 @@ var Color = function () {
      * @private
      * @member {Number}
      */
-    this._r = (0, _utils.clamp)(r | 0, 0, 255) || 0;
+    this._r = r & 255;
 
     /**
      * @private
      * @member {Number}
      */
-    this._g = (0, _utils.clamp)(g | 0, 0, 255) || 0;
+    this._g = g & 255;
 
     /**
      * @private
      * @member {Number}
      */
-    this._b = (0, _utils.clamp)(b | 0, 0, 255) || 0;
+    this._b = b & 255;
 
     /**
      * @private
      * @member {Number}
      */
-    this._a = (0, _utils.clamp)(a, 0, 1) || 1;
+    this._a = (0, _utils.clamp)(a, 0, 1);
   }
 
   /**
@@ -1851,9 +2015,9 @@ var Color = function () {
     value: function lighten(percentage) {
       var value = Math.round(255 / 100 * percentage);
 
-      this.r = Math.max(255, this.r + value);
-      this.g = Math.max(255, this.g + value);
-      this.b = Math.max(255, this.b + value);
+      this.r = Math.min(255, this.r + value);
+      this.g = Math.min(255, this.g + value);
+      this.b = Math.min(255, this.b + value);
 
       return this;
     }
@@ -1942,7 +2106,7 @@ var Color = function () {
       return this._r;
     },
     set: function set(value) {
-      this._r = (0, _utils.clamp)(value | 0, 0, 255) || 0;
+      this._r = value & 255;
     }
 
     /**
@@ -1956,7 +2120,7 @@ var Color = function () {
       return this._g;
     },
     set: function set(value) {
-      this._g = (0, _utils.clamp)(value | 0, 0, 255) || 0;
+      this._g = value & 255;
     }
 
     /**
@@ -1970,7 +2134,7 @@ var Color = function () {
       return this._b;
     },
     set: function set(value) {
-      this._b = (0, _utils.clamp)(value | 0, 0, 255) || 0;
+      this._b = value & 255;
     }
 
     /**
@@ -1984,7 +2148,7 @@ var Color = function () {
       return this._a;
     },
     set: function set(value) {
-      this._a = (0, _utils.clamp)(value, 0, 1) || 0;
+      this._a = (0, _utils.clamp)(value, 0, 1);
     }
 
     /**
@@ -3034,14 +3198,10 @@ Color.YellowGreen = new Color(154, 205, 50, 1);
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _utils = __webpack_require__(1);
-
-var _const = __webpack_require__(0);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3050,132 +3210,133 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * @memberof Exo
  */
 var Shape = function () {
-    function Shape() {
-        _classCallCheck(this, Shape);
+  function Shape() {
+    _classCallCheck(this, Shape);
+  }
+
+  _createClass(Shape, [{
+    key: 'set',
+
+
+    /**
+     * @public
+     * @virtual
+     */
+    value: function set() {
+      throw new Error('Method not implemented!');
     }
 
-    _createClass(Shape, [{
-        key: 'set',
+    /**
+     * @public
+     * @virtual
+     */
+
+  }, {
+    key: 'copy',
+    value: function copy(shape) {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     * @returns {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape}
+     */
+
+  }, {
+    key: 'clone',
+    value: function clone() {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     */
+
+  }, {
+    key: 'toArray',
+    value: function toArray() {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     * @returns {Exo.Rectangle}
+     */
+
+  }, {
+    key: 'getBounds',
+    value: function getBounds() {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     * @param {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape} shape
+     * @returns {Boolean}
+     */
+
+  }, {
+    key: 'contains',
+    value: function contains(shape) {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     * @param {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape} shape
+     * @returns {Boolean}
+     */
+
+  }, {
+    key: 'intersects',
+    value: function intersects(shape) {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     */
+
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      throw new Error('Method not implemented!');
+    }
+  }, {
+    key: 'type',
 
 
-        /**
-         * @public
-         * @virtual
-         */
-        value: function set() {
-            throw new Error('Method not implemented!');
-        }
+    /**
+     * @public
+     * @virtual
+     * @readonly
+     * @member {Number}
+     */
+    get: function get() {
+      throw new Error('Type member should be overidden!');
+    }
 
-        /**
-         * @public
-         * @virtual
-         */
+    /**
+     * @public
+     * @virtual
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
 
-    }, {
-        key: 'copy',
-        value: function copy(shape) {
-            throw new Error('Method not implemented!');
-        }
+  }, {
+    key: 'bounds',
+    get: function get() {
+      return this.getBounds();
+    }
+  }]);
 
-        /**
-         * @public
-         * @virtual
-         * @returns {Exo.Vector}
-         */
-
-    }, {
-        key: 'clone',
-        value: function clone() {
-            throw new Error('Method not implemented!');
-        }
-
-        /**
-         * @public
-         * @virtual
-         */
-
-    }, {
-        key: 'toArray',
-        value: function toArray() {
-            throw new Error('Method not implemented!');
-        }
-
-        /**
-         * @public
-         * @virtual
-         * @param {Number} x
-         * @param {Number} y
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'contains',
-        value: function contains(x, y) {
-            throw new Error('Method not implemented!');
-        }
-
-        /**
-         * @public
-         * @virtual
-         * @returns {Exo.Rectangle}
-         */
-
-    }, {
-        key: 'getBounds',
-        value: function getBounds() {
-            throw new Error('Method not implemented!');
-        }
-
-        /**
-         * @public
-         * @param {Exo.Shape} shape
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'collidesWith',
-        value: function collidesWith(shape) {
-            switch (shape.type) {
-                case _const.SHAPE.POINT:
-                    return this.contains(shape.x, shape.y);
-                case _const.SHAPE.CIRCLE:
-                    return this._position.distanceTo(shape.position) < this._radius + shape.radius;
-                case _const.SHAPE.RECTANGLE:
-                    return (0, _utils.rangeIntersect)(this.left, this.right, shape.left, shape.right) && (0, _utils.rangeIntersect)(this.top, this.bottom, shape.top, shape.bottom);
-                case _const.SHAPE.POLYGON:
-                default:
-                    return false;
-            }
-
-            throw new Error('Passed item is not a valid shape!', shape);
-        }
-
-        /**
-         * @public
-         * @virtual
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            throw new Error('Method not implemented!');
-        }
-    }, {
-        key: 'type',
-
-
-        /**
-         * @public
-         * @virtual
-         * @readonly
-         * @member {Number}
-         */
-        get: function get() {
-            throw new Error('Type member should be overidden!');
-        }
-    }]);
-
-    return Shape;
+  return Shape;
 }();
 
 exports.default = Shape;
@@ -3460,9 +3621,30 @@ var Matrix = function () {
         matrices[_key] = arguments[_key];
       }
 
-      matrices.forEach(function (matrix) {
-        result.multiply(matrix);
-      });
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = matrices[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var matrix = _step.value;
+
+          result.multiply(matrix);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
 
       return result;
     }
@@ -3771,6 +3953,106 @@ exports.default = Time;
 
 
 Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @abstract
+ * @class ResourceType
+ * @memberof Exo
+ */
+var ResourceType = function () {
+  function ResourceType() {
+    _classCallCheck(this, ResourceType);
+  }
+
+  _createClass(ResourceType, [{
+    key: 'request',
+
+
+    /**
+     * @public
+     * @abstract
+     * @param {String} path
+     * @param {Object} [request]
+     * @param {String} [request.method='GET']
+     * @param {String} [request.mode='cors']
+     * @returns {Promise<Response>}
+     */
+    value: function request(path) {
+      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+          _ref$method = _ref.method,
+          method = _ref$method === undefined ? 'GET' : _ref$method,
+          _ref$mode = _ref.mode,
+          mode = _ref$mode === undefined ? 'cors' : _ref$mode;
+
+      return fetch(path, { method: method, mode: mode });
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @param {Response} source
+     * @param {Object} [options]
+     * @returns {Promise<*>}
+     */
+
+  }, {
+    key: 'create',
+    value: function create(source, options) {
+      return Promise.resolve(source);
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @param {String} path
+     * @param {Object} [request]
+     * @param {Object} [options]
+     * @returns {Promise<*>}
+     */
+
+  }, {
+    key: 'load',
+    value: function load(path, request, options) {
+      var _this = this;
+
+      return this.request(path, request).then(function (source) {
+        return _this.create(source, options);
+      });
+    }
+  }, {
+    key: 'storageKey',
+
+
+    /**
+     * @public
+     * @abstract
+     * @readonly
+     * @member {String}
+     */
+    get: function get() {
+      return 'resource';
+    }
+  }]);
+
+  return ResourceType;
+}();
+
+exports.default = ResourceType;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
@@ -4057,7 +4339,7 @@ var Playable = function () {
 exports.default = Playable;
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4100,7 +4382,7 @@ var ParticleModifier = function () {
 exports.default = ParticleModifier;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4144,7 +4426,7 @@ var Animation = function () {
 exports.default = Animation;
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4374,7 +4656,7 @@ var ObservableVector = function (_Vector) {
 exports.default = ObservableVector;
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4584,7 +4866,7 @@ var Clock = function () {
 exports.default = Clock;
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4719,7 +5001,7 @@ var Renderer = function () {
 exports.default = Renderer;
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4728,6 +5010,8 @@ exports.default = Renderer;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -4971,21 +5255,45 @@ var Shader = function () {
     }, {
         key: 'syncAttributes',
         value: function syncAttributes() {
-            var _this = this;
-
             var gl = this._context;
 
-            this._attributes.forEach(function (attribute, name) {
-                if (attribute.location === null) {
-                    attribute.location = gl.getAttribLocation(_this._program, name);
-                }
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
 
-                if (attribute.active) {
-                    gl.enableVertexAttribArray(attribute.location);
-                } else {
-                    gl.disableVertexAttribArray(attribute.location);
+            try {
+                for (var _iterator = this._attributes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var _ref = _step.value;
+
+                    var _ref2 = _slicedToArray(_ref, 2);
+
+                    var name = _ref2[0];
+                    var attribute = _ref2[1];
+
+                    if (attribute.location === null) {
+                        attribute.location = gl.getAttribLocation(this._program, name);
+                    }
+
+                    if (attribute.active) {
+                        gl.enableVertexAttribArray(attribute.location);
+                    } else {
+                        gl.disableVertexAttribArray(attribute.location);
+                    }
                 }
-            });
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
         }
 
         /**
@@ -5064,11 +5372,30 @@ var Shader = function () {
     }, {
         key: 'syncUniforms',
         value: function syncUniforms() {
-            var _this2 = this;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
-            this._uniforms.forEach(function (uniform) {
-                _this2._uploadUniform(uniform);
-            });
+            try {
+                for (var _iterator2 = this._uniforms.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var uniform = _step2.value;
+
+                    this._uploadUniform(uniform);
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
         }
 
         /**
@@ -5190,17 +5517,59 @@ var Shader = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            var _this3 = this;
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
 
-            this._uniforms.forEach(function (uniform, name) {
-                _this3.removeUniform(name);
-            });
+            try {
+                for (var _iterator3 = this._uniforms.keys()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                    var name = _step3.value;
+
+                    this.removeUniform(name);
+                }
+            } catch (err) {
+                _didIteratorError3 = true;
+                _iteratorError3 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                        _iterator3.return();
+                    }
+                } finally {
+                    if (_didIteratorError3) {
+                        throw _iteratorError3;
+                    }
+                }
+            }
+
             this._uniforms.clear();
             this._uniforms = null;
 
-            this._attributes.forEach(function (attribute, name) {
-                _this3.removeAttribute(name);
-            });
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+                for (var _iterator4 = this._attributes.keys()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var _name = _step4.value;
+
+                    this.removeAttribute(_name);
+                }
+            } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
+                    }
+                } finally {
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
+                    }
+                }
+            }
+
             this._attributes.clear();
             this._attributes = null;
 
@@ -5491,7 +5860,7 @@ var Shader = function () {
 exports.default = Shader;
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5523,22 +5892,19 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var offset = _const.INPUT_DEVICE.GAMEPAD * _const.CHANNEL_RANGE_DEVICE;
-
 /**
  * @class Gamepad
  * @extends {Exo.ChannelHandler}
  * @memberof Exo
  */
-
 var Gamepad = function (_ChannelHandler) {
   _inherits(Gamepad, _ChannelHandler);
 
   /**
    * @constructor
    * @param {ArrayBuffer} channelBuffer
-   * @param {Number} [index=0]
-   * @param {Gamepad} [gamepad]
+   * @param {Number} index
+   * @param {Gamepad} gamepad
    */
   function Gamepad(channelBuffer, index, gamepad) {
     _classCallCheck(this, Gamepad);
@@ -5547,15 +5913,15 @@ var Gamepad = function (_ChannelHandler) {
      * @private
      * @member {Number}
      */
-    var _this = _possibleConstructorReturn(this, (Gamepad.__proto__ || Object.getPrototypeOf(Gamepad)).call(this, channelBuffer, offset | index * _const.CHANNEL_RANGE_HANDLER, _const.CHANNEL_RANGE_HANDLER));
+    var _this = _possibleConstructorReturn(this, (Gamepad.__proto__ || Object.getPrototypeOf(Gamepad)).call(this, channelBuffer, _const.CHANNEL_OFFSET.GAMEPAD | index * _const.CHANNEL_LENGTH.CHILD, _const.CHANNEL_LENGTH.CHILD));
 
-    _this._index = index | 0;
+    _this._index = index;
 
     /**
      * @private
      * @member {Gamepad}
      */
-    _this._rawGamepad = gamepad;
+    _this._gamepad = gamepad;
 
     /**
      * @private
@@ -5567,6 +5933,7 @@ var Gamepad = function (_ChannelHandler) {
 
   /**
    * @public
+   * @readonly
    * @member {Exo.Gamepad}
    */
 
@@ -5579,51 +5946,64 @@ var Gamepad = function (_ChannelHandler) {
      * @public
      */
     value: function update() {
-      var rawGamepad = this._rawGamepad,
-          mapping = this._mapping;
-
       if (!this.active) {
         return;
       }
 
-      this.updateButtons(rawGamepad.buttons, mapping.buttons);
-      this.updateButtons(rawGamepad.axes, mapping.axes);
+      this.updateControls(this._gamepad.buttons, this._mapping.buttons);
+      this.updateControls(this._gamepad.axes, this._mapping.axes);
     }
 
     /**
      * @public
-     * @param {Exo.GamepadButton[]|Number[]} buttons
+     * @param {GamepadButton[]|Number[]} buttons
      * @param {Exo.GamepadButton[]} mappingButtons
      */
 
   }, {
-    key: 'updateButtons',
-    value: function updateButtons(buttons, mappingButtons) {
-      var channels = this.channels;
+    key: 'updateControls',
+    value: function updateControls(buttons, mappingButtons) {
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
 
-      mappingButtons.forEach(function (mappingButton) {
-        if (mappingButton.index in buttons) {
-          channels[mappingButton.keyCode] = mappingButton.getMappedValue(buttons[mappingButton.index]);
+      try {
+        for (var _iterator = mappingButtons[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var mappingButton = _step.value;
+
+          if (mappingButton.index in buttons) {
+            this.channels[mappingButton.keyCode] = mappingButton.transformValue(buttons[mappingButton.index]);
+          }
         }
-      });
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
     }
 
     /**
-     * @public
-     * @param {Boolean} [resetChannels=false]
+     * @override
      */
 
   }, {
     key: 'destroy',
     value: function destroy() {
-      var resetChannels = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-      _get(Gamepad.prototype.__proto__ || Object.getPrototypeOf(Gamepad.prototype), 'destroy', this).call(this, resetChannels);
+      _get(Gamepad.prototype.__proto__ || Object.getPrototypeOf(Gamepad.prototype), 'destroy', this).call(this);
 
       this._mapping.destroy();
       this._mapping = null;
 
-      this._rawGamepad = null;
+      this._gamepad = null;
       this._index = null;
     }
 
@@ -5636,16 +6016,14 @@ var Gamepad = function (_ChannelHandler) {
      */
 
   }, {
-    key: 'rawGamepad',
+    key: 'gamepad',
     get: function get() {
-      return this._rawGamepad;
-    },
-    set: function set(value) {
-      this._rawGamepad = value;
+      return this._gamepad;
     }
 
     /**
      * @public
+     * @readonly
      * @member {Number}
      */
 
@@ -5653,12 +6031,6 @@ var Gamepad = function (_ChannelHandler) {
     key: 'index',
     get: function get() {
       return this._index;
-    },
-    set: function set(value) {
-      if (this._index !== value) {
-        this._index = value | 0;
-        this.setChannelOffset(offset | this._index * _const.CHANNEL_RANGE_HANDLER, _const.CHANNEL_RANGE_HANDLER);
-      }
     }
 
     /**
@@ -5679,7 +6051,7 @@ var Gamepad = function (_ChannelHandler) {
     value: function getChannelCode(key) {
       var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-      return offset | (index * _const.CHANNEL_RANGE_HANDLER | key & 255);
+      return _const.CHANNEL_OFFSET.GAMEPAD | (index * _const.CHANNEL_LENGTH.CHILD | key);
     }
   }]);
 
@@ -5694,119 +6066,119 @@ var Gamepad = function (_ChannelHandler) {
 
 
 exports.default = Gamepad;
-Gamepad.FaceButtonBottom = offset | 0;
+Gamepad.FaceButtonBottom = _const.CHANNEL_OFFSET.GAMEPAD | 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonLeft = offset | 1;
+Gamepad.FaceButtonLeft = _const.CHANNEL_OFFSET.GAMEPAD | 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonRight = offset | 2;
+Gamepad.FaceButtonRight = _const.CHANNEL_OFFSET.GAMEPAD | 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonTop = offset | 3;
+Gamepad.FaceButtonTop = _const.CHANNEL_OFFSET.GAMEPAD | 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftTriggerBottom = offset | 4;
+Gamepad.LeftTriggerBottom = _const.CHANNEL_OFFSET.GAMEPAD | 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightTriggerBottom = offset | 5;
+Gamepad.RightTriggerBottom = _const.CHANNEL_OFFSET.GAMEPAD | 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftTriggerTop = offset | 6;
+Gamepad.LeftTriggerTop = _const.CHANNEL_OFFSET.GAMEPAD | 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightTriggerTop = offset | 7;
+Gamepad.RightTriggerTop = _const.CHANNEL_OFFSET.GAMEPAD | 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Select = offset | 8;
+Gamepad.Select = _const.CHANNEL_OFFSET.GAMEPAD | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Start = offset | 9;
+Gamepad.Start = _const.CHANNEL_OFFSET.GAMEPAD | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickButton = offset | 10;
+Gamepad.LeftStickButton = _const.CHANNEL_OFFSET.GAMEPAD | 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickButton = offset | 11;
+Gamepad.RightStickButton = _const.CHANNEL_OFFSET.GAMEPAD | 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadUp = offset | 12;
+Gamepad.DPadUp = _const.CHANNEL_OFFSET.GAMEPAD | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadDown = offset | 13;
+Gamepad.DPadDown = _const.CHANNEL_OFFSET.GAMEPAD | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadLeft = offset | 14;
+Gamepad.DPadLeft = _const.CHANNEL_OFFSET.GAMEPAD | 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadRight = offset | 15;
+Gamepad.DPadRight = _const.CHANNEL_OFFSET.GAMEPAD | 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Special = offset | 16;
+Gamepad.Special = _const.CHANNEL_OFFSET.GAMEPAD | 16;
 
 /**
  * Left analogue stick
@@ -5817,28 +6189,28 @@ Gamepad.Special = offset | 16;
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickLeft = offset | 17;
+Gamepad.LeftStickLeft = _const.CHANNEL_OFFSET.GAMEPAD | 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickRight = offset | 18;
+Gamepad.LeftStickRight = _const.CHANNEL_OFFSET.GAMEPAD | 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickUp = offset | 19;
+Gamepad.LeftStickUp = _const.CHANNEL_OFFSET.GAMEPAD | 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickDown = offset | 20;
+Gamepad.LeftStickDown = _const.CHANNEL_OFFSET.GAMEPAD | 20;
 
 /**
  * Right analogue stick
@@ -5849,31 +6221,31 @@ Gamepad.LeftStickDown = offset | 20;
  * @static
  * @member {Number}
  */
-Gamepad.RightStickLeft = offset | 21;
+Gamepad.RightStickLeft = _const.CHANNEL_OFFSET.GAMEPAD | 21;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickRight = offset | 22;
+Gamepad.RightStickRight = _const.CHANNEL_OFFSET.GAMEPAD | 22;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickUp = offset | 23;
+Gamepad.RightStickUp = _const.CHANNEL_OFFSET.GAMEPAD | 23;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickDown = offset | 24;
+Gamepad.RightStickDown = _const.CHANNEL_OFFSET.GAMEPAD | 24;
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5885,9 +6257,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _ResourceType2 = __webpack_require__(19);
+var _ResourceType2 = __webpack_require__(10);
 
 var _ResourceType3 = _interopRequireDefault(_ResourceType2);
 
@@ -5914,16 +6284,14 @@ var ArrayBufferType = function (_ResourceType) {
   }
 
   _createClass(ArrayBufferType, [{
-    key: 'loadSource',
+    key: 'create',
 
 
     /**
      * @override
      */
-    value: function loadSource(path, request) {
-      return _get(ArrayBufferType.prototype.__proto__ || Object.getPrototypeOf(ArrayBufferType.prototype), 'loadSource', this).call(this, path, request).then(function (response) {
-        return response.arrayBuffer();
-      });
+    value: function create(response, options) {
+      return Promise.resolve(response.arrayBuffer());
     }
   }, {
     key: 'storageKey',
@@ -5943,7 +6311,7 @@ var ArrayBufferType = function (_ResourceType) {
 exports.default = ArrayBufferType;
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5955,108 +6323,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @abstract
- * @class ResourceType
- * @memberof Exo
- */
-var ResourceType = function () {
-  function ResourceType() {
-    _classCallCheck(this, ResourceType);
-  }
-
-  _createClass(ResourceType, [{
-    key: 'loadSource',
-
-
-    /**
-     * @public
-     * @abstract
-     * @param {String} path
-     * @param {Object} [request]
-     * @param {String} [request.method='GET']
-     * @param {String} [request.mode='cors']
-     * @returns {Promise}
-     */
-    value: function loadSource(path) {
-      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-          _ref$method = _ref.method,
-          method = _ref$method === undefined ? 'GET' : _ref$method,
-          _ref$mode = _ref.mode,
-          mode = _ref$mode === undefined ? 'cors' : _ref$mode;
-
-      return fetch(path, { method: method, mode: mode });
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @param {*} source
-     * @param {Object} [options]
-     * @returns {Promise}
-     */
-
-  }, {
-    key: 'create',
-    value: function create(source, options) {
-      return Promise.resolve(source);
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @param {String} path
-     * @param {Object} [options]
-     * @returns {Promise}
-     */
-
-  }, {
-    key: 'load',
-    value: function load(path, options) {
-      var _this = this;
-
-      return this.loadSource(path).then(function (source) {
-        return _this.create(source, options);
-      });
-    }
-  }, {
-    key: 'storageKey',
-
-
-    /**
-     * @public
-     * @abstract
-     * @readonly
-     * @member {String}
-     */
-    get: function get() {
-      return 'resource';
-    }
-  }]);
-
-  return ResourceType;
-}();
-
-exports.default = ResourceType;
-
-/***/ }),
-/* 20 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(18);
+var _ArrayBufferType2 = __webpack_require__(19);
 
 var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
 
@@ -6074,63 +6343,33 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @memberof Exo
  */
 var BlobType = function (_ArrayBufferType) {
-    _inherits(BlobType, _ArrayBufferType);
+  _inherits(BlobType, _ArrayBufferType);
 
-    function BlobType() {
-        _classCallCheck(this, BlobType);
+  function BlobType() {
+    _classCallCheck(this, BlobType);
 
-        return _possibleConstructorReturn(this, (BlobType.__proto__ || Object.getPrototypeOf(BlobType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (BlobType.__proto__ || Object.getPrototypeOf(BlobType)).apply(this, arguments));
+  }
+
+  _createClass(BlobType, [{
+    key: 'create',
+
+
+    /**
+     * @override
+     */
+    value: function create(response) {
+      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+          _ref$mimeType = _ref.mimeType,
+          mimeType = _ref$mimeType === undefined ? 'text/plain' : _ref$mimeType;
+
+      return _get(BlobType.prototype.__proto__ || Object.getPrototypeOf(BlobType.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
+        return new Blob([arrayBuffer], { type: mimeType });
+      });
     }
+  }]);
 
-    _createClass(BlobType, [{
-        key: 'loadSource',
-
-
-        /**
-         * @override
-         */
-        value: function loadSource(path, request) {
-            return _get(BlobType.prototype.__proto__ || Object.getPrototypeOf(BlobType.prototype), 'loadSource', this).call(this, path, request);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'load',
-        value: function load(path) {
-            var _this2 = this;
-
-            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                _ref$mimeType = _ref.mimeType,
-                mimeType = _ref$mimeType === undefined ? 'plain/text' : _ref$mimeType;
-
-            return this.loadSource(path).then(function (source) {
-                return _this2.create(source, { mimeType: mimeType });
-            });
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'create',
-        value: function create(source) {
-            var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                _ref2$mimeType = _ref2.mimeType,
-                mimeType = _ref2$mimeType === undefined ? 'plain/text' : _ref2$mimeType;
-
-            return _get(BlobType.prototype.__proto__ || Object.getPrototypeOf(BlobType.prototype), 'create', this).call(this, source).then(function (arrayBuffer) {
-                return new Blob([arrayBuffer], {
-                    type: mimeType
-                });
-            });
-        }
-    }]);
-
-    return BlobType;
+  return BlobType;
 }(_ArrayBufferType3.default);
 
 exports.default = BlobType;
@@ -6352,7 +6591,7 @@ var _Color = __webpack_require__(6);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _ObservableVector = __webpack_require__(13);
+var _ObservableVector = __webpack_require__(14);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -6908,7 +7147,7 @@ var _EventEmitter2 = __webpack_require__(5);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ObservableVector = __webpack_require__(13);
+var _ObservableVector = __webpack_require__(14);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -8226,13 +8465,32 @@ var DisplayManager = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            var _this = this;
-
             this._removeEvents();
 
-            this._renderers.forEach(function (renderer, name) {
-                _this.removeRenderer(name);
-            });
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._renderers.keys()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var name = _step.value;
+
+                    this.removeRenderer(name);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
 
             this._canvas = null;
             this._context = null;
@@ -8638,7 +8896,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ObservableVector = __webpack_require__(13);
+var _ObservableVector = __webpack_require__(14);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -9014,7 +9272,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderer2 = __webpack_require__(15);
+var _Renderer2 = __webpack_require__(16);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -9292,7 +9550,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Shader2 = __webpack_require__(16);
+var _Shader2 = __webpack_require__(17);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -9835,7 +10093,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderer2 = __webpack_require__(15);
+var _Renderer2 = __webpack_require__(16);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -10126,7 +10384,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Shader2 = __webpack_require__(16);
+var _Shader2 = __webpack_require__(17);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -10650,7 +10908,7 @@ var InputManager = function (_ChannelHandler) {
          * @private
          * @member {Exo.Game}
          */
-        var _this = _possibleConstructorReturn(this, (InputManager.__proto__ || Object.getPrototypeOf(InputManager)).call(this, new ArrayBuffer(_const.CHANNEL_RANGE_DEVICE * 16), 0, _const.CHANNEL_RANGE_DEVICE * 4));
+        var _this = _possibleConstructorReturn(this, (InputManager.__proto__ || Object.getPrototypeOf(InputManager)).call(this, new ArrayBuffer(_const.CHANNEL_LENGTH.GLOBAL * 4), 0, _const.CHANNEL_LENGTH.GLOBAL));
 
         _this._game = game;
 
@@ -10690,43 +10948,83 @@ var InputManager = function (_ChannelHandler) {
 
     /**
      * @public
-     * @param {Exo.Input|Exo.Input[]} input
+     * @param {Exo.Input|Exo.Input[]} inputs
      */
 
 
     _createClass(InputManager, [{
         key: 'add',
-        value: function add(input) {
-            var _this2 = this;
+        value: function add(inputs) {
+            if (Array.isArray(inputs)) {
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
 
-            if (Array.isArray(input)) {
-                input.forEach(function (input) {
-                    _this2._inputs.add(input);
-                });
+                try {
+                    for (var _iterator = inputs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var input = _step.value;
+
+                        this._inputs.add(input);
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
+
                 return;
             }
 
-            this._inputs.add(input);
+            this._inputs.add(inputs);
         }
 
         /**
          * @public
-         * @param {Exo.Input|Exo.Input[]} input
+         * @param {Exo.Input|Exo.Input[]} inputs
          */
 
     }, {
         key: 'remove',
-        value: function remove(input) {
-            var _this3 = this;
+        value: function remove(inputs) {
+            if (Array.isArray(inputs)) {
+                var _iteratorNormalCompletion2 = true;
+                var _didIteratorError2 = false;
+                var _iteratorError2 = undefined;
 
-            if (Array.isArray(input)) {
-                input.forEach(function (input) {
-                    _this3._inputs.delete(input);
-                });
+                try {
+                    for (var _iterator2 = inputs[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                        var input = _step2.value;
+
+                        this._inputs.delete(input);
+                    }
+                } catch (err) {
+                    _didIteratorError2 = true;
+                    _iteratorError2 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                            _iterator2.return();
+                        }
+                    } finally {
+                        if (_didIteratorError2) {
+                            throw _iteratorError2;
+                        }
+                    }
+                }
+
                 return;
             }
 
-            this._inputs.delete(input);
+            this._inputs.delete(inputs);
         }
 
         /**
@@ -10740,9 +11038,30 @@ var InputManager = function (_ChannelHandler) {
             var destroyInputs = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
             if (destroyInputs) {
-                this._inputs.forEach(function (input) {
-                    input.destroy();
-                });
+                var _iteratorNormalCompletion3 = true;
+                var _didIteratorError3 = false;
+                var _iteratorError3 = undefined;
+
+                try {
+                    for (var _iterator3 = this._inputs[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                        var input = _step3.value;
+
+                        input.destroy();
+                    }
+                } catch (err) {
+                    _didIteratorError3 = true;
+                    _iteratorError3 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                            _iterator3.return();
+                        }
+                    } finally {
+                        if (_didIteratorError3) {
+                            throw _iteratorError3;
+                        }
+                    }
+                }
             }
 
             this._inputs.clear();
@@ -10758,9 +11077,32 @@ var InputManager = function (_ChannelHandler) {
             var channels = this.channels;
 
             this._gamepadManager.update();
-            this._inputs.forEach(function (input) {
-                input.update(channels);
-            });
+
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+                for (var _iterator4 = this._inputs[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var input = _step4.value;
+
+                    input.update(channels);
+                }
+            } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
+                    }
+                } finally {
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
+                    }
+                }
+            }
+
             this._mouse.update();
         }
 
@@ -10828,14 +11170,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var offset = _const.INPUT_DEVICE.KEYBOARD * _const.CHANNEL_RANGE_DEVICE;
-
 /**
  * @class Keyboard
  * @extends {Exo.ChannelHandler}
  * @memberof Exo
  */
-
 var Keyboard = function (_ChannelHandler) {
   _inherits(Keyboard, _ChannelHandler);
 
@@ -10851,7 +11190,7 @@ var Keyboard = function (_ChannelHandler) {
      * @private
      * @member {Exo.Game}
      */
-    var _this = _possibleConstructorReturn(this, (Keyboard.__proto__ || Object.getPrototypeOf(Keyboard)).call(this, channelBuffer, offset, _const.CHANNEL_RANGE_DEVICE));
+    var _this = _possibleConstructorReturn(this, (Keyboard.__proto__ || Object.getPrototypeOf(Keyboard)).call(this, channelBuffer, _const.CHANNEL_OFFSET.KEYBOARD, _const.CHANNEL_LENGTH.DEVICE));
 
     _this._game = game;
 
@@ -10860,17 +11199,14 @@ var Keyboard = function (_ChannelHandler) {
   }
 
   /**
-   * @public
-   * @param {Boolean} [resetChannels=false]
+   * @override
    */
 
 
   _createClass(Keyboard, [{
     key: 'destroy',
     value: function destroy() {
-      var resetChannels = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-      _get(Keyboard.prototype.__proto__ || Object.getPrototypeOf(Keyboard.prototype), 'destroy', this).call(this, resetChannels);
+      _get(Keyboard.prototype.__proto__ || Object.getPrototypeOf(Keyboard.prototype), 'destroy', this).call(this);
 
       this._removeEventListeners();
       this._game = null;
@@ -10943,14 +11279,14 @@ var Keyboard = function (_ChannelHandler) {
     /**
      * @public
      * @static
-     * @param {Number} keyCode
+     * @param {Number} key
      * @returns {Number}
      */
 
   }], [{
     key: 'getChannelCode',
-    value: function getChannelCode(keyCode) {
-      return offset | keyCode & 255;
+    value: function getChannelCode(key) {
+      return _const.CHANNEL_OFFSET.KEYBOARD | key;
     }
   }]);
 
@@ -10965,693 +11301,693 @@ var Keyboard = function (_ChannelHandler) {
 
 
 exports.default = Keyboard;
-Keyboard.Backspace = offset | 8;
+Keyboard.Backspace = _const.CHANNEL_OFFSET.KEYBOARD | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tab = offset | 9;
+Keyboard.Tab = _const.CHANNEL_OFFSET.KEYBOARD | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Clear = offset | 12;
+Keyboard.Clear = _const.CHANNEL_OFFSET.KEYBOARD | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Enter = offset | 13;
+Keyboard.Enter = _const.CHANNEL_OFFSET.KEYBOARD | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Shift = offset | 16;
+Keyboard.Shift = _const.CHANNEL_OFFSET.KEYBOARD | 16;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Control = offset | 17;
+Keyboard.Control = _const.CHANNEL_OFFSET.KEYBOARD | 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Alt = offset | 18;
+Keyboard.Alt = _const.CHANNEL_OFFSET.KEYBOARD | 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Pause = offset | 19;
+Keyboard.Pause = _const.CHANNEL_OFFSET.KEYBOARD | 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.CapsLock = offset | 20;
+Keyboard.CapsLock = _const.CHANNEL_OFFSET.KEYBOARD | 20;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Escape = offset | 27;
+Keyboard.Escape = _const.CHANNEL_OFFSET.KEYBOARD | 27;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Space = offset | 32;
+Keyboard.Space = _const.CHANNEL_OFFSET.KEYBOARD | 32;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageUp = offset | 33;
+Keyboard.PageUp = _const.CHANNEL_OFFSET.KEYBOARD | 33;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageDown = offset | 34;
+Keyboard.PageDown = _const.CHANNEL_OFFSET.KEYBOARD | 34;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.End = offset | 35;
+Keyboard.End = _const.CHANNEL_OFFSET.KEYBOARD | 35;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Home = offset | 36;
+Keyboard.Home = _const.CHANNEL_OFFSET.KEYBOARD | 36;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Left = offset | 37;
+Keyboard.Left = _const.CHANNEL_OFFSET.KEYBOARD | 37;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Up = offset | 38;
+Keyboard.Up = _const.CHANNEL_OFFSET.KEYBOARD | 38;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Right = offset | 39;
+Keyboard.Right = _const.CHANNEL_OFFSET.KEYBOARD | 39;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Down = offset | 40;
+Keyboard.Down = _const.CHANNEL_OFFSET.KEYBOARD | 40;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Insert = offset | 45;
+Keyboard.Insert = _const.CHANNEL_OFFSET.KEYBOARD | 45;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Delete = offset | 46;
+Keyboard.Delete = _const.CHANNEL_OFFSET.KEYBOARD | 46;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Help = offset | 47;
+Keyboard.Help = _const.CHANNEL_OFFSET.KEYBOARD | 47;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Zero = offset | 48;
+Keyboard.Zero = _const.CHANNEL_OFFSET.KEYBOARD | 48;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.One = offset | 49;
+Keyboard.One = _const.CHANNEL_OFFSET.KEYBOARD | 49;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Two = offset | 50;
+Keyboard.Two = _const.CHANNEL_OFFSET.KEYBOARD | 50;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Three = offset | 51;
+Keyboard.Three = _const.CHANNEL_OFFSET.KEYBOARD | 51;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Four = offset | 52;
+Keyboard.Four = _const.CHANNEL_OFFSET.KEYBOARD | 52;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Five = offset | 53;
+Keyboard.Five = _const.CHANNEL_OFFSET.KEYBOARD | 53;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Six = offset | 54;
+Keyboard.Six = _const.CHANNEL_OFFSET.KEYBOARD | 54;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Seven = offset | 55;
+Keyboard.Seven = _const.CHANNEL_OFFSET.KEYBOARD | 55;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Eight = offset | 56;
+Keyboard.Eight = _const.CHANNEL_OFFSET.KEYBOARD | 56;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Nine = offset | 57;
+Keyboard.Nine = _const.CHANNEL_OFFSET.KEYBOARD | 57;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.A = offset | 65;
+Keyboard.A = _const.CHANNEL_OFFSET.KEYBOARD | 65;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.B = offset | 66;
+Keyboard.B = _const.CHANNEL_OFFSET.KEYBOARD | 66;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.C = offset | 67;
+Keyboard.C = _const.CHANNEL_OFFSET.KEYBOARD | 67;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.D = offset | 68;
+Keyboard.D = _const.CHANNEL_OFFSET.KEYBOARD | 68;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.E = offset | 69;
+Keyboard.E = _const.CHANNEL_OFFSET.KEYBOARD | 69;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F = offset | 70;
+Keyboard.F = _const.CHANNEL_OFFSET.KEYBOARD | 70;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.G = offset | 71;
+Keyboard.G = _const.CHANNEL_OFFSET.KEYBOARD | 71;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.H = offset | 72;
+Keyboard.H = _const.CHANNEL_OFFSET.KEYBOARD | 72;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.I = offset | 73;
+Keyboard.I = _const.CHANNEL_OFFSET.KEYBOARD | 73;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.J = offset | 74;
+Keyboard.J = _const.CHANNEL_OFFSET.KEYBOARD | 74;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.K = offset | 75;
+Keyboard.K = _const.CHANNEL_OFFSET.KEYBOARD | 75;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.L = offset | 76;
+Keyboard.L = _const.CHANNEL_OFFSET.KEYBOARD | 76;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.M = offset | 77;
+Keyboard.M = _const.CHANNEL_OFFSET.KEYBOARD | 77;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.N = offset | 78;
+Keyboard.N = _const.CHANNEL_OFFSET.KEYBOARD | 78;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.O = offset | 79;
+Keyboard.O = _const.CHANNEL_OFFSET.KEYBOARD | 79;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.P = offset | 80;
+Keyboard.P = _const.CHANNEL_OFFSET.KEYBOARD | 80;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Q = offset | 81;
+Keyboard.Q = _const.CHANNEL_OFFSET.KEYBOARD | 81;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.R = offset | 82;
+Keyboard.R = _const.CHANNEL_OFFSET.KEYBOARD | 82;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.S = offset | 83;
+Keyboard.S = _const.CHANNEL_OFFSET.KEYBOARD | 83;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.T = offset | 84;
+Keyboard.T = _const.CHANNEL_OFFSET.KEYBOARD | 84;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.U = offset | 85;
+Keyboard.U = _const.CHANNEL_OFFSET.KEYBOARD | 85;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.V = offset | 86;
+Keyboard.V = _const.CHANNEL_OFFSET.KEYBOARD | 86;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.W = offset | 87;
+Keyboard.W = _const.CHANNEL_OFFSET.KEYBOARD | 87;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.X = offset | 88;
+Keyboard.X = _const.CHANNEL_OFFSET.KEYBOARD | 88;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Y = offset | 89;
+Keyboard.Y = _const.CHANNEL_OFFSET.KEYBOARD | 89;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Z = offset | 90;
+Keyboard.Z = _const.CHANNEL_OFFSET.KEYBOARD | 90;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad0 = offset | 96;
+Keyboard.NumPad0 = _const.CHANNEL_OFFSET.KEYBOARD | 96;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad1 = offset | 97;
+Keyboard.NumPad1 = _const.CHANNEL_OFFSET.KEYBOARD | 97;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad2 = offset | 98;
+Keyboard.NumPad2 = _const.CHANNEL_OFFSET.KEYBOARD | 98;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad3 = offset | 99;
+Keyboard.NumPad3 = _const.CHANNEL_OFFSET.KEYBOARD | 99;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad4 = offset | 100;
+Keyboard.NumPad4 = _const.CHANNEL_OFFSET.KEYBOARD | 100;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad5 = offset | 101;
+Keyboard.NumPad5 = _const.CHANNEL_OFFSET.KEYBOARD | 101;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad6 = offset | 102;
+Keyboard.NumPad6 = _const.CHANNEL_OFFSET.KEYBOARD | 102;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad7 = offset | 103;
+Keyboard.NumPad7 = _const.CHANNEL_OFFSET.KEYBOARD | 103;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad8 = offset | 104;
+Keyboard.NumPad8 = _const.CHANNEL_OFFSET.KEYBOARD | 104;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad9 = offset | 105;
+Keyboard.NumPad9 = _const.CHANNEL_OFFSET.KEYBOARD | 105;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadMultiply = offset | 106;
+Keyboard.NumPadMultiply = _const.CHANNEL_OFFSET.KEYBOARD | 106;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadAdd = offset | 107;
+Keyboard.NumPadAdd = _const.CHANNEL_OFFSET.KEYBOARD | 107;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadEnter = offset | 108;
+Keyboard.NumPadEnter = _const.CHANNEL_OFFSET.KEYBOARD | 108;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadSubtract = offset | 109;
+Keyboard.NumPadSubtract = _const.CHANNEL_OFFSET.KEYBOARD | 109;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDecimal = offset | 110;
+Keyboard.NumPadDecimal = _const.CHANNEL_OFFSET.KEYBOARD | 110;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDivide = offset | 111;
+Keyboard.NumPadDivide = _const.CHANNEL_OFFSET.KEYBOARD | 111;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F1 = offset | 112;
+Keyboard.F1 = _const.CHANNEL_OFFSET.KEYBOARD | 112;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F2 = offset | 113;
+Keyboard.F2 = _const.CHANNEL_OFFSET.KEYBOARD | 113;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F3 = offset | 114;
+Keyboard.F3 = _const.CHANNEL_OFFSET.KEYBOARD | 114;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F4 = offset | 115;
+Keyboard.F4 = _const.CHANNEL_OFFSET.KEYBOARD | 115;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F5 = offset | 116;
+Keyboard.F5 = _const.CHANNEL_OFFSET.KEYBOARD | 116;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F6 = offset | 117;
+Keyboard.F6 = _const.CHANNEL_OFFSET.KEYBOARD | 117;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F7 = offset | 118;
+Keyboard.F7 = _const.CHANNEL_OFFSET.KEYBOARD | 118;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F8 = offset | 119;
+Keyboard.F8 = _const.CHANNEL_OFFSET.KEYBOARD | 119;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F9 = offset | 120;
+Keyboard.F9 = _const.CHANNEL_OFFSET.KEYBOARD | 120;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F10 = offset | 121;
+Keyboard.F10 = _const.CHANNEL_OFFSET.KEYBOARD | 121;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F11 = offset | 122;
+Keyboard.F11 = _const.CHANNEL_OFFSET.KEYBOARD | 122;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F12 = offset | 123;
+Keyboard.F12 = _const.CHANNEL_OFFSET.KEYBOARD | 123;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumLock = offset | 144;
+Keyboard.NumLock = _const.CHANNEL_OFFSET.KEYBOARD | 144;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ScrollLock = offset | 145;
+Keyboard.ScrollLock = _const.CHANNEL_OFFSET.KEYBOARD | 145;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Colon = offset | 186;
+Keyboard.Colon = _const.CHANNEL_OFFSET.KEYBOARD | 186;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Equals = offset | 187;
+Keyboard.Equals = _const.CHANNEL_OFFSET.KEYBOARD | 187;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Comma = offset | 188;
+Keyboard.Comma = _const.CHANNEL_OFFSET.KEYBOARD | 188;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Dash = offset | 189;
+Keyboard.Dash = _const.CHANNEL_OFFSET.KEYBOARD | 189;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Period = offset | 190;
+Keyboard.Period = _const.CHANNEL_OFFSET.KEYBOARD | 190;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.QuestionMark = offset | 191;
+Keyboard.QuestionMark = _const.CHANNEL_OFFSET.KEYBOARD | 191;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tilde = offset | 192;
+Keyboard.Tilde = _const.CHANNEL_OFFSET.KEYBOARD | 192;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.OpenBracket = offset | 219;
+Keyboard.OpenBracket = _const.CHANNEL_OFFSET.KEYBOARD | 219;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.BackwardSlash = offset | 220;
+Keyboard.BackwardSlash = _const.CHANNEL_OFFSET.KEYBOARD | 220;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ClosedBracket = offset | 221;
+Keyboard.ClosedBracket = _const.CHANNEL_OFFSET.KEYBOARD | 221;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Quotes = offset | 222;
+Keyboard.Quotes = _const.CHANNEL_OFFSET.KEYBOARD | 222;
 
 /***/ }),
 /* 42 */
@@ -11686,14 +12022,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var offset = _const.INPUT_DEVICE.MOUSE * _const.CHANNEL_RANGE_DEVICE;
-
 /**
  * @class Mouse
  * @extends {Exo.ChannelHandler}
  * @memberof Exo
  */
-
 var Mouse = function (_ChannelHandler) {
   _inherits(Mouse, _ChannelHandler);
 
@@ -11709,7 +12042,7 @@ var Mouse = function (_ChannelHandler) {
      * @private
      * @member {Exo.Game}
      */
-    var _this = _possibleConstructorReturn(this, (Mouse.__proto__ || Object.getPrototypeOf(Mouse)).call(this, channelBuffer, offset, _const.CHANNEL_RANGE_DEVICE));
+    var _this = _possibleConstructorReturn(this, (Mouse.__proto__ || Object.getPrototypeOf(Mouse)).call(this, channelBuffer, _const.CHANNEL_OFFSET.MOUSE, _const.CHANNEL_LENGTH.DEVICE));
 
     _this._game = game;
 
@@ -11780,7 +12113,7 @@ var Mouse = function (_ChannelHandler) {
       }
 
       if (this._stateChanged) {
-        this._insideWindow = this.windowEntered;
+        this._insideWindow = this.hasEnteredWindow;
 
         if (this._insideWindow) {
 
@@ -11832,7 +12165,7 @@ var Mouse = function (_ChannelHandler) {
     }
 
     /**
-     * @public
+     * @override
      */
 
   }, {
@@ -11955,14 +12288,12 @@ var Mouse = function (_ChannelHandler) {
   }, {
     key: '_onMouseMove',
     value: function _onMouseMove(event) {
-      var canvas = this._canvas,
-          position = this._position,
-          newX = event.clientX - canvas.offsetLeft,
-          newY = event.clientY - canvas.offsetTop;
+      var rect = this._canvas.getBoundingClientRect(),
+          x = event.clientX - rect.left,
+          y = event.clientY - rect.top;
 
-      this._setPositionDelta(newX - position.x, newY - position.y);
-      position.set(newX, newY);
-
+      this._setPositionDelta(x - this.x, y - this.y);
+      this._position.set(x, y);
       this._positionChanged = true;
     }
 
@@ -12059,8 +12390,21 @@ var Mouse = function (_ChannelHandler) {
     /**
      * @public
      * @static
-     * @param {Number} keyCode
+     * @param {Number} key
      * @returns {Number}
+     */
+
+  }, {
+    key: 'position',
+    get: function get() {
+      return this._position;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     * @memberof Mouse
      */
 
   }, {
@@ -12085,25 +12429,12 @@ var Mouse = function (_ChannelHandler) {
     /**
      * @public
      * @readonly
-     * @member {Number}
-     * @memberof Mouse
-     */
-
-  }, {
-    key: 'position',
-    get: function get() {
-      return this._position;
-    }
-
-    /**
-     * @public
-     * @readonly
      * @member {Boolean}
      * @memberof Mouse
      */
 
   }, {
-    key: 'insideWindow',
+    key: 'isInsideFrame',
     get: function get() {
       return this._insideWindow;
     }
@@ -12181,7 +12512,7 @@ var Mouse = function (_ChannelHandler) {
      */
 
   }, {
-    key: 'windowEntered',
+    key: 'hasEnteredWindow',
     get: function get() {
       return !!this._channels[15];
     }
@@ -12194,14 +12525,14 @@ var Mouse = function (_ChannelHandler) {
      */
 
   }, {
-    key: 'windowLeft',
+    key: 'hasLeftWindow',
     get: function get() {
       return !!this._channels[16];
     }
   }], [{
     key: 'getChannelCode',
-    value: function getChannelCode(keyCode) {
-      return offset | keyCode & 255;
+    value: function getChannelCode(key) {
+      return _const.CHANNEL_OFFSET.MOUSE | key;
     }
   }]);
 
@@ -12216,119 +12547,119 @@ var Mouse = function (_ChannelHandler) {
 
 
 exports.default = Mouse;
-Mouse.LeftButton = offset | 0;
+Mouse.LeftButton = _const.CHANNEL_OFFSET.MOUSE | 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MiddleButton = offset | 1;
+Mouse.MiddleButton = _const.CHANNEL_OFFSET.MOUSE | 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.RightButton = offset | 2;
+Mouse.RightButton = _const.CHANNEL_OFFSET.MOUSE | 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.BackButton = offset | 3;
+Mouse.BackButton = _const.CHANNEL_OFFSET.MOUSE | 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ForwardButton = offset | 4;
+Mouse.ForwardButton = _const.CHANNEL_OFFSET.MOUSE | 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollLeft = offset | 5;
+Mouse.ScrollLeft = _const.CHANNEL_OFFSET.MOUSE | 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollRight = offset | 6;
+Mouse.ScrollRight = _const.CHANNEL_OFFSET.MOUSE | 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollUp = offset | 7;
+Mouse.ScrollUp = _const.CHANNEL_OFFSET.MOUSE | 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollDown = offset | 8;
+Mouse.ScrollDown = _const.CHANNEL_OFFSET.MOUSE | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollForward = offset | 9;
+Mouse.ScrollForward = _const.CHANNEL_OFFSET.MOUSE | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollBackward = offset | 10;
+Mouse.ScrollBackward = _const.CHANNEL_OFFSET.MOUSE | 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveLeft = offset | 11;
+Mouse.MoveLeft = _const.CHANNEL_OFFSET.MOUSE | 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveRight = offset | 12;
+Mouse.MoveRight = _const.CHANNEL_OFFSET.MOUSE | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveUp = offset | 13;
+Mouse.MoveUp = _const.CHANNEL_OFFSET.MOUSE | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveDown = offset | 14;
+Mouse.MoveDown = _const.CHANNEL_OFFSET.MOUSE | 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.EnterWindow = offset | 15;
+Mouse.EnterWindow = _const.CHANNEL_OFFSET.MOUSE | 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.LeaveWindow = offset | 16;
+Mouse.LeaveWindow = _const.CHANNEL_OFFSET.MOUSE | 16;
 
 /***/ }),
 /* 43 */
@@ -12345,7 +12676,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Gamepad = __webpack_require__(17);
+var _Gamepad = __webpack_require__(18);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -12363,11 +12694,14 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+var navigator = window.navigator;
+
 /**
  * @class GamepadManager
  * @extends {Exo.ChannelHandler}
  * @memberof Exo
  */
+
 var GamepadManager = function (_ChannelHandler) {
     _inherits(GamepadManager, _ChannelHandler);
 
@@ -12383,46 +12717,32 @@ var GamepadManager = function (_ChannelHandler) {
          * @private
          * @member {Exo.Game}
          */
-        var _this = _possibleConstructorReturn(this, (GamepadManager.__proto__ || Object.getPrototypeOf(GamepadManager)).call(this, channelBuffer, _const.INPUT_DEVICE.GAMEPAD * _const.CHANNEL_RANGE_DEVICE, _const.CHANNEL_RANGE_DEVICE));
+        var _this = _possibleConstructorReturn(this, (GamepadManager.__proto__ || Object.getPrototypeOf(GamepadManager)).call(this, channelBuffer, _const.CHANNEL_OFFSET.GAMEPAD, _const.CHANNEL_LENGTH.DEVICE));
 
         _this._game = game;
 
         /**
          * @private
-         * @member {Exo.Gamepad[]}
+         * @member {Map.<Number, Exo.Gamepad>}
          */
-        _this._gamepads = [];
+        _this._gamepads = new Map();
         return _this;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Exo.Gamepad[]}
+     * @member {Map.<Number, Exo.Gamepad>}
      */
 
 
     _createClass(GamepadManager, [{
-        key: 'getGamepad',
-
-
-        /**
-         * @public
-         * @param {Number} [index=0]
-         * @returns {?Exo.Gamepad}
-         */
-        value: function getGamepad() {
-            var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-
-            return this._gamepads[index] || null;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
         key: 'update',
+
+
+        /**
+         * @public
+         */
         value: function update() {
             this.updateGamepads();
 
@@ -12430,8 +12750,29 @@ var GamepadManager = function (_ChannelHandler) {
                 return;
             }
 
-            for (var i = 0, len = this._gamepads.length; i < len; i++) {
-                this._gamepads[i].update();
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._gamepads.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var gamepad = _step.value;
+
+                    gamepad.update();
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
             }
         }
 
@@ -12443,95 +12784,67 @@ var GamepadManager = function (_ChannelHandler) {
         key: 'updateGamepads',
         value: function updateGamepads() {
             var game = this._game,
-                currentGamepads = this._gamepads,
-                currentLength = currentGamepads.length,
-                rawGamepads = this.getRawGamepads(),
-                rawLength = rawGamepads.length;
+                activeGamepads = this._gamepads,
+                nativeGamepads = navigator.getGamepads(),
+                length = nativeGamepads.length;
 
-            if (currentLength === rawLength) {
-                return;
-            }
-
-            if (currentLength < rawLength) {
-                this.addGamepads(rawGamepads);
-            } else {
-                this.removeGamepads(rawGamepads);
-            }
-
-            game.trigger('gamepad:change', currentGamepads);
-        }
-    }, {
-        key: 'addGamepads',
-        value: function addGamepads(rawGamepads) {
-            var game = this._game,
-                channelBuffer = this._channelBuffer,
-                currentGamepads = this._gamepads;
-
-            for (var index = currentGamepads.length; index < rawGamepads.length; index++) {
-                currentGamepads.push(new _Gamepad2.default(channelBuffer, index, rawGamepads[index]));
-
-                game.trigger('gamepad:add', currentGamepads);
-            }
-        }
-    }, {
-        key: 'removeGamepads',
-        value: function removeGamepads(rawGamepads) {
-            var game = this._game,
-                currentGamepads = this._gamepads,
-                rawLength = rawGamepads.length;
-
-            for (var i = currentGamepads.length - 1; i >= 0; i--) {
-                var currentGamepad = currentGamepads[i];
-
-                if (i < rawLength) {
-                    currentGamepad.rawGamepad = rawGamepads[i];
-                    currentGamepad.index = i;
+            for (var i = 0; i < length; i++) {
+                if (!!nativeGamepads[i] === activeGamepads.has(i)) {
                     continue;
                 }
 
-                currentGamepad.destroy(true);
-                currentGamepads.splice(i, 1);
+                if (nativeGamepads[i]) {
+                    var newGamepad = new _Gamepad2.default(this._channelBuffer, i, nativeGamepads[i]);
 
-                game.trigger('gamepad:remove', currentGamepads);
-            }
-        }
+                    activeGamepads.set(i, newGamepad);
+                    game.trigger('gamepad:add', newGamepad, i, activeGamepads);
+                } else {
+                    var oldGamepad = activeGamepads.get(i);
 
-        /**
-         * @public
-         * @returns {Array}
-         */
-
-    }, {
-        key: 'getRawGamepads',
-        value: function getRawGamepads() {
-            var navigator = window.navigator,
-                rawGamepads = navigator.getGamepads(),
-                activeGamepads = [],
-                len = rawGamepads.length;
-
-            for (var i = 0; i < len; i++) {
-                if (rawGamepads[i]) {
-                    activeGamepads.push(rawGamepads[i]);
+                    activeGamepads.delete(i);
+                    game.trigger('gamepad:remove', oldGamepad, i, activeGamepads);
+                    oldGamepad.destroy();
                 }
-            }
 
-            return activeGamepads;
+                game.trigger('gamepad:change', activeGamepads);
+            }
         }
 
         /**
          * @public
-         * @param {Boolean} [resetChannels]
          */
 
     }, {
         key: 'destroy',
-        value: function destroy(resetChannels) {
-            _get(GamepadManager.prototype.__proto__ || Object.getPrototypeOf(GamepadManager.prototype), 'destroy', this).call(this, resetChannels);
+        value: function destroy() {
+            _get(GamepadManager.prototype.__proto__ || Object.getPrototypeOf(GamepadManager.prototype), 'destroy', this).call(this);
 
-            this._gamepads.forEach(function (gamepad) {
-                gamepad.destroy();
-            });
-            this._gamepads.length = 0;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = this._gamepads.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var gamepad = _step2.value;
+
+                    gamepad.destroy();
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            this._gamepads.clear();
             this._gamepads = null;
 
             this._game = null;
@@ -12567,7 +12880,7 @@ var _GamepadButton = __webpack_require__(46);
 
 var _GamepadButton2 = _interopRequireDefault(_GamepadButton);
 
-var _Gamepad = __webpack_require__(17);
+var _Gamepad = __webpack_require__(18);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -12634,72 +12947,67 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * @memberof Exo
  */
 var GamepadMapping = function () {
-    _createClass(GamepadMapping, [{
-        key: "buttons",
 
-
-        /**
-         * @public
-         * @member {Exo.GamepadButton[]}
-         */
-        get: function get() {
-            return this._buttons;
-        },
-        set: function set(value) {
-            this.setButtons(value);
-        }
-
-        /**
-         * @public
-         * @member {Exo.GamepadButton[]}
-         */
-
-    }, {
-        key: "axes",
-        get: function get() {
-            return this._axes;
-        },
-        set: function set(value) {
-            this.setAxes(value);
-        }
-
-        /**
-         * @constructor
-         */
-
-    }]);
-
+    /**
+     * @constructor
+     */
     function GamepadMapping() {
         _classCallCheck(this, GamepadMapping);
 
         /**
          * @private
-         * @member {Exo.GamepadButton[]}
+         * @member {Set.<Exo.GamepadButton>}
          */
-        this._buttons = [];
+        this._buttons = new Set();
 
         /**
          * @private
-         * @member {Exo.GamepadButton[]}
+         * @member {Set.<Exo.GamepadButton>}
          */
-        this._axes = [];
+        this._axes = new Set();
     }
 
     /**
      * @public
-     * @param {Exo.GamepadButton[]} buttons
+     * @member {Set<Exo.GamepadButton>}
      */
 
 
     _createClass(GamepadMapping, [{
         key: "setButtons",
-        value: function setButtons(buttons) {
-            var mappingButtons = this._buttons;
-            mappingButtons.length = 0;
 
-            buttons.forEach(function (button) {
-                mappingButtons.push(button);
-            });
+
+        /**
+         * @public
+         * @param {Exo.GamepadButton[]} buttons
+         */
+        value: function setButtons(buttons) {
+            this._buttons.clear();
+
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = buttons[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var button = _step.value;
+
+                    this._buttons.add(button);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
         }
 
         /**
@@ -12710,12 +13018,32 @@ var GamepadMapping = function () {
     }, {
         key: "setAxes",
         value: function setAxes(axes) {
-            var mappingAxes = this._axes;
-            mappingAxes.length = 0;
+            this._axes.clear();
 
-            axes.forEach(function (axis) {
-                mappingAxes.push(axis);
-            });
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = axes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var axis = _step2.value;
+
+                    this._axes.add(axis);
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
         }
 
         /**
@@ -12725,11 +13053,33 @@ var GamepadMapping = function () {
     }, {
         key: "destroy",
         value: function destroy() {
-            this._buttons.length = 0;
+            this._buttons.clear();
             this._buttons = null;
 
-            this._axes.length = 0;
+            this._axes.clear();
             this._axes = null;
+        }
+    }, {
+        key: "buttons",
+        get: function get() {
+            return this._buttons;
+        },
+        set: function set(value) {
+            this.setButtons(value);
+        }
+
+        /**
+         * @public
+         * @member {Set<Exo.GamepadButton>}
+         */
+
+    }, {
+        key: "axes",
+        get: function get() {
+            return this._axes;
+        },
+        set: function set(value) {
+            this.setAxes(value);
         }
     }]);
 
@@ -12760,19 +13110,93 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * @memberof Exo
  */
 var GamepadButton = function () {
+
+    /**
+     * @constructor
+     * @param {Number} index
+     * @param {Number} channel
+     * @param {Object} [options]
+     * @param {Number} [options.threshold=0.2]
+     * @param {Boolean} [options.negate=false]
+     * @param {Boolean} [options.normalize=false]
+     */
+    function GamepadButton(index, channel) {
+        var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+            _ref$threshold = _ref.threshold,
+            threshold = _ref$threshold === undefined ? 0.2 : _ref$threshold,
+            _ref$negate = _ref.negate,
+            negate = _ref$negate === undefined ? false : _ref$negate,
+            _ref$normalize = _ref.normalize,
+            normalize = _ref$normalize === undefined ? false : _ref$normalize;
+
+        _classCallCheck(this, GamepadButton);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._index = index;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._channel = channel;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._threshold = (0, _utils.clamp)(threshold, 0, 1);
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._negate = negate;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._normalize = normalize;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+
+
     _createClass(GamepadButton, [{
-        key: 'index',
+        key: 'transformValue',
 
 
         /**
          * @public
-         * @member {Number}
+         * @param {Exo.GamepadButton|Number} buttonValue
+         * @returns {Number}
          */
+        value: function transformValue(buttonValue) {
+            var value = typeof buttonValue.value === 'number' ? buttonValue.value : buttonValue;
+
+            if (this._negate) {
+                value *= -1;
+            }
+
+            if (this._normalize) {
+                value = (value + 1) / 2;
+            }
+
+            return value >= this._threshold ? value : 0;
+        }
+    }, {
+        key: 'index',
         get: function get() {
             return this._index;
         },
         set: function set(value) {
-            this._index = value | 0;
+            this._index = value;
         }
 
         /**
@@ -12786,7 +13210,7 @@ var GamepadButton = function () {
             return this._channel;
         },
         set: function set(value) {
-            this._channel = value | 0;
+            this._channel = value;
         }
 
         /**
@@ -12814,7 +13238,7 @@ var GamepadButton = function () {
             return this._negate;
         },
         set: function set(value) {
-            this._negate = !!value;
+            this._negate = value;
         }
 
         /**
@@ -12828,7 +13252,7 @@ var GamepadButton = function () {
             return this._normalize;
         },
         set: function set(value) {
-            this._normalize = !!value;
+            this._normalize = value;
         }
 
         /**
@@ -12840,77 +13264,6 @@ var GamepadButton = function () {
         key: 'keyCode',
         get: function get() {
             return this._channel & 31;
-        }
-
-        /**
-         * @constructor
-         * @param {Number} index
-         * @param {Number} channel
-         * @param {Object} [options={}]
-         * @param {Number} [options.threshold]
-         * @param {Boolean} [options.negate]
-         * @param {Boolean} [options.normalize]
-         */
-
-    }]);
-
-    function GamepadButton(index, channel) {
-        var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
-        _classCallCheck(this, GamepadButton);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._index = index | 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._channel = channel | 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._threshold = (0, _utils.clamp)(options.threshold || 0.2, 0, 1);
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._negate = options.negate;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._normalize = options.normalize;
-    }
-
-    /**
-     * @public
-     * @param {Exo.GamepadButton|Number} buttonValue
-     * @returns {Number}
-     */
-
-
-    _createClass(GamepadButton, [{
-        key: 'getMappedValue',
-        value: function getMappedValue(buttonValue) {
-            var val = typeof buttonValue.value === 'number' ? buttonValue.value : buttonValue;
-
-            if (this._negate) {
-                val *= -1;
-            }
-
-            if (this._normalize) {
-                val = (val + 1) / 2;
-            }
-
-            return val >= this._threshold ? val : 0;
         }
     }]);
 
@@ -12968,7 +13321,7 @@ var PointerManager = function (_ChannelHandler) {
          * @private
          * @member {Exo.Game}
          */
-        var _this = _possibleConstructorReturn(this, (PointerManager.__proto__ || Object.getPrototypeOf(PointerManager)).call(this, channelBuffer, _const.INPUT_DEVICE.POINTER * _const.CHANNEL_RANGE_DEVICE, _const.CHANNEL_RANGE_DEVICE));
+        var _this = _possibleConstructorReturn(this, (PointerManager.__proto__ || Object.getPrototypeOf(PointerManager)).call(this, channelBuffer, _const.CHANNEL_OFFSET.POINTER, _const.CHANNEL_LENGTH.DEVICE));
 
         _this._game = game;
 
@@ -13006,16 +13359,13 @@ var PointerManager = function (_ChannelHandler) {
         }
 
         /**
-         * @public
-         * @param {Boolean} [resetChannels]
+         * @override
          */
 
     }, {
         key: 'destroy',
         value: function destroy() {
-            var resetChannels = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-            _get(PointerManager.prototype.__proto__ || Object.getPrototypeOf(PointerManager.prototype), 'destroy', this).call(this, resetChannels);
+            _get(PointerManager.prototype.__proto__ || Object.getPrototypeOf(PointerManager.prototype), 'destroy', this).call(this);
 
             this._removeEventListeners();
             this._game = null;
@@ -13096,6 +13446,8 @@ exports.default = PointerManager;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -13266,7 +13618,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @param {String} key
          * @param {String} path
          * @param {Object} [options]
-         * @returns {Promise}
+         * @returns {Promise<*>}
          */
 
     }, {
@@ -13286,7 +13638,7 @@ var ResourceLoader = function (_EventEmitter) {
 
             if (this._database) {
                 return this._database.loadData(typeHandler.storageKey, key).then(function (data) {
-                    return data ? Promise.resolve(data) : typeHandler.loadSource(_this3._basePath + path).then(function (source) {
+                    return data ? Promise.resolve(data) : typeHandler.request(_this3._basePath + path).then(function (source) {
                         return _this3._database.saveData(typeHandler.storageKey, key, source).then(function (source) {
                             return Promise.resolve(source);
                         });
@@ -13338,24 +13690,44 @@ var ResourceLoader = function (_EventEmitter) {
          * @public
          * @chainable
          * @param {String} type
-         * @param {Map.<String, String>|Object.<String, String>} map
+         * @param {Map.<String, String>|Object.<String, String>} list
          * @param {Object} [options]
          * @returns {Exo.Loader}
          */
 
     }, {
         key: 'addList',
-        value: function addList(type, map, options) {
-            var _this4 = this;
+        value: function addList(type, list, options) {
+            var items = list instanceof Map ? list : Object.entries(list);
 
-            if (map instanceof Map) {
-                map.forEach(function (path, key) {
-                    _this4.add(type, key, path, options);
-                });
-            } else {
-                Object.keys(map).forEach(function (key) {
-                    _this4.add(type, key, map[key], options);
-                });
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = items[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var _ref = _step.value;
+
+                    var _ref2 = _slicedToArray(_ref, 2);
+
+                    var key = _ref2[0];
+                    var path = _ref2[1];
+
+                    this.add(type, key, path, options);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
             }
 
             return this;
@@ -13618,9 +13990,30 @@ var ResourceContainer = function () {
     }, {
         key: "clear",
         value: function clear() {
-            this._resources.forEach(function (container) {
-                container.clear();
-            });
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._resources.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var container = _step.value;
+
+                    container.clear();
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
 
             return this;
         }
@@ -13655,7 +14048,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _ArrayBufferType = __webpack_require__(18);
+var _ArrayBufferType = __webpack_require__(19);
 
 Object.defineProperty(exports, 'ArrayBufferType', {
   enumerable: true,
@@ -13700,7 +14093,7 @@ Object.defineProperty(exports, 'ImageType', {
   }
 });
 
-var _JSONType = __webpack_require__(68);
+var _JSONType = __webpack_require__(67);
 
 Object.defineProperty(exports, 'JSONType', {
   enumerable: true,
@@ -13709,7 +14102,7 @@ Object.defineProperty(exports, 'JSONType', {
   }
 });
 
-var _MusicType = __webpack_require__(69);
+var _MusicType = __webpack_require__(68);
 
 Object.defineProperty(exports, 'MusicType', {
   enumerable: true,
@@ -13718,7 +14111,7 @@ Object.defineProperty(exports, 'MusicType', {
   }
 });
 
-var _SoundType = __webpack_require__(70);
+var _SoundType = __webpack_require__(69);
 
 Object.defineProperty(exports, 'SoundType', {
   enumerable: true,
@@ -13727,7 +14120,7 @@ Object.defineProperty(exports, 'SoundType', {
   }
 });
 
-var _SpriteType = __webpack_require__(71);
+var _SpriteType = __webpack_require__(70);
 
 Object.defineProperty(exports, 'SpriteType', {
   enumerable: true,
@@ -13736,7 +14129,7 @@ Object.defineProperty(exports, 'SpriteType', {
   }
 });
 
-var _StringType = __webpack_require__(54);
+var _StringType = __webpack_require__(71);
 
 Object.defineProperty(exports, 'StringType', {
   enumerable: true,
@@ -13745,7 +14138,7 @@ Object.defineProperty(exports, 'StringType', {
   }
 });
 
-var _TextureType = __webpack_require__(57);
+var _TextureType = __webpack_require__(56);
 
 Object.defineProperty(exports, 'TextureType', {
   enumerable: true,
@@ -13771,7 +14164,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(18);
+var _ArrayBufferType2 = __webpack_require__(19);
 
 var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
 
@@ -13800,25 +14193,15 @@ var AudioBufferType = function (_ArrayBufferType) {
   }
 
   _createClass(AudioBufferType, [{
-    key: 'loadSource',
-
-
-    /**
-     * @override
-     */
-    value: function loadSource(path, request) {
-      return _get(AudioBufferType.prototype.__proto__ || Object.getPrototypeOf(AudioBufferType.prototype), 'loadSource', this).call(this, path, request);
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
     key: 'create',
-    value: function create(source, options) {
-      return _get(AudioBufferType.prototype.__proto__ || Object.getPrototypeOf(AudioBufferType.prototype), 'create', this).call(this, source, options).then(function (source) {
-        return (0, _utils.decodeAudioBuffer)(source);
+
+
+    /**
+     * @override
+     */
+    value: function create(response, options) {
+      return _get(AudioBufferType.prototype.__proto__ || Object.getPrototypeOf(AudioBufferType.prototype), 'create', this).call(this, response, options).then(function (arrayBuffer) {
+        return (0, _utils.decodeAudioBuffer)(arrayBuffer);
       });
     }
   }]);
@@ -13847,6 +14230,8 @@ var _BlobType2 = __webpack_require__(20);
 
 var _BlobType3 = _interopRequireDefault(_BlobType2);
 
+var _utils = __webpack_require__(1);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -13855,14 +14240,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var URL = window.URL;
-
 /**
  * @class AudioType
  * @extends {Exo.BlobType}
  * @memberof Exo
  */
-
 var AudioType = function (_BlobType) {
     _inherits(AudioType, _BlobType);
 
@@ -13873,39 +14255,34 @@ var AudioType = function (_BlobType) {
     }
 
     _createClass(AudioType, [{
-        key: 'loadSource',
-
-
-        /**
-         * @override
-         */
-        value: function loadSource(path, request) {
-            return _get(AudioType.prototype.__proto__ || Object.getPrototypeOf(AudioType.prototype), 'loadSource', this).call(this, path, request);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
         key: 'create',
-        value: function create(source) {
+
+
+        /**
+         * @override
+         */
+        value: function create(response) {
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$mimeType = _ref.mimeType,
-                mimeType = _ref$mimeType === undefined ? 'audio/ogg' : _ref$mimeType;
+                mimeType = _ref$mimeType === undefined ? (0, _utils.getMimeType)(response, 'audio') : _ref$mimeType,
+                _ref$loadEvent = _ref.loadEvent,
+                loadEvent = _ref$loadEvent === undefined ? 'canplaythrough' : _ref$loadEvent;
 
-            return _get(AudioType.prototype.__proto__ || Object.getPrototypeOf(AudioType.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (blob) {
+            return _get(AudioType.prototype.__proto__ || Object.getPrototypeOf(AudioType.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var audio = new Audio();
 
-                    audio.oncanplaythrough = function () {
+                    audio.addEventListener(loadEvent, function () {
                         return resolve(audio);
-                    };
-                    audio.onerror = function () {
+                    });
+                    audio.addEventListener('error', function () {
                         return reject(audio);
-                    };
+                    });
+                    audio.addEventListener('abort', function () {
+                        return reject(audio);
+                    });
 
-                    audio.src = URL.createObjectURL(blob);
+                    audio.src = window.URL.createObjectURL(blob);
                 });
             });
         }
@@ -13945,6 +14322,8 @@ var _BlobType2 = __webpack_require__(20);
 
 var _BlobType3 = _interopRequireDefault(_BlobType2);
 
+var _utils = __webpack_require__(1);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -13953,14 +14332,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var URL = window.URL;
-
 /**
  * @class ImageType
  * @extends {Exo.BlobType}
  * @memberof Exo
  */
-
 var ImageType = function (_BlobType) {
     _inherits(ImageType, _BlobType);
 
@@ -13971,39 +14347,32 @@ var ImageType = function (_BlobType) {
     }
 
     _createClass(ImageType, [{
-        key: 'loadSource',
-
-
-        /**
-         * @override
-         */
-        value: function loadSource(path, request) {
-            return _get(ImageType.prototype.__proto__ || Object.getPrototypeOf(ImageType.prototype), 'loadSource', this).call(this, path, request);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
         key: 'create',
-        value: function create(source) {
+
+
+        /**
+         * @override
+         */
+        value: function create(response) {
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$mimeType = _ref.mimeType,
-                mimeType = _ref$mimeType === undefined ? 'image/png' : _ref$mimeType;
+                mimeType = _ref$mimeType === undefined ? (0, _utils.getMimeType)(response, 'image') : _ref$mimeType;
 
-            return _get(ImageType.prototype.__proto__ || Object.getPrototypeOf(ImageType.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (blob) {
+            return _get(ImageType.prototype.__proto__ || Object.getPrototypeOf(ImageType.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var image = new Image();
 
-                    image.onload = function () {
+                    image.addEventListener('load', function () {
                         return resolve(image);
-                    };
-                    image.onerror = function () {
+                    });
+                    image.addEventListener('error', function () {
                         return reject(image);
-                    };
+                    });
+                    image.addEventListener('abort', function () {
+                        return reject(image);
+                    });
 
-                    image.src = URL.createObjectURL(blob);
+                    image.src = window.URL.createObjectURL(blob);
                 });
             });
         }
@@ -14032,76 +14401,6 @@ exports.default = ImageType;
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _ResourceType2 = __webpack_require__(19);
-
-var _ResourceType3 = _interopRequireDefault(_ResourceType2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class StringType
- * @extends {Exo.ResourceType}
- * @memberof Exo
- */
-var StringType = function (_ResourceType) {
-  _inherits(StringType, _ResourceType);
-
-  function StringType() {
-    _classCallCheck(this, StringType);
-
-    return _possibleConstructorReturn(this, (StringType.__proto__ || Object.getPrototypeOf(StringType)).apply(this, arguments));
-  }
-
-  _createClass(StringType, [{
-    key: 'loadSource',
-
-
-    /**
-     * @override
-     */
-    value: function loadSource(path, request) {
-      return _get(StringType.prototype.__proto__ || Object.getPrototypeOf(StringType.prototype), 'loadSource', this).call(this, path, request).then(function (response) {
-        return response.text();
-      });
-    }
-  }, {
-    key: 'storageKey',
-
-
-    /**
-     * @override
-     */
-    get: function get() {
-      return 'string';
-    }
-  }]);
-
-  return StringType;
-}(_ResourceType3.default);
-
-exports.default = StringType;
-
-/***/ }),
-/* 55 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
@@ -14109,7 +14408,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Playable2 = __webpack_require__(10);
+var _Playable2 = __webpack_require__(11);
 
 var _Playable3 = _interopRequireDefault(_Playable2);
 
@@ -14257,7 +14556,7 @@ var Music = function (_Playable) {
 exports.default = Music;
 
 /***/ }),
-/* 56 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14271,7 +14570,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Playable2 = __webpack_require__(10);
+var _Playable2 = __webpack_require__(11);
 
 var _Playable3 = _interopRequireDefault(_Playable2);
 
@@ -14588,7 +14887,7 @@ var Sound = function (_Playable) {
 exports.default = Sound;
 
 /***/ }),
-/* 57 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14635,32 +14934,21 @@ var TextureType = function (_ImageType) {
   }
 
   _createClass(TextureType, [{
-    key: 'loadSource',
-
-
-    /**
-     * @override
-     */
-    value: function loadSource(path, request) {
-      return _get(TextureType.prototype.__proto__ || Object.getPrototypeOf(TextureType.prototype), 'loadSource', this).call(this, path, request);
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
     key: 'create',
-    value: function create(source) {
+
+
+    /**
+     * @override
+     */
+    value: function create(response) {
       var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-          _ref$mimeType = _ref.mimeType,
-          mimeType = _ref$mimeType === undefined ? 'image/png' : _ref$mimeType,
+          mimeType = _ref.mimeType,
           _ref$scaleMode = _ref.scaleMode,
           scaleMode = _ref$scaleMode === undefined ? _const.SCALE_MODE.NEAREST : _ref$scaleMode,
           _ref$wrapMode = _ref.wrapMode,
           wrapMode = _ref$wrapMode === undefined ? _const.WRAP_MODE.CLAMP_TO_EDGE : _ref$wrapMode;
 
-      return _get(TextureType.prototype.__proto__ || Object.getPrototypeOf(TextureType.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (image) {
+      return _get(TextureType.prototype.__proto__ || Object.getPrototypeOf(TextureType.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (image) {
         return new _Texture2.default(image, scaleMode, wrapMode);
       });
     }
@@ -14672,7 +14960,7 @@ var TextureType = function (_ImageType) {
 exports.default = TextureType;
 
 /***/ }),
-/* 58 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14918,7 +15206,7 @@ var Particle = function () {
 exports.default = Particle;
 
 /***/ }),
-/* 59 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15047,7 +15335,7 @@ var AnimationFrame = function () {
 exports.default = AnimationFrame;
 
 /***/ }),
-/* 60 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15058,7 +15346,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.utils = undefined;
 
-var _polyfill = __webpack_require__(61);
+var _polyfill = __webpack_require__(60);
 
 Object.keys(_polyfill).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15082,7 +15370,7 @@ Object.keys(_const).forEach(function (key) {
   });
 });
 
-var _core = __webpack_require__(62);
+var _core = __webpack_require__(61);
 
 Object.keys(_core).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15094,7 +15382,7 @@ Object.keys(_core).forEach(function (key) {
   });
 });
 
-var _resource = __webpack_require__(73);
+var _resource = __webpack_require__(74);
 
 Object.keys(_resource).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15106,7 +15394,7 @@ Object.keys(_resource).forEach(function (key) {
   });
 });
 
-var _input = __webpack_require__(75);
+var _input = __webpack_require__(76);
 
 Object.keys(_input).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15118,7 +15406,7 @@ Object.keys(_input).forEach(function (key) {
   });
 });
 
-var _audio = __webpack_require__(78);
+var _audio = __webpack_require__(79);
 
 Object.keys(_audio).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15130,7 +15418,7 @@ Object.keys(_audio).forEach(function (key) {
   });
 });
 
-var _display = __webpack_require__(81);
+var _display = __webpack_require__(82);
 
 Object.keys(_display).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15142,7 +15430,7 @@ Object.keys(_display).forEach(function (key) {
   });
 });
 
-var _animation = __webpack_require__(88);
+var _animation = __webpack_require__(89);
 
 Object.keys(_animation).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15165,7 +15453,7 @@ exports.utils = utils; /**
                         */
 
 /***/ }),
-/* 61 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15229,7 +15517,7 @@ exports.utils = utils; /**
 })(window);
 
 /***/ }),
-/* 62 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15275,7 +15563,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(63);
+var _Circle = __webpack_require__(62);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -15284,7 +15572,7 @@ Object.defineProperty(exports, 'Circle', {
   }
 });
 
-var _Polygon = __webpack_require__(64);
+var _Polygon = __webpack_require__(63);
 
 Object.defineProperty(exports, 'Polygon', {
   enumerable: true,
@@ -15320,7 +15608,7 @@ Object.defineProperty(exports, 'RC4', {
   }
 });
 
-var _Random = __webpack_require__(65);
+var _Random = __webpack_require__(64);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -15338,7 +15626,7 @@ Object.defineProperty(exports, 'Time', {
   }
 });
 
-var _Clock = __webpack_require__(14);
+var _Clock = __webpack_require__(15);
 
 Object.defineProperty(exports, 'Clock', {
   enumerable: true,
@@ -15347,7 +15635,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(66);
+var _Timer = __webpack_require__(65);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -15356,7 +15644,7 @@ Object.defineProperty(exports, 'Timer', {
   }
 });
 
-var _Game = __webpack_require__(67);
+var _Game = __webpack_require__(66);
 
 Object.defineProperty(exports, 'Game', {
   enumerable: true,
@@ -15392,10 +15680,19 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
+var _Quadtree = __webpack_require__(73);
+
+Object.defineProperty(exports, 'Quadtree', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_Quadtree).default;
+  }
+});
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 63 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15526,27 +15823,42 @@ var Circle = function (_Shape) {
 
     }, {
         key: 'contains',
-        value: function contains(x, y) {
-            var dx = this.x - x,
-                dy = this.y - y;
+        value: function contains(shape) {
+            switch (shape.type) {
+                case _const.SHAPE.POINT:
+                    var dx = this.x - shape.x,
+                        dy = this.y - shape.y;
 
-            return dx * dx + dy * dy <= this._radius * this._radius;
+                    return dx * dx + dy * dy <= this._radius * this._radius;
+                case _const.SHAPE.CIRCLE:
+                case _const.SHAPE.RECTANGLE:
+                case _const.SHAPE.POLYGON:
+                default:
+                    return false;
+            }
+
+            throw new Error('Passed item is not a valid shape!', shape);
         }
 
         /**
-         * @public
-         * @param {Number} x
-         * @param {Number} y
-         * @returns {Number}
+         * @override
          */
 
     }, {
-        key: 'distanceTo',
-        value: function distanceTo(circle) {
-            var x = this._x - circle.x,
-                y = this._y - circle.y;
+        key: 'intersects',
+        value: function intersects(shape) {
+            switch (shape.type) {
+                case _const.SHAPE.POINT:
+                    return this.contains(shape);
+                case _const.SHAPE.CIRCLE:
+                    return this._position.distanceTo(shape.position) < this._radius + shape.radius;
+                case _const.SHAPE.RECTANGLE:
+                case _const.SHAPE.POLYGON:
+                default:
+                    return false;
+            }
 
-            return Math.sqrt(x * x + y * y);
+            throw new Error('Passed item is not a valid shape!', shape);
         }
 
         /**
@@ -15568,8 +15880,23 @@ var Circle = function (_Shape) {
         value: function destroy() {
             this._position.destroy();
             this._position = null;
-
             this._radius = null;
+        }
+
+        /**
+         * @public
+         * @param {Number} x
+         * @param {Number} y
+         * @returns {Number}
+         */
+
+    }, {
+        key: 'distanceTo',
+        value: function distanceTo(circle) {
+            var x = this._x - circle.x,
+                y = this._y - circle.y;
+
+            return Math.sqrt(x * x + y * y);
         }
 
         /**
@@ -15651,7 +15978,7 @@ var Circle = function (_Shape) {
 exports.default = Circle;
 
 /***/ }),
-/* 64 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15773,10 +16100,31 @@ var Polygon = function (_Shape) {
         value: function toArray() {
             var array = [];
 
-            this._vectors.forEach(function (vector) {
-                array.push(vector.x);
-                array.push(vector.y);
-            });
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._vectors[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var vector = _step.value;
+
+                    array.push(vector.x);
+                    array.push(vector.y);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
 
             return array;
         }
@@ -15787,9 +16135,11 @@ var Polygon = function (_Shape) {
 
     }, {
         key: 'contains',
-        value: function contains(x, y) {
+        value: function contains(shape) {
             var vectors = this._vectors,
-                length = vectors.length;
+                length = vectors.length,
+                x = shape.x,
+                y = shape.y;
 
             var inside = false;
 
@@ -15829,7 +16179,7 @@ var Polygon = function (_Shape) {
 exports.default = Polygon;
 
 /***/ }),
-/* 65 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15853,10 +16203,21 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var getRandomValues = 'crypto' in window ? crypto.getRandomValues.bind(crypto) : function (array) {
+    var len = array.length;
+
+    for (var i = 0; i < len; i++) {
+        array[i] = Math.random() * 256 | 0;
+    }
+
+    return array;
+};
+
 /**
  * @class Random
  * @memberof Exo
  */
+
 var Random = function () {
 
     /**
@@ -15898,14 +16259,33 @@ var Random = function () {
          * @returns {String}
          */
         value: function flatten(obj, depth) {
-            var _this = this;
-
             var result = [];
 
             if (depth >= 0 && (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object') {
-                Object.keys(obj).forEach(function (key) {
-                    result.push(_this.flatten(obj[key], depth - 1));
-                });
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
+
+                try {
+                    for (var _iterator = Object.values(obj)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var value = _step.value;
+
+                        result.push(this.flatten(value, depth - 1));
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
             }
 
             if (result.length) {
@@ -15944,17 +16324,7 @@ var Random = function () {
     }, {
         key: 'generateSeed',
         value: function generateSeed() {
-            var seed = new Uint8Array(256);
-
-            try {
-                crypto.getRandomValues(seed);
-            } catch (e) {
-                seed.forEach(function (value, index) {
-                    seed[index] = Math.random() * 256 | 0;
-                });
-            }
-
-            return String.fromCharCode.apply(String, _toConsumableArray(seed));
+            return String.fromCharCode.apply(String, _toConsumableArray(getRandomValues(new Uint8Array(256))));
         }
 
         /**
@@ -16009,7 +16379,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 66 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16021,7 +16391,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Clock2 = __webpack_require__(14);
+var _Clock2 = __webpack_require__(15);
 
 var _Clock3 = _interopRequireDefault(_Clock2);
 
@@ -16176,7 +16546,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 67 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16194,7 +16564,7 @@ var _EventEmitter2 = __webpack_require__(5);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _Clock = __webpack_require__(14);
+var _Clock = __webpack_require__(15);
 
 var _Clock2 = _interopRequireDefault(_Clock);
 
@@ -16535,7 +16905,7 @@ var Game = function (_EventEmitter) {
 exports.default = Game;
 
 /***/ }),
-/* 68 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16547,11 +16917,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+var _ResourceType2 = __webpack_require__(10);
 
-var _StringType2 = __webpack_require__(54);
-
-var _StringType3 = _interopRequireDefault(_StringType2);
+var _ResourceType3 = _interopRequireDefault(_ResourceType2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -16563,11 +16931,11 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class JSONType
- * @extends {Exo.StringType}
+ * @extends {Exo.ResourceType}
  * @memberof Exo
  */
-var JSONType = function (_StringType) {
-  _inherits(JSONType, _StringType);
+var JSONType = function (_ResourceType) {
+  _inherits(JSONType, _ResourceType);
 
   function JSONType() {
     _classCallCheck(this, JSONType);
@@ -16576,26 +16944,14 @@ var JSONType = function (_StringType) {
   }
 
   _createClass(JSONType, [{
-    key: 'loadSource',
-
-
-    /**
-     * @override
-     */
-    value: function loadSource(path, request) {
-      return _get(JSONType.prototype.__proto__ || Object.getPrototypeOf(JSONType.prototype), 'loadSource', this).call(this, path, request);
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
     key: 'create',
-    value: function create(source, options) {
-      return _get(JSONType.prototype.__proto__ || Object.getPrototypeOf(JSONType.prototype), 'create', this).call(this, source, options).then(function (text) {
-        return JSON.parse(text);
-      });
+
+
+    /**
+     * @override
+     */
+    value: function create(response, options) {
+      return Promise.resolve(response.json());
     }
   }, {
     key: 'storageKey',
@@ -16610,12 +16966,12 @@ var JSONType = function (_StringType) {
   }]);
 
   return JSONType;
-}(_StringType3.default);
+}(_ResourceType3.default);
 
 exports.default = JSONType;
 
 /***/ }),
-/* 69 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16633,7 +16989,7 @@ var _AudioType2 = __webpack_require__(52);
 
 var _AudioType3 = _interopRequireDefault(_AudioType2);
 
-var _Music = __webpack_require__(55);
+var _Music = __webpack_require__(54);
 
 var _Music2 = _interopRequireDefault(_Music);
 
@@ -16662,28 +17018,18 @@ var MusicType = function (_AudioType) {
     }
 
     _createClass(MusicType, [{
-        key: 'loadSource',
-
-
-        /**
-         * @override
-         */
-        value: function loadSource(path, request) {
-            return _get(MusicType.prototype.__proto__ || Object.getPrototypeOf(MusicType.prototype), 'loadSource', this).call(this, path, request);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
         key: 'create',
-        value: function create(source, options) {
+
+
+        /**
+         * @override
+         */
+        value: function create(response, options) {
             if (!_utils.webAudioSupport) {
                 return Promise.reject();
             }
 
-            return _get(MusicType.prototype.__proto__ || Object.getPrototypeOf(MusicType.prototype), 'create', this).call(this, source, options).then(function (audio) {
+            return _get(MusicType.prototype.__proto__ || Object.getPrototypeOf(MusicType.prototype), 'create', this).call(this, response, options).then(function (audio) {
                 return new _Music2.default(audio);
             });
         }
@@ -16705,7 +17051,7 @@ var MusicType = function (_AudioType) {
 exports.default = MusicType;
 
 /***/ }),
-/* 70 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16723,7 +17069,7 @@ var _AudioBufferType2 = __webpack_require__(51);
 
 var _AudioBufferType3 = _interopRequireDefault(_AudioBufferType2);
 
-var _Sound = __webpack_require__(56);
+var _Sound = __webpack_require__(55);
 
 var _Sound2 = _interopRequireDefault(_Sound);
 
@@ -16752,28 +17098,18 @@ var SoundType = function (_AudioBufferType) {
     }
 
     _createClass(SoundType, [{
-        key: 'loadSource',
-
-
-        /**
-         * @override
-         */
-        value: function loadSource(path, request) {
-            return _get(SoundType.prototype.__proto__ || Object.getPrototypeOf(SoundType.prototype), 'loadSource', this).call(this, path, request);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
         key: 'create',
-        value: function create(source, options) {
+
+
+        /**
+         * @override
+         */
+        value: function create(response, options) {
             if (!_utils.webAudioSupport) {
                 return Promise.reject();
             }
 
-            return _get(SoundType.prototype.__proto__ || Object.getPrototypeOf(SoundType.prototype), 'create', this).call(this, source, options).then(function (audioBuffer) {
+            return _get(SoundType.prototype.__proto__ || Object.getPrototypeOf(SoundType.prototype), 'create', this).call(this, response, options).then(function (audioBuffer) {
                 return new _Sound2.default(audioBuffer);
             });
         }
@@ -16795,7 +17131,7 @@ var SoundType = function (_AudioBufferType) {
 exports.default = SoundType;
 
 /***/ }),
-/* 71 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16809,7 +17145,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _TextureType2 = __webpack_require__(57);
+var _TextureType2 = __webpack_require__(56);
 
 var _TextureType3 = _interopRequireDefault(_TextureType2);
 
@@ -16842,32 +17178,14 @@ var SpriteType = function (_TextureType) {
   }
 
   _createClass(SpriteType, [{
-    key: 'loadSource',
-
-
-    /**
-     * @override
-     */
-    value: function loadSource(path, request) {
-      return _get(SpriteType.prototype.__proto__ || Object.getPrototypeOf(SpriteType.prototype), 'loadSource', this).call(this, path, request);
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
     key: 'create',
-    value: function create(source) {
-      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-          _ref$mimeType = _ref.mimeType,
-          mimeType = _ref$mimeType === undefined ? 'image/png' : _ref$mimeType,
-          _ref$scaleMode = _ref.scaleMode,
-          scaleMode = _ref$scaleMode === undefined ? _const.SCALE_MODE.NEAREST : _ref$scaleMode,
-          _ref$wrapMode = _ref.wrapMode,
-          wrapMode = _ref$wrapMode === undefined ? _const.WRAP_MODE.CLAMP_TO_EDGE : _ref$wrapMode;
 
-      return _get(SpriteType.prototype.__proto__ || Object.getPrototypeOf(SpriteType.prototype), 'create', this).call(this, source, { mimeType: mimeType, scaleMode: scaleMode, wrapMode: wrapMode }).then(function (texture) {
+
+    /**
+     * @override
+     */
+    value: function create(response, options) {
+      return _get(SpriteType.prototype.__proto__ || Object.getPrototypeOf(SpriteType.prototype), 'create', this).call(this, response, options).then(function (texture) {
         return new _Sprite2.default(texture);
       });
     }
@@ -16877,6 +17195,72 @@ var SpriteType = function (_TextureType) {
 }(_TextureType3.default);
 
 exports.default = SpriteType;
+
+/***/ }),
+/* 71 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _ResourceType2 = __webpack_require__(10);
+
+var _ResourceType3 = _interopRequireDefault(_ResourceType2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class StringType
+ * @extends {Exo.ResourceType}
+ * @memberof Exo
+ */
+var StringType = function (_ResourceType) {
+  _inherits(StringType, _ResourceType);
+
+  function StringType() {
+    _classCallCheck(this, StringType);
+
+    return _possibleConstructorReturn(this, (StringType.__proto__ || Object.getPrototypeOf(StringType)).apply(this, arguments));
+  }
+
+  _createClass(StringType, [{
+    key: 'create',
+
+
+    /**
+     * @override
+     */
+    value: function create(response, options) {
+      return Promise.resolve(response.text());
+    }
+  }, {
+    key: 'storageKey',
+
+
+    /**
+     * @override
+     */
+    get: function get() {
+      return 'string';
+    }
+  }]);
+
+  return StringType;
+}(_ResourceType3.default);
+
+exports.default = StringType;
 
 /***/ }),
 /* 72 */
@@ -17027,10 +17411,317 @@ exports.default = Scene;
 
 
 Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _const = __webpack_require__(0);
+
+var _Rectangle = __webpack_require__(3);
+
+var _Rectangle2 = _interopRequireDefault(_Rectangle);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class Quadtree
+ * @memberof Exo
+ */
+var Quadtree = function () {
+
+    /**
+     * @constructor
+     * @param {Exo.Rectangle} bounds
+     * @param {Number} [level=0]
+     */
+    function Quadtree(bounds) {
+        var level = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+        _classCallCheck(this, Quadtree);
+
+        /**
+         * @private
+         * @member {Exo.Rectangle}
+         */
+        this._bounds = bounds.clone();
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._level = level;
+
+        /**
+         * @private
+         * @member {Map.<Number, Exo.Quadtree>}
+         */
+        this._children = new Map();
+
+        /**
+         * @private
+         * @member {Set.<Object>}
+         */
+        this._entities = new Set();
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
+
+
+    _createClass(Quadtree, [{
+        key: 'clear',
+
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Exo.Quadtree}
+         */
+        value: function clear() {
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var quadtree = _step.value;
+
+                    quadtree.clear();
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            this._children.clear();
+            this._entities.clear();
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Object} entity
+         * @returns {Exo.Quadtree}
+         */
+
+    }, {
+        key: 'insert',
+        value: function insert(entity) {
+            var entities = this._entities,
+                childNode = this._getChildNode(entity);
+
+            if (childNode) {
+                childNode.insert(entity);
+
+                return this;
+            }
+
+            entities.add(entity);
+
+            if (entities.size > _const.QUAD_TREE_MAX_ENTITIES && this._level < _const.QUAD_TREE_MAX_LEVEL) {
+                this._split();
+
+                var _iteratorNormalCompletion2 = true;
+                var _didIteratorError2 = false;
+                var _iteratorError2 = undefined;
+
+                try {
+                    for (var _iterator2 = entities[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                        var _entity = _step2.value;
+
+                        var _childNode = this._getChildNode(_entity);
+
+                        if (_childNode) {
+                            entities.delete(_entity);
+                            _childNode.insert(_entity);
+                        }
+                    }
+                } catch (err) {
+                    _didIteratorError2 = true;
+                    _iteratorError2 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                            _iterator2.return();
+                        }
+                    } finally {
+                        if (_didIteratorError2) {
+                            throw _iteratorError2;
+                        }
+                    }
+                }
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @param {Object} entity
+         * @returns {Object[]}
+         */
+
+    }, {
+        key: 'getRelatedEntities',
+        value: function getRelatedEntities(entity) {
+            var childNode = this._getChildNode(entity);
+
+            return childNode ? [].concat(_toConsumableArray(childNode.getRelatedEntities(entity)), _toConsumableArray(this._entities)) : [].concat(_toConsumableArray(this._entities));
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_split',
+        value: function _split() {
+            if (this._children.size) {
+                return;
+            }
+
+            var bounds = this._bounds,
+                childLevel = this._level + 1,
+                childWidth = bounds.width / 2 | 0,
+                childHeight = bounds.height / 2 | 0,
+                x = bounds.x,
+                y = bounds.y;
+
+            this._children.set(0, new Quadtree(new _Rectangle2.default(x, y, childWidth, childHeight), childLevel)).set(1, new Quadtree(new _Rectangle2.default(x + childWidth, y, childWidth, childHeight), childLevel)).set(2, new Quadtree(new _Rectangle2.default(x, y + childHeight, childWidth, childHeight), childLevel)).set(3, new Quadtree(new _Rectangle2.default(x + childWidth, y + childHeight, childWidth, childHeight), childLevel));
+        }
+
+        /**
+         * @private
+         * @param {Object} entity
+         * @returns {?Exo.Quadtree}
+         */
+
+    }, {
+        key: '_getChildNode',
+        value: function _getChildNode(entity) {
+            var children = this._children,
+                length = children.size,
+                bounds = entity.getBounds();
+
+            for (var i = 0; i < length; i++) {
+                var child = children.get(i);
+
+                if (child.bounds.contains(bounds)) {
+                    return child;
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * @private
+         * @param {Object} entity
+         * @returns {?Exo.Quadtree}
+         */
+
+    }, {
+        key: '_getChildNode',
+        value: function _getChildNode(entity) {
+            var children = this._children,
+                bounds = this._bounds,
+                horizontalCenter = bounds.x + bounds.width / 2,
+                verticalCenter = bounds.y + bounds.height / 2,
+                topQuadrant = entity.top < verticalCenter && entity.bottom < verticalCenter,
+                bottomQuadrant = entity.top > horizontalCenter;
+
+            if (!children.size || !topQuadrant && !bottomQuadrant) {
+                return null;
+            }
+
+            if (entity.left < horizontalCenter && entity.right < horizontalCenter) {
+                return topQuadrant ? children.get(0) : children.get(2);
+            } else if (entity.left > horizontalCenter) {
+                return topQuadrant ? children.get(1) : children.get(3);
+            }
+
+            return null;
+        }
+    }, {
+        key: 'bounds',
+        get: function get() {
+            return this._bounds;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'level',
+        get: function get() {
+            return this._level;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Map.<Number, Exo.Quadtree>}
+         */
+
+    }, {
+        key: 'children',
+        get: function get() {
+            return this._children;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Set.<Object>}
+         */
+
+    }, {
+        key: 'entities',
+        get: function get() {
+            return this._entities;
+        }
+    }]);
+
+    return Quadtree;
+}();
+
+exports.default = Quadtree;
+
+/***/ }),
+/* 74 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(74);
+var _Database = __webpack_require__(75);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -17057,7 +17748,7 @@ Object.defineProperty(exports, 'ResourceContainer', {
   }
 });
 
-var _ResourceType = __webpack_require__(19);
+var _ResourceType = __webpack_require__(10);
 
 Object.defineProperty(exports, 'ResourceType', {
   enumerable: true,
@@ -17081,7 +17772,7 @@ Object.keys(_types).forEach(function (key) {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17170,11 +17861,32 @@ var Database = function () {
                 request.onupgradeneeded = function (event) {
                     var database = event.target.result;
 
-                    _this._types.forEach(function (type) {
-                        database.createObjectStore(type, {
-                            keyPath: 'key'
-                        });
-                    });
+                    var _iteratorNormalCompletion = true;
+                    var _didIteratorError = false;
+                    var _iteratorError = undefined;
+
+                    try {
+                        for (var _iterator = _this._types[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                            var type = _step.value;
+
+                            database.createObjectStore(type, {
+                                keyPath: 'key'
+                            });
+                        }
+                    } catch (err) {
+                        _didIteratorError = true;
+                        _iteratorError = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion && _iterator.return) {
+                                _iterator.return();
+                            }
+                        } finally {
+                            if (_didIteratorError) {
+                                throw _iteratorError;
+                            }
+                        }
+                    }
                 };
 
                 request.onsuccess = function (event) {
@@ -17412,7 +18124,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17431,7 +18143,7 @@ Object.defineProperty(exports, 'ChannelHandler', {
   }
 });
 
-var _Input = __webpack_require__(76);
+var _Input = __webpack_require__(77);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -17494,7 +18206,7 @@ Object.defineProperty(exports, 'GamepadDefaultMapping', {
   }
 });
 
-var _Gamepad = __webpack_require__(17);
+var _Gamepad = __webpack_require__(18);
 
 Object.defineProperty(exports, 'Gamepad', {
   enumerable: true,
@@ -17512,7 +18224,7 @@ Object.defineProperty(exports, 'GamepadManager', {
   }
 });
 
-var _Pointer = __webpack_require__(77);
+var _Pointer = __webpack_require__(78);
 
 Object.defineProperty(exports, 'Pointer', {
   enumerable: true,
@@ -17533,7 +18245,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17656,15 +18368,34 @@ var Input = function (_EventEmitter) {
          * @param {Float32Array} activeChannels
          */
         value: function update(activeChannels) {
-            var _this2 = this;
-
             this._value = 0;
 
-            this._channels.forEach(function (channel) {
-                if (activeChannels[channel]) {
-                    _this2._value = Math.max(activeChannels[channel], _this2._value);
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._channels[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var channel = _step.value;
+
+                    if (activeChannels[channel]) {
+                        this._value = Math.max(activeChannels[channel], this._value);
+                    }
                 }
-            });
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
 
             if (this.active) {
                 if (!this._triggered) {
@@ -17765,7 +18496,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17791,14 +18522,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var offset = _const.INPUT_DEVICE.POINTER * _const.CHANNEL_RANGE_DEVICE;
-
 /**
  * @class Pointer
  * @extends {Exo.ChannelHandler}
  * @memberof Exo
  */
-
 var Pointer = function (_ChannelHandler) {
     _inherits(Pointer, _ChannelHandler);
 
@@ -17809,7 +18537,7 @@ var Pointer = function (_ChannelHandler) {
     function Pointer(channelBuffer, index) {
         _classCallCheck(this, Pointer);
 
-        return _possibleConstructorReturn(this, (Pointer.__proto__ || Object.getPrototypeOf(Pointer)).call(this, channelBuffer, offset | index * _const.CHANNEL_RANGE_HANDLER, _const.CHANNEL_RANGE_HANDLER));
+        return _possibleConstructorReturn(this, (Pointer.__proto__ || Object.getPrototypeOf(Pointer)).call(this, channelBuffer, _const.CHANNEL_OFFSET.POINTER | index * _const.CHANNEL_LENGTH.CHILD, _const.CHANNEL_LENGTH.CHILD));
     }
 
     /**
@@ -17872,7 +18600,7 @@ var Pointer = function (_ChannelHandler) {
         value: function getChannelCode(key) {
             var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-            return offset | (index * _const.CHANNEL_RANGE_HANDLER | key & 255);
+            return _const.CHANNEL_OFFSET.POINTER | (index * _const.CHANNEL_LENGTH.CHILD | key & 255);
         }
     }]);
 
@@ -17882,7 +18610,7 @@ var Pointer = function (_ChannelHandler) {
 exports.default = Pointer;
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17892,7 +18620,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Playable = __webpack_require__(10);
+var _Playable = __webpack_require__(11);
 
 Object.defineProperty(exports, 'Playable', {
   enumerable: true,
@@ -17901,7 +18629,7 @@ Object.defineProperty(exports, 'Playable', {
   }
 });
 
-var _Audio = __webpack_require__(79);
+var _Audio = __webpack_require__(80);
 
 Object.defineProperty(exports, 'Audio', {
   enumerable: true,
@@ -17910,7 +18638,7 @@ Object.defineProperty(exports, 'Audio', {
   }
 });
 
-var _Sound = __webpack_require__(56);
+var _Sound = __webpack_require__(55);
 
 Object.defineProperty(exports, 'Sound', {
   enumerable: true,
@@ -17919,7 +18647,7 @@ Object.defineProperty(exports, 'Sound', {
   }
 });
 
-var _Music = __webpack_require__(55);
+var _Music = __webpack_require__(54);
 
 Object.defineProperty(exports, 'Music', {
   enumerable: true,
@@ -17937,7 +18665,7 @@ Object.defineProperty(exports, 'AudioManager', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(80);
+var _AudioAnalyser = __webpack_require__(81);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -17949,7 +18677,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17961,7 +18689,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Playable2 = __webpack_require__(10);
+var _Playable2 = __webpack_require__(11);
 
 var _Playable3 = _interopRequireDefault(_Playable2);
 
@@ -18018,7 +18746,6 @@ var Audio = function (_Playable) {
 
         /**
          * @override
-         * @param {Exo.AudioManager} audioManager
          */
         value: function connect(audioManager) {
             this.parentVolume = audioManager.masterVolume;
@@ -18062,7 +18789,7 @@ var Audio = function (_Playable) {
 exports.default = Audio;
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18085,9 +18812,36 @@ var AudioAnalyser = function () {
   /**
    * @constructor
    * @param {Exo.Sound|Exo.Music|Exo.AudioManager} target
+   * @param {Object} [options]
+   * @param {Number} [options.fftSize=2048]
+   * @param {Number} [options.minDecibels=-100]
+   * @param {Number} [options.maxDecibels=-30]
+   * @param {Number} [options.smoothingTimeConstant=0.8]
    */
   function AudioAnalyser(target) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$fftSize = _ref.fftSize,
+        fftSize = _ref$fftSize === undefined ? 2048 : _ref$fftSize,
+        _ref$minDecibels = _ref.minDecibels,
+        minDecibels = _ref$minDecibels === undefined ? -100 : _ref$minDecibels,
+        _ref$maxDecibels = _ref.maxDecibels,
+        maxDecibels = _ref$maxDecibels === undefined ? -30 : _ref$maxDecibels,
+        _ref$smoothingTimeCon = _ref.smoothingTimeConstant,
+        smoothingTimeConstant = _ref$smoothingTimeCon === undefined ? 0.8 : _ref$smoothingTimeCon;
+
     _classCallCheck(this, AudioAnalyser);
+
+    if (!target) {
+      throw new Error('No analyser target was provided.');
+    }
+
+    if (!target.context) {
+      throw new Error('Could not find AudioContext of the target.');
+    }
+
+    if (!target.analyserTarget) {
+      throw new Error('Target has no valid AudioNode to analyse.');
+    }
 
     /**
      * @private
@@ -18095,124 +18849,128 @@ var AudioAnalyser = function () {
      */
     this._context = target.context;
 
-    if (!this._context) {
-      throw new Error('Target has no AudioContext to work with.');
-    }
-
-    /**
-     * @private
-     * @member {AudioNode}
-     */
-    this._targetNode = target.analyserTarget;
-
-    if (!this._targetNode) {
-      throw new Error('Target has no valid AudioNode to analyse.');
-    }
-
     /**
      * @private
      * @member {AnalyserNode}
      */
     this._analyser = this._context.createAnalyser();
-    this._targetNode.connect(this._analyser);
+    this._analyser.fftSize = fftSize;
+    this._analyser.minDecibels = minDecibels;
+    this._analyser.maxDecibels = maxDecibels;
+    this._analyser.smoothingTimeConstant = smoothingTimeConstant;
 
     /**
      * @private
-     * @member {Uint8Array}
+     * @member {AudioNode}
      */
-    this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount);
+    this._target = target.analyserTarget;
+    this._target.connect(this._analyser);
 
     /**
      * @private
-     * @member {Uint8Array}
+     * @member {Uint8Array} _timeDomainData
      */
-    this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
 
     /**
      * @private
-     * @member {Float32Array}
+     * @member {Uint8Array} _frequencyData
      */
-    this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
 
     /**
      * @private
-     * @member {Float32Array}
+     * @member {Float32Array} _preciseTimeDomainData
      */
-    this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
+
+    /**
+     * @private
+     * @member {Float32Array} _preciseFrequencyData
+     */
   }
 
   /**
    * @public
-   * @returns {Uint8Array}
+   * @readonly
+   * @member {Uint8Array}
    */
 
 
   _createClass(AudioAnalyser, [{
-    key: 'getTimeDomainData',
-    value: function getTimeDomainData() {
-      this._analyser.getByteTimeDomainData(this._timeDomainData);
-
-      return this._timeDomainData;
-    }
-
-    /**
-     * @public
-     * @returns {Uint8Array}
-     */
-
-  }, {
-    key: 'getFrequencyData',
-    value: function getFrequencyData() {
-      this._analyser.getByteFrequencyData(this._frequencyData);
-
-      return this._frequencyData;
-    }
-
-    /**
-     * @public
-     * @returns {Float32Array}
-     */
-
-  }, {
-    key: 'getPreciseTimeDomainData',
-    value: function getPreciseTimeDomainData() {
-      this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
-
-      return this._preciseTimeDomainData;
-    }
-
-    /**
-     * @public
-     * @returns {Float32Array}
-     */
-
-  }, {
-    key: 'getPreciseFrequencyData',
-    value: function getPreciseFrequencyData() {
-      this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
-
-      return this._preciseFrequencyData;
-    }
-
-    /**
-     * @public
-     */
-
-  }, {
     key: 'destroy',
+
+
+    /**
+     * @public
+     */
     value: function destroy() {
       this._timeDomainData = null;
       this._frequencyData = null;
       this._preciseTimeDomainData = null;
       this._preciseFrequencyData = null;
 
-      this._targetNode.disconnect(this._analyser);
-      this._targetNode = null;
+      this._target.disconnect();
+      this._target = null;
 
       this._analyser.disconnect();
       this._analyser = null;
 
       this._context = null;
+    }
+  }, {
+    key: 'timeDomainData',
+    get: function get() {
+      var timeDomainData = this._timeDomainData || (this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount));
+
+      this._analyser.getByteTimeDomainData(timeDomainData);
+
+      return timeDomainData;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Uint8Array}
+     */
+
+  }, {
+    key: 'frequencyData',
+    get: function get() {
+      var frequencyData = this._frequencyData || (this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount));
+
+      this._analyser.getByteFrequencyData(frequencyData);
+
+      return frequencyData;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+
+  }, {
+    key: 'preciseTimeDomainData',
+    get: function get() {
+      var preciseTimeDomainData = this._preciseTimeDomainData || (this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount));
+
+      this._analyser.getFloatTimeDomainData(preciseTimeDomainData);
+
+      return preciseTimeDomainData;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+
+  }, {
+    key: 'preciseFrequencyData',
+    get: function get() {
+      var preciseFrequencyData = this._preciseFrequencyData || (this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount));
+
+      this._analyser.getFloatFrequencyData(preciseFrequencyData);
+
+      return preciseFrequencyData;
     }
   }]);
 
@@ -18222,7 +18980,7 @@ var AudioAnalyser = function () {
 exports.default = AudioAnalyser;
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18295,7 +19053,7 @@ Object.defineProperty(exports, 'Renderable', {
   }
 });
 
-var _Container = __webpack_require__(82);
+var _Container = __webpack_require__(83);
 
 Object.defineProperty(exports, 'Container', {
   enumerable: true,
@@ -18304,7 +19062,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Renderer = __webpack_require__(15);
+var _Renderer = __webpack_require__(16);
 
 Object.defineProperty(exports, 'Renderer', {
   enumerable: true,
@@ -18313,7 +19071,7 @@ Object.defineProperty(exports, 'Renderer', {
   }
 });
 
-var _Shader = __webpack_require__(16);
+var _Shader = __webpack_require__(17);
 
 Object.defineProperty(exports, 'Shader', {
   enumerable: true,
@@ -18349,7 +19107,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Text = __webpack_require__(83);
+var _Text = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -18376,7 +19134,7 @@ Object.defineProperty(exports, 'SpriteRenderer', {
   }
 });
 
-var _Particle = __webpack_require__(58);
+var _Particle = __webpack_require__(57);
 
 Object.defineProperty(exports, 'Particle', {
   enumerable: true,
@@ -18385,7 +19143,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(84);
+var _ParticleEmitter = __webpack_require__(85);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -18412,7 +19170,7 @@ Object.defineProperty(exports, 'ParticleRenderer', {
   }
 });
 
-var _ParticleModifier = __webpack_require__(11);
+var _ParticleModifier = __webpack_require__(12);
 
 Object.defineProperty(exports, 'ParticleModifier', {
   enumerable: true,
@@ -18421,7 +19179,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(85);
+var _ForceModifier = __webpack_require__(86);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -18430,7 +19188,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(86);
+var _ScaleModifier = __webpack_require__(87);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -18439,7 +19197,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(87);
+var _TorqueModifier = __webpack_require__(88);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -18451,7 +19209,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18753,9 +19511,30 @@ var Container = function (_Renderable) {
             _get(Container.prototype.__proto__ || Object.getPrototypeOf(Container.prototype), 'destroy', this).call(this);
 
             if (destroyChildren) {
-                this._children.forEach(function (child) {
-                    child.destroy();
-                });
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
+
+                try {
+                    for (var _iterator = this._children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var child = _step.value;
+
+                        child.destroy();
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
             }
 
             this._children.length = 0;
@@ -18833,7 +19612,7 @@ var Container = function (_Renderable) {
 exports.default = Container;
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19313,7 +20092,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19325,7 +20104,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Particle = __webpack_require__(58);
+var _Particle = __webpack_require__(57);
 
 var _Particle2 = _interopRequireDefault(_Particle);
 
@@ -19710,7 +20489,7 @@ var ParticleEmitter = function () {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19722,7 +20501,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(11);
+var _ParticleModifier2 = __webpack_require__(12);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -19798,7 +20577,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19810,7 +20589,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(11);
+var _ParticleModifier2 = __webpack_require__(12);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -19886,7 +20665,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19898,7 +20677,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(11);
+var _ParticleModifier2 = __webpack_require__(12);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -19971,7 +20750,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19981,7 +20760,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Animation = __webpack_require__(12);
+var _Animation = __webpack_require__(13);
 
 Object.defineProperty(exports, 'Animation', {
   enumerable: true,
@@ -19990,7 +20769,7 @@ Object.defineProperty(exports, 'Animation', {
   }
 });
 
-var _ColorAnimation = __webpack_require__(89);
+var _ColorAnimation = __webpack_require__(90);
 
 Object.defineProperty(exports, 'ColorAnimation', {
   enumerable: true,
@@ -19999,7 +20778,7 @@ Object.defineProperty(exports, 'ColorAnimation', {
   }
 });
 
-var _FadeAnimation = __webpack_require__(90);
+var _FadeAnimation = __webpack_require__(91);
 
 Object.defineProperty(exports, 'FadeAnimation', {
   enumerable: true,
@@ -20008,7 +20787,7 @@ Object.defineProperty(exports, 'FadeAnimation', {
   }
 });
 
-var _FrameAnimation = __webpack_require__(91);
+var _FrameAnimation = __webpack_require__(92);
 
 Object.defineProperty(exports, 'FrameAnimation', {
   enumerable: true,
@@ -20017,7 +20796,7 @@ Object.defineProperty(exports, 'FrameAnimation', {
   }
 });
 
-var _AnimationFrame = __webpack_require__(59);
+var _AnimationFrame = __webpack_require__(58);
 
 Object.defineProperty(exports, 'AnimationFrame', {
   enumerable: true,
@@ -20026,7 +20805,7 @@ Object.defineProperty(exports, 'AnimationFrame', {
   }
 });
 
-var _Animator = __webpack_require__(92);
+var _Animator = __webpack_require__(93);
 
 Object.defineProperty(exports, 'Animator', {
   enumerable: true,
@@ -20038,7 +20817,7 @@ Object.defineProperty(exports, 'Animator', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20048,7 +20827,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Animation2 = __webpack_require__(12);
+var _Animation2 = __webpack_require__(13);
 
 var _Animation3 = _interopRequireDefault(_Animation2);
 
@@ -20095,7 +20874,7 @@ var ColorAnimation = function (_Animation) {
 exports.default = ColorAnimation;
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20107,7 +20886,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Animation2 = __webpack_require__(12);
+var _Animation2 = __webpack_require__(13);
 
 var _Animation3 = _interopRequireDefault(_Animation2);
 
@@ -20178,7 +20957,7 @@ var FadeAnimation = function (_Animation) {
 exports.default = FadeAnimation;
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20190,11 +20969,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Animation2 = __webpack_require__(12);
+var _Animation2 = __webpack_require__(13);
 
 var _Animation3 = _interopRequireDefault(_Animation2);
 
-var _AnimationFrame = __webpack_require__(59);
+var _AnimationFrame = __webpack_require__(58);
 
 var _AnimationFrame2 = _interopRequireDefault(_AnimationFrame);
 
@@ -20266,9 +21045,30 @@ var FrameAnimation = function (_Animation) {
                 return val + frame.duration;
             }, 0);
 
-            this._frames.forEach(function (frame) {
-                frame.duration /= sum;
-            });
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._frames[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var frame = _step.value;
+
+                    frame.duration /= sum;
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
 
             this._normalized = true;
         }
@@ -20286,19 +21086,38 @@ var FrameAnimation = function (_Animation) {
 
             this.ensureNormalized();
 
-            for (var i = 0, len = this._frames.length; i < len; i++) {
-                var frame = this._frames[i];
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
-                progress -= frame.duration;
+            try {
+                for (var _iterator2 = this._frames[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var frame = _step2.value;
 
-                if (progress > 0) {
-                    target.setTextureRect(frame.subrect);
+                    progress -= frame.duration;
 
-                    if (frame.applyOrigin) {
-                        target.setOrigin(frame.origin);
+                    if (progress <= 0) {
+                        target.setTextureRect(frame.rectangle);
+
+                        if (frame.applyOrigin) {
+                            target.setOrigin(frame.origin);
+                        }
+
+                        break;
                     }
-
-                    break;
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
                 }
             }
         }
@@ -20310,7 +21129,7 @@ var FrameAnimation = function (_Animation) {
 exports.default = FrameAnimation;
 
 /***/ }),
-/* 92 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

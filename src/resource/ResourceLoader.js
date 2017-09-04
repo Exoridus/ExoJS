@@ -190,7 +190,7 @@ export default class ResourceLoader extends EventEmitter {
      * @param {String} key
      * @param {String} path
      * @param {Object} [options]
-     * @returns {Promise}
+     * @returns {Promise<*>}
      */
     loadItem(type, key, path, options) {
         if (!this._types.has(type)) {
@@ -206,7 +206,7 @@ export default class ResourceLoader extends EventEmitter {
         if (this._database) {
             return this._database
                 .loadData(typeHandler.storageKey, key)
-                .then((data) => data ? Promise.resolve(data) : typeHandler.loadSource(this._basePath + path)
+                .then((data) => data ? Promise.resolve(data) : typeHandler.request(this._basePath + path)
                     .then((source) => this._database.saveData(typeHandler.storageKey, key, source)
                         .then((source) => Promise.resolve(source))))
                 .then((source) => typeHandler.create(source, options))
@@ -254,20 +254,15 @@ export default class ResourceLoader extends EventEmitter {
      * @public
      * @chainable
      * @param {String} type
-     * @param {Map.<String, String>|Object.<String, String>} map
+     * @param {Map.<String, String>|Object.<String, String>} list
      * @param {Object} [options]
      * @returns {Exo.Loader}
      */
-    addList(type, map, options) {
-        if (map instanceof Map) {
-            map.forEach((path, key) => {
-                this.add(type, key, path, options);
-            });
-        } else {
-            Object.keys(map)
-                .forEach((key) => {
-                    this.add(type, key, map[key], options);
-                });
+    addList(type, list, options) {
+        const items = (list instanceof Map) ? list : Object.entries(list);
+
+        for (const [key, path] of items) {
+            this.add(type, key, path, options);
         }
 
         return this;

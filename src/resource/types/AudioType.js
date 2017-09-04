@@ -1,6 +1,5 @@
 import BlobType from './BlobType';
-
-const URL = window.URL;
+import {getMimeType} from '../../utils';
 
 /**
  * @class AudioType
@@ -19,23 +18,17 @@ export default class AudioType extends BlobType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super.loadSource(path, request);
-    }
-
-    /**
-     * @override
-     */
-    create(source, { mimeType = 'audio/ogg' } = {}) {
+    create(response, { mimeType = getMimeType(response, 'audio'), loadEvent = 'canplaythrough' } = {}) {
         return super
-            .create(source, { mimeType })
+            .create(response, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {
                 const audio = new Audio();
 
-                audio.oncanplaythrough = () => resolve(audio);
-                audio.onerror = () => reject(audio);
+                audio.addEventListener(loadEvent, () => resolve(audio));
+                audio.addEventListener('error', () => reject(audio));
+                audio.addEventListener('abort', () => reject(audio));
 
-                audio.src = URL.createObjectURL(blob);
+                audio.src = window.URL.createObjectURL(blob);
             }));
     }
 }

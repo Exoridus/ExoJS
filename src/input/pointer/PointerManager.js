@@ -1,5 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
+import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
 
 /**
  * @class PointerManager
@@ -14,7 +14,7 @@ export default class PointerManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, INPUT_DEVICE.POINTER * CHANNEL_RANGE_DEVICE, CHANNEL_RANGE_DEVICE);
+        super(channelBuffer, CHANNEL_OFFSET.POINTER, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
@@ -50,11 +50,10 @@ export default class PointerManager extends ChannelHandler {
     }
 
     /**
-     * @public
-     * @param {Boolean} [resetChannels]
+     * @override
      */
-    destroy(resetChannels = false) {
-        super.destroy(resetChannels);
+    destroy() {
+        super.destroy();
 
         this._removeEventListeners();
         this._game = null;

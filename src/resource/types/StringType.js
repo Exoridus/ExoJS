@@ -17,9 +17,7 @@ export default class StringType extends ResourceType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super
-            .loadSource(path, request)
-            .then((response) => response.text());
+    create(response, options) {
+        return Promise.resolve(response.text());
     }
 }

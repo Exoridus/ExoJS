@@ -1,11 +1,11 @@
-import StringType from './StringType';
+import ResourceType from '../ResourceType';
 
 /**
  * @class JSONType
- * @extends {Exo.StringType}
+ * @extends {Exo.ResourceType}
  * @memberof Exo
  */
-export default class JSONType extends StringType {
+export default class JSONType extends ResourceType {
 
     /**
      * @override
@@ -17,16 +17,7 @@ export default class JSONType extends StringType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super.loadSource(path, request);
-    }
-
-    /**
-     * @override
-     */
-    create(source, options) {
-        return super
-            .create(source, options)
-            .then((text) => JSON.parse(text));
+    create(response, options) {
+        return Promise.resolve(response.json());
     }
 }

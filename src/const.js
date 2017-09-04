@@ -8,7 +8,7 @@ export const
      * @memberof Exo
      * @type {String}
      */
-    VERSION = '__VERSION__',
+    VERSION = __VERSION__,
 
     /**
      * @public
@@ -112,19 +112,35 @@ export const
      * @public
      * @constant
      * @memberOf Exo
-     * @name CHANNEL_RANGE_DEVICE
-     * @type {Number}
+     * @name CHANNEL_OFFSET
+     * @type {Object.<String, Number>}
+     * @property {Number} KEYBOARD
+     * @property {Number} MOUSE
+     * @property {Number} GAMEPAD
+     * @property {Number} POINTER
      */
-    CHANNEL_RANGE_DEVICE = 256,
+    CHANNEL_OFFSET = {
+        KEYBOARD: INPUT_DEVICE.KEYBOARD << 8,
+        MOUSE: INPUT_DEVICE.MOUSE << 8,
+        GAMEPAD: INPUT_DEVICE.GAMEPAD << 8,
+        POINTER: INPUT_DEVICE.POINTER << 8,
+    },
 
     /**
      * @public
      * @constant
      * @memberOf Exo
-     * @name CHANNEL_RANGE_HANDLER
-     * @type {Number}
+     * @name CHANNEL_LENGTH
+     * @type {Object}
+     * @property {Number} GLOBAL
+     * @property {Number} DEVICE
+     * @property {Number} CHILD
      */
-    CHANNEL_RANGE_HANDLER = 32,
+    CHANNEL_LENGTH = {
+        GLOBAL: 1024,
+        DEVICE: 256,
+        CHILD: 32,
+    },
 
     /**
      * @public
@@ -190,4 +206,22 @@ export const
         SATURATION: 14,
         COLOR: 15,
         LUMINOSITY: 16,
-    };
+    },
+
+    /**
+     * @public
+     * @constant
+     * @memberOf Exo
+     * @name QUAD_TREE_MAX_LEVEL
+     * @type {Number}
+     */
+    QUAD_TREE_MAX_LEVEL = 5,
+
+    /**
+     * @public
+     * @constant
+     * @memberOf Exo
+     * @name QUAD_TREE_MAX_ENTITIES
+     * @type {Number}
+     */
+    QUAD_TREE_MAX_ENTITIES = 10;

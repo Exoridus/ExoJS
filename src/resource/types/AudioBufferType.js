@@ -11,16 +11,9 @@ export default class AudioBufferType extends ArrayBufferType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super.loadSource(path, request);
-    }
-
-    /**
-     * @override
-     */
-    create(source, options) {
+    create(response, options) {
         return super
-            .create(source, options)
-            .then((source) => decodeAudioBuffer(source));
+            .create(response, options)
+            .then((arrayBuffer) => decodeAudioBuffer(arrayBuffer));
     }
 }

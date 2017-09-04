@@ -85,7 +85,7 @@ window.game.start(new Exo.Scene({
             trigger() {
                 this._music.toggle();
             },
-        });
+        }, this);
 
         canvas.parentNode.appendChild(this._canvas);
 
@@ -127,8 +127,8 @@ window.game.start(new Exo.Scene({
 
         const canvas = this._canvas,
             context = this._context,
-            freqData = this._analyser.getFrequencyData(),
-            timeDomain = this._analyser.getTimeDomainData(),
+            freqData = this._analyser.frequencyData,
+            timeDomain = this._analyser.timeDomainData,
             time = this._time.add(delta)
                 .asSeconds(),
             width = canvas.width,

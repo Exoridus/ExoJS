@@ -242,9 +242,9 @@ export default class Matrix {
     static multiply(...matrices) {
         const result = new Matrix();
 
-        matrices.forEach((matrix) => {
+        for (const matrix of matrices) {
             result.multiply(matrix);
-        });
+        }
 
         return result;
     }

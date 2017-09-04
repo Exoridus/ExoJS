@@ -68,7 +68,7 @@ export default class GameScene extends Exo.Scene {
                         // hide pause menu
                     }
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Up,
                 Keyboard.W,
@@ -78,7 +78,7 @@ export default class GameScene extends Exo.Scene {
                 active(value) {
                     this._movePlayer(0, value * -1);
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Down,
                 Keyboard.S,
@@ -88,7 +88,7 @@ export default class GameScene extends Exo.Scene {
                 active(value) {
                     this._movePlayer(0, value);
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Left,
                 Keyboard.A,
@@ -98,7 +98,7 @@ export default class GameScene extends Exo.Scene {
                 active(value) {
                     this._movePlayer(value * -1, 0);
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Right,
                 Keyboard.D,
@@ -108,7 +108,7 @@ export default class GameScene extends Exo.Scene {
                 active(value) {
                     this._movePlayer(value, 0);
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Shift,
                 Gamepad.RightTriggerTop,
@@ -119,7 +119,7 @@ export default class GameScene extends Exo.Scene {
                 stop() {
                     this._player.running = false;
                 },
-            }),
+            }, this),
         ];
 
         this.game.trigger('input:add', this._inputs);

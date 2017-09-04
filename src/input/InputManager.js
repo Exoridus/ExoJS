@@ -3,7 +3,7 @@ import Keyboard from './Keyboard';
 import Mouse from './Mouse';
 import GamepadManager from './gamepad/GamepadManager';
 import PointerManager from './pointer/PointerManager';
-import {CHANNEL_RANGE_DEVICE} from '../const';
+import {CHANNEL_LENGTH} from '../const';
 
 /**
  * @class InputManager
@@ -17,7 +17,7 @@ export default class InputManager extends ChannelHandler {
      * @param {Exo.Game} game
      */
     constructor(game) {
-        super(new ArrayBuffer(CHANNEL_RANGE_DEVICE * 16), 0, CHANNEL_RANGE_DEVICE * 4);
+        super(new ArrayBuffer(CHANNEL_LENGTH.GLOBAL * 4), 0, CHANNEL_LENGTH.GLOBAL);
 
         /**
          * @private
@@ -62,32 +62,32 @@ export default class InputManager extends ChannelHandler {
 
     /**
      * @public
-     * @param {Exo.Input|Exo.Input[]} input
+     * @param {Exo.Input|Exo.Input[]} inputs
      */
-    add(input) {
-        if (Array.isArray(input)) {
-            input.forEach((input) => {
+    add(inputs) {
+        if (Array.isArray(inputs)) {
+            for (const input of inputs) {
                 this._inputs.add(input);
-            });
+            }
             return;
         }
 
-        this._inputs.add(input);
+        this._inputs.add(inputs);
     }
 
     /**
      * @public
-     * @param {Exo.Input|Exo.Input[]} input
+     * @param {Exo.Input|Exo.Input[]} inputs
      */
-    remove(input) {
-        if (Array.isArray(input)) {
-            input.forEach((input) => {
+    remove(inputs) {
+        if (Array.isArray(inputs)) {
+            for (const input of inputs) {
                 this._inputs.delete(input);
-            });
+            }
             return;
         }
 
-        this._inputs.delete(input);
+        this._inputs.delete(inputs);
     }
 
     /**
@@ -96,9 +96,9 @@ export default class InputManager extends ChannelHandler {
      */
     clear(destroyInputs = false) {
         if (destroyInputs) {
-            this._inputs.forEach((input) => {
+            for (const input of this._inputs) {
                 input.destroy();
-            });
+            }
         }
 
         this._inputs.clear();
@@ -111,9 +111,11 @@ export default class InputManager extends ChannelHandler {
         const channels = this.channels;
 
         this._gamepadManager.update();
-        this._inputs.forEach((input) => {
+
+        for (const input of this._inputs) {
             input.update(channels);
-        });
+        }
+
         this._mouse.update();
     }
 

@@ -51,7 +51,7 @@ export default class MenuManager {
                         this._currentMenu.onInputUp();
                     }
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Down,
                 Gamepad.LeftStickDown,
@@ -62,7 +62,7 @@ export default class MenuManager {
                         this._currentMenu.onInputDown();
                     }
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Left,
                 Gamepad.LeftStickLeft,
@@ -73,7 +73,7 @@ export default class MenuManager {
                         this._currentMenu.onInputLeft();
                     }
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Right,
                 Gamepad.LeftStickRight,
@@ -84,7 +84,7 @@ export default class MenuManager {
                         this._currentMenu.onInputRight();
                     }
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Enter,
                 Gamepad.FaceButtonBottom,
@@ -94,7 +94,7 @@ export default class MenuManager {
                         this._currentMenu.onInputSelect();
                     }
                 },
-            }),
+            }, this),
             new Exo.Input([
                 Keyboard.Backspace,
                 Gamepad.FaceButtonRight,
@@ -104,7 +104,7 @@ export default class MenuManager {
                         this._currentMenu.onInputBack();
                     }
                 },
-            }),
+            }, this),
         ];
     }
 

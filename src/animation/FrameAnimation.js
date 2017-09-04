@@ -48,9 +48,9 @@ export default class FrameAnimation extends Animation {
 
         const sum = this._frames.reduce((val, frame) => val + frame.duration, 0);
 
-        this._frames.forEach((frame) => {
+        for (const frame of this._frames) {
             frame.duration /= sum;
-        });
+        }
 
         this._normalized = true;
     }
@@ -65,13 +65,11 @@ export default class FrameAnimation extends Animation {
 
         this.ensureNormalized();
 
-        for (let i = 0, len = this._frames.length; i < len; i++) {
-            const frame = this._frames[i];
-
+        for (const frame of this._frames) {
             progress -= frame.duration;
 
-            if (progress > 0) {
-                target.setTextureRect(frame.subrect);
+            if (progress <= 0) {
+                target.setTextureRect(frame.rectangle);
 
                 if (frame.applyOrigin) {
                     target.setOrigin(frame.origin);

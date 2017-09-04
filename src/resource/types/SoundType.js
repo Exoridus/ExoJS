@@ -19,20 +19,13 @@ export default class SoundType extends AudioBufferType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super.loadSource(path, request);
-    }
-
-    /**
-     * @override
-     */
-    create(source, options) {
+    create(response, options) {
         if (!webAudioSupport) {
             return Promise.reject();
         }
 
         return super
-            .create(source, options)
+            .create(response, options)
             .then((audioBuffer) => new Sound(audioBuffer));
     }
 }

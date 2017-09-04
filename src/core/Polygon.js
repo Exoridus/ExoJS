@@ -81,10 +81,10 @@ export default class Polygon extends Shape {
     toArray() {
         const array = [];
 
-        this._vectors.forEach((vector) => {
+        for (const vector of this._vectors) {
             array.push(vector.x);
             array.push(vector.y);
-        });
+        }
 
         return array;
     }
@@ -92,9 +92,11 @@ export default class Polygon extends Shape {
     /**
      * @override
      */
-    contains(x, y) {
+    contains(shape) {
         const vectors = this._vectors,
-            length = vectors.length;
+            length = vectors.length,
+            x = shape.x,
+            y = shape.y;
 
         let inside = false;
 

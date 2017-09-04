@@ -1,6 +1,5 @@
 import BlobType from './BlobType';
-
-const URL = window.URL;
+import {getMimeType} from '../../utils';
 
 /**
  * @class ImageType
@@ -19,23 +18,17 @@ export default class ImageType extends BlobType {
     /**
      * @override
      */
-    loadSource(path, request) {
-        return super.loadSource(path, request);
-    }
-
-    /**
-     * @override
-     */
-    create(source, { mimeType = 'image/png' } = {}) {
+    create(response, { mimeType = getMimeType(response, 'image') } = {}) {
         return super
-            .create(source, { mimeType })
+            .create(response, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {
                 const image = new Image();
 
-                image.onload = () => resolve(image);
-                image.onerror = () => reject(image);
+                image.addEventListener('load', () => resolve(image));
+                image.addEventListener('error', () => reject(image));
+                image.addEventListener('abort', () => reject(image));
 
-                image.src = URL.createObjectURL(blob);
+                image.src = window.URL.createObjectURL(blob);
             }));
     }
 }

@@ -22,18 +22,18 @@ export default class ResourceType {
      * @param {Object} [request]
      * @param {String} [request.method='GET']
      * @param {String} [request.mode='cors']
-     * @returns {Promise}
+     * @returns {Promise<Response>}
      */
-    loadSource(path, { method = 'GET', mode = 'cors' } = {}) {
+    request(path, { method = 'GET', mode = 'cors' } = {}) {
         return fetch(path, { method, mode });
     }
 
     /**
      * @public
      * @abstract
-     * @param {*} source
+     * @param {Response} source
      * @param {Object} [options]
-     * @returns {Promise}
+     * @returns {Promise<*>}
      */
     create(source, options) {
         return Promise.resolve(source);
@@ -43,12 +43,13 @@ export default class ResourceType {
      * @public
      * @abstract
      * @param {String} path
+     * @param {Object} [request]
      * @param {Object} [options]
-     * @returns {Promise}
+     * @returns {Promise<*>}
      */
-    load(path, options) {
+    load(path, request, options) {
         return this
-            .loadSource(path)
+            .request(path, request)
             .then((source) => this.create(source, options));
     }
 }

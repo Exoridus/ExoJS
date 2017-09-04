@@ -236,7 +236,7 @@ export default class Shader {
     syncAttributes() {
         const gl = this._context;
 
-        this._attributes.forEach((attribute, name) => {
+        for (const [name, attribute] of this._attributes) {
             if (attribute.location === null) {
                 attribute.location = gl.getAttribLocation(this._program, name);
             }
@@ -246,7 +246,7 @@ export default class Shader {
             } else {
                 gl.disableVertexAttribArray(attribute.location);
             }
-        });
+        }
     }
 
     /**
@@ -310,9 +310,9 @@ export default class Shader {
      * @public
      */
     syncUniforms() {
-        this._uniforms.forEach((uniform) => {
+        for (const uniform of this._uniforms.values()) {
             this._uploadUniform(uniform);
-        });
+        }
     }
 
     /**
@@ -403,15 +403,15 @@ export default class Shader {
      * @public
      */
     destroy() {
-        this._uniforms.forEach((uniform, name) => {
+        for (const name of this._uniforms.keys()) {
             this.removeUniform(name);
-        });
+        }
         this._uniforms.clear();
         this._uniforms = null;
 
-        this._attributes.forEach((attribute, name) => {
+        for (const name of this._attributes.keys()) {
             this.removeAttribute(name);
-        });
+        }
         this._attributes.clear();
         this._attributes = null;
 

@@ -1,7 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import {CHANNEL_RANGE_HANDLER, CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
-
-const offset = INPUT_DEVICE.POINTER * CHANNEL_RANGE_DEVICE;
+import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
 
 /**
  * @class Pointer
@@ -15,7 +13,7 @@ export default class Pointer extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(channelBuffer, index) {
-        super(channelBuffer, offset | (index * CHANNEL_RANGE_HANDLER), CHANNEL_RANGE_HANDLER);
+        super(channelBuffer, CHANNEL_OFFSET.POINTER | (index * CHANNEL_LENGTH.CHILD), CHANNEL_LENGTH.CHILD);
     }
 
     /**
@@ -63,6 +61,6 @@ export default class Pointer extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key, index = 0) {
-        return offset | ((index * CHANNEL_RANGE_HANDLER) | (key & 255));
+        return CHANNEL_OFFSET.POINTER | ((index * CHANNEL_LENGTH.CHILD) | (key & 255));
     }
 }

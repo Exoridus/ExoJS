@@ -149,9 +149,9 @@ export default class EventEmitter {
         const events = this._events.get(event);
 
         if (events) {
-            events.forEach((event) => {
+            for (const event of events) {
                 event.callback.call(event.context, ...args);
-            });
+            }
         }
 
         return this;
@@ -161,14 +161,14 @@ export default class EventEmitter {
      * @public
      */
     destroy() {
-        this._events.forEach((events) => {
-            events.forEach((event) => {
+        for (const events of this._events.values()) {
+            for (const event of events) {
                 event.callback = null;
                 event.context = null;
-            });
+            }
 
             events.length = 0;
-        });
+        }
         this._events.clear();
         this._events = null;
     }

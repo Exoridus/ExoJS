@@ -41,7 +41,7 @@ export default class Audio extends Playable {
 
         if (this._parentVolume !== volume) {
             this._parentVolume = volume;
-            this._source.volume = this._volume * this._parentVolume;
+            this._source.volume = (this._volume * this._parentVolume);
         }
     }
 
@@ -57,13 +57,12 @@ export default class Audio extends Playable {
 
         if (this._volume !== volume) {
             this._volume = volume;
-            this._source.volume = this._volume * this._parentVolume;
+            this._source.volume = (this._volume * this._parentVolume);
         }
     }
 
     /**
      * @override
-     * @param {Exo.AudioManager} audioManager
      */
     connect(audioManager) {
         this.parentVolume = audioManager.masterVolume;

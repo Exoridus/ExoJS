@@ -5,8 +5,26 @@
 export default class GamepadMapping {
 
     /**
+     * @constructor
+     */
+    constructor() {
+
+        /**
+         * @private
+         * @member {Set.<Exo.GamepadButton>}
+         */
+        this._buttons = new Set();
+
+        /**
+         * @private
+         * @member {Set.<Exo.GamepadButton>}
+         */
+        this._axes = new Set();
+    }
+
+    /**
      * @public
-     * @member {Exo.GamepadButton[]}
+     * @member {Set<Exo.GamepadButton>}
      */
     get buttons() {
         return this._buttons;
@@ -18,7 +36,7 @@ export default class GamepadMapping {
 
     /**
      * @public
-     * @member {Exo.GamepadButton[]}
+     * @member {Set<Exo.GamepadButton>}
      */
     get axes() {
         return this._axes;
@@ -29,34 +47,15 @@ export default class GamepadMapping {
     }
 
     /**
-     * @constructor
-     */
-    constructor() {
-
-        /**
-         * @private
-         * @member {Exo.GamepadButton[]}
-         */
-        this._buttons = [];
-
-        /**
-         * @private
-         * @member {Exo.GamepadButton[]}
-         */
-        this._axes = [];
-    }
-
-    /**
      * @public
      * @param {Exo.GamepadButton[]} buttons
      */
     setButtons(buttons) {
-        const mappingButtons = this._buttons;
-        mappingButtons.length = 0;
+        this._buttons.clear();
 
-        buttons.forEach((button) => {
-            mappingButtons.push(button);
-        });
+        for (const button of buttons) {
+            this._buttons.add(button);
+        }
     }
 
     /**
@@ -64,22 +63,21 @@ export default class GamepadMapping {
      * @param {Exo.GamepadButton[]} axes
      */
     setAxes(axes) {
-        const mappingAxes = this._axes;
-        mappingAxes.length = 0;
+        this._axes.clear();
 
-        axes.forEach((axis) => {
-            mappingAxes.push(axis);
-        });
+        for (const axis of axes) {
+            this._axes.add(axis);
+        }
     }
 
     /**
      * @public
      */
     destroy() {
-        this._buttons.length = 0;
+        this._buttons.clear();
         this._buttons = null;
 
-        this._axes.length = 0;
+        this._axes.clear();
         this._axes = null;
     }
 }

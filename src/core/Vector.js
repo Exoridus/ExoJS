@@ -112,8 +112,8 @@ export default class Vector extends Shape {
     /**
      * @override
      */
-    contains(x, y) {
-        return this._x === x && this._y === y;
+    contains(shape) {
+        return shape.type === SHAPE.POINT && (this._x === shape.x && this._y === shape.y);
     }
 
     /**
@@ -202,7 +202,7 @@ export default class Vector extends Shape {
      * @override
      */
     getBounds() {
-        return new Rectangle(this.x, this.y, 0, 0);
+        return new Rectangle(this._x, this._y, 0, 0);
     }
 
     /**

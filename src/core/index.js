@@ -18,3 +18,4 @@ export { default as Game } from './Game';
 export { default as Config } from './Config';
 export { default as Scene } from './Scene';
 export { default as SceneManager } from './SceneManager';
+export { default as Quadtree } from './Quadtree';

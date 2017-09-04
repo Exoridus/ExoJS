@@ -412,9 +412,9 @@ export default class DisplayManager {
     destroy() {
         this._removeEvents();
 
-        this._renderers.forEach((renderer, name) => {
+        for (const name of this._renderers.keys()) {
             this.removeRenderer(name);
-        });
+        }
 
         this._canvas = null;
         this._context = null;

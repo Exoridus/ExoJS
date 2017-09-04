@@ -105,9 +105,9 @@ export default class ResourceContainer {
      * @returns {Exo.ResourceContainer}
      */
     clear() {
-        this._resources.forEach((container) => {
+        for (const container of this._resources.values()) {
             container.clear();
-        });
+        }
 
         return this;
     }

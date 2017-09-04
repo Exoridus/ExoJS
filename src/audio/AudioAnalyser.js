@@ -7,8 +7,24 @@ export default class AudioAnalyser {
     /**
      * @constructor
      * @param {Exo.Sound|Exo.Music|Exo.AudioManager} target
+     * @param {Object} [options]
+     * @param {Number} [options.fftSize=2048]
+     * @param {Number} [options.minDecibels=-100]
+     * @param {Number} [options.maxDecibels=-30]
+     * @param {Number} [options.smoothingTimeConstant=0.8]
      */
-    constructor(target) {
+    constructor(target, { fftSize = 2048, minDecibels = -100, maxDecibels = -30, smoothingTimeConstant = 0.8 } = {}) {
+        if (!target) {
+            throw new Error('No analyser target was provided.');
+        }
+
+        if (!target.context) {
+            throw new Error('Could not find AudioContext of the target.');
+        }
+
+        if (!target.analyserTarget) {
+            throw new Error('Target has no valid AudioNode to analyse.');
+        }
 
         /**
          * @private
@@ -16,90 +32,94 @@ export default class AudioAnalyser {
          */
         this._context = target.context;
 
-        if (!this._context) {
-            throw new Error('Target has no AudioContext to work with.');
-        }
-
-        /**
-         * @private
-         * @member {AudioNode}
-         */
-        this._targetNode = target.analyserTarget;
-
-        if (!this._targetNode) {
-            throw new Error('Target has no valid AudioNode to analyse.');
-        }
-
         /**
          * @private
          * @member {AnalyserNode}
          */
         this._analyser = this._context.createAnalyser();
-        this._targetNode.connect(this._analyser);
+        this._analyser.fftSize = fftSize;
+        this._analyser.minDecibels = minDecibels;
+        this._analyser.maxDecibels = maxDecibels;
+        this._analyser.smoothingTimeConstant = smoothingTimeConstant;
 
         /**
          * @private
-         * @member {Uint8Array}
+         * @member {AudioNode}
          */
-        this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount);
+        this._target = target.analyserTarget;
+        this._target.connect(this._analyser);
 
         /**
          * @private
-         * @member {Uint8Array}
+         * @member {Uint8Array} _timeDomainData
          */
-        this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
 
         /**
          * @private
-         * @member {Float32Array}
+         * @member {Uint8Array} _frequencyData
          */
-        this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
 
         /**
          * @private
-         * @member {Float32Array}
+         * @member {Float32Array} _preciseTimeDomainData
          */
-        this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
+
+        /**
+         * @private
+         * @member {Float32Array} _preciseFrequencyData
+         */
     }
 
     /**
      * @public
-     * @returns {Uint8Array}
+     * @readonly
+     * @member {Uint8Array}
      */
-    getTimeDomainData() {
-        this._analyser.getByteTimeDomainData(this._timeDomainData);
+    get timeDomainData() {
+        const timeDomainData = this._timeDomainData || (this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount));
 
-        return this._timeDomainData;
+        this._analyser.getByteTimeDomainData(timeDomainData);
+
+        return timeDomainData;
     }
 
     /**
      * @public
-     * @returns {Uint8Array}
+     * @readonly
+     * @member {Uint8Array}
      */
-    getFrequencyData() {
-        this._analyser.getByteFrequencyData(this._frequencyData);
+    get frequencyData() {
+        const frequencyData = this._frequencyData || (this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount));
 
-        return this._frequencyData;
+        this._analyser.getByteFrequencyData(frequencyData);
+
+        return frequencyData;
     }
 
     /**
      * @public
-     * @returns {Float32Array}
+     * @readonly
+     * @member {Float32Array}
      */
-    getPreciseTimeDomainData() {
-        this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
+    get preciseTimeDomainData() {
+        const preciseTimeDomainData = this._preciseTimeDomainData || (this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount));
 
-        return this._preciseTimeDomainData;
+        this._analyser.getFloatTimeDomainData(preciseTimeDomainData);
+
+        return preciseTimeDomainData;
     }
 
     /**
      * @public
-     * @returns {Float32Array}
+     * @readonly
+     * @member {Float32Array}
      */
-    getPreciseFrequencyData() {
-        this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
+    get preciseFrequencyData() {
+        const preciseFrequencyData = this._preciseFrequencyData || (this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount));
 
-        return this._preciseFrequencyData;
+        this._analyser.getFloatFrequencyData(preciseFrequencyData);
+
+        return preciseFrequencyData;
     }
 
     /**
@@ -111,8 +131,8 @@ export default class AudioAnalyser {
         this._preciseTimeDomainData = null;
         this._preciseFrequencyData = null;
 
-        this._targetNode.disconnect(this._analyser);
-        this._targetNode = null;
+        this._target.disconnect();
+        this._target = null;
 
         this._analyser.disconnect();
         this._analyser = null;

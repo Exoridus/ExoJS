@@ -130,24 +130,39 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    contains(x, y) {
-        const dx = (this.x - x),
-            dy = (this.y - y);
+    contains(shape) {
+        switch (shape.type) {
+            case SHAPE.POINT:
+                const dx = (this.x - shape.x),
+                    dy = (this.y - shape.y);
 
-        return (dx * dx) + (dy * dy) <= (this._radius * this._radius);
+                return (dx * dx) + (dy * dy) <= (this._radius * this._radius);
+            case SHAPE.CIRCLE:
+            case SHAPE.RECTANGLE:
+            case SHAPE.POLYGON:
+            default:
+                return false;
+        }
+
+        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {Number}
+     * @override
      */
-    distanceTo(circle) {
-        const x = this._x - circle.x,
-            y = this._y - circle.y;
+    intersects(shape) {
+        switch (shape.type) {
+            case SHAPE.POINT:
+                return this.contains(shape);
+            case SHAPE.CIRCLE:
+                return this._position.distanceTo(shape.position) < (this._radius + shape.radius);
+            case SHAPE.RECTANGLE:
+            case SHAPE.POLYGON:
+            default:
+                return false;
+        }
 
-        return Math.sqrt((x * x) + (y * y));
+        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**
@@ -168,8 +183,20 @@ export default class Circle extends Shape {
     destroy() {
         this._position.destroy();
         this._position = null;
-
         this._radius = null;
+    }
+
+    /**
+     * @public
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {Number}
+     */
+    distanceTo(circle) {
+        const x = this._x - circle.x,
+            y = this._y - circle.y;
+
+        return Math.sqrt((x * x) + (y * y));
     }
 
     /**

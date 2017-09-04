@@ -1,6 +1,8 @@
 import Gamepad from './Gamepad';
 import ChannelHandler from '../ChannelHandler';
-import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../../const';
+import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
+
+const navigator = window.navigator;
 
 /**
  * @class GamepadManager
@@ -15,7 +17,7 @@ export default class GamepadManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, INPUT_DEVICE.GAMEPAD * CHANNEL_RANGE_DEVICE, CHANNEL_RANGE_DEVICE);
+        super(channelBuffer, CHANNEL_OFFSET.GAMEPAD, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
@@ -25,27 +27,18 @@ export default class GamepadManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Gamepad[]}
+         * @member {Map.<Number, Exo.Gamepad>}
          */
-        this._gamepads = [];
+        this._gamepads = new Map();
     }
 
     /**
      * @public
      * @readonly
-     * @member {Exo.Gamepad[]}
+     * @member {Map.<Number, Exo.Gamepad>}
      */
     get gamepads() {
         return this._gamepads;
-    }
-
-    /**
-     * @public
-     * @param {Number} [index=0]
-     * @returns {?Exo.Gamepad}
-     */
-    getGamepad(index = 0) {
-        return this._gamepads[index] || null;
     }
 
     /**
@@ -58,8 +51,8 @@ export default class GamepadManager extends ChannelHandler {
             return;
         }
 
-        for (let i = 0, len = this._gamepads.length; i < len; i++) {
-            this._gamepads[i].update();
+        for (const gamepad of this._gamepads.values()) {
+            gamepad.update();
         }
     }
 
@@ -68,87 +61,42 @@ export default class GamepadManager extends ChannelHandler {
      */
     updateGamepads() {
         const game = this._game,
-            currentGamepads = this._gamepads,
-            currentLength = currentGamepads.length,
-            rawGamepads = this.getRawGamepads(),
-            rawLength = rawGamepads.length;
+            activeGamepads = this._gamepads,
+            nativeGamepads = navigator.getGamepads(),
+            length = nativeGamepads.length;
 
-        if (currentLength === rawLength) {
-            return;
-        }
-
-        if (currentLength < rawLength) {
-            this.addGamepads(rawGamepads);
-        } else {
-            this.removeGamepads(rawGamepads);
-        }
-
-        game.trigger('gamepad:change', currentGamepads);
-    }
-
-    addGamepads(rawGamepads) {
-        const game = this._game,
-            channelBuffer = this._channelBuffer,
-            currentGamepads = this._gamepads;
-
-        for (let index = currentGamepads.length; index < rawGamepads.length; index++) {
-            currentGamepads.push(new Gamepad(channelBuffer, index, rawGamepads[index]));
-
-            game.trigger('gamepad:add', currentGamepads);
-        }
-    }
-
-    removeGamepads(rawGamepads) {
-        const game = this._game,
-            currentGamepads = this._gamepads,
-            rawLength = rawGamepads.length;
-
-        for (let i = currentGamepads.length - 1; i >= 0; i--) {
-            const currentGamepad = currentGamepads[i];
-
-            if (i < rawLength) {
-                currentGamepad.rawGamepad = rawGamepads[i];
-                currentGamepad.index = i;
+        for (let i = 0; i < length; i++) {
+            if (!!nativeGamepads[i] === activeGamepads.has(i)) {
                 continue;
             }
 
-            currentGamepad.destroy(true);
-            currentGamepads.splice(i, 1);
+            if (nativeGamepads[i]) {
+                const newGamepad = new Gamepad(this._channelBuffer, i, nativeGamepads[i]);
 
-            game.trigger('gamepad:remove', currentGamepads);
-        }
-    }
+                activeGamepads.set(i, newGamepad);
+                game.trigger('gamepad:add', newGamepad, i, activeGamepads);
+            } else {
+                const oldGamepad = activeGamepads.get(i);
 
-    /**
-     * @public
-     * @returns {Array}
-     */
-    getRawGamepads() {
-        const navigator = window.navigator,
-            rawGamepads = navigator.getGamepads(),
-            activeGamepads = [],
-            len = rawGamepads.length;
-
-        for (let i = 0; i < len; i++) {
-            if (rawGamepads[i]) {
-                activeGamepads.push(rawGamepads[i]);
+                activeGamepads.delete(i);
+                game.trigger('gamepad:remove', oldGamepad, i, activeGamepads);
+                oldGamepad.destroy();
             }
-        }
 
-        return activeGamepads;
+            game.trigger('gamepad:change', activeGamepads);
+        }
     }
 
     /**
      * @public
-     * @param {Boolean} [resetChannels]
      */
-    destroy(resetChannels) {
-        super.destroy(resetChannels);
+    destroy() {
+        super.destroy();
 
-        this._gamepads.forEach((gamepad) => {
+        for (const gamepad of this._gamepads.values()) {
             gamepad.destroy();
-        });
-        this._gamepads.length = 0;
+        }
+        this._gamepads.clear();
         this._gamepads = null;
 
         this._game = null;

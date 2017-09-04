@@ -1,4 +1,8 @@
+const webpack = require('webpack');
+
 module.exports = (grunt) => {
+    const package = grunt.file.readJSON('package.json');
+
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-cssmin');
     grunt.loadNpmTasks('grunt-contrib-sass');
@@ -6,7 +10,7 @@ module.exports = (grunt) => {
     grunt.loadNpmTasks('grunt-babel');
 
     grunt.initConfig({
-        pkg: grunt.file.readJSON('package.json'),
+        pkg: package,
         dirs: {
             build: './bin',
             src: './src',
@@ -47,6 +51,11 @@ module.exports = (grunt) => {
                     sourceMapFilename: 'exo.build.js.map',
                     library: 'Exo',
                 },
+                plugins: [
+                    new webpack.DefinePlugin({
+                        __VERSION__: JSON.stringify(package.version)
+                    })
+                ]
             },
             examples: {
                 entry: '<%= dirs.examples %>/src/js/index.js',

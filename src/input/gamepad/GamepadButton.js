@@ -7,6 +7,48 @@ import {clamp} from '../../utils';
 export default class GamepadButton {
 
     /**
+     * @constructor
+     * @param {Number} index
+     * @param {Number} channel
+     * @param {Object} [options]
+     * @param {Number} [options.threshold=0.2]
+     * @param {Boolean} [options.negate=false]
+     * @param {Boolean} [options.normalize=false]
+     */
+    constructor(index, channel, { threshold = 0.2, negate = false, normalize = false } = {}) {
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._index = index;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._channel = channel;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._threshold = clamp(threshold, 0, 1);
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._negate = negate;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._normalize = normalize;
+    }
+
+    /**
      * @public
      * @member {Number}
      */
@@ -15,7 +57,7 @@ export default class GamepadButton {
     }
 
     set index(value) {
-        this._index = value | 0;
+        this._index = value;
     }
 
     /**
@@ -27,7 +69,7 @@ export default class GamepadButton {
     }
 
     set channel(value) {
-        this._channel = value | 0;
+        this._channel = value;
     }
 
     /**
@@ -51,7 +93,7 @@ export default class GamepadButton {
     }
 
     set negate(value) {
-        this._negate = !!value;
+        this._negate = value;
     }
 
     /**
@@ -63,7 +105,7 @@ export default class GamepadButton {
     }
 
     set normalize(value) {
-        this._normalize = !!value;
+        this._normalize = value;
     }
 
     /**
@@ -75,63 +117,21 @@ export default class GamepadButton {
     }
 
     /**
-     * @constructor
-     * @param {Number} index
-     * @param {Number} channel
-     * @param {Object} [options={}]
-     * @param {Number} [options.threshold]
-     * @param {Boolean} [options.negate]
-     * @param {Boolean} [options.normalize]
-     */
-    constructor(index, channel, options = {}) {
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._index = index | 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._channel = channel | 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._threshold = clamp(options.threshold || 0.2, 0, 1);
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._negate = options.negate;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._normalize = options.normalize;
-    }
-
-    /**
      * @public
      * @param {Exo.GamepadButton|Number} buttonValue
      * @returns {Number}
      */
-    getMappedValue(buttonValue) {
-        let val = (typeof buttonValue.value === 'number') ? buttonValue.value : buttonValue;
+    transformValue(buttonValue) {
+        let value = (typeof buttonValue.value === 'number') ? buttonValue.value : buttonValue;
 
         if (this._negate) {
-            val *= -1;
+            value *= -1;
         }
 
         if (this._normalize) {
-            val = (val + 1) / 2;
+            value = (value + 1) / 2;
         }
 
-        return val >= this._threshold ? val : 0;
+        return (value >= this._threshold) ? value : 0;
     }
 }

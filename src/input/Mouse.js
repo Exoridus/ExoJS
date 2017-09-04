@@ -1,8 +1,6 @@
 import ChannelHandler from './ChannelHandler';
 import Vector from '../core/Vector';
-import {CHANNEL_RANGE_DEVICE, INPUT_DEVICE} from '../const';
-
-const offset = INPUT_DEVICE.MOUSE * CHANNEL_RANGE_DEVICE;
+import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../const';
 
 /**
  * @class Mouse
@@ -17,7 +15,7 @@ export default class Mouse extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
-        super(channelBuffer, offset, CHANNEL_RANGE_DEVICE);
+        super(channelBuffer, CHANNEL_OFFSET.MOUSE, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
@@ -70,6 +68,16 @@ export default class Mouse extends ChannelHandler {
      * @member {Number}
      * @memberof Mouse
      */
+    get position() {
+        return this._position;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     * @memberof Mouse
+     */
     get x() {
         return this._position.x;
     }
@@ -87,20 +95,10 @@ export default class Mouse extends ChannelHandler {
     /**
      * @public
      * @readonly
-     * @member {Number}
-     * @memberof Mouse
-     */
-    get position() {
-        return this._position;
-    }
-
-    /**
-     * @public
-     * @readonly
      * @member {Boolean}
      * @memberof Mouse
      */
-    get insideWindow() {
+    get isInsideFrame() {
         return this._insideWindow;
     }
 
@@ -160,7 +158,7 @@ export default class Mouse extends ChannelHandler {
      * @member {Boolean}
      * @memberof Mouse
      */
-    get windowEntered() {
+    get hasEnteredWindow() {
         return !!this._channels[15];
     }
 
@@ -170,7 +168,7 @@ export default class Mouse extends ChannelHandler {
      * @member {Boolean}
      * @memberof Mouse
      */
-    get windowLeft() {
+    get hasLeftWindow() {
         return !!this._channels[16];
     }
 
@@ -189,7 +187,7 @@ export default class Mouse extends ChannelHandler {
         }
 
         if (this._stateChanged) {
-            this._insideWindow = this.windowEntered;
+            this._insideWindow = this.hasEnteredWindow;
 
             if (this._insideWindow) {
 
@@ -241,7 +239,7 @@ export default class Mouse extends ChannelHandler {
     }
 
     /**
-     * @public
+     * @override
      */
     destroy() {
         super.destroy();
@@ -343,14 +341,12 @@ export default class Mouse extends ChannelHandler {
      * @param {MouseEvent} event
      */
     _onMouseMove(event) {
-        const canvas = this._canvas,
-            position = this._position,
-            newX = (event.clientX - canvas.offsetLeft),
-            newY = (event.clientY - canvas.offsetTop);
+        const rect = this._canvas.getBoundingClientRect(),
+            x = (event.clientX - rect.left),
+            y = (event.clientY - rect.top);
 
-        this._setPositionDelta(newX - position.x, newY - position.y);
-        position.set(newX, newY);
-
+        this._setPositionDelta(x - this.x, y - this.y);
+        this._position.set(x, y);
         this._positionChanged = true;
     }
 
@@ -429,11 +425,11 @@ export default class Mouse extends ChannelHandler {
     /**
      * @public
      * @static
-     * @param {Number} keyCode
+     * @param {Number} key
      * @returns {Number}
      */
-    static getChannelCode(keyCode) {
-        return offset | (keyCode & 255);
+    static getChannelCode(key) {
+        return CHANNEL_OFFSET.MOUSE | key;
     }
 }
 
@@ -442,116 +438,116 @@ export default class Mouse extends ChannelHandler {
  * @static
  * @member {Number}
  */
-Mouse.LeftButton = offset | 0;
+Mouse.LeftButton = CHANNEL_OFFSET.MOUSE | 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MiddleButton = offset | 1;
+Mouse.MiddleButton = CHANNEL_OFFSET.MOUSE | 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.RightButton = offset | 2;
+Mouse.RightButton = CHANNEL_OFFSET.MOUSE | 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.BackButton = offset | 3;
+Mouse.BackButton = CHANNEL_OFFSET.MOUSE | 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ForwardButton = offset | 4;
+Mouse.ForwardButton = CHANNEL_OFFSET.MOUSE | 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollLeft = offset | 5;
+Mouse.ScrollLeft = CHANNEL_OFFSET.MOUSE | 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollRight = offset | 6;
+Mouse.ScrollRight = CHANNEL_OFFSET.MOUSE | 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollUp = offset | 7;
+Mouse.ScrollUp = CHANNEL_OFFSET.MOUSE | 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollDown = offset | 8;
+Mouse.ScrollDown = CHANNEL_OFFSET.MOUSE | 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollForward = offset | 9;
+Mouse.ScrollForward = CHANNEL_OFFSET.MOUSE | 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollBackward = offset | 10;
+Mouse.ScrollBackward = CHANNEL_OFFSET.MOUSE | 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveLeft = offset | 11;
+Mouse.MoveLeft = CHANNEL_OFFSET.MOUSE | 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveRight = offset | 12;
+Mouse.MoveRight = CHANNEL_OFFSET.MOUSE | 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveUp = offset | 13;
+Mouse.MoveUp = CHANNEL_OFFSET.MOUSE | 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveDown = offset | 14;
+Mouse.MoveDown = CHANNEL_OFFSET.MOUSE | 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.EnterWindow = offset | 15;
+Mouse.EnterWindow = CHANNEL_OFFSET.MOUSE | 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.LeaveWindow = offset | 16;
+Mouse.LeaveWindow = CHANNEL_OFFSET.MOUSE | 16;
