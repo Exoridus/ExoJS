@@ -1,18 +1,18 @@
-import AudioType from './AudioType';
+import AudioFactory from './AudioFactory';
 import Music from '../../audio/Music';
-import {webAudioSupport} from '../../utils';
+import {webAudioSupported} from '../../utils';
 
 /**
- * @class MusicType
- * @extends {Exo.AudioType}
+ * @class MusicFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class MusicType extends AudioType {
+export default class MusicFactory extends AudioFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'music';
     }
 
@@ -20,7 +20,7 @@ export default class MusicType extends AudioType {
      * @override
      */
     create(response, options) {
-        if (!webAudioSupport) {
+        if (!webAudioSupported) {
             return Promise.reject();
         }
 

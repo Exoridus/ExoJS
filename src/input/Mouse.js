@@ -429,7 +429,7 @@ export default class Mouse extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return CHANNEL_OFFSET.MOUSE | key;
+        return CHANNEL_OFFSET.MOUSE + (key & 255);
     }
 }
 
@@ -438,116 +438,116 @@ export default class Mouse extends ChannelHandler {
  * @static
  * @member {Number}
  */
-Mouse.LeftButton = CHANNEL_OFFSET.MOUSE | 0;
+Mouse.LeftButton = CHANNEL_OFFSET.MOUSE + 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MiddleButton = CHANNEL_OFFSET.MOUSE | 1;
+Mouse.MiddleButton = CHANNEL_OFFSET.MOUSE + 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.RightButton = CHANNEL_OFFSET.MOUSE | 2;
+Mouse.RightButton = CHANNEL_OFFSET.MOUSE + 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.BackButton = CHANNEL_OFFSET.MOUSE | 3;
+Mouse.BackButton = CHANNEL_OFFSET.MOUSE + 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ForwardButton = CHANNEL_OFFSET.MOUSE | 4;
+Mouse.ForwardButton = CHANNEL_OFFSET.MOUSE + 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollLeft = CHANNEL_OFFSET.MOUSE | 5;
+Mouse.ScrollLeft = CHANNEL_OFFSET.MOUSE + 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollRight = CHANNEL_OFFSET.MOUSE | 6;
+Mouse.ScrollRight = CHANNEL_OFFSET.MOUSE + 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollUp = CHANNEL_OFFSET.MOUSE | 7;
+Mouse.ScrollUp = CHANNEL_OFFSET.MOUSE + 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollDown = CHANNEL_OFFSET.MOUSE | 8;
+Mouse.ScrollDown = CHANNEL_OFFSET.MOUSE + 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollForward = CHANNEL_OFFSET.MOUSE | 9;
+Mouse.ScrollForward = CHANNEL_OFFSET.MOUSE + 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollBackward = CHANNEL_OFFSET.MOUSE | 10;
+Mouse.ScrollBackward = CHANNEL_OFFSET.MOUSE + 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveLeft = CHANNEL_OFFSET.MOUSE | 11;
+Mouse.MoveLeft = CHANNEL_OFFSET.MOUSE + 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveRight = CHANNEL_OFFSET.MOUSE | 12;
+Mouse.MoveRight = CHANNEL_OFFSET.MOUSE + 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveUp = CHANNEL_OFFSET.MOUSE | 13;
+Mouse.MoveUp = CHANNEL_OFFSET.MOUSE + 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveDown = CHANNEL_OFFSET.MOUSE | 14;
+Mouse.MoveDown = CHANNEL_OFFSET.MOUSE + 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.EnterWindow = CHANNEL_OFFSET.MOUSE | 15;
+Mouse.EnterWindow = CHANNEL_OFFSET.MOUSE + 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.LeaveWindow = CHANNEL_OFFSET.MOUSE | 16;
+Mouse.LeaveWindow = CHANNEL_OFFSET.MOUSE + 16;

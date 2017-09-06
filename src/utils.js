@@ -1,6 +1,4 @@
-import {DEG_TO_RAD, RAD_TO_DEG, SCALE_MODE, WRAP_MODE} from './const';
-
-const audioSupportRegex = /^no$/;
+import {DEG_TO_RAD, RAD_TO_DEG, SCALE_MODE, WRAP_MODE, CODEC_NOT_SUPPORTED} from './const';
 
 export const
 
@@ -12,7 +10,7 @@ export const
      * @memberof Exo.utils
      * @type {Boolean}
      */
-    webAudioSupport = ('AudioContext' in window),
+    webAudioSupported = ('AudioContext' in window),
 
     /**
      * @public
@@ -22,7 +20,7 @@ export const
      * @memberof Exo.utils
      * @type {Boolean}
      */
-    indexedDBSupport = ('indexedDB' in window),
+    indexedDBSupported = ('indexedDB' in window),
 
     /**
      * @public
@@ -32,7 +30,7 @@ export const
      * @memberof Exo.utils
      * @type {Boolean}
      */
-    webGLSupport = (() => {
+    webGLSupported = (() => {
         const canvas = document.createElement('canvas'),
             supports = ('probablySupportsContext' in canvas) ? 'probablySupportsContext' : 'supportsContext';
 
@@ -49,9 +47,9 @@ export const
      * @readonly
      * @constant
      * @memberof Exo.utils
-     * @type {HTMLMediaElement}
+     * @type {?AudioContext}
      */
-    audio = new Audio(),
+    audioContext = webAudioSupported ? new AudioContext() : null,
 
     /**
      * @public
@@ -59,9 +57,9 @@ export const
      * @readonly
      * @constant
      * @memberof Exo.utils
-     * @type {?AudioContext}
+     * @type {HTMLMediaElement}
      */
-    audioContext = webAudioSupport ? new AudioContext() : null,
+    audio = new Audio(),
 
     /**
      * @public
@@ -73,13 +71,9 @@ export const
      * @returns {Boolean}
      */
     isCodecSupported = (...codecs) => {
-        const len = codecs.length;
-
-        for (let i = 0; i < len; i++) {
-            const support = audio.canPlayType(codecs[i]);
-
-            if (support) {
-                return !!support.replace(audioSupportRegex, '');
+        for (const codec of codecs) {
+            if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
+                return true;
             }
         }
 
@@ -93,17 +87,17 @@ export const
      * @memberof Exo.utils
      * @type {Object.<String, Boolean>}
      */
-    supportedCodecs = {
-        'mp3': isCodecSupported('audio/mpeg;', 'audio/mp3;'),
-        'mpeg': isCodecSupported('audio/mpeg;'),
-        'opus': isCodecSupported('audio/ogg; codecs="opus"'),
-        'ogg': isCodecSupported('audio/ogg; codecs="vorbis"'),
-        'wav': isCodecSupported('audio/wav; codecs="1"'),
-        'aac': isCodecSupported('audio/aac;'),
-        'm4a': isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
-        'mp4': isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
-        'weba': isCodecSupported('audio/webm; codecs="vorbis"'),
-        'webm': isCodecSupported('audio/webm; codecs="vorbis"'),
+    supportedAudioCodecs = {
+        mp3: isCodecSupported('audio/mpeg;', 'audio/mp3;'),
+        mpeg: isCodecSupported('audio/mpeg;'),
+        opus: isCodecSupported('audio/ogg; codecs="opus"'),
+        ogg: isCodecSupported('audio/ogg; codecs="vorbis"'),
+        wav: isCodecSupported('audio/wav; codecs="1"'),
+        aac: isCodecSupported('audio/aac;'),
+        m4a: isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
+        mp4: isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
+        weba: isCodecSupported('audio/webm; codecs="vorbis"'),
+        webm: isCodecSupported('audio/webm; codecs="vorbis"'),
     },
 
     /**
@@ -116,7 +110,7 @@ export const
      * @returns {Promise<AudioBuffer>}
      */
     decodeAudioBuffer = (arrayBuffer) => {
-        if (!webAudioSupport) {
+        if (!webAudioSupported) {
             return Promise.reject();
         }
 
@@ -281,21 +275,19 @@ export const
      * @static
      * @constant
      * @memberof Exo.utils
-     * @type [Function}
+     * @type {Function}
      * @param {WebGLRenderingContext} gl
      * @param {Number} scaleMode
      * @returns {Number}
      */
-    getScaleModeEnum = (gl, scaleMode) => {
-        return (scaleMode === SCALE_MODE.LINEAR) ? gl.LINEAR : gl.NEAREST;
-    },
+    getScaleModeEnum = (gl, scaleMode) => (scaleMode === SCALE_MODE.LINEAR) ? gl.LINEAR : gl.NEAREST,
 
     /**
      * @public
      * @static
      * @constant
      * @memberof Exo.utils
-     * @type [Function}
+     * @type {Function}
      * @param {WebGLRenderingContext} gl
      * @param {Number} wrapMode
      * @returns {Number}
@@ -313,7 +305,17 @@ export const
      * @static
      * @constant
      * @memberof Exo.utils
-     * @type [Function}
+     * @type {Function}
+     * @returns {String}
+     */
+    getFilename = (url) => url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.')),
+
+    /**
+     * @public
+     * @static
+     * @constant
+     * @memberof Exo.utils
+     * @type {Function}
      * @returns {String}
      */
     getExtension = (url) => url.substring(url.lastIndexOf('.') + 1).toLowerCase(),
@@ -323,7 +325,7 @@ export const
      * @static
      * @constant
      * @memberof Exo.utils
-     * @type [Function}
+     * @type {Function}
      * @param {Response} response
      * @param {String} type
      * @returns {?String}

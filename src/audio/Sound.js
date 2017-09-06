@@ -1,5 +1,5 @@
 import Playable from './Playable';
-import {clamp, webAudioSupport} from '../utils';
+import {clamp, webAudioSupported} from '../utils';
 
 /**
  * @class Sound
@@ -15,7 +15,7 @@ export default class Sound extends Playable {
     constructor(audioBuffer) {
         super(audioBuffer);
 
-        if (!webAudioSupport) {
+        if (!webAudioSupported) {
             throw new Error('Web Audio API is not supported, use the fallback Exo.Audio instead.');
         }
 

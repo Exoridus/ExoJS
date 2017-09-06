@@ -2,7 +2,7 @@ import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from './particle/ParticleRenderer';
 import Matrix from '../core/Matrix';
-import {webGLSupport} from '../utils';
+import {webGLSupported} from '../utils';
 import {BLEND_MODE} from '../const';
 import BlendMode from './BlendMode';
 
@@ -19,7 +19,7 @@ export default class DisplayManager {
     constructor(game) {
         const config = game.config;
 
-        if (!webGLSupport) {
+        if (!webGLSupported) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
@@ -216,7 +216,8 @@ export default class DisplayManager {
      */
     removeRenderer(name) {
         if (this._renderers.has(name)) {
-            this._renderers.get(name).destroy();
+            this._renderers.get(name)
+                .destroy();
             this._renderers.delete(name);
         }
     }
@@ -272,7 +273,7 @@ export default class DisplayManager {
      */
     setBlendMode(blendMode) {
         if (!this._blendModes.has(blendMode)) {
-            throw new Error(`Blendmode "${blendMode}" is not supported.`)
+            throw new Error(`Blendmode "${blendMode}" is not supported.`);
         }
 
         if (blendMode !== this._currentBlendMode) {
@@ -427,18 +428,18 @@ export default class DisplayManager {
     /**
      * @override
      */
-    _createContext(contextOptions) {
-        const opts = Object.assign({
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: true,
-            depth: false,
-        }, contextOptions);
+    _createContext({ alpha = false, antialias = false, premultipliedAlpha = false, preserveDrawingBuffer = false, stencil = true, depth = false } = {}) {
+        const options = {
+            alpha,
+            antialias,
+            premultipliedAlpha,
+            preserveDrawingBuffer,
+            stencil,
+            depth,
+        };
 
         try {
-            return (this._canvas.getContext('webgl', opts) || this._canvas.getContext('experimental-webgl', opts));
+            return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
         } catch (e) {
             return null;
         }

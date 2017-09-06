@@ -1,8 +1,3 @@
-@font-face {
-  font-family: AndyBold;
-  src: url("../assets/font/AndyBold/AndyBold.woff2") format("woff2"), url("../assets/font/AndyBold/AndyBold.woff") format("woff");
-  font-weight: normal;
-  font-style: normal; }
 * {
   box-sizing: border-box; }
 

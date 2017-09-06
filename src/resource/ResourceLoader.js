@@ -1,6 +1,6 @@
 import EventEmitter from '../core/EventEmitter';
 import ResourceContainer from './ResourceContainer';
-import * as Types from './types';
+import * as Factories from './factory';
 
 /**
  * @class ResourceLoader
@@ -18,9 +18,9 @@ export default class ResourceLoader extends EventEmitter {
 
         /**
          * @private
-         * @member {Object[]}
+         * @member {Set.<Object>}
          */
-        this._queue = [];
+        this._queue = new Set();
 
         /**
          * @private
@@ -30,9 +30,13 @@ export default class ResourceLoader extends EventEmitter {
 
         /**
          * @private
-         * @member {String}
+         * @member {Object.<String, String>}
          */
-        this._requestQuery = '';
+        this._options = {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'default',
+        };
 
         /**
          * @private
@@ -42,23 +46,17 @@ export default class ResourceLoader extends EventEmitter {
 
         /**
          * @private
-         * @member {Map.<String, Exo.ResourceType>}
+         * @member {Map.<String, Exo.ResourceFactory>}
          */
-        this._types = new Map();
+        this._factories = new Map();
 
         /**
          * @private
          * @member {?Promise}
          */
-        this._loadingPromise = null;
+        this._promise = null;
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._itemsLoaded = 0;
-
-        this.registerTypes();
+        this.addFactories();
     }
 
     /**
@@ -84,6 +82,15 @@ export default class ResourceLoader extends EventEmitter {
      * @readonly
      * @member {Number}
      */
+    get itemsQueued() {
+        return this._queue.size;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
     get itemsLoaded() {
         return this._itemsLoaded;
     }
@@ -94,7 +101,7 @@ export default class ResourceLoader extends EventEmitter {
      * @member {Boolean}
      */
     get isLoading() {
-        return this._loadingPromise !== null;
+        return this._promise !== null;
     }
 
     /**
@@ -111,26 +118,26 @@ export default class ResourceLoader extends EventEmitter {
 
     /**
      * @public
-     * @member {String}
+     * @member {Object.<String, String>}
      */
-    get requestQuery() {
-        return this._requestQuery;
+    get options() {
+        return this._options;
     }
 
-    set requestQuery(value) {
-        this._requestQuery = value;
+    set options(value) {
+        this._options = value;
     }
 
     /**
      * @public
      * @chainable
-     * @param {String} name
-     * @param {Exo.ResourceType} type
-     * @returns {Exo.Loader}
+     * @param {String} type
+     * @param {Exo.ResourceFactory} factory
+     * @returns {Exo.ResourceLoader}
      */
-    registerType(name, type) {
-        this._types.set(name, type);
-        this._resources.addType(name);
+    addFactory(type, factory) {
+        this._factories.set(type, factory);
+        this._resources.addType(type);
 
         return this;
     }
@@ -138,21 +145,36 @@ export default class ResourceLoader extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Loader}
+     * @param {String} type
+     * @returns {Exo.ResourceFactory}
      */
-    registerTypes() {
+    getFactory(type) {
+        if (!this._factories.has(type)) {
+            throw new Error(`No resource factory for type "${type}".`);
+        }
+
+        return this._factories.get(type);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Exo.ResourceLoader}
+     */
+    addFactories() {
         return this
-            .registerType('arrayBuffer', new Types.ArrayBufferType())
-            .registerType('audioBuffer', new Types.AudioBufferType())
-            .registerType('audio', new Types.AudioType())
-            .registerType('blob', new Types.BlobType())
-            .registerType('image', new Types.ImageType())
-            .registerType('json', new Types.JSONType())
-            .registerType('music', new Types.MusicType())
-            .registerType('sound', new Types.SoundType())
-            .registerType('sprite', new Types.SpriteType())
-            .registerType('string', new Types.StringType())
-            .registerType('texture', new Types.TextureType());
+            .addFactory('arrayBuffer', new Factories.ArrayBufferFactory())
+            .addFactory('audioBuffer', new Factories.AudioBufferFactory())
+            .addFactory('audio', new Factories.AudioFactory())
+            .addFactory('blob', new Factories.BlobFactory())
+            .addFactory('font', new Factories.FontFactory())
+            .addFactory('image', new Factories.ImageFactory())
+            .addFactory('json', new Factories.JSONFactory())
+            .addFactory('music', new Factories.MusicFactory())
+            .addFactory('sound', new Factories.SoundFactory())
+            .addFactory('sprite', new Factories.SpriteFactory())
+            .addFactory('string', new Factories.StringFactory())
+            .addFactory('texture', new Factories.TextureFactory());
     }
 
     /**
@@ -160,92 +182,93 @@ export default class ResourceLoader extends EventEmitter {
      * @returns {Promise}
      */
     load() {
-        if (this._loadingPromise) {
-            return this._loadingPromise;
+        if (this._promise) {
+            return this._promise;
         }
 
+        this._promise = Promise.resolve();
         this._itemsLoaded = 0;
 
-        this.trigger('start', this._queue.length);
+        this.trigger('start', this._queue.size, this._itemsLoaded);
 
-        this._loadingPromise = this._queue
-            .map((item) => this.loadItem(item.type, item.key, item.path, item.options))
-            .reduce((sequence, promise) => sequence
-                .then(() => promise)
-                .then((resource) => {
-                    this.trigger('progress', resource, ++this._itemsLoaded, this._queue.length);
-                }), Promise.resolve())
-            .then(() => {
-                this._queue.length = 0;
+        for (const item of this._queue) {
+            this._promise
+                .then(() => this.loadItem(item))
+                .then((resource) => this.trigger('progress', this._queue.size, ++this._itemsLoaded, resource));
+        }
 
-                this.trigger('complete', this._itemsLoaded);
-            });
+        return this._promise.then(() => {
+            this._promise = null;
+            this._queue.clear();
 
-        return this._loadingPromise;
+            this.trigger('complete', this._queue.size, this._itemsLoaded);
+        });
     }
 
     /**
      * @public
-     * @param {String} type
-     * @param {String} key
-     * @param {String} path
-     * @param {Object} [options]
+     * @param {Object} item
+     * @param {String} item.type
+     * @param {String} item.name
+     * @param {String} item.path
+     * @param {Object} item.options
      * @returns {Promise<*>}
      */
-    loadItem(type, key, path, options) {
-        if (!this._types.has(type)) {
-            throw new Error(`Invalid resource type "${type}".`);
+    loadItem({ type, name, path, options } = {}) {
+        if (this._resources.has(type, name)) {
+            return Promise.resolve(this._resources.get(type, name));
         }
 
-        if (this._resources.has(type, key)) {
-            return Promise.resolve(this._resources.get(type, key));
+        const promise = this._database ? this.loadDatabaseItem({ type, name, path, options }) : this.getFactory(type)
+            .load(this._basePath + path, this._options, options);
+
+        return promise.then((resource) => {
+            this._resources.set(type, name, resource);
+
+            return resource;
+        });
+    }
+
+    /**
+     * @public
+     * @param {Object} item
+     * @param {String} item.type
+     * @param {String} item.name
+     * @param {String} item.path
+     * @param {Object} item.options
+     * @returns {Promise<*>}
+     */
+    loadDatabaseItem({ type, name, path, options } = {}) {
+        if (!this._database) {
+            throw new Error('No database was provided to load from.');
         }
 
-        const typeHandler = this._types.get(type);
+        const factory = this.getFactory(type);
 
-        if (this._database) {
-            return this._database
-                .loadData(typeHandler.storageKey, key)
-                .then((data) => data ? Promise.resolve(data) : typeHandler.request(this._basePath + path)
-                    .then((source) => this._database.saveData(typeHandler.storageKey, key, source)
-                        .then((source) => Promise.resolve(source))))
-                .then((source) => typeHandler.create(source, options))
-                .then((resource) => {
-                    this._resources.set(type, key, resource);
-
-                    return resource;
-                });
-        }
-
-        return typeHandler
-            .load(this._basePath + path, options)
-            .then((resource) => {
-                this._resources.set(type, key, resource);
-
-                return resource;
-            });
+        return this._database
+            .loadData(factory.storageType, name)
+            .then((data) => data ? Promise.resolve(data) : factory
+                .request(this._basePath + path, this._options)
+                .then((data) => this._database.saveData(factory.storageType, name, data))
+                .then(({ type, name, data }) => data))
+            .then((data) => factory.create(data, options));
     }
 
     /**
      * @public
      * @chainable
      * @param {String} type
-     * @param {String} key
+     * @param {String} name
      * @param {String} path
      * @param {Object} [options]
-     * @returns {Exo.Loader}
+     * @returns {Exo.ResourceLoader}
      */
-    add(type, key, path, options) {
-        if (!this._types.has(type)) {
-            throw new Error(`Invalid resource type "${type}".`);
+    add(type, name, path, options) {
+        if (!this._factories.has(type)) {
+            throw new Error(`No resource factory for type "${type}".`);
         }
 
-        this._queue.push({
-            path,
-            type,
-            key,
-            options,
-        });
+        this._queue.add({ type, name, path, options });
 
         return this;
     }
@@ -256,13 +279,13 @@ export default class ResourceLoader extends EventEmitter {
      * @param {String} type
      * @param {Map.<String, String>|Object.<String, String>} list
      * @param {Object} [options]
-     * @returns {Exo.Loader}
+     * @returns {Exo.ResourceLoader}
      */
     addList(type, list, options) {
         const items = (list instanceof Map) ? list : Object.entries(list);
 
-        for (const [key, path] of items) {
-            this.add(type, key, path, options);
+        for (const [name, path] of items) {
+            this.add(type, name, path, options);
         }
 
         return this;
@@ -271,11 +294,12 @@ export default class ResourceLoader extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Loader}
+     * @returns {Exo.ResourceLoader}
      */
     reset() {
-        this._queue.length = 0;
+        this._promise = null;
         this._resources.clear();
+        this._queue.clear();
         this.off();
 
         return this;
@@ -287,15 +311,15 @@ export default class ResourceLoader extends EventEmitter {
     destroy() {
         super.destroy();
 
-        this._queue.length = 0;
-        this._queue = null;
-
         this._resources.destroy();
         this._resources = null;
 
-        this._types.clear();
-        this._types = null;
+        this._queue.clear();
+        this._queue = null;
 
-        this._loadingPromise = null;
+        this._factories.clear();
+        this._factories = null;
+
+        this._promise = null;
     }
 }

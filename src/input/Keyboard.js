@@ -66,10 +66,8 @@ export default class Keyboard extends ChannelHandler {
             return;
         }
 
-        const keyCode = event.keyCode;
-
-        this._channels[keyCode] = 1;
-        this.trigger('keyboard:down', Keyboard.getChannelCode(keyCode), this);
+        this._channels[event.keyCode] = 1;
+        this.trigger('keyboard:down', Keyboard.getChannelCode(event.keyCode), this);
     }
 
     /**
@@ -81,10 +79,8 @@ export default class Keyboard extends ChannelHandler {
             return;
         }
 
-        const keyCode = event.keyCode;
-
-        this._channels[keyCode] = 0;
-        this.trigger('keyboard:up', Keyboard.getChannelCode(keyCode), this);
+        this._channels[event.keyCode] = 0;
+        this.trigger('keyboard:up', Keyboard.getChannelCode(event.keyCode), this);
     }
 
     /**
@@ -94,7 +90,7 @@ export default class Keyboard extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return CHANNEL_OFFSET.KEYBOARD | key;
+        return CHANNEL_OFFSET.KEYBOARD + (key & 255);
     }
 }
 
@@ -103,690 +99,690 @@ export default class Keyboard extends ChannelHandler {
  * @static
  * @member {Number}
  */
-Keyboard.Backspace = CHANNEL_OFFSET.KEYBOARD | 8;
+Keyboard.Backspace = CHANNEL_OFFSET.KEYBOARD + 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tab = CHANNEL_OFFSET.KEYBOARD | 9;
+Keyboard.Tab = CHANNEL_OFFSET.KEYBOARD + 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Clear = CHANNEL_OFFSET.KEYBOARD | 12;
+Keyboard.Clear = CHANNEL_OFFSET.KEYBOARD + 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Enter = CHANNEL_OFFSET.KEYBOARD | 13;
+Keyboard.Enter = CHANNEL_OFFSET.KEYBOARD + 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Shift = CHANNEL_OFFSET.KEYBOARD | 16;
+Keyboard.Shift = CHANNEL_OFFSET.KEYBOARD + 16;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Control = CHANNEL_OFFSET.KEYBOARD | 17;
+Keyboard.Control = CHANNEL_OFFSET.KEYBOARD + 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Alt = CHANNEL_OFFSET.KEYBOARD | 18;
+Keyboard.Alt = CHANNEL_OFFSET.KEYBOARD + 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Pause = CHANNEL_OFFSET.KEYBOARD | 19;
+Keyboard.Pause = CHANNEL_OFFSET.KEYBOARD + 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.CapsLock = CHANNEL_OFFSET.KEYBOARD | 20;
+Keyboard.CapsLock = CHANNEL_OFFSET.KEYBOARD + 20;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Escape = CHANNEL_OFFSET.KEYBOARD | 27;
+Keyboard.Escape = CHANNEL_OFFSET.KEYBOARD + 27;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Space = CHANNEL_OFFSET.KEYBOARD | 32;
+Keyboard.Space = CHANNEL_OFFSET.KEYBOARD + 32;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageUp = CHANNEL_OFFSET.KEYBOARD | 33;
+Keyboard.PageUp = CHANNEL_OFFSET.KEYBOARD + 33;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageDown = CHANNEL_OFFSET.KEYBOARD | 34;
+Keyboard.PageDown = CHANNEL_OFFSET.KEYBOARD + 34;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.End = CHANNEL_OFFSET.KEYBOARD | 35;
+Keyboard.End = CHANNEL_OFFSET.KEYBOARD + 35;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Home = CHANNEL_OFFSET.KEYBOARD | 36;
+Keyboard.Home = CHANNEL_OFFSET.KEYBOARD + 36;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Left = CHANNEL_OFFSET.KEYBOARD | 37;
+Keyboard.Left = CHANNEL_OFFSET.KEYBOARD + 37;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Up = CHANNEL_OFFSET.KEYBOARD | 38;
+Keyboard.Up = CHANNEL_OFFSET.KEYBOARD + 38;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Right = CHANNEL_OFFSET.KEYBOARD | 39;
+Keyboard.Right = CHANNEL_OFFSET.KEYBOARD + 39;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Down = CHANNEL_OFFSET.KEYBOARD | 40;
+Keyboard.Down = CHANNEL_OFFSET.KEYBOARD + 40;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Insert = CHANNEL_OFFSET.KEYBOARD | 45;
+Keyboard.Insert = CHANNEL_OFFSET.KEYBOARD + 45;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Delete = CHANNEL_OFFSET.KEYBOARD | 46;
+Keyboard.Delete = CHANNEL_OFFSET.KEYBOARD + 46;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Help = CHANNEL_OFFSET.KEYBOARD | 47;
+Keyboard.Help = CHANNEL_OFFSET.KEYBOARD + 47;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Zero = CHANNEL_OFFSET.KEYBOARD | 48;
+Keyboard.Zero = CHANNEL_OFFSET.KEYBOARD + 48;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.One = CHANNEL_OFFSET.KEYBOARD | 49;
+Keyboard.One = CHANNEL_OFFSET.KEYBOARD + 49;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Two = CHANNEL_OFFSET.KEYBOARD | 50;
+Keyboard.Two = CHANNEL_OFFSET.KEYBOARD + 50;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Three = CHANNEL_OFFSET.KEYBOARD | 51;
+Keyboard.Three = CHANNEL_OFFSET.KEYBOARD + 51;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Four = CHANNEL_OFFSET.KEYBOARD | 52;
+Keyboard.Four = CHANNEL_OFFSET.KEYBOARD + 52;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Five = CHANNEL_OFFSET.KEYBOARD | 53;
+Keyboard.Five = CHANNEL_OFFSET.KEYBOARD + 53;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Six = CHANNEL_OFFSET.KEYBOARD | 54;
+Keyboard.Six = CHANNEL_OFFSET.KEYBOARD + 54;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Seven = CHANNEL_OFFSET.KEYBOARD | 55;
+Keyboard.Seven = CHANNEL_OFFSET.KEYBOARD + 55;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Eight = CHANNEL_OFFSET.KEYBOARD | 56;
+Keyboard.Eight = CHANNEL_OFFSET.KEYBOARD + 56;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Nine = CHANNEL_OFFSET.KEYBOARD | 57;
+Keyboard.Nine = CHANNEL_OFFSET.KEYBOARD + 57;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.A = CHANNEL_OFFSET.KEYBOARD | 65;
+Keyboard.A = CHANNEL_OFFSET.KEYBOARD + 65;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.B = CHANNEL_OFFSET.KEYBOARD | 66;
+Keyboard.B = CHANNEL_OFFSET.KEYBOARD + 66;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.C = CHANNEL_OFFSET.KEYBOARD | 67;
+Keyboard.C = CHANNEL_OFFSET.KEYBOARD + 67;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.D = CHANNEL_OFFSET.KEYBOARD | 68;
+Keyboard.D = CHANNEL_OFFSET.KEYBOARD + 68;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.E = CHANNEL_OFFSET.KEYBOARD | 69;
+Keyboard.E = CHANNEL_OFFSET.KEYBOARD + 69;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F = CHANNEL_OFFSET.KEYBOARD | 70;
+Keyboard.F = CHANNEL_OFFSET.KEYBOARD + 70;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.G = CHANNEL_OFFSET.KEYBOARD | 71;
+Keyboard.G = CHANNEL_OFFSET.KEYBOARD + 71;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.H = CHANNEL_OFFSET.KEYBOARD | 72;
+Keyboard.H = CHANNEL_OFFSET.KEYBOARD + 72;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.I = CHANNEL_OFFSET.KEYBOARD | 73;
+Keyboard.I = CHANNEL_OFFSET.KEYBOARD + 73;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.J = CHANNEL_OFFSET.KEYBOARD | 74;
+Keyboard.J = CHANNEL_OFFSET.KEYBOARD + 74;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.K = CHANNEL_OFFSET.KEYBOARD | 75;
+Keyboard.K = CHANNEL_OFFSET.KEYBOARD + 75;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.L = CHANNEL_OFFSET.KEYBOARD | 76;
+Keyboard.L = CHANNEL_OFFSET.KEYBOARD + 76;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.M = CHANNEL_OFFSET.KEYBOARD | 77;
+Keyboard.M = CHANNEL_OFFSET.KEYBOARD + 77;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.N = CHANNEL_OFFSET.KEYBOARD | 78;
+Keyboard.N = CHANNEL_OFFSET.KEYBOARD + 78;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.O = CHANNEL_OFFSET.KEYBOARD | 79;
+Keyboard.O = CHANNEL_OFFSET.KEYBOARD + 79;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.P = CHANNEL_OFFSET.KEYBOARD | 80;
+Keyboard.P = CHANNEL_OFFSET.KEYBOARD + 80;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Q = CHANNEL_OFFSET.KEYBOARD | 81;
+Keyboard.Q = CHANNEL_OFFSET.KEYBOARD + 81;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.R = CHANNEL_OFFSET.KEYBOARD | 82;
+Keyboard.R = CHANNEL_OFFSET.KEYBOARD + 82;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.S = CHANNEL_OFFSET.KEYBOARD | 83;
+Keyboard.S = CHANNEL_OFFSET.KEYBOARD + 83;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.T = CHANNEL_OFFSET.KEYBOARD | 84;
+Keyboard.T = CHANNEL_OFFSET.KEYBOARD + 84;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.U = CHANNEL_OFFSET.KEYBOARD | 85;
+Keyboard.U = CHANNEL_OFFSET.KEYBOARD + 85;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.V = CHANNEL_OFFSET.KEYBOARD | 86;
+Keyboard.V = CHANNEL_OFFSET.KEYBOARD + 86;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.W = CHANNEL_OFFSET.KEYBOARD | 87;
+Keyboard.W = CHANNEL_OFFSET.KEYBOARD + 87;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.X = CHANNEL_OFFSET.KEYBOARD | 88;
+Keyboard.X = CHANNEL_OFFSET.KEYBOARD + 88;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Y = CHANNEL_OFFSET.KEYBOARD | 89;
+Keyboard.Y = CHANNEL_OFFSET.KEYBOARD + 89;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Z = CHANNEL_OFFSET.KEYBOARD | 90;
+Keyboard.Z = CHANNEL_OFFSET.KEYBOARD + 90;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad0 = CHANNEL_OFFSET.KEYBOARD | 96;
+Keyboard.NumPad0 = CHANNEL_OFFSET.KEYBOARD + 96;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad1 = CHANNEL_OFFSET.KEYBOARD | 97;
+Keyboard.NumPad1 = CHANNEL_OFFSET.KEYBOARD + 97;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad2 = CHANNEL_OFFSET.KEYBOARD | 98;
+Keyboard.NumPad2 = CHANNEL_OFFSET.KEYBOARD + 98;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad3 = CHANNEL_OFFSET.KEYBOARD | 99;
+Keyboard.NumPad3 = CHANNEL_OFFSET.KEYBOARD + 99;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad4 = CHANNEL_OFFSET.KEYBOARD | 100;
+Keyboard.NumPad4 = CHANNEL_OFFSET.KEYBOARD + 100;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad5 = CHANNEL_OFFSET.KEYBOARD | 101;
+Keyboard.NumPad5 = CHANNEL_OFFSET.KEYBOARD + 101;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad6 = CHANNEL_OFFSET.KEYBOARD | 102;
+Keyboard.NumPad6 = CHANNEL_OFFSET.KEYBOARD + 102;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad7 = CHANNEL_OFFSET.KEYBOARD | 103;
+Keyboard.NumPad7 = CHANNEL_OFFSET.KEYBOARD + 103;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad8 = CHANNEL_OFFSET.KEYBOARD | 104;
+Keyboard.NumPad8 = CHANNEL_OFFSET.KEYBOARD + 104;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad9 = CHANNEL_OFFSET.KEYBOARD | 105;
+Keyboard.NumPad9 = CHANNEL_OFFSET.KEYBOARD + 105;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadMultiply = CHANNEL_OFFSET.KEYBOARD | 106;
+Keyboard.NumPadMultiply = CHANNEL_OFFSET.KEYBOARD + 106;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadAdd = CHANNEL_OFFSET.KEYBOARD | 107;
+Keyboard.NumPadAdd = CHANNEL_OFFSET.KEYBOARD + 107;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadEnter = CHANNEL_OFFSET.KEYBOARD | 108;
+Keyboard.NumPadEnter = CHANNEL_OFFSET.KEYBOARD + 108;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadSubtract = CHANNEL_OFFSET.KEYBOARD | 109;
+Keyboard.NumPadSubtract = CHANNEL_OFFSET.KEYBOARD + 109;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDecimal = CHANNEL_OFFSET.KEYBOARD | 110;
+Keyboard.NumPadDecimal = CHANNEL_OFFSET.KEYBOARD + 110;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDivide = CHANNEL_OFFSET.KEYBOARD | 111;
+Keyboard.NumPadDivide = CHANNEL_OFFSET.KEYBOARD + 111;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F1 = CHANNEL_OFFSET.KEYBOARD | 112;
+Keyboard.F1 = CHANNEL_OFFSET.KEYBOARD + 112;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F2 = CHANNEL_OFFSET.KEYBOARD | 113;
+Keyboard.F2 = CHANNEL_OFFSET.KEYBOARD + 113;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F3 = CHANNEL_OFFSET.KEYBOARD | 114;
+Keyboard.F3 = CHANNEL_OFFSET.KEYBOARD + 114;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F4 = CHANNEL_OFFSET.KEYBOARD | 115;
+Keyboard.F4 = CHANNEL_OFFSET.KEYBOARD + 115;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F5 = CHANNEL_OFFSET.KEYBOARD | 116;
+Keyboard.F5 = CHANNEL_OFFSET.KEYBOARD + 116;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F6 = CHANNEL_OFFSET.KEYBOARD | 117;
+Keyboard.F6 = CHANNEL_OFFSET.KEYBOARD + 117;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F7 = CHANNEL_OFFSET.KEYBOARD | 118;
+Keyboard.F7 = CHANNEL_OFFSET.KEYBOARD + 118;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F8 = CHANNEL_OFFSET.KEYBOARD | 119;
+Keyboard.F8 = CHANNEL_OFFSET.KEYBOARD + 119;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F9 = CHANNEL_OFFSET.KEYBOARD | 120;
+Keyboard.F9 = CHANNEL_OFFSET.KEYBOARD + 120;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F10 = CHANNEL_OFFSET.KEYBOARD | 121;
+Keyboard.F10 = CHANNEL_OFFSET.KEYBOARD + 121;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F11 = CHANNEL_OFFSET.KEYBOARD | 122;
+Keyboard.F11 = CHANNEL_OFFSET.KEYBOARD + 122;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F12 = CHANNEL_OFFSET.KEYBOARD | 123;
+Keyboard.F12 = CHANNEL_OFFSET.KEYBOARD + 123;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumLock = CHANNEL_OFFSET.KEYBOARD | 144;
+Keyboard.NumLock = CHANNEL_OFFSET.KEYBOARD + 144;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ScrollLock = CHANNEL_OFFSET.KEYBOARD | 145;
+Keyboard.ScrollLock = CHANNEL_OFFSET.KEYBOARD + 145;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Colon = CHANNEL_OFFSET.KEYBOARD | 186;
+Keyboard.Colon = CHANNEL_OFFSET.KEYBOARD + 186;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Equals = CHANNEL_OFFSET.KEYBOARD | 187;
+Keyboard.Equals = CHANNEL_OFFSET.KEYBOARD + 187;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Comma = CHANNEL_OFFSET.KEYBOARD | 188;
+Keyboard.Comma = CHANNEL_OFFSET.KEYBOARD + 188;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Dash = CHANNEL_OFFSET.KEYBOARD | 189;
+Keyboard.Dash = CHANNEL_OFFSET.KEYBOARD + 189;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Period = CHANNEL_OFFSET.KEYBOARD | 190;
+Keyboard.Period = CHANNEL_OFFSET.KEYBOARD + 190;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.QuestionMark = CHANNEL_OFFSET.KEYBOARD | 191;
+Keyboard.QuestionMark = CHANNEL_OFFSET.KEYBOARD + 191;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tilde = CHANNEL_OFFSET.KEYBOARD | 192;
+Keyboard.Tilde = CHANNEL_OFFSET.KEYBOARD + 192;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.OpenBracket = CHANNEL_OFFSET.KEYBOARD | 219;
+Keyboard.OpenBracket = CHANNEL_OFFSET.KEYBOARD + 219;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.BackwardSlash = CHANNEL_OFFSET.KEYBOARD | 220;
+Keyboard.BackwardSlash = CHANNEL_OFFSET.KEYBOARD + 220;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ClosedBracket = CHANNEL_OFFSET.KEYBOARD | 221;
+Keyboard.ClosedBracket = CHANNEL_OFFSET.KEYBOARD + 221;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Quotes = CHANNEL_OFFSET.KEYBOARD | 222;
+Keyboard.Quotes = CHANNEL_OFFSET.KEYBOARD + 222;

@@ -1,13 +1,12 @@
-import TextureType from './TextureType';
+import TextureFactory from './TextureFactory';
 import Sprite from '../../display/sprite/Sprite';
-import {SCALE_MODE, WRAP_MODE} from '../../const';
 
 /**
- * @class SpriteType
- * @extends {Exo.TextureType}
+ * @class SpriteFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class SpriteType extends TextureType {
+export default class SpriteFactory extends TextureFactory {
 
     /**
      * @override

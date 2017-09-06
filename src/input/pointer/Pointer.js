@@ -13,44 +13,7 @@ export default class Pointer extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(channelBuffer, index) {
-        super(channelBuffer, CHANNEL_OFFSET.POINTER | (index * CHANNEL_LENGTH.CHILD), CHANNEL_LENGTH.CHILD);
-    }
-
-    /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @param {Number} identifier
-     */
-    onPress(x, y, identifier) {
-        this.identifier = identifier;
-        this.pressed = true;
-
-        this.setPosition(x, y);
-    }
-
-    /**
-     * @public
-     */
-    onRelease() {
-        this.identifier = 0;
-        this.pressed = false;
-    }
-
-    /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     */
-    setPosition(x, y) {
-        if (this.moved === false) {
-            this.moved = true;
-            this.previousX = this.currentX;
-            this.previousY = this.currentY;
-        }
-
-        this.currentX = x >>> 0;
-        this.currentY = y >>> 0;
+        super(channelBuffer, CHANNEL_OFFSET.POINTER + (index * CHANNEL_LENGTH.CHILD), CHANNEL_LENGTH.CHILD);
     }
 
     /**
@@ -61,6 +24,6 @@ export default class Pointer extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key, index = 0) {
-        return CHANNEL_OFFSET.POINTER | ((index * CHANNEL_LENGTH.CHILD) | (key & 255));
+        return CHANNEL_OFFSET.POINTER + (index * CHANNEL_LENGTH.CHILD) + (key & 31);
     }
 }

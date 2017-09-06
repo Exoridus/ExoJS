@@ -1,16 +1,16 @@
-import ResourceType from '../ResourceType';
+import ResourceFactory from '../ResourceFactory';
 
 /**
- * @class ArrayBufferType
- * @extends {Exo.ResourceType}
+ * @class ArrayBufferFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class ArrayBufferType extends ResourceType {
+export default class ArrayBufferFactory extends ResourceFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'arrayBuffer';
     }
 

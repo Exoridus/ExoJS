@@ -1,16 +1,16 @@
-import ResourceType from '../ResourceType';
+import ResourceFactory from '../ResourceFactory';
 
 /**
- * @class StringType
- * @extends {Exo.ResourceType}
+ * @class StringFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class StringType extends ResourceType {
+export default class StringFactory extends ResourceFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'string';
     }
 

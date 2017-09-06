@@ -193,20 +193,20 @@ export default class Playable {
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
-    applyOptions({ loop, playbackRate, volume, time }) {
-        if (typeof loop === 'boolean') {
+    applyOptions({ loop, playbackRate, volume, time } = {}) {
+        if (typeof loop !== 'undefined') {
             this.loop = loop;
         }
 
-        if (typeof playbackRate === 'number') {
+        if (typeof playbackRate !== 'undefined') {
             this.playbackRate = playbackRate;
         }
 
-        if (typeof volume === 'number') {
+        if (typeof volume !== 'undefined') {
             this.volume = volume;
         }
 
-        if (typeof time === 'number') {
+        if (typeof time !== 'undefined') {
             this.currentTime = time;
         }
     }

@@ -1,13 +1,13 @@
-import ImageType from './ImageType';
+import ImageFactory from './ImageFactory';
 import {SCALE_MODE, WRAP_MODE} from '../../const';
 import Texture from '../../display/Texture';
 
 /**
- * @class TextureType
- * @extends {Exo.ImageType}
+ * @class TextureFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class TextureType extends ImageType {
+export default class TextureFactory extends ImageFactory {
 
     /**
      * @override

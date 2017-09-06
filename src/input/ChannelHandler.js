@@ -37,6 +37,16 @@ export default class ChannelHandler extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {ArrayBuffer}
+     */
+    get channelBuffer() {
+        return this._channelBuffer;
+    }
+
+    /**
+     * @public
+     * @readonly
      * @member {Float32Array}
      */
     get channels() {

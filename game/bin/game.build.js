@@ -552,15 +552,7 @@ window.addEventListener('load', function () {
     game.loader.requestQuery = '?no-cache=' + Date.now();
     // game.loader.database = new Exo.Database('game', 1);
 
-    WebFont.load({
-        classes: false,
-        custom: {
-            families: ['AndyBold']
-        },
-        active: function active() {
-            game.start(new _LauncherScene2.default());
-        }
-    });
+    game.start(new _LauncherScene2.default());
 }, false); /* global WebFont */
 
 /***/ }),
@@ -669,7 +661,7 @@ var LauncherScene = function (_Exo$Scene) {
             }).addList('music', {
                 'title/background': 'audio/title/background.ogg',
                 'game/background': 'audio/game/background.ogg'
-            }).load().then(function () {
+            }).add('font', 'menu', 'font/AndyBold/AndyBold.woff2').load().then(function () {
                 return _this2.game.trigger('scene:start');
             });
 

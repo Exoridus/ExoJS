@@ -224,4 +224,13 @@ export const
      * @name QUAD_TREE_MAX_ENTITIES
      * @type {Number}
      */
-    QUAD_TREE_MAX_ENTITIES = 10;
+    QUAD_TREE_MAX_ENTITIES = 10,
+
+    /**
+     * @public
+     * @constant
+     * @memberOf Exo
+     * @name CODEC_NOT_SUPPORTED
+     * @type {RegExp}
+     */
+    CODEC_NOT_SUPPORTED = /^no$/;

@@ -65,21 +65,21 @@ export default class GamepadManager extends ChannelHandler {
             nativeGamepads = navigator.getGamepads(),
             length = nativeGamepads.length;
 
-        for (let i = 0; i < length; i++) {
-            if (!!nativeGamepads[i] === activeGamepads.has(i)) {
+        for (let index = 0; index < length; index++) {
+            if (!nativeGamepads[index] === !activeGamepads.has(index)) {
                 continue;
             }
 
-            if (nativeGamepads[i]) {
-                const newGamepad = new Gamepad(this._channelBuffer, i, nativeGamepads[i]);
+            if (nativeGamepads[index]) {
+                const newGamepad = new Gamepad(nativeGamepads[index], this.channelBuffer);
 
-                activeGamepads.set(i, newGamepad);
-                game.trigger('gamepad:add', newGamepad, i, activeGamepads);
+                activeGamepads.set(index, newGamepad);
+                game.trigger('gamepad:add', newGamepad, index, activeGamepads);
             } else {
-                const oldGamepad = activeGamepads.get(i);
+                const oldGamepad = activeGamepads.get(index);
 
-                activeGamepads.delete(i);
-                game.trigger('gamepad:remove', oldGamepad, i, activeGamepads);
+                activeGamepads.delete(index);
+                game.trigger('gamepad:remove', oldGamepad, index, activeGamepads);
                 oldGamepad.destroy();
             }
 

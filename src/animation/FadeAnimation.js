@@ -30,8 +30,6 @@ export default class FadeAnimation extends Animation {
 
     /**
      * @override
-     * @param {*} animated
-     * @param {Number} progress
      */
     apply(animated, progress) {
         const inRatio = this._inRatio,

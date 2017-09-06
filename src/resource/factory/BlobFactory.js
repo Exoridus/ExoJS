@@ -1,11 +1,11 @@
-import ArrayBufferType from './ArrayBufferType';
+import ArrayBufferFactory from './ArrayBufferFactory';
 
 /**
- * @class BlobType
- * @extends {Exo.ArrayBufferType}
+ * @class BlobFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class BlobType extends ArrayBufferType {
+export default class BlobFactory extends ArrayBufferFactory {
 
     /**
      * @override

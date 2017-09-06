@@ -14,13 +14,5 @@ window.addEventListener('load', () => {
     game.loader.requestQuery = `?no-cache=${Date.now()}`;
     // game.loader.database = new Exo.Database('game', 1);
 
-    WebFont.load({
-        classes: false,
-        custom: {
-            families: ['AndyBold'],
-        },
-        active() {
-            game.start(new LauncherScene());
-        },
-    });
+    game.start(new LauncherScene());
 }, false);

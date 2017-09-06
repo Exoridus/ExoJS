@@ -35,25 +35,25 @@ export default class InputManager extends ChannelHandler {
          * @private
          * @member {Exo.Keyboard}
          */
-        this._keyboard = new Keyboard(game, this._channelBuffer);
+        this._keyboard = new Keyboard(game, this.channelBuffer);
 
         /**
          * @private
          * @member {Exo.Mouse}
          */
-        this._mouse = new Mouse(game, this._channelBuffer);
+        this._mouse = new Mouse(game, this.channelBuffer);
 
         /**
          * @private
          * @member {Exo.GamepadManager}
          */
-        this._gamepadManager = new GamepadManager(game, this._channelBuffer);
+        this._gamepadManager = new GamepadManager(game, this.channelBuffer);
 
         /**
          * @private
          * @member {Exo.PointerManager}
          */
-        this._pointerManager = new PointerManager(game, this._channelBuffer);
+        this._pointerManager = new PointerManager(game, this.channelBuffer);
 
         game.on('input:add', this.add, this)
             .on('input:remove', this.remove, this)
@@ -67,7 +67,7 @@ export default class InputManager extends ChannelHandler {
     add(inputs) {
         if (Array.isArray(inputs)) {
             for (const input of inputs) {
-                this._inputs.add(input);
+                this.add(input);
             }
             return;
         }
@@ -82,7 +82,7 @@ export default class InputManager extends ChannelHandler {
     remove(inputs) {
         if (Array.isArray(inputs)) {
             for (const input of inputs) {
-                this._inputs.delete(input);
+                this.remove(input);
             }
             return;
         }
@@ -108,19 +108,17 @@ export default class InputManager extends ChannelHandler {
      * @public
      */
     update() {
-        const channels = this.channels;
-
         this._gamepadManager.update();
 
         for (const input of this._inputs) {
-            input.update(channels);
+            input.update(this.channels);
         }
 
         this._mouse.update();
     }
 
     /**
-     * @public
+     * @override
      */
     destroy() {
         super.destroy();

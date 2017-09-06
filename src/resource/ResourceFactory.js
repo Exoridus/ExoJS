@@ -1,9 +1,9 @@
 /**
  * @abstract
- * @class ResourceType
+ * @class ResourceFactory
  * @memberof Exo
  */
-export default class ResourceType {
+export default class ResourceFactory {
 
     /**
      * @public
@@ -11,7 +11,7 @@ export default class ResourceType {
      * @readonly
      * @member {String}
      */
-    get storageKey() {
+    get storageType() {
         return 'resource';
     }
 

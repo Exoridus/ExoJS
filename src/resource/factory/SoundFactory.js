@@ -1,18 +1,18 @@
-import AudioBufferType from './AudioBufferType';
+import AudioBufferFactory from './AudioBufferFactory';
 import Sound from '../../audio/Sound';
-import {webAudioSupport} from '../../utils';
+import {webAudioSupported} from '../../utils';
 
 /**
- * @class SoundType
- * @extends {Exo.AudioBufferType}
+ * @class SoundFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class SoundType extends AudioBufferType {
+export default class SoundFactory extends AudioBufferFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'sound';
     }
 
@@ -20,7 +20,7 @@ export default class SoundType extends AudioBufferType {
      * @override
      */
     create(response, options) {
-        if (!webAudioSupport) {
+        if (!webAudioSupported) {
             return Promise.reject();
         }
 

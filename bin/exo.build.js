@@ -313,7 +313,17 @@ QUAD_TREE_MAX_LEVEL = exports.QUAD_TREE_MAX_LEVEL = 5,
  * @name QUAD_TREE_MAX_ENTITIES
  * @type {Number}
  */
-QUAD_TREE_MAX_ENTITIES = exports.QUAD_TREE_MAX_ENTITIES = 10;
+QUAD_TREE_MAX_ENTITIES = exports.QUAD_TREE_MAX_ENTITIES = 10,
+
+
+/**
+ * @public
+ * @constant
+ * @memberOf Exo
+ * @name CODEC_NOT_SUPPORTED
+ * @type {RegExp}
+ */
+CODEC_NOT_SUPPORTED = exports.CODEC_NOT_SUPPORTED = /^no$/;
 
 /***/ }),
 /* 1 */
@@ -325,11 +335,9 @@ QUAD_TREE_MAX_ENTITIES = exports.QUAD_TREE_MAX_ENTITIES = 10;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getMimeType = exports.getExtension = exports.getWrapModeEnum = exports.getScaleModeEnum = exports.removeItems = exports.rgbToHex = exports.hueToRgb = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.average = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportedCodecs = exports.isCodecSupported = exports.audioContext = exports.audio = exports.webGLSupport = exports.indexedDBSupport = exports.webAudioSupport = undefined;
+exports.getMimeType = exports.getExtension = exports.getFilename = exports.getWrapModeEnum = exports.getScaleModeEnum = exports.removeItems = exports.rgbToHex = exports.hueToRgb = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.average = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportedAudioCodecs = exports.isCodecSupported = exports.audio = exports.audioContext = exports.webGLSupported = exports.indexedDBSupported = exports.webAudioSupported = undefined;
 
 var _const = __webpack_require__(0);
-
-var audioSupportRegex = /^no$/;
 
 var
 
@@ -341,7 +349,7 @@ var
  * @memberof Exo.utils
  * @type {Boolean}
  */
-webAudioSupport = exports.webAudioSupport = 'AudioContext' in window,
+webAudioSupported = exports.webAudioSupported = 'AudioContext' in window,
 
 
 /**
@@ -352,7 +360,7 @@ webAudioSupport = exports.webAudioSupport = 'AudioContext' in window,
  * @memberof Exo.utils
  * @type {Boolean}
  */
-indexedDBSupport = exports.indexedDBSupport = 'indexedDB' in window,
+indexedDBSupported = exports.indexedDBSupported = 'indexedDB' in window,
 
 
 /**
@@ -363,7 +371,7 @@ indexedDBSupport = exports.indexedDBSupport = 'indexedDB' in window,
  * @memberof Exo.utils
  * @type {Boolean}
  */
-webGLSupport = exports.webGLSupport = function () {
+webGLSupported = exports.webGLSupported = function () {
   var canvas = document.createElement('canvas'),
       supports = 'probablySupportsContext' in canvas ? 'probablySupportsContext' : 'supportsContext';
 
@@ -381,9 +389,9 @@ webGLSupport = exports.webGLSupport = function () {
  * @readonly
  * @constant
  * @memberof Exo.utils
- * @type {HTMLMediaElement}
+ * @type {?AudioContext}
  */
-audio = exports.audio = new Audio(),
+audioContext = exports.audioContext = webAudioSupported ? new AudioContext() : null,
 
 
 /**
@@ -392,9 +400,9 @@ audio = exports.audio = new Audio(),
  * @readonly
  * @constant
  * @memberof Exo.utils
- * @type {?AudioContext}
+ * @type {HTMLMediaElement}
  */
-audioContext = exports.audioContext = webAudioSupport ? new AudioContext() : null,
+audio = exports.audio = new Audio(),
 
 
 /**
@@ -411,13 +419,30 @@ isCodecSupported = exports.isCodecSupported = function isCodecSupported() {
     codecs[_key] = arguments[_key];
   }
 
-  var len = codecs.length;
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
 
-  for (var i = 0; i < len; i++) {
-    var support = audio.canPlayType(codecs[i]);
+  try {
+    for (var _iterator = codecs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var codec = _step.value;
 
-    if (support) {
-      return !!support.replace(audioSupportRegex, '');
+      if (audio.canPlayType(codec).replace(_const.CODEC_NOT_SUPPORTED, '')) {
+        return true;
+      }
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
     }
   }
 
@@ -432,17 +457,17 @@ isCodecSupported = exports.isCodecSupported = function isCodecSupported() {
  * @memberof Exo.utils
  * @type {Object.<String, Boolean>}
  */
-supportedCodecs = exports.supportedCodecs = {
-  'mp3': isCodecSupported('audio/mpeg;', 'audio/mp3;'),
-  'mpeg': isCodecSupported('audio/mpeg;'),
-  'opus': isCodecSupported('audio/ogg; codecs="opus"'),
-  'ogg': isCodecSupported('audio/ogg; codecs="vorbis"'),
-  'wav': isCodecSupported('audio/wav; codecs="1"'),
-  'aac': isCodecSupported('audio/aac;'),
-  'm4a': isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
-  'mp4': isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
-  'weba': isCodecSupported('audio/webm; codecs="vorbis"'),
-  'webm': isCodecSupported('audio/webm; codecs="vorbis"')
+supportedAudioCodecs = exports.supportedAudioCodecs = {
+  mp3: isCodecSupported('audio/mpeg;', 'audio/mp3;'),
+  mpeg: isCodecSupported('audio/mpeg;'),
+  opus: isCodecSupported('audio/ogg; codecs="opus"'),
+  ogg: isCodecSupported('audio/ogg; codecs="vorbis"'),
+  wav: isCodecSupported('audio/wav; codecs="1"'),
+  aac: isCodecSupported('audio/aac;'),
+  m4a: isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
+  mp4: isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
+  weba: isCodecSupported('audio/webm; codecs="vorbis"'),
+  webm: isCodecSupported('audio/webm; codecs="vorbis"')
 },
 
 
@@ -456,7 +481,7 @@ supportedCodecs = exports.supportedCodecs = {
  * @returns {Promise<AudioBuffer>}
  */
 decodeAudioBuffer = exports.decodeAudioBuffer = function decodeAudioBuffer(arrayBuffer) {
-  if (!webAudioSupport) {
+  if (!webAudioSupported) {
     return Promise.reject();
   }
 
@@ -652,7 +677,7 @@ removeItems = exports.removeItems = function removeItems(array, startIndex, amou
  * @static
  * @constant
  * @memberof Exo.utils
- * @type [Function}
+ * @type {Function}
  * @param {WebGLRenderingContext} gl
  * @param {Number} scaleMode
  * @returns {Number}
@@ -667,7 +692,7 @@ getScaleModeEnum = exports.getScaleModeEnum = function getScaleModeEnum(gl, scal
  * @static
  * @constant
  * @memberof Exo.utils
- * @type [Function}
+ * @type {Function}
  * @param {WebGLRenderingContext} gl
  * @param {Number} wrapMode
  * @returns {Number}
@@ -686,7 +711,20 @@ getWrapModeEnum = exports.getWrapModeEnum = function getWrapModeEnum(gl, wrapMod
  * @static
  * @constant
  * @memberof Exo.utils
- * @type [Function}
+ * @type {Function}
+ * @returns {String}
+ */
+getFilename = exports.getFilename = function getFilename(url) {
+  return url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
+},
+
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @memberof Exo.utils
+ * @type {Function}
  * @returns {String}
  */
 getExtension = exports.getExtension = function getExtension(url) {
@@ -699,7 +737,7 @@ getExtension = exports.getExtension = function getExtension(url) {
  * @static
  * @constant
  * @memberof Exo.utils
- * @type [Function}
+ * @type {Function}
  * @param {Response} response
  * @param {String} type
  * @returns {?String}
@@ -1447,7 +1485,8 @@ var ChannelHandler = function (_EventEmitter) {
 
   /**
    * @public
-   * @member {Float32Array}
+   * @readonly
+   * @member {ArrayBuffer}
    */
 
 
@@ -1488,6 +1527,18 @@ var ChannelHandler = function (_EventEmitter) {
       this._channels = null;
       this._active = null;
     }
+  }, {
+    key: 'channelBuffer',
+    get: function get() {
+      return this._channelBuffer;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+
   }, {
     key: 'channels',
     get: function get() {
@@ -3958,6 +4009,72 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _ResourceType2 = __webpack_require__(11);
+
+var _ResourceType3 = _interopRequireDefault(_ResourceType2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class ArrayBufferType
+ * @extends {Exo.ResourceType}
+ * @memberof Exo
+ */
+var ArrayBufferType = function (_ResourceType) {
+  _inherits(ArrayBufferType, _ResourceType);
+
+  function ArrayBufferType() {
+    _classCallCheck(this, ArrayBufferType);
+
+    return _possibleConstructorReturn(this, (ArrayBufferType.__proto__ || Object.getPrototypeOf(ArrayBufferType)).apply(this, arguments));
+  }
+
+  _createClass(ArrayBufferType, [{
+    key: 'create',
+
+
+    /**
+     * @override
+     */
+    value: function create(response, options) {
+      return Promise.resolve(response.arrayBuffer());
+    }
+  }, {
+    key: 'storageKey',
+
+
+    /**
+     * @override
+     */
+    get: function get() {
+      return 'arrayBuffer';
+    }
+  }]);
+
+  return ArrayBufferType;
+}(_ResourceType3.default);
+
+exports.default = ArrayBufferType;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
@@ -4046,7 +4163,7 @@ var ResourceType = function () {
 exports.default = ResourceType;
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4174,25 +4291,26 @@ var Playable = function () {
 
     }, {
         key: 'applyOptions',
-        value: function applyOptions(_ref) {
-            var loop = _ref.loop,
+        value: function applyOptions() {
+            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+                loop = _ref.loop,
                 playbackRate = _ref.playbackRate,
                 volume = _ref.volume,
                 time = _ref.time;
 
-            if (typeof loop === 'boolean') {
+            if (typeof loop !== 'undefined') {
                 this.loop = loop;
             }
 
-            if (typeof playbackRate === 'number') {
+            if (typeof playbackRate !== 'undefined') {
                 this.playbackRate = playbackRate;
             }
 
-            if (typeof volume === 'number') {
+            if (typeof volume !== 'undefined') {
                 this.volume = volume;
             }
 
-            if (typeof time === 'number') {
+            if (typeof time !== 'undefined') {
                 this.currentTime = time;
             }
         }
@@ -4339,7 +4457,7 @@ var Playable = function () {
 exports.default = Playable;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4382,7 +4500,7 @@ var ParticleModifier = function () {
 exports.default = ParticleModifier;
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4426,7 +4544,7 @@ var Animation = function () {
 exports.default = Animation;
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4656,7 +4774,7 @@ var ObservableVector = function (_Vector) {
 exports.default = ObservableVector;
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4866,7 +4984,7 @@ var Clock = function () {
 exports.default = Clock;
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5001,7 +5119,7 @@ var Renderer = function () {
 exports.default = Renderer;
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5860,7 +5978,7 @@ var Shader = function () {
 exports.default = Shader;
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5902,25 +6020,18 @@ var Gamepad = function (_ChannelHandler) {
 
   /**
    * @constructor
-   * @param {ArrayBuffer} channelBuffer
-   * @param {Number} index
    * @param {Gamepad} gamepad
+   * @param {ArrayBuffer} channelBuffer
    */
-  function Gamepad(channelBuffer, index, gamepad) {
+  function Gamepad(gamepad, channelBuffer) {
     _classCallCheck(this, Gamepad);
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    var _this = _possibleConstructorReturn(this, (Gamepad.__proto__ || Object.getPrototypeOf(Gamepad)).call(this, channelBuffer, _const.CHANNEL_OFFSET.GAMEPAD | index * _const.CHANNEL_LENGTH.CHILD, _const.CHANNEL_LENGTH.CHILD));
-
-    _this._index = index;
 
     /**
      * @private
      * @member {Gamepad}
      */
+    var _this = _possibleConstructorReturn(this, (Gamepad.__proto__ || Object.getPrototypeOf(Gamepad)).call(this, channelBuffer, _const.CHANNEL_OFFSET.GAMEPAD + gamepad.index * _const.CHANNEL_LENGTH.CHILD, _const.CHANNEL_LENGTH.CHILD));
+
     _this._gamepad = gamepad;
 
     /**
@@ -5934,7 +6045,7 @@ var Gamepad = function (_ChannelHandler) {
   /**
    * @public
    * @readonly
-   * @member {Exo.Gamepad}
+   * @member {Gamepad}
    */
 
 
@@ -5950,29 +6061,22 @@ var Gamepad = function (_ChannelHandler) {
         return;
       }
 
-      this.updateControls(this._gamepad.buttons, this._mapping.buttons);
-      this.updateControls(this._gamepad.axes, this._mapping.axes);
-    }
+      var channels = this.channels,
+          buttonMapping = this._mapping.buttons,
+          axesMapping = this._mapping.axes,
+          buttons = this._gamepad.buttons,
+          axes = this._gamepad.axes;
 
-    /**
-     * @public
-     * @param {GamepadButton[]|Number[]} buttons
-     * @param {Exo.GamepadButton[]} mappingButtons
-     */
-
-  }, {
-    key: 'updateControls',
-    value: function updateControls(buttons, mappingButtons) {
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
 
       try {
-        for (var _iterator = mappingButtons[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var mappingButton = _step.value;
+        for (var _iterator = buttonMapping[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var button = _step.value;
 
-          if (mappingButton.index in buttons) {
-            this.channels[mappingButton.keyCode] = mappingButton.transformValue(buttons[mappingButton.index]);
+          if (button.index in buttons) {
+            channels[button.keyCode] = button.transformValue(buttons[button.index]);
           }
         }
       } catch (err) {
@@ -5986,6 +6090,33 @@ var Gamepad = function (_ChannelHandler) {
         } finally {
           if (_didIteratorError) {
             throw _iteratorError;
+          }
+        }
+      }
+
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = axesMapping[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var axis = _step2.value;
+
+          if (axis.index in axes) {
+            channels[axis.keyCode] = axis.transformValue(axes[axis.index]);
+          }
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
           }
         }
       }
@@ -6004,7 +6135,6 @@ var Gamepad = function (_ChannelHandler) {
       this._mapping = null;
 
       this._gamepad = null;
-      this._index = null;
     }
 
     /**
@@ -6023,18 +6153,6 @@ var Gamepad = function (_ChannelHandler) {
 
     /**
      * @public
-     * @readonly
-     * @member {Number}
-     */
-
-  }, {
-    key: 'index',
-    get: function get() {
-      return this._index;
-    }
-
-    /**
-     * @public
      * @member {Exo.GamepadMapping}
      */
 
@@ -6046,12 +6164,48 @@ var Gamepad = function (_ChannelHandler) {
     set: function set(value) {
       this._mapping = value;
     }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+
+  }, {
+    key: 'id',
+    get: function get() {
+      return this._gamepad.id;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+
+  }, {
+    key: 'index',
+    get: function get() {
+      return this._gamepad.index;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+
+  }, {
+    key: 'connected',
+    get: function get() {
+      return this._gamepad.connected;
+    }
   }], [{
     key: 'getChannelCode',
     value: function getChannelCode(key) {
       var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-      return _const.CHANNEL_OFFSET.GAMEPAD | (index * _const.CHANNEL_LENGTH.CHILD | key);
+      return _const.CHANNEL_OFFSET.GAMEPAD + index * _const.CHANNEL_LENGTH.CHILD + (key & 31);
     }
   }]);
 
@@ -6066,119 +6220,119 @@ var Gamepad = function (_ChannelHandler) {
 
 
 exports.default = Gamepad;
-Gamepad.FaceButtonBottom = _const.CHANNEL_OFFSET.GAMEPAD | 0;
+Gamepad.FaceButtonBottom = _const.CHANNEL_OFFSET.GAMEPAD + 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonLeft = _const.CHANNEL_OFFSET.GAMEPAD | 1;
+Gamepad.FaceButtonLeft = _const.CHANNEL_OFFSET.GAMEPAD + 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonRight = _const.CHANNEL_OFFSET.GAMEPAD | 2;
+Gamepad.FaceButtonRight = _const.CHANNEL_OFFSET.GAMEPAD + 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.FaceButtonTop = _const.CHANNEL_OFFSET.GAMEPAD | 3;
+Gamepad.FaceButtonTop = _const.CHANNEL_OFFSET.GAMEPAD + 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftTriggerBottom = _const.CHANNEL_OFFSET.GAMEPAD | 4;
+Gamepad.LeftTriggerBottom = _const.CHANNEL_OFFSET.GAMEPAD + 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightTriggerBottom = _const.CHANNEL_OFFSET.GAMEPAD | 5;
+Gamepad.RightTriggerBottom = _const.CHANNEL_OFFSET.GAMEPAD + 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftTriggerTop = _const.CHANNEL_OFFSET.GAMEPAD | 6;
+Gamepad.LeftTriggerTop = _const.CHANNEL_OFFSET.GAMEPAD + 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightTriggerTop = _const.CHANNEL_OFFSET.GAMEPAD | 7;
+Gamepad.RightTriggerTop = _const.CHANNEL_OFFSET.GAMEPAD + 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Select = _const.CHANNEL_OFFSET.GAMEPAD | 8;
+Gamepad.Select = _const.CHANNEL_OFFSET.GAMEPAD + 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Start = _const.CHANNEL_OFFSET.GAMEPAD | 9;
+Gamepad.Start = _const.CHANNEL_OFFSET.GAMEPAD + 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickButton = _const.CHANNEL_OFFSET.GAMEPAD | 10;
+Gamepad.LeftStickButton = _const.CHANNEL_OFFSET.GAMEPAD + 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickButton = _const.CHANNEL_OFFSET.GAMEPAD | 11;
+Gamepad.RightStickButton = _const.CHANNEL_OFFSET.GAMEPAD + 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadUp = _const.CHANNEL_OFFSET.GAMEPAD | 12;
+Gamepad.DPadUp = _const.CHANNEL_OFFSET.GAMEPAD + 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadDown = _const.CHANNEL_OFFSET.GAMEPAD | 13;
+Gamepad.DPadDown = _const.CHANNEL_OFFSET.GAMEPAD + 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadLeft = _const.CHANNEL_OFFSET.GAMEPAD | 14;
+Gamepad.DPadLeft = _const.CHANNEL_OFFSET.GAMEPAD + 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.DPadRight = _const.CHANNEL_OFFSET.GAMEPAD | 15;
+Gamepad.DPadRight = _const.CHANNEL_OFFSET.GAMEPAD + 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.Special = _const.CHANNEL_OFFSET.GAMEPAD | 16;
+Gamepad.Special = _const.CHANNEL_OFFSET.GAMEPAD + 16;
 
 /**
  * Left analogue stick
@@ -6189,28 +6343,28 @@ Gamepad.Special = _const.CHANNEL_OFFSET.GAMEPAD | 16;
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickLeft = _const.CHANNEL_OFFSET.GAMEPAD | 17;
+Gamepad.LeftStickLeft = _const.CHANNEL_OFFSET.GAMEPAD + 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickRight = _const.CHANNEL_OFFSET.GAMEPAD | 18;
+Gamepad.LeftStickRight = _const.CHANNEL_OFFSET.GAMEPAD + 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickUp = _const.CHANNEL_OFFSET.GAMEPAD | 19;
+Gamepad.LeftStickUp = _const.CHANNEL_OFFSET.GAMEPAD + 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.LeftStickDown = _const.CHANNEL_OFFSET.GAMEPAD | 20;
+Gamepad.LeftStickDown = _const.CHANNEL_OFFSET.GAMEPAD + 20;
 
 /**
  * Right analogue stick
@@ -6221,94 +6375,28 @@ Gamepad.LeftStickDown = _const.CHANNEL_OFFSET.GAMEPAD | 20;
  * @static
  * @member {Number}
  */
-Gamepad.RightStickLeft = _const.CHANNEL_OFFSET.GAMEPAD | 21;
+Gamepad.RightStickLeft = _const.CHANNEL_OFFSET.GAMEPAD + 21;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickRight = _const.CHANNEL_OFFSET.GAMEPAD | 22;
+Gamepad.RightStickRight = _const.CHANNEL_OFFSET.GAMEPAD + 22;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickUp = _const.CHANNEL_OFFSET.GAMEPAD | 23;
+Gamepad.RightStickUp = _const.CHANNEL_OFFSET.GAMEPAD + 23;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Gamepad.RightStickDown = _const.CHANNEL_OFFSET.GAMEPAD | 24;
-
-/***/ }),
-/* 19 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _ResourceType2 = __webpack_require__(10);
-
-var _ResourceType3 = _interopRequireDefault(_ResourceType2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class ArrayBufferType
- * @extends {Exo.ResourceType}
- * @memberof Exo
- */
-var ArrayBufferType = function (_ResourceType) {
-  _inherits(ArrayBufferType, _ResourceType);
-
-  function ArrayBufferType() {
-    _classCallCheck(this, ArrayBufferType);
-
-    return _possibleConstructorReturn(this, (ArrayBufferType.__proto__ || Object.getPrototypeOf(ArrayBufferType)).apply(this, arguments));
-  }
-
-  _createClass(ArrayBufferType, [{
-    key: 'create',
-
-
-    /**
-     * @override
-     */
-    value: function create(response, options) {
-      return Promise.resolve(response.arrayBuffer());
-    }
-  }, {
-    key: 'storageKey',
-
-
-    /**
-     * @override
-     */
-    get: function get() {
-      return 'arrayBuffer';
-    }
-  }]);
-
-  return ArrayBufferType;
-}(_ResourceType3.default);
-
-exports.default = ArrayBufferType;
+Gamepad.RightStickDown = _const.CHANNEL_OFFSET.GAMEPAD + 24;
 
 /***/ }),
 /* 20 */
@@ -6325,7 +6413,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(19);
+var _ArrayBufferType2 = __webpack_require__(10);
 
 var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
 
@@ -6591,7 +6679,7 @@ var _Color = __webpack_require__(6);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _ObservableVector = __webpack_require__(14);
+var _ObservableVector = __webpack_require__(15);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -7147,7 +7235,7 @@ var _EventEmitter2 = __webpack_require__(5);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ObservableVector = __webpack_require__(14);
+var _ObservableVector = __webpack_require__(15);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -8068,7 +8156,7 @@ var DisplayManager = function () {
 
         var config = game.config;
 
-        if (!_utils.webGLSupport) {
+        if (!_utils.webGLSupported) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
@@ -8506,18 +8594,32 @@ var DisplayManager = function () {
 
     }, {
         key: '_createContext',
-        value: function _createContext(contextOptions) {
-            var opts = Object.assign({
-                alpha: false,
-                antialias: false,
-                premultipliedAlpha: false,
-                preserveDrawingBuffer: false,
-                stencil: true,
-                depth: false
-            }, contextOptions);
+        value: function _createContext() {
+            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+                _ref$alpha = _ref.alpha,
+                alpha = _ref$alpha === undefined ? false : _ref$alpha,
+                _ref$antialias = _ref.antialias,
+                antialias = _ref$antialias === undefined ? false : _ref$antialias,
+                _ref$premultipliedAlp = _ref.premultipliedAlpha,
+                premultipliedAlpha = _ref$premultipliedAlp === undefined ? false : _ref$premultipliedAlp,
+                _ref$preserveDrawingB = _ref.preserveDrawingBuffer,
+                preserveDrawingBuffer = _ref$preserveDrawingB === undefined ? false : _ref$preserveDrawingB,
+                _ref$stencil = _ref.stencil,
+                stencil = _ref$stencil === undefined ? true : _ref$stencil,
+                _ref$depth = _ref.depth,
+                depth = _ref$depth === undefined ? false : _ref$depth;
+
+            var options = {
+                alpha: alpha,
+                antialias: antialias,
+                premultipliedAlpha: premultipliedAlpha,
+                preserveDrawingBuffer: preserveDrawingBuffer,
+                stencil: stencil,
+                depth: depth
+            };
 
             try {
-                return this._canvas.getContext('webgl', opts) || this._canvas.getContext('experimental-webgl', opts);
+                return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
             } catch (e) {
                 return null;
             }
@@ -8896,7 +8998,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ObservableVector = __webpack_require__(14);
+var _ObservableVector = __webpack_require__(15);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -9272,7 +9374,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderer2 = __webpack_require__(16);
+var _Renderer2 = __webpack_require__(17);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -9550,7 +9652,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Shader2 = __webpack_require__(17);
+var _Shader2 = __webpack_require__(18);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -10093,7 +10195,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderer2 = __webpack_require__(16);
+var _Renderer2 = __webpack_require__(17);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -10384,7 +10486,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Shader2 = __webpack_require__(17);
+var _Shader2 = __webpack_require__(18);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -10922,25 +11024,25 @@ var InputManager = function (_ChannelHandler) {
          * @private
          * @member {Exo.Keyboard}
          */
-        _this._keyboard = new _Keyboard2.default(game, _this._channelBuffer);
+        _this._keyboard = new _Keyboard2.default(game, _this.channelBuffer);
 
         /**
          * @private
          * @member {Exo.Mouse}
          */
-        _this._mouse = new _Mouse2.default(game, _this._channelBuffer);
+        _this._mouse = new _Mouse2.default(game, _this.channelBuffer);
 
         /**
          * @private
          * @member {Exo.GamepadManager}
          */
-        _this._gamepadManager = new _GamepadManager2.default(game, _this._channelBuffer);
+        _this._gamepadManager = new _GamepadManager2.default(game, _this.channelBuffer);
 
         /**
          * @private
          * @member {Exo.PointerManager}
          */
-        _this._pointerManager = new _PointerManager2.default(game, _this._channelBuffer);
+        _this._pointerManager = new _PointerManager2.default(game, _this.channelBuffer);
 
         game.on('input:add', _this.add, _this).on('input:remove', _this.remove, _this).on('input:clear', _this.clear, _this);
         return _this;
@@ -10964,7 +11066,7 @@ var InputManager = function (_ChannelHandler) {
                     for (var _iterator = inputs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                         var input = _step.value;
 
-                        this._inputs.add(input);
+                        this.add(input);
                     }
                 } catch (err) {
                     _didIteratorError = true;
@@ -11004,7 +11106,7 @@ var InputManager = function (_ChannelHandler) {
                     for (var _iterator2 = inputs[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
                         var input = _step2.value;
 
-                        this._inputs.delete(input);
+                        this.remove(input);
                     }
                 } catch (err) {
                     _didIteratorError2 = true;
@@ -11074,8 +11176,6 @@ var InputManager = function (_ChannelHandler) {
     }, {
         key: 'update',
         value: function update() {
-            var channels = this.channels;
-
             this._gamepadManager.update();
 
             var _iteratorNormalCompletion4 = true;
@@ -11086,7 +11186,7 @@ var InputManager = function (_ChannelHandler) {
                 for (var _iterator4 = this._inputs[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
                     var input = _step4.value;
 
-                    input.update(channels);
+                    input.update(this.channels);
                 }
             } catch (err) {
                 _didIteratorError4 = true;
@@ -11107,7 +11207,7 @@ var InputManager = function (_ChannelHandler) {
         }
 
         /**
-         * @public
+         * @override
          */
 
     }, {
@@ -11252,10 +11352,8 @@ var Keyboard = function (_ChannelHandler) {
         return;
       }
 
-      var keyCode = event.keyCode;
-
-      this._channels[keyCode] = 1;
-      this.trigger('keyboard:down', Keyboard.getChannelCode(keyCode), this);
+      this._channels[event.keyCode] = 1;
+      this.trigger('keyboard:down', Keyboard.getChannelCode(event.keyCode), this);
     }
 
     /**
@@ -11270,10 +11368,8 @@ var Keyboard = function (_ChannelHandler) {
         return;
       }
 
-      var keyCode = event.keyCode;
-
-      this._channels[keyCode] = 0;
-      this.trigger('keyboard:up', Keyboard.getChannelCode(keyCode), this);
+      this._channels[event.keyCode] = 0;
+      this.trigger('keyboard:up', Keyboard.getChannelCode(event.keyCode), this);
     }
 
     /**
@@ -11286,7 +11382,7 @@ var Keyboard = function (_ChannelHandler) {
   }], [{
     key: 'getChannelCode',
     value: function getChannelCode(key) {
-      return _const.CHANNEL_OFFSET.KEYBOARD | key;
+      return _const.CHANNEL_OFFSET.KEYBOARD + (key & 255);
     }
   }]);
 
@@ -11301,693 +11397,693 @@ var Keyboard = function (_ChannelHandler) {
 
 
 exports.default = Keyboard;
-Keyboard.Backspace = _const.CHANNEL_OFFSET.KEYBOARD | 8;
+Keyboard.Backspace = _const.CHANNEL_OFFSET.KEYBOARD + 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tab = _const.CHANNEL_OFFSET.KEYBOARD | 9;
+Keyboard.Tab = _const.CHANNEL_OFFSET.KEYBOARD + 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Clear = _const.CHANNEL_OFFSET.KEYBOARD | 12;
+Keyboard.Clear = _const.CHANNEL_OFFSET.KEYBOARD + 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Enter = _const.CHANNEL_OFFSET.KEYBOARD | 13;
+Keyboard.Enter = _const.CHANNEL_OFFSET.KEYBOARD + 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Shift = _const.CHANNEL_OFFSET.KEYBOARD | 16;
+Keyboard.Shift = _const.CHANNEL_OFFSET.KEYBOARD + 16;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Control = _const.CHANNEL_OFFSET.KEYBOARD | 17;
+Keyboard.Control = _const.CHANNEL_OFFSET.KEYBOARD + 17;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Alt = _const.CHANNEL_OFFSET.KEYBOARD | 18;
+Keyboard.Alt = _const.CHANNEL_OFFSET.KEYBOARD + 18;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Pause = _const.CHANNEL_OFFSET.KEYBOARD | 19;
+Keyboard.Pause = _const.CHANNEL_OFFSET.KEYBOARD + 19;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.CapsLock = _const.CHANNEL_OFFSET.KEYBOARD | 20;
+Keyboard.CapsLock = _const.CHANNEL_OFFSET.KEYBOARD + 20;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Escape = _const.CHANNEL_OFFSET.KEYBOARD | 27;
+Keyboard.Escape = _const.CHANNEL_OFFSET.KEYBOARD + 27;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Space = _const.CHANNEL_OFFSET.KEYBOARD | 32;
+Keyboard.Space = _const.CHANNEL_OFFSET.KEYBOARD + 32;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageUp = _const.CHANNEL_OFFSET.KEYBOARD | 33;
+Keyboard.PageUp = _const.CHANNEL_OFFSET.KEYBOARD + 33;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.PageDown = _const.CHANNEL_OFFSET.KEYBOARD | 34;
+Keyboard.PageDown = _const.CHANNEL_OFFSET.KEYBOARD + 34;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.End = _const.CHANNEL_OFFSET.KEYBOARD | 35;
+Keyboard.End = _const.CHANNEL_OFFSET.KEYBOARD + 35;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Home = _const.CHANNEL_OFFSET.KEYBOARD | 36;
+Keyboard.Home = _const.CHANNEL_OFFSET.KEYBOARD + 36;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Left = _const.CHANNEL_OFFSET.KEYBOARD | 37;
+Keyboard.Left = _const.CHANNEL_OFFSET.KEYBOARD + 37;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Up = _const.CHANNEL_OFFSET.KEYBOARD | 38;
+Keyboard.Up = _const.CHANNEL_OFFSET.KEYBOARD + 38;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Right = _const.CHANNEL_OFFSET.KEYBOARD | 39;
+Keyboard.Right = _const.CHANNEL_OFFSET.KEYBOARD + 39;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Down = _const.CHANNEL_OFFSET.KEYBOARD | 40;
+Keyboard.Down = _const.CHANNEL_OFFSET.KEYBOARD + 40;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Insert = _const.CHANNEL_OFFSET.KEYBOARD | 45;
+Keyboard.Insert = _const.CHANNEL_OFFSET.KEYBOARD + 45;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Delete = _const.CHANNEL_OFFSET.KEYBOARD | 46;
+Keyboard.Delete = _const.CHANNEL_OFFSET.KEYBOARD + 46;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Help = _const.CHANNEL_OFFSET.KEYBOARD | 47;
+Keyboard.Help = _const.CHANNEL_OFFSET.KEYBOARD + 47;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Zero = _const.CHANNEL_OFFSET.KEYBOARD | 48;
+Keyboard.Zero = _const.CHANNEL_OFFSET.KEYBOARD + 48;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.One = _const.CHANNEL_OFFSET.KEYBOARD | 49;
+Keyboard.One = _const.CHANNEL_OFFSET.KEYBOARD + 49;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Two = _const.CHANNEL_OFFSET.KEYBOARD | 50;
+Keyboard.Two = _const.CHANNEL_OFFSET.KEYBOARD + 50;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Three = _const.CHANNEL_OFFSET.KEYBOARD | 51;
+Keyboard.Three = _const.CHANNEL_OFFSET.KEYBOARD + 51;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Four = _const.CHANNEL_OFFSET.KEYBOARD | 52;
+Keyboard.Four = _const.CHANNEL_OFFSET.KEYBOARD + 52;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Five = _const.CHANNEL_OFFSET.KEYBOARD | 53;
+Keyboard.Five = _const.CHANNEL_OFFSET.KEYBOARD + 53;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Six = _const.CHANNEL_OFFSET.KEYBOARD | 54;
+Keyboard.Six = _const.CHANNEL_OFFSET.KEYBOARD + 54;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Seven = _const.CHANNEL_OFFSET.KEYBOARD | 55;
+Keyboard.Seven = _const.CHANNEL_OFFSET.KEYBOARD + 55;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Eight = _const.CHANNEL_OFFSET.KEYBOARD | 56;
+Keyboard.Eight = _const.CHANNEL_OFFSET.KEYBOARD + 56;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Nine = _const.CHANNEL_OFFSET.KEYBOARD | 57;
+Keyboard.Nine = _const.CHANNEL_OFFSET.KEYBOARD + 57;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.A = _const.CHANNEL_OFFSET.KEYBOARD | 65;
+Keyboard.A = _const.CHANNEL_OFFSET.KEYBOARD + 65;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.B = _const.CHANNEL_OFFSET.KEYBOARD | 66;
+Keyboard.B = _const.CHANNEL_OFFSET.KEYBOARD + 66;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.C = _const.CHANNEL_OFFSET.KEYBOARD | 67;
+Keyboard.C = _const.CHANNEL_OFFSET.KEYBOARD + 67;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.D = _const.CHANNEL_OFFSET.KEYBOARD | 68;
+Keyboard.D = _const.CHANNEL_OFFSET.KEYBOARD + 68;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.E = _const.CHANNEL_OFFSET.KEYBOARD | 69;
+Keyboard.E = _const.CHANNEL_OFFSET.KEYBOARD + 69;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F = _const.CHANNEL_OFFSET.KEYBOARD | 70;
+Keyboard.F = _const.CHANNEL_OFFSET.KEYBOARD + 70;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.G = _const.CHANNEL_OFFSET.KEYBOARD | 71;
+Keyboard.G = _const.CHANNEL_OFFSET.KEYBOARD + 71;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.H = _const.CHANNEL_OFFSET.KEYBOARD | 72;
+Keyboard.H = _const.CHANNEL_OFFSET.KEYBOARD + 72;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.I = _const.CHANNEL_OFFSET.KEYBOARD | 73;
+Keyboard.I = _const.CHANNEL_OFFSET.KEYBOARD + 73;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.J = _const.CHANNEL_OFFSET.KEYBOARD | 74;
+Keyboard.J = _const.CHANNEL_OFFSET.KEYBOARD + 74;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.K = _const.CHANNEL_OFFSET.KEYBOARD | 75;
+Keyboard.K = _const.CHANNEL_OFFSET.KEYBOARD + 75;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.L = _const.CHANNEL_OFFSET.KEYBOARD | 76;
+Keyboard.L = _const.CHANNEL_OFFSET.KEYBOARD + 76;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.M = _const.CHANNEL_OFFSET.KEYBOARD | 77;
+Keyboard.M = _const.CHANNEL_OFFSET.KEYBOARD + 77;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.N = _const.CHANNEL_OFFSET.KEYBOARD | 78;
+Keyboard.N = _const.CHANNEL_OFFSET.KEYBOARD + 78;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.O = _const.CHANNEL_OFFSET.KEYBOARD | 79;
+Keyboard.O = _const.CHANNEL_OFFSET.KEYBOARD + 79;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.P = _const.CHANNEL_OFFSET.KEYBOARD | 80;
+Keyboard.P = _const.CHANNEL_OFFSET.KEYBOARD + 80;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Q = _const.CHANNEL_OFFSET.KEYBOARD | 81;
+Keyboard.Q = _const.CHANNEL_OFFSET.KEYBOARD + 81;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.R = _const.CHANNEL_OFFSET.KEYBOARD | 82;
+Keyboard.R = _const.CHANNEL_OFFSET.KEYBOARD + 82;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.S = _const.CHANNEL_OFFSET.KEYBOARD | 83;
+Keyboard.S = _const.CHANNEL_OFFSET.KEYBOARD + 83;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.T = _const.CHANNEL_OFFSET.KEYBOARD | 84;
+Keyboard.T = _const.CHANNEL_OFFSET.KEYBOARD + 84;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.U = _const.CHANNEL_OFFSET.KEYBOARD | 85;
+Keyboard.U = _const.CHANNEL_OFFSET.KEYBOARD + 85;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.V = _const.CHANNEL_OFFSET.KEYBOARD | 86;
+Keyboard.V = _const.CHANNEL_OFFSET.KEYBOARD + 86;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.W = _const.CHANNEL_OFFSET.KEYBOARD | 87;
+Keyboard.W = _const.CHANNEL_OFFSET.KEYBOARD + 87;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.X = _const.CHANNEL_OFFSET.KEYBOARD | 88;
+Keyboard.X = _const.CHANNEL_OFFSET.KEYBOARD + 88;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Y = _const.CHANNEL_OFFSET.KEYBOARD | 89;
+Keyboard.Y = _const.CHANNEL_OFFSET.KEYBOARD + 89;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Z = _const.CHANNEL_OFFSET.KEYBOARD | 90;
+Keyboard.Z = _const.CHANNEL_OFFSET.KEYBOARD + 90;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad0 = _const.CHANNEL_OFFSET.KEYBOARD | 96;
+Keyboard.NumPad0 = _const.CHANNEL_OFFSET.KEYBOARD + 96;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad1 = _const.CHANNEL_OFFSET.KEYBOARD | 97;
+Keyboard.NumPad1 = _const.CHANNEL_OFFSET.KEYBOARD + 97;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad2 = _const.CHANNEL_OFFSET.KEYBOARD | 98;
+Keyboard.NumPad2 = _const.CHANNEL_OFFSET.KEYBOARD + 98;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad3 = _const.CHANNEL_OFFSET.KEYBOARD | 99;
+Keyboard.NumPad3 = _const.CHANNEL_OFFSET.KEYBOARD + 99;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad4 = _const.CHANNEL_OFFSET.KEYBOARD | 100;
+Keyboard.NumPad4 = _const.CHANNEL_OFFSET.KEYBOARD + 100;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad5 = _const.CHANNEL_OFFSET.KEYBOARD | 101;
+Keyboard.NumPad5 = _const.CHANNEL_OFFSET.KEYBOARD + 101;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad6 = _const.CHANNEL_OFFSET.KEYBOARD | 102;
+Keyboard.NumPad6 = _const.CHANNEL_OFFSET.KEYBOARD + 102;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad7 = _const.CHANNEL_OFFSET.KEYBOARD | 103;
+Keyboard.NumPad7 = _const.CHANNEL_OFFSET.KEYBOARD + 103;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad8 = _const.CHANNEL_OFFSET.KEYBOARD | 104;
+Keyboard.NumPad8 = _const.CHANNEL_OFFSET.KEYBOARD + 104;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPad9 = _const.CHANNEL_OFFSET.KEYBOARD | 105;
+Keyboard.NumPad9 = _const.CHANNEL_OFFSET.KEYBOARD + 105;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadMultiply = _const.CHANNEL_OFFSET.KEYBOARD | 106;
+Keyboard.NumPadMultiply = _const.CHANNEL_OFFSET.KEYBOARD + 106;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadAdd = _const.CHANNEL_OFFSET.KEYBOARD | 107;
+Keyboard.NumPadAdd = _const.CHANNEL_OFFSET.KEYBOARD + 107;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadEnter = _const.CHANNEL_OFFSET.KEYBOARD | 108;
+Keyboard.NumPadEnter = _const.CHANNEL_OFFSET.KEYBOARD + 108;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadSubtract = _const.CHANNEL_OFFSET.KEYBOARD | 109;
+Keyboard.NumPadSubtract = _const.CHANNEL_OFFSET.KEYBOARD + 109;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDecimal = _const.CHANNEL_OFFSET.KEYBOARD | 110;
+Keyboard.NumPadDecimal = _const.CHANNEL_OFFSET.KEYBOARD + 110;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumPadDivide = _const.CHANNEL_OFFSET.KEYBOARD | 111;
+Keyboard.NumPadDivide = _const.CHANNEL_OFFSET.KEYBOARD + 111;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F1 = _const.CHANNEL_OFFSET.KEYBOARD | 112;
+Keyboard.F1 = _const.CHANNEL_OFFSET.KEYBOARD + 112;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F2 = _const.CHANNEL_OFFSET.KEYBOARD | 113;
+Keyboard.F2 = _const.CHANNEL_OFFSET.KEYBOARD + 113;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F3 = _const.CHANNEL_OFFSET.KEYBOARD | 114;
+Keyboard.F3 = _const.CHANNEL_OFFSET.KEYBOARD + 114;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F4 = _const.CHANNEL_OFFSET.KEYBOARD | 115;
+Keyboard.F4 = _const.CHANNEL_OFFSET.KEYBOARD + 115;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F5 = _const.CHANNEL_OFFSET.KEYBOARD | 116;
+Keyboard.F5 = _const.CHANNEL_OFFSET.KEYBOARD + 116;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F6 = _const.CHANNEL_OFFSET.KEYBOARD | 117;
+Keyboard.F6 = _const.CHANNEL_OFFSET.KEYBOARD + 117;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F7 = _const.CHANNEL_OFFSET.KEYBOARD | 118;
+Keyboard.F7 = _const.CHANNEL_OFFSET.KEYBOARD + 118;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F8 = _const.CHANNEL_OFFSET.KEYBOARD | 119;
+Keyboard.F8 = _const.CHANNEL_OFFSET.KEYBOARD + 119;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F9 = _const.CHANNEL_OFFSET.KEYBOARD | 120;
+Keyboard.F9 = _const.CHANNEL_OFFSET.KEYBOARD + 120;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F10 = _const.CHANNEL_OFFSET.KEYBOARD | 121;
+Keyboard.F10 = _const.CHANNEL_OFFSET.KEYBOARD + 121;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F11 = _const.CHANNEL_OFFSET.KEYBOARD | 122;
+Keyboard.F11 = _const.CHANNEL_OFFSET.KEYBOARD + 122;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.F12 = _const.CHANNEL_OFFSET.KEYBOARD | 123;
+Keyboard.F12 = _const.CHANNEL_OFFSET.KEYBOARD + 123;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.NumLock = _const.CHANNEL_OFFSET.KEYBOARD | 144;
+Keyboard.NumLock = _const.CHANNEL_OFFSET.KEYBOARD + 144;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ScrollLock = _const.CHANNEL_OFFSET.KEYBOARD | 145;
+Keyboard.ScrollLock = _const.CHANNEL_OFFSET.KEYBOARD + 145;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Colon = _const.CHANNEL_OFFSET.KEYBOARD | 186;
+Keyboard.Colon = _const.CHANNEL_OFFSET.KEYBOARD + 186;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Equals = _const.CHANNEL_OFFSET.KEYBOARD | 187;
+Keyboard.Equals = _const.CHANNEL_OFFSET.KEYBOARD + 187;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Comma = _const.CHANNEL_OFFSET.KEYBOARD | 188;
+Keyboard.Comma = _const.CHANNEL_OFFSET.KEYBOARD + 188;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Dash = _const.CHANNEL_OFFSET.KEYBOARD | 189;
+Keyboard.Dash = _const.CHANNEL_OFFSET.KEYBOARD + 189;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Period = _const.CHANNEL_OFFSET.KEYBOARD | 190;
+Keyboard.Period = _const.CHANNEL_OFFSET.KEYBOARD + 190;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.QuestionMark = _const.CHANNEL_OFFSET.KEYBOARD | 191;
+Keyboard.QuestionMark = _const.CHANNEL_OFFSET.KEYBOARD + 191;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Tilde = _const.CHANNEL_OFFSET.KEYBOARD | 192;
+Keyboard.Tilde = _const.CHANNEL_OFFSET.KEYBOARD + 192;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.OpenBracket = _const.CHANNEL_OFFSET.KEYBOARD | 219;
+Keyboard.OpenBracket = _const.CHANNEL_OFFSET.KEYBOARD + 219;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.BackwardSlash = _const.CHANNEL_OFFSET.KEYBOARD | 220;
+Keyboard.BackwardSlash = _const.CHANNEL_OFFSET.KEYBOARD + 220;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.ClosedBracket = _const.CHANNEL_OFFSET.KEYBOARD | 221;
+Keyboard.ClosedBracket = _const.CHANNEL_OFFSET.KEYBOARD + 221;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Keyboard.Quotes = _const.CHANNEL_OFFSET.KEYBOARD | 222;
+Keyboard.Quotes = _const.CHANNEL_OFFSET.KEYBOARD + 222;
 
 /***/ }),
 /* 42 */
@@ -12532,7 +12628,7 @@ var Mouse = function (_ChannelHandler) {
   }], [{
     key: 'getChannelCode',
     value: function getChannelCode(key) {
-      return _const.CHANNEL_OFFSET.MOUSE | key;
+      return _const.CHANNEL_OFFSET.MOUSE + (key & 255);
     }
   }]);
 
@@ -12547,119 +12643,119 @@ var Mouse = function (_ChannelHandler) {
 
 
 exports.default = Mouse;
-Mouse.LeftButton = _const.CHANNEL_OFFSET.MOUSE | 0;
+Mouse.LeftButton = _const.CHANNEL_OFFSET.MOUSE + 0;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MiddleButton = _const.CHANNEL_OFFSET.MOUSE | 1;
+Mouse.MiddleButton = _const.CHANNEL_OFFSET.MOUSE + 1;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.RightButton = _const.CHANNEL_OFFSET.MOUSE | 2;
+Mouse.RightButton = _const.CHANNEL_OFFSET.MOUSE + 2;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.BackButton = _const.CHANNEL_OFFSET.MOUSE | 3;
+Mouse.BackButton = _const.CHANNEL_OFFSET.MOUSE + 3;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ForwardButton = _const.CHANNEL_OFFSET.MOUSE | 4;
+Mouse.ForwardButton = _const.CHANNEL_OFFSET.MOUSE + 4;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollLeft = _const.CHANNEL_OFFSET.MOUSE | 5;
+Mouse.ScrollLeft = _const.CHANNEL_OFFSET.MOUSE + 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollRight = _const.CHANNEL_OFFSET.MOUSE | 6;
+Mouse.ScrollRight = _const.CHANNEL_OFFSET.MOUSE + 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollUp = _const.CHANNEL_OFFSET.MOUSE | 7;
+Mouse.ScrollUp = _const.CHANNEL_OFFSET.MOUSE + 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollDown = _const.CHANNEL_OFFSET.MOUSE | 8;
+Mouse.ScrollDown = _const.CHANNEL_OFFSET.MOUSE + 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollForward = _const.CHANNEL_OFFSET.MOUSE | 9;
+Mouse.ScrollForward = _const.CHANNEL_OFFSET.MOUSE + 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollBackward = _const.CHANNEL_OFFSET.MOUSE | 10;
+Mouse.ScrollBackward = _const.CHANNEL_OFFSET.MOUSE + 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveLeft = _const.CHANNEL_OFFSET.MOUSE | 11;
+Mouse.MoveLeft = _const.CHANNEL_OFFSET.MOUSE + 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveRight = _const.CHANNEL_OFFSET.MOUSE | 12;
+Mouse.MoveRight = _const.CHANNEL_OFFSET.MOUSE + 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveUp = _const.CHANNEL_OFFSET.MOUSE | 13;
+Mouse.MoveUp = _const.CHANNEL_OFFSET.MOUSE + 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveDown = _const.CHANNEL_OFFSET.MOUSE | 14;
+Mouse.MoveDown = _const.CHANNEL_OFFSET.MOUSE + 14;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.EnterWindow = _const.CHANNEL_OFFSET.MOUSE | 15;
+Mouse.EnterWindow = _const.CHANNEL_OFFSET.MOUSE + 15;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.LeaveWindow = _const.CHANNEL_OFFSET.MOUSE | 16;
+Mouse.LeaveWindow = _const.CHANNEL_OFFSET.MOUSE + 16;
 
 /***/ }),
 /* 43 */
@@ -12676,7 +12772,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Gamepad = __webpack_require__(18);
+var _Gamepad = __webpack_require__(19);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -12788,21 +12884,21 @@ var GamepadManager = function (_ChannelHandler) {
                 nativeGamepads = navigator.getGamepads(),
                 length = nativeGamepads.length;
 
-            for (var i = 0; i < length; i++) {
-                if (!!nativeGamepads[i] === activeGamepads.has(i)) {
+            for (var index = 0; index < length; index++) {
+                if (!nativeGamepads[index] === !activeGamepads.has(index)) {
                     continue;
                 }
 
-                if (nativeGamepads[i]) {
-                    var newGamepad = new _Gamepad2.default(this._channelBuffer, i, nativeGamepads[i]);
+                if (nativeGamepads[index]) {
+                    var newGamepad = new _Gamepad2.default(nativeGamepads[index], this.channelBuffer);
 
-                    activeGamepads.set(i, newGamepad);
-                    game.trigger('gamepad:add', newGamepad, i, activeGamepads);
+                    activeGamepads.set(index, newGamepad);
+                    game.trigger('gamepad:add', newGamepad, index, activeGamepads);
                 } else {
-                    var oldGamepad = activeGamepads.get(i);
+                    var oldGamepad = activeGamepads.get(index);
 
-                    activeGamepads.delete(i);
-                    game.trigger('gamepad:remove', oldGamepad, i, activeGamepads);
+                    activeGamepads.delete(index);
+                    game.trigger('gamepad:remove', oldGamepad, index, activeGamepads);
                     oldGamepad.destroy();
                 }
 
@@ -12880,7 +12976,7 @@ var _GamepadButton = __webpack_require__(46);
 
 var _GamepadButton2 = _interopRequireDefault(_GamepadButton);
 
-var _Gamepad = __webpack_require__(18);
+var _Gamepad = __webpack_require__(19);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -13508,9 +13604,13 @@ var ResourceLoader = function (_EventEmitter) {
 
         /**
          * @private
-         * @member {String}
+         * @member {Object.<String, String>}
          */
-        _this._requestQuery = '';
+        _this._options = {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'default'
+        };
 
         /**
          * @private
@@ -13528,7 +13628,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @private
          * @member {?Promise}
          */
-        _this._loadingPromise = null;
+        _this._loading = null;
 
         /**
          * @private
@@ -13556,7 +13656,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @chainable
          * @param {String} name
          * @param {Exo.ResourceType} type
-         * @returns {Exo.Loader}
+         * @returns {Exo.ResourceLoader}
          */
         value: function registerType(name, type) {
             this._types.set(name, type);
@@ -13568,13 +13668,13 @@ var ResourceLoader = function (_EventEmitter) {
         /**
          * @public
          * @chainable
-         * @returns {Exo.Loader}
+         * @returns {Exo.ResourceLoader}
          */
 
     }, {
         key: 'registerTypes',
         value: function registerTypes() {
-            return this.registerType('arrayBuffer', new Types.ArrayBufferType()).registerType('audioBuffer', new Types.AudioBufferType()).registerType('audio', new Types.AudioType()).registerType('blob', new Types.BlobType()).registerType('image', new Types.ImageType()).registerType('json', new Types.JSONType()).registerType('music', new Types.MusicType()).registerType('sound', new Types.SoundType()).registerType('sprite', new Types.SpriteType()).registerType('string', new Types.StringType()).registerType('texture', new Types.TextureType());
+            return this.registerType('arrayBuffer', new Types.ArrayBufferType()).registerType('audioBuffer', new Types.AudioBufferType()).registerType('audio', new Types.AudioType()).registerType('blob', new Types.BlobType()).registerType('font', new Types.FontType()).registerType('image', new Types.ImageType()).registerType('json', new Types.JSONType()).registerType('music', new Types.MusicType()).registerType('sound', new Types.SoundType()).registerType('sprite', new Types.SpriteType()).registerType('string', new Types.StringType()).registerType('texture', new Types.TextureType());
         }
 
         /**
@@ -13587,16 +13687,16 @@ var ResourceLoader = function (_EventEmitter) {
         value: function load() {
             var _this2 = this;
 
-            if (this._loadingPromise) {
-                return this._loadingPromise;
+            if (this._loading) {
+                return this._loading;
             }
 
             this._itemsLoaded = 0;
 
             this.trigger('start', this._queue.length);
 
-            this._loadingPromise = this._queue.map(function (item) {
-                return _this2.loadItem(item.type, item.key, item.path, item.options);
+            this._loading = this._queue.map(function (item) {
+                return _this2.loadItem(item);
             }).reduce(function (sequence, promise) {
                 return sequence.then(function () {
                     return promise;
@@ -13609,51 +13709,60 @@ var ResourceLoader = function (_EventEmitter) {
                 _this2.trigger('complete', _this2._itemsLoaded);
             });
 
-            return this._loadingPromise;
+            return this._loading;
         }
 
         /**
          * @public
-         * @param {String} type
-         * @param {String} key
-         * @param {String} path
-         * @param {Object} [options]
+         * @param {Object} item
+         * @param {String} item.type
+         * @param {String} item.name
+         * @param {String} item.path
+         * @param {Object} item.options
          * @returns {Promise<*>}
          */
 
     }, {
         key: 'loadItem',
-        value: function loadItem(type, key, path, options) {
+        value: function loadItem() {
             var _this3 = this;
+
+            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+                type = _ref.type,
+                name = _ref.name,
+                path = _ref.path,
+                options = _ref.options;
 
             if (!this._types.has(type)) {
                 throw new Error('Invalid resource type "' + type + '".');
             }
 
-            if (this._resources.has(type, key)) {
-                return Promise.resolve(this._resources.get(type, key));
+            if (this._resources.has(type, name)) {
+                return Promise.resolve(this._resources.get(type, name));
             }
 
-            var typeHandler = this._types.get(type);
+            var typeHandler = this._types.get(type),
+                resourcePath = this._basePath + path,
+                requestOptions = this._options;
 
             if (this._database) {
-                return this._database.loadData(typeHandler.storageKey, key).then(function (data) {
-                    return data ? Promise.resolve(data) : typeHandler.request(_this3._basePath + path).then(function (source) {
-                        return _this3._database.saveData(typeHandler.storageKey, key, source).then(function (source) {
+                return this._database.loadData(typeHandler.storageKey, name).then(function (data) {
+                    return data ? Promise.resolve(data) : typeHandler.request(resourcePath, requestOptions).then(function (source) {
+                        return _this3._database.saveData(typeHandler.storageKey, name, source).then(function (source) {
                             return Promise.resolve(source);
                         });
                     });
                 }).then(function (source) {
                     return typeHandler.create(source, options);
                 }).then(function (resource) {
-                    _this3._resources.set(type, key, resource);
+                    _this3._resources.set(type, name, resource);
 
                     return resource;
                 });
             }
 
-            return typeHandler.load(this._basePath + path, options).then(function (resource) {
-                _this3._resources.set(type, key, resource);
+            return typeHandler.load(resourcePath, requestOptions, options).then(function (resource) {
+                _this3._resources.set(type, name, resource);
 
                 return resource;
             });
@@ -13663,25 +13772,20 @@ var ResourceLoader = function (_EventEmitter) {
          * @public
          * @chainable
          * @param {String} type
-         * @param {String} key
+         * @param {String} name
          * @param {String} path
          * @param {Object} [options]
-         * @returns {Exo.Loader}
+         * @returns {Exo.ResourceLoader}
          */
 
     }, {
         key: 'add',
-        value: function add(type, key, path, options) {
+        value: function add(type, name, path, options) {
             if (!this._types.has(type)) {
                 throw new Error('Invalid resource type "' + type + '".');
             }
 
-            this._queue.push({
-                path: path,
-                type: type,
-                key: key,
-                options: options
-            });
+            this._queue.push({ type: type, name: name, path: path, options: options });
 
             return this;
         }
@@ -13692,7 +13796,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @param {String} type
          * @param {Map.<String, String>|Object.<String, String>} list
          * @param {Object} [options]
-         * @returns {Exo.Loader}
+         * @returns {Exo.ResourceLoader}
          */
 
     }, {
@@ -13706,14 +13810,14 @@ var ResourceLoader = function (_EventEmitter) {
 
             try {
                 for (var _iterator = items[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _ref = _step.value;
+                    var _ref2 = _step.value;
 
-                    var _ref2 = _slicedToArray(_ref, 2);
+                    var _ref3 = _slicedToArray(_ref2, 2);
 
-                    var key = _ref2[0];
-                    var path = _ref2[1];
+                    var name = _ref3[0];
+                    var path = _ref3[1];
 
-                    this.add(type, key, path, options);
+                    this.add(type, name, path, options);
                 }
             } catch (err) {
                 _didIteratorError = true;
@@ -13736,7 +13840,7 @@ var ResourceLoader = function (_EventEmitter) {
         /**
          * @public
          * @chainable
-         * @returns {Exo.Loader}
+         * @returns {Exo.ResourceLoader}
          */
 
     }, {
@@ -13767,7 +13871,7 @@ var ResourceLoader = function (_EventEmitter) {
             this._types.clear();
             this._types = null;
 
-            this._loadingPromise = null;
+            this._loading = null;
         }
     }, {
         key: 'items',
@@ -13808,7 +13912,7 @@ var ResourceLoader = function (_EventEmitter) {
     }, {
         key: 'isLoading',
         get: function get() {
-            return this._loadingPromise !== null;
+            return this._loading !== null;
         }
 
         /**
@@ -13827,16 +13931,16 @@ var ResourceLoader = function (_EventEmitter) {
 
         /**
          * @public
-         * @member {String}
+         * @member {Object.<String, String>}
          */
 
     }, {
-        key: 'requestQuery',
+        key: 'options',
         get: function get() {
-            return this._requestQuery;
+            return this._options;
         },
         set: function set(value) {
-            this._requestQuery = value;
+            this._options = value;
         }
     }]);
 
@@ -14048,7 +14152,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _ArrayBufferType = __webpack_require__(19);
+var _ArrayBufferType = __webpack_require__(10);
 
 Object.defineProperty(exports, 'ArrayBufferType', {
   enumerable: true,
@@ -14084,6 +14188,15 @@ Object.defineProperty(exports, 'BlobType', {
   }
 });
 
+var _FontType = __webpack_require__(67);
+
+Object.defineProperty(exports, 'FontType', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_FontType).default;
+  }
+});
+
 var _ImageType = __webpack_require__(53);
 
 Object.defineProperty(exports, 'ImageType', {
@@ -14093,7 +14206,7 @@ Object.defineProperty(exports, 'ImageType', {
   }
 });
 
-var _JSONType = __webpack_require__(67);
+var _JSONType = __webpack_require__(68);
 
 Object.defineProperty(exports, 'JSONType', {
   enumerable: true,
@@ -14102,7 +14215,7 @@ Object.defineProperty(exports, 'JSONType', {
   }
 });
 
-var _MusicType = __webpack_require__(68);
+var _MusicType = __webpack_require__(69);
 
 Object.defineProperty(exports, 'MusicType', {
   enumerable: true,
@@ -14111,7 +14224,7 @@ Object.defineProperty(exports, 'MusicType', {
   }
 });
 
-var _SoundType = __webpack_require__(69);
+var _SoundType = __webpack_require__(70);
 
 Object.defineProperty(exports, 'SoundType', {
   enumerable: true,
@@ -14120,7 +14233,7 @@ Object.defineProperty(exports, 'SoundType', {
   }
 });
 
-var _SpriteType = __webpack_require__(70);
+var _SpriteType = __webpack_require__(71);
 
 Object.defineProperty(exports, 'SpriteType', {
   enumerable: true,
@@ -14129,7 +14242,7 @@ Object.defineProperty(exports, 'SpriteType', {
   }
 });
 
-var _StringType = __webpack_require__(71);
+var _StringType = __webpack_require__(72);
 
 Object.defineProperty(exports, 'StringType', {
   enumerable: true,
@@ -14164,7 +14277,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(19);
+var _ArrayBufferType2 = __webpack_require__(10);
 
 var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
 
@@ -14408,7 +14521,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Playable2 = __webpack_require__(11);
+var _Playable2 = __webpack_require__(12);
 
 var _Playable3 = _interopRequireDefault(_Playable2);
 
@@ -14439,7 +14552,7 @@ var Music = function (_Playable) {
 
         var _this = _possibleConstructorReturn(this, (Music.__proto__ || Object.getPrototypeOf(Music)).call(this, audio));
 
-        if (!_utils.webAudioSupport) {
+        if (!_utils.webAudioSupported) {
             throw new Error('Web Audio API is not supported, use the fallback Exo.Audio instead.');
         }
 
@@ -14475,9 +14588,7 @@ var Music = function (_Playable) {
 
 
         /**
-         * @public
          * @override
-         * @param {Exo.AudioManager} audioManager
          */
         value: function connect(audioManager) {
             if (this._context) {
@@ -14494,7 +14605,6 @@ var Music = function (_Playable) {
         }
 
         /**
-         * @public
          * @override
          */
 
@@ -14504,13 +14614,13 @@ var Music = function (_Playable) {
             _get(Music.prototype.__proto__ || Object.getPrototypeOf(Music.prototype), 'destroy', this).call(this);
 
             if (this._context) {
+                this._context = null;
+
                 this._sourceNode.disconnect();
                 this._sourceNode = null;
 
                 this._gainNode.disconnect();
                 this._gainNode = null;
-
-                this._context = null;
             }
         }
     }, {
@@ -14520,9 +14630,7 @@ var Music = function (_Playable) {
         }
 
         /**
-         * @public
          * @override
-         * @member {Number}
          */
 
     }, {
@@ -14538,7 +14646,6 @@ var Music = function (_Playable) {
 
         /**
          * @public
-         * @override
          * @readonly
          * @member {?GainNode}
          */
@@ -14570,7 +14677,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Playable2 = __webpack_require__(11);
+var _Playable2 = __webpack_require__(12);
 
 var _Playable3 = _interopRequireDefault(_Playable2);
 
@@ -14601,7 +14708,7 @@ var Sound = function (_Playable) {
 
         var _this = _possibleConstructorReturn(this, (Sound.__proto__ || Object.getPrototypeOf(Sound)).call(this, audioBuffer));
 
-        if (!_utils.webAudioSupport) {
+        if (!_utils.webAudioSupported) {
             throw new Error('Web Audio API is not supported, use the fallback Exo.Audio instead.');
         }
 
@@ -15382,7 +15489,7 @@ Object.keys(_core).forEach(function (key) {
   });
 });
 
-var _resource = __webpack_require__(74);
+var _resource = __webpack_require__(75);
 
 Object.keys(_resource).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15394,7 +15501,7 @@ Object.keys(_resource).forEach(function (key) {
   });
 });
 
-var _input = __webpack_require__(76);
+var _input = __webpack_require__(77);
 
 Object.keys(_input).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15406,7 +15513,7 @@ Object.keys(_input).forEach(function (key) {
   });
 });
 
-var _audio = __webpack_require__(79);
+var _audio = __webpack_require__(80);
 
 Object.keys(_audio).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15418,7 +15525,7 @@ Object.keys(_audio).forEach(function (key) {
   });
 });
 
-var _display = __webpack_require__(82);
+var _display = __webpack_require__(83);
 
 Object.keys(_display).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15430,7 +15537,7 @@ Object.keys(_display).forEach(function (key) {
   });
 });
 
-var _animation = __webpack_require__(89);
+var _animation = __webpack_require__(90);
 
 Object.keys(_animation).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15461,31 +15568,6 @@ exports.utils = utils; /**
 
 (function (global) {
     var vendors = ['webkit', 'moz', 'ms', 'o'];
-
-    global.AudioContext = global.AudioContext || global.webkitAudioContext;
-    global.OfflineAudioContext = global.OfflineAudioContext || global.webkitOfflineAudioContext;
-
-    if (global.AudioContext) {
-        var Prototype = global.AudioContext.prototype;
-
-        Prototype.createGain = Prototype.createGain || Prototype.createGainNode;
-        Prototype.createDelay = Prototype.createDelay || Prototype.createDelayNode;
-        Prototype.createScriptProcessor = Prototype.createScriptProcessor || Prototype.createJavaScriptNode;
-    }
-
-    if (global.AudioBufferSourceNode) {
-        var _Prototype = global.AudioBufferSourceNode.prototype;
-
-        _Prototype.start = _Prototype.start || _Prototype.noteOn;
-        _Prototype.stop = _Prototype.stop || _Prototype.noteOff;
-    }
-
-    if (global.OscillatorNode) {
-        var _Prototype2 = global.OscillatorNode.prototype;
-
-        _Prototype2.start = _Prototype2.start || _Prototype2.noteOn;
-        _Prototype2.stop = _Prototype2.stop || _Prototype2.noteOff;
-    }
 
     for (var i = 0, len = vendors.length; !global.requestAnimationFrame && i < len; i++) {
         var vendor = vendors[i];
@@ -15626,7 +15708,7 @@ Object.defineProperty(exports, 'Time', {
   }
 });
 
-var _Clock = __webpack_require__(15);
+var _Clock = __webpack_require__(16);
 
 Object.defineProperty(exports, 'Clock', {
   enumerable: true,
@@ -15662,7 +15744,7 @@ Object.defineProperty(exports, 'Config', {
   }
 });
 
-var _Scene = __webpack_require__(72);
+var _Scene = __webpack_require__(73);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -15680,7 +15762,7 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
-var _Quadtree = __webpack_require__(73);
+var _Quadtree = __webpack_require__(74);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -16203,15 +16285,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var getRandomValues = 'crypto' in window ? crypto.getRandomValues.bind(crypto) : function (array) {
-    var len = array.length;
-
-    for (var i = 0; i < len; i++) {
-        array[i] = Math.random() * 256 | 0;
-    }
-
-    return array;
-};
+var crypto = window.crypto || window.msCrypto;
 
 /**
  * @class Random
@@ -16324,7 +16398,17 @@ var Random = function () {
     }, {
         key: 'generateSeed',
         value: function generateSeed() {
-            return String.fromCharCode.apply(String, _toConsumableArray(getRandomValues(new Uint8Array(256))));
+            var seed = new Uint8Array(256);
+
+            if (crypto) {
+                crypto.getRandomValues(seed);
+            } else {
+                for (var i = 0; i < 256; i++) {
+                    seed[i] = Math.random() * 256 & 255;
+                }
+            }
+
+            return String.fromCharCode.apply(String, _toConsumableArray(seed));
         }
 
         /**
@@ -16391,7 +16475,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Clock2 = __webpack_require__(15);
+var _Clock2 = __webpack_require__(16);
 
 var _Clock3 = _interopRequireDefault(_Clock2);
 
@@ -16564,7 +16648,7 @@ var _EventEmitter2 = __webpack_require__(5);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _Clock = __webpack_require__(15);
+var _Clock = __webpack_require__(16);
 
 var _Clock2 = _interopRequireDefault(_Clock);
 
@@ -16912,12 +16996,109 @@ exports.default = Game;
 
 
 Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _ArrayBufferType2 = __webpack_require__(10);
+
+var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
+
+var _utils = __webpack_require__(1);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var fonts = document.fonts;
+
+/**
+ * @class FontType
+ * @extends {Exo.ArrayBufferType}
+ * @memberof Exo
+ */
+
+var FontType = function (_ArrayBufferType) {
+    _inherits(FontType, _ArrayBufferType);
+
+    function FontType() {
+        _classCallCheck(this, FontType);
+
+        return _possibleConstructorReturn(this, (FontType.__proto__ || Object.getPrototypeOf(FontType)).apply(this, arguments));
+    }
+
+    _createClass(FontType, [{
+        key: 'create',
+
+
+        /**
+         * @override
+         */
+        value: function create(response) {
+            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                _ref$addToDocument = _ref.addToDocument,
+                addToDocument = _ref$addToDocument === undefined ? true : _ref$addToDocument,
+                _ref$family = _ref.family,
+                family = _ref$family === undefined ? (0, _utils.getFilename)(response.url) : _ref$family,
+                destriptors = _ref.destriptors;
+
+            return _get(FontType.prototype.__proto__ || Object.getPrototypeOf(FontType.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
+                return new Promise(function (resolve, reject) {
+                    var fontFace = new FontFace(family, arrayBuffer, destriptors),
+                        promise = fontFace.load();
+
+                    if (addToDocument) {
+                        promise.then(function () {
+                            return fonts.add(fontFace);
+                        });
+                    }
+
+                    promise.then(function () {
+                        return resolve(fontFace);
+                    }, function () {
+                        return reject(fontFace);
+                    });
+                });
+            });
+        }
+    }, {
+        key: 'storageKey',
+
+
+        /**
+         * @override
+         */
+        get: function get() {
+            return 'font';
+        }
+    }]);
+
+    return FontType;
+}(_ArrayBufferType3.default);
+
+exports.default = FontType;
+
+/***/ }),
+/* 68 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ResourceType2 = __webpack_require__(10);
+var _ResourceType2 = __webpack_require__(11);
 
 var _ResourceType3 = _interopRequireDefault(_ResourceType2);
 
@@ -16971,7 +17152,7 @@ var JSONType = function (_ResourceType) {
 exports.default = JSONType;
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17025,7 +17206,7 @@ var MusicType = function (_AudioType) {
          * @override
          */
         value: function create(response, options) {
-            if (!_utils.webAudioSupport) {
+            if (!_utils.webAudioSupported) {
                 return Promise.reject();
             }
 
@@ -17051,7 +17232,7 @@ var MusicType = function (_AudioType) {
 exports.default = MusicType;
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17105,7 +17286,7 @@ var SoundType = function (_AudioBufferType) {
          * @override
          */
         value: function create(response, options) {
-            if (!_utils.webAudioSupport) {
+            if (!_utils.webAudioSupported) {
                 return Promise.reject();
             }
 
@@ -17131,7 +17312,7 @@ var SoundType = function (_AudioBufferType) {
 exports.default = SoundType;
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17197,7 +17378,7 @@ var SpriteType = function (_TextureType) {
 exports.default = SpriteType;
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17209,7 +17390,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ResourceType2 = __webpack_require__(10);
+var _ResourceType2 = __webpack_require__(11);
 
 var _ResourceType3 = _interopRequireDefault(_ResourceType2);
 
@@ -17263,7 +17444,7 @@ var StringType = function (_ResourceType) {
 exports.default = StringType;
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17404,7 +17585,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17711,7 +17892,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17721,7 +17902,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(75);
+var _Database = __webpack_require__(76);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -17748,7 +17929,7 @@ Object.defineProperty(exports, 'ResourceContainer', {
   }
 });
 
-var _ResourceType = __webpack_require__(10);
+var _ResourceType = __webpack_require__(11);
 
 Object.defineProperty(exports, 'ResourceType', {
   enumerable: true,
@@ -17772,7 +17953,7 @@ Object.keys(_types).forEach(function (key) {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17802,7 +17983,7 @@ var Database = function () {
     function Database(name, version) {
         _classCallCheck(this, Database);
 
-        if (!_utils.indexedDBSupport) {
+        if (!_utils.indexedDBSupported) {
             throw new Error('This browser does not support indexedDB!');
         }
 
@@ -18124,7 +18305,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18143,7 +18324,7 @@ Object.defineProperty(exports, 'ChannelHandler', {
   }
 });
 
-var _Input = __webpack_require__(77);
+var _Input = __webpack_require__(78);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -18206,7 +18387,7 @@ Object.defineProperty(exports, 'GamepadDefaultMapping', {
   }
 });
 
-var _Gamepad = __webpack_require__(18);
+var _Gamepad = __webpack_require__(19);
 
 Object.defineProperty(exports, 'Gamepad', {
   enumerable: true,
@@ -18224,7 +18405,7 @@ Object.defineProperty(exports, 'GamepadManager', {
   }
 });
 
-var _Pointer = __webpack_require__(78);
+var _Pointer = __webpack_require__(79);
 
 Object.defineProperty(exports, 'Pointer', {
   enumerable: true,
@@ -18245,7 +18426,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18496,14 +18677,14 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -18528,89 +18709,43 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @memberof Exo
  */
 var Pointer = function (_ChannelHandler) {
-    _inherits(Pointer, _ChannelHandler);
+  _inherits(Pointer, _ChannelHandler);
 
-    /**
-     * @constructor
-     * @param {ArrayBuffer} channelBuffer
-     */
-    function Pointer(channelBuffer, index) {
-        _classCallCheck(this, Pointer);
+  /**
+   * @constructor
+   * @param {ArrayBuffer} channelBuffer
+   */
+  function Pointer(channelBuffer, index) {
+    _classCallCheck(this, Pointer);
 
-        return _possibleConstructorReturn(this, (Pointer.__proto__ || Object.getPrototypeOf(Pointer)).call(this, channelBuffer, _const.CHANNEL_OFFSET.POINTER | index * _const.CHANNEL_LENGTH.CHILD, _const.CHANNEL_LENGTH.CHILD));
+    return _possibleConstructorReturn(this, (Pointer.__proto__ || Object.getPrototypeOf(Pointer)).call(this, channelBuffer, _const.CHANNEL_OFFSET.POINTER + index * _const.CHANNEL_LENGTH.CHILD, _const.CHANNEL_LENGTH.CHILD));
+  }
+
+  /**
+   * @public
+   * @static
+   * @param {Number} key
+   * @param {Number} [index=0]
+   * @returns {Number}
+   */
+
+
+  _createClass(Pointer, null, [{
+    key: 'getChannelCode',
+    value: function getChannelCode(key) {
+      var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+      return _const.CHANNEL_OFFSET.POINTER + index * _const.CHANNEL_LENGTH.CHILD + (key & 31);
     }
+  }]);
 
-    /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @param {Number} identifier
-     */
-
-
-    _createClass(Pointer, [{
-        key: 'onPress',
-        value: function onPress(x, y, identifier) {
-            this.identifier = identifier;
-            this.pressed = true;
-
-            this.setPosition(x, y);
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'onRelease',
-        value: function onRelease() {
-            this.identifier = 0;
-            this.pressed = false;
-        }
-
-        /**
-         * @public
-         * @param {Number} x
-         * @param {Number} y
-         */
-
-    }, {
-        key: 'setPosition',
-        value: function setPosition(x, y) {
-            if (this.moved === false) {
-                this.moved = true;
-                this.previousX = this.currentX;
-                this.previousY = this.currentY;
-            }
-
-            this.currentX = x >>> 0;
-            this.currentY = y >>> 0;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Number} key
-         * @param {Number} [index=0]
-         * @returns {Number}
-         */
-
-    }], [{
-        key: 'getChannelCode',
-        value: function getChannelCode(key) {
-            var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-            return _const.CHANNEL_OFFSET.POINTER | (index * _const.CHANNEL_LENGTH.CHILD | key & 255);
-        }
-    }]);
-
-    return Pointer;
+  return Pointer;
 }(_ChannelHandler3.default);
 
 exports.default = Pointer;
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18620,7 +18755,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Playable = __webpack_require__(11);
+var _Playable = __webpack_require__(12);
 
 Object.defineProperty(exports, 'Playable', {
   enumerable: true,
@@ -18629,7 +18764,7 @@ Object.defineProperty(exports, 'Playable', {
   }
 });
 
-var _Audio = __webpack_require__(80);
+var _Audio = __webpack_require__(81);
 
 Object.defineProperty(exports, 'Audio', {
   enumerable: true,
@@ -18665,7 +18800,7 @@ Object.defineProperty(exports, 'AudioManager', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(81);
+var _AudioAnalyser = __webpack_require__(82);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -18677,7 +18812,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18689,7 +18824,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Playable2 = __webpack_require__(11);
+var _Playable2 = __webpack_require__(12);
 
 var _Playable3 = _interopRequireDefault(_Playable2);
 
@@ -18789,7 +18924,7 @@ var Audio = function (_Playable) {
 exports.default = Audio;
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18835,66 +18970,85 @@ var AudioAnalyser = function () {
       throw new Error('No analyser target was provided.');
     }
 
-    if (!target.context) {
-      throw new Error('Could not find AudioContext of the target.');
-    }
-
-    if (!target.analyserTarget) {
-      throw new Error('Target has no valid AudioNode to analyse.');
-    }
+    /**
+     * @private
+     * @member {Exo.Sound|Exo.Music|Exo.AudioManager}
+     */
+    this._target = target;
 
     /**
      * @private
-     * @member {AudioContext}
+     * @member {Object}
      */
-    this._context = target.context;
-
-    /**
-     * @private
-     * @member {AnalyserNode}
-     */
-    this._analyser = this._context.createAnalyser();
-    this._analyser.fftSize = fftSize;
-    this._analyser.minDecibels = minDecibels;
-    this._analyser.maxDecibels = maxDecibels;
-    this._analyser.smoothingTimeConstant = smoothingTimeConstant;
-
-    /**
-     * @private
-     * @member {AudioNode}
-     */
-    this._target = target.analyserTarget;
-    this._target.connect(this._analyser);
-
-    /**
-     * @private
-     * @member {Uint8Array} _timeDomainData
-     */
-
-    /**
-     * @private
-     * @member {Uint8Array} _frequencyData
-     */
-
-    /**
-     * @private
-     * @member {Float32Array} _preciseTimeDomainData
-     */
-
-    /**
-     * @private
-     * @member {Float32Array} _preciseFrequencyData
-     */
+    this._options = { fftSize: fftSize, minDecibels: minDecibels, maxDecibels: maxDecibels, smoothingTimeConstant: smoothingTimeConstant };
   }
 
-  /**
-   * @public
-   * @readonly
-   * @member {Uint8Array}
-   */
-
-
   _createClass(AudioAnalyser, [{
+    key: 'ensureContext',
+    value: function ensureContext() {
+      if (this._context) {
+        return;
+      }
+
+      if (!this._target.context) {
+        throw new Error('Failed to provide an AudioContext from the target.');
+      }
+
+      if (!this._target.analyserTarget) {
+        throw new Error('Target has no valid AudioNode to analyse.');
+      }
+
+      /**
+       * @private
+       * @member {AudioContext}
+       */
+      this._context = this._target.context;
+
+      /**
+       * @private
+       * @member {AnalyserNode}
+       */
+      this._analyser = Object.assign(this._context.createAnalyser(), this._options);
+
+      /**
+       * @private
+       * @member {AudioNode}
+       */
+      this._targetNode = this._target.analyserTarget;
+      this._targetNode.connect(this._analyser);
+
+      /**
+       * @private
+       * @member {Uint8Array} _timeDomainData
+       */
+      this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount);
+
+      /**
+       * @private
+       * @member {Uint8Array} _frequencyData
+       */
+      this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
+
+      /**
+       * @private
+       * @member {Float32Array} _preciseTimeDomainData
+       */
+      this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
+
+      /**
+       * @private
+       * @member {Float32Array} _preciseFrequencyData
+       */
+      this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Uint8Array}
+     */
+
+  }, {
     key: 'destroy',
 
 
@@ -18902,27 +19056,32 @@ var AudioAnalyser = function () {
      * @public
      */
     value: function destroy() {
-      this._timeDomainData = null;
-      this._frequencyData = null;
-      this._preciseTimeDomainData = null;
-      this._preciseFrequencyData = null;
-
-      this._target.disconnect();
       this._target = null;
+      this._options = null;
 
-      this._analyser.disconnect();
-      this._analyser = null;
+      if (this._context) {
+        this._context = null;
 
-      this._context = null;
+        this._targetNode.disconnect(this._analyser);
+        this._targetNode = null;
+
+        this._analyser.disconnect();
+        this._analyser = null;
+
+        this._timeDomainData = null;
+        this._frequencyData = null;
+        this._preciseTimeDomainData = null;
+        this._preciseFrequencyData = null;
+      }
     }
   }, {
     key: 'timeDomainData',
     get: function get() {
-      var timeDomainData = this._timeDomainData || (this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount));
+      this.ensureContext();
 
-      this._analyser.getByteTimeDomainData(timeDomainData);
+      this._analyser.getByteTimeDomainData(this._timeDomainData);
 
-      return timeDomainData;
+      return this._timeDomainData;
     }
 
     /**
@@ -18934,11 +19093,11 @@ var AudioAnalyser = function () {
   }, {
     key: 'frequencyData',
     get: function get() {
-      var frequencyData = this._frequencyData || (this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount));
+      this.ensureContext();
 
-      this._analyser.getByteFrequencyData(frequencyData);
+      this._analyser.getByteFrequencyData(this._frequencyData);
 
-      return frequencyData;
+      return this._frequencyData;
     }
 
     /**
@@ -18950,11 +19109,11 @@ var AudioAnalyser = function () {
   }, {
     key: 'preciseTimeDomainData',
     get: function get() {
-      var preciseTimeDomainData = this._preciseTimeDomainData || (this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount));
+      this.ensureContext();
 
-      this._analyser.getFloatTimeDomainData(preciseTimeDomainData);
+      this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
 
-      return preciseTimeDomainData;
+      return this._preciseTimeDomainData;
     }
 
     /**
@@ -18966,11 +19125,11 @@ var AudioAnalyser = function () {
   }, {
     key: 'preciseFrequencyData',
     get: function get() {
-      var preciseFrequencyData = this._preciseFrequencyData || (this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount));
+      this.ensureContext();
 
-      this._analyser.getFloatFrequencyData(preciseFrequencyData);
+      this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
 
-      return preciseFrequencyData;
+      return this._preciseFrequencyData;
     }
   }]);
 
@@ -18980,7 +19139,7 @@ var AudioAnalyser = function () {
 exports.default = AudioAnalyser;
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19053,7 +19212,7 @@ Object.defineProperty(exports, 'Renderable', {
   }
 });
 
-var _Container = __webpack_require__(83);
+var _Container = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Container', {
   enumerable: true,
@@ -19062,7 +19221,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Renderer = __webpack_require__(16);
+var _Renderer = __webpack_require__(17);
 
 Object.defineProperty(exports, 'Renderer', {
   enumerable: true,
@@ -19071,7 +19230,7 @@ Object.defineProperty(exports, 'Renderer', {
   }
 });
 
-var _Shader = __webpack_require__(17);
+var _Shader = __webpack_require__(18);
 
 Object.defineProperty(exports, 'Shader', {
   enumerable: true,
@@ -19107,7 +19266,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Text = __webpack_require__(84);
+var _Text = __webpack_require__(85);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -19143,7 +19302,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(85);
+var _ParticleEmitter = __webpack_require__(86);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -19170,7 +19329,7 @@ Object.defineProperty(exports, 'ParticleRenderer', {
   }
 });
 
-var _ParticleModifier = __webpack_require__(12);
+var _ParticleModifier = __webpack_require__(13);
 
 Object.defineProperty(exports, 'ParticleModifier', {
   enumerable: true,
@@ -19179,7 +19338,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(86);
+var _ForceModifier = __webpack_require__(87);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -19188,7 +19347,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(87);
+var _ScaleModifier = __webpack_require__(88);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -19197,7 +19356,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(88);
+var _TorqueModifier = __webpack_require__(89);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -19209,7 +19368,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19612,7 +19771,7 @@ var Container = function (_Renderable) {
 exports.default = Container;
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20092,7 +20251,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20489,7 +20648,7 @@ var ParticleEmitter = function () {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20501,7 +20660,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(12);
+var _ParticleModifier2 = __webpack_require__(13);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -20577,7 +20736,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20589,7 +20748,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(12);
+var _ParticleModifier2 = __webpack_require__(13);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -20665,7 +20824,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20677,7 +20836,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(12);
+var _ParticleModifier2 = __webpack_require__(13);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -20750,7 +20909,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20760,7 +20919,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Animation = __webpack_require__(13);
+var _Animation = __webpack_require__(14);
 
 Object.defineProperty(exports, 'Animation', {
   enumerable: true,
@@ -20769,7 +20928,7 @@ Object.defineProperty(exports, 'Animation', {
   }
 });
 
-var _ColorAnimation = __webpack_require__(90);
+var _ColorAnimation = __webpack_require__(91);
 
 Object.defineProperty(exports, 'ColorAnimation', {
   enumerable: true,
@@ -20778,7 +20937,7 @@ Object.defineProperty(exports, 'ColorAnimation', {
   }
 });
 
-var _FadeAnimation = __webpack_require__(91);
+var _FadeAnimation = __webpack_require__(92);
 
 Object.defineProperty(exports, 'FadeAnimation', {
   enumerable: true,
@@ -20787,7 +20946,7 @@ Object.defineProperty(exports, 'FadeAnimation', {
   }
 });
 
-var _FrameAnimation = __webpack_require__(92);
+var _FrameAnimation = __webpack_require__(93);
 
 Object.defineProperty(exports, 'FrameAnimation', {
   enumerable: true,
@@ -20805,7 +20964,7 @@ Object.defineProperty(exports, 'AnimationFrame', {
   }
 });
 
-var _Animator = __webpack_require__(93);
+var _Animator = __webpack_require__(94);
 
 Object.defineProperty(exports, 'Animator', {
   enumerable: true,
@@ -20817,7 +20976,7 @@ Object.defineProperty(exports, 'Animator', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20827,7 +20986,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Animation2 = __webpack_require__(13);
+var _Animation2 = __webpack_require__(14);
 
 var _Animation3 = _interopRequireDefault(_Animation2);
 
@@ -20874,7 +21033,7 @@ var ColorAnimation = function (_Animation) {
 exports.default = ColorAnimation;
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20886,7 +21045,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Animation2 = __webpack_require__(13);
+var _Animation2 = __webpack_require__(14);
 
 var _Animation3 = _interopRequireDefault(_Animation2);
 
@@ -20932,8 +21091,6 @@ var FadeAnimation = function (_Animation) {
 
     /**
      * @override
-     * @param {*} animated
-     * @param {Number} progress
      */
 
 
@@ -20957,7 +21114,7 @@ var FadeAnimation = function (_Animation) {
 exports.default = FadeAnimation;
 
 /***/ }),
-/* 92 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20969,7 +21126,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Animation2 = __webpack_require__(13);
+var _Animation2 = __webpack_require__(14);
 
 var _Animation3 = _interopRequireDefault(_Animation2);
 
@@ -21129,7 +21286,7 @@ var FrameAnimation = function (_Animation) {
 exports.default = FrameAnimation;
 
 /***/ }),
-/* 93 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

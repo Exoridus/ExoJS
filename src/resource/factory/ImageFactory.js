@@ -1,17 +1,17 @@
-import BlobType from './BlobType';
+import BlobFactory from './BlobFactory';
 import {getMimeType} from '../../utils';
 
 /**
- * @class ImageType
- * @extends {Exo.BlobType}
+ * @class ImageFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class ImageType extends BlobType {
+export default class ImageFactory extends BlobFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'image';
     }
 
@@ -28,7 +28,7 @@ export default class ImageType extends BlobType {
                 image.addEventListener('error', () => reject(image));
                 image.addEventListener('abort', () => reject(image));
 
-                image.src = window.URL.createObjectURL(blob);
+                image.src = URL.createObjectURL(blob);
             }));
     }
 }

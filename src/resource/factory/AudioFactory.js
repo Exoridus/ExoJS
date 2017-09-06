@@ -1,17 +1,17 @@
-import BlobType from './BlobType';
+import BlobFactory from './BlobFactory';
 import {getMimeType} from '../../utils';
 
 /**
- * @class AudioType
- * @extends {Exo.BlobType}
+ * @class AudioFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class AudioType extends BlobType {
+export default class AudioFactory extends BlobFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'audio';
     }
 
@@ -28,7 +28,7 @@ export default class AudioType extends BlobType {
                 audio.addEventListener('error', () => reject(audio));
                 audio.addEventListener('abort', () => reject(audio));
 
-                audio.src = window.URL.createObjectURL(blob);
+                audio.src = URL.createObjectURL(blob);
             }));
     }
 }

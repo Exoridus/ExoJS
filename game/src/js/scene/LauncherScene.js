@@ -53,10 +53,7 @@ export default class LauncherScene extends Exo.Scene {
          */
         this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
-        loader
-            .on('progress', (resource, index, length) => {
-                this._renderProgress(index / length * 100);
-            })
+        loader.on('progress', (length, index, resource) => this._renderProgress(index / length * 100))
             .addList('sprite', {
                 'title/logo': 'image/title/logo.png',
                 'title/background': 'image/title/background.jpg',
@@ -71,6 +68,7 @@ export default class LauncherScene extends Exo.Scene {
                 'title/background': 'audio/title/background.ogg',
                 'game/background': 'audio/game/background.ogg',
             })
+            .add('font', 'menu', 'font/AndyBold/AndyBold.woff2')
             .load()
             .then(() => this.game.trigger('scene:start'));
 

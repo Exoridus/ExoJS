@@ -1,15 +1,5 @@
 import RC4 from './RC4';
 
-const getRandomValues = ('crypto' in window) ? crypto.getRandomValues.bind(crypto) : (array) => {
-    const len = array.length;
-
-    for (let i = 0; i < len; i++) {
-        array[i] = (Math.random() * 256) | 0;
-    }
-
-    return array;
-};
-
 /**
  * @class Random
  * @memberof Exo
@@ -93,7 +83,17 @@ export default class Random {
      * @returns {String}
      */
     generateSeed() {
-        return String.fromCharCode(...getRandomValues(new Uint8Array(256)));
+        const seed = new Uint8Array(256);
+
+        if (crypto) {
+            crypto.getRandomValues(seed);
+        } else {
+            for (let i = 0; i < 256; i++) {
+                seed[i] = (Math.random() * 256) & 255;
+            }
+        }
+
+        return String.fromCharCode(...seed);
     }
 
     /**

@@ -14,6 +14,30 @@ export default class ResourceContainer {
          * @member {Map.<String, Map.<String, *>>}
          */
         this._resources = new Map();
+
+        /**
+         * @private
+         * @member {Set.<String>}
+         */
+        this._types = new Set();
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Map.<String, Map.<String, *>>}
+     */
+    get resources() {
+        return this._resources;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Set.<String>}
+     */
+    get types() {
+        return this._types;
     }
 
     /**
@@ -23,8 +47,9 @@ export default class ResourceContainer {
      * @returns {Exo.ResourceContainer}
      */
     addType(type) {
-        if (!this._resources.has(type)) {
+        if (!this._types.has(type)) {
             this._resources.set(type, new Map());
+            this._types.add(type);
         }
 
         return this;
@@ -32,56 +57,53 @@ export default class ResourceContainer {
 
     /**
      * @public
-     * @chainable
      * @param {String} type
-     * @returns {Exo.ResourceContainer}
+     * @returns {Map.<String, *>}
      */
-    getType(type) {
-        const resources = this._resources.get(type);
-
-        if (!resources) {
-            throw new Error(`Invalid type "${type}".`);
+    getResources(type) {
+        if (!this._types.has(type)) {
+            throw new Error(`Unknown type "${type}".`);
         }
 
-        return resources;
+        return this._resources.get(type);
     }
 
     /**
      * @public
      * @param {String} type
-     * @param {String} key
+     * @param {String} name
      * @returns {Boolean}
      */
-    has(type, key) {
-        return this.getType(type).has(key);
+    has(type, name) {
+        return this.getResources(type).has(name);
     }
 
     /**
      * @public
      * @param {String} type
-     * @param {String} key
+     * @param {String} name
      * @returns {Exo.ResourceContainer}
      */
-    get(type, key) {
-        const resources = this.getType(type);
+    get(type, name) {
+        const resources = this.getResources(type);
 
-        if (!resources.has(key)) {
-            throw new Error(`Could not find resource "${key}" with type "${type}".`);
+        if (!resources.has(name)) {
+            throw new Error(`Missing resource "${name}" with type "${type}".`);
         }
 
-        return resources.get(key);
+        return resources.get(name);
     }
 
     /**
      * @public
      * @chainable
      * @param {String} type
-     * @param {String} key
-     * @param {*} value
+     * @param {String} name
+     * @param {*} resource
      * @returns {Exo.ResourceContainer}
      */
-    set(type, key, value) {
-        this.getType(type).set(key, value);
+    set(type, name, resource) {
+        this.getResources(type).set(name, resource);
 
         return this;
     }
@@ -90,11 +112,11 @@ export default class ResourceContainer {
      * @public
      * @chainable
      * @param {String} type
-     * @param {String} key
+     * @param {String} name
      * @returns {Exo.ResourceContainer}
      */
-    delete(type, key) {
-        this.getType(type).delete(key);
+    delete(type, name) {
+        this.getResources(type).delete(name);
 
         return this;
     }
@@ -120,5 +142,8 @@ export default class ResourceContainer {
 
         this._resources.clear();
         this._resources = null;
+
+        this._types.clear();
+        this._types = null;
     }
 }

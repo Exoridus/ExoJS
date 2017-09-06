@@ -1,16 +1,16 @@
-import ResourceType from '../ResourceType';
+import ResourceFactory from '../ResourceFactory';
 
 /**
- * @class JSONType
- * @extends {Exo.ResourceType}
+ * @class JSONFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-export default class JSONType extends ResourceType {
+export default class JSONFactory extends ResourceFactory {
 
     /**
      * @override
      */
-    get storageKey() {
+    get storageType() {
         return 'json';
     }
 
