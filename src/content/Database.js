@@ -1,4 +1,5 @@
 import {indexedDBSupported} from '../utils';
+import {DATABASE_TYPES} from '../const';
 
 /**
  * @class Database
@@ -42,25 +43,9 @@ export default class Database {
 
         /**
          * @private
-         * @member {Set.<String>}
-         */
-        this._types = new Set([
-            'arrayBuffer',
-            'audioBuffer',
-            'audio',
-            'font',
-            'image',
-            'json',
-            'music',
-            'sound',
-            'string',
-        ]);
-
-        /**
-         * @private
          * @member {Function}
          */
-        this._onCloseHandler = this.close.bind(this);
+        this._onCloseHandler = this._closeConnection.bind(this);
     }
 
     /**
@@ -99,8 +84,7 @@ export default class Database {
             const request = indexedDB.open(this._name, this._version);
 
             request.addEventListener('upgradeneeded', (event) => {
-                const types = this._types,
-                    database = event.target.result,
+                const database = event.target.result,
                     transaction = event.target.transaction,
                     currentStores = [...transaction.objectStoreNames];
 
@@ -108,12 +92,12 @@ export default class Database {
                 database.addEventListener('abort', (event) => reject(event));
 
                 for (const store of currentStores) {
-                    if (!types.has(store)) {
+                    if (!DATABASE_TYPES.includes(store)) {
                         database.deleteObjectStore(store);
                     }
                 }
 
-                for (const type of types) {
+                for (const type of DATABASE_TYPES) {
                     if (!currentStores.includes(type)) {
                         database.createObjectStore(type, { keyPath: 'name' });
                     }
@@ -138,14 +122,7 @@ export default class Database {
      * @returns {Promise}
      */
     close() {
-        if (this._database) {
-            this._database.removeEventListener('close', this._onCloseHandler);
-            this._database.close();
-            this._database = null;
-        }
-
-        this._connect = null;
-
+        this._closeConnection();
         return Promise.resolve();
     }
 
@@ -156,7 +133,7 @@ export default class Database {
      * @returns {Promise}
      */
     getObjectStore(type, transactionMode = 'readonly') {
-        if (!this._types.has(type)) {
+        if (!DATABASE_TYPES.includes(type)) {
             return Promise.reject(Error(`Could not find ObjectStore named "${type}".`));
         }
 
@@ -174,7 +151,7 @@ export default class Database {
      */
     clear(type = '*') {
         if (type === '*') {
-            return [...this._types].reduce((promise, type) => promise.then(() => this.clear(type)), Promise.resolve());
+            return DATABASE_TYPES.reduce((promise, type) => promise.then(() => this.clear(type)), Promise.resolve());
         }
 
         return this
@@ -206,7 +183,7 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Promise.<Object>}
+     * @returns {Promise<Object>}
      */
     loadData(type, name) {
         return this
@@ -230,7 +207,7 @@ export default class Database {
      * @param {String} type
      * @param {String} name
      * @param {*} data
-     * @returns {Promise.<Object>}
+     * @returns {Promise<Object>}
      */
     saveData(type, name, data) {
         return this
@@ -247,7 +224,7 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Promise.<Object>}
+     * @returns {Promise<Object>}
      */
     removeData(type, name) {
         return this
@@ -264,19 +241,24 @@ export default class Database {
      * @public
      */
     destroy() {
+        this._closeConnection();
+
+        this._name = null;
+        this._version = null;
+        this._onCloseHandler = null;
+    }
+
+    /**
+     * @private
+     */
+    _closeConnection() {
         if (this._database) {
             this._database.removeEventListener('close', this._onCloseHandler);
+            this._database.removeEventListener('versionchange', this._onCloseHandler);
             this._database.close();
             this._database = null;
         }
 
-        this._types.clear();
-        this._types = null;
-
-        this._name = null;
-        this._version = null;
         this._connect = null;
-        this._onCloseHandler = null;
-        this._onUpgradeNeededHandler = null;
     }
 }

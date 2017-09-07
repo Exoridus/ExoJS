@@ -1,4 +1,4 @@
-import {DEG_TO_RAD, RAD_TO_DEG, SCALE_MODE, WRAP_MODE, CODEC_NOT_SUPPORTED} from './const';
+import {DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED} from './const';
 
 export const
 
@@ -85,26 +85,6 @@ export const
      * @static
      * @constant
      * @memberof Exo.utils
-     * @type {Object.<String, Boolean>}
-     */
-    supportedAudioCodecs = {
-        mp3: isCodecSupported('audio/mpeg;', 'audio/mp3;'),
-        mpeg: isCodecSupported('audio/mpeg;'),
-        opus: isCodecSupported('audio/ogg; codecs="opus"'),
-        ogg: isCodecSupported('audio/ogg; codecs="vorbis"'),
-        wav: isCodecSupported('audio/wav; codecs="1"'),
-        aac: isCodecSupported('audio/aac;'),
-        m4a: isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
-        mp4: isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
-        weba: isCodecSupported('audio/webm; codecs="vorbis"'),
-        webm: isCodecSupported('audio/webm; codecs="vorbis"'),
-    },
-
-    /**
-     * @public
-     * @static
-     * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
      * @returns {Promise<AudioBuffer>}
@@ -140,17 +120,6 @@ export const
      * @returns {Number}
      */
     radiansToDegrees = (radian) => radian * RAD_TO_DEG,
-
-    /**
-     * @public
-     * @static
-     * @constant
-     * @memberof Exo.utils
-     * @type {Function}
-     * @param {...Number} values
-     * @returns {Number}
-     */
-    average = (...values) => values.reduce((sum, value) => sum + value, 0) / values.length,
 
     /**
      * @public
@@ -268,36 +237,6 @@ export const
         }
 
         array.length = newLen;
-    },
-
-    /**
-     * @public
-     * @static
-     * @constant
-     * @memberof Exo.utils
-     * @type {Function}
-     * @param {WebGLRenderingContext} gl
-     * @param {Number} scaleMode
-     * @returns {Number}
-     */
-    getScaleModeEnum = (gl, scaleMode) => (scaleMode === SCALE_MODE.LINEAR) ? gl.LINEAR : gl.NEAREST,
-
-    /**
-     * @public
-     * @static
-     * @constant
-     * @memberof Exo.utils
-     * @type {Function}
-     * @param {WebGLRenderingContext} gl
-     * @param {Number} wrapMode
-     * @returns {Number}
-     */
-    getWrapModeEnum = (gl, wrapMode) => {
-        if (wrapMode === WRAP_MODE.CLAMP_TO_EDGE) {
-            return gl.CLAMP_TO_EDGE;
-        }
-
-        return (wrapMode === WRAP_MODE.REPEAT) ? gl.REPEAT : gl.MIRRORED_REPEAT;
     },
 
     /**

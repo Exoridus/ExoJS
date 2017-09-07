@@ -8,7 +8,7 @@ window.game = new Exo.Game({
 window.game.start(new Exo.Scene({
 
     load(loader) {
-        loader.add('sprite', 'bunny', 'image/bunny.png')
+        loader.addItem('sprite', 'bunny', 'image/bunny.png')
             .load()
             .then(() => this.game.trigger('scene:start'));
     },

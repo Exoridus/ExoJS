@@ -8,9 +8,9 @@ export default class Random {
 
     /**
      * @constructor
-     * @param {String} [seed]
+     * @param {String} [seed=Random.generateSeed()]
      */
-    constructor(seed = this.generateSeed()) {
+    constructor(seed = Random.generateSeed()) {
 
         /**
          * @private
@@ -22,7 +22,7 @@ export default class Random {
          * @private
          * @member {RC4}
          */
-        this._rc4 = new RC4(this.getMixedKeys(this.flatten(this._seed, 3), []));
+        this._rc4 = new RC4(this.getMixedKeys(this.flatten(seed)));
     }
 
     /**
@@ -34,21 +34,21 @@ export default class Random {
     }
 
     set seed(value) {
-        this._seed = (value === null) ? this.generateSeed() : value;
-        this._rc4.setKeys(this.getMixedKeys(this.flatten(this._seed, 3), []));
+        this._seed = value;
+        this._rc4.setKeys(this.getMixedKeys(this.flatten(value)));
     }
 
     /**
      * @private
-     * @param {*} obj
-     * @param {Number} depth
+     * @param {*} object
+     * @param {Number} [depth=3]
      * @returns {String}
      */
-    flatten(obj, depth) {
+    flatten(object, depth = 3) {
         const result = [];
 
-        if (depth >= 0 && typeof obj === 'object') {
-            for (const value of Object.values(obj)) {
+        if (depth >= 0 && typeof object === 'object') {
+            for (const value of Object.values(object)) {
                 result.push(this.flatten(value, depth - 1));
             }
         }
@@ -57,16 +57,16 @@ export default class Random {
             return String.fromCharCode(...result);
         }
 
-        return (typeof obj === 'string') ? obj : `${obj}\0`;
+        return (typeof object === 'string') ? object : `${object}\0`;
     }
 
     /**
      * @private
      * @param {String} seed
-     * @param {Array} keys
-     * @returns {Array}
+     * @param {Number[]} [keys=[]]
+     * @returns {Number[]}
      */
-    getMixedKeys(seed, keys) {
+    getMixedKeys(seed, keys = []) {
         const result = [],
             seedString = `${seed}`,
             len = seedString.length;
@@ -76,24 +76,6 @@ export default class Random {
         }
 
         return result;
-    }
-
-    /**
-     * @private
-     * @returns {String}
-     */
-    generateSeed() {
-        const seed = new Uint8Array(256);
-
-        if (crypto) {
-            crypto.getRandomValues(seed);
-        } else {
-            for (let i = 0; i < 256; i++) {
-                seed[i] = (Math.random() * 256) & 255;
-            }
-        }
-
-        return String.fromCharCode(...seed);
     }
 
     /**
@@ -124,5 +106,23 @@ export default class Random {
         }
 
         return (((n + x) / denom) * (max - min)) + min;
+    }
+
+    /**
+     * @private
+     * @returns {String}
+     */
+    static generateSeed() {
+        const seed = new Uint8Array(256);
+
+        if (crypto) {
+            crypto.getRandomValues(seed);
+        } else {
+            for (let i = 0; i < 256; i++) {
+                seed[i] = (Math.random() * 256) & 255;
+            }
+        }
+
+        return String.fromCharCode(...seed);
     }
 }

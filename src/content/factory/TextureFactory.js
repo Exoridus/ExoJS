@@ -1,6 +1,6 @@
 import ImageFactory from './ImageFactory';
-import {SCALE_MODE, WRAP_MODE} from '../../const';
 import Texture from '../../display/Texture';
+import settings from '../../settings';
 
 /**
  * @class TextureFactory
@@ -12,7 +12,14 @@ export default class TextureFactory extends ImageFactory {
     /**
      * @override
      */
-    create(response, { mimeType, scaleMode = SCALE_MODE.NEAREST, wrapMode = WRAP_MODE.CLAMP_TO_EDGE } = {}) {
+    get storageType() {
+        return 'image';
+    }
+
+    /**
+     * @override
+     */
+    create(response, { mimeType, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE } = {}) {
         return super
             .create(response, { mimeType })
             .then((image) => new Texture(image, scaleMode, wrapMode));

@@ -11,6 +11,13 @@ export default class SpriteFactory extends TextureFactory {
     /**
      * @override
      */
+    get storageType() {
+        return 'image';
+    }
+
+    /**
+     * @override
+     */
     create(response, options) {
         return super
             .create(response, options)

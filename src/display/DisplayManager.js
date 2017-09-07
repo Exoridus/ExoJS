@@ -59,7 +59,7 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map.<String, Exo.Renderer>}
+         * @member {Map<String, Exo.Renderer>}
          */
         this._renderers = new Map();
 
@@ -95,7 +95,7 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map.<Number, Exo.BlendMode>}
+         * @member {Map<Number, Exo.BlendMode>}
          */
         this._blendModes = this._createBlendModes(this._context);
 

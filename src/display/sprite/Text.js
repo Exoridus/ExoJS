@@ -247,7 +247,7 @@ export default class Text extends Sprite {
     }
 
     set wordWrapWidth(wordWrapWidth) {
-        this._style.wordWrapWidth = (typeof wordWrapWidth === 'number') ? wordWrapWidth : 100;
+        this._style.wordWrapWidth = wordWrapWidth;
         this._updateCanvas();
     }
 

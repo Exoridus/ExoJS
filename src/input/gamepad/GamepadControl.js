@@ -1,10 +1,10 @@
-import {clamp} from '../../utils';
+import {CHANNEL_OFFSET} from '../../const';
 
 /**
- * @class GamepadButton
+ * @class GamepadControl
  * @memberof Exo
  */
-export default class GamepadButton {
+export default class GamepadControl {
 
     /**
      * @constructor
@@ -33,7 +33,7 @@ export default class GamepadButton {
          * @private
          * @member {Number}
          */
-        this._threshold = clamp(threshold, 0, 1);
+        this._threshold = threshold;
 
         /**
          * @private
@@ -46,6 +46,12 @@ export default class GamepadButton {
          * @member {Boolean}
          */
         this._normalize = normalize;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._key = channel & 31;
     }
 
     /**
@@ -70,6 +76,20 @@ export default class GamepadButton {
 
     set channel(value) {
         this._channel = value;
+        this._key = value & 31;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get key() {
+        return this._key;
+    }
+
+    set key(value) {
+        this._key = value & 31;
+        this._channel = CHANNEL_OFFSET.GAMEPAD + value;
     }
 
     /**
@@ -81,7 +101,7 @@ export default class GamepadButton {
     }
 
     set threshold(value) {
-        this._threshold = clamp(value, 0, 1);
+        this._threshold = value;
     }
 
     /**
@@ -110,20 +130,10 @@ export default class GamepadButton {
 
     /**
      * @public
-     * @member {Number}
-     */
-    get keyCode() {
-        return this._channel & 31;
-    }
-
-    /**
-     * @public
-     * @param {Exo.GamepadButton|Number} buttonValue
+     * @param {Number} value
      * @returns {Number}
      */
-    transformValue(buttonValue) {
-        let value = (typeof buttonValue.value === 'number') ? buttonValue.value : buttonValue;
-
+    transformValue(value) {
         if (this._negate) {
             value *= -1;
         }

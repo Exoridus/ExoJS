@@ -2,6 +2,7 @@ import Vector from './Vector';
 
 /**
  * @class ObservableVector
+ * @extends {Exo.Vector}
  * @memberof Exo
  */
 export default class ObservableVector extends Vector {
@@ -62,7 +63,7 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    set (x, y) {
+    set (x = this._x, y = this._y) {
         if (this._x !== x || this._y !== y) {
             this._x = x;
             this._y = y;
@@ -75,9 +76,9 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    add(x, y) {
-        this._x += (typeof x === 'number') ? x : 0;
-        this._y += (typeof y === 'number') ? y : 0;
+    add(x = 0, y = 0) {
+        this._x += x;
+        this._y += y;
         this._callback.call(this._scope);
 
         return this;
@@ -86,9 +87,9 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    subtract(x, y) {
-        this._x -= (typeof x === 'number') ? x : 0;
-        this._y -= (typeof y === 'number') ? y : 0;
+    subtract(x = 0, y = 0) {
+        this._x -= x;
+        this._y -= y;
         this._callback.call(this._scope);
 
         return this;
@@ -97,9 +98,9 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    multiply(x, y) {
-        this._x *= (typeof x === 'number') ? x : 1;
-        this._y *= (typeof y === 'number') ? y : 1;
+    multiply(x = 1, y = 1) {
+        this._x *= x;
+        this._y *= y;
         this._callback.call(this._scope);
 
         return this;
@@ -108,9 +109,9 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    divide(x, y) {
-        this._x /= (typeof x === 'number') ? x : 1;
-        this._y /= (typeof y === 'number') ? y : 1;
+    divide(x = 1, y = 1) {
+        this._x /= x;
+        this._y /= y;
         this._callback.call(this._scope);
 
         return this;
@@ -151,7 +152,7 @@ export default class ObservableVector extends Vector {
     }
 
     /**
-     * @public
+     * @override
      */
     destroy() {
         this._x = null;

@@ -1,9 +1,8 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
-import WebGLTexture from './WebGLTexture';
 import Matrix from '../core/Matrix';
-import {SCALE_MODE, UNIFORM_TYPE, WRAP_MODE} from '../const';
-import {getScaleModeEnum, getWrapModeEnum} from '../utils';
+import {UNIFORM_TYPE} from '../const';
+import settings from '../settings';
 
 /**
  * @class Shader
@@ -44,13 +43,13 @@ export default class Shader {
 
         /**
          * @private
-         * @member {Map.<String, Exo.ShaderUniform>}
+         * @member {Map<String, Exo.ShaderUniform>}
          */
         this._uniforms = new Map();
 
         /**
          * @private
-         * @member {Map.<String, Exo.ShaderAttribute>}
+         * @member {Map<String, Exo.ShaderAttribute>}
          */
         this._attributes = new Map();
 
@@ -85,7 +84,7 @@ export default class Shader {
     }
 
     set inUse(value) {
-        this._inUse = !!value;
+        this._inUse = value;
     }
 
     /**
@@ -146,7 +145,7 @@ export default class Shader {
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
             gl.deleteProgram(program);
 
-            throw new Error('Error: Could not initialize shader.', gl.getError());
+            throw new Error(`Could not initialize shader. Error: ${gl.getError()}`);
         }
 
         return program;
@@ -286,7 +285,7 @@ export default class Shader {
 
         uniform.value = value;
 
-        if (typeof textureUnit === 'number') {
+        if (textureUnit !== undefined) {
             uniform.textureUnit = textureUnit;
         }
 
@@ -373,26 +372,24 @@ export default class Shader {
     /**
      * @public
      * @param {HTMLImageElement|HTMLCanvasElement} source
-     * @param {Number} [scaleMode=SCALE_MODE.NEAREST]
-     * @param {Number} [wrapMode=WRAP_MODE.CLAMP_TO_EDGE]
+     * @param {Number} [scaleMode=settings.SCALE_MODE]
+     * @param {Number} [wrapMode=settings.WRAP_MODE]
      * @returns {WebGLTexture}
      */
-    createWebGLTexture(source, scaleMode = SCALE_MODE.NEAREST, wrapMode = WRAP_MODE.CLAMP_TO_EDGE) {
+    createWebGLTexture(source, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE) {
         const gl = this._context,
-            wrap = getWrapModeEnum(gl, wrapMode),
-            scale = getScaleModeEnum(gl, scaleMode),
             texture = gl.createTexture();
 
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, settings.PREMULTIPLY_ALPHA);
 
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
 
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scale);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scale);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
         gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -439,16 +436,16 @@ export default class Shader {
             return value.length;
         }
 
-        if (typeof value.x === 'number') {
+        if ('x' in value) {
             len++;
 
-            if (typeof value.y === 'number') {
+            if ('y' in value) {
                 len++;
 
-                if (typeof value.z === 'number') {
+                if ('z' in value) {
                     len++;
 
-                    if (typeof value.w === 'number') {
+                    if ('w' in value) {
                         len++;
                     }
                 }
@@ -608,32 +605,15 @@ export default class Shader {
                     value.webGLTexture = this.createWebGLTexture(value.source, value.scaleMode, value.wrapMode);
                 }
 
+                // if (!value.webGLTexture) {
+                //     value.webGLTexture = new WebGLTexture(gl);
+                //     value.webGLTexture.upload(value.source);
+                //     value.webGLTexture.setScaleMode(value.scaleMode);
+                //     value.webGLTexture.setWrapMode(value.wrapMode);
+                //     value.webGLTexture.unbind();
+                // }
+
                 gl.bindTexture(gl.TEXTURE_2D, value.webGLTexture);
-
-                return;
-
-            case UNIFORM_TYPE:
-                textureUnit = uniform.textureUnit;
-
-                if (textureUnit !== this._currentTextureUnit) {
-                    gl.activeTexture(gl.TEXTURE0 + textureUnit);
-                    this._currentTextureUnit = textureUnit;
-                }
-
-                if (uniform.textureUnitChanged) {
-                    gl.uniform1i(location, textureUnit);
-                    uniform.textureUnitChanged = false;
-                }
-
-                if (!value.webGLTexture) {
-                    value.webGLTexture = new WebGLTexture(gl);
-                    value.webGLTexture.setSource(value.source);
-                    value.webGLTexture.setScaleMode(value.scaleMode);
-                    value.webGLTexture.setWrapMode(value.wrapMode);
-                    value.webGLTexture.unbind();
-                }
-
-                value.webGLTexture.bind();
 
                 return;
 

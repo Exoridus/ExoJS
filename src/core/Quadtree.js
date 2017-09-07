@@ -28,13 +28,13 @@ export default class Quadtree {
 
         /**
          * @private
-         * @member {Map.<Number, Exo.Quadtree>}
+         * @member {Map<Number, Exo.Quadtree>}
          */
         this._children = new Map();
 
         /**
          * @private
-         * @member {Set.<Object>}
+         * @member {Set<Object>}
          */
         this._entities = new Set();
     }
@@ -60,7 +60,7 @@ export default class Quadtree {
     /**
      * @public
      * @readonly
-     * @member {Map.<Number, Exo.Quadtree>}
+     * @member {Map<Number, Exo.Quadtree>}
      */
     get children() {
         return this._children;
@@ -69,7 +69,7 @@ export default class Quadtree {
     /**
      * @public
      * @readonly
-     * @member {Set.<Object>}
+     * @member {Set<Object>}
      */
     get entities() {
         return this._entities;

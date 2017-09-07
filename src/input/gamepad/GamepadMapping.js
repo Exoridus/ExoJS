@@ -6,25 +6,27 @@ export default class GamepadMapping {
 
     /**
      * @constructor
+     * @param {Exo.GamepadControl[]} [buttons]
+     * @param {Exo.GamepadControl[]} [axes]
      */
-    constructor() {
+    constructor(buttons, axes) {
 
         /**
          * @private
-         * @member {Set.<Exo.GamepadButton>}
+         * @member {Set<Exo.GamepadControl>}
          */
-        this._buttons = new Set();
+        this._buttons = new Set(buttons);
 
         /**
          * @private
-         * @member {Set.<Exo.GamepadButton>}
+         * @member {Set<Exo.GamepadControl>}
          */
-        this._axes = new Set();
+        this._axes = new Set(axes);
     }
 
     /**
      * @public
-     * @member {Set<Exo.GamepadButton>}
+     * @member {Set<Exo.GamepadControl>}
      */
     get buttons() {
         return this._buttons;
@@ -36,7 +38,7 @@ export default class GamepadMapping {
 
     /**
      * @public
-     * @member {Set<Exo.GamepadButton>}
+     * @member {Set<Exo.GamepadControl>}
      */
     get axes() {
         return this._axes;
@@ -48,7 +50,7 @@ export default class GamepadMapping {
 
     /**
      * @public
-     * @param {Exo.GamepadButton[]} buttons
+     * @param {Exo.GamepadControl[]} buttons
      */
     setButtons(buttons) {
         this._buttons.clear();
@@ -60,7 +62,7 @@ export default class GamepadMapping {
 
     /**
      * @public
-     * @param {Exo.GamepadButton[]} axes
+     * @param {Exo.GamepadControl[]} axes
      */
     setAxes(axes) {
         this._axes.clear();

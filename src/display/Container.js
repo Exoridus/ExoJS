@@ -237,20 +237,18 @@ export default class Container extends Renderable {
      * @param {Number} end
      * @returns {Exo.Container}
      */
-    removeChildren(begin = 0, end) {
-        const children = this._children,
-            endIndex = (typeof end === 'number') ? end : children.length,
-            range = (endIndex - begin);
+    removeChildren(begin = 0, end = this._children.length) {
+        const range = (end - begin);
 
-        if (!range && !children.length) {
+        if (!range && !this._children.length) {
             return this;
         }
 
-        if (range < 0 && range > endIndex) {
+        if (range < 0 && range > end) {
             throw new Error('removeChildren: numeric values are outside the acceptable range.');
         }
 
-        children.splice(begin, range);
+        this._children.splice(begin, range);
 
         return this;
     }

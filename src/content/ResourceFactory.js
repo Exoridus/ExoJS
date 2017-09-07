@@ -19,13 +19,14 @@ export default class ResourceFactory {
      * @public
      * @abstract
      * @param {String} path
-     * @param {Object} [request]
-     * @param {String} [request.method='GET']
-     * @param {String} [request.mode='cors']
+     * @param {Object} [options]
+     * @param {String} [options.method='GET']
+     * @param {String} [options.mode='cors']
+     * @param {String} [options.cache='default']
      * @returns {Promise<Response>}
      */
-    request(path, { method = 'GET', mode = 'cors' } = {}) {
-        return fetch(path, { method, mode });
+    request(path, options = { method: 'GET', mode: 'cors', cache: 'default' }) {
+        return fetch(path, options);
     }
 
     /**

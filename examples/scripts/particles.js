@@ -8,7 +8,7 @@ window.game = new Exo.Game({
 window.game.start(new Exo.Scene({
 
     load(loader) {
-        loader.add('texture', 'particle', 'image/particle.png')
+        loader.addItem('texture', 'particle', 'image/particle.png')
             .load()
             .then(() => this.game.trigger('scene:start'));
     },

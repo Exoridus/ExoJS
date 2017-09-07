@@ -11,13 +11,13 @@ export default class ResourceContainer {
 
         /**
          * @private
-         * @member {Map.<String, Map.<String, *>>}
+         * @member {Map<String, Map<String, *>>}
          */
         this._resources = new Map();
 
         /**
          * @private
-         * @member {Set.<String>}
+         * @member {Set<String>}
          */
         this._types = new Set();
     }
@@ -25,7 +25,7 @@ export default class ResourceContainer {
     /**
      * @public
      * @readonly
-     * @member {Map.<String, Map.<String, *>>}
+     * @member {Map<String, Map<String, *>>}
      */
     get resources() {
         return this._resources;
@@ -34,7 +34,7 @@ export default class ResourceContainer {
     /**
      * @public
      * @readonly
-     * @member {Set.<String>}
+     * @member {Set<String>}
      */
     get types() {
         return this._types;
@@ -58,7 +58,7 @@ export default class ResourceContainer {
     /**
      * @public
      * @param {String} type
-     * @returns {Map.<String, *>}
+     * @returns {Map<String, *>}
      */
     getResources(type) {
         if (!this._types.has(type)) {

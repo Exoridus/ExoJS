@@ -27,7 +27,7 @@ export default class GamepadManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Map.<Number, Exo.Gamepad>}
+         * @member {Map<Number, Exo.Gamepad>}
          */
         this._gamepads = new Map();
     }
@@ -35,7 +35,7 @@ export default class GamepadManager extends ChannelHandler {
     /**
      * @public
      * @readonly
-     * @member {Map.<Number, Exo.Gamepad>}
+     * @member {Map<Number, Exo.Gamepad>}
      */
     get gamepads() {
         return this._gamepads;
@@ -47,12 +47,10 @@ export default class GamepadManager extends ChannelHandler {
     update() {
         this.updateGamepads();
 
-        if (!this.active) {
-            return;
-        }
-
-        for (const gamepad of this._gamepads.values()) {
-            gamepad.update();
+        if (this.active) {
+            for (const gamepad of this._gamepads.values()) {
+                gamepad.update();
+            }
         }
     }
 

@@ -208,7 +208,6 @@ export default class Transformable extends EventEmitter {
             angle = this._rotation * DEG_TO_RAD,
             cos = Math.cos(angle),
             sin = Math.sin(angle),
-
             sxc = scale.x * cos,
             syc = scale.y * cos,
             sxs = scale.x * sin,

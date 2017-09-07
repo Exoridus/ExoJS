@@ -1,5 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import GamepadDefaultMapping from './GamepadDefaultMapping';
+import DefaultGamepadMapping from './DefaultGamepadMapping';
 import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
 
 /**
@@ -27,7 +27,7 @@ export default class Gamepad extends ChannelHandler {
          * @private
          * @member {Exo.GamepadMapping}
          */
-        this._mapping = new GamepadDefaultMapping();
+        this._mapping = new DefaultGamepadMapping();
     }
 
     /**
@@ -94,13 +94,13 @@ export default class Gamepad extends ChannelHandler {
 
         for (const button of buttonMapping) {
             if (button.index in buttons) {
-                channels[button.keyCode] = button.transformValue(buttons[button.index]);
+                channels[button.key] = button.transformValue(buttons[button.index].value);
             }
         }
 
         for (const axis of axesMapping) {
             if (axis.index in axes) {
-                channels[axis.keyCode] = axis.transformValue(axes[axis.index]);
+                channels[axis.key] = axis.transformValue(axes[axis.index]);
             }
         }
     }

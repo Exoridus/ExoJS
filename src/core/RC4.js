@@ -6,7 +6,7 @@ export default class RC4 {
 
     /**
      * @constructor
-     * @param {Array} keys
+     * @param {Number[]} keys
      */
     constructor(keys) {
 
@@ -24,7 +24,7 @@ export default class RC4 {
 
         /**
          * @private
-         * @member {Array}
+         * @member {Number[]}
          */
         this._keys = [];
 
@@ -33,7 +33,7 @@ export default class RC4 {
 
     /**
      * @public
-     * @param {Array} newKeys
+     * @param {Number[]} newKeys
      */
     setKeys(newKeys) {
         const keys = this._keys,

@@ -92,7 +92,7 @@
         node = document.createElement('script');
         node.type = 'text/javascript';
         node.async = true;
-        node.src = 'assets/scripts/' + name + '.js?no-cache=' + Date.now();
+        node.src = 'scripts/' + name + '.js?no-cache=' + Date.now();
         node.id = 'current-example';
         document.getElementsByTagName('head')[0].appendChild(node);
     };

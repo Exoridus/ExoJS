@@ -125,7 +125,7 @@ RAD_TO_DEG = exports.RAD_TO_DEG = 180 / Math.PI,
  * @constant
  * @memberOf Exo
  * @name SHAPE
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} POLYGON
  * @property {Number} RECTANGLE
  * @property {Number} CIRCLE
@@ -146,7 +146,7 @@ SHAPE = exports.SHAPE = {
  * @constant
  * @memberOf Exo
  * @name SCALE_MODE
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} LINEAR
  * @property {Number} NEAREST
  */
@@ -161,7 +161,7 @@ SCALE_MODE = exports.SCALE_MODE = {
  * @constant
  * @memberOf Exo
  * @name WRAP_MODE
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} CLAMP_TO_EDGE
  * @property {Number} REPEAT
  * @property {Number} MIRRORED_REPEAT
@@ -178,7 +178,7 @@ WRAP_MODE = exports.WRAP_MODE = {
  * @constant
  * @memberOf Exo
  * @name INPUT_DEVICE
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} KEYBOARD
  * @property {Number} MOUSE
  * @property {Number} GAMEPAD
@@ -197,7 +197,7 @@ INPUT_DEVICE = exports.INPUT_DEVICE = {
  * @constant
  * @memberOf Exo
  * @name CHANNEL_OFFSET
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} KEYBOARD
  * @property {Number} MOUSE
  * @property {Number} GAMEPAD
@@ -233,7 +233,7 @@ CHANNEL_LENGTH = exports.CHANNEL_LENGTH = {
  * @constant
  * @memberOf Exo
  * @name UNIFORM_TYPE
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} INT
  * @property {Number} FLOAT
  * @property {Number} VECTOR
@@ -256,7 +256,7 @@ UNIFORM_TYPE = exports.UNIFORM_TYPE = {
  * @constant
  * @memberOf Exo
  * @name BLEND_MODE
- * @type {Object.<String, Number>}
+ * @type {Object<String, Number>}
  * @property {Number} SOURCE_OVER
  * @property {Number} ADD
  * @property {Number} MULTIPLY
@@ -300,6 +300,16 @@ BLEND_MODE = exports.BLEND_MODE = {
  * @public
  * @constant
  * @memberOf Exo
+ * @name DATABASE_TYPES
+ * @type {String[]}
+ */
+DATABASE_TYPES = exports.DATABASE_TYPES = ['arrayBuffer', 'audioBuffer', 'audio', 'font', 'image', 'json', 'music', 'sound', 'string'],
+
+
+/**
+ * @public
+ * @constant
+ * @memberOf Exo
  * @name QUAD_TREE_MAX_LEVEL
  * @type {Number}
  */
@@ -335,7 +345,7 @@ CODEC_NOT_SUPPORTED = exports.CODEC_NOT_SUPPORTED = /^no$/;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getMimeType = exports.getExtension = exports.getFilename = exports.getWrapModeEnum = exports.getScaleModeEnum = exports.removeItems = exports.rgbToHex = exports.hueToRgb = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.average = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportedAudioCodecs = exports.isCodecSupported = exports.audio = exports.audioContext = exports.webGLSupported = exports.indexedDBSupported = exports.webAudioSupported = undefined;
+exports.getMimeType = exports.getExtension = exports.getFilename = exports.getWrapModeEnum = exports.getScaleModeEnum = exports.removeItems = exports.rgbToHex = exports.hueToRgb = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.isCodecSupported = exports.audio = exports.audioContext = exports.webGLSupported = exports.indexedDBSupported = exports.webAudioSupported = undefined;
 
 var _const = __webpack_require__(0);
 
@@ -455,27 +465,6 @@ isCodecSupported = exports.isCodecSupported = function isCodecSupported() {
  * @static
  * @constant
  * @memberof Exo.utils
- * @type {Object.<String, Boolean>}
- */
-supportedAudioCodecs = exports.supportedAudioCodecs = {
-  mp3: isCodecSupported('audio/mpeg;', 'audio/mp3;'),
-  mpeg: isCodecSupported('audio/mpeg;'),
-  opus: isCodecSupported('audio/ogg; codecs="opus"'),
-  ogg: isCodecSupported('audio/ogg; codecs="vorbis"'),
-  wav: isCodecSupported('audio/wav; codecs="1"'),
-  aac: isCodecSupported('audio/aac;'),
-  m4a: isCodecSupported('audio/x-m4a;', 'audio/m4a;', 'audio/aac;'),
-  mp4: isCodecSupported('audio/x-mp4;', 'audio/mp4;', 'audio/aac;'),
-  weba: isCodecSupported('audio/webm; codecs="vorbis"'),
-  webm: isCodecSupported('audio/webm; codecs="vorbis"')
-},
-
-
-/**
- * @public
- * @static
- * @constant
- * @memberof Exo.utils
  * @type {Function}
  * @param {ArrayBuffer} arrayBuffer
  * @returns {Promise<AudioBuffer>}
@@ -516,26 +505,6 @@ degreesToRadians = exports.degreesToRadians = function degreesToRadians(degree) 
  */
 radiansToDegrees = exports.radiansToDegrees = function radiansToDegrees(radian) {
   return radian * _const.RAD_TO_DEG;
-},
-
-
-/**
- * @public
- * @static
- * @constant
- * @memberof Exo.utils
- * @type {Function}
- * @param {...Number} values
- * @returns {Number}
- */
-average = exports.average = function average() {
-  for (var _len2 = arguments.length, values = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-    values[_key2] = arguments[_key2];
-  }
-
-  return values.reduce(function (sum, value) {
-    return sum + value;
-  }, 0) / values.length;
 },
 
 
@@ -1596,7 +1565,7 @@ var EventEmitter = function () {
 
         /**
          * @private
-         * @member {Map.<String, Object[]>}
+         * @member {Map<String, Object[]>}
          */
         this._events = new Map();
     }
@@ -1604,7 +1573,7 @@ var EventEmitter = function () {
     /**
      * @public
      * @readonly
-     * @member {Map.<String, Object[]>}
+     * @member {Map<String, Object[]>}
      */
 
 
@@ -1971,7 +1940,7 @@ var Color = function () {
 
     /**
      * @public
-     * @returns {Object.<String, Number>}
+     * @returns {Object<String, Number>}
      */
 
   }, {
@@ -4009,9 +3978,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ResourceType2 = __webpack_require__(11);
+var _ResourceFactory2 = __webpack_require__(11);
 
-var _ResourceType3 = _interopRequireDefault(_ResourceType2);
+var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -4022,20 +3991,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class ArrayBufferType
- * @extends {Exo.ResourceType}
+ * @class ArrayBufferFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var ArrayBufferType = function (_ResourceType) {
-  _inherits(ArrayBufferType, _ResourceType);
+var ArrayBufferFactory = function (_ResourceFactory) {
+  _inherits(ArrayBufferFactory, _ResourceFactory);
 
-  function ArrayBufferType() {
-    _classCallCheck(this, ArrayBufferType);
+  function ArrayBufferFactory() {
+    _classCallCheck(this, ArrayBufferFactory);
 
-    return _possibleConstructorReturn(this, (ArrayBufferType.__proto__ || Object.getPrototypeOf(ArrayBufferType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (ArrayBufferFactory.__proto__ || Object.getPrototypeOf(ArrayBufferFactory)).apply(this, arguments));
   }
 
-  _createClass(ArrayBufferType, [{
+  _createClass(ArrayBufferFactory, [{
     key: 'create',
 
 
@@ -4046,7 +4015,7 @@ var ArrayBufferType = function (_ResourceType) {
       return Promise.resolve(response.arrayBuffer());
     }
   }, {
-    key: 'storageKey',
+    key: 'storageType',
 
 
     /**
@@ -4057,10 +4026,10 @@ var ArrayBufferType = function (_ResourceType) {
     }
   }]);
 
-  return ArrayBufferType;
-}(_ResourceType3.default);
+  return ArrayBufferFactory;
+}(_ResourceFactory3.default);
 
-exports.default = ArrayBufferType;
+exports.default = ArrayBufferFactory;
 
 /***/ }),
 /* 11 */
@@ -4079,15 +4048,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 /**
  * @abstract
- * @class ResourceType
+ * @class ResourceFactory
  * @memberof Exo
  */
-var ResourceType = function () {
-  function ResourceType() {
-    _classCallCheck(this, ResourceType);
+var ResourceFactory = function () {
+  function ResourceFactory() {
+    _classCallCheck(this, ResourceFactory);
   }
 
-  _createClass(ResourceType, [{
+  _createClass(ResourceFactory, [{
     key: 'request',
 
 
@@ -4095,19 +4064,16 @@ var ResourceType = function () {
      * @public
      * @abstract
      * @param {String} path
-     * @param {Object} [request]
-     * @param {String} [request.method='GET']
-     * @param {String} [request.mode='cors']
+     * @param {Object} [options]
+     * @param {String} [options.method='GET']
+     * @param {String} [options.mode='cors']
+     * @param {String} [options.cache='default']
      * @returns {Promise<Response>}
      */
     value: function request(path) {
-      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-          _ref$method = _ref.method,
-          method = _ref$method === undefined ? 'GET' : _ref$method,
-          _ref$mode = _ref.mode,
-          mode = _ref$mode === undefined ? 'cors' : _ref$mode;
+      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { method: 'GET', mode: 'cors', cache: 'default' };
 
-      return fetch(path, { method: method, mode: mode });
+      return fetch(path, options);
     }
 
     /**
@@ -4143,7 +4109,7 @@ var ResourceType = function () {
       });
     }
   }, {
-    key: 'storageKey',
+    key: 'storageType',
 
 
     /**
@@ -4157,10 +4123,10 @@ var ResourceType = function () {
     }
   }]);
 
-  return ResourceType;
+  return ResourceFactory;
 }();
 
-exports.default = ResourceType;
+exports.default = ResourceFactory;
 
 /***/ }),
 /* 12 */
@@ -5200,13 +5166,13 @@ var Shader = function () {
 
         /**
          * @private
-         * @member {Map.<String, Exo.ShaderUniform>}
+         * @member {Map<String, Exo.ShaderUniform>}
          */
         this._uniforms = new Map();
 
         /**
          * @private
-         * @member {Map.<String, Exo.ShaderAttribute>}
+         * @member {Map<String, Exo.ShaderAttribute>}
          */
         this._attributes = new Map();
 
@@ -6413,9 +6379,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(10);
+var _ArrayBufferFactory2 = __webpack_require__(10);
 
-var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
+var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -6426,20 +6392,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class BlobType
- * @extends {Exo.ArrayBufferType}
+ * @class BlobFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var BlobType = function (_ArrayBufferType) {
-  _inherits(BlobType, _ArrayBufferType);
+var BlobFactory = function (_ArrayBufferFactory) {
+  _inherits(BlobFactory, _ArrayBufferFactory);
 
-  function BlobType() {
-    _classCallCheck(this, BlobType);
+  function BlobFactory() {
+    _classCallCheck(this, BlobFactory);
 
-    return _possibleConstructorReturn(this, (BlobType.__proto__ || Object.getPrototypeOf(BlobType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (BlobFactory.__proto__ || Object.getPrototypeOf(BlobFactory)).apply(this, arguments));
   }
 
-  _createClass(BlobType, [{
+  _createClass(BlobFactory, [{
     key: 'create',
 
 
@@ -6451,16 +6417,16 @@ var BlobType = function (_ArrayBufferType) {
           _ref$mimeType = _ref.mimeType,
           mimeType = _ref$mimeType === undefined ? 'text/plain' : _ref$mimeType;
 
-      return _get(BlobType.prototype.__proto__ || Object.getPrototypeOf(BlobType.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
+      return _get(BlobFactory.prototype.__proto__ || Object.getPrototypeOf(BlobFactory.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
         return new Blob([arrayBuffer], { type: mimeType });
       });
     }
   }]);
 
-  return BlobType;
-}(_ArrayBufferType3.default);
+  return BlobFactory;
+}(_ArrayBufferFactory3.default);
 
-exports.default = BlobType;
+exports.default = BlobFactory;
 
 /***/ }),
 /* 21 */
@@ -7576,7 +7542,7 @@ var RC4 = function () {
 
     /**
      * @constructor
-     * @param {Array} keys
+     * @param {Number[]} keys
      */
     function RC4(keys) {
         _classCallCheck(this, RC4);
@@ -7595,7 +7561,7 @@ var RC4 = function () {
 
         /**
          * @private
-         * @member {Array}
+         * @member {Number[]}
          */
         this._keys = [];
 
@@ -7604,7 +7570,7 @@ var RC4 = function () {
 
     /**
      * @public
-     * @param {Array} newKeys
+     * @param {Number[]} newKeys
      */
 
 
@@ -8196,7 +8162,7 @@ var DisplayManager = function () {
 
         /**
          * @private
-         * @member {Map.<String, Exo.Renderer>}
+         * @member {Map<String, Exo.Renderer>}
          */
         this._renderers = new Map();
 
@@ -8232,7 +8198,7 @@ var DisplayManager = function () {
 
         /**
          * @private
-         * @member {Map.<Number, Exo.BlendMode>}
+         * @member {Map<Number, Exo.BlendMode>}
          */
         this._blendModes = this._createBlendModes(this._context);
 
@@ -11016,7 +10982,7 @@ var InputManager = function (_ChannelHandler) {
 
         /**
          * @private
-         * @member {Set.<Exo.Input>}
+         * @member {Set<Exo.Input>}
          */
         _this._inputs = new Set();
 
@@ -12819,7 +12785,7 @@ var GamepadManager = function (_ChannelHandler) {
 
         /**
          * @private
-         * @member {Map.<Number, Exo.Gamepad>}
+         * @member {Map<Number, Exo.Gamepad>}
          */
         _this._gamepads = new Map();
         return _this;
@@ -12828,7 +12794,7 @@ var GamepadManager = function (_ChannelHandler) {
     /**
      * @public
      * @readonly
-     * @member {Map.<Number, Exo.Gamepad>}
+     * @member {Map<Number, Exo.Gamepad>}
      */
 
 
@@ -12842,31 +12808,29 @@ var GamepadManager = function (_ChannelHandler) {
         value: function update() {
             this.updateGamepads();
 
-            if (!this.active) {
-                return;
-            }
+            if (this.active) {
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
 
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = this._gamepads.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var gamepad = _step.value;
-
-                    gamepad.update();
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
                 try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
+                    for (var _iterator = this._gamepads.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var gamepad = _step.value;
+
+                        gamepad.update();
                     }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
                 } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
                     }
                 }
             }
@@ -13052,13 +13016,13 @@ var GamepadMapping = function () {
 
         /**
          * @private
-         * @member {Set.<Exo.GamepadButton>}
+         * @member {Set<Exo.GamepadButton>}
          */
         this._buttons = new Set();
 
         /**
          * @private
-         * @member {Set.<Exo.GamepadButton>}
+         * @member {Set<Exo.GamepadButton>}
          */
         this._axes = new Set();
     }
@@ -13557,13 +13521,15 @@ var _ResourceContainer = __webpack_require__(49);
 
 var _ResourceContainer2 = _interopRequireDefault(_ResourceContainer);
 
-var _types = __webpack_require__(50);
+var _factory = __webpack_require__(50);
 
-var Types = _interopRequireWildcard(_types);
+var Factories = _interopRequireWildcard(_factory);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -13590,27 +13556,11 @@ var ResourceLoader = function (_EventEmitter) {
 
         /**
          * @private
-         * @member {Object[]}
+         * @member {Set<Object>}
          */
         var _this = _possibleConstructorReturn(this, (ResourceLoader.__proto__ || Object.getPrototypeOf(ResourceLoader)).call(this));
 
-        _this._queue = [];
-
-        /**
-         * @private
-         * @member {String}
-         */
-        _this._basePath = basePath;
-
-        /**
-         * @private
-         * @member {Object.<String, String>}
-         */
-        _this._options = {
-            method: 'GET',
-            mode: 'cors',
-            cache: 'default'
-        };
+        _this._queue = new Set();
 
         /**
          * @private
@@ -13620,49 +13570,70 @@ var ResourceLoader = function (_EventEmitter) {
 
         /**
          * @private
-         * @member {Map.<String, Exo.ResourceType>}
+         * @member {Map<String, Exo.ResourceFactory>}
          */
-        _this._types = new Map();
+        _this._factories = new Map();
 
         /**
          * @private
-         * @member {?Promise}
+         * @member {String}
          */
-        _this._loading = null;
+        _this._basePath = basePath;
 
         /**
          * @private
-         * @member {Number}
+         * @member {Object}
          */
-        _this._itemsLoaded = 0;
+        _this._request = {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'default'
+        };
 
-        _this.registerTypes();
+        _this.addFactories();
         return _this;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Object[]}
+     * @member {Exo.ResourceContainer}
      */
 
 
     _createClass(ResourceLoader, [{
-        key: 'registerType',
+        key: 'addFactory',
 
 
         /**
          * @public
          * @chainable
-         * @param {String} name
-         * @param {Exo.ResourceType} type
+         * @param {String} type
+         * @param {Exo.ResourceFactory} factory
          * @returns {Exo.ResourceLoader}
          */
-        value: function registerType(name, type) {
-            this._types.set(name, type);
-            this._resources.addType(name);
+        value: function addFactory(type, factory) {
+            this._factories.set(type, factory);
+            this._resources.addType(type);
 
             return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} type
+         * @returns {Exo.ResourceFactory}
+         */
+
+    }, {
+        key: 'getFactory',
+        value: function getFactory(type) {
+            if (!this._factories.has(type)) {
+                throw new Error('No resource factory for type "' + type + '".');
+            }
+
+            return this._factories.get(type);
         }
 
         /**
@@ -13672,9 +13643,9 @@ var ResourceLoader = function (_EventEmitter) {
          */
 
     }, {
-        key: 'registerTypes',
-        value: function registerTypes() {
-            return this.registerType('arrayBuffer', new Types.ArrayBufferType()).registerType('audioBuffer', new Types.AudioBufferType()).registerType('audio', new Types.AudioType()).registerType('blob', new Types.BlobType()).registerType('font', new Types.FontType()).registerType('image', new Types.ImageType()).registerType('json', new Types.JSONType()).registerType('music', new Types.MusicType()).registerType('sound', new Types.SoundType()).registerType('sprite', new Types.SpriteType()).registerType('string', new Types.StringType()).registerType('texture', new Types.TextureType());
+        key: 'addFactories',
+        value: function addFactories() {
+            return this.addFactory('arrayBuffer', new Factories.ArrayBufferFactory()).addFactory('audioBuffer', new Factories.AudioBufferFactory()).addFactory('audio', new Factories.AudioFactory()).addFactory('blob', new Factories.BlobFactory()).addFactory('font', new Factories.FontFactory()).addFactory('image', new Factories.ImageFactory()).addFactory('json', new Factories.JSONFactory()).addFactory('music', new Factories.MusicFactory()).addFactory('sound', new Factories.SoundFactory()).addFactory('sprite', new Factories.SpriteFactory()).addFactory('string', new Factories.StringFactory()).addFactory('texture', new Factories.TextureFactory());
         }
 
         /**
@@ -13687,29 +13658,24 @@ var ResourceLoader = function (_EventEmitter) {
         value: function load() {
             var _this2 = this;
 
-            if (this._loading) {
-                return this._loading;
-            }
+            var items = [].concat(_toConsumableArray(this._queue));
+            var loaded = 0;
 
-            this._itemsLoaded = 0;
+            this._queue.clear();
 
-            this.trigger('start', this._queue.length);
+            this.trigger('start', items.length, loaded, items);
 
-            this._loading = this._queue.map(function (item) {
+            return items.map(function (item) {
                 return _this2.loadItem(item);
             }).reduce(function (sequence, promise) {
                 return sequence.then(function () {
                     return promise;
                 }).then(function (resource) {
-                    _this2.trigger('progress', resource, ++_this2._itemsLoaded, _this2._queue.length);
+                    return _this2.trigger('progress', items.length, ++loaded, resource);
                 });
             }, Promise.resolve()).then(function () {
-                _this2._queue.length = 0;
-
-                _this2.trigger('complete', _this2._itemsLoaded);
+                return _this2.trigger('complete', items.length, loaded, _this2._resources);
             });
-
-            return this._loading;
         }
 
         /**
@@ -13733,27 +13699,22 @@ var ResourceLoader = function (_EventEmitter) {
                 path = _ref.path,
                 options = _ref.options;
 
-            if (!this._types.has(type)) {
-                throw new Error('Invalid resource type "' + type + '".');
-            }
-
             if (this._resources.has(type, name)) {
                 return Promise.resolve(this._resources.get(type, name));
             }
 
-            var typeHandler = this._types.get(type),
-                resourcePath = this._basePath + path,
-                requestOptions = this._options;
+            var factory = this.getFactory(type);
 
             if (this._database) {
-                return this._database.loadData(typeHandler.storageKey, name).then(function (data) {
-                    return data ? Promise.resolve(data) : typeHandler.request(resourcePath, requestOptions).then(function (source) {
-                        return _this3._database.saveData(typeHandler.storageKey, name, source).then(function (source) {
-                            return Promise.resolve(source);
-                        });
+                return this._database.loadData(factory.storageType, name).then(function (data) {
+                    return data || factory.request(_this3._basePath + path, _this3._request).then(function (data) {
+                        return _this3._database.saveData(factory.storageType, name, data);
+                    }).then(function (_ref2) {
+                        var data = _ref2.data;
+                        return data;
                     });
-                }).then(function (source) {
-                    return typeHandler.create(source, options);
+                }).then(function (data) {
+                    return factory.create(data, options);
                 }).then(function (resource) {
                     _this3._resources.set(type, name, resource);
 
@@ -13761,7 +13722,7 @@ var ResourceLoader = function (_EventEmitter) {
                 });
             }
 
-            return typeHandler.load(resourcePath, requestOptions, options).then(function (resource) {
+            return factory.load(this._basePath + path, this._request, options).then(function (resource) {
                 _this3._resources.set(type, name, resource);
 
                 return resource;
@@ -13781,11 +13742,11 @@ var ResourceLoader = function (_EventEmitter) {
     }, {
         key: 'add',
         value: function add(type, name, path, options) {
-            if (!this._types.has(type)) {
-                throw new Error('Invalid resource type "' + type + '".');
+            if (!this._factories.has(type)) {
+                throw new Error('No resource factory for type "' + type + '".');
             }
 
-            this._queue.push({ type: type, name: name, path: path, options: options });
+            this._queue.add({ type: type, name: name, path: path, options: options });
 
             return this;
         }
@@ -13794,7 +13755,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @public
          * @chainable
          * @param {String} type
-         * @param {Map.<String, String>|Object.<String, String>} list
+         * @param {Map<String, String>|Object<String, String>} list
          * @param {Object} [options]
          * @returns {Exo.ResourceLoader}
          */
@@ -13810,12 +13771,12 @@ var ResourceLoader = function (_EventEmitter) {
 
             try {
                 for (var _iterator = items[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _ref2 = _step.value;
+                    var _ref3 = _step.value;
 
-                    var _ref3 = _slicedToArray(_ref2, 2);
+                    var _ref4 = _slicedToArray(_ref3, 2);
 
-                    var name = _ref3[0];
-                    var path = _ref3[1];
+                    var name = _ref4[0];
+                    var path = _ref4[1];
 
                     this.add(type, name, path, options);
                 }
@@ -13846,8 +13807,8 @@ var ResourceLoader = function (_EventEmitter) {
     }, {
         key: 'reset',
         value: function reset() {
-            this._queue.length = 0;
             this._resources.clear();
+            this._queue.clear();
             this.off();
 
             return this;
@@ -13862,57 +13823,22 @@ var ResourceLoader = function (_EventEmitter) {
         value: function destroy() {
             _get(ResourceLoader.prototype.__proto__ || Object.getPrototypeOf(ResourceLoader.prototype), 'destroy', this).call(this);
 
-            this._queue.length = 0;
+            this._queue.clear();
             this._queue = null;
 
             this._resources.destroy();
             this._resources = null;
 
-            this._types.clear();
-            this._types = null;
+            this._factories.clear();
+            this._factories = null;
 
-            this._loading = null;
+            this._basePath = null;
+            this._request = null;
         }
-    }, {
-        key: 'items',
-        get: function get() {
-            return this._resources;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Exo.ResourceContainer}
-         */
-
     }, {
         key: 'resources',
         get: function get() {
             return this._resources;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'itemsLoaded',
-        get: function get() {
-            return this._itemsLoaded;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'isLoading',
-        get: function get() {
-            return this._loading !== null;
         }
 
         /**
@@ -13931,16 +13857,16 @@ var ResourceLoader = function (_EventEmitter) {
 
         /**
          * @public
-         * @member {Object.<String, String>}
+         * @member {Object<String, String>}
          */
 
     }, {
-        key: 'options',
+        key: 'request',
         get: function get() {
-            return this._options;
+            return this._request;
         },
         set: function set(value) {
-            this._options = value;
+            this._request = value;
         }
     }]);
 
@@ -13978,28 +13904,27 @@ var ResourceContainer = function () {
 
         /**
          * @private
-         * @member {Map.<String, Map.<String, *>>}
+         * @member {Map<String, Map<String, *>>}
          */
         this._resources = new Map();
+
+        /**
+         * @private
+         * @member {Set<String>}
+         */
+        this._types = new Set();
     }
 
     /**
      * @public
-     * @chainable
-     * @param {String} type
-     * @returns {Exo.ResourceContainer}
+     * @readonly
+     * @member {Map<String, Map<String, *>>}
      */
 
 
     _createClass(ResourceContainer, [{
         key: "addType",
-        value: function addType(type) {
-            if (!this._resources.has(type)) {
-                this._resources.set(type, new Map());
-            }
 
-            return this;
-        }
 
         /**
          * @public
@@ -14007,64 +13932,76 @@ var ResourceContainer = function () {
          * @param {String} type
          * @returns {Exo.ResourceContainer}
          */
-
-    }, {
-        key: "getType",
-        value: function getType(type) {
-            var resources = this._resources.get(type);
-
-            if (!resources) {
-                throw new Error("Invalid type \"" + type + "\".");
+        value: function addType(type) {
+            if (!this._types.has(type)) {
+                this._resources.set(type, new Map());
+                this._types.add(type);
             }
 
-            return resources;
+            return this;
         }
 
         /**
          * @public
          * @param {String} type
-         * @param {String} key
+         * @returns {Map<String, *>}
+         */
+
+    }, {
+        key: "getResources",
+        value: function getResources(type) {
+            if (!this._types.has(type)) {
+                throw new Error("Unknown type \"" + type + "\".");
+            }
+
+            return this._resources.get(type);
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @param {String} name
          * @returns {Boolean}
          */
 
     }, {
         key: "has",
-        value: function has(type, key) {
-            return this.getType(type).has(key);
+        value: function has(type, name) {
+            return this.getResources(type).has(name);
         }
 
         /**
          * @public
          * @param {String} type
-         * @param {String} key
+         * @param {String} name
          * @returns {Exo.ResourceContainer}
          */
 
     }, {
         key: "get",
-        value: function get(type, key) {
-            var resources = this.getType(type);
+        value: function get(type, name) {
+            var resources = this.getResources(type);
 
-            if (!resources.has(key)) {
-                throw new Error("Could not find resource \"" + key + "\" with type \"" + type + "\".");
+            if (!resources.has(name)) {
+                throw new Error("Missing resource \"" + name + "\" with type \"" + type + "\".");
             }
 
-            return resources.get(key);
+            return resources.get(name);
         }
 
         /**
          * @public
          * @chainable
          * @param {String} type
-         * @param {String} key
-         * @param {*} value
+         * @param {String} name
+         * @param {*} resource
          * @returns {Exo.ResourceContainer}
          */
 
     }, {
         key: "set",
-        value: function set(type, key, value) {
-            this.getType(type).set(key, value);
+        value: function set(type, name, resource) {
+            this.getResources(type).set(name, resource);
 
             return this;
         }
@@ -14073,14 +14010,14 @@ var ResourceContainer = function () {
          * @public
          * @chainable
          * @param {String} type
-         * @param {String} key
+         * @param {String} name
          * @returns {Exo.ResourceContainer}
          */
 
     }, {
         key: "delete",
-        value: function _delete(type, key) {
-            this.getType(type).delete(key);
+        value: function _delete(type, name) {
+            this.getResources(type).delete(name);
 
             return this;
         }
@@ -14133,6 +14070,26 @@ var ResourceContainer = function () {
 
             this._resources.clear();
             this._resources = null;
+
+            this._types.clear();
+            this._types = null;
+        }
+    }, {
+        key: "resources",
+        get: function get() {
+            return this._resources;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Set<String>}
+         */
+
+    }, {
+        key: "types",
+        get: function get() {
+            return this._types;
         }
     }]);
 
@@ -14152,111 +14109,111 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _ArrayBufferType = __webpack_require__(10);
+var _ArrayBufferFactory = __webpack_require__(10);
 
-Object.defineProperty(exports, 'ArrayBufferType', {
+Object.defineProperty(exports, 'ArrayBufferFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_ArrayBufferType).default;
+    return _interopRequireDefault(_ArrayBufferFactory).default;
   }
 });
 
-var _AudioBufferType = __webpack_require__(51);
+var _AudioBufferFactory = __webpack_require__(51);
 
-Object.defineProperty(exports, 'AudioBufferType', {
+Object.defineProperty(exports, 'AudioBufferFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_AudioBufferType).default;
+    return _interopRequireDefault(_AudioBufferFactory).default;
   }
 });
 
-var _AudioType = __webpack_require__(52);
+var _AudioFactory = __webpack_require__(52);
 
-Object.defineProperty(exports, 'AudioType', {
+Object.defineProperty(exports, 'AudioFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_AudioType).default;
+    return _interopRequireDefault(_AudioFactory).default;
   }
 });
 
-var _BlobType = __webpack_require__(20);
+var _BlobFactory = __webpack_require__(20);
 
-Object.defineProperty(exports, 'BlobType', {
+Object.defineProperty(exports, 'BlobFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_BlobType).default;
+    return _interopRequireDefault(_BlobFactory).default;
   }
 });
 
-var _FontType = __webpack_require__(67);
+var _FontFactory = __webpack_require__(66);
 
-Object.defineProperty(exports, 'FontType', {
+Object.defineProperty(exports, 'FontFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_FontType).default;
+    return _interopRequireDefault(_FontFactory).default;
   }
 });
 
-var _ImageType = __webpack_require__(53);
+var _ImageFactory = __webpack_require__(53);
 
-Object.defineProperty(exports, 'ImageType', {
+Object.defineProperty(exports, 'ImageFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_ImageType).default;
+    return _interopRequireDefault(_ImageFactory).default;
   }
 });
 
-var _JSONType = __webpack_require__(68);
+var _JSONFactory = __webpack_require__(67);
 
-Object.defineProperty(exports, 'JSONType', {
+Object.defineProperty(exports, 'JSONFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_JSONType).default;
+    return _interopRequireDefault(_JSONFactory).default;
   }
 });
 
-var _MusicType = __webpack_require__(69);
+var _MusicFactory = __webpack_require__(68);
 
-Object.defineProperty(exports, 'MusicType', {
+Object.defineProperty(exports, 'MusicFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_MusicType).default;
+    return _interopRequireDefault(_MusicFactory).default;
   }
 });
 
-var _SoundType = __webpack_require__(70);
+var _SoundFactory = __webpack_require__(69);
 
-Object.defineProperty(exports, 'SoundType', {
+Object.defineProperty(exports, 'SoundFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_SoundType).default;
+    return _interopRequireDefault(_SoundFactory).default;
   }
 });
 
-var _SpriteType = __webpack_require__(71);
+var _SpriteFactory = __webpack_require__(70);
 
-Object.defineProperty(exports, 'SpriteType', {
+Object.defineProperty(exports, 'SpriteFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_SpriteType).default;
+    return _interopRequireDefault(_SpriteFactory).default;
   }
 });
 
-var _StringType = __webpack_require__(72);
+var _StringFactory = __webpack_require__(71);
 
-Object.defineProperty(exports, 'StringType', {
+Object.defineProperty(exports, 'StringFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_StringType).default;
+    return _interopRequireDefault(_StringFactory).default;
   }
 });
 
-var _TextureType = __webpack_require__(56);
+var _TextureFactory = __webpack_require__(56);
 
-Object.defineProperty(exports, 'TextureType', {
+Object.defineProperty(exports, 'TextureFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_TextureType).default;
+    return _interopRequireDefault(_TextureFactory).default;
   }
 });
 
@@ -14277,9 +14234,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(10);
+var _ArrayBufferFactory2 = __webpack_require__(10);
 
-var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
+var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
 var _utils = __webpack_require__(1);
 
@@ -14292,20 +14249,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class AudioBufferType
- * @extends {Exo.ArrayBufferType}
+ * @class AudioBufferFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var AudioBufferType = function (_ArrayBufferType) {
-  _inherits(AudioBufferType, _ArrayBufferType);
+var AudioBufferFactory = function (_ArrayBufferFactory) {
+  _inherits(AudioBufferFactory, _ArrayBufferFactory);
 
-  function AudioBufferType() {
-    _classCallCheck(this, AudioBufferType);
+  function AudioBufferFactory() {
+    _classCallCheck(this, AudioBufferFactory);
 
-    return _possibleConstructorReturn(this, (AudioBufferType.__proto__ || Object.getPrototypeOf(AudioBufferType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (AudioBufferFactory.__proto__ || Object.getPrototypeOf(AudioBufferFactory)).apply(this, arguments));
   }
 
-  _createClass(AudioBufferType, [{
+  _createClass(AudioBufferFactory, [{
     key: 'create',
 
 
@@ -14313,16 +14270,16 @@ var AudioBufferType = function (_ArrayBufferType) {
      * @override
      */
     value: function create(response, options) {
-      return _get(AudioBufferType.prototype.__proto__ || Object.getPrototypeOf(AudioBufferType.prototype), 'create', this).call(this, response, options).then(function (arrayBuffer) {
+      return _get(AudioBufferFactory.prototype.__proto__ || Object.getPrototypeOf(AudioBufferFactory.prototype), 'create', this).call(this, response, options).then(function (arrayBuffer) {
         return (0, _utils.decodeAudioBuffer)(arrayBuffer);
       });
     }
   }]);
 
-  return AudioBufferType;
-}(_ArrayBufferType3.default);
+  return AudioBufferFactory;
+}(_ArrayBufferFactory3.default);
 
-exports.default = AudioBufferType;
+exports.default = AudioBufferFactory;
 
 /***/ }),
 /* 52 */
@@ -14339,9 +14296,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _BlobType2 = __webpack_require__(20);
+var _BlobFactory2 = __webpack_require__(20);
 
-var _BlobType3 = _interopRequireDefault(_BlobType2);
+var _BlobFactory3 = _interopRequireDefault(_BlobFactory2);
 
 var _utils = __webpack_require__(1);
 
@@ -14354,20 +14311,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class AudioType
- * @extends {Exo.BlobType}
+ * @class AudioFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var AudioType = function (_BlobType) {
-    _inherits(AudioType, _BlobType);
+var AudioFactory = function (_BlobFactory) {
+    _inherits(AudioFactory, _BlobFactory);
 
-    function AudioType() {
-        _classCallCheck(this, AudioType);
+    function AudioFactory() {
+        _classCallCheck(this, AudioFactory);
 
-        return _possibleConstructorReturn(this, (AudioType.__proto__ || Object.getPrototypeOf(AudioType)).apply(this, arguments));
+        return _possibleConstructorReturn(this, (AudioFactory.__proto__ || Object.getPrototypeOf(AudioFactory)).apply(this, arguments));
     }
 
-    _createClass(AudioType, [{
+    _createClass(AudioFactory, [{
         key: 'create',
 
 
@@ -14381,7 +14338,7 @@ var AudioType = function (_BlobType) {
                 _ref$loadEvent = _ref.loadEvent,
                 loadEvent = _ref$loadEvent === undefined ? 'canplaythrough' : _ref$loadEvent;
 
-            return _get(AudioType.prototype.__proto__ || Object.getPrototypeOf(AudioType.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
+            return _get(AudioFactory.prototype.__proto__ || Object.getPrototypeOf(AudioFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var audio = new Audio();
 
@@ -14395,12 +14352,12 @@ var AudioType = function (_BlobType) {
                         return reject(audio);
                     });
 
-                    audio.src = window.URL.createObjectURL(blob);
+                    audio.src = URL.createObjectURL(blob);
                 });
             });
         }
     }, {
-        key: 'storageKey',
+        key: 'storageType',
 
 
         /**
@@ -14411,10 +14368,10 @@ var AudioType = function (_BlobType) {
         }
     }]);
 
-    return AudioType;
-}(_BlobType3.default);
+    return AudioFactory;
+}(_BlobFactory3.default);
 
-exports.default = AudioType;
+exports.default = AudioFactory;
 
 /***/ }),
 /* 53 */
@@ -14431,9 +14388,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _BlobType2 = __webpack_require__(20);
+var _BlobFactory2 = __webpack_require__(20);
 
-var _BlobType3 = _interopRequireDefault(_BlobType2);
+var _BlobFactory3 = _interopRequireDefault(_BlobFactory2);
 
 var _utils = __webpack_require__(1);
 
@@ -14446,20 +14403,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class ImageType
- * @extends {Exo.BlobType}
+ * @class ImageFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var ImageType = function (_BlobType) {
-    _inherits(ImageType, _BlobType);
+var ImageFactory = function (_BlobFactory) {
+    _inherits(ImageFactory, _BlobFactory);
 
-    function ImageType() {
-        _classCallCheck(this, ImageType);
+    function ImageFactory() {
+        _classCallCheck(this, ImageFactory);
 
-        return _possibleConstructorReturn(this, (ImageType.__proto__ || Object.getPrototypeOf(ImageType)).apply(this, arguments));
+        return _possibleConstructorReturn(this, (ImageFactory.__proto__ || Object.getPrototypeOf(ImageFactory)).apply(this, arguments));
     }
 
-    _createClass(ImageType, [{
+    _createClass(ImageFactory, [{
         key: 'create',
 
 
@@ -14471,7 +14428,7 @@ var ImageType = function (_BlobType) {
                 _ref$mimeType = _ref.mimeType,
                 mimeType = _ref$mimeType === undefined ? (0, _utils.getMimeType)(response, 'image') : _ref$mimeType;
 
-            return _get(ImageType.prototype.__proto__ || Object.getPrototypeOf(ImageType.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
+            return _get(ImageFactory.prototype.__proto__ || Object.getPrototypeOf(ImageFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var image = new Image();
 
@@ -14485,12 +14442,12 @@ var ImageType = function (_BlobType) {
                         return reject(image);
                     });
 
-                    image.src = window.URL.createObjectURL(blob);
+                    image.src = URL.createObjectURL(blob);
                 });
             });
         }
     }, {
-        key: 'storageKey',
+        key: 'storageType',
 
 
         /**
@@ -14501,10 +14458,10 @@ var ImageType = function (_BlobType) {
         }
     }]);
 
-    return ImageType;
-}(_BlobType3.default);
+    return ImageFactory;
+}(_BlobFactory3.default);
 
-exports.default = ImageType;
+exports.default = ImageFactory;
 
 /***/ }),
 /* 54 */
@@ -15008,9 +14965,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ImageType2 = __webpack_require__(53);
+var _ImageFactory2 = __webpack_require__(53);
 
-var _ImageType3 = _interopRequireDefault(_ImageType2);
+var _ImageFactory3 = _interopRequireDefault(_ImageFactory2);
 
 var _const = __webpack_require__(0);
 
@@ -15027,20 +14984,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class TextureType
- * @extends {Exo.ImageType}
+ * @class TextureFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var TextureType = function (_ImageType) {
-  _inherits(TextureType, _ImageType);
+var TextureFactory = function (_ImageFactory) {
+  _inherits(TextureFactory, _ImageFactory);
 
-  function TextureType() {
-    _classCallCheck(this, TextureType);
+  function TextureFactory() {
+    _classCallCheck(this, TextureFactory);
 
-    return _possibleConstructorReturn(this, (TextureType.__proto__ || Object.getPrototypeOf(TextureType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (TextureFactory.__proto__ || Object.getPrototypeOf(TextureFactory)).apply(this, arguments));
   }
 
-  _createClass(TextureType, [{
+  _createClass(TextureFactory, [{
     key: 'create',
 
 
@@ -15055,16 +15012,16 @@ var TextureType = function (_ImageType) {
           _ref$wrapMode = _ref.wrapMode,
           wrapMode = _ref$wrapMode === undefined ? _const.WRAP_MODE.CLAMP_TO_EDGE : _ref$wrapMode;
 
-      return _get(TextureType.prototype.__proto__ || Object.getPrototypeOf(TextureType.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (image) {
+      return _get(TextureFactory.prototype.__proto__ || Object.getPrototypeOf(TextureFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (image) {
         return new _Texture2.default(image, scaleMode, wrapMode);
       });
     }
   }]);
 
-  return TextureType;
-}(_ImageType3.default);
+  return TextureFactory;
+}(_ImageFactory3.default);
 
-exports.default = TextureType;
+exports.default = TextureFactory;
 
 /***/ }),
 /* 57 */
@@ -15453,18 +15410,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.utils = undefined;
 
-var _polyfill = __webpack_require__(60);
-
-Object.keys(_polyfill).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _polyfill[key];
-    }
-  });
-});
-
 var _const = __webpack_require__(0);
 
 Object.keys(_const).forEach(function (key) {
@@ -15477,7 +15422,7 @@ Object.keys(_const).forEach(function (key) {
   });
 });
 
-var _core = __webpack_require__(61);
+var _core = __webpack_require__(60);
 
 Object.keys(_core).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15489,19 +15434,19 @@ Object.keys(_core).forEach(function (key) {
   });
 });
 
-var _resource = __webpack_require__(75);
+var _content = __webpack_require__(74);
 
-Object.keys(_resource).forEach(function (key) {
+Object.keys(_content).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _resource[key];
+      return _content[key];
     }
   });
 });
 
-var _input = __webpack_require__(77);
+var _input = __webpack_require__(76);
 
 Object.keys(_input).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15513,7 +15458,7 @@ Object.keys(_input).forEach(function (key) {
   });
 });
 
-var _audio = __webpack_require__(80);
+var _audio = __webpack_require__(79);
 
 Object.keys(_audio).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15525,7 +15470,7 @@ Object.keys(_audio).forEach(function (key) {
   });
 });
 
-var _display = __webpack_require__(83);
+var _display = __webpack_require__(82);
 
 Object.keys(_display).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15537,7 +15482,7 @@ Object.keys(_display).forEach(function (key) {
   });
 });
 
-var _animation = __webpack_require__(90);
+var _animation = __webpack_require__(89);
 
 Object.keys(_animation).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -15555,51 +15500,13 @@ var utils = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-exports.utils = utils; /**
-                        * @namespace Exo
-                        */
+/**
+ * @namespace Exo
+ */
+exports.utils = utils;
 
 /***/ }),
 /* 60 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-(function (global) {
-    var vendors = ['webkit', 'moz', 'ms', 'o'];
-
-    for (var i = 0, len = vendors.length; !global.requestAnimationFrame && i < len; i++) {
-        var vendor = vendors[i];
-
-        global.requestAnimationFrame = global[vendor + 'RequestAnimationFrame'];
-        global.cancelAnimationFrame = global[vendor + 'CancelAnimationFrame'] || global[vendor + 'CancelRequestAnimationFrame'];
-    }
-
-    if (!global.requestAnimationFrame) {
-        var lastTime = Date.now();
-
-        global.requestAnimationFrame = function (callback) {
-            var currTime = Date.now(),
-                timeToCall = Math.max(0, 16 - (currTime - lastTime));
-
-            lastTime = currTime + timeToCall;
-
-            return global.setTimeout(function () {
-                return callback(currTime + timeToCall);
-            }, timeToCall);
-        };
-    }
-
-    if (!global.cancelAnimationFrame) {
-        global.cancelAnimationFrame = function (id) {
-            return clearTimeout(id);
-        };
-    }
-})(window);
-
-/***/ }),
-/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15645,7 +15552,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(62);
+var _Circle = __webpack_require__(61);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -15654,7 +15561,7 @@ Object.defineProperty(exports, 'Circle', {
   }
 });
 
-var _Polygon = __webpack_require__(63);
+var _Polygon = __webpack_require__(62);
 
 Object.defineProperty(exports, 'Polygon', {
   enumerable: true,
@@ -15690,7 +15597,7 @@ Object.defineProperty(exports, 'RC4', {
   }
 });
 
-var _Random = __webpack_require__(64);
+var _Random = __webpack_require__(63);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -15717,7 +15624,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(65);
+var _Timer = __webpack_require__(64);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -15726,7 +15633,7 @@ Object.defineProperty(exports, 'Timer', {
   }
 });
 
-var _Game = __webpack_require__(66);
+var _Game = __webpack_require__(65);
 
 Object.defineProperty(exports, 'Game', {
   enumerable: true,
@@ -15744,7 +15651,7 @@ Object.defineProperty(exports, 'Config', {
   }
 });
 
-var _Scene = __webpack_require__(73);
+var _Scene = __webpack_require__(72);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -15762,7 +15669,7 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
-var _Quadtree = __webpack_require__(74);
+var _Quadtree = __webpack_require__(73);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -15774,7 +15681,7 @@ Object.defineProperty(exports, 'Quadtree', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 62 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16060,7 +15967,7 @@ var Circle = function (_Shape) {
 exports.default = Circle;
 
 /***/ }),
-/* 63 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16261,7 +16168,7 @@ var Polygon = function (_Shape) {
 exports.default = Polygon;
 
 /***/ }),
-/* 64 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16285,21 +16192,18 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var crypto = window.crypto || window.msCrypto;
-
 /**
  * @class Random
  * @memberof Exo
  */
-
 var Random = function () {
 
     /**
      * @constructor
-     * @param {String} [seed]
+     * @param {String} [seed=Random.generateSeed()]
      */
     function Random() {
-        var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.generateSeed();
+        var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Random.generateSeed();
 
         _classCallCheck(this, Random);
 
@@ -16313,7 +16217,7 @@ var Random = function () {
          * @private
          * @member {RC4}
          */
-        this._rc4 = new _RC2.default(this.getMixedKeys(this.flatten(this._seed, 3), []));
+        this._rc4 = new _RC2.default(this.getMixedKeys(this.flatten(seed)));
     }
 
     /**
@@ -16328,20 +16232,22 @@ var Random = function () {
 
         /**
          * @private
-         * @param {*} obj
-         * @param {Number} depth
+         * @param {*} object
+         * @param {Number} [depth=3]
          * @returns {String}
          */
-        value: function flatten(obj, depth) {
+        value: function flatten(object) {
+            var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 3;
+
             var result = [];
 
-            if (depth >= 0 && (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object') {
+            if (depth >= 0 && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object') {
                 var _iteratorNormalCompletion = true;
                 var _didIteratorError = false;
                 var _iteratorError = undefined;
 
                 try {
-                    for (var _iterator = Object.values(obj)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    for (var _iterator = Object.values(object)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                         var value = _step.value;
 
                         result.push(this.flatten(value, depth - 1));
@@ -16366,19 +16272,21 @@ var Random = function () {
                 return String.fromCharCode.apply(String, result);
             }
 
-            return typeof obj === 'string' ? obj : obj + '\0';
+            return typeof object === 'string' ? object : object + '\0';
         }
 
         /**
          * @private
          * @param {String} seed
-         * @param {Array} keys
-         * @returns {Array}
+         * @param {Number[]} [keys=[]]
+         * @returns {Number[]}
          */
 
     }, {
         key: 'getMixedKeys',
-        value: function getMixedKeys(seed, keys) {
+        value: function getMixedKeys(seed) {
+            var keys = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
             var result = [],
                 seedString = '' + seed,
                 len = seedString.length;
@@ -16388,27 +16296,6 @@ var Random = function () {
             }
 
             return result;
-        }
-
-        /**
-         * @private
-         * @returns {String}
-         */
-
-    }, {
-        key: 'generateSeed',
-        value: function generateSeed() {
-            var seed = new Uint8Array(256);
-
-            if (crypto) {
-                crypto.getRandomValues(seed);
-            } else {
-                for (var i = 0; i < 256; i++) {
-                    seed[i] = Math.random() * 256 & 255;
-                }
-            }
-
-            return String.fromCharCode.apply(String, _toConsumableArray(seed));
         }
 
         /**
@@ -16446,14 +16333,35 @@ var Random = function () {
 
             return (n + x) / denom * (max - min) + min;
         }
+
+        /**
+         * @private
+         * @returns {String}
+         */
+
     }, {
         key: 'seed',
         get: function get() {
             return this._seed;
         },
         set: function set(value) {
-            this._seed = value === null ? this.generateSeed() : value;
-            this._rc4.setKeys(this.getMixedKeys(this.flatten(this._seed, 3), []));
+            this._seed = value;
+            this._rc4.setKeys(this.getMixedKeys(this.flatten(value)));
+        }
+    }], [{
+        key: 'generateSeed',
+        value: function generateSeed() {
+            var seed = new Uint8Array(256);
+
+            if (crypto) {
+                crypto.getRandomValues(seed);
+            } else {
+                for (var i = 0; i < 256; i++) {
+                    seed[i] = Math.random() * 256 & 255;
+                }
+            }
+
+            return String.fromCharCode.apply(String, _toConsumableArray(seed));
         }
     }]);
 
@@ -16463,7 +16371,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 65 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16630,7 +16538,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 66 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16989,7 +16897,7 @@ var Game = function (_EventEmitter) {
 exports.default = Game;
 
 /***/ }),
-/* 67 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17003,9 +16911,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferType2 = __webpack_require__(10);
+var _ArrayBufferFactory2 = __webpack_require__(10);
 
-var _ArrayBufferType3 = _interopRequireDefault(_ArrayBufferType2);
+var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
 var _utils = __webpack_require__(1);
 
@@ -17017,24 +16925,21 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var fonts = document.fonts;
-
 /**
- * @class FontType
- * @extends {Exo.ArrayBufferType}
+ * @class FontFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
+var FontFactory = function (_ArrayBufferFactory) {
+    _inherits(FontFactory, _ArrayBufferFactory);
 
-var FontType = function (_ArrayBufferType) {
-    _inherits(FontType, _ArrayBufferType);
+    function FontFactory() {
+        _classCallCheck(this, FontFactory);
 
-    function FontType() {
-        _classCallCheck(this, FontType);
-
-        return _possibleConstructorReturn(this, (FontType.__proto__ || Object.getPrototypeOf(FontType)).apply(this, arguments));
+        return _possibleConstructorReturn(this, (FontFactory.__proto__ || Object.getPrototypeOf(FontFactory)).apply(this, arguments));
     }
 
-    _createClass(FontType, [{
+    _createClass(FontFactory, [{
         key: 'create',
 
 
@@ -17049,14 +16954,14 @@ var FontType = function (_ArrayBufferType) {
                 family = _ref$family === undefined ? (0, _utils.getFilename)(response.url) : _ref$family,
                 destriptors = _ref.destriptors;
 
-            return _get(FontType.prototype.__proto__ || Object.getPrototypeOf(FontType.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
+            return _get(FontFactory.prototype.__proto__ || Object.getPrototypeOf(FontFactory.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
                 return new Promise(function (resolve, reject) {
                     var fontFace = new FontFace(family, arrayBuffer, destriptors),
                         promise = fontFace.load();
 
                     if (addToDocument) {
                         promise.then(function () {
-                            return fonts.add(fontFace);
+                            return document.fonts.add(fontFace);
                         });
                     }
 
@@ -17069,7 +16974,7 @@ var FontType = function (_ArrayBufferType) {
             });
         }
     }, {
-        key: 'storageKey',
+        key: 'storageType',
 
 
         /**
@@ -17080,13 +16985,13 @@ var FontType = function (_ArrayBufferType) {
         }
     }]);
 
-    return FontType;
-}(_ArrayBufferType3.default);
+    return FontFactory;
+}(_ArrayBufferFactory3.default);
 
-exports.default = FontType;
+exports.default = FontFactory;
 
 /***/ }),
-/* 68 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17098,9 +17003,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ResourceType2 = __webpack_require__(11);
+var _ResourceFactory2 = __webpack_require__(11);
 
-var _ResourceType3 = _interopRequireDefault(_ResourceType2);
+var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -17111,20 +17016,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class JSONType
- * @extends {Exo.ResourceType}
+ * @class JSONFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var JSONType = function (_ResourceType) {
-  _inherits(JSONType, _ResourceType);
+var JSONFactory = function (_ResourceFactory) {
+  _inherits(JSONFactory, _ResourceFactory);
 
-  function JSONType() {
-    _classCallCheck(this, JSONType);
+  function JSONFactory() {
+    _classCallCheck(this, JSONFactory);
 
-    return _possibleConstructorReturn(this, (JSONType.__proto__ || Object.getPrototypeOf(JSONType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (JSONFactory.__proto__ || Object.getPrototypeOf(JSONFactory)).apply(this, arguments));
   }
 
-  _createClass(JSONType, [{
+  _createClass(JSONFactory, [{
     key: 'create',
 
 
@@ -17135,7 +17040,7 @@ var JSONType = function (_ResourceType) {
       return Promise.resolve(response.json());
     }
   }, {
-    key: 'storageKey',
+    key: 'storageType',
 
 
     /**
@@ -17146,13 +17051,13 @@ var JSONType = function (_ResourceType) {
     }
   }]);
 
-  return JSONType;
-}(_ResourceType3.default);
+  return JSONFactory;
+}(_ResourceFactory3.default);
 
-exports.default = JSONType;
+exports.default = JSONFactory;
 
 /***/ }),
-/* 69 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17166,9 +17071,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _AudioType2 = __webpack_require__(52);
+var _AudioFactory2 = __webpack_require__(52);
 
-var _AudioType3 = _interopRequireDefault(_AudioType2);
+var _AudioFactory3 = _interopRequireDefault(_AudioFactory2);
 
 var _Music = __webpack_require__(54);
 
@@ -17185,20 +17090,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class MusicType
- * @extends {Exo.AudioType}
+ * @class MusicFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var MusicType = function (_AudioType) {
-    _inherits(MusicType, _AudioType);
+var MusicFactory = function (_AudioFactory) {
+    _inherits(MusicFactory, _AudioFactory);
 
-    function MusicType() {
-        _classCallCheck(this, MusicType);
+    function MusicFactory() {
+        _classCallCheck(this, MusicFactory);
 
-        return _possibleConstructorReturn(this, (MusicType.__proto__ || Object.getPrototypeOf(MusicType)).apply(this, arguments));
+        return _possibleConstructorReturn(this, (MusicFactory.__proto__ || Object.getPrototypeOf(MusicFactory)).apply(this, arguments));
     }
 
-    _createClass(MusicType, [{
+    _createClass(MusicFactory, [{
         key: 'create',
 
 
@@ -17210,12 +17115,12 @@ var MusicType = function (_AudioType) {
                 return Promise.reject();
             }
 
-            return _get(MusicType.prototype.__proto__ || Object.getPrototypeOf(MusicType.prototype), 'create', this).call(this, response, options).then(function (audio) {
+            return _get(MusicFactory.prototype.__proto__ || Object.getPrototypeOf(MusicFactory.prototype), 'create', this).call(this, response, options).then(function (audio) {
                 return new _Music2.default(audio);
             });
         }
     }, {
-        key: 'storageKey',
+        key: 'storageType',
 
 
         /**
@@ -17226,13 +17131,13 @@ var MusicType = function (_AudioType) {
         }
     }]);
 
-    return MusicType;
-}(_AudioType3.default);
+    return MusicFactory;
+}(_AudioFactory3.default);
 
-exports.default = MusicType;
+exports.default = MusicFactory;
 
 /***/ }),
-/* 70 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17246,9 +17151,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _AudioBufferType2 = __webpack_require__(51);
+var _AudioBufferFactory2 = __webpack_require__(51);
 
-var _AudioBufferType3 = _interopRequireDefault(_AudioBufferType2);
+var _AudioBufferFactory3 = _interopRequireDefault(_AudioBufferFactory2);
 
 var _Sound = __webpack_require__(55);
 
@@ -17265,20 +17170,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class SoundType
- * @extends {Exo.AudioBufferType}
+ * @class SoundFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var SoundType = function (_AudioBufferType) {
-    _inherits(SoundType, _AudioBufferType);
+var SoundFactory = function (_AudioBufferFactory) {
+    _inherits(SoundFactory, _AudioBufferFactory);
 
-    function SoundType() {
-        _classCallCheck(this, SoundType);
+    function SoundFactory() {
+        _classCallCheck(this, SoundFactory);
 
-        return _possibleConstructorReturn(this, (SoundType.__proto__ || Object.getPrototypeOf(SoundType)).apply(this, arguments));
+        return _possibleConstructorReturn(this, (SoundFactory.__proto__ || Object.getPrototypeOf(SoundFactory)).apply(this, arguments));
     }
 
-    _createClass(SoundType, [{
+    _createClass(SoundFactory, [{
         key: 'create',
 
 
@@ -17290,12 +17195,12 @@ var SoundType = function (_AudioBufferType) {
                 return Promise.reject();
             }
 
-            return _get(SoundType.prototype.__proto__ || Object.getPrototypeOf(SoundType.prototype), 'create', this).call(this, response, options).then(function (audioBuffer) {
+            return _get(SoundFactory.prototype.__proto__ || Object.getPrototypeOf(SoundFactory.prototype), 'create', this).call(this, response, options).then(function (audioBuffer) {
                 return new _Sound2.default(audioBuffer);
             });
         }
     }, {
-        key: 'storageKey',
+        key: 'storageType',
 
 
         /**
@@ -17306,10 +17211,74 @@ var SoundType = function (_AudioBufferType) {
         }
     }]);
 
-    return SoundType;
-}(_AudioBufferType3.default);
+    return SoundFactory;
+}(_AudioBufferFactory3.default);
 
-exports.default = SoundType;
+exports.default = SoundFactory;
+
+/***/ }),
+/* 70 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _TextureFactory2 = __webpack_require__(56);
+
+var _TextureFactory3 = _interopRequireDefault(_TextureFactory2);
+
+var _Sprite = __webpack_require__(22);
+
+var _Sprite2 = _interopRequireDefault(_Sprite);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class SpriteFactory
+ * @extends {Exo.ResourceFactory}
+ * @memberof Exo
+ */
+var SpriteFactory = function (_TextureFactory) {
+  _inherits(SpriteFactory, _TextureFactory);
+
+  function SpriteFactory() {
+    _classCallCheck(this, SpriteFactory);
+
+    return _possibleConstructorReturn(this, (SpriteFactory.__proto__ || Object.getPrototypeOf(SpriteFactory)).apply(this, arguments));
+  }
+
+  _createClass(SpriteFactory, [{
+    key: 'create',
+
+
+    /**
+     * @override
+     */
+    value: function create(response, options) {
+      return _get(SpriteFactory.prototype.__proto__ || Object.getPrototypeOf(SpriteFactory.prototype), 'create', this).call(this, response, options).then(function (texture) {
+        return new _Sprite2.default(texture);
+      });
+    }
+  }]);
+
+  return SpriteFactory;
+}(_TextureFactory3.default);
+
+exports.default = SpriteFactory;
 
 /***/ }),
 /* 71 */
@@ -17324,17 +17293,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+var _ResourceFactory2 = __webpack_require__(11);
 
-var _TextureType2 = __webpack_require__(56);
-
-var _TextureType3 = _interopRequireDefault(_TextureType2);
-
-var _Sprite = __webpack_require__(22);
-
-var _Sprite2 = _interopRequireDefault(_Sprite);
-
-var _const = __webpack_require__(0);
+var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -17345,78 +17306,20 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class SpriteType
- * @extends {Exo.TextureType}
+ * @class StringFactory
+ * @extends {Exo.ResourceFactory}
  * @memberof Exo
  */
-var SpriteType = function (_TextureType) {
-  _inherits(SpriteType, _TextureType);
+var StringFactory = function (_ResourceFactory) {
+  _inherits(StringFactory, _ResourceFactory);
 
-  function SpriteType() {
-    _classCallCheck(this, SpriteType);
+  function StringFactory() {
+    _classCallCheck(this, StringFactory);
 
-    return _possibleConstructorReturn(this, (SpriteType.__proto__ || Object.getPrototypeOf(SpriteType)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (StringFactory.__proto__ || Object.getPrototypeOf(StringFactory)).apply(this, arguments));
   }
 
-  _createClass(SpriteType, [{
-    key: 'create',
-
-
-    /**
-     * @override
-     */
-    value: function create(response, options) {
-      return _get(SpriteType.prototype.__proto__ || Object.getPrototypeOf(SpriteType.prototype), 'create', this).call(this, response, options).then(function (texture) {
-        return new _Sprite2.default(texture);
-      });
-    }
-  }]);
-
-  return SpriteType;
-}(_TextureType3.default);
-
-exports.default = SpriteType;
-
-/***/ }),
-/* 72 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _ResourceType2 = __webpack_require__(11);
-
-var _ResourceType3 = _interopRequireDefault(_ResourceType2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class StringType
- * @extends {Exo.ResourceType}
- * @memberof Exo
- */
-var StringType = function (_ResourceType) {
-  _inherits(StringType, _ResourceType);
-
-  function StringType() {
-    _classCallCheck(this, StringType);
-
-    return _possibleConstructorReturn(this, (StringType.__proto__ || Object.getPrototypeOf(StringType)).apply(this, arguments));
-  }
-
-  _createClass(StringType, [{
+  _createClass(StringFactory, [{
     key: 'create',
 
 
@@ -17427,7 +17330,7 @@ var StringType = function (_ResourceType) {
       return Promise.resolve(response.text());
     }
   }, {
-    key: 'storageKey',
+    key: 'storageType',
 
 
     /**
@@ -17438,13 +17341,13 @@ var StringType = function (_ResourceType) {
     }
   }]);
 
-  return StringType;
-}(_ResourceType3.default);
+  return StringFactory;
+}(_ResourceFactory3.default);
 
-exports.default = StringType;
+exports.default = StringFactory;
 
 /***/ }),
-/* 73 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17585,7 +17488,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 74 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17639,13 +17542,13 @@ var Quadtree = function () {
 
         /**
          * @private
-         * @member {Map.<Number, Exo.Quadtree>}
+         * @member {Map<Number, Exo.Quadtree>}
          */
         this._children = new Map();
 
         /**
          * @private
-         * @member {Set.<Object>}
+         * @member {Set<Object>}
          */
         this._entities = new Set();
     }
@@ -17864,7 +17767,7 @@ var Quadtree = function () {
         /**
          * @public
          * @readonly
-         * @member {Map.<Number, Exo.Quadtree>}
+         * @member {Map<Number, Exo.Quadtree>}
          */
 
     }, {
@@ -17876,7 +17779,7 @@ var Quadtree = function () {
         /**
          * @public
          * @readonly
-         * @member {Set.<Object>}
+         * @member {Set<Object>}
          */
 
     }, {
@@ -17892,7 +17795,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 75 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17902,7 +17805,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(76);
+var _Database = __webpack_require__(75);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -17929,23 +17832,23 @@ Object.defineProperty(exports, 'ResourceContainer', {
   }
 });
 
-var _ResourceType = __webpack_require__(11);
+var _ResourceFactory = __webpack_require__(11);
 
-Object.defineProperty(exports, 'ResourceType', {
+Object.defineProperty(exports, 'ResourceFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_ResourceType).default;
+    return _interopRequireDefault(_ResourceFactory).default;
   }
 });
 
-var _types = __webpack_require__(50);
+var _factory = __webpack_require__(50);
 
-Object.keys(_types).forEach(function (key) {
+Object.keys(_factory).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _types[key];
+      return _factory[key];
     }
   });
 });
@@ -17953,7 +17856,7 @@ Object.keys(_types).forEach(function (key) {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 76 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17966,6 +17869,10 @@ Object.defineProperty(exports, "__esModule", {
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _utils = __webpack_require__(1);
+
+var _const = __webpack_require__(0);
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -18009,13 +17916,13 @@ var Database = function () {
          * @private
          * @member {?Promise}
          */
-        this._connectionPromise = null;
+        this._connect = null;
 
         /**
          * @private
-         * @member {Set.<String>}
+         * @member {Function}
          */
-        this._types = new Set(['arrayBuffer', 'audioBuffer', 'audio', 'blob', 'image', 'json', 'music', 'sound', 'sprite', 'text', 'texture']);
+        this._onCloseHandler = this._closeConnection.bind(this);
     }
 
     /**
@@ -18036,23 +17943,32 @@ var Database = function () {
         value: function open() {
             var _this = this;
 
-            return this._connectionPromise || (this._connectionPromise = new Promise(function (resolve, reject) {
+            return this._connect || (this._connect = new Promise(function (resolve, reject) {
                 var request = indexedDB.open(_this._name, _this._version);
 
-                request.onupgradeneeded = function (event) {
-                    var database = event.target.result;
+                request.addEventListener('upgradeneeded', function (event) {
+                    var database = event.target.result,
+                        transaction = event.target.transaction,
+                        currentStores = [].concat(_toConsumableArray(transaction.objectStoreNames));
+
+                    database.addEventListener('error', function (event) {
+                        return reject(event);
+                    });
+                    database.addEventListener('abort', function (event) {
+                        return reject(event);
+                    });
 
                     var _iteratorNormalCompletion = true;
                     var _didIteratorError = false;
                     var _iteratorError = undefined;
 
                     try {
-                        for (var _iterator = _this._types[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                            var type = _step.value;
+                        for (var _iterator = currentStores[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                            var store = _step.value;
 
-                            database.createObjectStore(type, {
-                                keyPath: 'key'
-                            });
+                            if (!_const.DATABASE_TYPES.includes(store)) {
+                                database.deleteObjectStore(store);
+                            }
                         }
                     } catch (err) {
                         _didIteratorError = true;
@@ -18068,17 +17984,49 @@ var Database = function () {
                             }
                         }
                     }
-                };
 
-                request.onsuccess = function (event) {
+                    var _iteratorNormalCompletion2 = true;
+                    var _didIteratorError2 = false;
+                    var _iteratorError2 = undefined;
+
+                    try {
+                        for (var _iterator2 = _const.DATABASE_TYPES[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                            var type = _step2.value;
+
+                            if (!currentStores.includes(type)) {
+                                database.createObjectStore(type, { keyPath: 'name' });
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError2 = true;
+                        _iteratorError2 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                _iterator2.return();
+                            }
+                        } finally {
+                            if (_didIteratorError2) {
+                                throw _iteratorError2;
+                            }
+                        }
+                    }
+                });
+
+                request.addEventListener('success', function (event) {
                     _this._database = event.target.result;
+                    _this._database.addEventListener('close', _this._onCloseHandler);
+                    _this._database.addEventListener('versionchange', _this._onCloseHandler);
 
-                    resolve(event);
-                };
+                    resolve(_this._database);
+                });
 
-                request.onerror = function (event) {
+                request.addEventListener('error', function (event) {
                     return reject(event);
-                };
+                });
+                request.addEventListener('blocked', function (event) {
+                    return reject(event);
+                });
             }));
         }
 
@@ -18090,160 +18038,8 @@ var Database = function () {
     }, {
         key: 'close',
         value: function close() {
-            if (this._database) {
-                this._database.close();
-                this._database = null;
-            }
-
-            this._connectionPromise = null;
-
+            this._closeConnection();
             return Promise.resolve();
-        }
-
-        /**
-         * @public
-         * @param {?String} [type]
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'clear',
-        value: function clear() {
-            var _this2 = this;
-
-            var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-
-            if (type === null) {
-                return Promise.all(this._types.map(function (type) {
-                    return _this2.clear(type);
-                }));
-            }
-
-            return this.getObjectStore(type, 'readwrite').then(function (store) {
-                return new Promise(function (resolve, reject) {
-                    var request = store.clear();
-
-                    request.onsuccess = function () {
-                        return resolve();
-                    };
-                    request.onerror = function () {
-                        return reject();
-                    };
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'delete',
-        value: function _delete() {
-            var _this3 = this;
-
-            return this.close().then(function () {
-                return new Promise(function (resolve, reject) {
-                    var request = indexedDB.deleteDatabase(_this3.name);
-
-                    request.onsuccess = function () {
-                        return resolve();
-                    };
-                    request.onerror = function () {
-                        return reject();
-                    };
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @param {String} key
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'loadData',
-        value: function loadData(type, key) {
-            return this.getObjectStore(type).then(function (store) {
-                return new Promise(function (resolve, reject) {
-                    var request = store.get(key);
-
-                    request.onsuccess = function (event) {
-                        var result = event.target && event.target.result;
-
-                        resolve(result && result.value);
-                    };
-                    request.onerror = function () {
-                        return reject();
-                    };
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @param {String} key
-         * @param {*} value
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'saveData',
-        value: function saveData(type, key, value) {
-            return this.getObjectStore(type, 'readwrite').then(function (store) {
-                return new Promise(function (resolve, reject) {
-                    var request = store.put({ key: key, value: value });
-
-                    request.onsuccess = function () {
-                        return resolve();
-                    };
-                    request.onerror = function () {
-                        return reject();
-                    };
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @param {String} key
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'removeData',
-        value: function removeData(type, key) {
-            return this.getObjectStore(type, 'readwrite').then(function (store) {
-                return new Promise(function (resolve, reject) {
-                    var request = store.delete(key);
-
-                    request.onsuccess = function () {
-                        return resolve();
-                    };
-                    request.onerror = function () {
-                        return reject();
-                    };
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._types.clear();
-            this._types = null;
-
-            return this.close();
         }
 
         /**
@@ -18256,17 +18052,184 @@ var Database = function () {
     }, {
         key: 'getObjectStore',
         value: function getObjectStore(type) {
-            var _this4 = this;
+            var _this2 = this;
 
             var transactionMode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'readonly';
 
-            if (!this._types.contains(type)) {
-                return Promise.reject('Could not find ObjectStore named "' + type + '".');
+            if (!_const.DATABASE_TYPES.includes(type)) {
+                return Promise.reject(Error('Could not find ObjectStore named "' + type + '".'));
             }
 
             return this.open().then(function () {
-                return _this4._database.transaction([type], transactionMode).objectStore(type);
+                return _this2._database.transaction([type], transactionMode).objectStore(type);
             });
+        }
+
+        /**
+         * @public
+         * @param {String} [type='*']
+         * @returns {Promise}
+         */
+
+    }, {
+        key: 'clear',
+        value: function clear() {
+            var _this3 = this;
+
+            var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+
+            if (type === '*') {
+                return _const.DATABASE_TYPES.reduce(function (promise, type) {
+                    return promise.then(function () {
+                        return _this3.clear(type);
+                    });
+                }, Promise.resolve());
+            }
+
+            return this.getObjectStore(type, 'readwrite').then(function (store) {
+                return new Promise(function (resolve, reject) {
+                    var request = store.clear();
+
+                    request.addEventListener('success', function (event) {
+                        return resolve(event);
+                    });
+                    request.addEventListener('error', function (event) {
+                        return reject(event);
+                    });
+                });
+            });
+        }
+
+        /**
+         * @public
+         * @returns {Promise}
+         */
+
+    }, {
+        key: 'delete',
+        value: function _delete() {
+            var _this4 = this;
+
+            return this.close().then(function () {
+                return new Promise(function (resolve, reject) {
+                    var request = indexedDB.deleteDatabase(_this4._name);
+
+                    request.addEventListener('success', function (event) {
+                        return resolve(event);
+                    });
+                    request.addEventListener('error', function (event) {
+                        return reject(event);
+                    });
+                });
+            });
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @param {String} name
+         * @returns {Promise<Object>}
+         */
+
+    }, {
+        key: 'loadData',
+        value: function loadData(type, name) {
+            return this.getObjectStore(type).then(function (store) {
+                return new Promise(function (resolve, reject) {
+                    var request = store.get(name);
+
+                    request.addEventListener('success', function (event) {
+                        var result = event.target.result,
+                            data = result && result.value || null;
+
+                        resolve({ data: data, type: type, name: name });
+                    });
+
+                    request.addEventListener('error', function (event) {
+                        return reject(event);
+                    });
+                });
+            });
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @param {String} name
+         * @param {*} data
+         * @returns {Promise<Object>}
+         */
+
+    }, {
+        key: 'saveData',
+        value: function saveData(type, name, data) {
+            return this.getObjectStore(type, 'readwrite').then(function (store) {
+                return new Promise(function (resolve, reject) {
+                    var request = store.put({ key: name, value: data });
+
+                    request.addEventListener('success', function () {
+                        return resolve({ type: type, name: name, data: data });
+                    });
+                    request.addEventListener('error', function (event) {
+                        return reject(event);
+                    });
+                });
+            });
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @param {String} name
+         * @returns {Promise<Object>}
+         */
+
+    }, {
+        key: 'removeData',
+        value: function removeData(type, name) {
+            return this.getObjectStore(type, 'readwrite').then(function (store) {
+                return new Promise(function (resolve, reject) {
+                    var request = store.delete(name);
+
+                    request.addEventListener('success', function () {
+                        return resolve({ type: type, name: name });
+                    });
+                    request.addEventListener('error', function (event) {
+                        return reject(event);
+                    });
+                });
+            });
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            this._closeConnection();
+
+            this._name = null;
+            this._version = null;
+            this._onCloseHandler = null;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_closeConnection',
+        value: function _closeConnection() {
+            if (this._database) {
+                this._database.removeEventListener('close', this._onCloseHandler);
+                this._database.removeEventListener('versionchange', this._onCloseHandler);
+                this._database.close();
+                this._database = null;
+            }
+
+            this._connect = null;
         }
     }, {
         key: 'name',
@@ -18305,7 +18268,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 77 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18324,7 +18287,7 @@ Object.defineProperty(exports, 'ChannelHandler', {
   }
 });
 
-var _Input = __webpack_require__(78);
+var _Input = __webpack_require__(77);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -18405,7 +18368,7 @@ Object.defineProperty(exports, 'GamepadManager', {
   }
 });
 
-var _Pointer = __webpack_require__(79);
+var _Pointer = __webpack_require__(78);
 
 Object.defineProperty(exports, 'Pointer', {
   enumerable: true,
@@ -18426,7 +18389,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 78 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18463,7 +18426,7 @@ var Input = function (_EventEmitter) {
     /**
      * @constructor
      * @param {Number[]} [channels=[]]
-     * @param {Object.<String, Function>} [events={}]
+     * @param {Object<String, Function>} [events={}]
      * @param {Function} [events.start]
      * @param {Function} [events.stop]
      * @param {Function} [events.active]
@@ -18485,7 +18448,7 @@ var Input = function (_EventEmitter) {
 
         /**
          * @private
-         * @member {Set.<Number>}
+         * @member {Set<Number>}
          */
         var _this = _possibleConstructorReturn(this, (Input.__proto__ || Object.getPrototypeOf(Input)).call(this));
 
@@ -18536,7 +18499,7 @@ var Input = function (_EventEmitter) {
     /**
      * @public
      * @readonly
-     * @member {Set.<Number>}
+     * @member {Set<Number>}
      */
 
 
@@ -18677,7 +18640,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 79 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18745,7 +18708,7 @@ var Pointer = function (_ChannelHandler) {
 exports.default = Pointer;
 
 /***/ }),
-/* 80 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18764,7 +18727,7 @@ Object.defineProperty(exports, 'Playable', {
   }
 });
 
-var _Audio = __webpack_require__(81);
+var _Audio = __webpack_require__(80);
 
 Object.defineProperty(exports, 'Audio', {
   enumerable: true,
@@ -18800,7 +18763,7 @@ Object.defineProperty(exports, 'AudioManager', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(82);
+var _AudioAnalyser = __webpack_require__(81);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -18812,7 +18775,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 81 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18924,7 +18887,7 @@ var Audio = function (_Playable) {
 exports.default = Audio;
 
 /***/ }),
-/* 82 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19139,7 +19102,7 @@ var AudioAnalyser = function () {
 exports.default = AudioAnalyser;
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19212,7 +19175,7 @@ Object.defineProperty(exports, 'Renderable', {
   }
 });
 
-var _Container = __webpack_require__(84);
+var _Container = __webpack_require__(83);
 
 Object.defineProperty(exports, 'Container', {
   enumerable: true,
@@ -19266,7 +19229,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Text = __webpack_require__(85);
+var _Text = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -19302,7 +19265,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(86);
+var _ParticleEmitter = __webpack_require__(85);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -19338,7 +19301,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(87);
+var _ForceModifier = __webpack_require__(86);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -19347,7 +19310,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(88);
+var _ScaleModifier = __webpack_require__(87);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -19356,7 +19319,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(89);
+var _TorqueModifier = __webpack_require__(88);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -19368,7 +19331,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19771,7 +19734,7 @@ var Container = function (_Renderable) {
 exports.default = Container;
 
 /***/ }),
-/* 85 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20251,7 +20214,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20648,7 +20611,7 @@ var ParticleEmitter = function () {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 87 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20736,7 +20699,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 88 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20824,7 +20787,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 89 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20909,7 +20872,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 90 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20928,7 +20891,7 @@ Object.defineProperty(exports, 'Animation', {
   }
 });
 
-var _ColorAnimation = __webpack_require__(91);
+var _ColorAnimation = __webpack_require__(90);
 
 Object.defineProperty(exports, 'ColorAnimation', {
   enumerable: true,
@@ -20937,7 +20900,7 @@ Object.defineProperty(exports, 'ColorAnimation', {
   }
 });
 
-var _FadeAnimation = __webpack_require__(92);
+var _FadeAnimation = __webpack_require__(91);
 
 Object.defineProperty(exports, 'FadeAnimation', {
   enumerable: true,
@@ -20946,7 +20909,7 @@ Object.defineProperty(exports, 'FadeAnimation', {
   }
 });
 
-var _FrameAnimation = __webpack_require__(93);
+var _FrameAnimation = __webpack_require__(92);
 
 Object.defineProperty(exports, 'FrameAnimation', {
   enumerable: true,
@@ -20964,7 +20927,7 @@ Object.defineProperty(exports, 'AnimationFrame', {
   }
 });
 
-var _Animator = __webpack_require__(94);
+var _Animator = __webpack_require__(93);
 
 Object.defineProperty(exports, 'Animator', {
   enumerable: true,
@@ -20976,7 +20939,7 @@ Object.defineProperty(exports, 'Animator', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 91 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21033,7 +20996,7 @@ var ColorAnimation = function (_Animation) {
 exports.default = ColorAnimation;
 
 /***/ }),
-/* 92 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21114,7 +21077,7 @@ var FadeAnimation = function (_Animation) {
 exports.default = FadeAnimation;
 
 /***/ }),
-/* 93 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21286,7 +21249,7 @@ var FrameAnimation = function (_Animation) {
 exports.default = FrameAnimation;
 
 /***/ }),
-/* 94 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

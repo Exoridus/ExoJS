@@ -45,7 +45,7 @@ export const
      * @constant
      * @memberOf Exo
      * @name SHAPE
-     * @type {Object.<String, Number>}
+     * @type {Object<String, Number>}
      * @property {Number} POLYGON
      * @property {Number} RECTANGLE
      * @property {Number} CIRCLE
@@ -65,13 +65,13 @@ export const
      * @constant
      * @memberOf Exo
      * @name SCALE_MODE
-     * @type {Object.<String, Number>}
-     * @property {Number} LINEAR
+     * @type {Object<String, Number>}
      * @property {Number} NEAREST
+     * @property {Number} LINEAR
      */
     SCALE_MODE = {
-        LINEAR: 0,
-        NEAREST: 1,
+        NEAREST: 0x2600,
+        LINEAR: 0x2601,
     },
 
     /**
@@ -79,15 +79,15 @@ export const
      * @constant
      * @memberOf Exo
      * @name WRAP_MODE
-     * @type {Object.<String, Number>}
-     * @property {Number} CLAMP_TO_EDGE
+     * @type {Object<String, Number>}
      * @property {Number} REPEAT
+     * @property {Number} CLAMP_TO_EDGE
      * @property {Number} MIRRORED_REPEAT
      */
     WRAP_MODE = {
-        CLAMP_TO_EDGE: 0,
-        REPEAT: 1,
-        MIRRORED_REPEAT: 2,
+        REPEAT: 0x2901,
+        CLAMP_TO_EDGE: 0x812F,
+        MIRRORED_REPEAT: 0x8370,
     },
 
     /**
@@ -95,7 +95,7 @@ export const
      * @constant
      * @memberOf Exo
      * @name INPUT_DEVICE
-     * @type {Object.<String, Number>}
+     * @type {Object<String, Number>}
      * @property {Number} KEYBOARD
      * @property {Number} MOUSE
      * @property {Number} GAMEPAD
@@ -113,7 +113,7 @@ export const
      * @constant
      * @memberOf Exo
      * @name CHANNEL_OFFSET
-     * @type {Object.<String, Number>}
+     * @type {Object<String, Number>}
      * @property {Number} KEYBOARD
      * @property {Number} MOUSE
      * @property {Number} GAMEPAD
@@ -147,7 +147,7 @@ export const
      * @constant
      * @memberOf Exo
      * @name UNIFORM_TYPE
-     * @type {Object.<String, Number>}
+     * @type {Object<String, Number>}
      * @property {Number} INT
      * @property {Number} FLOAT
      * @property {Number} VECTOR
@@ -169,7 +169,7 @@ export const
      * @constant
      * @memberOf Exo
      * @name BLEND_MODE
-     * @type {Object.<String, Number>}
+     * @type {Object<String, Number>}
      * @property {Number} SOURCE_OVER
      * @property {Number} ADD
      * @property {Number} MULTIPLY
@@ -207,6 +207,26 @@ export const
         COLOR: 15,
         LUMINOSITY: 16,
     },
+
+    /**
+     * @public
+     * @constant
+     * @memberOf Exo
+     * @name DATABASE_TYPES
+     * @type {String[]}
+     */
+    DATABASE_TYPES = [
+        'arrayBuffer',
+        'audioBuffer',
+        'audio',
+        'blob',
+        'font',
+        'image',
+        'json',
+        'music',
+        'sound',
+        'string',
+    ],
 
     /**
      * @public

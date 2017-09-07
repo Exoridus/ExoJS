@@ -66,6 +66,15 @@ export default class Vector extends Shape {
     /**
      * @public
      * @readonly
+     * @member {Float32Array}
+     */
+    get array() {
+        return this._array || (this._array = new Float32Array(2));
+    }
+
+    /**
+     * @public
+     * @readonly
      * @member {Number}
      */
     get magnitude() {
@@ -75,9 +84,9 @@ export default class Vector extends Shape {
     /**
      * @override
      */
-    set(x, y) {
-        this._x = (typeof x === 'number') ? x : this._x;
-        this._y = (typeof y === 'number') ? y : this._y;
+    set(x = this._x, y = this._y) {
+        this._x = x;
+        this._y = y;
 
         return this;
     }
@@ -103,10 +112,12 @@ export default class Vector extends Shape {
      * @override
      */
     toArray() {
-        return [
-            this._x,
-            this._y,
-        ];
+        const array = this.array;
+
+        array[0] = this._x;
+        array[1] = this._y;
+
+        return array;
     }
 
     /**
@@ -131,13 +142,13 @@ export default class Vector extends Shape {
     /**
      * @public
      * @chainable
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [x=0]
+     * @param {Number} [y=0]
      * @returns {Exo.Vector}
      */
-    add(x, y) {
-        this._x += (typeof x === 'number') ? x : 0;
-        this._y += (typeof y === 'number') ? y : 0;
+    add(x = 0, y = 0) {
+        this._x += x;
+        this._y += y;
 
         return this;
     }
@@ -145,13 +156,13 @@ export default class Vector extends Shape {
     /**
      * @public
      * @chainable
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [x=0]
+     * @param {Number} [y=0]
      * @returns {Exo.Vector}
      */
-    subtract(x, y) {
-        this._x -= (typeof x === 'number') ? x : 0;
-        this._y -= (typeof y === 'number') ? y : 0;
+    subtract(x = 0, y = 0) {
+        this._x -= x;
+        this._y -= y;
 
         return this;
     }
@@ -159,13 +170,13 @@ export default class Vector extends Shape {
     /**
      * @public
      * @chainable
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [x=1]
+     * @param {Number} [y=1]
      * @returns {Exo.Vector}
      */
-    multiply(x, y) {
-        this._x *= (typeof x === 'number') ? x : 1;
-        this._y *= (typeof y === 'number') ? y : 1;
+    multiply(x = 1, y = 1) {
+        this._x *= x;
+        this._y *= y;
 
         return this;
     }
@@ -173,13 +184,13 @@ export default class Vector extends Shape {
     /**
      * @public
      * @chainable
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [x=1]
+     * @param {Number} [y=1]
      * @returns {Exo.Vector}
      */
-    divide(x, y) {
-        this._x /= (typeof x === 'number') ? x : 1;
-        this._y /= (typeof y === 'number') ? y : 1;
+    divide(x = 1, y = 1) {
+        this._x /= x;
+        this._y /= y;
 
         return this;
     }

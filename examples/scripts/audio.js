@@ -129,8 +129,7 @@ window.game.start(new Exo.Scene({
             context = this._context,
             freqData = this._analyser.frequencyData,
             timeDomain = this._analyser.timeDomainData,
-            time = this._time.add(delta)
-                .asSeconds(),
+            time = this._time.add(delta).asSeconds(),
             width = canvas.width,
             height = canvas.height,
             length = freqData.length,

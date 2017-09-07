@@ -44,6 +44,15 @@ export default class Rectangle extends Shape {
 
     /**
      * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+    get array() {
+        return this._array || (this._array = new Float32Array(4));
+    }
+
+    /**
+     * @public
      * @member {Exo.Vector}
      */
     get position() {
@@ -193,12 +202,14 @@ export default class Rectangle extends Shape {
      * @override
      */
     toArray() {
-        return [
-            this.x,
-            this.y,
-            this.width,
-            this.height,
-        ];
+        const array = this.array;
+
+        array[0] = this.x;
+        array[1] = this.y;
+        array[2] = this.width;
+        array[3] = this.height;
+
+        return array;
     }
 
     /**

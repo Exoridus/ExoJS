@@ -13,7 +13,7 @@ export default class EventEmitter {
 
         /**
          * @private
-         * @member {Map.<String, Object[]>}
+         * @member {Map<String, Object[]>}
          */
         this._events = new Map();
     }
@@ -21,7 +21,7 @@ export default class EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Map.<String, Object[]>}
+     * @member {Map<String, Object[]>}
      */
     get events() {
         return this._events;

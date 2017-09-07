@@ -5,7 +5,6 @@ export { default as DisplayManager } from './DisplayManager';
 export { default as RenderTarget } from './RenderTarget';
 export { default as Texture } from './Texture';
 export { default as View } from './View';
-export { default as WebGLTexture } from './WebGLTexture';
 export { default as BlendMode } from './BlendMode';
 export { default as Renderable } from './Renderable';
 export { default as Container } from './Container';

@@ -90,6 +90,15 @@ export default class Circle extends Shape {
     }
 
     /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+    get array() {
+        return this._array || (this._array = new Float32Array(3));
+    }
+
+    /**
      * @override
      */
     set(x, y, radius) {
@@ -120,11 +129,13 @@ export default class Circle extends Shape {
      * @override
      */
     toArray() {
-        return [
-            this.x,
-            this.y,
-            this.radius,
-        ];
+        const array = this.array;
+
+        array[0] = this.x;
+        array[1] = this.y;
+        array[2] = this.radius;
+
+        return array;
     }
 
     /**

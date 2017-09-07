@@ -1,11 +1,11 @@
 import EventEmitter from './EventEmitter';
 import Clock from './Clock';
-import Config from './Config';
 import SceneManager from './SceneManager';
 import DisplayManager from '../display/DisplayManager';
 import AudioManager from '../audio/AudioManager';
 import InputManager from '../input/InputManager';
-import ResourceLoader from '../resource/ResourceLoader';
+import ResourceLoader from '../content/ResourceLoader';
+import settings from '../settings';
 
 /**
  * @class Game
@@ -16,38 +16,45 @@ export default class Game extends EventEmitter {
 
     /**
      * @constructor
-     * @param {Exo.Config|Object} config
+     * @param {Object} [config]
+     * @param {String} [config.basePath='']
+     * @param {Number} [config.width=800]
+     * @param {Number} [config.height=600]
+     * @param {Number} [config.soundVolume=1]
+     * @param {Number} [config.musicVolume=1]
+     * @param {Number} [config.masterVolume=1]
+     * @param {?HTMLCanvasElement|?String} [config.canvas=null]
+     * @param {?HTMLCanvasElement|?String} [config.canvasParent=null]
+     * @param {Exo.Color} [config.clearColor=Exo.Color.White]
+     * @param {Boolean} [config.clearBeforeRender=true]
+     * @param {Object} [config.contextOptions]
      */
     constructor(config) {
         super();
 
-        if (!(config instanceof Config)) {
-            config = new Config(config);
-        }
-
         /**
          * @private
-         * @member {Exo.Config}
+         * @member {Object}
          */
-        this._config = config;
+        this._config = Object.assign({}, settings.GAME_CONFIG, config);
 
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = (config.canvas || document.createElement('canvas'));
+        this._canvas = (typeof this._config.canvas === 'string' && document.querySelector(this._config.canvas)) || this._config.canvas || document.createElement('canvas');
 
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvasParent = config.canvasParent || null;
+        this._canvasParent = (typeof this._config.canvasParent === 'string' && document.querySelector(this._config.canvasParent)) || this._config.canvasParent;
 
         /**
          * @private
          * @member {Exo.ResourceLoader}
          */
-        this._loader = new ResourceLoader(config.basePath);
+        this._loader = new ResourceLoader(this._config.basePath);
 
         /**
          * @private
@@ -114,7 +121,7 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.Config}
+     * @member {Object}
      */
     get config() {
         return this._config;

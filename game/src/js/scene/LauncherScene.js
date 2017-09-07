@@ -68,7 +68,7 @@ export default class LauncherScene extends Exo.Scene {
                 'title/background': 'audio/title/background.ogg',
                 'game/background': 'audio/game/background.ogg',
             })
-            .add('font', 'menu', 'font/AndyBold/AndyBold.woff2')
+            .addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2')
             .load()
             .then(() => this.game.trigger('scene:start'));
 

@@ -27,7 +27,7 @@ export default class InputManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Set.<Exo.Input>}
+         * @member {Set<Exo.Input>}
          */
         this._inputs = new Set();
 
