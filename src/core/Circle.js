@@ -30,6 +30,16 @@ export default class Circle extends Shape {
          * @member {Number}
          */
         this._radius = radius;
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
+
+        /**
+         * @private
+         * @member {Exo.Rectangle} _bounds
+         */
     }
 
     /**
@@ -95,7 +105,22 @@ export default class Circle extends Shape {
      * @member {Float32Array}
      */
     get array() {
-        return this._array || (this._array = new Float32Array(3));
+        const array = this._array || (this._array = new Float32Array(3));
+
+        array[0] = this.x;
+        array[1] = this.y;
+        array[2] = this.radius;
+
+        return array;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
+    get bounds() {
+        this.getBounds();
     }
 
     /**
@@ -128,14 +153,31 @@ export default class Circle extends Shape {
     /**
      * @override
      */
+    reset() {
+        this.set(0, 0, 0);
+    }
+
+    /**
+     * @override
+     */
     toArray() {
-        const array = this.array;
+        return this.array;
+    }
 
-        array[0] = this.x;
-        array[1] = this.y;
-        array[2] = this.radius;
+    /**
+     * @override
+     */
+    getBounds() {
+        if (!this._bounds) {
+            this._bounds = new Rectangle();
+        }
 
-        return array;
+        return this._bounds.set(
+            this._x - this._radius,
+            this._y - this._radius,
+            this._radius * 2,
+            this._radius * 2,
+        );
     }
 
     /**
@@ -179,19 +221,16 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    getBounds() {
-        return new Rectangle(
-            this._x - this._radius,
-            this._y - this._radius,
-            this._radius * 2,
-            this._radius * 2
-        );
-    }
-
-    /**
-     * @override
-     */
     destroy() {
+        if (this._array) {
+            this._array = null;
+        }
+
+        if (this._bounds) {
+            this._bounds.destroy();
+            this._bounds = null;
+        }
+
         this._position.destroy();
         this._position = null;
         this._radius = null;
@@ -208,13 +247,5 @@ export default class Circle extends Shape {
             y = this._y - circle.y;
 
         return Math.sqrt((x * x) + (y * y));
-    }
-
-    /**
-     * @public
-     * @returns {Exo.Circle}
-     */
-    static get Empty() {
-        return new Circle(0, 0, 0);
     }
 }

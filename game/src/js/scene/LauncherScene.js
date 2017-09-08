@@ -57,8 +57,6 @@ export default class LauncherScene extends Exo.Scene {
             .addList('sprite', {
                 'title/logo': 'image/title/logo.png',
                 'title/background': 'image/title/background.jpg',
-            }, {
-                scaleMode: Exo.SCALE_MODE.LINEAR,
             })
             .addList('texture', {
                 'game/tileset': 'image/game/tileset.png',

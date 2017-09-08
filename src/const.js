@@ -232,6 +232,20 @@ export const
      * @public
      * @constant
      * @memberOf Exo
+     * @name TEXT_GRADIENT
+     * @type {Object<String, Number>}
+     * @property {Number} LINEAR_VERTICAL
+     * @property {Number} LINEAR_HORIZONTAL
+     */
+    TEXT_GRADIENT = {
+        LINEAR_VERTICAL: 0,
+        LINEAR_HORIZONTAL: 1,
+    },
+
+    /**
+     * @public
+     * @constant
+     * @memberOf Exo
      * @name QUAD_TREE_MAX_LEVEL
      * @type {Number}
      */

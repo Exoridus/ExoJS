@@ -23,6 +23,12 @@ export default class Renderable extends Transformable {
 
         /**
          * @private
+         * @member {Exo.Rectangle}
+         */
+        this._bounds = new Rectangle();
+
+        /**
+         * @private
          * @member {Boolean}
          */
         this._visible = true;
@@ -72,28 +78,30 @@ export default class Renderable extends Transformable {
 
     /**
      * @public
-     * @returns {Exo.Rectangle}
+     * @member {Exo.Rectangle}
      */
-    getBounds() {
-        return this.getLocalBounds();
+    get bounds() {
+        return this.getBounds();
     }
 
     /**
      * @public
      * @returns {Exo.Rectangle}
      */
-    getLocalBounds() {
-        return Rectangle.Empty;
+    getBounds() {
+        return this._bounds.set(this.x, this.y, 0, 0);
     }
 
     /**
      * @public
      * @virtual
+     * @chainable
      * @param {Exo.DisplayManager} renderManager
      * @param {Exo.Matrix} worldTransform
+     * @returns {Exo.Renderable}
      */
     render(renderManager, worldTransform) {
-        // do nothing
+        return this;
     }
 
     /**
@@ -102,8 +110,13 @@ export default class Renderable extends Transformable {
     destroy() {
         super.destroy();
 
+        this._worldTransform.destroy();
         this._worldTransform = null;
-        this._visible = false;
+
+        this._bounds.destroy();
+        this._bounds = null;
+
+        this._visible = null;
         this._parent = null;
     }
 }

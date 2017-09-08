@@ -66,7 +66,7 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Uint16Array}
          */
-        this._indexData = this.createIndexBuffer(this._maxSprites * this._indexCount);
+        this._indexData = Renderer.createIndexBuffer(this._maxSprites * this._indexCount);
 
         /**
          * Current amount of elements inside the batch to draw.
@@ -75,28 +75,6 @@ export default class SpriteRenderer extends Renderer {
          * @member {Number}
          */
         this._currentBatchSize = 0;
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
-
-        /**
-         * Vertex buffer that will be fed by the vertexData.
-         *
-         * @private
-         * @member {?WebGLBuffer}
-         */
-        this._vertexBuffer = null;
-
-        /**
-         * Index buffer that will be fed by the indexData.
-         *
-         * @private
-         * @member {?WebGLBuffer}
-         */
-        this._indexBuffer = null;
 
         /**
          * @private
@@ -109,28 +87,60 @@ export default class SpriteRenderer extends Renderer {
          * @member {?Exo.Texture}
          */
         this._currentTexture = null;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._bound = false;
     }
 
     /**
      * @override
-     * @param {Exo.DisplayManager} displayManager
      */
-    start(displayManager) {
-        const gl = this._context,
-            shader = this._shader,
-            stride = this._spriteVertexSize;
+    setContext(gl) {
+        if (!this._context) {
+            this._context = gl;
+            this._indexBuffer = gl.createBuffer();
+            this._vertexBuffer = gl.createBuffer();
+            this._shader.setContext(gl);
+        }
+    }
 
-        displayManager.setShader(shader);
+    /**
+     * @override
+     */
+    setProjection(projection) {
+        this._shader.setProjection(projection);
+    }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
+    /**
+     * @override
+     */
+    bind() {
+        if (!this._bound) {
+            const gl = this._context;
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
 
-        gl.vertexAttribPointer(shader.getAttribute('aVertexPosition').location, 2, gl.FLOAT, false, stride, 0);
-        gl.vertexAttribPointer(shader.getAttribute('aTextureCoord').location, 2, gl.FLOAT, false, stride, 8);
-        gl.vertexAttribPointer(shader.getAttribute('aColor').location, 4, gl.UNSIGNED_BYTE, true, stride, 16);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+
+            this._shader.bind();
+            this._bound = true;
+        }
+    }
+
+    /**
+     * @override
+     */
+    unbind() {
+        if (this._bound) {
+            this.flush();
+            this._shader.unbind();
+            this._bound = false;
+        }
     }
 
     /**
@@ -154,7 +164,7 @@ export default class SpriteRenderer extends Renderer {
 
             if (textureSwap) {
                 this._currentTexture = texture;
-                this._shader.setUniformTexture('uSampler', texture, 0);
+                this._shader.setSpriteTexture(texture);
             }
         }
 
@@ -219,13 +229,22 @@ export default class SpriteRenderer extends Renderer {
     destroy() {
         super.destroy();
 
+        if (this._bound) {
+            this.unbind();
+        }
+
         this._shader.destroy();
         this._shader = null;
 
         this._vertexData = null;
-        this._indexData = null;
         this._vertexView = null;
         this._colorView = null;
+        this._indexData = null;
+        this._spriteVertexSize = null;
+        this._indexCount = null;
+        this._maxSprites = null;
+        this._currentBatchSize = null;
         this._currentTexture = null;
+        this._bound = null;
     }
 }

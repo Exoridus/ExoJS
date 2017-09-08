@@ -197,12 +197,12 @@ export default class MenuManager {
 
     /**
      * @public
-     * @param {Exo.DisplayManager} diplayManager
+     * @param {Exo.DisplayManager} displayManager
      * @param {Exo.Matrix} worldTransform
      */
-    render(diplayManager, worldTransform) {
+    render(displayManager, worldTransform) {
         if (this._currentMenu) {
-            this._currentMenu.render(diplayManager, worldTransform);
+            this._currentMenu.render(displayManager, worldTransform);
         }
     }
 

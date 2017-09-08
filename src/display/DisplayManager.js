@@ -1,6 +1,7 @@
 import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from './particle/ParticleRenderer';
+import Color from '../core/Color';
 import Matrix from '../core/Matrix';
 import {webGLSupported} from '../utils';
 import {BLEND_MODE} from '../const';
@@ -15,10 +16,14 @@ export default class DisplayManager {
     /**
      * @constructor
      * @param {Exo.Game} game
+     * @param {Object} [config={}]
+     * @param {Number} [config.width=800]
+     * @param {Number} [config.height=600]
+     * @param {Exo.Color} [config.clearColor=Exo.Color.White]
+     * @param {Boolean} [config.clearBeforeRender=true]
+     * @param {Object} [config.contextOptions]
      */
-    constructor(game) {
-        const config = game.config;
-
+    constructor(game, { width = 800, height = 600, clearColor = Color.White, clearBeforeRender = true, contextOptions } = {}) {
         if (!webGLSupported) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
@@ -33,7 +38,7 @@ export default class DisplayManager {
          * @private
          * @member {WebGLRenderingContext}
          */
-        this._context = this._createContext(config.contextOptions);
+        this._context = this._createContext(contextOptions);
 
         if (!this._context) {
             throw new Error('This browser or hardware does not support WebGL.');
@@ -43,13 +48,13 @@ export default class DisplayManager {
          * @private
          * @member {Exo.Color}
          */
-        this._clearColor = config.clearColor.clone();
+        this._clearColor = clearColor.clone();
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._clearBeforeRender = config.clearBeforeRender;
+        this._clearBeforeRender = clearBeforeRender;
 
         /**
          * @private
@@ -85,7 +90,7 @@ export default class DisplayManager {
          * @private
          * @member {Exo.RenderTarget}
          */
-        this._rootRenderTarget = new RenderTarget(config.width, config.height, true);
+        this._rootRenderTarget = new RenderTarget(width, height, true);
 
         /**
          * @private
@@ -107,12 +112,6 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {?Exo.Shader}
-         */
-        this._shader = null;
-
-        /**
-         * @private
          * @member {Exo.Matrix}
          */
         this._projection = new Matrix();
@@ -126,9 +125,8 @@ export default class DisplayManager {
 
         this.addRenderer('sprite', new SpriteRenderer());
         this.addRenderer('particle', new ParticleRenderer());
-        this.setCurrentRenderer('sprite');
 
-        this.resize(config.width, config.height);
+        this.resize(width, height);
 
         game.on('display:begin', this.begin, this)
             .on('display:render', this.render, this)
@@ -186,7 +184,7 @@ export default class DisplayManager {
     /**
      * @public
      * @param {String} name
-     * @param {Exo.Renderer} renderer
+     * @param {Exo.SpriteRenderer|Exo.ParticleRenderer|Exo.Renderer} renderer
      */
     addRenderer(name, renderer) {
         if (this._renderers.has(name)) {
@@ -207,47 +205,20 @@ export default class DisplayManager {
             throw new Error(`Could not find renderer "${name}".`);
         }
 
-        return this._renderers.get(name);
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     */
-    removeRenderer(name) {
-        if (this._renderers.has(name)) {
-            this._renderers.get(name)
-                .destroy();
-            this._renderers.delete(name);
-        }
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     */
-    setCurrentRenderer(name) {
-        const renderer = this.getRenderer(name),
+        const renderer = this._renderers.get(name),
             currentRenderer = this._currentRenderer;
 
-        if (currentRenderer === renderer) {
-            return;
+        if (currentRenderer !== renderer) {
+            if (currentRenderer) {
+                currentRenderer.unbind();
+            }
+
+            this._currentRenderer = renderer;
+            this._currentRenderer.setProjection(this._projection);
+            this._currentRenderer.bind();
         }
 
-        if (currentRenderer) {
-            currentRenderer.stop();
-        }
-
-        this._currentRenderer = renderer;
-        renderer.start(this);
-    }
-
-    /**
-     * @public
-     * @returns {?Exo.Renderer}
-     */
-    getCurrentRenderer() {
-        return this._currentRenderer;
+        return renderer;
     }
 
     /**
@@ -286,29 +257,6 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Exo.Shader} shader
-     */
-    setShader(shader) {
-        const gl = this._context,
-            currentShader = this._shader;
-
-        if (currentShader === shader) {
-            return;
-        }
-
-        if (currentShader) {
-            currentShader.inUse = false;
-        }
-
-        shader.setContext(gl);
-        shader.setProjection(this._projection);
-        shader.bind();
-
-        this._shader = shader;
-    }
-
-    /**
-     * @public
      * @param {Number} width
      * @param {Number} height
      */
@@ -317,11 +265,7 @@ export default class DisplayManager {
         this._canvas.height = height;
 
         this._rootRenderTarget.resize(width, height);
-        this._projection.copy(this._rootRenderTarget.getProjection());
-
-        if (this._shader) {
-            this._shader.setProjection(this._projection);
-        }
+        this.setProjection(this._rootRenderTarget.getProjection());
     }
 
     /**
@@ -332,16 +276,27 @@ export default class DisplayManager {
         this._renderTarget.setView(view);
 
         if (this._renderTarget === this._rootRenderTarget) {
-            this._projection.copy(this._rootRenderTarget.getProjection());
-            this._shader.setProjection(this._projection);
+            this.setProjection(this._rootRenderTarget.getProjection());
         }
     }
 
     /**
      * @public
-     * @param {Exo.Color} [color]
+     * @param {Exo.Matrix} projection
      */
-    clear(color) {
+    setProjection(projection) {
+        this._projection.copy(projection);
+
+        if (this._currentRenderer) {
+            this._currentRenderer.setProjection(this._projection);
+        }
+    }
+
+    /**
+     * @public
+     * @param {Exo.Color} [color=this._clearColor]
+     */
+    clear(color = this._clearColor) {
         const gl = this._context;
 
         if (color) {
@@ -354,7 +309,6 @@ export default class DisplayManager {
     /**
      * @public
      * @param {Exo.Color} color
-     * @param {Boolean} [override=true]
      */
     setClearColor(color) {
         if (!this._clearColor.equals(color)) {
@@ -402,7 +356,7 @@ export default class DisplayManager {
 
         this._isDrawing = false;
 
-        if (!this._contextLost) {
+        if (this._currentRenderer && !this._contextLost) {
             this._currentRenderer.flush();
         }
     }
@@ -413,33 +367,43 @@ export default class DisplayManager {
     destroy() {
         this._removeEvents();
 
-        for (const name of this._renderers.keys()) {
-            this.removeRenderer(name);
+        for (const renderer of this._renderers.values()) {
+            renderer.destroy();
         }
+        this._renderers.clear();
+        this._renderers = null
 
-        this._canvas = null;
-        this._context = null;
+        this._clearColor.destroy();
         this._clearColor = null;
-        this._renderers = null;
-        this._currentRenderer = null;
+
+        this._worldTransform.destroy();
         this._worldTransform = null;
+
+        this._currentRenderer = null;
+        this._context = null;
+        this._canvas = null;
     }
 
     /**
      * @override
      */
     _createContext({ alpha = false, antialias = false, premultipliedAlpha = false, preserveDrawingBuffer = false, stencil = true, depth = false } = {}) {
-        const options = {
-            alpha,
-            antialias,
-            premultipliedAlpha,
-            preserveDrawingBuffer,
-            stencil,
-            depth,
-        };
-
         try {
-            return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
+            return this._canvas.getContext('webgl', {
+                alpha,
+                antialias,
+                premultipliedAlpha,
+                preserveDrawingBuffer,
+                stencil,
+                depth,
+            }) || this._canvas.getContext('experimental-webgl', {
+                alpha,
+                antialias,
+                premultipliedAlpha,
+                preserveDrawingBuffer,
+                stencil,
+                depth,
+            });
         } catch (e) {
             return null;
         }

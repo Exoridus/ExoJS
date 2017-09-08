@@ -161,13 +161,15 @@ export default class EventEmitter {
      * @public
      */
     destroy() {
-        for (const events of this._events.values()) {
-            for (const event of events) {
-                event.callback = null;
-                event.context = null;
-            }
+        if (this._events.size) {
+            for (const events of this._events.values()) {
+                for (const event of events) {
+                    event.callback = null;
+                    event.context = null;
+                }
 
-            events.length = 0;
+                events.length = 0;
+            }
         }
         this._events.clear();
         this._events = null;

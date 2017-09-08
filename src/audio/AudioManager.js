@@ -9,8 +9,12 @@ export default class AudioManager {
     /**
      * @constructor
      * @param {Exo.Game} game
+     * @param {Object} [options={}]
+     * @param {Number} [options.masterVolume=1]
+     * @param {Number} [options.musicVolume=1]
+     * @param {Number} [options.soundVolume=1]
      */
-    constructor(game) {
+    constructor(game, { masterVolume = 1, musicVolume = 1, soundVolume = 1 } = {}) {
 
         /**
          * @private
@@ -66,19 +70,23 @@ export default class AudioManager {
          * @private
          * @member {Number}
          */
-        this._masterVolume = 1;
+        this._masterVolume = null;
 
         /**
          * @private
          * @member {Number}
          */
-        this._musicVolume = 1;
+        this._musicVolume = null;
 
         /**
          * @private
          * @member {Number}
          */
-        this._soundVolume = 1;
+        this._soundVolume = null;
+
+        this.setMasterVolume(masterVolume);
+        this.setMusicVolume(musicVolume);
+        this.setSoundVolume(soundVolume);
 
         game.on('audio:play', this.play, this)
             .on('audio:volume:master', this.setMasterVolume, this)

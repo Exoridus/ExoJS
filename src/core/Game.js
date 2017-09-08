@@ -16,57 +16,57 @@ export default class Game extends EventEmitter {
 
     /**
      * @constructor
-     * @param {Object} [config]
-     * @param {String} [config.basePath='']
-     * @param {Number} [config.width=800]
-     * @param {Number} [config.height=600]
-     * @param {Number} [config.soundVolume=1]
-     * @param {Number} [config.musicVolume=1]
-     * @param {Number} [config.masterVolume=1]
-     * @param {?HTMLCanvasElement|?String} [config.canvas=null]
-     * @param {?HTMLCanvasElement|?String} [config.canvasParent=null]
-     * @param {Exo.Color} [config.clearColor=Exo.Color.White]
-     * @param {Boolean} [config.clearBeforeRender=true]
-     * @param {Object} [config.contextOptions]
+     * @param {Object} [options]
+     * @param {String} [options.basePath='']
+     * @param {Number} [options.width=800]
+     * @param {Number} [options.height=600]
+     * @param {Number} [options.soundVolume=1]
+     * @param {Number} [options.musicVolume=1]
+     * @param {Number} [options.masterVolume=1]
+     * @param {?HTMLCanvasElement|?String} [options.canvas=null]
+     * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
+     * @param {Exo.Color} [options.clearColor=Exo.Color.White]
+     * @param {Boolean} [options.clearBeforeRender=true]
+     * @param {Object} [options.contextOptions]
      */
-    constructor(config) {
+    constructor(options) {
         super();
 
         /**
          * @private
          * @member {Object}
          */
-        this._config = Object.assign({}, settings.GAME_CONFIG, config);
+        this._config = Object.assign({}, settings.GAME_CONFIG, options);
 
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = (typeof this._config.canvas === 'string' && document.querySelector(this._config.canvas)) || this._config.canvas || document.createElement('canvas');
+        this._canvas = this._getElement(this._config.canvas) || document.createElement('canvas');
 
         /**
          * @private
-         * @member {HTMLCanvasElement}
+         * @member {HTMLElement}
          */
-        this._canvasParent = (typeof this._config.canvasParent === 'string' && document.querySelector(this._config.canvasParent)) || this._config.canvasParent;
+        this._canvasParent = this._getElement(this._config.canvasParent);
 
         /**
          * @private
          * @member {Exo.ResourceLoader}
          */
-        this._loader = new ResourceLoader(this._config.basePath);
+        this._loader = new ResourceLoader(this._config);
 
         /**
          * @private
          * @member {Exo.DisplayManager}
          */
-        this._displayManager = new DisplayManager(this);
+        this._displayManager = new DisplayManager(this, this._config);
 
         /**
          * @private
          * @member {Exo.AudioManager}
          */
-        this._audioManager = new AudioManager(this);
+        this._audioManager = new AudioManager(this, this._config);
 
         /**
          * @private
@@ -228,17 +228,32 @@ export default class Game extends EventEmitter {
         this._sceneManager.destroy();
         this._sceneManager = null;
 
-        this._config.destroy();
-        this._config = null;
-
         this._delta.destroy();
         this._delta = null;
 
+        this._config = null;
         this._canvas = null;
         this._canvasParent = null;
         this._updateHandler = null;
         this._updateId = null;
         this._running = null;
+    }
+
+    /**
+     * @private
+     * @param {?String|?HTMLElement} element
+     * @returns {?HTMLElement|?HTMLCanvasElement}
+     */
+    _getElement(element) {
+        if (!element) {
+            return null;
+        }
+
+        if (element instanceof HTMLElement) {
+            return element;
+        }
+
+        return (typeof element === 'string' && document.querySelector(element)) || null;
     }
 
     /**

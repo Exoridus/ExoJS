@@ -75,6 +75,11 @@ export default class Matrix {
          * @member {Number}
          */
         this.z = z;
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
     }
 
     /**
@@ -83,7 +88,44 @@ export default class Matrix {
      * @member {Float32Array}
      */
     get array() {
-        return this._array || (this._array = new Float32Array(9));
+        const array = this._array || (this._array = new Float32Array(9));
+
+        array[0] = this.a;
+        array[1] = this.c;
+        array[2] = this.e;
+
+        array[3] = this.b;
+        array[4] = this.d;
+        array[5] = this.f;
+
+        array[6] = this.x;
+        array[7] = this.y;
+        array[8] = this.z;
+
+        return array;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+    get transposedArray() {
+        const array = this._array || (this._array = new Float32Array(9));
+
+        array[0] = this.a;
+        array[1] = this.b;
+        array[2] = this.x;
+
+        array[3] = this.c;
+        array[4] = this.d;
+        array[5] = this.y;
+
+        array[6] = this.e;
+        array[7] = this.f;
+        array[8] = this.z;
+
+        return array;
     }
 
     /**
@@ -172,35 +214,7 @@ export default class Matrix {
      * @returns {Float32Array}
      */
     toArray(transpose = false) {
-        const array = this.array;
-
-        if (transpose) {
-            array[0] = this.a;
-            array[1] = this.b;
-            array[2] = this.x;
-
-            array[3] = this.c;
-            array[4] = this.d;
-            array[5] = this.y;
-
-            array[6] = this.e;
-            array[7] = this.f;
-            array[8] = this.z;
-        } else {
-            array[0] = this.a;
-            array[1] = this.c;
-            array[2] = this.e;
-
-            array[3] = this.b;
-            array[4] = this.d;
-            array[5] = this.f;
-
-            array[6] = this.x;
-            array[7] = this.y;
-            array[8] = this.z;
-        }
-
-        return array;
+        return transpose ? this.transposedArray : this.array;
     }
 
     /**
@@ -220,6 +234,10 @@ export default class Matrix {
      * @returns {Exo.Matrix}
      */
     destroy() {
+        if (this._array) {
+            this._array = null;
+        }
+
         this.a = null;
         this.b = null;
         this.x = null;

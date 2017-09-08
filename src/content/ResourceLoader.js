@@ -11,9 +11,10 @@ export default class ResourceLoader extends EventEmitter {
 
     /**
      * @constructor
-     * @param {String} [basePath='']
+     * @param {Object} [options={}]
+     * @param {String} [options.basePath='']
      */
-    constructor(basePath = '') {
+    constructor({ basePath = '' } = {}) {
         super();
 
         /**

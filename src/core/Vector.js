@@ -28,6 +28,16 @@ export default class Vector extends Shape {
          * @member {Number}
          */
         this._y = y;
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
+
+        /**
+         * @private
+         * @member {Exo.Rectangle} _bounds
+         */
     }
 
     /**
@@ -69,7 +79,21 @@ export default class Vector extends Shape {
      * @member {Float32Array}
      */
     get array() {
-        return this._array || (this._array = new Float32Array(2));
+        const array = this._array || (this._array = new Float32Array(2));
+
+        array[0] = this._x;
+        array[1] = this._y;
+
+        return array;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
+    get bounds() {
+        return this.getBounds();
     }
 
     /**
@@ -111,13 +135,26 @@ export default class Vector extends Shape {
     /**
      * @override
      */
+    reset() {
+        this.set(0, 0);
+    }
+
+    /**
+     * @override
+     */
     toArray() {
-        const array = this.array;
+        return this.array;
+    }
 
-        array[0] = this._x;
-        array[1] = this._y;
+    /**
+     * @override
+     */
+    getBounds() {
+        if (!this._bounds) {
+            this._bounds = new Rectangle();
+        }
 
-        return array;
+        return this._bounds.set(this._x, this._y, 0, 0);
     }
 
     /**
@@ -212,24 +249,17 @@ export default class Vector extends Shape {
     /**
      * @override
      */
-    getBounds() {
-        return new Rectangle(this._x, this._y, 0, 0);
-    }
-
-    /**
-     * @override
-     */
     destroy() {
+        if (this._array) {
+            this._array = null;
+        }
+
+        if (this._bounds) {
+            this._bounds.destroy();
+            this._bounds = null;
+        }
+
         this._x = null;
         this._y = null;
-    }
-
-    /**
-     * @public
-     * @static
-     * @returns {Exo.Vector}
-     */
-    static get Empty() {
-        return new Vector(0, 0);
     }
 }

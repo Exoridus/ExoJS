@@ -267,6 +267,70 @@ export const
      * @type {Function}
      * @param {Response} response
      * @param {String} type
-     * @returns {?String}
+     * @returns {String}
      */
-    getMimeType = (response, type) => response.headers.get('Content-Type') || `${type}/${getExtension(response.url)}`;
+    getMimeType = (response, type) => response.headers.get('Content-Type') || `${type}/${getExtension(response.url)}`,
+
+    /**
+     * @public
+     * @static
+     * @constant
+     * @memberof Exo.utils
+     * @param {WebGLRenderingContext} gl
+     * @param {Number} type
+     * @param {String} source
+     * @returns {WebGLShader}
+     */
+    compileShader = (gl, type, source) => {
+        const shader = gl.createShader(type);
+
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.log(gl.getShaderInfoLog(shader));
+
+            return null;
+        }
+
+        return shader;
+    },
+
+    /**
+     * @public
+     * @static
+     * @constant
+     * @memberof Exo.utils
+     * @param {WebGLRenderingContext} gl
+     * @param {String} vertexSource
+     * @param {String} fragmentSource
+     * @returns {?WebGLProgram}
+     */
+    compileProgram = (gl, vertexSource, fragmentSource) => {
+        const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexSource),
+            fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource),
+            program = gl.createProgram();
+
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+
+        gl.linkProgram(program);
+
+        gl.deleteShader(vertexShader);
+        gl.deleteShader(fragmentShader);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            gl.deleteProgram(program);
+
+            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS));
+            console.error('gl.getError()', gl.getError());
+
+            if (gl.getProgramInfoLog(program)) {
+                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program));
+            }
+
+            return null;
+        }
+
+        return program;
+    };

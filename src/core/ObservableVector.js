@@ -77,44 +77,28 @@ export default class ObservableVector extends Vector {
      * @override
      */
     add(x = 0, y = 0) {
-        this._x += x;
-        this._y += y;
-        this._callback.call(this._scope);
-
-        return this;
+        return this.set(this._x + x, this._y + y);
     }
 
     /**
      * @override
      */
     subtract(x = 0, y = 0) {
-        this._x -= x;
-        this._y -= y;
-        this._callback.call(this._scope);
-
-        return this;
+        return this.set(this._x - x, this._y - y);
     }
 
     /**
      * @override
      */
     multiply(x = 1, y = 1) {
-        this._x *= x;
-        this._y *= y;
-        this._callback.call(this._scope);
-
-        return this;
+        return this.set(this._x * x, this._y * y);
     }
 
     /**
      * @override
      */
     divide(x = 1, y = 1) {
-        this._x /= x;
-        this._y /= y;
-        this._callback.call(this._scope);
-
-        return this;
+        return this.set(this._x / x, this._y / y);
     }
 
     /**
@@ -123,25 +107,14 @@ export default class ObservableVector extends Vector {
     normalize() {
         const mag = this.magnitude;
 
-        this._x /= mag;
-        this._y /= mag;
-
-        this._callback.call(this._scope);
-
-        return this;
+        return this.set(this._x / mag, this._y / mag);
     }
 
     /**
      * @override
      */
     copy(vector) {
-        if (this._x !== vector.x || this._y !== vector.y) {
-            this._x = vector.x;
-            this._y = vector.y;
-            this._callback.call(this._scope);
-        }
-
-        return this;
+        return this.set(vector.x, vector.y);
     }
 
     /**
@@ -155,8 +128,8 @@ export default class ObservableVector extends Vector {
      * @override
      */
     destroy() {
-        this._x = null;
-        this._y = null;
+        super.destroy();
+
         this._callback = null;
         this._scope = null;
     }

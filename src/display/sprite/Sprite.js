@@ -12,7 +12,7 @@ export default class Sprite extends Renderable {
 
     /**
      * @constructor
-     * @param {?Exo.Texture|?HTMLImageElement|?HTMLCanvasElement} texture
+     * @param {?Exo.Texture} texture
      */
     constructor(texture) {
         super();
@@ -60,11 +60,56 @@ export default class Sprite extends Renderable {
 
     /**
      * @public
+     * @member {Exo.Texture}
+     */
+    get texture() {
+        return this._texture;
+    }
+
+    set texture(value) {
+        this.setTexture(value)
+    }
+
+    /**
+     * @public
+     * @member {Exo.Rectangle}
+     */
+    get textureRect() {
+        return this._textureRect;
+    }
+
+    set textureRect(value) {
+        this.setTextureRect(value);
+    }
+
+    /**
+     * @public
+     * @member {Exo.Color}
+     */
+    get tint() {
+        return this._tint;
+    }
+
+    set tint(value) {
+        this._tint.copy(value);
+    }
+
+    /**
+     * @public
      * @readonly
      * @member {Float32Array}
      */
     get vertexData() {
         return this._vertexData;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
+    get bounds() {
+        return this.getBounds();
     }
 
     /**
@@ -109,7 +154,7 @@ export default class Sprite extends Renderable {
      * @member {Number}
      */
     get top() {
-        return this.y - (this.height - this._origin.y);
+        return this.y - this.height + this.origin.y;
     }
 
     /**
@@ -118,7 +163,7 @@ export default class Sprite extends Renderable {
      * @member {Number}
      */
     get bottom() {
-        return this.y + (this.height - this._origin.y);
+        return this.y + this.height + this.origin.y;
     }
 
     /**
@@ -127,7 +172,7 @@ export default class Sprite extends Renderable {
      * @member {Number}
      */
     get left() {
-        return this.x - (this.width * this._origin.x);
+        return this.x - this.width + this.origin.x;
     }
 
     /**
@@ -136,101 +181,78 @@ export default class Sprite extends Renderable {
      * @member {Number}
      */
     get right() {
-        return this.x + (this.width * (1 - this._origin.x));
-    }
-
-    /**
-     * @public
-     * @member {Exo.Texture}
-     */
-    get texture() {
-        return this._texture;
-    }
-
-    set texture(value) {
-        this._texture = value;
-
-        this.setTextureRect(new Rectangle(0, 0, this._texture.width, this._texture.height));
-    }
-
-    /**
-     * @public
-     * @member {Exo.Rectangle}
-     */
-    get textureRect() {
-        return this._textureRect;
-    }
-
-    set textureRect(value) {
-        this.setTextureRect(value);
-    }
-
-    /**
-     * @public
-     * @member {Exo.Color}
-     */
-    get tint() {
-        return this._tint;
-    }
-
-    set tint(value) {
-        this._tint.copy(value);
-    }
-
-    /**
-     * @public
-     * @param {Exo.Rectangle} rectangle
-     * @param {Boolean} [keepSize]
-     */
-    setTextureRect(rectangle, keepSize) {
-        this._textureRect.copy(rectangle);
-
-        if (!keepSize) {
-            this._size.set(rectangle.width, rectangle.height);
-        }
-
-        this._updatePositions();
-        this._updateTexCoords();
+        return this.x + this.width + this.origin.x;
     }
 
     /**
      * @override
-     * @returns {Exo.Rectangle}
      */
-    getLocalBounds() {
-        return new Rectangle(0, 0, this.width, this.height);
+    getBounds() {
+        return this._bounds.set(this.x, this.y, this.width, this.height);
     }
 
     /**
-     * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @param {Boolean} [absolute=false]
+     * @override
      */
     setOrigin(x, y, absolute = false) {
-        const bounds = this.getLocalBounds(),
-            origin = this._origin;
+        const bounds = this.bounds;
 
         this._dirtyTransform = true;
 
         if (absolute) {
-            origin.x = x;
-            origin.y = y;
-
-            return;
+            this._origin.set(x, y);
+        } else {
+            this._origin.set(x * bounds.width, y * bounds.height);
         }
 
-        origin.x = x * bounds.width;
-        origin.y = y * bounds.height;
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} width
      * @param {Number} height
+     * @returns {Exo.Sprite}
      */
     setSize(width, height) {
         this._size.set(width, height);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Exo.Rectangle} rectangle
+     * @param {Boolean} [updateSize=true]
+     * @returns {Exo.Sprite}
+     */
+    setTextureRect(rectangle, updateSize = true) {
+        this._textureRect.copy(rectangle);
+
+        if (updateSize) {
+            this.setSize(rectangle.width, rectangle.height);
+        }
+
+        this._updatePositions();
+        this._updateTexCoords();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Exo.Rectangle} rectangle
+     * @param {Boolean} [updateSize=true]
+     * @returns {Exo.Sprite}
+     */
+    setTexture(texture) {
+        this._texture = texture;
+        this.setTextureRect(texture.frame);
+
+        return this;
     }
 
     /**
@@ -238,33 +260,34 @@ export default class Sprite extends Renderable {
      */
     render(displayManager, parentTransform) {
         if (!this.visible) {
-            return;
+            return this;
         }
 
         this._worldTransform.copy(parentTransform);
         this._worldTransform.multiply(this.transform);
 
-        displayManager.setCurrentRenderer('sprite');
-        displayManager.getCurrentRenderer().render(this);
+        displayManager.getRenderer('sprite').render(this);
+
+        return this;
     }
 
     /**
      * @override
-     * @param {Boolean} [destroyTexture]
      */
-    destroy(destroyTexture) {
+    destroy() {
         super.destroy();
 
-        if (destroyTexture && this._texture) {
-            this._texture.destroy();
-        }
-
-        this._vertexData.fill(0);
+        this._texture = null;
         this._vertexData = null;
 
-        this._texture = null;
+        this._textureRect.destroy();
         this._textureRect = null;
+
+        this._size.destroy();
         this._size = null;
+
+        this._tint.destroy();
+        this._tint = null;
     }
 
     /**
@@ -272,7 +295,7 @@ export default class Sprite extends Renderable {
      */
     _updatePositions() {
         const vertexData = this._vertexData,
-            bounds = this.getLocalBounds();
+            bounds = this.getBounds();
 
         vertexData[0] = vertexData[1] = vertexData[5] = vertexData[8] = 0;
         vertexData[4] = vertexData[12] = bounds.width;

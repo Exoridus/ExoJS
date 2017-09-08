@@ -38,6 +38,11 @@ export default class Color {
          * @member {Number}
          */
         this._a = clamp(a, 0, 1);
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
     }
 
     /**
@@ -119,6 +124,47 @@ export default class Color {
 
     /**
      * @public
+     * @readonly
+     * @member {String}
+     */
+    get hex() {
+        return rgbToHex(this._r, this._g, this._b);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+    get array() {
+        const array = this._array || (this._array = new Float32Array(4));
+
+        array[0] = this._r;
+        array[1] = this._g;
+        array[2] = this._b;
+        array[3] = this._a;
+
+        return array;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+    get normalizedArray() {
+        const array = this._array || (this._array = new Float32Array(4));
+
+        array[0] = this._r / 255;
+        array[1] = this._g / 255;
+        array[2] = this._b / 255;
+        array[3] = this._a;
+
+        return array;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Number} r
      * @param {Number} g
@@ -133,15 +179,6 @@ export default class Color {
         this.a = a;
 
         return this;
-    }
-
-    /**
-     * @public
-     * @param {Boolean} [prefixed=true]
-     * @returns {String}
-     */
-    getHexCode(prefixed = true) {
-        return rgbToHex(this._r, this._g, this._b, prefixed);
     }
 
     /**
@@ -259,7 +296,6 @@ export default class Color {
         return new Color(this._r, this._g, this._b, this._a);
     }
 
-
     /**
      * @public
      * @returns {Boolean}
@@ -276,30 +312,21 @@ export default class Color {
      * @returns {Float32Array}
      */
     toArray(normalized = false) {
-        const array = this._array || (this._array = new Float32Array(4));
-
-        if (normalized) {
-            array[0] = this._r / 255;
-            array[1] = this._g / 255;
-            array[2] = this._b / 255;
-            array[3] = this._a;
-        } else {
-            array[0] = this._r;
-            array[1] = this._g;
-            array[2] = this._b;
-            array[3] = this._a;
-        }
-
-        return array;
+        return normalized ? this.normalizedArray : this.array;
     }
 
     /**
      * @public
-     * @static
-     * @returns {Exo.Color}
      */
-    static get Empty() {
-        return new Color(0, 0, 0, 0);
+    destroy() {
+        if (this._array) {
+            this._array = null;
+        }
+
+        this._r = null;
+        this._g = null;
+        this._b = null;
+        this._a = null;
     }
 }
 

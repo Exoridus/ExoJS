@@ -14,7 +14,7 @@ export default class ParticleShader extends Shader {
     constructor() {
         super();
 
-        this.vertexSource = [
+        this.setVertexSource([
             'precision lowp float;',
             'attribute vec2 aVertexPosition;',
             'attribute vec2 aTextureCoord;',
@@ -40,9 +40,9 @@ export default class ParticleShader extends Shader {
 
             'gl_Position = vec4((projectionMatrix * vec3(vp, 1.0)).xy, 0.0, 1.0);',
             '}',
-        ].join('\n');
+        ]);
 
-        this.fragmentSource = [
+        this.setFragmentSource([
             'precision lowp float;',
 
             'varying vec2 vTextureCoord;',
@@ -53,16 +53,54 @@ export default class ParticleShader extends Shader {
             'void main(void) {',
             'gl_FragColor = texture2D(uSampler, vTextureCoord) * vColor;',
             '}',
-        ].join('\n');
+        ]);
 
-        this.addAttribute('aVertexPosition', true);
-        this.addAttribute('aTextureCoord', true);
-        this.addAttribute('aPosition', true);
-        this.addAttribute('aScale', true);
-        this.addAttribute('aRotation', true);
-        this.addAttribute('aColor', true);
+        this.setAttributes({
+            aVertexPosition: true,
+            aTextureCoord: true,
+            aPosition: true,
+            aScale: true,
+            aRotation: true,
+            aColor: true,
+        });
 
-        this.addUniform('uSampler', UNIFORM_TYPE.TEXTURE);
-        this.addUniform('projectionMatrix', UNIFORM_TYPE.MATRIX);
+        this.setUniforms({
+            projectionMatrix: UNIFORM_TYPE.MATRIX,
+            uSampler: UNIFORM_TYPE.TEXTURE,
+        });
+    }
+
+    /**
+     * @override
+     */
+    bindAttributePointers() {
+        const gl = this._context,
+            stride = 40;
+
+        this.getAttribute('aVertexPosition').setPointer(2, gl.FLOAT, false, stride, 0);
+        this.getAttribute('aTextureCoord').setPointer(2, gl.FLOAT, false, stride, 8);
+        this.getAttribute('aPosition').setPointer(2, gl.FLOAT, false, stride, 16);
+        this.getAttribute('aScale').setPointer(2, gl.FLOAT, false, stride, 24);
+        this.getAttribute('aRotation').setPointer(1, gl.FLOAT, false, stride, 32);
+        this.getAttribute('aColor').setPointer(4, gl.UNSIGNED_BYTE, true, stride, 36);
+    }
+
+    /**
+     * @override
+     */
+    setProjection(projection) {
+        this.getUniform('projectionMatrix')
+            .setValue(projection.toArray());
+    }
+
+    /**
+     * @public
+     * @param {Exo.Texture} texture
+     */
+    setParticleTexture(texture) {
+        const uniform = this.getUniform('uSampler');
+
+        uniform.setTextureUnit(0)
+        uniform.setValue(texture);
     }
 }

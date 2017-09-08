@@ -19,9 +19,9 @@ export default class TextureFactory extends ImageFactory {
     /**
      * @override
      */
-    create(response, { mimeType, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE } = {}) {
+    create(response, { mimeType, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
         return super
             .create(response, { mimeType })
-            .then((image) => new Texture(image, scaleMode, wrapMode));
+            .then((image) => new Texture(image, { scaleMode, wrapMode, premultiplyAlpha }));
     }
 }

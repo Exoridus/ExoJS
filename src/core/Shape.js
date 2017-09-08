@@ -11,7 +11,7 @@ export default class Shape {
      * @member {Number}
      */
     get type() {
-        throw new Error('Type member should be overidden!');
+        throw new Error('Property not implemented!');
     }
 
     /**
@@ -21,7 +21,7 @@ export default class Shape {
      * @member {Exo.Rectangle}
      */
     get bounds() {
-        return this.getBounds();
+        throw new Error('Property not implemented!');
     }
 
     /**
@@ -52,6 +52,15 @@ export default class Shape {
     /**
      * @public
      * @virtual
+     */
+    reset() {
+        throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @virtual
+     * @returns {Float32Array}
      */
     toArray() {
         throw new Error('Method not implemented!');

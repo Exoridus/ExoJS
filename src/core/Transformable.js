@@ -144,61 +144,83 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
+     * @returns {Exo.Transformable}
      */
     setPosition(x, y) {
         this._position.set(x, y);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
+     * @returns {Exo.Transformable}
      */
     setScale(x, y) {
         this._scale.set(x, y);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
+     * @returns {Exo.Transformable}
      */
     setOrigin(x, y) {
         this._origin.set(x, y);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} angle
+     * @returns {Exo.Transformable}
      */
     setRotation(angle) {
         const rotation = angle % 360;
 
         this._rotation = (rotation < 0) ? rotation + 360 : rotation;
         this._dirtyTransform = true;
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
+     * @returns {Exo.Transformable}
      */
     move(x, y) {
-        this.setPosition(this.x + x, this.y + y);
+        return this.setPosition(this.x + x, this.y + y);
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} angle
+     * @returns {Exo.Transformable}
      */
     rotate(angle) {
-        this.setRotation(this._rotation + angle);
+        return this.setRotation(this._rotation + angle);
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Exo.Transformable}
      */
     updateTransform() {
         const transform = this._transform,
@@ -220,6 +242,8 @@ export default class Transformable extends EventEmitter {
         transform.c = -sxs;
         transform.d = syc;
         transform.y = (origin.x * sxs) - (origin.y * syc) + position.y;
+
+        return this;
     }
 
     /**

@@ -31,6 +31,16 @@ export default class Rectangle extends Shape {
          * @member {Exo.Vector}
          */
         this._size = new Vector(width, height);
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
+
+        /**
+         * @private
+         * @member {Exo.Rectangle} _bounds
+         */
     }
 
     /**
@@ -48,7 +58,23 @@ export default class Rectangle extends Shape {
      * @member {Float32Array}
      */
     get array() {
-        return this._array || (this._array = new Float32Array(4));
+        const array = this._array || (this._array = new Float32Array(4));
+
+        array[0] = this.x;
+        array[1] = this.y;
+        array[2] = this.width;
+        array[3] = this.height;
+
+        return array;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Exo.Rectangle}
+     */
+    get bounds() {
+        this.getBounds();
     }
 
     /**
@@ -201,15 +227,26 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
+    reset() {
+        this.set(0, 0, 1, 1);
+    }
+
+    /**
+     * @override
+     */
     toArray() {
-        const array = this.array;
+        return this.array;
+    }
 
-        array[0] = this.x;
-        array[1] = this.y;
-        array[2] = this.width;
-        array[3] = this.height;
+    /**
+     * @override
+     */
+    getBounds() {
+        if (!this._bounds) {
+            this._bounds = new Rectangle();
+        }
 
-        return array;
+        return this._bounds.copy(this);
     }
 
     /**
@@ -258,14 +295,16 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    getBounds() {
-        return this.clone();
-    }
-
-    /**
-     * @override
-     */
     destroy() {
+        if (this._array) {
+            this._array = null;
+        }
+
+        if (this._bounds) {
+            this._bounds.destroy();
+            this._bounds = null;
+        }
+
         this._position.destroy();
         this._position = null;
 

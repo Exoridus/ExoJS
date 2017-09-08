@@ -8,7 +8,7 @@ window.game = new Exo.Game({
 window.game.start(new Exo.Scene({
 
     load(loader) {
-        loader.add('music', 'example', 'audio/example.ogg')
+        loader.addItem('music', 'example', 'audio/example.ogg')
             .load()
             .then(() => this.game.trigger('scene:start'));
     },

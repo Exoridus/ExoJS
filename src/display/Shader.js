@@ -1,8 +1,7 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
 import Matrix from '../core/Matrix';
-import {UNIFORM_TYPE} from '../const';
-import settings from '../settings';
+import {compileProgram} from '../utils';
 
 /**
  * @class Shader
@@ -12,10 +11,10 @@ export default class Shader {
 
     /**
      * @constructor
-     * @param {?String} vertexSource
-     * @param {?String} fragmentSource
+     * @param {String|String[]} [vertexSource]
+     * @param {String|String[]} [fragmentSource]
      */
-    constructor(vertexSource = null, fragmentSource = null) {
+    constructor(vertexSource, fragmentSource) {
 
         /**
          * @private
@@ -33,13 +32,13 @@ export default class Shader {
          * @private
          * @member {?String}
          */
-        this._vertexSource = vertexSource;
+        this._vertexSource = null;
 
         /**
          * @private
          * @member {?String}
          */
-        this._fragmentSource = fragmentSource;
+        this._fragmentSource = null;
 
         /**
          * @private
@@ -57,58 +56,39 @@ export default class Shader {
          * @private
          * @member {Boolean}
          */
-        this._inUse = false;
+        this._bound = false;
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._currentTextureUnit = -1;
+        if (vertexSource !== undefined) {
+            this.setVertexSource(vertexSource);
+        }
+
+        if (fragmentSource !== undefined) {
+            this.setFragmentSource(fragmentSource);
+        }
     }
 
     /**
      * @public
-     * @readonly
-     * @member {?WebGLProgram}
-     */
-    get program() {
-        return this._program;
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get inUse() {
-        return this._inUse;
-    }
-
-    set inUse(value) {
-        this._inUse = value;
-    }
-
-    /**
-     * @public
-     * @member {String} value
+     * @member {String|String[]}
      */
     get vertexSource() {
         return this._vertexSource;
     }
 
     set vertexSource(value) {
-        this._vertexSource = Array.isArray(value) ? value.join('\n') : value;
+        this.setVertexSource(value);
     }
 
     /**
      * @public
-     * @member {String} value
+     * @member {String|String[]}
      */
     get fragmentSource() {
         return this._fragmentSource;
     }
 
     set fragmentSource(value) {
-        this._fragmentSource = Array.isArray(value) ? value.join('\n') : value;
+        this.setFragmentSource(value);
     }
 
     /**
@@ -121,88 +101,87 @@ export default class Shader {
         }
 
         this._context = gl;
-        this._program = this.compileProgram();
-    }
+        this._program = compileProgram(gl, this._vertexSource, this._fragmentSource);
 
-    /**
-     * @public
-     * @returns {WebGLProgram}
-     */
-    compileProgram() {
-        const gl = this._context,
-            vertexShader = this.compileShader(this._vertexSource, gl.VERTEX_SHADER),
-            fragmentShader = this.compileShader(this._fragmentSource, gl.FRAGMENT_SHADER),
-            program = gl.createProgram();
-
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-
-        gl.linkProgram(program);
-
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            gl.deleteProgram(program);
-
-            throw new Error(`Could not initialize shader. Error: ${gl.getError()}`);
+        for (const attribute of this._attributes.values()) {
+            attribute.setContext(gl, this._program);
         }
 
-        return program;
-    }
-
-    /**
-     * @public
-     * @param {String|Array} source
-     * @param {Number} shaderType
-     * @returns {WebGLShader}
-     */
-    compileShader(source, shaderType) {
-        if (!source) {
-            throw new Error('Vertex or Fragment source need to be set first!');
+        for (const uniform of this._uniforms.values()) {
+            uniform.setContext(gl, this._program);
         }
-
-        const gl = this._context,
-            shader = gl.createShader(shaderType);
-
-        gl.shaderSource(shader, (source instanceof Array) ? source.join('\n') : source);
-        gl.compileShader(shader);
-
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            throw new Error([
-                'SHADER COMPILE ERROR:',
-                '- LOG -',
-                gl.getShaderInfoLog(shader),
-                '- SOURCE -',
-                source,
-            ].join('\n\n'));
-        }
-
-        return shader;
     }
 
     /**
      * @public
      */
     bind() {
-        this._context.useProgram(this._program);
-        this._inUse = true;
+        if (this._bound) {
+            return;
+        }
 
-        this.syncAttributes();
-        this.syncUniforms();
+        this._bound = true;
+
+        this._context.useProgram(this._program);
+
+        for (const attribute of this._attributes.values()) {
+            attribute.bind();
+        }
+
+        for (const uniform of this._uniforms.values()) {
+            uniform.bind();
+        }
+
+        this.bindAttributePointers();
     }
 
     /**
      * @public
-     * @param {String} name
-     * @param {Boolean} [active=true]
      */
-    addAttribute(name, active = true) {
-        if (this._attributes.has(name)) {
-            throw new Error(`Attribute "${name}" was already added.`);
+    unbind() {
+        if (!this._bound) {
+            return;
         }
 
-        this._attributes.set(name, new ShaderAttribute(name, active));
+        this._bound = false;
+
+        for (const attribute of this._attributes.values()) {
+            attribute.unbind();
+        }
+
+        for (const uniform of this._uniforms.values()) {
+            uniform.unbind();
+        }
+    }
+
+    /**
+     * @public
+     * @param {String|String[]} source
+     */
+    setVertexSource(source) {
+        this._vertexSource = Array.isArray(source) ? source.join('\n') : source;
+    }
+
+    /**
+     * @public
+     * @param {String|String[]} source
+     */
+    setFragmentSource(source) {
+        this._fragmentSource = Array.isArray(source) ? source.join('\n') : source;
+    }
+
+    /**
+     * @public
+     * @param {Object<String, Boolean>} attributes
+     */
+    setAttributes(attributes) {
+        for (const name of Object.keys(attributes)) {
+            if (this._attributes.has(name)) {
+                throw new Error(`Attribute "${name}" was already added.`);
+            }
+
+            this._attributes.set(name, new ShaderAttribute(name, attributes[name]));
+        }
     }
 
     /**
@@ -220,45 +199,16 @@ export default class Shader {
 
     /**
      * @public
-     * @param {String} name
+     * @param {Object<String, Number>} uniforms
      */
-    removeAttribute(name) {
-        if (this._attributes.has(name)) {
-            this._attributes.get(name).destroy();
-            this._attributes.delete(name);
-        }
-    }
-
-    /**
-     * @public
-     */
-    syncAttributes() {
-        const gl = this._context;
-
-        for (const [name, attribute] of this._attributes) {
-            if (attribute.location === null) {
-                attribute.location = gl.getAttribLocation(this._program, name);
+    setUniforms(uniforms) {
+        for (const name of Object.keys(uniforms)) {
+            if (this._uniforms.has(name)) {
+                throw new Error(`Uniform "${name}" was already added.`);
             }
 
-            if (attribute.active) {
-                gl.enableVertexAttribArray(attribute.location);
-            } else {
-                gl.disableVertexAttribArray(attribute.location);
-            }
+            this._uniforms.set(name, new ShaderUniform(name, uniforms[name]));
         }
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Number} type
-     */
-    addUniform(name, type) {
-        if (this._uniforms.has(name)) {
-            throw new Error(`Uniform "${name}" was already added.`);
-        }
-
-        this._uniforms.set(name, new ShaderUniform(name, type));
     }
 
     /**
@@ -268,7 +218,7 @@ export default class Shader {
      */
     getUniform(name) {
         if (!this._uniforms.has(name)) {
-            throw new Error(`Uniform "${name}" is missing.`);
+            throw new Error(`Could not find Uniform "${name}".`);
         }
 
         return this._uniforms.get(name);
@@ -276,349 +226,49 @@ export default class Shader {
 
     /**
      * @public
-     * @param {String} name
-     * @param {Number|Number[]|Exo.Vector|Exo.Matrix|Exo.Texture} value
-     * @param {Number} [textureUnit]
+     * @param {Exo.Matrix} projection
      */
-    setUniformValue(name, value, textureUnit) {
-        const uniform = this.getUniform(name);
-
-        uniform.value = value;
-
-        if (textureUnit !== undefined) {
-            uniform.textureUnit = textureUnit;
-        }
-
-        if (this._inUse) {
-            this._uploadUniform(uniform);
-        }
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     */
-    removeUniform(name) {
-        if (this._uniforms.has(name)) {
-            this._uniforms.get(name).destroy();
-            this._uniforms.delete(name);
-        }
+    setProjection(projection) {
+        // do nothing...
     }
 
     /**
      * @public
      */
-    syncUniforms() {
-        for (const uniform of this._uniforms.values()) {
-            this._uploadUniform(uniform);
-        }
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Number} number
-     */
-    setUniformNumber(name, number) {
-        this.setUniformValue(name, number);
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Exo.Vector|Number[]} vector
-     */
-    setUniformVector(name, vector) {
-        this.setUniformValue(name, vector);
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Exo.Color} color
-     */
-    setUniformColor(name, color) {
-        this.setUniformValue(name, color.toArray(true));
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Exo.Matrix|Array} matrix
-     * @param {Boolean} [transpose=false]
-     */
-    setUniformMatrix(name, matrix, transpose = false) {
-        this.setUniformValue(name, (matrix instanceof Matrix) ? matrix.toArray(transpose) : matrix);
-    }
-
-    /**
-     * @public
-     * @param {String} name
-     * @param {Exo.Texture} texture
-     * @param {Number} [textureUnit=0]
-     */
-    setUniformTexture(name, texture, textureUnit = 0) {
-        this.setUniformValue(name, texture, textureUnit);
-    }
-
-    /**
-     * @public
-     * @param {Exo.Matrix} matrix
-     */
-    setProjection(matrix) {
-        this.setUniformValue('projectionMatrix', matrix.toArray());
-    }
-
-    /**
-     * @public
-     * @param {HTMLImageElement|HTMLCanvasElement} source
-     * @param {Number} [scaleMode=settings.SCALE_MODE]
-     * @param {Number} [wrapMode=settings.WRAP_MODE]
-     * @returns {WebGLTexture}
-     */
-    createWebGLTexture(source, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE) {
-        const gl = this._context,
-            texture = gl.createTexture();
-
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, settings.PREMULTIPLY_ALPHA);
-
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        return texture;
+    bindAttributePointers() {
+        // do nothing...
     }
 
     /**
      * @public
      */
     destroy() {
-        for (const name of this._uniforms.keys()) {
-            this.removeUniform(name);
+        if (this._bound) {
+            this.unbind();
         }
+
+        for (const attribute of this._attributes.values()) {
+            attribute.destroy();
+        }
+
+        for (const uniform of this._uniforms.values()) {
+            uniform.destroy();
+        }
+
+        if (this._context) {
+            this._context.deleteProgram(this._program);
+            this._program = null;
+            this._context = null;
+        }
+
         this._uniforms.clear();
         this._uniforms = null;
 
-        for (const name of this._attributes.keys()) {
-            this.removeAttribute(name);
-        }
         this._attributes.clear();
         this._attributes = null;
 
-        if (this._program) {
-            this._context.deleteProgram(this._program);
-            this._program = null;
-        }
-
-        this._context = null;
         this._vertexSource = null;
         this._fragmentSource = null;
-    }
-
-    /**
-     * Not the best looking method, but it does its job
-     *
-     * @private
-     * @param {Object} value
-     * @returns {Number}
-     */
-    _getLength(value) {
-        let len = 0;
-
-        if (value instanceof Array) {
-            return value.length;
-        }
-
-        if ('x' in value) {
-            len++;
-
-            if ('y' in value) {
-                len++;
-
-                if ('z' in value) {
-                    len++;
-
-                    if ('w' in value) {
-                        len++;
-                    }
-                }
-            }
-        }
-
-        return len;
-    }
-
-    /**
-     * @private
-     * @param {Exo.ShaderUniform} uniform
-     */
-    _uploadUniform(uniform) {
-        const gl = this._context,
-            location = uniform.location || (uniform.location = gl.getUniformLocation(this._program, uniform.name)),
-            value = uniform.value;
-
-        let textureUnit;
-
-        if (!uniform.dirty) {
-            return;
-        }
-
-        switch (uniform.type) {
-            case UNIFORM_TYPE.INT:
-                gl.uniform1i(location, value);
-
-                return;
-
-            case UNIFORM_TYPE.FLOAT:
-                gl.uniform1f(location, value);
-
-                return;
-
-            case UNIFORM_TYPE.VECTOR:
-                if (value instanceof Array) {
-                    switch (this._getLength(value)) {
-                        case 1:
-                            gl.uniform1fv(location, value);
-
-                            return;
-                        case 2:
-                            gl.uniform2fv(location, value);
-
-                            return;
-                        case 3:
-                            gl.uniform3fv(location, value);
-
-                            return;
-                        case 4:
-                            gl.uniform4fv(location, value);
-
-                            return;
-                    }
-
-                    return;
-                }
-
-                switch (this._getLength(value)) {
-                    case 1:
-                        gl.uniform1f(location, value);
-
-                        return;
-                    case 2:
-                        gl.uniform2f(location, value.x, value.y);
-
-                        return;
-                    case 3:
-                        gl.uniform3f(location, value.x, value.y, value.z);
-
-                        return;
-                    case 4:
-                        gl.uniform4f(location, value.x, value.y, value.z, value.w);
-
-                        return;
-                }
-
-                return;
-            case UNIFORM_TYPE.VECTOR_INT:
-                if (value instanceof Array) {
-                    switch (this._getLength(value)) {
-                        case 1:
-                            gl.uniform1iv(location, value);
-
-                            return;
-                        case 2:
-                            gl.uniform2iv(location, value);
-
-                            return;
-                        case 3:
-                            gl.uniform3iv(location, value);
-
-                            return;
-                        case 4:
-                            gl.uniform4iv(location, value);
-
-                            return;
-                    }
-
-                    return;
-                }
-
-                switch (this._getLength(value)) {
-                    case 1:
-                        gl.uniform1i(location, value);
-
-                        return;
-                    case 2:
-                        gl.uniform2i(location, value.x, value.y);
-
-                        return;
-                    case 3:
-                        gl.uniform3i(location, value.x, value.y, value.z);
-
-                        return;
-                    case 4:
-                        gl.uniform4i(location, value.x, value.y, value.z, value.w);
-
-                        return;
-                }
-
-                return;
-
-            case UNIFORM_TYPE.MATRIX:
-                switch (value.length) {
-                    case 4:
-                        gl.uniformMatrix2fv(location, false, value);
-
-                        return;
-                    case 9:
-                        gl.uniformMatrix3fv(location, false, value);
-
-                        return;
-                    case 16:
-                        gl.uniformMatrix4fv(location, false, value);
-
-                        return;
-                }
-
-                return;
-
-            case UNIFORM_TYPE.TEXTURE:
-                textureUnit = uniform.textureUnit;
-
-                if (textureUnit !== this._currentTextureUnit) {
-                    gl.activeTexture(gl[`TEXTURE${textureUnit}`]);
-                    this._currentTextureUnit = textureUnit;
-                }
-
-                if (uniform.textureUnitChanged) {
-                    gl.uniform1i(location, textureUnit);
-                    uniform.textureUnitChanged = false;
-                }
-
-                if (!value.webGLTexture) {
-                    value.webGLTexture = this.createWebGLTexture(value.source, value.scaleMode, value.wrapMode);
-                }
-
-                // if (!value.webGLTexture) {
-                //     value.webGLTexture = new WebGLTexture(gl);
-                //     value.webGLTexture.upload(value.source);
-                //     value.webGLTexture.setScaleMode(value.scaleMode);
-                //     value.webGLTexture.setWrapMode(value.wrapMode);
-                //     value.webGLTexture.unbind();
-                // }
-
-                gl.bindTexture(gl.TEXTURE_2D, value.webGLTexture);
-
-                return;
-
-            default:
-                throw new Error(`Wrong Uniform Type set! Uniform: ${uniform.name}`);
-        }
+        this._bound = null;
     }
 }

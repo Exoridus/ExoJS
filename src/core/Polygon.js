@@ -20,6 +20,16 @@ export default class Polygon extends Shape {
          * @member {Exo.Vector[]}
          */
         this._vectors = vectors;
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
+
+        /**
+         * @private
+         * @member {Exo.Rectangle} _bounds
+         */
     }
 
     /**
@@ -46,7 +56,16 @@ export default class Polygon extends Shape {
      * @member {Float32Array}
      */
     get array() {
-        return this._array || (this._array = new Float32Array(this._vectors.length * 2));
+        const array = this._array || (this._array = new Float32Array(this._vectors.length * 2)),
+            vectors = this._vectors,
+            len = vectors.length;
+
+        for (let i = 0, j = 0; i < len; i++, j += 2) {
+            array[j] = vectors[i].x;
+            array[j + 1] = vectors[i].y;
+        }
+
+        return array;
     }
 
     /**
@@ -88,16 +107,7 @@ export default class Polygon extends Shape {
      * @override
      */
     toArray() {
-        const array = this.array,
-            vectors = this._vectors,
-            len = vectors.length;
-
-        for (let i = 0, j = 0; i < len; i++, j += 2) {
-            array[j] = vectors[i].x;
-            array[j + 1] = vectors[i].y;
-        }
-
-        return array;
+        return this.array;
     }
 
     /**

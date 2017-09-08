@@ -439,11 +439,9 @@ var MenuItem = function (_Exo$Text) {
   /**
    * @constructor
    * @param {String} text
-   * @param {MenuItem} [previousItem=null]
+   * @param {MenuItem} [previousItem]
    */
-  function MenuItem(text) {
-    var previousItem = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
+  function MenuItem(text, previousItem) {
     _classCallCheck(this, MenuItem);
 
     /**
@@ -456,7 +454,7 @@ var MenuItem = function (_Exo$Text) {
       fontFamily: 'AndyBold',
       outlineColor: 'black',
       outlineWidth: 5
-    }, Exo.SCALE_MODE.LINEAR));
+    }));
 
     _this._ticker = 0;
 
@@ -648,8 +646,8 @@ var LauncherScene = function (_Exo$Scene) {
              */
             this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
-            loader.on('progress', function (resource, index, length) {
-                _this2._renderProgress(index / length * 100);
+            loader.on('progress', function (length, index, resource) {
+                return _this2._renderProgress(index / length * 100);
             }).addList('sprite', {
                 'title/logo': 'image/title/logo.png',
                 'title/background': 'image/title/background.jpg'
@@ -661,7 +659,7 @@ var LauncherScene = function (_Exo$Scene) {
             }).addList('music', {
                 'title/background': 'audio/title/background.ogg',
                 'game/background': 'audio/game/background.ogg'
-            }).add('font', 'menu', 'font/AndyBold/AndyBold.woff2').load().then(function () {
+            }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2').load().then(function () {
                 return _this2.game.trigger('scene:start');
             });
 
@@ -1157,15 +1155,15 @@ var MenuManager = function () {
 
         /**
          * @public
-         * @param {Exo.DisplayManager} diplayManager
+         * @param {Exo.DisplayManager} displayManager
          * @param {Exo.Matrix} worldTransform
          */
 
     }, {
         key: 'render',
-        value: function render(diplayManager, worldTransform) {
+        value: function render(displayManager, worldTransform) {
             if (this._currentMenu) {
-                this._currentMenu.render(diplayManager, worldTransform);
+                this._currentMenu.render(displayManager, worldTransform);
             }
         }
 
@@ -1643,7 +1641,7 @@ var VersionText = function (_Exo$Text) {
             fontFamily: 'AndyBold',
             outlineColor: 'black',
             outlineWidth: 3
-        }, Exo.SCALE_MODE.LINEAR));
+        }));
 
         _this.setOrigin(1, 1);
         _this.setPosition(viewportWidth - 10, viewportHeight);

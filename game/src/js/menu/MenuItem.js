@@ -7,16 +7,16 @@ export default class MenuItem extends Exo.Text {
     /**
      * @constructor
      * @param {String} text
-     * @param {MenuItem} [previousItem=null]
+     * @param {MenuItem} [previousItem]
      */
-    constructor(text, previousItem = null) {
+    constructor(text, previousItem) {
         super(text, {
             color: 'white',
             fontSize: 45,
             fontFamily: 'AndyBold',
             outlineColor: 'black',
             outlineWidth: 5,
-        }, Exo.SCALE_MODE.LINEAR);
+        });
 
         /**
          * @private

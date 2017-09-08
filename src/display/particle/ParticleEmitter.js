@@ -307,6 +307,11 @@ export default class ParticleEmitter {
         }
     }
 
+    /**
+     * @public
+     * @param {Exo.Particle} particle
+     * @param {Exo.Time} delta
+     */
     updateParticle(particle, delta) {
         const seconds = delta.asSeconds(),
             velocity = particle.velocity;
@@ -316,8 +321,12 @@ export default class ParticleEmitter {
         particle.rotation += (seconds * particle.rotationSpeed);
     }
 
+    /**
+     * @public
+     * @param {Exo.DisplayManager} displayManager
+     * @param {Exo.Matrix} worldTransform
+     */
     render(displayManager) {
-        displayManager.setCurrentRenderer('particle');
-        displayManager.getCurrentRenderer().render(this);
+        displayManager.getRenderer('particle').render(this);
     }
 }

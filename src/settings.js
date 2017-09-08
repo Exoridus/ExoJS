@@ -1,4 +1,4 @@
-import {SCALE_MODE, WRAP_MODE} from './const';
+import {SCALE_MODE, WRAP_MODE, TEXT_GRADIENT} from './const';
 import Color from './core/Color';
 
 export default {
@@ -70,4 +70,22 @@ export default {
      * @default true
      */
     PREMULTIPLY_ALPHA: true,
+
+    /**
+     * @static
+     * @memberof Exo.settings
+     * @type {Object}
+     */
+    TEXT_STYLE: {
+        align: 'left',
+        color: 'black',
+        outlineColor: 'black',
+        outlineWidth: 0,
+        fontSize: 20,
+        fontWeight: 'bold',
+        fontFamily: 'Arial',
+        wordWrap: false,
+        wordWrapWidth: 100,
+        baseline: 'top',
+    },
 };

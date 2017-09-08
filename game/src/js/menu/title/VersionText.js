@@ -17,7 +17,7 @@ export default class VersionText extends Exo.Text {
             fontFamily: 'AndyBold',
             outlineColor: 'black',
             outlineWidth: 3,
-        }, Exo.SCALE_MODE.LINEAR);
+        });
 
         this.setOrigin(1, 1);
         this.setPosition(viewportWidth - 10, viewportHeight);
