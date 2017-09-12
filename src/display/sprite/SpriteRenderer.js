@@ -3,8 +3,7 @@ import SpriteShader from './SpriteShader';
 
 /**
  * @class SpriteRenderer
- * @extends {Exo.Renderer}
- * @memberof Exo
+ * @extends {Renderer}
  */
 export default class SpriteRenderer extends Renderer {
 
@@ -74,17 +73,17 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._currentBatchSize = 0;
+        this._batchSize = 0;
 
         /**
          * @private
-         * @member {Exo.SpriteShader}
+         * @member {SpriteShader}
          */
         this._shader = new SpriteShader();
 
         /**
          * @private
-         * @member {?Exo.Texture}
+         * @member {?Texture}
          */
         this._currentTexture = null;
 
@@ -145,28 +144,24 @@ export default class SpriteRenderer extends Renderer {
 
     /**
      * @override
-     * @param {Exo.Sprite} sprite
+     * @param {Sprite} sprite
      */
     render(sprite) {
+        if (this._currentTexture !== sprite.texture) {
+            this.flush();
+            this._currentTexture = sprite.texture;
+            this._shader.setSpriteTexture(this._currentTexture);
+        }
+
+        if (this._batchSize >= this._maxSprites) {
+            this.flush();
+        }
+
         const vertexBuffer = this._vertexView,
             colorBuffer = this._colorView,
             transform = sprite.worldTransform,
             vertexData = sprite.vertexData,
-            texture = sprite.texture,
-            textureSwap = this._currentTexture !== texture;
-
-        let index = this._currentBatchSize * this._spriteVertexSize;
-
-        if (this._currentBatchSize >= this._maxSprites || textureSwap) {
-            this.flush();
-
-            index = 0;
-
-            if (textureSwap) {
-                this._currentTexture = texture;
-                this._shader.setSpriteTexture(texture);
-            }
-        }
+            index = this._batchSize * this._spriteVertexSize;
 
         // X & Y
         vertexBuffer[index] = (vertexData[0] * transform.a) + (vertexData[1] * transform.b) + transform.x;
@@ -203,24 +198,23 @@ export default class SpriteRenderer extends Renderer {
         // Tint
         colorBuffer[index + 4] = colorBuffer[index + 9] = colorBuffer[index + 14] = colorBuffer[index + 19] = sprite.tint.rgba;
 
-        this._currentBatchSize++;
+        this._batchSize++;
     }
 
     /**
      * @override
      */
     flush() {
-        const gl = this._context,
-            batchSize = this._currentBatchSize;
+        const gl = this._context;
 
-        if (!batchSize) {
+        if (!this._batchSize) {
             return;
         }
 
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, batchSize * this._spriteVertexSize));
-        gl.drawElements(gl.TRIANGLES, batchSize * this._indexCount, gl.UNSIGNED_SHORT, 0);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, this._batchSize * this._spriteVertexSize));
+        gl.drawElements(gl.TRIANGLES, this._batchSize * this._indexCount, gl.UNSIGNED_SHORT, 0);
 
-        this._currentBatchSize = 0;
+        this._batchSize = 0;
     }
 
     /**
@@ -243,7 +237,7 @@ export default class SpriteRenderer extends Renderer {
         this._spriteVertexSize = null;
         this._indexCount = null;
         this._maxSprites = null;
-        this._currentBatchSize = null;
+        this._batchSize = null;
         this._currentTexture = null;
         this._bound = null;
     }

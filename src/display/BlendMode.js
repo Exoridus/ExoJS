@@ -1,6 +1,5 @@
 /**
  * @class BlendMode
- * @memberof Exo
  */
 export default class BlendMode {
 

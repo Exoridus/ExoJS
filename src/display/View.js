@@ -1,29 +1,28 @@
 import ObservableVector from '../core/ObservableVector';
-import Rectangle from '../core/Rectangle';
+import Rectangle from '../core/shape/Rectangle';
 import Matrix from '../core/Matrix';
-import {DEG_TO_RAD} from '../const';
+import { DEG_TO_RAD } from '../const';
 
 /**
  * @class View
- * @memberof Exo
  */
 export default class View {
 
     /**
      * @constructor
-     * @param {Exo.Rectangle} viewRectangle
+     * @param {Rectangle} viewRectangle
      */
-    constructor(viewRectangle) {
+    constructor(viewRectangle = new Rectangle(0, 0, 100, 100)) {
 
         /**
          * @private
-         * @member {Exo.ObservableVector}
+         * @member {ObservableVector}
          */
         this._center = new ObservableVector(this._setDirty, this);
 
         /**
          * @private
-         * @member {Exo.ObservableVector}
+         * @member {ObservableVector}
          */
         this._size = new ObservableVector(this._setDirty, this);
 
@@ -35,13 +34,13 @@ export default class View {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._viewport = new Rectangle(0, 0, 1, 1);
 
         /**
          * @private
-         * @member {Exo.Matrix}
+         * @member {Matrix}
          */
         this._transform = new Matrix();
 
@@ -51,7 +50,7 @@ export default class View {
          */
         this._dirtyTransform = true;
 
-        this.reset(viewRectangle || new Rectangle(0, 0, 100, 100));
+        this.reset(viewRectangle);
     }
 
     /**
@@ -110,7 +109,7 @@ export default class View {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get center() {
         return this._center;
@@ -122,7 +121,7 @@ export default class View {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get size() {
         return this._size;
@@ -146,7 +145,7 @@ export default class View {
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get viewport() {
         return this._viewport;
@@ -159,7 +158,7 @@ export default class View {
 
     /**
      * @public
-     * @member {Exo.Matrix}
+     * @member {Matrix}
      */
     get transform() {
         if (this._dirtyTransform) {
@@ -205,7 +204,7 @@ export default class View {
 
     /**
      * @public
-     * @param {Exo.Rectangle} rectangle
+     * @param {Rectangle} rectangle
      */
     setViewport(rectangle) {
         this._viewport.copy(rectangle);
@@ -238,10 +237,10 @@ export default class View {
 
     /**
      * @public
-     * @param {Exo.Rectangle} rectangle
+     * @param {Rectangle} rectangle
      */
     reset(rectangle) {
-        this._center.set(rectangle.x + (rectangle.width / 2), rectangle.y + (rectangle.height / 2));
+        this._center.set(rectangle.x + (rectangle.width / 2) | 0, rectangle.y + (rectangle.height / 2) | 0);
         this._size.set(rectangle.width, rectangle.height);
         this._rotation = 0;
         this._dirtyTransform = true;
@@ -273,6 +272,26 @@ export default class View {
         transform.c = -b * sin;
         transform.d = b * cos;
         transform.y = (b * ty) + d;
+    }
+
+    /**
+     * @public
+     */
+    destroy() {
+        this._center.destroy();
+        this._center = null;
+
+        this._size.destroy();
+        this._size = null;
+
+        this._viewport.destroy();
+        this._viewport = null;
+
+        this._transform.destroy();
+        this._transform = null;
+
+        this._rotation = null;
+        this._dirtyTransform = null;
     }
 
     /**

@@ -1,10 +1,9 @@
 import BlobFactory from './BlobFactory';
-import {getMimeType} from '../../utils';
+import { getMimeType } from '../../utils';
 
 /**
  * @class AudioFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class AudioFactory extends BlobFactory {
 

@@ -1,11 +1,10 @@
 import Shape from './Shape';
 import Rectangle from './Rectangle';
-import {SHAPE} from '../const';
+import { SHAPE } from '../../const';
 
 /**
  * @class Vector
- * @implements {Exo.Shape}
- * @memberof Exo
+ * @extends {Shape}
  */
 export default class Vector extends Shape {
 
@@ -28,22 +27,10 @@ export default class Vector extends Shape {
          * @member {Number}
          */
         this._y = y;
-
-        /**
-         * @private
-         * @member {Float32Array} _array
-         */
-
-        /**
-         * @private
-         * @member {Exo.Rectangle} _bounds
-         */
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Number}
+     * @override
      */
     get type() {
         return SHAPE.POINT;
@@ -58,7 +45,7 @@ export default class Vector extends Shape {
     }
 
     set x(value) {
-        return this._x = value;
+        this._x = value;
     }
 
     /**
@@ -70,30 +57,7 @@ export default class Vector extends Shape {
     }
 
     set y(value) {
-        return this._y = value;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        const array = this._array || (this._array = new Float32Array(2));
-
-        array[0] = this._x;
-        array[1] = this._y;
-
-        return array;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Exo.Rectangle}
-     */
-    get bounds() {
-        return this.getBounds();
+        this._y = value;
     }
 
     /**
@@ -143,7 +107,12 @@ export default class Vector extends Shape {
      * @override
      */
     toArray() {
-        return this.array;
+        const array = this._array || (this._array = new Float32Array(2));
+
+        array[0] = this._x;
+        array[1] = this._y;
+
+        return array;
     }
 
     /**
@@ -161,12 +130,12 @@ export default class Vector extends Shape {
      * @override
      */
     contains(shape) {
-        return shape.type === SHAPE.POINT && (this._x === shape.x && this._y === shape.y);
+        return (shape.type === SHAPE.POINT) && (this._x === shape.x && this._y === shape.y);
     }
 
     /**
      * @public
-     * @param {Exo.Vector} vector
+     * @param {Vector} vector
      * @returns {Number}
      */
     distanceTo(vector) {
@@ -181,7 +150,7 @@ export default class Vector extends Shape {
      * @chainable
      * @param {Number} [x=0]
      * @param {Number} [y=0]
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     add(x = 0, y = 0) {
         this._x += x;
@@ -195,7 +164,7 @@ export default class Vector extends Shape {
      * @chainable
      * @param {Number} [x=0]
      * @param {Number} [y=0]
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     subtract(x = 0, y = 0) {
         this._x -= x;
@@ -209,7 +178,7 @@ export default class Vector extends Shape {
      * @chainable
      * @param {Number} [x=1]
      * @param {Number} [y=1]
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     multiply(x = 1, y = 1) {
         this._x *= x;
@@ -223,7 +192,7 @@ export default class Vector extends Shape {
      * @chainable
      * @param {Number} [x=1]
      * @param {Number} [y=1]
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     divide(x = 1, y = 1) {
         this._x /= x;
@@ -235,7 +204,7 @@ export default class Vector extends Shape {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     normalize() {
         const mag = this.magnitude;
@@ -250,14 +219,7 @@ export default class Vector extends Shape {
      * @override
      */
     destroy() {
-        if (this._array) {
-            this._array = null;
-        }
-
-        if (this._bounds) {
-            this._bounds.destroy();
-            this._bounds = null;
-        }
+        super.destroy();
 
         this._x = null;
         this._y = null;

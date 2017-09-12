@@ -2,8 +2,7 @@ import Animation from './Animation';
 
 /**
  * @class FadeAnimation
- * @implements {Exo.Animation}
- * @memberof Exo
+ * @implements {Animation}
  */
 export default class FadeAnimation extends Animation {
 

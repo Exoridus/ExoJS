@@ -1,13 +1,25 @@
 import Sprite from './Sprite';
 import Texture from '../Texture';
 import settings from '../../settings';
+import { NEWLINE } from '../../const';
 
-const heightCache = new Map();
+const heightCache = new Map(),
+    body = document.querySelector('body'),
+    dummy = ((element) => {
+        element.appendChild(document.createTextNode('M'));
+
+        Object.assign(element.style, {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+        });
+
+        return element;
+    })(document.createElement('div'));
 
 /**
  * @class Text
- * @extends {Exo.Sprite}
- * @memberof Exo
+ * @extends {Sprite}
  */
 export default class Text extends Sprite {
 
@@ -36,28 +48,22 @@ export default class Text extends Sprite {
          * @private
          * @member {String}
          */
-        this._text = text || ' ';
+        this._text = null;
 
         /**
          * @private
          * @member {Object}
          */
-        this._style = Object.assign({}, settings.TEXT_STYLE, style);
+        this._style = null;
 
-        this.updateTexture();
-    }
+        /**
+         * @private
+         * @type {Boolean}
+         */
+        this._dirty = false;
 
-    /**
-     * @public
-     * @member {HTMLCanvasElement}
-     */
-    get canvas() {
-        return this._canvas;
-    }
-
-    set canvas(value) {
-        this._canvas = value;
-        this.updateTexture();
+        this.text = text;
+        this.style = style;
     }
 
     /**
@@ -73,7 +79,7 @@ export default class Text extends Sprite {
 
         if (this._text !== text) {
             this._text = text;
-            this.updateTexture();
+            this._dirty = true;
         }
     }
 
@@ -87,110 +93,123 @@ export default class Text extends Sprite {
 
     set style(style) {
         this._style = Object.assign({}, settings.TEXT_STYLE, style);
-        this.updateTexture();
+        this._dirty = true;
     }
 
     /**
      * @public
      */
-    updateTexture() {
+    updatateText() {
+        if (!this._dirty) {
+            return;
+        }
+
         const canvas = this._canvas,
             context = this._context,
             style = this._style,
+            font = context.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`,
+            strokeThickness = style.strokeThickness,
             text = style.wordWrap ? this._getWordWrappedText() : this._text,
-            font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`,
-            outlineWidth = style.outlineWidth,
-            lines = text.split(/(?:\r\n|\r|\n)/),
-            linesLen = lines.length,
-            lineWidths = [],
-            lineHeight = this._determineFontHeight(font) + outlineWidth;
+            lines = text.split(NEWLINE),
+            lineWidths = lines.map((line) => context.measureText(line).width),
+            maxLineWidth = lineWidths.reduce((max, width) => Math.max(max, width), 0),
+            lineHeight = this._determineFontHeight(font) + strokeThickness,
+            width = Math.ceil(maxLineWidth + strokeThickness + style.padding * 2),
+            height = Math.ceil(lineHeight * lines.length + style.padding * 2);
 
-        let maxLineWidth = 0;
+        canvas.width = width;
+        canvas.height = height;
 
-        // set canvas text styles
+        context.clearRect(0, 0, width, height);
+
         context.font = font;
 
-        for (let i = 0; i < linesLen; i++) {
-            const lineWidth = context.measureText(lines[i]).width;
-
-            lineWidths[i] = lineWidth;
-            maxLineWidth = Math.max(maxLineWidth, lineWidth);
-        }
-
-        canvas.width = maxLineWidth + outlineWidth;
-        canvas.height = lineHeight * lines.length;
-
-        // set canvas text styles
-        context.fillStyle = style.color;
-        context.font = font;
-        context.strokeStyle = style.outlineColor;
-        context.lineWidth = outlineWidth;
+        context.strokeStyle = style.stroke;
+        context.lineWidth = style.strokeThickness;
+        context.fillStyle = style.fill;
         context.textBaseline = style.baseline;
+        context.lineJoin = style.lineJoin;
+        context.miterLimit = style.miterLimit;
 
-        // draw lines line by line
-        for (let i = 0; i < linesLen; i++) {
-            const linePositionY = (outlineWidth / 2) + (i * lineHeight);
-            let linePositionX = outlineWidth / 2;
+        lines.forEach((line, index) => {
+            const lineWidth = (maxLineWidth - lineWidths[index]),
+                offset = (style.align === 'right') ? lineWidth : (style.align === 'center') ? lineWidth / 2 : 0,
+                lineX = (strokeThickness / 2) + (style.align === 'left' ? 0 : offset),
+                lineY = (strokeThickness / 2) + (lineHeight * index);
 
-            if (style.align === 'right') {
-                linePositionX += maxLineWidth - lineWidths[i];
-            } else if (style.align === 'center') {
-                linePositionX += (maxLineWidth - lineWidths[i]) / 2;
+            if (style.stroke && strokeThickness) {
+                context.strokeText(line, lineX, lineY);
             }
 
-            if (style.outlineColor && style.outlineWidth) {
-                context.strokeText(lines[i], linePositionX, linePositionY);
+            if (style.fill) {
+                context.fillText(line, lineX, lineY);
             }
+        });
 
-            if (style.color) {
-                context.fillText(lines[i], linePositionX, linePositionY);
-            }
-        }
+        this.setTexture(this.texture.setSource(this._canvas));
 
-        this.setTexture(this.texture.setSource(canvas));
+        this._dirty = false;
     }
 
     /**
+     * @override
+     */
+    render(displayManager, parentTransform) {
+        this.updatateText();
+
+        super.render(displayManager, parentTransform);
+
+        return this;
+    }
+
+    /**
+     * @public
+     */
+    destroy() {
+        super.destroy();
+
+        this._context = null;
+        this._canvas = null;
+        this._text = null;
+        this._style = null;
+        this._dirty = null;
+    }
+
+    /**
+     * Greedy wrapping algorithm that will wrap words as the line grows longer
+     * than its horizontal bounds.
+     *
      * @private
      * @returns {String}
      */
     _getWordWrappedText() {
-        // Greedy wrapping algorithm that will wrap words as the line grows longer
-        // than its horizontal bounds.
-        const context = this._context,
-            lines = this._text.split('\n'),
-            linesLen = lines.length;
+        const context = this._context;
 
         let spaceLeft = this._style.wordWrapWidth,
             result = '';
 
-        for (let i = 0; i < linesLen; i++) {
-            const words = lines[i].split(' '),
-                wordsLen = words.length;
+        this._text.split('\n').forEach((line, index) => {
+            if (index > 0) {
+                result += '\n';
+            }
 
-            for (let j = 0; j < wordsLen; j++) {
-                const wordWidth = context.measureText(words[j]).width,
-                    wordWidthWithSpace = wordWidth + context.measureText(' ').width;
+            line.split(' ').forEach((word, index) => {
+                const wordWidth = context.measureText(word).width,
+                    spaceWidth = context.measureText(' ').width;
 
-                if (wordWidthWithSpace > spaceLeft) {
-                    // Skip printing the newline if it's the first word of the line that is
-                    // greater than the word wrap width.
-                    if (j > 0) {
+                if (wordWidth + spaceWidth > spaceLeft) {
+                    if (index > 0) {
                         result += '\n';
                     }
 
                     spaceLeft -= wordWidth;
                 } else {
-                    spaceLeft -= wordWidthWithSpace;
+                    spaceLeft -= wordWidth + spaceWidth;
                 }
 
-                result += `${words[j]} `;
-            }
-
-            if (i < linesLen - 1) {
-                result += '\n';
-            }
-        }
+                result += `${word} `;
+            });
+        });
 
         return result;
     }
@@ -202,11 +221,7 @@ export default class Text extends Sprite {
      */
     _determineFontHeight(font) {
         if (!heightCache.has(font)) {
-            const body = document.getElementsByTagName('body')[0],
-                dummy = document.createElement('div');
-
-            dummy.appendChild(document.createTextNode('M'));
-            dummy.setAttribute('style', `font: ${font};position:absolute;top:0;left:0`);
+            dummy.style.font = font;
 
             body.appendChild(dummy);
             heightCache.set(font, dummy.offsetHeight);

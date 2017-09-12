@@ -2,7 +2,6 @@ import Time from './Time';
 
 /**
  * @class Clock
- * @memberof Exo
  */
 export default class Clock {
 
@@ -32,7 +31,7 @@ export default class Clock {
 
         /**
          * @private
-         * @member {Exo.Time}
+         * @member {Time}
          */
         this._time = new Time();
 
@@ -53,7 +52,7 @@ export default class Clock {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Clock}
+     * @returns {Clock}
      */
     start() {
         if (this._isRunning) {
@@ -69,7 +68,7 @@ export default class Clock {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Clock}
+     * @returns {Clock}
      */
     stop() {
         if (!this._isRunning) {
@@ -85,7 +84,7 @@ export default class Clock {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Clock}
+     * @returns {Clock}
      */
     reset() {
         this._timeBuffer = 0;
@@ -97,10 +96,11 @@ export default class Clock {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Clock}
+     * @returns {Clock}
      */
     restart() {
-        return this.reset().start();
+        return this.reset()
+            .start();
     }
 
     /**
@@ -133,7 +133,7 @@ export default class Clock {
 
     /**
      * @public
-     * @returns {Exo.Time}
+     * @returns {Time}
      */
     getElapsedTime() {
         return this._time.setMilliseconds(this.getElapsedMilliseconds());

@@ -1,11 +1,10 @@
 import Renderable from './Renderable';
-import Vector from '../core/Vector';
-import {removeItems} from '../utils';
+import Vector from '../core/shape/Vector';
+import { removeItems } from '../utils';
 
 /**
  * @class Container
- * @extends {Exo.Renderable}
- * @memberof Exo
+ * @extends {Renderable}
  */
 export default class Container extends Renderable {
 
@@ -17,13 +16,13 @@ export default class Container extends Renderable {
 
         /**
          * @private
-         * @member {Exo.Renderable[]}
+         * @member {Renderable[]}
          */
         this._children = [];
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._size = new Vector();
     }
@@ -31,7 +30,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @readonly
-     * @member {Exo.Renderable[]}
+     * @member {Renderable[]}
      */
     get children() {
         return this._children;
@@ -39,7 +38,7 @@ export default class Container extends Renderable {
 
     /**
      * @public
-     * @member {Exo.Renderable|Exo.Container}
+     * @member {Renderable|Container}
      */
     get parent() {
         return this._parent;
@@ -51,7 +50,7 @@ export default class Container extends Renderable {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get size() {
         return this._size;
@@ -88,8 +87,8 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Renderable} child
-     * @returns {Exo.Container}
+     * @param {Renderable} child
+     * @returns {Container}
      */
     addChild(child) {
         if (child === this) {
@@ -110,9 +109,9 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Renderable} child
+     * @param {Renderable} child
      * @param {Number} index
-     * @returns {Exo.Container}
+     * @returns {Container}
      */
     addChildAt(child, index) {
         if (index < 0 || index > this._children.length) {
@@ -137,9 +136,9 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Renderable} firstChild
-     * @param {Exo.Renderable} secondChild
-     * @returns {Exo.Container}
+     * @param {Renderable} firstChild
+     * @param {Renderable} secondChild
+     * @returns {Container}
      */
     swapChildren(firstChild, secondChild) {
         if (firstChild === secondChild) {
@@ -154,7 +153,7 @@ export default class Container extends Renderable {
 
     /**
      * @public
-     * @param {Exo.Renderable} child
+     * @param {Renderable} child
      * @returns {Number}
      */
     getChildIndex(child) {
@@ -170,9 +169,9 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Renderable} child
+     * @param {Renderable} child
      * @param {Number} index
-     * @returns {Exo.Container}
+     * @returns {Container}
      */
     setChildIndex(child, index) {
         if (index < 0 || index >= this._children.length) {
@@ -188,7 +187,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @param {Number} index
-     * @returns {Exo.Renderable}
+     * @returns {Renderable}
      */
     getChildAt(index) {
         if (index < 0 || index >= this._children.length) {
@@ -201,8 +200,8 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Renderable} child
-     * @returns {Exo.Container}
+     * @param {Renderable} child
+     * @returns {Container}
      */
     removeChild(child) {
         const index = this._children.indexOf(child);
@@ -221,7 +220,7 @@ export default class Container extends Renderable {
      * @public
      * @chainable
      * @param {Number} index
-     * @returns {Exo.Container}
+     * @returns {Container}
      */
     removeChildAt(index) {
         this.getChildAt(index).parent = null;
@@ -235,7 +234,7 @@ export default class Container extends Renderable {
      * @chainable
      * @param {Number} begin
      * @param {Number} end
-     * @returns {Exo.Container}
+     * @returns {Container}
      */
     removeChildren(begin = 0, end = this._children.length) {
         const range = (end - begin);

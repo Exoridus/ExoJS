@@ -22,7 +22,7 @@ window.game.start(new Exo.Scene({
     },
 
     update(delta) {
-        this.bunny.rotate(delta.asSeconds() * 360);
+        this.bunny.rotate(delta.seconds * 360);
 
         this.game
             .trigger('display:begin')

@@ -23,18 +23,6 @@ window.game.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Exo.Color}
-         */
-        this.color = new Exo.Color();
-
-        /**
-         * @private
-         * @member {Exo.Vector}
-         */
-        this.velocity = new Exo.Vector();
-
-        /**
-         * @private
          * @member {Exo.Random}
          */
         this.random = new Exo.Random();
@@ -45,7 +33,7 @@ window.game.start(new Exo.Scene({
          */
         this.emitter = new Exo.ParticleEmitter(this.texture);
         this.emitter.emissionRate = 30;
-        this.emitter.particleLifeTime = new Exo.Time(5, Exo.Time.Seconds);
+        this.emitter.particleLifetime = new Exo.Time(5, Exo.Time.Seconds);
         this.emitter.addModifier(new Exo.TorqueModifier(100));
         this.emitter.addModifier(new Exo.ForceModifier(new Exo.Vector(0, 100)));
 
@@ -61,11 +49,12 @@ window.game.start(new Exo.Scene({
         const emitter = this.emitter,
             random = this.random;
 
-        emitter.particleColor = this.color.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
-        emitter.particleVelocity = this.velocity.set(random.next(-100, 100), random.next(-100, 0));
+        emitter.particleColor.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
+        emitter.particleVelocity.set(random.next(-100, 100), random.next(-100, 0));
         emitter.update(delta);
 
-        this.game.trigger('display:begin')
+        this.game
+            .trigger('display:begin')
             .trigger('display:render', emitter)
             .trigger('display:end');
     },

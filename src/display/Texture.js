@@ -1,11 +1,10 @@
-import Vector from '../core/Vector';
+import Vector from '../core/shape/Vector';
 import settings from '../settings';
-import Rectangle from '../core/Rectangle';
+import Rectangle from '../core/shape/Rectangle';
 import GLTexture from './GLTexture';
 
 /**
  * @class Texture
- * @memberof Exo
  */
 export default class Texture {
 
@@ -13,11 +12,11 @@ export default class Texture {
      * @constructor
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
      * @param {Number} [options]
-     * @param {Number} [options.scaleMode=Exo.settings.SCALE_MODE]
-     * @param {Number} [options.wrapMode=Exo.settings.WRAP_MODE]
-     * @param {Boolean} [options.premultiplyAlpha=Exo.settings.PREMULTIPLY_ALPHA]
+     * @param {Number} [options.scaleMode]
+     * @param {Number} [options.wrapMode]
+     * @param {Boolean} [options.premultiplyAlpha]
      */
-    constructor(source, { scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
+    constructor(source, options) {
 
         /**
          * @private
@@ -27,33 +26,15 @@ export default class Texture {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._scaleMode = scaleMode;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._wrapMode = wrapMode;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._premultiplyAlpha = premultiplyAlpha;
-
-        /**
-         * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._frame = new Rectangle();
 
         /**
          * @private
-         * @member {Exo.GLTexture}
+         * @member {GLTexture}
          */
-        this._glTexture = new GLTexture({ source, scaleMode, wrapMode, premultiplyAlpha });
+        this._glTexture = new GLTexture(options);
 
         if (source !== undefined) {
             this.setSource(source);
@@ -77,11 +58,11 @@ export default class Texture {
      * @member {Number}
      */
     get scaleMode() {
-        return this._scaleMode;
+        return this._glTexture.scaleMode;
     }
 
     set scaleMode(value) {
-        this._glTexture.scaleMode = value;
+        this._glTexture.setScaleMode(value);
     }
 
     /**
@@ -89,14 +70,11 @@ export default class Texture {
      * @member {Number}
      */
     get wrapMode() {
-        return this._wrapMode;
+        return this._glTexture.wrapMode;
     }
 
     set wrapMode(value) {
-        if (this._wrapMode !== value) {
-            this._wrapMode = value;
-            this._glTexture.wrapMode = value;
-        }
+        this._glTexture.setWrapMode(value);
     }
 
     /**
@@ -104,29 +82,26 @@ export default class Texture {
      * @member {Boolean}
      */
     get premultiplyAlpha() {
-        return this._premultiplyAlpha;
+        return this._glTexture.premultiplyAlpha;
     }
 
     set premultiplyAlpha(value) {
-        this.setPremultiplyAlpha(value);
-    }
-
-    /**
-     * @public
-     * @member {?Exo.GLTexture}
-     */
-    get glTexture() {
-        return this._glTexture;
-    }
-
-    set glTexture(value) {
-        this._glTexture = value;
+        this._glTexture.setPremultiplyAlpha(value);
     }
 
     /**
      * @public
      * @readonly
-     * @member {Exo.Rectangle}
+     * @member {GLTexture}
+     */
+    get glTexture() {
+        return this._glTexture;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Rectangle}
      */
     get frame() {
         return this._frame;
@@ -135,7 +110,7 @@ export default class Texture {
     /**
      * @public
      * @readonly
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get size() {
         return this._frame.size;
@@ -162,55 +137,33 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {Number} scaleMode
-     * @returns {Exo.GLTexture}
-     */
-    setScaleMode(scaleMode) {
-        this._glTexture.setScaleMode(scaleMode);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} wrapMode
-     * @returns {Exo.GLTexture}
-     */
-    setWrapMode(wrapMode) {
-        this._glTexture.setWrapMode(wrapMode);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Boolean} premultiplyAlpha
-     * @returns {Exo.GLTexture}
-     */
-    setPremultiplyAlpha(premultiplyAlpha) {
-        this._glTexture.setPremultiplyAlpha(premultiplyAlpha);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
-     * @returns {Exo.Texture}
+     * @returns {Texture}
      */
     setSource(source) {
-        this._source = source;
-
-        if (source) {
-            this._frame.set(0, 0, source.videoWidth || source.width, source.videoHeight || source.height);
-        } else {
-            this._frame.set(0, 0, 0, 0);
+        if (this._source !== source) {
+            this._source = source;
         }
 
         this._glTexture.setSource(source);
+        this.updateFrame();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Texture}
+     */
+    updateFrame() {
+        const source = this._source;
+
+        if (source) {
+            this._frame.set(0, 0, (source.videoWidth || source.width), (source.videoHeight || source.height));
+        } else {
+            this._frame.reset();
+        }
 
         return this;
     }
@@ -220,9 +173,6 @@ export default class Texture {
      */
     destroy() {
         this._source = null;
-        this._scaleMode = null;
-        this._wrapMode = null;
-        this._premultiplyAlpha = null;
 
         this._frame.destroy();
         this._frame = null;

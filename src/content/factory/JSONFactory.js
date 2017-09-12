@@ -2,8 +2,7 @@ import ResourceFactory from '../ResourceFactory';
 
 /**
  * @class JSONFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class JSONFactory extends ResourceFactory {
 

@@ -4,8 +4,7 @@ import * as Factories from './factory';
 
 /**
  * @class ResourceLoader
- * @extends {Exo.EventEmitter}
- * @memberof Exo
+ * @extends {EventEmitter}
  */
 export default class ResourceLoader extends EventEmitter {
 
@@ -25,13 +24,13 @@ export default class ResourceLoader extends EventEmitter {
 
         /**
          * @private
-         * @member {Exo.ResourceContainer}
+         * @member {ResourceContainer}
          */
         this._resources = new ResourceContainer();
 
         /**
          * @private
-         * @member {Map<String, Exo.ResourceFactory>}
+         * @member {Map<String, ResourceFactory>}
          */
         this._factories = new Map();
 
@@ -62,13 +61,14 @@ export default class ResourceLoader extends EventEmitter {
             .addFactory('sound', new Factories.SoundFactory())
             .addFactory('sprite', new Factories.SpriteFactory())
             .addFactory('string', new Factories.StringFactory())
-            .addFactory('texture', new Factories.TextureFactory());
+            .addFactory('texture', new Factories.TextureFactory())
+            .addFactory('video', new Factories.VideoFactory());
     }
 
     /**
      * @public
      * @readonly
-     * @member {Exo.ResourceContainer}
+     * @member {ResourceContainer}
      */
     get resources() {
         return this._resources;
@@ -102,8 +102,8 @@ export default class ResourceLoader extends EventEmitter {
      * @public
      * @chainable
      * @param {String} type
-     * @param {Exo.ResourceFactory} factory
-     * @returns {Exo.ResourceLoader}
+     * @param {ResourceFactory} factory
+     * @returns {ResourceLoader}
      */
     addFactory(type, factory) {
         this._factories.set(type, factory);
@@ -116,7 +116,7 @@ export default class ResourceLoader extends EventEmitter {
      * @public
      * @chainable
      * @param {String} type
-     * @returns {Exo.ResourceFactory}
+     * @returns {ResourceFactory}
      */
     getFactory(type) {
         if (!this._factories.has(type)) {
@@ -153,7 +153,7 @@ export default class ResourceLoader extends EventEmitter {
      * @param {String} item.type
      * @param {String} item.name
      * @param {String} item.path
-     * @param {Object} item.options
+     * @param {Object} [item.options]
      * @returns {Promise<*>}
      */
     loadItem({ type, name, path, options } = {}) {
@@ -193,14 +193,19 @@ export default class ResourceLoader extends EventEmitter {
      * @param {String} name
      * @param {String} path
      * @param {Object} [options]
-     * @returns {Exo.ResourceLoader}
+     * @returns {ResourceLoader}
      */
     addItem(type, name, path, options) {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }
 
-        this._queue.add({ type, name, path, options });
+        this._queue.add({
+            type,
+            name,
+            path,
+            options,
+        });
 
         return this;
     }
@@ -211,7 +216,7 @@ export default class ResourceLoader extends EventEmitter {
      * @param {String} type
      * @param {Map<String, String>|Object<String, String>} list
      * @param {Object} [options]
-     * @returns {Exo.ResourceLoader}
+     * @returns {ResourceLoader}
      */
     addList(type, list, options) {
         const items = (list instanceof Map) ? list : Object.entries(list);
@@ -226,7 +231,7 @@ export default class ResourceLoader extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @returns {Exo.ResourceLoader}
+     * @returns {ResourceLoader}
      */
     reset() {
         this._resources.clear();

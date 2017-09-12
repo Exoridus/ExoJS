@@ -1,17 +1,21 @@
 import ChannelHandler from './ChannelHandler';
-import Vector from '../core/Vector';
-import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../const';
+import Vector from '../core/shape/Vector';
+import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
+
+const SCALE_MODE_DIRTY = 0x01,
+    WRAP_MODE_DIRTY = 0x02,
+    PREMULTIPLY_ALPHA_DIRTY = 0x04,
+    SOURCE_DIRTY = 0x08;
 
 /**
  * @class Mouse
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class Mouse extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
@@ -19,7 +23,7 @@ export default class Mouse extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = game;
 
@@ -31,42 +35,47 @@ export default class Mouse extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._position = new Vector();
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {Number}
          */
-        this._insideWindow = false;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._positionChanged = false;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._wheelChanged = false;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._stateChanged = false;
+        this._dirty = 0;
 
         this._addEventListeners();
+
+        /**
+         * @event Mouse#leave
+         * @member {Function}
+         * @property {Mouse} mouse
+         */
+
+        /**
+         * @event Mouse#enter
+         * @member {Function}
+         * @property {Mouse} mouse
+         */
+
+        /**
+         * @event Mouse#move
+         * @member {Function}
+         * @property {Mouse} mouse
+         */
+
+        /**
+         * @event Mouse#scroll
+         * @member {Function}
+         * @property {Mouse} mouse
+         */
     }
 
     /**
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get position() {
         return this._position;
@@ -76,7 +85,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get x() {
         return this._position.x;
@@ -86,7 +94,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get y() {
         return this._position.y;
@@ -95,18 +102,7 @@ export default class Mouse extends ChannelHandler {
     /**
      * @public
      * @readonly
-     * @member {Boolean}
-     * @memberof Mouse
-     */
-    get isInsideFrame() {
-        return this._insideWindow;
-    }
-
-    /**
-     * @public
-     * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get wheelX() {
         return this._channels[5] - this._channels[6];
@@ -116,7 +112,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get wheelY() {
         return this._channels[7] - this._channels[8];
@@ -126,7 +121,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get wheelZ() {
         return this._channels[9] - this._channels[10];
@@ -136,7 +130,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get deltaX() {
         return this._channels[11] - this._channels[12];
@@ -146,7 +139,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Number}
-     * @memberof Mouse
      */
     get deltaY() {
         return this._channels[13] - this._channels[14];
@@ -156,7 +148,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Boolean}
-     * @memberof Mouse
      */
     get hasEnteredWindow() {
         return !!this._channels[15];
@@ -166,7 +157,6 @@ export default class Mouse extends ChannelHandler {
      * @public
      * @readonly
      * @member {Boolean}
-     * @memberof Mouse
      */
     get hasLeftWindow() {
         return !!this._channels[16];
@@ -180,62 +170,26 @@ export default class Mouse extends ChannelHandler {
      * @fires Mouse#scroll
      */
     update() {
-        const game = this._game;
-
         if (!this.active) {
             return;
         }
 
-        if (this._stateChanged) {
-            this._insideWindow = this.hasEnteredWindow;
-
-            if (this._insideWindow) {
-
-                /**
-                 * @event Exo.Mouse#enter
-                 * @member {Function}
-                 * @property {Exo.Mouse} mouse
-                 */
-                game.trigger('mouse:enter', this);
-            } else {
-
-                /**
-                 * @event Exo.Mouse#leave
-                 * @member {Function}
-                 * @property {Exo.Mouse} mouse
-                 */
-                game.trigger('mouse:leave', this);
-            }
-
-            this._setStateDelta(0);
-            this._stateChanged = false;
+        if (this._wheelChanged) {
+            this._game.trigger('mouse:scroll', this);
+            this._wheelChanged = false;
         }
 
         if (this._positionChanged) {
-
-            /**
-             * @event Exo.Mouse#move
-             * @member {Function}
-             * @property {Exo.Mouse} mouse
-             */
-            game.trigger('mouse:move', this);
-
-            this._setPositionDelta(0, 0);
+            this._game.trigger('mouse:move', this);
             this._positionChanged = false;
         }
 
-        if (this._wheelChanged) {
-
-            /**
-             * @event Exo.Mouse#scroll
-             * @member {Function}
-             * @property {Exo.Mouse} mouse
-             */
-            game.trigger('mouse:scroll', this);
-
-            this._setWheelDelta(0, 0, 0);
-            this._wheelChanged = false;
+        if (this._stateChanged) {
+            this._game.trigger(this.hasEnteredWindow ? 'mouse:enter' : 'mouse:leave', this);
+            this._stateChanged = false;
         }
+
+        this.channels.fill(0, 5);
     }
 
     /**
@@ -245,9 +199,9 @@ export default class Mouse extends ChannelHandler {
         super.destroy();
 
         this._removeEventListeners();
-        this._stateChanged = null;
-        this._positionChanged = null;
         this._wheelChanged = null;
+        this._positionChanged = null;
+        this._stateChanged = null;
         this._game = null;
     }
 
@@ -317,11 +271,12 @@ export default class Mouse extends ChannelHandler {
      * @param {MouseEvent} event
      */
     _onMouseDown(event) {
+        event.preventDefault();
+
         const button = Math.min(event.button, 4);
 
-        this._channels[button] = 1;
+        this.channels[button] = 1;
         this._game.trigger('mouse:down', Mouse.getChannelCode(button), this);
-        event.preventDefault();
     }
 
     /**
@@ -329,11 +284,12 @@ export default class Mouse extends ChannelHandler {
      * @param {MouseEvent} event
      */
     _onMouseUp(event) {
+        event.preventDefault();
+
         const button = Math.min(event.button, 4);
 
-        this._channels[button] = 0;
+        this.channels[button] = 0;
         this._game.trigger('mouse:up', Mouse.getChannelCode(button), this);
-        event.preventDefault();
     }
 
     /**
@@ -341,11 +297,21 @@ export default class Mouse extends ChannelHandler {
      * @param {MouseEvent} event
      */
     _onMouseMove(event) {
-        const rect = this._canvas.getBoundingClientRect(),
-            x = (event.clientX - rect.left),
-            y = (event.clientY - rect.top);
+        event.preventDefault();
 
-        this._setPositionDelta(x - this.x, y - this.y);
+        const channels = this.channels,
+            bounds = this._canvas.getBoundingClientRect(),
+            x = (event.clientX - bounds.left),
+            y = (event.clientY - bounds.top),
+            deltaX = x - this.x,
+            deltaY = y - this.y;
+
+        channels[11] = Math.abs(Math.min(0, deltaX));
+        channels[12] = Math.max(0, deltaX);
+
+        channels[13] = Math.abs(Math.min(0, deltaY));
+        channels[14] = Math.max(0, deltaY);
+
         this._position.set(x, y);
         this._positionChanged = true;
     }
@@ -354,14 +320,24 @@ export default class Mouse extends ChannelHandler {
      * @private
      */
     _onMouseOver() {
-        this._setStateDelta(1);
+        const channels = this.channels;
+
+        channels[15] = 1;
+        channels[16] = 0;
+
+        this._stateChanged = true;
     }
 
     /**
      * @private
      */
     _onMouseOut() {
-        this._setStateDelta(-1);
+        const channels = this.channels;
+
+        channels[15] = 0;
+        channels[16] = 1;
+
+        this._stateChanged = true;
     }
 
     /**
@@ -369,18 +345,10 @@ export default class Mouse extends ChannelHandler {
      * @param {WheelEvent} event
      */
     _onMouseWheel(event) {
-        this._setWheelDelta(event.deltaX, event.deltaY, event.deltaZ);
-        this._wheelChanged = true;
-    }
-
-    /**
-     * @param {Number} deltaX
-     * @param {Number} deltaY
-     * @param {Number} deltaZ
-     * @memberof Mouse
-     */
-    _setWheelDelta(deltaX, deltaY, deltaZ) {
-        const channels = this.channels;
+        const channels = this.channels,
+            deltaX = event.deltaX,
+            deltaY = event.deltaY,
+            deltaZ = event.deltaZ;
 
         channels[5] = Math.abs(Math.min(0, deltaX));
         channels[6] = Math.max(0, deltaX);
@@ -390,36 +358,8 @@ export default class Mouse extends ChannelHandler {
 
         channels[9] = Math.abs(Math.min(0, deltaZ));
         channels[10] = Math.max(0, deltaZ);
-    }
 
-    /**
-     * @param {Number} deltaX
-     * @param {Number} deltaY
-     * @memberof Mouse
-     */
-    _setPositionDelta(deltaX, deltaY) {
-        const channels = this.channels;
-
-        channels[11] = Math.abs(Math.min(0, deltaX));
-        channels[12] = Math.max(0, deltaX);
-
-        channels[13] = Math.abs(Math.min(0, deltaY));
-        channels[14] = Math.max(0, deltaY);
-    }
-
-    /**
-     *  1 = enter
-     *  0 = nothing
-     * -1 = leave
-     *
-     * @param {Number} delta
-     * @memberof Mouse
-     */
-    _setStateDelta(delta) {
-        const channels = this.channels;
-
-        channels[15] = Math.max(0, delta);
-        channels[16] = Math.abs(Math.min(0, delta));
+        this._wheelChanged = true;
     }
 
     /**
@@ -429,7 +369,17 @@ export default class Mouse extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return CHANNEL_OFFSET.MOUSE + (key & 255);
+        return CHANNEL_OFFSET.MOUSE + (key % CHANNEL_LENGTH.DEVICE);
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Number} channel
+     * @returns {Number}
+     */
+    static getKey(channel) {
+        return channel % CHANNEL_LENGTH.DEVICE;
     }
 }
 

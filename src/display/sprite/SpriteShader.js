@@ -1,10 +1,9 @@
 import Shader from '../Shader';
-import {UNIFORM_TYPE} from '../../const';
+import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../../const';
 
 /**
  * @class SpriteShader
- * @extends {Exo.Shader}
- * @memberof Exo
+ * @extends {Shader}
  */
 export default class SpriteShader extends Shader {
 
@@ -46,46 +45,48 @@ export default class SpriteShader extends Shader {
             '}',
         ]);
 
-        this.setAttributes({
-            aVertexPosition: true,
-            aTextureCoord: true,
-            aColor: true,
-        });
+        this.setAttributes([{
+            name: 'aVertexPosition',
+            type: ATTRIBUTE_TYPE.FLOAT,
+            size: 2,
+            normalized: false,
+        }, {
+            name: 'aTextureCoord',
+            type: ATTRIBUTE_TYPE.FLOAT,
+            size: 2,
+            normalized: false,
+        }, {
+            name: 'aColor',
+            type: ATTRIBUTE_TYPE.UNSIGNED_BYTE,
+            size: 4,
+            normalized: true,
+        }]);
 
-        this.setUniforms({
-            uSampler: UNIFORM_TYPE.TEXTURE,
-            projectionMatrix: UNIFORM_TYPE.MATRIX
-        });
-    }
-
-    /**
-     * @override
-     */
-    bindAttributePointers() {
-        const gl = this._context,
-            stride = 20;
-
-        this.getAttribute('aVertexPosition').setPointer(2, gl.FLOAT, false, stride, 0);
-        this.getAttribute('aTextureCoord').setPointer(2, gl.FLOAT, false, stride, 8);
-        this.getAttribute('aColor').setPointer(4, gl.UNSIGNED_BYTE, true, stride, 16);
-    }
-
-    /**
-     * @override
-     */
-    setProjection(projection) {
-        this.getUniform('projectionMatrix')
-            .setValue(projection.toArray());
+        this.setUniforms([{
+            name: 'projectionMatrix',
+            type: UNIFORM_TYPE.FLOAT_MAT3,
+        }, {
+            name: 'uSampler',
+            type: UNIFORM_TYPE.SAMPLER_2D,
+            unit: 0,
+        }]);
     }
 
     /**
      * @public
-     * @param {Exo.Texture} texture
+     * @param {Matrix} projection
+     */
+    setProjection(projection) {
+        this.getUniform('projectionMatrix')
+            .setMatrix(projection);
+    }
+
+    /**
+     * @public
+     * @param {Texture} texture
      */
     setSpriteTexture(texture) {
-        const uniform = this.getUniform('uSampler');
-
-        uniform.setTextureUnit(0)
-        uniform.setValue(texture);
+        this.getUniform('uSampler')
+            .setTexture(texture, 0);
     }
 }

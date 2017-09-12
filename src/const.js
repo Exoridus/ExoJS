@@ -5,7 +5,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo
      * @type {String}
      */
     VERSION = __VERSION__,
@@ -15,7 +14,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo
      * @type {Number}
      */
     TAU = Math.PI * 2,
@@ -25,7 +23,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo
      * @type {Number}
      */
     DEG_TO_RAD = Math.PI / 180,
@@ -35,7 +32,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo
      * @type {Number}
      */
     RAD_TO_DEG = 180 / Math.PI,
@@ -43,9 +39,9 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name SHAPE
      * @type {Object<String, Number>}
+     * @property {Number} NONE
      * @property {Number} POLYGON
      * @property {Number} RECTANGLE
      * @property {Number} CIRCLE
@@ -53,17 +49,17 @@ export const
      * @property {Number} POINT
      */
     SHAPE = {
-        POLYGON: 0,
-        RECTANGLE: 1,
-        CIRCLE: 2,
-        ELLIPSIS: 3,
-        POINT: 4,
+        NONE: 0,
+        POLYGON: 1,
+        RECTANGLE: 2,
+        CIRCLE: 3,
+        ELLIPSIS: 4,
+        POINT: 5,
     },
 
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name SCALE_MODE
      * @type {Object<String, Number>}
      * @property {Number} NEAREST
@@ -77,7 +73,6 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name WRAP_MODE
      * @type {Object<String, Number>}
      * @property {Number} REPEAT
@@ -93,7 +88,29 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
+     * @name ATTRIBUTE_TYPE
+     * @type {Object<String, Number>}
+     * @property {Number} BYTE
+     * @property {Number} UNSIGNED_BYTE
+     * @property {Number} SHORT
+     * @property {Number} UNSIGNED_SHORT
+     * @property {Number} INT
+     * @property {Number} UNSIGNED_INT
+     * @property {Number} FLOAT
+     */
+    ATTRIBUTE_TYPE = {
+        BYTE: 0x1400,
+        UNSIGNED_BYTE: 0x1401,
+        SHORT: 0x1402,
+        UNSIGNED_SHORT: 0x1403,
+        INT: 0x1404,
+        UNSIGNED_INT: 0x1405,
+        FLOAT: 0x1406,
+    },
+
+    /**
+     * @public
+     * @constant
      * @name INPUT_DEVICE
      * @type {Object<String, Number>}
      * @property {Number} KEYBOARD
@@ -111,7 +128,6 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name CHANNEL_OFFSET
      * @type {Object<String, Number>}
      * @property {Number} KEYBOARD
@@ -129,7 +145,6 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name CHANNEL_LENGTH
      * @type {Object}
      * @property {Number} GLOBAL
@@ -145,29 +160,51 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name UNIFORM_TYPE
      * @type {Object<String, Number>}
      * @property {Number} INT
      * @property {Number} FLOAT
-     * @property {Number} VECTOR
-     * @property {Number} VECTOR_INT
-     * @property {Number} MATRIX
-     * @property {Number} TEXTURE
+     * @property {Number} FLOAT_VEC2
+     * @property {Number} FLOAT_VEC3
+     * @property {Number} FLOAT_VEC4
+     * @property {Number} INT_VEC2
+     * @property {Number} INT_VEC3
+     * @property {Number} INT_VEC4
+     * @property {Number} BOOL
+     * @property {Number} BOOL_VEC2
+     * @property {Number} BOOL_VEC3
+     * @property {Number} BOOL_VEC4
+     * @property {Number} FLOAT_MAT2
+     * @property {Number} FLOAT_MAT3
+     * @property {Number} FLOAT_MAT4
+     * @property {Number} SAMPLER_2D
      */
     UNIFORM_TYPE = {
-        INT: 0,
-        FLOAT: 1,
-        VECTOR: 2,
-        VECTOR_INT: 3,
-        MATRIX: 4,
-        TEXTURE: 5,
+        INT: 0x1404,
+        INT_VEC2: 0x8B53,
+        INT_VEC3: 0x8B54,
+        INT_VEC4: 0x8B55,
+
+        FLOAT: 0x1406,
+        FLOAT_VEC2: 0x8B50,
+        FLOAT_VEC3: 0x8B51,
+        FLOAT_VEC4: 0x8B52,
+
+        BOOL: 0x8B56,
+        BOOL_VEC2: 0x8B57,
+        BOOL_VEC3: 0x8B58,
+        BOOL_VEC4: 0x8B59,
+
+        FLOAT_MAT2: 0x8B5A,
+        FLOAT_MAT3: 0x8B5B,
+        FLOAT_MAT4: 0x8B5C,
+
+        SAMPLER_2D: 0x8B5E,
     },
 
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name BLEND_MODE
      * @type {Object<String, Number>}
      * @property {Number} SOURCE_OVER
@@ -211,7 +248,6 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
      * @name DATABASE_TYPES
      * @type {String[]}
      */
@@ -231,40 +267,15 @@ export const
     /**
      * @public
      * @constant
-     * @memberOf Exo
-     * @name TEXT_GRADIENT
-     * @type {Object<String, Number>}
-     * @property {Number} LINEAR_VERTICAL
-     * @property {Number} LINEAR_HORIZONTAL
-     */
-    TEXT_GRADIENT = {
-        LINEAR_VERTICAL: 0,
-        LINEAR_HORIZONTAL: 1,
-    },
-
-    /**
-     * @public
-     * @constant
-     * @memberOf Exo
-     * @name QUAD_TREE_MAX_LEVEL
-     * @type {Number}
-     */
-    QUAD_TREE_MAX_LEVEL = 5,
-
-    /**
-     * @public
-     * @constant
-     * @memberOf Exo
-     * @name QUAD_TREE_MAX_ENTITIES
-     * @type {Number}
-     */
-    QUAD_TREE_MAX_ENTITIES = 10,
-
-    /**
-     * @public
-     * @constant
-     * @memberOf Exo
      * @name CODEC_NOT_SUPPORTED
      * @type {RegExp}
      */
-    CODEC_NOT_SUPPORTED = /^no$/;
+    CODEC_NOT_SUPPORTED = /^no$/,
+
+    /**
+     * @public
+     * @constant
+     * @name NEWLINE
+     * @type {RegExp}
+     */
+    NEWLINE = /(?:\r\n|\r|\n)/;

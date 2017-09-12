@@ -11,11 +11,11 @@ export default class MenuItem extends Exo.Text {
      */
     constructor(text, previousItem) {
         super(text, {
-            color: 'white',
+            fill: 'white',
             fontSize: 45,
             fontFamily: 'AndyBold',
-            outlineColor: 'black',
-            outlineWidth: 5,
+            stroke: 'black',
+            strokeThickness: 5,
         });
 
         /**

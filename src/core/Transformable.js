@@ -1,12 +1,11 @@
 import EventEmitter from './EventEmitter';
 import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
-import {DEG_TO_RAD} from '../const';
+import { DEG_TO_RAD } from '../const';
 
 /**
  * @class Transformable
- * @extends {Exo.EventEmitter}
- * @memberof Exo
+ * @extends {EventEmitter}
  */
 export default class Transformable extends EventEmitter {
 
@@ -18,25 +17,25 @@ export default class Transformable extends EventEmitter {
 
         /**
          * @private
-         * @member {Exo.Matrix}
+         * @member {Matrix}
          */
         this._transform = new Matrix();
 
         /**
          * @private
-         * @member {Exo.ObservableVector}
+         * @member {ObservableVector}
          */
         this._position = new ObservableVector(this._setDirty, this);
 
         /**
          * @private
-         * @member {Exo.ObservableVector}
+         * @member {ObservableVector}
          */
         this._scale = new ObservableVector(this._setDirty, this, 1, 1);
 
         /**
          * @private
-         * @member {Exo.ObservableVector}
+         * @member {ObservableVector}
          */
         this._origin = new ObservableVector(this._setDirty, this, 0, 0);
 
@@ -79,7 +78,7 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get position() {
         return this._position;
@@ -91,7 +90,7 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get scale() {
         return this._scale;
@@ -103,7 +102,7 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get origin() {
         return this._origin;
@@ -127,7 +126,7 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Exo.Matrix}
+     * @member {Matrix}
      */
     get transform() {
         if (this._dirtyTransform) {
@@ -147,7 +146,7 @@ export default class Transformable extends EventEmitter {
      * @chainable
      * @param {Number} x
      * @param {Number} y
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     setPosition(x, y) {
         this._position.set(x, y);
@@ -160,7 +159,7 @@ export default class Transformable extends EventEmitter {
      * @chainable
      * @param {Number} x
      * @param {Number} y
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     setScale(x, y) {
         this._scale.set(x, y);
@@ -173,7 +172,7 @@ export default class Transformable extends EventEmitter {
      * @chainable
      * @param {Number} x
      * @param {Number} y
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     setOrigin(x, y) {
         this._origin.set(x, y);
@@ -185,7 +184,7 @@ export default class Transformable extends EventEmitter {
      * @public
      * @chainable
      * @param {Number} angle
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     setRotation(angle) {
         const rotation = angle % 360;
@@ -201,7 +200,7 @@ export default class Transformable extends EventEmitter {
      * @chainable
      * @param {Number} x
      * @param {Number} y
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     move(x, y) {
         return this.setPosition(this.x + x, this.y + y);
@@ -211,7 +210,7 @@ export default class Transformable extends EventEmitter {
      * @public
      * @chainable
      * @param {Number} angle
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     rotate(angle) {
         return this.setRotation(this._rotation + angle);
@@ -220,7 +219,7 @@ export default class Transformable extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Transformable}
+     * @returns {Transformable}
      */
     updateTransform() {
         const transform = this._transform,

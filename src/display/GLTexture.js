@@ -1,13 +1,14 @@
 import settings from '../settings';
 
-const SCALE_MODE_DIRTY = 0x01,
-    WRAP_MODE_DIRTY = 0x02,
-    PREMULTIPLY_ALPHA_DIRTY = 0x04,
-    SOURCE_DIRTY = 0x08;
+const flags = {
+    SCALE_MODE: 1 << 0,
+    WRAP_MODE: 1 << 1,
+    PREMULTIPLY_ALPHA: 1 << 2,
+    SOURCE: 1 << 3,
+};
 
 /**
  * @class GLTexture
- * @memberof Exo
  */
 export default class GLTexture {
 
@@ -16,11 +17,11 @@ export default class GLTexture {
      * @param {Object} [options={}]
      * @param {WebGLRenderingContext} [options.context]
      * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} [options.source]
-     * @param {Number} [options.scaleMode=Exo.settings.SCALE_MODE]
-     * @param {Number} [options.wrapMode=Exo.settings.WRAP_MODE]
-     * @param {Boolean} [options.premultiplyAlpha=Exo.settings.PREMULTIPLY_ALPHA]
+     * @param {Number} [options.scaleMode=settings.SCALE_MODE]
+     * @param {Number} [options.wrapMode=settings.WRAP_MODE]
+     * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
      */
-    constructor({ context, source, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
+    constructor({ context, source, width = -1, height = -1, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
 
         /**
          * @private
@@ -36,36 +37,6 @@ export default class GLTexture {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._width = -1;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._height = -1;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._scaleMode = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._wrapMode = null;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._premultiplyAlpha = null;
-
-        /**
-         * @private
          * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
          */
         this._source = null;
@@ -74,19 +45,57 @@ export default class GLTexture {
          * @private
          * @member {Number}
          */
-        this._dirty = 0;
+        this._width = width;
 
-        this.setScaleMode(scaleMode);
-        this.setWrapMode(wrapMode);
-        this.setPremultiplyAlpha(premultiplyAlpha);
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._height = height;
 
-        if (source !== undefined) {
-            this.setSource(source);
-        }
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._scaleMode = scaleMode;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._wrapMode = wrapMode;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._premultiplyAlpha = premultiplyAlpha;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._flags = (flags.SCALE_MODE | flags.WRAP_MODE | flags.PREMULTIPLY_ALPHA);
 
         if (context !== undefined) {
             this.setContext(context);
         }
+
+        if (source !== undefined) {
+            this.setSource(source);
+        }
+    }
+
+    /**
+     * @public
+     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+     */
+    get source() {
+        return this._source;
+    }
+
+    set source(value) {
+        this.setSource(value);
     }
 
     /**
@@ -127,24 +136,12 @@ export default class GLTexture {
 
     /**
      * @public
-     * @member {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement}
-     */
-    get source() {
-        return this._source;
-    }
-
-    set source(value) {
-        this.setSource(value);
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {WebGLRenderingContext} gl
-     * @returns {Exo.GLTexture}
+     * @returns {GLTexture}
      */
     setContext(gl) {
-        if (!this._context) {
+        if (this._context !== gl) {
             this._context = gl;
             this._texture = gl.createTexture();
         }
@@ -155,13 +152,33 @@ export default class GLTexture {
     /**
      * @public
      * @chainable
+     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
+     * @returns {GLTexture}
+     */
+    setSource(source) {
+        if (this._source !== source) {
+            this._source = source;
+        }
+
+        if (this._source) {
+            this._flags |= flags.SOURCE;
+        } else {
+            this._flags &= ~flags.SOURCE;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Number} scaleMode
-     * @returns {Exo.GLTexture}
+     * @returns {GLTexture}
      */
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._dirty |= SCALE_MODE_DIRTY;
+            this._flags |= flags.SCALE_MODE;
         }
 
         return this;
@@ -171,12 +188,12 @@ export default class GLTexture {
      * @public
      * @chainable
      * @param {Number} wrapMode
-     * @returns {Exo.GLTexture}
+     * @returns {GLTexture}
      */
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._dirty |= WRAP_MODE_DIRTY;
+            this._flags |= flags.WRAP_MODE;
         }
 
         return this;
@@ -186,12 +203,12 @@ export default class GLTexture {
      * @public
      * @chainable
      * @param {Boolean} premultiplyAlpha
-     * @returns {Exo.GLTexture}
+     * @returns {GLTexture}
      */
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._dirty |= PREMULTIPLY_ALPHA_DIRTY;
+            this._flags |= flags.PREMULTIPLY_ALPHA;
         }
 
         return this;
@@ -200,23 +217,52 @@ export default class GLTexture {
     /**
      * @public
      * @chainable
-     * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
-     * @returns {Exo.GLTexture}
+     * @returns {GLTexture}
      */
-    setSource(source) {
-        if (source) {
-            this._source = source;
-            this._dirty |= SOURCE_DIRTY;
+    update() {
+        if (!this._flags) {
+            return this;
         }
+
+        const gl = this._context;
+
+        if (this._flags & flags.SCALE_MODE) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
+        }
+
+        if (this._flags & flags.WRAP_MODE) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
+        }
+
+        if (this._flags & flags.PREMULTIPLY_ALPHA) {
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
+        }
+
+        if (this._flags & flags.SOURCE) {
+            const source = this._source,
+                width = source.videoWidth || source.width,
+                height = source.videoHeight || source.height;
+
+            if (this._width !== width || this._height !== height) {
+                this._width = width;
+                this._height = height;
+
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            } else {
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            }
+        }
+
+        this._flags = 0;
 
         return this;
     }
 
     /**
      * @public
-     * @chainable
      * @param {Number} [unit]
-     * @returns {Exo.GLTexture}
      */
     bind(unit) {
         const gl = this._context;
@@ -227,24 +273,16 @@ export default class GLTexture {
 
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
 
-        if (this._dirty) {
-            this._updateParameters();
-        }
-
-        return this;
+        this.update();
     }
 
     /**
      * @public
-     * @chainable
-     * @returns {Exo.GLTexture}
      */
     unbind() {
         const gl = this._context;
 
         gl.bindTexture(gl.TEXTURE_2D, null);
-
-        return this;
     }
 
     /**
@@ -263,54 +301,6 @@ export default class GLTexture {
         this._wrapMode = null;
         this._premultiplyAlpha = null;
         this._source = null;
-        this._dirty = null;
-    }
-
-    /**
-     * @private
-     */
-    _updateParameters() {
-        const gl = this._context,
-            flag = this._dirty;
-
-        if (flag & SCALE_MODE_DIRTY !== 0) {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
-        }
-
-        if (flag & WRAP_MODE_DIRTY !== 0) {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
-        }
-
-        if (flag & PREMULTIPLY_ALPHA_DIRTY !== 0) {
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
-        }
-
-        if (flag & SOURCE_DIRTY !== 0) {
-            this._updateSource();
-        }
-
-        this._dirty = 0;
-    }
-
-    /**
-     * @private
-     */
-    _updateSource() {
-        const gl = this._context,
-            source = this._source,
-            width = source.videoWidth || source.width,
-            height = source.videoHeight || source.height;
-
-        if (this._width !== width || this._height !== height) {
-            this._width = width;
-            this._height = height;
-
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-            return;
-        }
-
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        this._flags = null;
     }
 }

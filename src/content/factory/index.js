@@ -13,3 +13,4 @@ export { default as SoundFactory } from './SoundFactory';
 export { default as SpriteFactory } from './SpriteFactory';
 export { default as StringFactory } from './StringFactory';
 export { default as TextureFactory } from './TextureFactory';
+export { default as VideoFactory } from './VideoFactory';

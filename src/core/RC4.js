@@ -1,6 +1,5 @@
 /**
  * @class RC4
- * @memberof Exo
  */
 export default class RC4 {
 

@@ -1,11 +1,10 @@
 import Renderer from '../Renderer';
 import ParticleShader from './ParticleShader';
-import {degreesToRadians} from '../../utils';
+import { degreesToRadians } from '../../utils';
 
 /**
  * @class ParticleRenderer
- * @extends {Exo.Renderer}
- * @memberof Exo
+ * @extends {Renderer}
  */
 export default class ParticleRenderer extends Renderer {
 
@@ -95,16 +94,16 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._currentBatchSize = 0;
+        this._batchSize = 0;
 
         /**
          * @private
-         * @member {?Exo.ParticleShader}
+         * @member {?ParticleShader}
          */
         this._shader = new ParticleShader();
 
         /**
-         * @member {?Exo.Texture}
+         * @member {?Texture}
          * @private
          */
         this._currentTexture = null;
@@ -166,7 +165,7 @@ export default class ParticleRenderer extends Renderer {
 
     /**
      * @override
-     * @param {Exo.ParticleEmitter} emitter
+     * @param {ParticleEmitter} emitter
      */
     render(emitter) {
         const vertexData = this._vertexView,
@@ -174,28 +173,21 @@ export default class ParticleRenderer extends Renderer {
             particles = emitter.particles,
             texture = emitter.texture,
             textureRect = emitter.textureRect,
-            textureCoords = emitter.textureCoords,
-            textureSwap = this._currentTexture !== texture,
-            propCount = this._particleVertexSize,
-            len = particles.length;
+            textureCoords = emitter.textureCoords;
 
-        if (this._currentBatchSize >= this._maxParticles || textureSwap) {
+        if (this._currentTexture !== texture) {
             this.flush();
 
-            if (textureSwap) {
-                this._currentTexture = texture;
-                this._shader.setParticleTexture(texture);
-            }
+            this._currentTexture = texture;
+            this._shader.setParticleTexture(texture);
         }
 
-        for (let i = 0, index = this._currentBatchSize * this._particleVertexSize; i < len; i++, index += propCount) {
-            if (this._currentBatchSize >= this._maxParticles) {
+        for (const particle of particles) {
+            if (this._batchSize >= this._maxParticles) {
                 this.flush();
-
-                index = this._currentBatchSize * this._particleVertexSize;
             }
 
-            const particle = particles[i];
+            const index = this._batchSize * this._particleVertexSize;
 
             vertexData[index] = vertexData[index + 1] = vertexData[index + 11] = vertexData[index + 20] = 0;
 
@@ -218,7 +210,7 @@ export default class ParticleRenderer extends Renderer {
 
             colorData[index + 9] = colorData[index + 19] = colorData[index + 29] = colorData[index + 39] = particle.color.rgba;
 
-            this._currentBatchSize++;
+            this._batchSize++;
         }
     }
 
@@ -226,17 +218,16 @@ export default class ParticleRenderer extends Renderer {
      * @override
      */
     flush() {
-        const batchSize = this._currentBatchSize,
-            gl = this._context;
-
-        if (!batchSize) {
+        if (!this._batchSize) {
             return;
         }
 
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, batchSize * this._particleVertexSize));
-        gl.drawElements(gl.TRIANGLES, batchSize * this._indexCount, gl.UNSIGNED_SHORT, 0);
+        const gl = this._context;
 
-        this._currentBatchSize = 0;
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, this._batchSize * this._particleVertexSize));
+        gl.drawElements(gl.TRIANGLES, this._batchSize * this._indexCount, gl.UNSIGNED_SHORT, 0);
+
+        this._batchSize = 0;
     }
 
     /**
@@ -261,7 +252,7 @@ export default class ParticleRenderer extends Renderer {
         this._particleVertexSize = null;
         this._indexCount = null;
         this._maxParticles = null;
-        this._currentBatchSize = null;
+        this._batchSize = null;
         this._currentTexture = null;
         this._bound = null;
     }

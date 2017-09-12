@@ -2,8 +2,7 @@ import ResourceFactory from '../ResourceFactory';
 
 /**
  * @class ArrayBufferFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class ArrayBufferFactory extends ResourceFactory {
 

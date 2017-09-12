@@ -3,8 +3,7 @@ import Time from './Time';
 
 /**
  * @class Timer
- * @extends {Exo.Clock}
- * @memberof Exo
+ * @extends {Clock}
  */
 export default class Timer extends Clock {
 
@@ -50,11 +49,11 @@ export default class Timer extends Clock {
      * @public
      * @chainable
      * @param {Number} timeLimit
-     * @param {Number} factor
-     * @returns {Exo.Timer}
+     * @param {Number} [factor=Time.Milliseconds]
+     * @returns {Timer}
      */
-    reset(timeLimit, factor) {
-        this._limit = timeLimit * (factor || 1);
+    reset(timeLimit, factor = Time.Milliseconds) {
+        this._limit = timeLimit * factor;
         this._timeBuffer = 0;
         this._isRunning = false;
 
@@ -65,11 +64,13 @@ export default class Timer extends Clock {
      * @public
      * @chainable
      * @param {Number} timeLimit
-     * @param {Number} factor
-     * @returns {Exo.Timer}
+     * @param {Number} [factor=Time.Milliseconds]
+     * @returns {Timer}
      */
-    restart(timeLimit, factor) {
-        return this.reset(timeLimit, factor).start();
+    restart(timeLimit, factor = Time.Milliseconds) {
+        return this
+            .reset(timeLimit, factor)
+            .start();
     }
 
     /**
@@ -98,7 +99,7 @@ export default class Timer extends Clock {
 
     /**
      * @public
-     * @returns {Exo.Time}
+     * @returns {Time}
      */
     getRemainingTime() {
         return this._time.setMilliseconds(this.getRemainingMilliseconds());

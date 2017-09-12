@@ -1,10 +1,9 @@
 import ArrayBufferFactory from './ArrayBufferFactory';
-import {decodeAudioBuffer} from '../../utils';
+import { decodeAudioBuffer } from '../../utils';
 
 /**
  * @class AudioBufferFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class AudioBufferFactory extends ArrayBufferFactory {
 

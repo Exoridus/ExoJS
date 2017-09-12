@@ -1,9 +1,8 @@
-import {indexedDBSupported} from '../utils';
-import {DATABASE_TYPES} from '../const';
+import { indexedDBSupported } from '../utils';
+import { DATABASE_TYPES } from '../const';
 
 /**
  * @class Database
- * @memberof Exo
  */
 export default class Database {
 
@@ -195,7 +194,11 @@ export default class Database {
                     const result = event.target.result,
                         data = (result && result.value) || null;
 
-                    resolve({ data, type, name });
+                    resolve({
+                        data,
+                        type,
+                        name,
+                    });
                 });
 
                 request.addEventListener('error', (event) => reject(event));
@@ -213,9 +216,16 @@ export default class Database {
         return this
             .getObjectStore(type, 'readwrite')
             .then((store) => new Promise((resolve, reject) => {
-                const request = store.put({ key: name, value: data });
+                const request = store.put({
+                    key: name,
+                    value: data,
+                });
 
-                request.addEventListener('success', () => resolve({ type, name, data }));
+                request.addEventListener('success', () => resolve({
+                    type,
+                    name,
+                    data,
+                }));
                 request.addEventListener('error', (event) => reject(event));
             }));
     }
@@ -232,7 +242,10 @@ export default class Database {
             .then((store) => new Promise((resolve, reject) => {
                 const request = store.delete(name);
 
-                request.addEventListener('success', () => resolve({ type, name }));
+                request.addEventListener('success', () => resolve({
+                    type,
+                    name,
+                }));
                 request.addEventListener('error', (event) => reject(event));
             }));
     }

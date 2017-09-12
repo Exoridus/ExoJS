@@ -1,9 +1,8 @@
-import Vector from './Vector';
+import Vector from './shape/Vector';
 
 /**
  * @class ObservableVector
- * @extends {Exo.Vector}
- * @memberof Exo
+ * @extends {Vector}
  */
 export default class ObservableVector extends Vector {
 
@@ -63,7 +62,7 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    set (x = this._x, y = this._y) {
+    set(x = this._x, y = this._y) {
         if (this._x !== x || this._y !== y) {
             this._x = x;
             this._y = y;

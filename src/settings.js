@@ -1,12 +1,10 @@
-import {SCALE_MODE, WRAP_MODE, TEXT_GRADIENT} from './const';
+import { SCALE_MODE, WRAP_MODE } from './const';
 import Color from './core/Color';
 
 export default {
 
     /**
      * @static
-     * @constant
-     * @memberof Exo.settings
      * @type {Object}
      * @property {String} basePath=''
      * @property {Number} width=800
@@ -16,7 +14,7 @@ export default {
      * @property {Number} masterVolume=1
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
-     * @property {Exo.Color} clearColor=Exo.Color.White
+     * @property {Color} clearColor=Color.White
      * @property {Boolean} clearBeforeRender=true
      * @property {Object} contextOptions
      * @property {Boolean} contextOptions.alpha=false
@@ -32,7 +30,7 @@ export default {
         height: 600,
         soundVolume: 1,
         musicVolume: 1,
-        masterVolume:  1,
+        masterVolume: 1,
         canvas: null,
         canvasParent: null,
         clearColor: Color.White,
@@ -48,44 +46,71 @@ export default {
     },
 
     /**
+     * @public
      * @static
-     * @memberof Exo.settings
      * @type {Number}
-     * @default Exo.WRAP_MODE.CLAMP_TO_EDGE
+     * @default WRAP_MODE.CLAMP_TO_EDGE
      */
     WRAP_MODE: WRAP_MODE.CLAMP_TO_EDGE,
 
     /**
+     * @public
      * @static
-     * @memberof Exo.settings
      * @type {Number}
-     * @default Exo.SCALE_MODE.LINEAR
+     * @default SCALE_MODE.LINEAR
      */
     SCALE_MODE: SCALE_MODE.LINEAR,
 
     /**
+     * @public
      * @static
-     * @memberof Exo.settings
      * @type {Boolean}
      * @default true
      */
     PREMULTIPLY_ALPHA: true,
 
     /**
+     * @public
      * @static
-     * @memberof Exo.settings
      * @type {Object}
      */
     TEXT_STYLE: {
         align: 'left',
-        color: 'black',
-        outlineColor: 'black',
-        outlineWidth: 0,
+        fill: 'black',
+        stroke: 'black',
+        strokeThickness: 0,
         fontSize: 20,
         fontWeight: 'bold',
         fontFamily: 'Arial',
         wordWrap: false,
         wordWrapWidth: 100,
-        baseline: 'top',
+        baseline: 'alphabetic',
+        lineJoin: 'miter',
+        miterLimit: 10,
+        padding: 0,
     },
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 5
+     */
+    QUAD_TREE_MAX_LEVEL: 5,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 10
+     */
+    QUAD_TREE_MAX_ENTITIES: 10,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 300
+     */
+    TRIGGER_THRESHOLD: 300,
 };

@@ -1,25 +1,24 @@
 import Renderable from '../Renderable';
-import Rectangle from '../../core/Rectangle';
+import Rectangle from '../../core/shape/Rectangle';
 import Color from '../../core/Color';
 import ObservableVector from '../../core/ObservableVector';
 
 /**
  * @class Sprite
- * @extends {Exo.Renderable}
- * @memberof Exo
+ * @extends {Renderable}
  */
 export default class Sprite extends Renderable {
 
     /**
      * @constructor
-     * @param {?Exo.Texture} texture
+     * @param {?Texture} texture
      */
     constructor(texture) {
         super();
 
         /**
          * @private
-         * @member {?Exo.Texture}
+         * @member {?Texture}
          */
         this._texture = null;
 
@@ -37,19 +36,19 @@ export default class Sprite extends Renderable {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._textureRect = new Rectangle();
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._size = new ObservableVector(this._updatePositions, this);
 
         /**
          * @private
-         * @member {Exo.Color}
+         * @member {Color}
          */
         this._tint = Color.White.clone();
 
@@ -60,19 +59,19 @@ export default class Sprite extends Renderable {
 
     /**
      * @public
-     * @member {Exo.Texture}
+     * @member {Texture}
      */
     get texture() {
         return this._texture;
     }
 
     set texture(value) {
-        this.setTexture(value)
+        this.setTexture(value);
     }
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get textureRect() {
         return this._textureRect;
@@ -84,7 +83,7 @@ export default class Sprite extends Renderable {
 
     /**
      * @public
-     * @member {Exo.Color}
+     * @member {Color}
      */
     get tint() {
         return this._tint;
@@ -106,7 +105,7 @@ export default class Sprite extends Renderable {
     /**
      * @public
      * @readonly
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get bounds() {
         return this.getBounds();
@@ -114,7 +113,7 @@ export default class Sprite extends Renderable {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get size() {
         return this._size;
@@ -213,7 +212,7 @@ export default class Sprite extends Renderable {
      * @chainable
      * @param {Number} width
      * @param {Number} height
-     * @returns {Exo.Sprite}
+     * @returns {Sprite}
      */
     setSize(width, height) {
         this._size.set(width, height);
@@ -224,9 +223,9 @@ export default class Sprite extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Rectangle} rectangle
+     * @param {Rectangle} rectangle
      * @param {Boolean} [updateSize=true]
-     * @returns {Exo.Sprite}
+     * @returns {Sprite}
      */
     setTextureRect(rectangle, updateSize = true) {
         this._textureRect.copy(rectangle);
@@ -244,9 +243,9 @@ export default class Sprite extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Exo.Rectangle} rectangle
+     * @param {Rectangle} rectangle
      * @param {Boolean} [updateSize=true]
-     * @returns {Exo.Sprite}
+     * @returns {Sprite}
      */
     setTexture(texture) {
         this._texture = texture;
@@ -266,7 +265,9 @@ export default class Sprite extends Renderable {
         this._worldTransform.copy(parentTransform);
         this._worldTransform.multiply(this.transform);
 
-        displayManager.getRenderer('sprite').render(this);
+        displayManager
+            .getRenderer('sprite')
+            .render(this);
 
         return this;
     }

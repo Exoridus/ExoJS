@@ -1,20 +1,20 @@
-import {UNIFORM_TYPE} from '../const';
-import GLTexture from './GLTexture';
+import { UNIFORM_TYPE } from '../const';
 import Matrix from '../core/Matrix';
 
 /**
  * @class ShaderUniform
- * @memberof Exo
  */
 export default class ShaderUniform {
 
     /**
      * @constructor
-     * @param {String} name
-     * @param {Number} type
-     * @param {Number|Number[]|Exo.Vector|Exo.Matrix|Exo.Texture} [value]
+     * @param {Object} options
+     * @param {String} options.name
+     * @param {Number} options.type
+     * @param {Number} [options.unit=-1]
+     * @param {Boolean} [options.transpose=false]
      */
-    constructor(name, type, value) {
+    constructor({ name, type, unit = -1, transpose = false } = {}) {
 
         /**
          * @private
@@ -30,15 +30,21 @@ export default class ShaderUniform {
 
         /**
          * @private
-         * @member {Number|Number[]|Exo.Vector|Exo.Matrix|Exo.Texture}
+         * @member {*}
          */
-        this._value = value;
+        this._value = null;
 
         /**
          * @private
          * @member {Number}
          */
-        this._textureUnit = -1;
+        this._unit = unit;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._transpose = transpose;
 
         /**
          * @private
@@ -77,15 +83,15 @@ export default class ShaderUniform {
     /**
      * @public
      * @readonly
-     * @member {?WebGLUniformLocation}
+     * @member {Number}
      */
-    get location() {
-        return this._location;
+    get type() {
+        return this._type;
     }
 
     /**
      * @public
-     * @member {Number|Number[]|Exo.Vector|Exo.Matrix|Exo.Texture}
+     * @member {Number|Number[]|Vector|Matrix|Texture}
      */
     get value() {
         return this._value;
@@ -97,23 +103,11 @@ export default class ShaderUniform {
 
     /**
      * @public
-     * @member {Number}
-     */
-    get textureUnit() {
-        return this._textureUnit;
-    }
-
-    set textureUnit(value) {
-        this.setTextureUnit(value);
-    }
-
-    /**
-     * @public
      * @param {WebGLRenderingContext} gl
      * @param {WebGLProgram} program
      */
     setContext(gl, program) {
-        if (!this._context) {
+        if (this._context !== gl) {
             this._context = gl;
             this._location = gl.getUniformLocation(program, this._name);
         }
@@ -121,22 +115,35 @@ export default class ShaderUniform {
 
     /**
      * @public
-     * @param {Number|Number[]|Exo.Vector|Exo.Matrix|Exo.Texture} value
+     * @param {WebGLRenderingContext} gl
+     * @param {WebGLProgram} program
      */
     setValue(value) {
         this._value = value;
         this._dirty = true;
-        this._upload();
+
+        if (this._bound) {
+            this._upload();
+        }
     }
 
     /**
-     * @public
+     * @param {Matrix} matrix
+     */
+    setMatrix(matrix, transpose = this._transpose) {
+        this._transpose = transpose;
+
+        this.setValue((matrix instanceof Matrix) ? matrix.toArray(transpose) : matrix);
+    }
+
+    /**
+     * @param {Texture} texture
      * @param {Number} unit
      */
-    setTextureUnit(unit) {
-        this._textureUnit = unit;
-        this._dirty = true;
-        this._upload();
+    setTexture(texture, unit = this._unit) {
+        this._unit = unit;
+
+        this.setValue(texture);
     }
 
     /**
@@ -153,192 +160,79 @@ export default class ShaderUniform {
      * @public
      */
     unbind() {
-        this._bound = false;
+        if (this._bound) {
+            this._bound = false;
+        }
     }
 
     /**
      * @public
      */
     destroy() {
+        if (this._bound) {
+            this.unbind();
+        }
+
         this._name = null;
         this._type = null;
         this._value = null;
-        this._textureUnit = null;
         this._context = null;
         this._location = null;
         this._bound = null;
-        this._dirty = null;
+        this._unit = null;
+        this._transpose = null;
     }
 
-    /**
-     * @private
-     */
     _upload() {
-        if (!this._bound || !this._dirty || this._value === undefined) {
+        if (!this._dirty) {
             return;
         }
 
-        switch (this._type) {
-            case UNIFORM_TYPE.INT:
-                this._uploadInt();
-                break;
-            case UNIFORM_TYPE.FLOAT:
-                this._uploadFloat();
-                break;
-            case UNIFORM_TYPE.VECTOR:
-                this._uploadVector();
-                break;
-            case UNIFORM_TYPE.VECTOR_INT:
-                this._uploadIntVector();
-                break;
-            case UNIFORM_TYPE.MATRIX:
-                this._uploadMatrix();
-                break;
-            case UNIFORM_TYPE.TEXTURE:
-                this._uploadTexture();
-                break;
-            default:
-                throw new Error(`Invalid uniform type ${this._type}`);
-        }
+        const gl = this._context,
+            location = this._location,
+            value = this._value;
 
         this._dirty = false;
-    }
 
-    /**
-     * @private
-     */
-    _uploadInt() {
-        return this._context.uniform1i(this._location, this._value);
-    }
+        switch (this._type) {
+            case UNIFORM_TYPE.INT:
+                return gl.uniform1i(location, value);
+            case UNIFORM_TYPE.FLOAT:
+                return gl.uniform1f(location, value);
+            case UNIFORM_TYPE.FLOAT_VEC2:
+                return gl.uniform2fv(location, value);
+            case UNIFORM_TYPE.FLOAT_VEC3:
+                return gl.uniform3fv(location, value);
+            case UNIFORM_TYPE.FLOAT_VEC4:
+                return gl.uniform4fv(location, value);
+            case UNIFORM_TYPE.INT_VEC2:
+                return gl.uniform2iv(location, value);
+            case UNIFORM_TYPE.INT_VEC3:
+                return gl.uniform3iv(location, value);
+            case UNIFORM_TYPE.INT_VEC4:
+                return gl.uniform4iv(location, value);
+            case UNIFORM_TYPE.BOOL:
+                return gl.uniform1i(location, value);
+            case UNIFORM_TYPE.BOOL_VEC2:
+                return gl.uniform2iv(location, value);
+            case UNIFORM_TYPE.BOOL_VEC3:
+                return gl.uniform3iv(location, value);
+            case UNIFORM_TYPE.BOOL_VEC4:
+                return gl.uniform4iv(location, value);
+            case UNIFORM_TYPE.FLOAT_MAT2:
+                return gl.uniformMatrix2fv(location, this._transpose, value);
+            case UNIFORM_TYPE.FLOAT_MAT3:
+                return gl.uniformMatrix3fv(location, this._transpose, value);
+            case UNIFORM_TYPE.FLOAT_MAT4:
+                return gl.uniformMatrix4fv(location, this._transpose, value);
+            case UNIFORM_TYPE.SAMPLER_2D:
+                value.glTexture
+                    .setContext(this._context)
+                    .bind(this._unit);
 
-    /**
-     * @private
-     */
-    _uploadFloat() {
-        return this._context.uniform1f(this._location, this._value);
-    }
-
-    /**
-     * @private
-     */
-    _uploadVector() {
-        const gl = this._context,
-            location = this._location,
-            vector = this._value;
-
-        if (vector instanceof Array) {
-            switch (this._getLength(vector)) {
-                case 1:
-                    return gl.uniform1fv(location, vector);
-                case 2:
-                    return gl.uniform2fv(location, vector);
-                case 3:
-                    return gl.uniform3fv(location, vector);
-                case 4:
-                    return gl.uniform4fv(location, vector);
-            }
-        } else {
-            switch (this._getLength(vector)) {
-                case 1:
-                    return gl.uniform1f(location, vector.x);
-                case 2:
-                    return gl.uniform2f(location, vector.x, vector.y);
-                case 3:
-                    return gl.uniform3f(location, vector.x, vector.y, vector.z);
-                case 4:
-                    return gl.uniform4f(location, vector.x, vector.y, vector.z, vector.w);
-            }
+                return gl.uniform1i(location, this._unit);
+            default:
+                throw new Error(`Unknown uniform type ${this._type}`);
         }
-    }
-
-    /**
-     * @private
-     */
-    _uploadIntVector() {
-        const gl = this._context,
-            location = this._location,
-            vector = this._value;
-
-        if (Array.isArray(vector)) {
-            switch (this._getLength(vector)) {
-                case 1:
-                    return gl.uniform1iv(location, vector);
-                case 2:
-                    return gl.uniform2iv(location, vector);
-                case 3:
-                    return gl.uniform3iv(location, vector);
-                case 4:
-                    return gl.uniform4iv(location, vector);
-            }
-        } else {
-            switch (this._getLength(vector)) {
-                case 1:
-                    return gl.uniform1i(location, vector.x);
-                case 2:
-                    return gl.uniform2i(location, vector.x, vector.y);
-                case 3:
-                    return gl.uniform3i(location, vector.x, vector.y, vector.z);
-                case 4:
-                    return gl.uniform4i(location, vector.x, vector.y, vector.z, vector.w);
-            }
-        }
-    }
-
-    /**
-     * @private
-     */
-    _uploadMatrix() {
-        const gl = this._context,
-            location = this._location,
-            matrix = (this._value instanceof Matrix) ? this._value.toArray() : this._value;
-
-        switch (matrix.length) {
-            case 4:
-                return gl.uniformMatrix2fv(location, false, matrix);
-            case 9:
-                return gl.uniformMatrix3fv(location, false, matrix);
-            case 16:
-                return gl.uniformMatrix4fv(location, false, matrix);
-        }
-    }
-
-    /**
-     * @private
-     */
-    _uploadTexture() {
-        this._value.glTexture
-            .setContext(this._context)
-            .bind(this._textureUnit);
-    }
-
-    /**
-     * @private
-     * @param {Object} value
-     * @returns {Number}
-     */
-    _getLength(value) {
-        if (value instanceof Array) {
-            return value.length;
-        }
-
-        let len = 0;
-
-        if ('x' in value) {
-            len++;
-
-            if ('y' in value) {
-                len++;
-
-                if ('z' in value) {
-                    len++;
-
-                    if ('w' in value) {
-                        len++;
-                    }
-                }
-            }
-        }
-
-        return len;
     }
 }

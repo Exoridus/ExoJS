@@ -1,41 +1,28 @@
 import Shape from './Shape';
-import {SHAPE} from '../const';
+import { SHAPE } from '../../const';
 
 /**
  * @class Polygon
- * @implements {Exo.Shape}
- * @memberof Exo
+ * @extends {Shape}
  */
 export default class Polygon extends Shape {
 
     /**
      * @constructor
-     * @param {...Exo.Vector} vectors
+     * @param {?Vector[]} vectors
      */
-    constructor(...vectors) {
+    constructor(vectors = []) {
         super();
 
         /**
          * @private
-         * @member {Exo.Vector[]}
+         * @member {Vector[]}
          */
         this._vectors = vectors;
-
-        /**
-         * @private
-         * @member {Float32Array} _array
-         */
-
-        /**
-         * @private
-         * @member {Exo.Rectangle} _bounds
-         */
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Number}
+     * @override
      */
     get type() {
         return SHAPE.POLYGON;
@@ -44,34 +31,16 @@ export default class Polygon extends Shape {
     /**
      * @public
      * @readonly
-     * @member {Exo.Vector[]}
+     * @member {Vector[]}
      */
     get vectors() {
         return this._vectors;
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        const array = this._array || (this._array = new Float32Array(this._vectors.length * 2)),
-            vectors = this._vectors,
-            len = vectors.length;
-
-        for (let i = 0, j = 0; i < len; i++, j += 2) {
-            array[j] = vectors[i].x;
-            array[j + 1] = vectors[i].y;
-        }
-
-        return array;
-    }
-
-    /**
      * @override
      */
-    set(...newVectors) {
+    set(newVectors) {
         const vectors = this._vectors,
             oldLen = vectors.length,
             newLen = newVectors.length;
@@ -107,7 +76,16 @@ export default class Polygon extends Shape {
      * @override
      */
     toArray() {
-        return this.array;
+        const array = this._array || (this._array = new Float32Array(this._vectors.length * 2)),
+            vectors = this._vectors,
+            len = vectors.length;
+
+        for (let i = 0, j = 0; i < len; i++, j += 2) {
+            array[j] = vectors[i].x;
+            array[j + 1] = vectors[i].y;
+        }
+
+        return array;
     }
 
     /**

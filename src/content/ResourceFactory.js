@@ -1,7 +1,6 @@
 /**
  * @abstract
  * @class ResourceFactory
- * @memberof Exo
  */
 export default class ResourceFactory {
 
@@ -25,7 +24,11 @@ export default class ResourceFactory {
      * @param {String} [options.cache='default']
      * @returns {Promise<Response>}
      */
-    request(path, options = { method: 'GET', mode: 'cors', cache: 'default' }) {
+    request(path, options = {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'default',
+    }) {
         return fetch(path, options);
     }
 

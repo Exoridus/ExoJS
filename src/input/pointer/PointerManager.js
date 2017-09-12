@@ -1,16 +1,15 @@
 import ChannelHandler from '../ChannelHandler';
-import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
+import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
 
 /**
  * @class PointerManager
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class PointerManager extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
@@ -18,7 +17,7 @@ export default class PointerManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = game;
 
@@ -30,7 +29,7 @@ export default class PointerManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Pointer[]}
+         * @member {Pointer[]}
          */
         this._pointers = [];
 
@@ -43,7 +42,7 @@ export default class PointerManager extends ChannelHandler {
 
     /**
      * @param {Number} index
-     * @returns {Exo.Pointer}
+     * @returns {Pointer}
      */
     getPointer(index) {
         return this._pointers[index];

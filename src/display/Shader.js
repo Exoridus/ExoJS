@@ -1,11 +1,9 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
-import Matrix from '../core/Matrix';
-import {compileProgram} from '../utils';
+import { compileProgram } from '../utils';
 
 /**
  * @class Shader
- * @memberof Exo
  */
 export default class Shader {
 
@@ -15,18 +13,6 @@ export default class Shader {
      * @param {String|String[]} [fragmentSource]
      */
     constructor(vertexSource, fragmentSource) {
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
-
-        /**
-         * @private
-         * @member {?WebGLProgram}
-         */
-        this._program = null;
 
         /**
          * @private
@@ -42,21 +28,39 @@ export default class Shader {
 
         /**
          * @private
-         * @member {Map<String, Exo.ShaderUniform>}
+         * @member {Map<String, ShaderUniform>}
          */
         this._uniforms = new Map();
 
         /**
          * @private
-         * @member {Map<String, Exo.ShaderAttribute>}
+         * @member {Map<String, ShaderAttribute>}
          */
         this._attributes = new Map();
+
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
+
+        /**
+         * @private
+         * @member {?WebGLProgram}
+         */
+        this._program = null;
 
         /**
          * @private
          * @member {Boolean}
          */
         this._bound = false;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._stride = 0;
 
         if (vertexSource !== undefined) {
             this.setVertexSource(vertexSource);
@@ -69,26 +73,20 @@ export default class Shader {
 
     /**
      * @public
-     * @member {String|String[]}
+     * @readonly
+     * @member {String}
      */
     get vertexSource() {
         return this._vertexSource;
     }
 
-    set vertexSource(value) {
-        this.setVertexSource(value);
-    }
-
     /**
      * @public
-     * @member {String|String[]}
+     * @readonly
+     * @member {String}
      */
     get fragmentSource() {
         return this._fragmentSource;
-    }
-
-    set fragmentSource(value) {
-        this.setFragmentSource(value);
     }
 
     /**
@@ -120,19 +118,21 @@ export default class Shader {
             return;
         }
 
-        this._bound = true;
-
         this._context.useProgram(this._program);
 
+        let offset = 0;
+
         for (const attribute of this._attributes.values()) {
-            attribute.bind();
+            attribute.bind(this._stride, offset);
+
+            offset += attribute.byteSize;
         }
 
         for (const uniform of this._uniforms.values()) {
             uniform.bind();
         }
 
-        this.bindAttributePointers();
+        this._bound = true;
     }
 
     /**
@@ -143,8 +143,6 @@ export default class Shader {
             return;
         }
 
-        this._bound = false;
-
         for (const attribute of this._attributes.values()) {
             attribute.unbind();
         }
@@ -152,6 +150,8 @@ export default class Shader {
         for (const uniform of this._uniforms.values()) {
             uniform.unbind();
         }
+
+        this._bound = false;
     }
 
     /**
@@ -172,49 +172,44 @@ export default class Shader {
 
     /**
      * @public
-     * @param {Object<String, Boolean>} attributes
+     * @param {Object[]} attributes
+     * @param {String} attributes[].name
+     * @param {Number} attributes[].type
+     * @param {Number} attributes[].size
+     * @param {Number} attributes[].offset
+     * @param {Number} attributes[].stride
+     * @param {Boolean} [attributes[].normalized=false]
+     * @param {Boolean} [attributes[].enabled=true]
      */
     setAttributes(attributes) {
-        for (const name of Object.keys(attributes)) {
-            if (this._attributes.has(name)) {
-                throw new Error(`Attribute "${name}" was already added.`);
-            }
+        for (const item of attributes) {
+            const attribute = (item instanceof ShaderAttribute) ? item : new ShaderAttribute(item);
 
-            this._attributes.set(name, new ShaderAttribute(name, attributes[name]));
+            this._attributes.set(attribute.name, attribute);
+            this._stride += attribute.byteSize;
         }
     }
 
     /**
      * @public
-     * @param {String} name
-     * @returns {Exo.ShaderAttribute}
-     */
-    getAttribute(name) {
-        if (!this._attributes.has(name)) {
-            throw new Error(`Attribute "${name}" is missing.`);
-        }
-
-        return this._attributes.get(name);
-    }
-
-    /**
-     * @public
-     * @param {Object<String, Number>} uniforms
+     * @param {Object[]} uniforms
+     * @param {String} uniforms[].name
+     * @param {Number} uniforms[].type
+     * @param {Number} [uniforms[].unit=-1]
+     * @param {Boolean} [uniforms[].transpose=false]
      */
     setUniforms(uniforms) {
-        for (const name of Object.keys(uniforms)) {
-            if (this._uniforms.has(name)) {
-                throw new Error(`Uniform "${name}" was already added.`);
-            }
+        for (const item of uniforms) {
+            const uniform = (item instanceof ShaderUniform) ? item : new ShaderUniform(item);
 
-            this._uniforms.set(name, new ShaderUniform(name, uniforms[name]));
+            this._uniforms.set(uniform.name, uniform);
         }
     }
 
     /**
      * @public
      * @param {String} name
-     * @returns {Exo.ShaderUniform}
+     * @returns {ShaderUniform}
      */
     getUniform(name) {
         if (!this._uniforms.has(name)) {
@@ -222,21 +217,6 @@ export default class Shader {
         }
 
         return this._uniforms.get(name);
-    }
-
-    /**
-     * @public
-     * @param {Exo.Matrix} projection
-     */
-    setProjection(projection) {
-        // do nothing...
-    }
-
-    /**
-     * @public
-     */
-    bindAttributePointers() {
-        // do nothing...
     }
 
     /**
@@ -261,11 +241,11 @@ export default class Shader {
             this._context = null;
         }
 
-        this._uniforms.clear();
-        this._uniforms = null;
-
         this._attributes.clear();
         this._attributes = null;
+
+        this._uniforms.clear();
+        this._uniforms = null;
 
         this._vertexSource = null;
         this._fragmentSource = null;

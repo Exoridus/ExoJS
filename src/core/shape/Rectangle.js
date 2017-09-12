@@ -1,12 +1,11 @@
 import Vector from './Vector';
 import Shape from './Shape';
-import {inRange, rangeIntersect} from '../utils';
-import {SHAPE} from '../const';
+import { inRange, rangeIntersect } from '../../utils';
+import { SHAPE } from '../../const';
 
 /**
  * @class Rectangle
- * @implements {Exo.Shape}
- * @memberof Exo
+ * @extends {Shape}
  */
 export default class Rectangle extends Shape {
 
@@ -22,31 +21,19 @@ export default class Rectangle extends Shape {
 
         /**
          * @public
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._position = new Vector(x, y);
 
         /**
          * @public
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._size = new Vector(width, height);
-
-        /**
-         * @private
-         * @member {Float32Array} _array
-         */
-
-        /**
-         * @private
-         * @member {Exo.Rectangle} _bounds
-         */
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Number}
+     * @override
      */
     get type() {
         return SHAPE.RECTANGLE;
@@ -54,32 +41,7 @@ export default class Rectangle extends Shape {
 
     /**
      * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        const array = this._array || (this._array = new Float32Array(4));
-
-        array[0] = this.x;
-        array[1] = this.y;
-        array[2] = this.width;
-        array[3] = this.height;
-
-        return array;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Exo.Rectangle}
-     */
-    get bounds() {
-        this.getBounds();
-    }
-
-    /**
-     * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get position() {
         return this._position;
@@ -115,7 +77,7 @@ export default class Rectangle extends Shape {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get size() {
         return this._size;
@@ -235,7 +197,14 @@ export default class Rectangle extends Shape {
      * @override
      */
     toArray() {
-        return this.array;
+        const array = this._array || (this._array = new Float32Array(4));
+
+        array[0] = this.x;
+        array[1] = this.y;
+        array[2] = this.width;
+        array[3] = this.height;
+
+        return array;
     }
 
     /**
@@ -255,8 +224,7 @@ export default class Rectangle extends Shape {
     contains(shape) {
         switch (shape.type) {
             case SHAPE.POINT:
-                return inRange(shape.x, this.left, this.right) &&
-                    inRange(shape.y, this.top, this.bottom);
+                return inRange(shape.x, this.left, this.right) && inRange(shape.y, this.top, this.bottom);
             case SHAPE.CIRCLE:
                 return this.contains(shape.bounds);
             case SHAPE.RECTANGLE:
@@ -264,7 +232,7 @@ export default class Rectangle extends Shape {
                     inRange(shape.right, this.left, this.right) &&
                     inRange(shape.top, this.top, this.bottom) &&
                     inRange(shape.bottom, this.top, this.bottom);
-            case SHAPE.POLYGON: // todo
+            case SHAPE.POLYGON:
             default:
                 return false;
         }
@@ -284,7 +252,7 @@ export default class Rectangle extends Shape {
             case SHAPE.RECTANGLE:
                 return rangeIntersect(this.left, this.right, shape.left, shape.right) &&
                     rangeIntersect(this.top, this.bottom, shape.top, shape.bottom);
-            case SHAPE.POLYGON: // todo
+            case SHAPE.POLYGON:
             default:
                 return false;
         }
@@ -296,28 +264,12 @@ export default class Rectangle extends Shape {
      * @override
      */
     destroy() {
-        if (this._array) {
-            this._array = null;
-        }
-
-        if (this._bounds) {
-            this._bounds.destroy();
-            this._bounds = null;
-        }
+        super.destroy();
 
         this._position.destroy();
         this._position = null;
 
         this._size.destroy();
         this._size = null;
-    }
-
-    /**
-     * @public
-     * @static
-     * @returns {Exo.Rectangle}
-     */
-    static get Empty() {
-        return new Rectangle(0, 0, 0, 0);
     }
 }

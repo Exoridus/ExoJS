@@ -59,6 +59,7 @@ export default class GameScene extends Exo.Scene {
                 Keyboard.Escape,
                 Gamepad.Start,
             ], {
+                context: this,
                 trigger() {
                     this._paused = !this._paused;
 
@@ -68,58 +69,63 @@ export default class GameScene extends Exo.Scene {
                         // hide pause menu
                     }
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Up,
                 Keyboard.W,
                 Gamepad.LeftStickUp,
                 Gamepad.DPadUp,
             ], {
+                context: this,
                 active(value) {
                     this._movePlayer(0, value * -1);
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Down,
                 Keyboard.S,
                 Gamepad.LeftStickDown,
                 Gamepad.DPadDown,
             ], {
+                context: this,
                 active(value) {
                     this._movePlayer(0, value);
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Left,
                 Keyboard.A,
                 Gamepad.LeftStickLeft,
                 Gamepad.DPadLeft,
             ], {
+                context: this,
                 active(value) {
                     this._movePlayer(value * -1, 0);
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Right,
                 Keyboard.D,
                 Gamepad.LeftStickRight,
                 Gamepad.DPadRight,
             ], {
+                context: this,
                 active(value) {
                     this._movePlayer(value, 0);
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Shift,
                 Gamepad.RightTriggerTop,
             ], {
+                context: this,
                 start() {
                     this._player.running = true;
                 },
                 stop() {
                     this._player.running = false;
                 },
-            }, this),
+            }),
         ];
 
         this.game.trigger('input:add', this._inputs);

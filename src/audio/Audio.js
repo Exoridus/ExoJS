@@ -1,10 +1,9 @@
 import Playable from './Playable';
-import {clamp} from '../utils';
+import { clamp } from '../utils';
 
 /**
  * @class Audio
- * @extends {Exo.Playable}
- * @memberof Exo
+ * @extends {Playable}
  */
 export default class Audio extends Playable {
 

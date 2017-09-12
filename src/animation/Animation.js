@@ -1,6 +1,5 @@
 /**
  * @interface Animation
- * @memberof Exo
  */
 export default class Animation {
 

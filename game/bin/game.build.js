@@ -651,8 +651,6 @@ var LauncherScene = function (_Exo$Scene) {
             }).addList('sprite', {
                 'title/logo': 'image/title/logo.png',
                 'title/background': 'image/title/background.jpg'
-            }, {
-                scaleMode: Exo.SCALE_MODE.LINEAR
             }).addList('texture', {
                 'game/tileset': 'image/game/tileset.png',
                 'game/player': 'image/game/player.png'
@@ -1644,7 +1642,11 @@ var VersionText = function (_Exo$Text) {
         }));
 
         _this.setOrigin(1, 1);
-        _this.setPosition(viewportWidth - 10, viewportHeight);
+        _this.setPosition(0, viewportHeight);
+
+        setInterval(function () {
+            _this.text += 'A';
+        }, 1000);
         return _this;
     }
 

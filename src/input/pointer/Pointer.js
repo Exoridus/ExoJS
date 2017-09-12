@@ -1,10 +1,9 @@
 import ChannelHandler from '../ChannelHandler';
-import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
+import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
 
 /**
  * @class Pointer
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class Pointer extends ChannelHandler {
 
@@ -24,6 +23,6 @@ export default class Pointer extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key, index = 0) {
-        return CHANNEL_OFFSET.POINTER + (index * CHANNEL_LENGTH.CHILD) + (key & 31);
+        return CHANNEL_OFFSET.POINTER + (index * CHANNEL_LENGTH.CHILD) + (key % CHANNEL_LENGTH.CHILD);
     }
 }

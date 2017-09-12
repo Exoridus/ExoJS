@@ -3,8 +3,7 @@ import AnimationFrame from './AnimationFrame';
 
 /**
  * @class FrameAnimation
- * @implements {Exo.Animation}
- * @memberof Exo
+ * @implements {Animation}
  */
 export default class FrameAnimation extends Animation {
 
@@ -16,7 +15,7 @@ export default class FrameAnimation extends Animation {
 
         /**
          * @private
-         * @member {Exo.AnimationFrame[]}
+         * @member {AnimationFrame[]}
          */
         this._frames = [];
 
@@ -30,8 +29,8 @@ export default class FrameAnimation extends Animation {
     /**
      * @public
      * @param {Number} relativeDuration
-     * @param {Exo.Rectangle} rectangle
-     * @param {Exo.Vector} [origin]
+     * @param {Rectangle} rectangle
+     * @param {Vector} [origin]
      */
     addFrame(relativeDuration, rectangle, origin) {
         this._frames.push(new AnimationFrame(relativeDuration, rectangle, origin));

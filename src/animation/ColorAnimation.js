@@ -2,21 +2,20 @@ import Animation from './Animation';
 
 /**
  * @class ColorAnimation
- * @implements {Exo.Animation}
- * @memberof Exo
+ * @implements {Animation}
  */
 export default class ColorAnimation extends Animation {
 
     /**
      * @constructor
-     * @param {...Exo.Color} colors
+     * @param {...Color} colors
      */
     constructor(...colors) {
         super();
 
         /**
          * @private
-         * @member {Exo.Color[]}
+         * @member {Color[]}
          */
         this._colorGradient = colors;
     }

@@ -82,10 +82,11 @@ window.game.start(new Exo.Scene({
         this._input = new Exo.Input([
             Exo.Keyboard.Space
         ], {
+            context: this,
             trigger() {
                 this._music.toggle();
             },
-        }, this);
+        });
 
         canvas.parentNode.appendChild(this._canvas);
 
@@ -125,22 +126,24 @@ window.game.start(new Exo.Scene({
             return;
         }
 
+        this._time.add(delta);
+
         const canvas = this._canvas,
             context = this._context,
             freqData = this._analyser.frequencyData,
             timeDomain = this._analyser.timeDomainData,
-            time = this._time.add(delta).asSeconds(),
+            seconds = this._time.seconds,
             width = canvas.width,
             height = canvas.height,
             length = freqData.length,
             barWidth = Math.ceil(width / length),
-            redModifier = (Math.cos(time) * 0.5) + 0.5,
-            greenModifier = (Math.sin(time) * 0.5) + 0.5;
+            redModifier = (Math.cos(seconds) * 0.5) + 0.5,
+            greenModifier = (Math.sin(seconds) * 0.5) + 0.5;
 
         let [r, g, b] = [0, 0, 0];
 
         for (let i = 0; i < length; i++) {
-            switch (i / (length / 3) | 0) {
+            switch (i / (length / 3 | 0)) {
                 case 0:
                     r += freqData[i] * redModifier;
                     break;
@@ -154,8 +157,8 @@ window.game.start(new Exo.Scene({
         }
 
         this.game.trigger('display:clear', this._color.set(r / length, g / length, b / length));
-        context.clearRect(0, 0, width, height);
 
+        context.clearRect(0, 0, width, height);
         context.beginPath();
 
         for (let i = 0; i < length; i++) {

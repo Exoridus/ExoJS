@@ -46,65 +46,71 @@ export default class MenuManager {
                 Gamepad.DPadUp,
                 Gamepad.LeftStickUp,
             ], {
+                context: this,
                 start() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputUp();
                     }
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Down,
                 Gamepad.LeftStickDown,
                 Gamepad.DPadDown,
             ], {
+                context: this,
                 start() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputDown();
                     }
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Left,
                 Gamepad.LeftStickLeft,
                 Gamepad.DPadLeft,
             ], {
+                context: this,
                 start() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputLeft();
                     }
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Right,
                 Gamepad.LeftStickRight,
                 Gamepad.DPadRight,
             ], {
+                context: this,
                 start() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputRight();
                     }
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Enter,
                 Gamepad.FaceButtonBottom,
             ], {
+                context: this,
                 start() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputSelect();
                     }
                 },
-            }, this),
+            }),
             new Exo.Input([
                 Keyboard.Backspace,
                 Gamepad.FaceButtonRight,
             ], {
+                context: this,
                 start() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputBack();
                     }
                 },
-            }, this),
+            }),
         ];
     }
 

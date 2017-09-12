@@ -1,9 +1,8 @@
-import {clamp} from '../utils';
+import { clamp } from '../utils';
 
 /**
  * @abstract
  * @class Playable
- * @memberof Exo
  */
 export default class Playable {
 
@@ -131,7 +130,7 @@ export default class Playable {
     /**
      * @public
      * @abstract
-     * @param {Exo.AudioManager} audioManager
+     * @param {AudioManager} audioManager
      */
     connect(audioManager) {
         // do nothing

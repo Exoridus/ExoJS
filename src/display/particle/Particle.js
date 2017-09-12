@@ -1,71 +1,77 @@
-import Vector from '../../core/Vector';
+import Vector from '../../core/shape/Vector';
 import Color from '../../core/Color';
-import Time from '../../core/Time';
+import Time from '../../core/time/Time';
 
 /**
  * @class Particle
- * @memberof Exo
  */
 export default class Particle {
 
     /**
      * @constructor
-     * @param {Exo.Time} totalLifetime
+     * @param {Object} [options]
+     * @param {Time} [options.lifetime]
+     * @param {Vector} [options.position]
+     * @param {Vector} [options.velocity]
+     * @param {Number} [options.rotation]
+     * @param {Number} [options.rotationSpeed]
+     * @param {Vector} [options.scale]
+     * @param {Color} [options.color]
      */
-    constructor(totalLifetime) {
+    constructor({ lifetime, position, velocity, rotation, rotationSpeed, scale, color } = {}) {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Time}
          */
-        this._position = new Vector();
+        this._totalLifetime = (lifetime && lifetime.clone()) || new Time(1, Time.Seconds);
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
-        this._velocity = new Vector();
+        this._position = (position && position.clone()) || new Vector();
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._velocity = (velocity && velocity.clone()) || new Vector();
 
         /**
          * @private
          * @member {Number}
          */
-        this._rotation = 0;
+        this._rotation = rotation || 0;
 
         /**
          * @private
          * @member {Number}
          */
-        this._rotationSpeed = 0;
+        this._rotationSpeed = rotationSpeed || 0;
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
-        this._scale = new Vector(1, 1);
+        this._scale = (scale && scale.clone()) || new Vector(1, 1);
 
         /**
          * @private
-         * @member {Exo.Color}
+         * @member {Color}
          */
-        this._color = Color.White.clone();
+        this._color = (color && color.clone()) || new Color(255, 255, 255, 1);
 
         /**
          * @private
-         * @member {Exo.Time}
+         * @member {Time}
          */
         this._elapsedLifetime = new Time();
-
-        /**
-         * @private
-         * @member {Exo.Time}
-         */
-        this._totalLifetime = totalLifetime.clone();
     }
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get position() {
         return this._position;
@@ -77,7 +83,7 @@ export default class Particle {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get velocity() {
         return this._velocity;
@@ -113,7 +119,7 @@ export default class Particle {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get scale() {
         return this._scale;
@@ -125,7 +131,7 @@ export default class Particle {
 
     /**
      * @public
-     * @member {Exo.Color}
+     * @member {Color}
      */
     get color() {
         return this._color;
@@ -137,7 +143,7 @@ export default class Particle {
 
     /**
      * @public
-     * @member {Exo.Time}
+     * @member {Time}
      */
     get elapsedLifetime() {
         return this._elapsedLifetime;
@@ -149,7 +155,7 @@ export default class Particle {
 
     /**
      * @public
-     * @member {Exo.Time}
+     * @member {Time}
      */
     get totalLifetime() {
         return this._totalLifetime;
@@ -162,27 +168,39 @@ export default class Particle {
     /**
      * @public
      * @readonly
-     * @member {Exo.Time}
+     * @member {Time}
      */
     get remainingLifetime() {
-        return new Time(this.totalLifetime.asMilliseconds() - this.elapsedLifetime.asMilliseconds());
+        return new Time(this.totalLifetime.milliseconds - this.elapsedLifetime.milliseconds);
     }
 
     /**
      * @public
      * @readonly
-     * @member {Exo.Time}
+     * @member {Time}
      */
     get elapsedRatio() {
-        return this.elapsedLifetime.asMilliseconds() / this.totalLifetime.asMilliseconds();
+        return this.elapsedLifetime.milliseconds / this.totalLifetime.milliseconds;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Exo.Time}
+     * @member {Time}
      */
     get remainingRatio() {
-        return this.remainingLifetime.asMilliseconds() / this.totalLifetime.asMilliseconds();
+        return this.remainingLifetime.milliseconds / this.totalLifetime.milliseconds;
+    }
+
+    /**
+     * @public
+     * @param {Time} delta
+     */
+    update(delta) {
+        const seconds = delta.seconds;
+
+        this._elapsedLifetime.add(delta);
+        this._position.add(seconds * this._velocity.x, seconds * this._velocity.y);
+        this._rotation += seconds * this._rotationSpeed;
     }
 }

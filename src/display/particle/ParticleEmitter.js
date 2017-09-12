@@ -1,36 +1,35 @@
 import Particle from './Particle';
-import Rectangle from '../../core/Rectangle';
-import Vector from '../../core/Vector';
+import Rectangle from '../../core/shape/Rectangle';
+import Vector from '../../core/shape/Vector';
 import Color from '../../core/Color';
-import Time from '../../core/Time';
+import Time from '../../core/time/Time';
 
 /**
  * @class ParticleEmitter
- * @memberof Exo
  */
 export default class ParticleEmitter {
 
     /**
      * @constructor
-     * @param {Exo.Texture} texture
+     * @param {Texture} texture
      */
     constructor(texture) {
 
         /**
          * @private
-         * @member {Exo.Texture}
+         * @member {Texture}
          */
         this._texture = texture;
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._textureRect = new Rectangle(0, 0, texture.width, texture.height);
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._textureCoords = new Rectangle();
 
@@ -48,31 +47,31 @@ export default class ParticleEmitter {
 
         /**
          * @private
-         * @member {Exo.ParticleModifier[]}
+         * @member {ParticleModifier[]}
          */
         this._modifiers = [];
 
         /**
          * @private
-         * @member {Exo.Particle[]}
+         * @member {Set<Particle>}
          */
-        this._particles = [];
+        this._particles = new Set();
 
         /**
          * @private
-         * @member {Exo.Time}
+         * @member {Time}
          */
-        this._particleLifeTime = new Time(1, Time.Seconds);
+        this._particleLifetime = new Time(1, Time.Seconds);
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._particlePosition = new Vector();
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._particleVelocity = new Vector();
 
@@ -90,13 +89,13 @@ export default class ParticleEmitter {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._particleScale = new Vector(1, 1);
 
         /**
          * @private
-         * @member {Exo.Color}
+         * @member {Color}
          */
         this._particleColor = Color.White.clone();
     }
@@ -104,7 +103,7 @@ export default class ParticleEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.Particle[]}
+     * @member {Set<Particle>}
      */
     get particles() {
         return this._particles;
@@ -113,7 +112,7 @@ export default class ParticleEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.ParticleModifier[]}
+     * @member {ParticleModifier[]}
      */
     get modifiers() {
         return this._modifiers;
@@ -122,7 +121,7 @@ export default class ParticleEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get textureRect() {
         return this._textureRect;
@@ -130,7 +129,7 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @member {Exo.Texture}
+     * @member {Texture}
      */
     get texture() {
         return this._texture;
@@ -142,7 +141,7 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get textureCoords() {
         return this._textureCoords;
@@ -166,19 +165,19 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @member {Exo.Time}
+     * @member {Time}
      */
-    get particleLifeTime() {
-        return this._particleLifeTime;
+    get particleLifetime() {
+        return this._particleLifetime;
     }
 
-    set particleLifeTime(particleLifeTime) {
-        this._particleLifeTime.copy(particleLifeTime);
+    set particleLifetime(particleLifetime) {
+        this._particleLifetime.copy(particleLifetime);
     }
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get particlePosition() {
         return this._particlePosition;
@@ -190,7 +189,7 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get particleVelocity() {
         return this._particleVelocity;
@@ -226,7 +225,7 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get particleScale() {
         return this._particleScale;
@@ -238,7 +237,7 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @member {Exo.Color}
+     * @member {Color}
      */
     get particleColor() {
         return this._particleColor;
@@ -248,23 +247,35 @@ export default class ParticleEmitter {
         this._particleColor.copy(color);
     }
 
-    setTextureRect(textureRect) {
+    /**
+     * @public
+     * @param {Rectangle} rect
+     */
+    setTextureRect(rectangle) {
         const texture = this._texture,
             width = texture.width,
             height = texture.height,
-            x = textureRect.x / width,
-            y = textureRect.y / height;
+            x = rectangle.x / width,
+            y = rectangle.y / height;
 
-        this._textureCoords.set(x, y, x + (textureRect.width / width), y + (textureRect.height / height));
-        this._textureRect.copy(textureRect);
+        this._textureCoords.set(x, y, x + (rectangle.width / width), y + (rectangle.height / height));
+        this._textureRect.copy(rectangle);
     }
 
+    /**
+     * @public
+     * @param {ParticleModifier} modifier
+     */
     addModifier(modifier) {
         this._modifiers.push(modifier);
     }
 
+    /**
+     * @public
+     * @param {Time} time
+     */
     computeParticleCount(time) {
-        const particleAmount = (this._emissionRate * time.asSeconds()) + this._emissionDelta,
+        const particleAmount = (this._emissionRate * time.seconds) + this._emissionDelta,
             particles = particleAmount | 0;
 
         this._emissionDelta = particleAmount - particles;
@@ -272,61 +283,48 @@ export default class ParticleEmitter {
         return particles;
     }
 
+    /**
+     * @public
+     * @param {Time} delta
+     */
     update(delta) {
         const particles = this._particles,
             modifiers = this._modifiers,
-            particleCount = this.computeParticleCount(delta),
-            modifierCount = modifiers.length;
+            particleCount = this.computeParticleCount(delta);
 
         for (let i = 0; i < particleCount; i++) {
-            const particle = new Particle(this._particleLifeTime);
-
-            particle.position.copy(this._particlePosition);
-            particle.velocity.copy(this._particleVelocity);
-            particle.rotation = this._particleRotation;
-            particle.rotationSpeed = this._particleRotationSpeed;
-            particle.scale.copy(this._particleScale);
-            particle.color.copy(this._particleColor);
-
-            particles.push(particle);
+            particles.add(new Particle({
+                lifetime: this._particleLifetime,
+                position: this._particlePosition,
+                velocity: this._particleVelocity,
+                rotation: this._particleRotation,
+                rotationSpeed: this._particleRotationSpeed,
+                scale: this._particleScale,
+                color: this._particleColor,
+            }));
         }
 
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const particle = particles[i];
-
-            this.updateParticle(particle, delta);
+        for (const particle of particles) {
+            particle.update(delta);
 
             if (particle.elapsedLifetime.greaterThan(particle.totalLifetime)) {
-                particles.splice(i, 1);
+                particles.delete(particle);
                 continue;
             }
 
-            for (let j = 0; j < modifierCount; j++) {
-                modifiers[j].apply(particle, delta);
+            for (const modifier of modifiers) {
+                modifier.apply(particle, delta);
             }
         }
     }
 
     /**
      * @public
-     * @param {Exo.Particle} particle
-     * @param {Exo.Time} delta
-     */
-    updateParticle(particle, delta) {
-        const seconds = delta.asSeconds(),
-            velocity = particle.velocity;
-
-        particle.elapsedLifetime.add(delta);
-        particle.position.add(seconds * velocity.x, seconds * velocity.y);
-        particle.rotation += (seconds * particle.rotationSpeed);
-    }
-
-    /**
-     * @public
-     * @param {Exo.DisplayManager} displayManager
-     * @param {Exo.Matrix} worldTransform
+     * @param {DisplayManager} displayManager
      */
     render(displayManager) {
-        displayManager.getRenderer('particle').render(this);
+        displayManager
+            .getRenderer('particle')
+            .render(this);
     }
 }

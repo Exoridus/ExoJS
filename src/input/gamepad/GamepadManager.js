@@ -1,19 +1,18 @@
 import Gamepad from './Gamepad';
 import ChannelHandler from '../ChannelHandler';
-import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
+import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
 
 const navigator = window.navigator;
 
 /**
  * @class GamepadManager
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class GamepadManager extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
@@ -21,13 +20,13 @@ export default class GamepadManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = game;
 
         /**
          * @private
-         * @member {Map<Number, Exo.Gamepad>}
+         * @member {Map<Number, Gamepad>}
          */
         this._gamepads = new Map();
     }
@@ -35,7 +34,7 @@ export default class GamepadManager extends ChannelHandler {
     /**
      * @public
      * @readonly
-     * @member {Map<Number, Exo.Gamepad>}
+     * @member {Map<Number, Gamepad>}
      */
     get gamepads() {
         return this._gamepads;
@@ -94,6 +93,7 @@ export default class GamepadManager extends ChannelHandler {
         for (const gamepad of this._gamepads.values()) {
             gamepad.destroy();
         }
+
         this._gamepads.clear();
         this._gamepads = null;
 

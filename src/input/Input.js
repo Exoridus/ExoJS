@@ -1,23 +1,24 @@
 import EventEmitter from '../core/EventEmitter';
+import settings from '../settings';
 
 /**
  * @class Input
- * @extends {Exo.EventEmitter}
- * @memberof Exo
+ * @extends {EventEmitter}
  */
 export default class Input extends EventEmitter {
 
     /**
      * @constructor
-     * @param {Number[]} [channels=[]]
-     * @param {Object<String, Function>} [events={}]
-     * @param {Function} [events.start]
-     * @param {Function} [events.stop]
-     * @param {Function} [events.active]
-     * @param {Function} [events.trigger]
-     * @param {*} [context]
+     * @param {Number[]} channels
+     * @param {Object} [options={}]
+     * @param {Number} [options.triggerThreshold=settings.TRIGGER_THRESHOLD]
+     * @param {Function} [options.start]
+     * @param {Function} [options.stop]
+     * @param {Function} [options.active]
+     * @param {Function} [options.trigger]
+     * @param {*} [options.context]
      */
-    constructor(channels = [], { start, stop, active, trigger } = {}, context) {
+    constructor(channels, { triggerThreshold = settings.TRIGGER_THRESHOLD, start, stop, active, trigger, context } = {}) {
         super();
 
         /**
@@ -34,21 +35,15 @@ export default class Input extends EventEmitter {
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {Number}
          */
-        this._triggered = false;
+        this._triggerStart = 0;
 
         /**
          * @private
-         * @member {number}
+         * @member {Number}
          */
-        this._lastTrigger = 0;
-
-        /**
-         * @private
-         * @member {number}
-         */
-        this._triggerThreshold = 300;
+        this._triggerThreshold = triggerThreshold;
 
         if (start) {
             this.on('start', start, context);
@@ -87,24 +82,6 @@ export default class Input extends EventEmitter {
 
     /**
      * @public
-     * @readonly
-     * @member {Boolean}
-     */
-    get triggered() {
-        return this._triggered;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Boolean}
-     */
-    get active() {
-        return this._value > 0;
-    }
-
-    /**
-     * @public
      * @member {Number}
      */
     get triggerThreshold() {
@@ -117,33 +94,25 @@ export default class Input extends EventEmitter {
 
     /**
      * @public
-     * @param {Float32Array} activeChannels
+     * @param {Float32Array} channels
      */
-    update(activeChannels) {
-        this._value = 0;
+    update(channels) {
+        this._value = [...this._channels].reduce((value, channel) => Math.max(channels[channel], value), 0);
 
-        for (const channel of this._channels) {
-            if (activeChannels[channel]) {
-                this._value = Math.max(activeChannels[channel], this._value);
-            }
-        }
-
-        if (this.active) {
-            if (!this._triggered) {
-                this._triggered = true;
-                this._lastTrigger = Date.now();
+        if (this._value) {
+            if (!this._triggerStart) {
+                this._triggerStart = Date.now();
                 this.trigger('start', this._value);
             }
 
             this.trigger('active', this._value);
-        } else if (this._triggered) {
-            this._triggered = false;
+        } else {
+            this.trigger('stop', this._value);
 
-            if (Date.now() - this._lastTrigger < this._triggerThreshold) {
+            if (this._triggerStart && (Date.now() - this._triggerStart) > this._triggerThreshold) {
+                this._triggerStart = 0;
                 this.trigger('trigger', this._value);
             }
-
-            this.trigger('stop', this._value);
         }
     }
 
@@ -157,8 +126,7 @@ export default class Input extends EventEmitter {
         this._channels = null;
 
         this._value = null;
-        this._triggered = null;
-        this._lastTrigger = null;
+        this._triggerStart = null;
         this._triggerThreshold = null;
     }
 }

@@ -1,10 +1,9 @@
 import BlobFactory from './BlobFactory';
-import {getMimeType} from '../../utils';
+import { getMimeType } from '../../utils';
 
 /**
  * @class ImageFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class ImageFactory extends BlobFactory {
 

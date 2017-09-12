@@ -1,11 +1,10 @@
 import AudioFactory from './AudioFactory';
 import Music from '../../audio/Music';
-import {webAudioSupported} from '../../utils';
+import { webAudioSupported } from '../../utils';
 
 /**
  * @class MusicFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class MusicFactory extends AudioFactory {
 

@@ -1,22 +1,21 @@
-import {QUAD_TREE_MAX_LEVEL, QUAD_TREE_MAX_ENTITIES} from '../const';
-import Rectangle from './Rectangle';
+import Rectangle from './shape/Rectangle';
+import settings from '../settings';
 
 /**
  * @class Quadtree
- * @memberof Exo
  */
 export default class Quadtree {
 
     /**
      * @constructor
-     * @param {Exo.Rectangle} bounds
+     * @param {Rectangle} bounds
      * @param {Number} [level=0]
      */
     constructor(bounds, level = 0) {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._bounds = bounds.clone();
 
@@ -28,7 +27,7 @@ export default class Quadtree {
 
         /**
          * @private
-         * @member {Map<Number, Exo.Quadtree>}
+         * @member {Map<Number, Quadtree>}
          */
         this._children = new Map();
 
@@ -42,7 +41,7 @@ export default class Quadtree {
     /**
      * @public
      * @readonly
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get bounds() {
         return this._bounds;
@@ -60,7 +59,7 @@ export default class Quadtree {
     /**
      * @public
      * @readonly
-     * @member {Map<Number, Exo.Quadtree>}
+     * @member {Map<Number, Quadtree>}
      */
     get children() {
         return this._children;
@@ -78,7 +77,7 @@ export default class Quadtree {
     /**
      * @public
      * @chainable
-     * @returns {Exo.Quadtree}
+     * @returns {Quadtree}
      */
     clear() {
         for (const quadtree of this._children) {
@@ -94,7 +93,7 @@ export default class Quadtree {
      * @public
      * @chainable
      * @param {Object} entity
-     * @returns {Exo.Quadtree}
+     * @returns {Quadtree}
      */
     insert(entity) {
         const entities = this._entities,
@@ -108,7 +107,7 @@ export default class Quadtree {
 
         entities.add(entity);
 
-        if ((entities.size > QUAD_TREE_MAX_ENTITIES) && (this._level < QUAD_TREE_MAX_LEVEL)) {
+        if ((entities.size > settings.QUAD_TREE_MAX_ENTITIES) && (this._level < settings.QUAD_TREE_MAX_LEVEL)) {
             this._split();
 
             for (const entity of entities) {
@@ -160,7 +159,7 @@ export default class Quadtree {
     /**
      * @private
      * @param {Object} entity
-     * @returns {?Exo.Quadtree}
+     * @returns {?Quadtree}
      */
     _getChildNode(entity) {
         const children = this._children,
@@ -181,7 +180,7 @@ export default class Quadtree {
     /**
      * @private
      * @param {Object} entity
-     * @returns {?Exo.Quadtree}
+     * @returns {?Quadtree}
      */
     _getChildNode(entity) {
         const children = this._children,

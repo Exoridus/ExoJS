@@ -3,23 +3,22 @@ import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from './particle/ParticleRenderer';
 import Color from '../core/Color';
 import Matrix from '../core/Matrix';
-import {webGLSupported} from '../utils';
-import {BLEND_MODE} from '../const';
+import { webGLSupported } from '../utils';
+import { BLEND_MODE } from '../const';
 import BlendMode from './BlendMode';
 
 /**
  * @class DisplayManager
- * @memberof Exo
  */
 export default class DisplayManager {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      * @param {Object} [config={}]
      * @param {Number} [config.width=800]
      * @param {Number} [config.height=600]
-     * @param {Exo.Color} [config.clearColor=Exo.Color.White]
+     * @param {Color} [config.clearColor=Color.White]
      * @param {Boolean} [config.clearBeforeRender=true]
      * @param {Object} [config.contextOptions]
      */
@@ -46,7 +45,7 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Exo.Color}
+         * @member {Color}
          */
         this._clearColor = clearColor.clone();
 
@@ -60,23 +59,23 @@ export default class DisplayManager {
          * @private
          * @member {Boolean}
          */
-        this._isDrawing = false;
+        this._isRendering = false;
 
         /**
          * @private
-         * @member {Map<String, Exo.Renderer>}
+         * @member {Map<String, Renderer>}
          */
         this._renderers = new Map();
 
         /**
          * @private
-         * @member {?Exo.Renderer}
+         * @member {?Renderer}
          */
         this._currentRenderer = null;
 
         /**
          * @private
-         * @member {Exo.Matrix}
+         * @member {Matrix}
          */
         this._worldTransform = new Matrix();
 
@@ -88,19 +87,19 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Exo.RenderTarget}
+         * @member {RenderTarget}
          */
         this._rootRenderTarget = new RenderTarget(width, height, true);
 
         /**
          * @private
-         * @member {?Exo.RenderTarget}
+         * @member {?RenderTarget}
          */
         this._renderTarget = null;
 
         /**
          * @private
-         * @member {Map<Number, Exo.BlendMode>}
+         * @member {Map<Number, BlendMode>}
          */
         this._blendModes = this._createBlendModes(this._context);
 
@@ -112,7 +111,7 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Exo.Matrix}
+         * @member {Matrix}
          */
         this._projection = new Matrix();
 
@@ -147,7 +146,7 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @member {Exo.RenderTarget}
+     * @member {RenderTarget}
      */
     get renderTarget() {
         return this._renderTarget;
@@ -171,7 +170,7 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @member {Exo.Color}
+     * @member {Color}
      */
     get clearColor() {
         return this._clearColor;
@@ -184,7 +183,7 @@ export default class DisplayManager {
     /**
      * @public
      * @param {String} name
-     * @param {Exo.SpriteRenderer|Exo.ParticleRenderer|Exo.Renderer} renderer
+     * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
      */
     addRenderer(name, renderer) {
         if (this._renderers.has(name)) {
@@ -198,7 +197,7 @@ export default class DisplayManager {
     /**
      * @public
      * @param {String} name
-     * @returns {Exo.Renderer}
+     * @returns {Renderer}
      */
     getRenderer(name) {
         if (!this._renderers.has(name)) {
@@ -223,19 +222,17 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {?Exo.RenderTarget} renderTarget
+     * @param {?RenderTarget} renderTarget
      */
     setRenderTarget(renderTarget) {
         const newTarget = renderTarget || this._rootRenderTarget;
 
-        if (this._renderTarget === newTarget) {
-            return;
+        if (this._renderTarget !== newTarget) {
+            newTarget.setContext(this._context);
+            newTarget.bind();
+
+            this._renderTarget = newTarget;
         }
-
-        newTarget.setContext(this._context);
-        newTarget.bind();
-
-        this._renderTarget = newTarget;
     }
 
     /**
@@ -265,24 +262,24 @@ export default class DisplayManager {
         this._canvas.height = height;
 
         this._rootRenderTarget.resize(width, height);
-        this.setProjection(this._rootRenderTarget.getProjection());
+        this.setProjection(this._rootRenderTarget.projection);
     }
 
     /**
      * @public
-     * @param {Exo.View} view
+     * @param {View} view
      */
     setView(view) {
         this._renderTarget.setView(view);
 
         if (this._renderTarget === this._rootRenderTarget) {
-            this.setProjection(this._rootRenderTarget.getProjection());
+            this.setProjection(this._rootRenderTarget.projection);
         }
     }
 
     /**
      * @public
-     * @param {Exo.Matrix} projection
+     * @param {Matrix} projection
      */
     setProjection(projection) {
         this._projection.copy(projection);
@@ -294,7 +291,7 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Exo.Color} [color=this._clearColor]
+     * @param {Color} [color=this._clearColor]
      */
     clear(color = this._clearColor) {
         const gl = this._context;
@@ -308,7 +305,7 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Exo.Color} color
+     * @param {Color} color
      */
     setClearColor(color) {
         if (!this._clearColor.equals(color)) {
@@ -321,11 +318,11 @@ export default class DisplayManager {
      * @public
      */
     begin() {
-        if (this._isDrawing) {
+        if (this._isRendering) {
             throw new Error('Renderer has already begun!');
         }
 
-        this._isDrawing = true;
+        this._isRendering = true;
 
         if (this._clearBeforeRender) {
             this.clear();
@@ -337,7 +334,7 @@ export default class DisplayManager {
      * @param {*} renderable
      */
     render(renderable) {
-        if (!this._isDrawing) {
+        if (!this._isRendering) {
             throw new Error('Renderer needs to begin first!');
         }
 
@@ -350,11 +347,11 @@ export default class DisplayManager {
      * @public
      */
     end() {
-        if (!this._isDrawing) {
+        if (!this._isRendering) {
             throw new Error('Renderer needs to begin first!');
         }
 
-        this._isDrawing = false;
+        this._isRendering = false;
 
         if (this._currentRenderer && !this._contextLost) {
             this._currentRenderer.flush();
@@ -370,8 +367,16 @@ export default class DisplayManager {
         for (const renderer of this._renderers.values()) {
             renderer.destroy();
         }
+
+        for (const blendMode of this._blendModes.values()) {
+            blendMode.destroy();
+        }
+
         this._renderers.clear();
-        this._renderers = null
+        this._renderers = null;
+
+        this._blendModes.clear();
+        this._blendModes = null;
 
         this._clearColor.destroy();
         this._clearColor = null;
@@ -379,7 +384,18 @@ export default class DisplayManager {
         this._worldTransform.destroy();
         this._worldTransform = null;
 
+        this._rootRenderTarget.destroy();
+        this._rootRenderTarget = null;
+
+        this._projection.destroy();
+        this._projection = null;
+
+        this._clearBeforeRender = null;
+        this._isRendering = null;
+        this._contextLost = null;
         this._currentRenderer = null;
+        this._currentBlendMode = null;
+        this._renderTarget = null;
         this._context = null;
         this._canvas = null;
     }

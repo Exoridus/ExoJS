@@ -1,32 +1,55 @@
+import { SHAPE } from '../../const';
+
 /**
- * @interface Shape
- * @memberof Exo
+ * @abstract
+ * @class Shape
  */
 export default class Shape {
 
     /**
+     * @private
+     * @member {Float32Array} _array
+     */
+
+    /**
+     * @private
+     * @member {Rectangle} _bounds
+     */
+
+    /**
      * @public
-     * @virtual
+     * @abstract
      * @readonly
      * @member {Number}
      */
     get type() {
-        throw new Error('Property not implemented!');
+        return SHAPE.NONE;
     }
 
     /**
      * @public
-     * @virtual
+     * @abstract
      * @readonly
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get bounds() {
-        throw new Error('Property not implemented!');
+        return this.getBounds();
     }
 
     /**
      * @public
-     * @virtual
+     * @abstract
+     * @readonly
+     * @member {Float32Array}
+     */
+    get array() {
+        return this.toArray();
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @abstract
      */
     set() {
         throw new Error('Method not implemented!');
@@ -34,7 +57,8 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
+     * @abstract
+     * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
      */
     copy(shape) {
         throw new Error('Method not implemented!');
@@ -42,8 +66,8 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
-     * @returns {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape}
+     * @abstract
+     * @returns {Shape|Vector|Rectangle|Cirlce|Polygon}
      */
     clone() {
         throw new Error('Method not implemented!');
@@ -51,7 +75,7 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
+     * @abstract
      */
     reset() {
         throw new Error('Method not implemented!');
@@ -59,7 +83,7 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
+     * @abstract
      * @returns {Float32Array}
      */
     toArray() {
@@ -68,8 +92,8 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
-     * @returns {Exo.Rectangle}
+     * @abstract
+     * @returns {Rectangle}
      */
     getBounds() {
         throw new Error('Method not implemented!');
@@ -77,8 +101,8 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
-     * @param {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape} shape
+     * @abstract
+     * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
      * @returns {Boolean}
      */
     contains(shape) {
@@ -87,8 +111,8 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
-     * @param {Exo.Vector|Exo.Circle|Exo.Rectangle|Exo.Polygon|Exo.Shape} shape
+     * @abstract
+     * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
      * @returns {Boolean}
      */
     intersects(shape) {
@@ -97,9 +121,17 @@ export default class Shape {
 
     /**
      * @public
-     * @virtual
+     * @abstract
      */
     destroy() {
-        throw new Error('Method not implemented!');
+        if (this._array) {
+            this._array.fill(0);
+            this._array = null;
+        }
+
+        if (this._bounds) {
+            this._bounds.destroy();
+            this._bounds = null;
+        }
     }
 }

@@ -1,14 +1,13 @@
 /**
  * @class AnimationFrame
- * @memberof Exo
  */
 export default class AnimationFrame {
 
     /**
      * @constructor
      * @param {Number} duration
-     * @param {Exo.Rectangle} rectangle
-     * @param {Exo.Vector} [origin=null]
+     * @param {Rectangle} rectangle
+     * @param {Vector} [origin=null]
      */
     constructor(duration, rectangle, origin = null) {
 
@@ -20,13 +19,13 @@ export default class AnimationFrame {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._rectangle = rectangle.clone();
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._origin = origin;
 
@@ -51,7 +50,7 @@ export default class AnimationFrame {
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get rectangle() {
         return this._rectangle;
@@ -63,7 +62,7 @@ export default class AnimationFrame {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get origin() {
         return this._origin;

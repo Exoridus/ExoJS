@@ -2,14 +2,13 @@ import ParticleModifier from '../ParticleModifier';
 
 /**
  * @class ForceModifier
- * @implements {Exo.ParticleModifier}
- * @memberof Exo
+ * @implements {ParticleModifier}
  */
 export default class ForceModifier extends ParticleModifier {
 
     /**
      * @constructor
-     * @param {Exo.Vector} acceleration
+     * @param {Vector} acceleration
      */
     constructor(acceleration) {
         super();
@@ -19,7 +18,7 @@ export default class ForceModifier extends ParticleModifier {
 
     /**
      * @public
-     * @param {Exo.Vector} acceleration
+     * @param {Vector} acceleration
      */
     setAcceleration(acceleration) {
         this._acceleration.copy(acceleration);
@@ -27,7 +26,7 @@ export default class ForceModifier extends ParticleModifier {
 
     /**
      * @public
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     getAcceleration() {
         return this._acceleration;
@@ -38,7 +37,7 @@ export default class ForceModifier extends ParticleModifier {
      */
     apply(particle, delta) {
         const acceleration = this._acceleration,
-            seconds = delta.asSeconds();
+            seconds = delta.seconds;
 
         particle.velocity.add(seconds * acceleration.x, seconds * acceleration.y);
     }

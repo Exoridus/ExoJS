@@ -2,7 +2,6 @@ import RC4 from './RC4';
 
 /**
  * @class Random
- * @memberof Exo
  */
 export default class Random {
 

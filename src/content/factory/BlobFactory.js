@@ -2,8 +2,7 @@ import ArrayBufferFactory from './ArrayBufferFactory';
 
 /**
  * @class BlobFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class BlobFactory extends ArrayBufferFactory {
 

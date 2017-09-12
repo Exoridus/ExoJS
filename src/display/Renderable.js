@@ -1,11 +1,10 @@
 import Transformable from '../core/Transformable';
 import Matrix from '../core/Matrix';
-import Rectangle from '../core/Rectangle';
+import Rectangle from '../core/shape/Rectangle';
 
 /**
  * @class Renderable
- * @extends {Exo.Transformable}
- * @memberof Exo
+ * @extends {Transformable}
  */
 export default class Renderable extends Transformable {
 
@@ -17,13 +16,13 @@ export default class Renderable extends Transformable {
 
         /**
          * @private
-         * @member {Exo.Matrix}
+         * @member {Matrix}
          */
         this._worldTransform = new Matrix();
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._bounds = new Rectangle();
 
@@ -35,14 +34,14 @@ export default class Renderable extends Transformable {
 
         /**
          * @private
-         * @member {?Exo.Renderable}
+         * @member {?Renderable}
          */
         this._parent = null;
     }
 
     /**
      * @public
-     * @member {Exo.Matrix}
+     * @member {Matrix}
      */
     get worldTransform() {
         return this._worldTransform;
@@ -66,7 +65,7 @@ export default class Renderable extends Transformable {
 
     /**
      * @public
-     * @member {?Exo.Renderable}
+     * @member {?Renderable}
      */
     get parent() {
         return this._parent;
@@ -78,7 +77,7 @@ export default class Renderable extends Transformable {
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get bounds() {
         return this.getBounds();
@@ -86,7 +85,7 @@ export default class Renderable extends Transformable {
 
     /**
      * @public
-     * @returns {Exo.Rectangle}
+     * @returns {Rectangle}
      */
     getBounds() {
         return this._bounds.set(this.x, this.y, 0, 0);
@@ -96,9 +95,9 @@ export default class Renderable extends Transformable {
      * @public
      * @virtual
      * @chainable
-     * @param {Exo.DisplayManager} renderManager
-     * @param {Exo.Matrix} worldTransform
-     * @returns {Exo.Renderable}
+     * @param {DisplayManager} renderManager
+     * @param {Matrix} worldTransform
+     * @returns {Renderable}
      */
     render(renderManager, worldTransform) {
         return this;

@@ -2,8 +2,7 @@ import EventEmitter from './EventEmitter';
 
 /**
  * @class Scene
- * @extends {Exo.EventEmitter}
- * @memberof Exo
+ * @extends {EventEmitter}
  */
 export default class Scene extends EventEmitter {
 
@@ -21,7 +20,7 @@ export default class Scene extends EventEmitter {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = null;
 
@@ -32,7 +31,7 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @member {Exo.Game}
+     * @member {Game}
      */
     get game() {
         return this._game;
@@ -45,7 +44,7 @@ export default class Scene extends EventEmitter {
     /**
      * @public
      * @abstract
-     * @param {Exo.ResourceLoader} loader
+     * @param {ResourceLoader} loader
      */
     load(loader) {
         this._game.trigger('scene:start');
@@ -62,7 +61,7 @@ export default class Scene extends EventEmitter {
     /**
      * @public
      * @abstract
-     * @param {Exo.Time} delta
+     * @param {Time} delta
      */
     update(delta) {
         // do nothing

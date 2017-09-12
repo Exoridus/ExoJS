@@ -1,10 +1,9 @@
 import View from './View';
-import Rectangle from '../core/Rectangle';
-import Vector from '../core/Vector';
+import Rectangle from '../core/shape/Rectangle';
+import Vector from '../core/shape/Vector';
 
 /**
  * @class RenderTarget
- * @memberof Exo
  */
 export default class RenderTarget {
 
@@ -36,26 +35,32 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._size = new Vector(width, height);
 
         /**
          * @private
-         * @member {Exo.View}
+         * @member {Rectangle}
+         */
+        this._viewport = new Rectangle();
+
+        /**
+         * @private
+         * @member {View}
          */
         this._defaultView = new View(new Rectangle(0, 0, width, height));
 
         /**
          * @private
-         * @member {Exo.View}
+         * @member {View}
          */
         this._view = this._defaultView;
     }
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get size() {
         return this._size;
@@ -91,10 +96,11 @@ export default class RenderTarget {
 
     /**
      * @public
+     * @readonly
+     * @member {Matrix}
      */
-    init() {
-        this._defaultView.reset(new Rectangle(0, 0, this._size.x, this._size.y));
-        this._view = this._defaultView;
+    get projection() {
+        return this._view.transform;
     }
 
     /**
@@ -102,12 +108,10 @@ export default class RenderTarget {
      * @param {WebGLRenderingContext} gl
      */
     setContext(gl) {
-        if (this._context) {
-            return;
+        if (!this._context) {
+            this._context = gl;
+            this._frameBuffer = this._isRoot ? null : gl.createFramebuffer();
         }
-
-        this._context = gl;
-        this._frameBuffer = this._isRoot ? null : gl.createFramebuffer();
     }
 
     /**
@@ -121,20 +125,30 @@ export default class RenderTarget {
 
     /**
      * @public
-     * @param {Exo.View} view
-     * @returns {Exo.Rectangle}
+     * @param {View} view
+     * @returns {Rectangle}
      */
     getViewport(view) {
-        const width = this._size.x,
-            height = this._size.y,
+        const width = this.width,
+            height = this.height,
             viewport = view.viewport;
 
-        return new Rectangle(
+        return this._viewport.set(
             (0.5 + (width * viewport.x)) | 0,
             (0.5 + (height * viewport.y)) | 0,
             (0.5 + (width * viewport.width)) | 0,
-            (0.5 + (height * viewport.height)) | 0
+            (0.5 + (height * viewport.height)) | 0,
         );
+    }
+
+    /**
+     * @public
+     */
+    updateViewport() {
+        const gl = this._context,
+            viewport = this.getViewport(this._view);
+
+        gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
     }
 
     /**
@@ -144,28 +158,40 @@ export default class RenderTarget {
      */
     resize(width, height) {
         this._size.set(width, height);
+
         this.updateViewport();
     }
 
     /**
      * @public
-     */
-    updateViewport() {
-        const viewport = this.getViewport(this._view);
-
-        this._context.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-    }
-
-    /**
-     * @public
-     * @param {Exo.View} view
+     * @param {View} view
      */
     setView(view) {
         this._view = view;
+
         this.updateViewport();
     }
 
-    getProjection() {
-        return this._view.transform;
+    /**
+     * @public
+     */
+    destroy() {
+        if (this._frameBuffer) {
+            this._context.deleteFramebuffer(this._frameBuffer);
+            this._frameBuffer = null;
+        }
+
+        this._defaultView.destroy();
+        this._defaultView = null;
+
+        this._viewport.destroy();
+        this._viewport = null;
+
+        this._size.destroy();
+        this._size = null;
+
+        this._view = null;
+        this._isRoot = null;
+        this._context = null;
     }
 }

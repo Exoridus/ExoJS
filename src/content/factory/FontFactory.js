@@ -1,10 +1,9 @@
 import ArrayBufferFactory from './ArrayBufferFactory';
-import {getFilename} from '../../utils';
+import { getFilename } from '../../utils';
 
 /**
  * @class FontFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class FontFactory extends ArrayBufferFactory {
 

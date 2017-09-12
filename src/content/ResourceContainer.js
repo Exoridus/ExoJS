@@ -1,6 +1,5 @@
 /**
  * @class ResourceContainer
- * @memberOf Exo
  */
 export default class ResourceContainer {
 
@@ -44,7 +43,7 @@ export default class ResourceContainer {
      * @public
      * @chainable
      * @param {String} type
-     * @returns {Exo.ResourceContainer}
+     * @returns {ResourceContainer}
      */
     addType(type) {
         if (!this._types.has(type)) {
@@ -75,14 +74,15 @@ export default class ResourceContainer {
      * @returns {Boolean}
      */
     has(type, name) {
-        return this.getResources(type).has(name);
+        return this.getResources(type)
+            .has(name);
     }
 
     /**
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Exo.ResourceContainer}
+     * @returns {ResourceContainer}
      */
     get(type, name) {
         const resources = this.getResources(type);
@@ -100,10 +100,11 @@ export default class ResourceContainer {
      * @param {String} type
      * @param {String} name
      * @param {*} resource
-     * @returns {Exo.ResourceContainer}
+     * @returns {ResourceContainer}
      */
     set(type, name, resource) {
-        this.getResources(type).set(name, resource);
+        this.getResources(type)
+            .set(name, resource);
 
         return this;
     }
@@ -113,10 +114,11 @@ export default class ResourceContainer {
      * @chainable
      * @param {String} type
      * @param {String} name
-     * @returns {Exo.ResourceContainer}
+     * @returns {ResourceContainer}
      */
     delete(type, name) {
-        this.getResources(type).delete(name);
+        this.getResources(type)
+            .delete(name);
 
         return this;
     }
@@ -124,7 +126,7 @@ export default class ResourceContainer {
     /**
      * @public
      * @chainable
-     * @returns {Exo.ResourceContainer}
+     * @returns {ResourceContainer}
      */
     clear() {
         for (const container of this._resources.values()) {

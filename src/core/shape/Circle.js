@@ -1,12 +1,11 @@
 import Rectangle from './Rectangle';
 import Vector from './Vector';
 import Shape from './Shape';
-import {SHAPE} from '../const';
+import { SHAPE } from '../../const';
 
 /**
  * @class Circle
- * @implements {Exo.Shape}
- * @memberof Exo
+ * @implements {Shape}
  */
 export default class Circle extends Shape {
 
@@ -21,7 +20,7 @@ export default class Circle extends Shape {
 
         /**
          * @private
-         * @member {Exo.Vector}
+         * @member {Vector}
          */
         this._position = new Vector(x, y);
 
@@ -30,22 +29,10 @@ export default class Circle extends Shape {
          * @member {Number}
          */
         this._radius = radius;
-
-        /**
-         * @private
-         * @member {Float32Array} _array
-         */
-
-        /**
-         * @private
-         * @member {Exo.Rectangle} _bounds
-         */
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Number}
+     * @override
      */
     get type() {
         return SHAPE.CIRCLE;
@@ -53,7 +40,7 @@ export default class Circle extends Shape {
 
     /**
      * @public
-     * @member {Exo.Vector}
+     * @member {Vector}
      */
     get position() {
         return this._position;
@@ -100,30 +87,6 @@ export default class Circle extends Shape {
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        const array = this._array || (this._array = new Float32Array(3));
-
-        array[0] = this.x;
-        array[1] = this.y;
-        array[2] = this.radius;
-
-        return array;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Exo.Rectangle}
-     */
-    get bounds() {
-        this.getBounds();
-    }
-
-    /**
      * @override
      */
     set(x, y, radius) {
@@ -147,7 +110,7 @@ export default class Circle extends Shape {
      * @override
      */
     clone() {
-        return new Circle(this.x, this.y, this.radius);
+        return new Circle(this.x, this.y, this._radius);
     }
 
     /**
@@ -161,7 +124,13 @@ export default class Circle extends Shape {
      * @override
      */
     toArray() {
-        return this.array;
+        const array = this._array || (this._array = new Float32Array(3));
+
+        array[0] = this.x;
+        array[1] = this.y;
+        array[2] = this._radius;
+
+        return array;
     }
 
     /**
@@ -208,7 +177,7 @@ export default class Circle extends Shape {
             case SHAPE.POINT:
                 return this.contains(shape);
             case SHAPE.CIRCLE:
-                return this._position.distanceTo(shape.position) < (this._radius + shape.radius);
+                return this.distanceTo(shape) < (this._radius + shape.radius);
             case SHAPE.RECTANGLE:
             case SHAPE.POLYGON:
             default:
@@ -219,27 +188,8 @@ export default class Circle extends Shape {
     }
 
     /**
-     * @override
-     */
-    destroy() {
-        if (this._array) {
-            this._array = null;
-        }
-
-        if (this._bounds) {
-            this._bounds.destroy();
-            this._bounds = null;
-        }
-
-        this._position.destroy();
-        this._position = null;
-        this._radius = null;
-    }
-
-    /**
      * @public
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Cirlce} circle
      * @returns {Number}
      */
     distanceTo(circle) {
@@ -247,5 +197,16 @@ export default class Circle extends Shape {
             y = this._y - circle.y;
 
         return Math.sqrt((x * x) + (y * y));
+    }
+
+    /**
+     * @override
+     */
+    destroy() {
+        super.destroy();
+
+        this._position.destroy();
+        this._position = null;
+        this._radius = null;
     }
 }

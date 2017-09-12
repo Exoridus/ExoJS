@@ -1,16 +1,15 @@
 import ChannelHandler from './ChannelHandler';
-import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../const';
+import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
 
 /**
  * @class Keyboard
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class Keyboard extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(game, channelBuffer) {
@@ -18,7 +17,7 @@ export default class Keyboard extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = game;
 
@@ -90,7 +89,7 @@ export default class Keyboard extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return CHANNEL_OFFSET.KEYBOARD + (key & 255);
+        return CHANNEL_OFFSET.KEYBOARD + (key % CHANNEL_LENGTH.DEVICE);
     }
 }
 

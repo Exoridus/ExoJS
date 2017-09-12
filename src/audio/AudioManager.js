@@ -1,14 +1,13 @@
-import {clamp} from '../utils';
+import { clamp } from '../utils';
 
 /**
  * @class AudioManager
- * @memberof Exo
  */
 export default class AudioManager {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      * @param {Object} [options={}]
      * @param {Number} [options.masterVolume=1]
      * @param {Number} [options.musicVolume=1]
@@ -18,29 +17,29 @@ export default class AudioManager {
 
         /**
          * @private
-         * @member {Exo.Game}
-         * @memberof Exo.AudioManager
+         * @member {Game}
+         * @memberof AudioManager
          */
         this._game = game;
 
         /**
          * @private
          * @member {AudioContext}
-         * @memberof Exo.AudioManager
+         * @memberof AudioManager
          */
         this._context = new AudioContext();
 
         /**
          * @private
          * @member {AudioDestinationNode}
-         * @memberof Exo.AudioManager
+         * @memberof AudioManager
          */
         this._destination = this._context.destination;
 
         /**
          * @private
          * @member {DynamicsCompressorNode}
-         * @memberof Exo.AudioManager
+         * @memberof AudioManager
          */
         this._compressor = this._context.createDynamicsCompressor();
         this._compressor.connect(this._destination);
@@ -98,7 +97,7 @@ export default class AudioManager {
      * @public
      * @readonly
      * @member {AudioContext}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get context() {
         return this._context;
@@ -107,7 +106,7 @@ export default class AudioManager {
     /**
      * @readonly
      * @member {AudioNode}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get masterNode() {
         return this._masterGain;
@@ -116,7 +115,7 @@ export default class AudioManager {
     /**
      * @readonly
      * @member {AudioNode}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get musicNode() {
         return this._musicGain;
@@ -125,7 +124,7 @@ export default class AudioManager {
     /**
      * @readonly
      * @member {AudioNode}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get soundNode() {
         return this._soundGain;
@@ -134,7 +133,7 @@ export default class AudioManager {
     /**
      * @readonly
      * @member {AudioNode}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get analyserTarget() {
         return this._compressor;
@@ -143,7 +142,7 @@ export default class AudioManager {
     /**
      * @public
      * @member {Number}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get masterVolume() {
         return this._masterVolume;
@@ -156,7 +155,7 @@ export default class AudioManager {
     /**
      * @public
      * @member {Number}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get soundVolume() {
         return this._soundVolume;
@@ -169,7 +168,7 @@ export default class AudioManager {
     /**
      * @public
      * @member {Number}
-     * @memberof Exo.AudioManager
+     * @memberof AudioManager
      */
     get musicVolume() {
         return this._musicVolume;
@@ -181,7 +180,7 @@ export default class AudioManager {
 
     /**
      * @public
-     * @param {Exo.Music|Exo.Sound|Exo.Audio|Exo.Playable} playable
+     * @param {Music|Sound|Audio|Playable} playable
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
      * @param {Number} [options.playbackRate]

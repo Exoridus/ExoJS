@@ -1,8 +1,7 @@
-import {removeItems} from '../utils';
+import { removeItems } from '../utils';
 
 /**
  * @class EventEmitter
- * @memberof Exo
  */
 export default class EventEmitter {
 
@@ -33,7 +32,7 @@ export default class EventEmitter {
      * @param {String} event
      * @param {Function} callback
      * @param {*} [context=this]
-     * @returns {Exo.EventEmitter}
+     * @returns {EventEmitter}
      */
     on(event, callback, context = this) {
         if (!this._events) {
@@ -63,7 +62,7 @@ export default class EventEmitter {
      * @param {String} event
      * @param {Function} callback
      * @param {*} [context=this]
-     * @returns {Exo.EventEmitter}
+     * @returns {EventEmitter}
      */
     once(event, callback, context = this) {
         const once = (...args) => {
@@ -80,7 +79,7 @@ export default class EventEmitter {
      * @param {String} [event='*']
      * @param {Function} [callback]
      * @param {*} [context]
-     * @returns {Exo.EventEmitter}
+     * @returns {EventEmitter}
      */
     off(event = '*', callback, context) {
         if (!this._events) {
@@ -139,7 +138,7 @@ export default class EventEmitter {
      * @chainable
      * @param {String} event
      * @param {...*} args
-     * @returns {Exo.EventEmitter}
+     * @returns {EventEmitter}
      */
     trigger(event, ...args) {
         if (!this._events) {

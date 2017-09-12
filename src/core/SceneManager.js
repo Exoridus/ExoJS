@@ -1,24 +1,23 @@
 /**
  * @class SceneManager
- * @memberof Exo
  */
 export default class SceneManager {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      */
     constructor(game) {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = game;
 
         /**
          * @private
-         * @member {?Exo.Scene}
+         * @member {?Scene}
          */
         this._currentScene = null;
 
@@ -35,7 +34,7 @@ export default class SceneManager {
 
     /**
      * @public
-     * @param {Exo.Time} delta
+     * @param {Time} delta
      */
     update(delta) {
         if (!this._currentScene || !this._sceneActive) {
@@ -47,7 +46,7 @@ export default class SceneManager {
 
     /**
      * @private
-     * @param {Exo.Scene} scene
+     * @param {Scene} scene
      */
     onSceneChange(scene) {
         this._game.trigger('scene:stop');

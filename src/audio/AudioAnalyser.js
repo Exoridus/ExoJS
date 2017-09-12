@@ -1,12 +1,11 @@
 /**
  * @class AudioAnalyser
- * @memberof Exo
  */
 export default class AudioAnalyser {
 
     /**
      * @constructor
-     * @param {Exo.Sound|Exo.Music|Exo.AudioManager} target
+     * @param {Sound|Music|AudioManager} target
      * @param {Object} [options]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
@@ -20,7 +19,7 @@ export default class AudioAnalyser {
 
         /**
          * @private
-         * @member {Exo.Sound|Exo.Music|Exo.AudioManager}
+         * @member {Sound|Music|AudioManager}
          */
         this._target = target;
 
@@ -28,7 +27,12 @@ export default class AudioAnalyser {
          * @private
          * @member {Object}
          */
-        this._options = { fftSize, minDecibels, maxDecibels, smoothingTimeConstant };
+        this._options = {
+            fftSize,
+            minDecibels,
+            maxDecibels,
+            smoothingTimeConstant,
+        };
     }
 
     ensureContext() {

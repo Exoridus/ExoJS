@@ -4,8 +4,7 @@ import Gamepad from './Gamepad';
 
 /**
  * @class DefaultGamepadMapping
- * @extends {Exo.GamepadMapping}
- * @memberof Exo
+ * @extends {GamepadMapping}
  */
 export default class DefaultGamepadMapping extends GamepadMapping {
 

@@ -2,8 +2,7 @@ import EventEmitter from '../core/EventEmitter';
 
 /**
  * @class ChannelHandler
- * @extends {Exo.EventEmitter}
- * @memberof Exo
+ * @extends {EventEmitter}
  */
 export default class ChannelHandler extends EventEmitter {
 
@@ -62,16 +61,14 @@ export default class ChannelHandler extends EventEmitter {
     }
 
     set active(value) {
-        this._active = !!value;
+        this._active = value;
     }
 
     /**
      * @public
-     * @param {Number} offset
-     * @param {Number} length
      */
-    setChannelOffset(offset, length) {
-        this._channels = new Float32Array(this._channelBuffer, offset * 4, length);
+    toggle() {
+        this._active = !this._active;
     }
 
     /**

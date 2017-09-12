@@ -4,7 +4,6 @@
  * | e | f | z |
  *
  * @class Matrix
- * @memberof Exo
  */
 export default class Matrix {
 
@@ -144,7 +143,7 @@ export default class Matrix {
      * @param {Number} e
      * @param {Number} f
      * @param {Number} z
-     * @returns {Exo.Matrix}
+     * @returns {Matrix}
      */
     set(a, b, x, c, d, y, e, f, z) {
         this.a = a;
@@ -163,8 +162,8 @@ export default class Matrix {
     /**
      * @public
      * @chainable
-     * @param {Exo.Matrix} matrix
-     * @returns {Exo.Matrix}
+     * @param {Matrix} matrix
+     * @returns {Matrix}
      */
     copy(matrix) {
         return this.set(
@@ -176,7 +175,7 @@ export default class Matrix {
 
     /**
      * @public
-     * @returns {Exo.Matrix}
+     * @returns {Matrix}
      */
     clone() {
         return new Matrix(
@@ -189,8 +188,8 @@ export default class Matrix {
     /**
      * @public
      * @chainable
-     * @param {Exo.Matrix} matrix
-     * @returns {Exo.Matrix}
+     * @param {Matrix} matrix
+     * @returns {Matrix}
      */
     multiply(matrix) {
         return this.set(
@@ -219,7 +218,7 @@ export default class Matrix {
 
     /**
      * @public
-     * @returns {Exo.Matrix}
+     * @returns {Matrix}
      */
     reset() {
         return this.set(
@@ -231,16 +230,17 @@ export default class Matrix {
 
     /**
      * @public
-     * @returns {Exo.Matrix}
+     * @returns {Matrix}
      */
     destroy() {
         if (this._array) {
+            this._array.fill(0);
             this._array = null;
         }
 
-        this.a = null;
-        this.b = null;
-        this.x = null;
+        this.a = this.c = this.e = null;
+        this.b = this.d = this.f = null;
+        this.x = this.y = this.z = null;
 
         this.c = null;
         this.d = null;
@@ -254,8 +254,8 @@ export default class Matrix {
     /**
      * @public
      * @static
-     * @param {...Exo.Matrix} matrices
-     * @returns {Exo.Matrix}
+     * @param {...Matrix} matrices
+     * @returns {Matrix}
      */
     static multiply(...matrices) {
         const result = new Matrix();
@@ -270,7 +270,7 @@ export default class Matrix {
     /**
      * @public
      * @static
-     * @member {Exo.Matrix}
+     * @member {Matrix}
      */
     static get Identity() {
         return new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);

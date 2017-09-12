@@ -1,11 +1,10 @@
 import ChannelHandler from '../ChannelHandler';
 import DefaultGamepadMapping from './DefaultGamepadMapping';
-import {CHANNEL_OFFSET, CHANNEL_LENGTH} from '../../const';
+import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
 
 /**
  * @class Gamepad
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class Gamepad extends ChannelHandler {
 
@@ -25,7 +24,7 @@ export default class Gamepad extends ChannelHandler {
 
         /**
          * @private
-         * @member {Exo.GamepadMapping}
+         * @member {GamepadMapping}
          */
         this._mapping = new DefaultGamepadMapping();
     }
@@ -41,7 +40,7 @@ export default class Gamepad extends ChannelHandler {
 
     /**
      * @public
-     * @member {Exo.GamepadMapping}
+     * @member {GamepadMapping}
      */
     get mapping() {
         return this._mapping;
@@ -125,7 +124,7 @@ export default class Gamepad extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key, index = 0) {
-        return CHANNEL_OFFSET.GAMEPAD + (index * CHANNEL_LENGTH.CHILD) + (key & 31);
+        return CHANNEL_OFFSET.GAMEPAD + (index * CHANNEL_LENGTH.CHILD) + (key % CHANNEL_LENGTH.CHILD);
     }
 }
 

@@ -1,5 +1,5 @@
 import EventEmitter from './EventEmitter';
-import Clock from './Clock';
+import Clock from './time/Clock';
 import SceneManager from './SceneManager';
 import DisplayManager from '../display/DisplayManager';
 import AudioManager from '../audio/AudioManager';
@@ -9,8 +9,7 @@ import settings from '../settings';
 
 /**
  * @class Game
- * @extends {Exo.EventEmitter}
- * @memberof Exo
+ * @extends {EventEmitter}
  */
 export default class Game extends EventEmitter {
 
@@ -25,7 +24,7 @@ export default class Game extends EventEmitter {
      * @param {Number} [options.masterVolume=1]
      * @param {?HTMLCanvasElement|?String} [options.canvas=null]
      * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
-     * @param {Exo.Color} [options.clearColor=Exo.Color.White]
+     * @param {Color} [options.clearColor=Color.White]
      * @param {Boolean} [options.clearBeforeRender=true]
      * @param {Object} [options.contextOptions]
      */
@@ -52,31 +51,31 @@ export default class Game extends EventEmitter {
 
         /**
          * @private
-         * @member {Exo.ResourceLoader}
+         * @member {ResourceLoader}
          */
         this._loader = new ResourceLoader(this._config);
 
         /**
          * @private
-         * @member {Exo.DisplayManager}
+         * @member {DisplayManager}
          */
         this._displayManager = new DisplayManager(this, this._config);
 
         /**
          * @private
-         * @member {Exo.AudioManager}
+         * @member {AudioManager}
          */
         this._audioManager = new AudioManager(this, this._config);
 
         /**
          * @private
-         * @member {Exo.InputManager}
+         * @member {InputManager}
          */
         this._inputManager = new InputManager(this);
 
         /**
          * @private
-         * @member {Exo.SceneManager}
+         * @member {SceneManager}
          */
         this._sceneManager = new SceneManager(this);
 
@@ -94,7 +93,7 @@ export default class Game extends EventEmitter {
 
         /**
          * @private
-         * @member {Exo.Clock}
+         * @member {Clock}
          */
         this._delta = new Clock(false);
 
@@ -130,7 +129,7 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.ResourceLoader}
+     * @member {ResourceLoader}
      */
     get loader() {
         return this._loader;
@@ -139,7 +138,7 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.DisplayManager}
+     * @member {DisplayManager}
      */
     get displayManager() {
         return this._displayManager;
@@ -148,7 +147,7 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.AudioManager}
+     * @member {AudioManager}
      */
     get audioManager() {
         return this._audioManager;
@@ -157,7 +156,7 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.InputManager}
+     * @member {InputManager}
      */
     get inputManager() {
         return this._inputManager;
@@ -166,7 +165,7 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Exo.SceneManager}
+     * @member {SceneManager}
      */
     get sceneManager() {
         return this._sceneManager;
@@ -174,7 +173,7 @@ export default class Game extends EventEmitter {
 
     /**
      * @public
-     * @param {Exo.Scene} scene
+     * @param {Scene} scene
      */
     start(scene) {
         if (this._running) {

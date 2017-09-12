@@ -1,4 +1,4 @@
-import {DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED} from './const';
+import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED } from './const';
 
 export const
 
@@ -7,7 +7,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo.utils
      * @type {Boolean}
      */
     webAudioSupported = ('AudioContext' in window),
@@ -17,7 +16,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo.utils
      * @type {Boolean}
      */
     indexedDBSupported = ('indexedDB' in window),
@@ -27,7 +25,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo.utils
      * @type {Boolean}
      */
     webGLSupported = (() => {
@@ -46,7 +43,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo.utils
      * @type {?AudioContext}
      */
     audioContext = webAudioSupported ? new AudioContext() : null,
@@ -56,7 +52,6 @@ export const
      * @static
      * @readonly
      * @constant
-     * @memberof Exo.utils
      * @type {HTMLMediaElement}
      */
     audio = new Audio(),
@@ -65,7 +60,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {...String} codecs
      * @returns {Boolean}
@@ -84,7 +78,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
      * @returns {Promise<AudioBuffer>}
@@ -103,7 +96,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} degree
      * @returns {Number}
@@ -114,7 +106,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} radian
      * @returns {Number}
@@ -125,7 +116,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} value
      * @param {Number} min
@@ -138,7 +128,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} value
      * @returns {Boolean}
@@ -149,7 +138,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} value
      * @param {Number} min
@@ -162,7 +150,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} minA
      * @param {Number} maxA
@@ -176,7 +163,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} p
      * @param {Number} q
@@ -184,11 +170,21 @@ export const
      * @returns {Number}
      */
     hueToRgb = (p, q, t) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return (p + (q - p)) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return (p + (q - p)) * ((2 / 3) - t) * 6;
+        if (t < 0) {
+            t += 1;
+        }
+        if (t > 1) {
+            t -= 1;
+        }
+        if (t < 1 / 6) {
+            return (p + (q - p)) * 6 * t;
+        }
+        if (t < 1 / 2) {
+            return q;
+        }
+        if (t < 2 / 3) {
+            return (p + (q - p)) * ((2 / 3) - t) * 6;
+        }
 
         return p;
     },
@@ -197,7 +193,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Number} r
      * @param {Number} g
@@ -217,7 +212,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Array} array
      * @param {Number} startIndex
@@ -243,7 +237,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @returns {String}
      */
@@ -253,17 +246,16 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @returns {String}
      */
-    getExtension = (url) => url.substring(url.lastIndexOf('.') + 1).toLowerCase(),
+    getExtension = (url) => url.substring(url.lastIndexOf('.') + 1)
+        .toLowerCase(),
 
     /**
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @type {Function}
      * @param {Response} response
      * @param {String} type
@@ -275,7 +267,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @param {WebGLRenderingContext} gl
      * @param {Number} type
      * @param {String} source
@@ -300,7 +291,6 @@ export const
      * @public
      * @static
      * @constant
-     * @memberof Exo.utils
      * @param {WebGLRenderingContext} gl
      * @param {String} vertexSource
      * @param {String} fragmentSource

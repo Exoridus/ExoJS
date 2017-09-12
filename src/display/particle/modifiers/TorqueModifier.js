@@ -2,8 +2,7 @@ import ParticleModifier from '../ParticleModifier';
 
 /**
  * @class TorqueModifier
- * @implements {Exo.ParticleModifier}
- * @memberof Exo
+ * @implements {ParticleModifier}
  */
 export default class TorqueModifier extends ParticleModifier {
 
@@ -27,7 +26,7 @@ export default class TorqueModifier extends ParticleModifier {
 
     /**
      * @public
-     * @returns {Exo.Vector}
+     * @returns {Vector}
      */
     getAngularAcceleration() {
         return this._angularAcceleration;
@@ -37,6 +36,6 @@ export default class TorqueModifier extends ParticleModifier {
      * @override
      */
     apply(particle, delta) {
-        particle.rotationSpeed += (delta.asSeconds() * this._angularAcceleration);
+        particle.rotationSpeed += (delta.seconds * this._angularAcceleration);
     }
 }

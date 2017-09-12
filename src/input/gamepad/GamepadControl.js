@@ -1,8 +1,7 @@
-import {CHANNEL_OFFSET} from '../../const';
+import { CHANNEL_LENGTH, CHANNEL_OFFSET } from '../../const';
 
 /**
  * @class GamepadControl
- * @memberof Exo
  */
 export default class GamepadControl {
 
@@ -33,25 +32,29 @@ export default class GamepadControl {
          * @private
          * @member {Number}
          */
+        this._key = channel % CHANNEL_OFFSET.CHILD;
+
+        /**
+         * @private
+         * @member {Number}
+         */
         this._threshold = threshold;
 
         /**
+         * Transform value range from [-1, 1] to [1, -1].
+         *
          * @private
          * @member {Boolean}
          */
         this._negate = negate;
 
         /**
+         * Transform value range from [-1, 1] to [0, 1].
+         *
          * @private
          * @member {Boolean}
          */
         this._normalize = normalize;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._key = channel & 31;
     }
 
     /**
@@ -76,7 +79,7 @@ export default class GamepadControl {
 
     set channel(value) {
         this._channel = value;
-        this._key = value & 31;
+        this._key = this._channel % CHANNEL_LENGTH.CHILD;
     }
 
     /**
@@ -88,8 +91,8 @@ export default class GamepadControl {
     }
 
     set key(value) {
-        this._key = value & 31;
-        this._channel = CHANNEL_OFFSET.GAMEPAD + value;
+        this._key = value % CHANNEL_LENGTH.CHILD;
+        this._channel = CHANNEL_OFFSET.GAMEPAD + this._key;
     }
 
     /**
@@ -142,6 +145,6 @@ export default class GamepadControl {
             value = (value + 1) / 2;
         }
 
-        return (value >= this._threshold) ? value : 0;
+        return (value > this._threshold) ? value : 0;
     }
 }

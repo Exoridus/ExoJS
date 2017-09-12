@@ -4,8 +4,7 @@ import settings from '../../settings';
 
 /**
  * @class TextureFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class TextureFactory extends ImageFactory {
 
@@ -22,6 +21,10 @@ export default class TextureFactory extends ImageFactory {
     create(response, { mimeType, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
         return super
             .create(response, { mimeType })
-            .then((image) => new Texture(image, { scaleMode, wrapMode, premultiplyAlpha }));
+            .then((image) => new Texture(image, {
+                scaleMode,
+                wrapMode,
+                premultiplyAlpha,
+            }));
     }
 }

@@ -12,11 +12,11 @@ export default class VersionText extends Exo.Text {
      */
     constructor(text, viewportWidth, viewportHeight) {
         super(text, {
-            color: 'white',
+            fill: 'white',
             fontSie: 25,
             fontFamily: 'AndyBold',
-            outlineColor: 'black',
-            outlineWidth: 3,
+            stroke: 'black',
+            strokeThickness: 3,
         });
 
         this.setOrigin(1, 1);

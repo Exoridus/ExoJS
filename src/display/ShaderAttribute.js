@@ -1,15 +1,23 @@
+import { ATTRIBUTE_TYPE } from '../const';
+
 /**
  * @class ShaderAttribute
- * @memberof Exo
  */
 export default class ShaderAttribute {
 
     /**
+     * Private: context, program, location
+     * Parent: offset, stride
+     *
      * @constructor
-     * @param {String} name
-     * @param {Boolean} active
+     * @param {Object} options
+     * @param {String} options.name
+     * @param {Number} [options.type]
+     * @param {Number} [options.size]
+     * @param {Boolean} [options.normalized=false]
+     * @param {Boolean} [options.enabled=true]
      */
-    constructor(name, active) {
+    constructor({ name, type, size = 1, normalized = false, enabled = true } = {}) {
 
         /**
          * @private
@@ -19,9 +27,27 @@ export default class ShaderAttribute {
 
         /**
          * @private
+         * @member {Number}
+         */
+        this._type = type;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._size = size;
+
+        /**
+         * @private
          * @member {Boolean}
          */
-        this._active = active;
+        this._normalized = normalized;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._enabled = enabled;
 
         /**
          * @private
@@ -54,25 +80,71 @@ export default class ShaderAttribute {
     /**
      * @public
      * @readonly
-     * @member {?Number}
+     * @member {Number}
      */
-    get location() {
-        return this._location;
+    get size() {
+        return this._size;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get type() {
+        return this._type;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get normalized() {
+        return this._normalized;
     }
 
     /**
      * @public
      * @member {Boolean}
      */
-    get active() {
-        return this._active;
+    get enabled() {
+        return this._enabled;
     }
 
-    set active(value) {
-        if (this._active !== active) {
-            this._active = active;
-            this._upload();
+    set enabled(value) {
+        this.setEnabled(value);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get byteSize() {
+        return this.bytesType * this._size;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get bytesType() {
+        switch (this._type) {
+            case ATTRIBUTE_TYPE.BYTE:
+            case ATTRIBUTE_TYPE.UNSIGNED_BYTE:
+                return 1;
+            case ATTRIBUTE_TYPE.SHORT:
+            case ATTRIBUTE_TYPE.UNSIGNED_SHORT:
+                return 2;
+            case ATTRIBUTE_TYPE.INT:
+            case ATTRIBUTE_TYPE.UNSIGNED_INT:
+            case ATTRIBUTE_TYPE.FLOAT:
+                return 4;
         }
+
+        return 0;
     }
 
     /**
@@ -81,34 +153,37 @@ export default class ShaderAttribute {
      * @param {WebGLProgram} program
      */
     setContext(gl, program) {
-        if (!this._context) {
+        if (this._context !== gl) {
             this._context = gl;
             this._location = gl.getAttribLocation(program, this._name);
 
             if (this._location === -1) {
-                throw new Error(`Attribute location for attribute "${this._name}" is not available.`)
+                throw new Error(`Attribute location for attribute "${this._name}" is not available.`);
             }
         }
     }
 
     /**
      * @public
-     * @param {Number} size
-     * @param {Number} type
-     * @param {boolean} normalized
-     * @param {Number} stride
-     * @param {Number} offset
+     * @param {Boolean} enabled
      */
-    setPointer(size, type, normalized, stride, offset) {
-        this._context.vertexAttribPointer(this._location, size, type, normalized, stride, offset);
+    setEnabled(enabled) {
+        if (this._enabled !== enabled) {
+            this._enabled = enabled;
+
+            if (this._bound) {
+                this._upload();
+            }
+        }
     }
 
     /**
      * @public
      */
-    bind() {
+    bind(stride, offset) {
         if (!this._bound) {
             this._bound = true;
+            this._context.vertexAttribPointer(this._location, this._size, this._type, this._normalized, stride, offset);
             this._upload();
         }
     }
@@ -117,16 +192,22 @@ export default class ShaderAttribute {
      * @public
      */
     unbind() {
-        this._bound = false;
+        if (this._bound) {
+            this._bound = false;
+        }
     }
 
     /**
      * @public
      */
     destroy() {
+        if (this._bound) {
+            this.unbind();
+        }
+
         this._context = null;
         this._name = null;
-        this._active = null;
+        this._enabled = null;
         this._location = null;
         this._bound = null;
     }
@@ -139,7 +220,7 @@ export default class ShaderAttribute {
             return;
         }
 
-        if (this._active) {
+        if (this._enabled) {
             this._context.enableVertexAttribArray(this._location);
         } else {
             this._context.disableVertexAttribArray(this._location);

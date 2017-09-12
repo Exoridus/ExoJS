@@ -1,6 +1,5 @@
 /**
  * @class Renderer
- * @memberof Exo
  */
 export default class Renderer {
 

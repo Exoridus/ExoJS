@@ -3,55 +3,54 @@ import Keyboard from './Keyboard';
 import Mouse from './Mouse';
 import GamepadManager from './gamepad/GamepadManager';
 import PointerManager from './pointer/PointerManager';
-import {CHANNEL_LENGTH} from '../const';
+import { CHANNEL_LENGTH } from '../const';
 
 /**
  * @class InputManager
- * @extends {Exo.ChannelHandler}
- * @memberof Exo
+ * @extends {ChannelHandler}
  */
 export default class InputManager extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Game} game
      */
     constructor(game) {
         super(new ArrayBuffer(CHANNEL_LENGTH.GLOBAL * 4), 0, CHANNEL_LENGTH.GLOBAL);
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Game}
          */
         this._game = game;
 
         /**
          * @private
-         * @member {Set<Exo.Input>}
+         * @member {Set<Input>}
          */
         this._inputs = new Set();
 
         /**
          * @private
-         * @member {Exo.Keyboard}
+         * @member {Keyboard}
          */
         this._keyboard = new Keyboard(game, this.channelBuffer);
 
         /**
          * @private
-         * @member {Exo.Mouse}
+         * @member {Mouse}
          */
         this._mouse = new Mouse(game, this.channelBuffer);
 
         /**
          * @private
-         * @member {Exo.GamepadManager}
+         * @member {GamepadManager}
          */
         this._gamepadManager = new GamepadManager(game, this.channelBuffer);
 
         /**
          * @private
-         * @member {Exo.PointerManager}
+         * @member {PointerManager}
          */
         this._pointerManager = new PointerManager(game, this.channelBuffer);
 
@@ -62,13 +61,14 @@ export default class InputManager extends ChannelHandler {
 
     /**
      * @public
-     * @param {Exo.Input|Exo.Input[]} inputs
+     * @param {Input|Input[]} inputs
      */
     add(inputs) {
         if (Array.isArray(inputs)) {
             for (const input of inputs) {
                 this.add(input);
             }
+
             return;
         }
 
@@ -77,13 +77,14 @@ export default class InputManager extends ChannelHandler {
 
     /**
      * @public
-     * @param {Exo.Input|Exo.Input[]} inputs
+     * @param {Input|Input[]} inputs
      */
     remove(inputs) {
         if (Array.isArray(inputs)) {
             for (const input of inputs) {
                 this.remove(input);
             }
+
             return;
         }
 
@@ -99,6 +100,8 @@ export default class InputManager extends ChannelHandler {
             for (const input of this._inputs) {
                 input.destroy();
             }
+
+            return;
         }
 
         this._inputs.clear();

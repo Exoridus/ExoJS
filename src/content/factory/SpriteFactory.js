@@ -3,8 +3,7 @@ import Sprite from '../../display/sprite/Sprite';
 
 /**
  * @class SpriteFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class SpriteFactory extends TextureFactory {
 

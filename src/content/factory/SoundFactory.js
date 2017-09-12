@@ -1,11 +1,10 @@
 import AudioBufferFactory from './AudioBufferFactory';
 import Sound from '../../audio/Sound';
-import {webAudioSupported} from '../../utils';
+import { webAudioSupported } from '../../utils';
 
 /**
  * @class SoundFactory
- * @extends {Exo.ResourceFactory}
- * @memberof Exo
+ * @extends {ResourceFactory}
  */
 export default class SoundFactory extends AudioBufferFactory {
 
