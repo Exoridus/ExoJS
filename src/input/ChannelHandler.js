@@ -60,8 +60,8 @@ export default class ChannelHandler extends EventEmitter {
         return this._active;
     }
 
-    set active(value) {
-        this._active = value;
+    set active(active) {
+        this._active = active;
     }
 
     /**

@@ -2,10 +2,12 @@
  * @namespace Exo
  */
 export * from './const';
+import * as support from './support';
 import * as utils from './utils';
 import * as settings from './settings';
 
 export {
+    support,
     utils,
     settings,
 };
@@ -13,6 +15,7 @@ export {
 export * from './core';
 export * from './content';
 export * from './input';
-export * from './audio';
+export * from './media';
 export * from './display';
 export * from './animation';
+export * from './particle';

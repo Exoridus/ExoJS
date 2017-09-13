@@ -1,7 +1,7 @@
 import Sprite from './Sprite';
-import Texture from '../Texture';
-import settings from '../../settings';
-import { NEWLINE } from '../../const';
+import Texture from './Texture';
+import settings from '../settings';
+import { NEWLINE } from '../const';
 
 const heightCache = new Map(),
     body = document.querySelector('body'),
@@ -74,11 +74,11 @@ export default class Text extends Sprite {
         return this._text;
     }
 
-    set text(value) {
-        const text = value || ' ';
+    set text(text) {
+        const newText = text || ' ';
 
-        if (this._text !== text) {
-            this._text = text;
+        if (this._text !== newText) {
+            this._text = newText;
             this._dirty = true;
         }
     }

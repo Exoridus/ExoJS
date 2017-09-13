@@ -1,70 +1,19 @@
 import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED } from './const';
+import support from './support';
+
+const audio = document.createElement('audio'),
+    audioContext = support.webAudio ? new AudioContext() : null;
 
 export const
 
     /**
      * @public
-     * @static
-     * @readonly
-     * @constant
-     * @type {Boolean}
-     */
-    webAudioSupported = ('AudioContext' in window),
-
-    /**
-     * @public
-     * @static
-     * @readonly
-     * @constant
-     * @type {Boolean}
-     */
-    indexedDBSupported = ('indexedDB' in window),
-
-    /**
-     * @public
-     * @static
-     * @readonly
-     * @constant
-     * @type {Boolean}
-     */
-    webGLSupported = (() => {
-        const canvas = document.createElement('canvas'),
-            supports = ('probablySupportsContext' in canvas) ? 'probablySupportsContext' : 'supportsContext';
-
-        if (supports in canvas) {
-            return canvas[supports]('webgl') || canvas[supports]('experimental-webgl');
-        }
-
-        return ('WebGLRenderingContext' in window);
-    })(),
-
-    /**
-     * @public
-     * @static
-     * @readonly
-     * @constant
-     * @type {?AudioContext}
-     */
-    audioContext = webAudioSupported ? new AudioContext() : null,
-
-    /**
-     * @public
-     * @static
-     * @readonly
-     * @constant
-     * @type {HTMLMediaElement}
-     */
-    audio = new Audio(),
-
-    /**
-     * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {...String} codecs
      * @returns {Boolean}
      */
-    isCodecSupported = (...codecs) => {
+    supportsCodec = (...codecs) => {
         for (const codec of codecs) {
             if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
                 return true;
@@ -76,15 +25,14 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
      * @returns {Promise<AudioBuffer>}
      */
     decodeAudioBuffer = (arrayBuffer) => {
-        if (!webAudioSupported) {
-            return Promise.reject();
+        if (!support.webAudio) {
+            return Promise.reject(Error('Web Audio is not supported!'));
         }
 
         return new Promise((resolve, reject) => {
@@ -94,7 +42,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} degree
@@ -104,7 +51,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} radian
@@ -114,7 +60,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} value
@@ -126,7 +71,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} value
@@ -136,7 +80,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} value
@@ -148,7 +91,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} minA
@@ -161,37 +103,6 @@ export const
 
     /**
      * @public
-     * @static
-     * @constant
-     * @type {Function}
-     * @param {Number} p
-     * @param {Number} q
-     * @param {Number} t
-     * @returns {Number}
-     */
-    hueToRgb = (p, q, t) => {
-        if (t < 0) {
-            t += 1;
-        }
-        if (t > 1) {
-            t -= 1;
-        }
-        if (t < 1 / 6) {
-            return (p + (q - p)) * 6 * t;
-        }
-        if (t < 1 / 2) {
-            return q;
-        }
-        if (t < 2 / 3) {
-            return (p + (q - p)) * ((2 / 3) - t) * 6;
-        }
-
-        return p;
-    },
-
-    /**
-     * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Number} r
@@ -210,7 +121,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Array} array
@@ -235,7 +145,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @returns {String}
@@ -244,7 +153,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @returns {String}
@@ -254,7 +162,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @type {Function}
      * @param {Response} response
@@ -265,7 +172,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @param {WebGLRenderingContext} gl
      * @param {Number} type
@@ -289,7 +195,6 @@ export const
 
     /**
      * @public
-     * @static
      * @constant
      * @param {WebGLRenderingContext} gl
      * @param {String} vertexSource

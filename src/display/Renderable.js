@@ -47,8 +47,8 @@ export default class Renderable extends Transformable {
         return this._worldTransform;
     }
 
-    set worldTransform(value) {
-        this._worldTransform.copy(value);
+    set worldTransform(worldTransform) {
+        this._worldTransform.copy(worldTransform);
     }
 
     /**
@@ -59,8 +59,8 @@ export default class Renderable extends Transformable {
         return this._visible;
     }
 
-    set visible(value) {
-        this._visible = value;
+    set visible(visible) {
+        this._visible = visible;
     }
 
     /**
@@ -71,8 +71,8 @@ export default class Renderable extends Transformable {
         return this._parent;
     }
 
-    set parent(value) {
-        this._parent = value;
+    set parent(parent) {
+        this._parent = parent;
     }
 
     /**

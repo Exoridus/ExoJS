@@ -2,7 +2,7 @@ import EventEmitter from './EventEmitter';
 import Clock from './time/Clock';
 import SceneManager from './SceneManager';
 import DisplayManager from '../display/DisplayManager';
-import AudioManager from '../audio/AudioManager';
+import MediaManager from '../media/MediaManager';
 import InputManager from '../input/InputManager';
 import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
@@ -63,9 +63,9 @@ export default class Game extends EventEmitter {
 
         /**
          * @private
-         * @member {AudioManager}
+         * @member {MediaManager}
          */
-        this._audioManager = new AudioManager(this, this._config);
+        this._mediaManager = new MediaManager(this, this._config);
 
         /**
          * @private
@@ -147,10 +147,10 @@ export default class Game extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {AudioManager}
+     * @member {MediaManager}
      */
-    get audioManager() {
-        return this._audioManager;
+    get mediaManager() {
+        return this._mediaManager;
     }
 
     /**
@@ -218,8 +218,8 @@ export default class Game extends EventEmitter {
         this._inputManager.destroy();
         this._inputManager = null;
 
-        this._audioManager.destroy();
-        this._audioManager = null;
+        this._mediaManager.destroy();
+        this._mediaManager = null;
 
         this._displayManager.destroy();
         this._displayManager = null;

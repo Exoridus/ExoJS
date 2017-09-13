@@ -60,8 +60,8 @@ export default class Transformable extends EventEmitter {
         return this._position.x;
     }
 
-    set x(value) {
-        this._position.x = value;
+    set x(x) {
+        this._position.x = x;
     }
 
     /**
@@ -72,8 +72,8 @@ export default class Transformable extends EventEmitter {
         return this._position.y;
     }
 
-    set y(value) {
-        this._position.y = value;
+    set y(y) {
+        this._position.y = y;
     }
 
     /**
@@ -84,8 +84,8 @@ export default class Transformable extends EventEmitter {
         return this._position;
     }
 
-    set position(value) {
-        this._position.copy(value);
+    set position(position) {
+        this._position.copy(position);
     }
 
     /**
@@ -96,8 +96,8 @@ export default class Transformable extends EventEmitter {
         return this._scale;
     }
 
-    set scale(value) {
-        this._scale.copy(value);
+    set scale(scale) {
+        this._scale.copy(scale);
     }
 
     /**
@@ -108,8 +108,8 @@ export default class Transformable extends EventEmitter {
         return this._origin;
     }
 
-    set origin(value) {
-        this._origin.copy(value);
+    set origin(origin) {
+        this._origin.copy(origin);
     }
 
     /**
@@ -120,8 +120,8 @@ export default class Transformable extends EventEmitter {
         return this._rotation;
     }
 
-    set rotation(value) {
-        this.setRotation(value);
+    set rotation(rotation) {
+        this.setRotation(rotation);
     }
 
     /**
@@ -137,8 +137,8 @@ export default class Transformable extends EventEmitter {
         return this._transform;
     }
 
-    set transform(value) {
-        this._transform.copy(value);
+    set transform(transform) {
+        this._transform.copy(transform);
     }
 
     /**

@@ -130,7 +130,7 @@ export default class GameScene extends Exo.Scene {
 
         this.game.trigger('input:add', this._inputs);
 
-        game.trigger('audio:play', this._backgroundMusic, {
+        game.trigger('media:play', this._backgroundMusic, {
             loop: true,
         });
 

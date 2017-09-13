@@ -31,7 +31,7 @@ export default class TitleScene extends Exo.Scene {
          */
         this._titleMusic = resources.get('music', 'title/background');
 
-        this.game.trigger('audio:play', this._titleMusic, {
+        this.game.trigger('media:play', this._titleMusic, {
             loop: true,
         });
     }

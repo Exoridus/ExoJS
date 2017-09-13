@@ -1,5 +1,6 @@
 import Playable from './Playable';
-import { clamp, webAudioSupported } from '../utils';
+import { clamp } from '../utils';
+import support from '../support';
 
 /**
  * @class Music
@@ -12,17 +13,17 @@ export default class Music extends Playable {
      * @param {HTMLMediaElement} audio
      */
     constructor(audio) {
-        super(audio);
-
-        if (!webAudioSupported) {
+        if (!support.webAudio) {
             throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
         }
+
+        super(audio);
 
         /**
          * @private
          * @member {?AudioContext}
          */
-        this._context = null;
+        this._audioContext = null;
 
         /**
          * @private
@@ -42,20 +43,20 @@ export default class Music extends Playable {
      * @readonly
      * @member {?AudioContext}
      */
-    get context() {
-        return this._context;
+    get audioContext() {
+        return this._audioContext;
     }
 
     /**
      * @override
      */
     get volume() {
-        return this._context ? this._gainNode.gain.value : 1;
+        return this._audioContext ? this._gainNode.gain.value : 1;
     }
 
-    set volume(value) {
-        if (this._context) {
-            this._gainNode.gain.value = clamp(value, 0, 1);
+    set volume(volume) {
+        if (this._audioContext) {
+            this._gainNode.gain.value = clamp(volume, 0, 1);
         }
     }
 
@@ -71,17 +72,17 @@ export default class Music extends Playable {
     /**
      * @override
      */
-    connect(audioManager) {
-        if (this._context) {
+    connect(mediaManager) {
+        if (this._audioContext) {
             return;
         }
 
-        this._context = audioManager.context;
+        this._audioContext = mediaManager.audioContext;
 
-        this._gainNode = this._context.createGain();
-        this._gainNode.connect(audioManager.musicNode);
+        this._gainNode = this._audioContext.createGain();
+        this._gainNode.connect(mediaManager.musicGain);
 
-        this._sourceNode = this._context.createMediaElementSource(this._source);
+        this._sourceNode = this._audioContext.createMediaElementSource(this._source);
         this._sourceNode.connect(this._gainNode);
     }
 
@@ -91,8 +92,8 @@ export default class Music extends Playable {
     destroy() {
         super.destroy();
 
-        if (this._context) {
-            this._context = null;
+        if (this._audioContext) {
+            this._audioContext = null;
 
             this._sourceNode.disconnect();
             this._sourceNode = null;

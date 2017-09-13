@@ -32,9 +32,9 @@ export default class Random {
         return this._seed;
     }
 
-    set seed(value) {
-        this._seed = value;
-        this._rc4.setKeys(this.getMixedKeys(this.flatten(value)));
+    set seed(seed) {
+        this._seed = seed;
+        this._rc4.setKeys(this.getMixedKeys(this.flatten(seed)));
     }
 
     /**

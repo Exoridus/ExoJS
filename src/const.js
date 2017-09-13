@@ -128,23 +128,6 @@ export const
     /**
      * @public
      * @constant
-     * @name CHANNEL_OFFSET
-     * @type {Object<String, Number>}
-     * @property {Number} KEYBOARD
-     * @property {Number} MOUSE
-     * @property {Number} GAMEPAD
-     * @property {Number} POINTER
-     */
-    CHANNEL_OFFSET = {
-        KEYBOARD: INPUT_DEVICE.KEYBOARD << 8,
-        MOUSE: INPUT_DEVICE.MOUSE << 8,
-        GAMEPAD: INPUT_DEVICE.GAMEPAD << 8,
-        POINTER: INPUT_DEVICE.POINTER << 8,
-    },
-
-    /**
-     * @public
-     * @constant
      * @name CHANNEL_LENGTH
      * @type {Object}
      * @property {Number} GLOBAL
@@ -155,6 +138,23 @@ export const
         GLOBAL: 1024,
         DEVICE: 256,
         CHILD: 32,
+    },
+
+    /**
+     * @public
+     * @constant
+     * @name CHANNEL_OFFSET
+     * @type {Object<String, Number>}
+     * @property {Number} KEYBOARD
+     * @property {Number} MOUSE
+     * @property {Number} GAMEPAD
+     * @property {Number} POINTER
+     */
+    CHANNEL_OFFSET = {
+        KEYBOARD: (INPUT_DEVICE.KEYBOARD * CHANNEL_LENGTH.DEVICE),
+        MOUSE: (INPUT_DEVICE.MOUSE * CHANNEL_LENGTH.DEVICE),
+        GAMEPAD: (INPUT_DEVICE.GAMEPAD * CHANNEL_LENGTH.DEVICE),
+        POINTER: (INPUT_DEVICE.POINTER * CHANNEL_LENGTH.DEVICE),
     },
 
     /**

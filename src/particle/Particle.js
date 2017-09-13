@@ -1,6 +1,6 @@
-import Vector from '../../core/shape/Vector';
-import Color from '../../core/Color';
-import Time from '../../core/time/Time';
+import Vector from '../core/shape/Vector';
+import Color from '../core/Color';
+import Time from '../core/time/Time';
 
 /**
  * @class Particle
@@ -77,8 +77,8 @@ export default class Particle {
         return this._position;
     }
 
-    set position(value) {
-        this._position.copy(value);
+    set position(position) {
+        this._position.copy(position);
     }
 
     /**
@@ -89,8 +89,8 @@ export default class Particle {
         return this._velocity;
     }
 
-    set velocity(value) {
-        this._velocity.copy(value);
+    set velocity(velocity) {
+        this._velocity.copy(velocity);
     }
 
     /**
@@ -101,8 +101,8 @@ export default class Particle {
         return this._rotation;
     }
 
-    set rotation(value) {
-        this._rotation = value;
+    set rotation(rotation) {
+        this._rotation = rotation;
     }
 
     /**
@@ -113,8 +113,8 @@ export default class Particle {
         return this._rotationSpeed;
     }
 
-    set rotationSpeed(value) {
-        this._rotationSpeed = value;
+    set rotationSpeed(rotationSpeed) {
+        this._rotationSpeed = rotationSpeed;
     }
 
     /**
@@ -125,8 +125,8 @@ export default class Particle {
         return this._scale;
     }
 
-    set scale(value) {
-        this._velocity.copy(value);
+    set scale(scale) {
+        this._velocity.copy(scale);
     }
 
     /**
@@ -137,8 +137,8 @@ export default class Particle {
         return this._color;
     }
 
-    set color(value) {
-        this._color.copy(value);
+    set color(color) {
+        this._color.copy(color);
     }
 
     /**
@@ -149,8 +149,8 @@ export default class Particle {
         return this._elapsedLifetime;
     }
 
-    set elapsedLifetime(value) {
-        this._elapsedLifetime.copy(value);
+    set elapsedLifetime(elapsedLifetime) {
+        this._elapsedLifetime.copy(elapsedLifetime);
     }
 
     /**
@@ -161,8 +161,8 @@ export default class Particle {
         return this._totalLifetime;
     }
 
-    set totalLifetime(value) {
-        this._totalLifetime.copy(value);
+    set totalLifetime(totalLifetime) {
+        this._totalLifetime.copy(totalLifetime);
     }
 
     /**

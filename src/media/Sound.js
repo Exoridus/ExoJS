@@ -1,5 +1,6 @@
 import Playable from './Playable';
-import { clamp, webAudioSupported } from '../utils';
+import { clamp } from '../utils';
+import support from '../support';
 
 /**
  * @class Sound
@@ -12,17 +13,17 @@ export default class Sound extends Playable {
      * @param {AudioBuffer} audioBuffer
      */
     constructor(audioBuffer) {
-        super(audioBuffer);
-
-        if (!webAudioSupported) {
+        if (!support.webAudio) {
             throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
         }
+
+        super(audioBuffer);
 
         /**
          * @private
          * @member {?AudioContext}
          */
-        this._context = null;
+        this._audioContext = null;
 
         /**
          * @private
@@ -78,8 +79,8 @@ export default class Sound extends Playable {
      * @readonly
      * @member {?AudioContext}
      */
-    get context() {
-        return this._context;
+    get audioContext() {
+        return this._audioContext;
     }
 
     /**
@@ -89,8 +90,8 @@ export default class Sound extends Playable {
         return this._volume;
     }
 
-    set volume(value) {
-        this._volume = clamp(value, 0, 2);
+    set volume(volume) {
+        this._volume = clamp(volume, 0, 2);
 
         if (this._gainNode) {
             this._gainNode.gain.value = this._volume;
@@ -101,16 +102,16 @@ export default class Sound extends Playable {
      * @override
      */
     get currentTime() {
-        if (!this._startTime || !this._context) {
+        if (!this._startTime || !this._audioContext) {
             return 0;
         }
 
-        return (this._currentTime + this._context.currentTime - this._startTime);
+        return (this._currentTime + this._audioContext.currentTime - this._startTime);
     }
 
-    set currentTime(value) {
+    set currentTime(currentTime) {
         this.pause();
-        this._currentTime = Math.max(0, value);
+        this._currentTime = Math.max(0, currentTime);
         this.play();
     }
 
@@ -121,8 +122,8 @@ export default class Sound extends Playable {
         return this._loop;
     }
 
-    set loop(value) {
-        this._loop = !!value;
+    set loop(loop) {
+        this._loop = loop;
 
         if (this._sourceNode) {
             this._sourceNode.loop = this._loop;
@@ -136,8 +137,8 @@ export default class Sound extends Playable {
         return this._playbackRate;
     }
 
-    set playbackRate(value) {
-        this._playbackRate = Math.max(0, value);
+    set playbackRate(playbackRate) {
+        this._playbackRate = Math.max(0, playbackRate);
 
         if (this._sourceNode) {
             this._sourceNode.playbackRate.value = this._playbackRate;
@@ -155,8 +156,8 @@ export default class Sound extends Playable {
         return (this.currentTime >= this.duration);
     }
 
-    set paused(value) {
-        if (value) {
+    set paused(paused) {
+        if (paused) {
             this.pause();
         } else {
             this.play();
@@ -170,8 +171,8 @@ export default class Sound extends Playable {
         return !this._paused;
     }
 
-    set playing(value) {
-        if (value) {
+    set playing(playing) {
+        if (playing) {
             this.play();
         } else {
             this.pause();
@@ -188,15 +189,15 @@ export default class Sound extends Playable {
     /**
      * @override
      */
-    connect(audioManager) {
-        if (this._context) {
+    connect(mediaManager) {
+        if (this._audioContext) {
             return;
         }
 
-        this._context = audioManager.context;
+        this._audioContext = mediaManager.audioContext;
 
-        this._gainNode = this._context.createGain();
-        this._gainNode.connect(audioManager.soundNode);
+        this._gainNode = this._audioContext.createGain();
+        this._gainNode.connect(mediaManager.soundGain);
     }
 
     /**
@@ -216,7 +217,7 @@ export default class Sound extends Playable {
 
         this.applyOptions(options);
 
-        this._sourceNode = this._context.createBufferSource();
+        this._sourceNode = this._audioContext.createBufferSource();
         this._sourceNode.buffer = this._source;
         this._sourceNode.loop = this._loop;
         this._sourceNode.playbackRate.value = this._playbackRate;
@@ -224,7 +225,7 @@ export default class Sound extends Playable {
         this._sourceNode.connect(this._gainNode);
         this._sourceNode.start(0, this._currentTime);
 
-        this._startTime = this._context.currentTime;
+        this._startTime = this._audioContext.currentTime;
     }
 
     /**
@@ -250,14 +251,14 @@ export default class Sound extends Playable {
     destroy() {
         super.destroy();
 
-        if (this._context) {
+        if (this._audioContext) {
             this._sourceNode.disconnect();
             this._sourceNode = null;
 
             this._gainNode.disconnect();
             this._gainNode = null;
 
-            this._context = null;
+            this._audioContext = null;
         }
     }
 }

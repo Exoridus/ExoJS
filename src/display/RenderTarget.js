@@ -66,8 +66,8 @@ export default class RenderTarget {
         return this._size;
     }
 
-    set size(value) {
-        this._size.copy(value);
+    set size(size) {
+        this._size.copy(size);
     }
 
     /**
@@ -78,8 +78,8 @@ export default class RenderTarget {
         return this._size.x;
     }
 
-    set width(value) {
-        this._size.x = value | 0;
+    set width(width) {
+        this._size.x = width | 0;
     }
 
     /**
@@ -90,8 +90,8 @@ export default class RenderTarget {
         return this._size.y;
     }
 
-    set height(value) {
-        this._size.y = value | 0;
+    set height(height) {
+        this._size.y = height | 0;
     }
 
     /**

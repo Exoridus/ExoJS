@@ -1,9 +1,9 @@
 import { clamp } from '../utils';
 
 /**
- * @class AudioManager
+ * @class MediaManager
  */
-export default class AudioManager {
+export default class MediaManager {
 
     /**
      * @constructor
@@ -12,34 +12,31 @@ export default class AudioManager {
      * @param {Number} [options.masterVolume=1]
      * @param {Number} [options.musicVolume=1]
      * @param {Number} [options.soundVolume=1]
+     * @param {Number} [options.videoVolume=1]
      */
-    constructor(game, { masterVolume = 1, musicVolume = 1, soundVolume = 1 } = {}) {
+    constructor(game, { masterVolume = 1, musicVolume = 1, soundVolume = 1, videoVolume = 1 } = {}) {
 
         /**
          * @private
          * @member {Game}
-         * @memberof AudioManager
          */
         this._game = game;
 
         /**
          * @private
          * @member {AudioContext}
-         * @memberof AudioManager
          */
         this._context = new AudioContext();
 
         /**
          * @private
          * @member {AudioDestinationNode}
-         * @memberof AudioManager
          */
         this._destination = this._context.destination;
 
         /**
          * @private
          * @member {DynamicsCompressorNode}
-         * @memberof AudioManager
          */
         this._compressor = this._context.createDynamicsCompressor();
         this._compressor.connect(this._destination);
@@ -67,9 +64,22 @@ export default class AudioManager {
 
         /**
          * @private
+         * @member {GainNode}
+         */
+        this._videoGain = this._context.createGain();
+        this._videoGain.connect(this._masterGain);
+
+        /**
+         * @private
          * @member {Number}
          */
         this._masterVolume = null;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._soundVolume = null;
 
         /**
          * @private
@@ -81,59 +91,64 @@ export default class AudioManager {
          * @private
          * @member {Number}
          */
-        this._soundVolume = null;
+        this._videoVolume = null;
 
         this.setMasterVolume(masterVolume);
-        this.setMusicVolume(musicVolume);
         this.setSoundVolume(soundVolume);
+        this.setMusicVolume(musicVolume);
+        this.setVideoVolume(videoVolume);
 
-        game.on('audio:play', this.play, this)
-            .on('audio:volume:master', this.setMasterVolume, this)
-            .on('audio:volume:sound', this.setSoundVolume, this)
-            .on('audio:volume:music', this.setMusicVolume, this);
+        game.on('media:play', this.play, this)
+            .on('media:volume:master', this.setMasterVolume, this)
+            .on('media:volume:sound', this.setSoundVolume, this)
+            .on('media:volume:music', this.setMusicVolume, this)
+            .on('media:volume:video', this.setVideoVolume, this);
     }
 
     /**
      * @public
      * @readonly
      * @member {AudioContext}
-     * @memberof AudioManager
      */
-    get context() {
+    get audioContext() {
         return this._context;
     }
 
     /**
      * @readonly
-     * @member {AudioNode}
-     * @memberof AudioManager
+     * @member {GainNode}
      */
-    get masterNode() {
+    get masterGain() {
         return this._masterGain;
     }
 
     /**
      * @readonly
-     * @member {AudioNode}
-     * @memberof AudioManager
+     * @member {GainNode}
      */
-    get musicNode() {
-        return this._musicGain;
-    }
-
-    /**
-     * @readonly
-     * @member {AudioNode}
-     * @memberof AudioManager
-     */
-    get soundNode() {
+    get soundGain() {
         return this._soundGain;
     }
 
     /**
      * @readonly
+     * @member {GainNode}
+     */
+    get musicGain() {
+        return this._musicGain;
+    }
+
+    /**
+     * @readonly
+     * @member {GainNode}
+     */
+    get videoGain() {
+        return this._videoGain;
+    }
+
+    /**
+     * @readonly
      * @member {AudioNode}
-     * @memberof AudioManager
      */
     get analyserTarget() {
         return this._compressor;
@@ -142,54 +157,63 @@ export default class AudioManager {
     /**
      * @public
      * @member {Number}
-     * @memberof AudioManager
      */
     get masterVolume() {
         return this._masterVolume;
     }
 
-    set masterVolume(value) {
-        this.setMasterVolume(value);
+    set masterVolume(volume) {
+        this.setMasterVolume(volume);
     }
 
     /**
      * @public
      * @member {Number}
-     * @memberof AudioManager
      */
     get soundVolume() {
         return this._soundVolume;
     }
 
-    set soundVolume(value) {
-        this.setSoundVolume(value);
+    set soundVolume(volume) {
+        this.setSoundVolume(volume);
     }
 
     /**
      * @public
      * @member {Number}
-     * @memberof AudioManager
      */
     get musicVolume() {
         return this._musicVolume;
     }
 
-    set musicVolume(value) {
-        this.setMusicVolume(value);
+    set musicVolume(volume) {
+        this.setMusicVolume(volume);
     }
 
     /**
      * @public
-     * @param {Music|Sound|Audio|Playable} playable
+     * @member {Number}
+     */
+    get videoVolume() {
+        return this._videoVolume;
+    }
+
+    set videoVolume(volume) {
+        this.setVideoVolume(volume);
+    }
+
+    /**
+     * @public
+     * @param {Music|Sound|Video} media
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
      * @param {Number} [options.playbackRate]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
-    play(playable, options) {
-        playable.connect(this);
-        playable.play(options);
+    play(media, options) {
+        media.connect(this);
+        media.play(options);
     }
 
     /**
@@ -230,15 +254,34 @@ export default class AudioManager {
 
     /**
      * @public
+     * @param {Number} volume
+     */
+    setVideoVolume(volume) {
+        const vol = clamp(volume, 0, 1);
+
+        if (this._videoVolume !== vol) {
+            this._videoGain.gain.value = this._videoVolume = vol;
+        }
+    }
+
+    /**
+     * @public
      */
     destroy() {
-        this._destination = null;
+        this._game
+            .off('media:play', this.play, this)
+            .off('media:volume:master', this.setMasterVolume, this)
+            .off('media:volume:sound', this.setSoundVolume, this)
+            .off('media:volume:music', this.setMusicVolume, this);
 
         this._soundGain.disconnect();
         this._soundGain = null;
 
         this._musicGain.disconnect();
         this._musicGain = null;
+
+        this._videoGain.disconnect();
+        this._videoGain = null;
 
         this._masterGain.disconnect();
         this._masterGain = null;
@@ -249,12 +292,11 @@ export default class AudioManager {
         this._context.close();
         this._context = null;
 
-        this._game
-            .off('audio:play', this.play, this)
-            .off('audio:volume:master', this.setMasterVolume, this)
-            .off('audio:volume:sound', this.setSoundVolume, this)
-            .off('audio:volume:music', this.setMusicVolume, this);
-
+        this._masterVolume = null;
+        this._soundVolume = null;
+        this._musicVolume = null;
+        this._videoVolume = null;
+        this._destination = null;
         this._game = null;
     }
 }

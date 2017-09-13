@@ -5,10 +5,11 @@ export default class ParticleModifier {
 
     /**
      * @public
+     * @virtual
      * @param {Particle} particle
      * @param {Time} delta
      */
     apply(particle, delta) {
-        // do nothing
+        throw new Error('Method not implemented!')
     }
 }

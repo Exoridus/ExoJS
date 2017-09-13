@@ -115,8 +115,8 @@ export default class View {
         return this._center;
     }
 
-    set center(value) {
-        this._center.copy(value);
+    set center(center) {
+        this._center.copy(center);
     }
 
     /**
@@ -127,8 +127,8 @@ export default class View {
         return this._size;
     }
 
-    set size(value) {
-        this._size.copy(value);
+    set size(size) {
+        this._size.copy(size);
     }
 
     /**
@@ -139,8 +139,8 @@ export default class View {
         return this._rotation;
     }
 
-    set rotation(value) {
-        this.setRotation(value);
+    set rotation(rotation) {
+        this.setRotation(rotation);
     }
 
     /**
@@ -151,8 +151,8 @@ export default class View {
         return this._viewport;
     }
 
-    set viewport(value) {
-        this._viewport.copy(value);
+    set viewport(viewport) {
+        this._viewport.copy(viewport);
         this._dirtyTransform = true;
     }
 
@@ -169,8 +169,8 @@ export default class View {
         return this._transform;
     }
 
-    set transform(value) {
-        this._transform.copy(value);
+    set transform(transform) {
+        this._transform.copy(transform);
     }
 
     /**

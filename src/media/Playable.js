@@ -8,13 +8,13 @@ export default class Playable {
 
     /**
      * @constructor
-     * @param {Audio|AudioBuffer|*} source
+     * @param {HTMLMediaElement|*} source
      */
     constructor(source) {
 
         /**
          * @private
-         * @member {Audio|AudioBuffer|*}
+         * @member {HTMLMediaElement|*}
          */
         this._source = source;
     }
@@ -22,7 +22,7 @@ export default class Playable {
     /**
      * @public
      * @readonly
-     * @member {Audio|AudioBuffer|*}
+     * @member {HTMLMediaElement|*}
      */
     get source() {
         return this._source;
@@ -45,8 +45,8 @@ export default class Playable {
         return this._source.volume;
     }
 
-    set volume(value) {
-        this._source.volume = clamp(value, 0, 2);
+    set volume(volume) {
+        this._source.volume = clamp(volume, 0, 2);
     }
 
     /**
@@ -57,8 +57,8 @@ export default class Playable {
         return this._source.currentTime;
     }
 
-    set currentTime(value) {
-        this._source.currentTime = Math.max(0, value);
+    set currentTime(currentTime) {
+        this._source.currentTime = Math.max(0, currentTime);
     }
 
     /**
@@ -69,8 +69,8 @@ export default class Playable {
         return this._source.loop;
     }
 
-    set loop(value) {
-        this._source.loop = !!value;
+    set loop(loop) {
+        this._source.loop = loop;
     }
 
     /**
@@ -81,8 +81,8 @@ export default class Playable {
         return this._source.playbackRate;
     }
 
-    set playbackRate(value) {
-        this._source.playbackRate = Math.max(0, value);
+    set playbackRate(playbackRate) {
+        this._source.playbackRate = Math.max(0, playbackRate);
     }
 
     /**
@@ -93,8 +93,8 @@ export default class Playable {
         return this._source.paused;
     }
 
-    set paused(value) {
-        if (value) {
+    set paused(paused) {
+        if (paused) {
             this.pause();
         } else {
             this.play();
@@ -109,8 +109,8 @@ export default class Playable {
         return !this.paused;
     }
 
-    set playing(value) {
-        if (value) {
+    set playing(playing) {
+        if (playing) {
             this.play();
         } else {
             this.pause();
@@ -130,9 +130,9 @@ export default class Playable {
     /**
      * @public
      * @abstract
-     * @param {AudioManager} audioManager
+     * @param {MediaManager} mediaManager
      */
-    connect(audioManager) {
+    connect(mediaManager) {
         // do nothing
     }
 

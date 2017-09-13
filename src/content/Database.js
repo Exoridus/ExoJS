@@ -1,5 +1,5 @@
-import { indexedDBSupported } from '../utils';
 import { DATABASE_TYPES } from '../const';
+import support from '../support';
 
 /**
  * @class Database
@@ -12,7 +12,7 @@ export default class Database {
      * @param {Number} version
      */
     constructor(name, version) {
-        if (!indexedDBSupported) {
+        if (!support.indexedDB) {
             throw new Error('This browser does not support indexedDB!');
         }
 

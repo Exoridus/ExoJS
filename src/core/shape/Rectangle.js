@@ -47,8 +47,8 @@ export default class Rectangle extends Shape {
         return this._position;
     }
 
-    set position(value) {
-        this._position.copy(value);
+    set position(position) {
+        this._position.copy(position);
     }
 
     /**
@@ -59,8 +59,8 @@ export default class Rectangle extends Shape {
         return this._position.x;
     }
 
-    set x(value) {
-        this._position.x = value;
+    set x(x) {
+        this._position.x = x;
     }
 
     /**
@@ -71,8 +71,8 @@ export default class Rectangle extends Shape {
         return this._position.y;
     }
 
-    set y(value) {
-        this._position.y = value;
+    set y(y) {
+        this._position.y = y;
     }
 
     /**
@@ -83,8 +83,8 @@ export default class Rectangle extends Shape {
         return this._size;
     }
 
-    set size(value) {
-        this._size.copy(value);
+    set size(size) {
+        this._size.copy(size);
     }
 
     /**
@@ -95,8 +95,8 @@ export default class Rectangle extends Shape {
         return this._size.x;
     }
 
-    set width(value) {
-        this._size.x = value;
+    set width(width) {
+        this._size.x = width;
     }
 
     /**
@@ -107,8 +107,8 @@ export default class Rectangle extends Shape {
         return this._size.y;
     }
 
-    set height(value) {
-        this._size.y = value;
+    set height(height) {
+        this._size.y = height;
     }
 
     /**
@@ -119,8 +119,8 @@ export default class Rectangle extends Shape {
         return this.x;
     }
 
-    set left(value) {
-        this.x = value;
+    set left(left) {
+        this.x = left;
     }
 
     /**
@@ -131,8 +131,8 @@ export default class Rectangle extends Shape {
         return this.x + this.width;
     }
 
-    set right(value) {
-        this.x = value - this.width;
+    set right(right) {
+        this.x = right - this.width;
     }
 
     /**
@@ -143,8 +143,8 @@ export default class Rectangle extends Shape {
         return this.y;
     }
 
-    set top(value) {
-        this.y = value;
+    set top(top) {
+        this.y = top;
     }
 
     /**
@@ -155,8 +155,8 @@ export default class Rectangle extends Shape {
         return this.y + this.height;
     }
 
-    set bottom(value) {
-        this.y = value - this.height;
+    set bottom(bottom) {
+        this.y = bottom - this.height;
     }
 
     /**

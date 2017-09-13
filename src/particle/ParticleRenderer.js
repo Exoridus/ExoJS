@@ -1,6 +1,7 @@
-import Renderer from '../Renderer';
+import Renderer from '../display/Renderer';
 import ParticleShader from './ParticleShader';
-import { degreesToRadians } from '../../utils';
+import { degreesToRadians } from '../utils';
+import settings from '../settings';
 
 /**
  * @class ParticleRenderer
@@ -15,8 +16,12 @@ export default class ParticleRenderer extends Renderer {
         super();
 
         /**
-         * 4 vertices per particle
-         *
+         * @private
+         * @member {Number}
+         */
+        this._indexCount = 6;
+
+        /**
          * @private
          * @member {Number}
          */
@@ -36,35 +41,18 @@ export default class ParticleRenderer extends Renderer {
         this._vertexPropCount = 10;
 
         /**
-         * Vertex property count times the vertices per particle.
-         *
          * @private
          * @member {Number}
          */
-        this._particleVertexSize = (this._vertexCount * this._vertexPropCount);
+        this._particleVertexSize = this._vertexCount * this._vertexPropCount;
 
         /**
-         * 2 triangles = 6 edges / indices
-         *
          * @private
          * @member {Number}
          */
-        this._indexCount = 6;
+        this._maxParticles = settings.PARTICLE_BATCH_SIZE;
 
         /**
-         * 10922 possible particles per batch
-         *
-         * @private
-         * @member {Number}
-         */
-        this._maxParticles = ~~(Math.pow(2, 16) / this._indexCount);
-
-        /**
-         * maximum particle amount per batch *
-         * vertex amount per particle        *
-         * property count per vertex         *
-         * byte size
-         *
          * @private
          * @member {ArrayBuffer}
          */
@@ -168,19 +156,20 @@ export default class ParticleRenderer extends Renderer {
      * @param {ParticleEmitter} emitter
      */
     render(emitter) {
+        if (this._currentTexture !== emitter.texture) {
+            this.flush();
+
+            this._shader.setParticleTexture(emitter.texture);
+            this._currentTexture = emitter.texture;
+        }
+
         const vertexData = this._vertexView,
             colorData = this._colorView,
             particles = emitter.particles,
-            texture = emitter.texture,
             textureRect = emitter.textureRect,
             textureCoords = emitter.textureCoords;
 
-        if (this._currentTexture !== texture) {
-            this.flush();
-
-            this._currentTexture = texture;
-            this._shader.setParticleTexture(texture);
-        }
+        this._currentTexture.glTexture.update();
 
         for (const particle of particles) {
             if (this._batchSize >= this._maxParticles) {

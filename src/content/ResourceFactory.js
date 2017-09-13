@@ -56,4 +56,12 @@ export default class ResourceFactory {
             .request(path, request)
             .then((source) => this.create(source, options));
     }
+
+    /**
+     * @public
+     * @abstract
+     */
+    destroy() {
+        // do nothing
+    }
 }

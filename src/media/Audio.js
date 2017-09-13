@@ -9,7 +9,7 @@ export default class Audio extends Playable {
 
     /**
      * @constructor
-     * @param {Audio} audio
+     * @param {HTMLAudioElement} audio
      */
     constructor(audio) {
         super(audio);
@@ -35,11 +35,11 @@ export default class Audio extends Playable {
         return this._parentVolume;
     }
 
-    set parentVolume(value) {
-        const volume = clamp(value, 0, 1);
+    set parentVolume(volume) {
+        const newVolume = clamp(volume, 0, 1);
 
-        if (this._parentVolume !== volume) {
-            this._parentVolume = volume;
+        if (this._parentVolume !== newVolume) {
+            this._parentVolume = newVolume;
             this._source.volume = (this._volume * this._parentVolume);
         }
     }
@@ -51,11 +51,11 @@ export default class Audio extends Playable {
         return this._volume;
     }
 
-    set volume(value) {
-        const volume = clamp(value, 0, 2);
+    set volume(volume) {
+        const newVolume = clamp(volume, 0, 2);
 
-        if (this._volume !== volume) {
-            this._volume = volume;
+        if (this._volume !== newVolume) {
+            this._volume = newVolume;
             this._source.volume = (this._volume * this._parentVolume);
         }
     }
@@ -63,7 +63,14 @@ export default class Audio extends Playable {
     /**
      * @override
      */
-    connect(audioManager) {
-        this.parentVolume = audioManager.masterVolume;
+    get analyserTarget() {
+        throw new Error('Audio class cannot be analysed.');
+    }
+
+    /**
+     * @override
+     */
+    connect(mediaManager) {
+        this.parentVolume = mediaManager.masterVolume;
     }
 }

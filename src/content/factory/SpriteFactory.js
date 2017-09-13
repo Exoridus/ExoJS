@@ -1,5 +1,5 @@
 import TextureFactory from './TextureFactory';
-import Sprite from '../../display/sprite/Sprite';
+import Sprite from '../../display/Sprite';
 
 /**
  * @class SpriteFactory

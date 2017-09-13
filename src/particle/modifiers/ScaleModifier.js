@@ -1,4 +1,5 @@
 import ParticleModifier from '../ParticleModifier';
+import Vector from '../../core/shape/Vector';
 
 /**
  * @class ScaleModifier
@@ -13,23 +14,23 @@ export default class ScaleModifier extends ParticleModifier {
     constructor(scaleFactor) {
         super();
 
-        this._scaleFactor = scaleFactor.clone();
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._scaleFactor = (scaleFactor && scaleFactor.clone()) || new Vector();
     }
 
     /**
      * @public
-     * @param {Vector} scaleFactor
+     * @member {Vector}
      */
-    setScaleFactor(scaleFactor) {
-        this._scaleFactor.copy(scaleFactor);
-    }
-
-    /**
-     * @public
-     * @returns {Vector}
-     */
-    getScaleFactor() {
+    get scaleFactor() {
         return this._scaleFactor;
+    }
+
+    set scaleFactor(scaleFactor) {
+        this._scaleFactor.copy(scaleFactor);
     }
 
     /**

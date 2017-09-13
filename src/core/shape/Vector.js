@@ -44,8 +44,8 @@ export default class Vector extends Shape {
         return this._x;
     }
 
-    set x(value) {
-        this._x = value;
+    set x(x) {
+        this._x = x;
     }
 
     /**
@@ -56,8 +56,8 @@ export default class Vector extends Shape {
         return this._y;
     }
 
-    set y(value) {
-        this._y = value;
+    set y(y) {
+        this._y = y;
     }
 
     /**

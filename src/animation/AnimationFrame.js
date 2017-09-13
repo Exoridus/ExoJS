@@ -44,8 +44,8 @@ export default class AnimationFrame {
         return this._duration;
     }
 
-    set duration(value) {
-        this._duration = value;
+    set duration(duration) {
+        this._duration = duration;
     }
 
     /**
@@ -56,8 +56,8 @@ export default class AnimationFrame {
         return this._rectangle;
     }
 
-    set rectangle(value) {
-        this._rectangle.copy(value);
+    set rectangle(rectangle) {
+        this._rectangle.copy(rectangle);
     }
 
     /**
@@ -68,8 +68,8 @@ export default class AnimationFrame {
         return this._origin;
     }
 
-    set origin(value) {
-        if (!value) {
+    set origin(origin) {
+        if (!origin) {
             this._origin = null;
             this._applyOrigin = false;
 
@@ -77,9 +77,9 @@ export default class AnimationFrame {
         }
 
         if (this._origin) {
-            this._origin.copy(value);
+            this._origin.copy(origin);
         } else {
-            this._origin = value.clone();
+            this._origin = origin.clone();
         }
     }
 

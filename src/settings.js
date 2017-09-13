@@ -110,7 +110,15 @@ export default {
      * @public
      * @static
      * @type {Number}
-     * @default 300
+     * @default 2500
      */
-    TRIGGER_THRESHOLD: 300,
+    SPRITE_BATCH_SIZE: 2500,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 5000
+     */
+    PARTICLE_BATCH_SIZE: 5000,
 };

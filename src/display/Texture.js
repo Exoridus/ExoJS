@@ -49,8 +49,8 @@ export default class Texture {
         return this._source;
     }
 
-    set source(value) {
-        this.setSource(value);
+    set source(source) {
+        this.setSource(source);
     }
 
     /**
@@ -61,8 +61,8 @@ export default class Texture {
         return this._glTexture.scaleMode;
     }
 
-    set scaleMode(value) {
-        this._glTexture.setScaleMode(value);
+    set scaleMode(scaleMode) {
+        this._glTexture.setScaleMode(scaleMode);
     }
 
     /**
@@ -73,8 +73,8 @@ export default class Texture {
         return this._glTexture.wrapMode;
     }
 
-    set wrapMode(value) {
-        this._glTexture.setWrapMode(value);
+    set wrapMode(wrapMode) {
+        this._glTexture.setWrapMode(wrapMode);
     }
 
     /**
@@ -85,8 +85,8 @@ export default class Texture {
         return this._glTexture.premultiplyAlpha;
     }
 
-    set premultiplyAlpha(value) {
-        this._glTexture.setPremultiplyAlpha(value);
+    set premultiplyAlpha(premultiplyAlpha) {
+        this._glTexture.setPremultiplyAlpha(premultiplyAlpha);
     }
 
     /**
@@ -143,9 +143,10 @@ export default class Texture {
     setSource(source) {
         if (this._source !== source) {
             this._source = source;
+            this._glTexture.setSource(source);
         }
 
-        this._glTexture.setSource(source);
+        this.updateSource();
         this.updateFrame();
 
         return this;
@@ -164,6 +165,17 @@ export default class Texture {
         } else {
             this._frame.reset();
         }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Texture}
+     */
+    updateSource() {
+        this._glTexture.updateSource();
 
         return this;
     }

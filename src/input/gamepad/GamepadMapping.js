@@ -31,8 +31,8 @@ export default class GamepadMapping {
         return this._buttons;
     }
 
-    set buttons(value) {
-        this.setButtons(value);
+    set buttons(buttons) {
+        this.setButtons(buttons);
     }
 
     /**
@@ -43,8 +43,8 @@ export default class GamepadMapping {
         return this._axes;
     }
 
-    set axes(value) {
-        this.setAxes(value);
+    set axes(axes) {
+        this.setAxes(axes);
     }
 
     /**

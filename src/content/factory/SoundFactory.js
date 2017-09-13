@@ -1,6 +1,6 @@
 import AudioBufferFactory from './AudioBufferFactory';
-import Sound from '../../audio/Sound';
-import { webAudioSupported } from '../../utils';
+import Sound from '../../media/Sound';
+import support from '../../support';
 
 /**
  * @class SoundFactory
@@ -19,8 +19,8 @@ export default class SoundFactory extends AudioBufferFactory {
      * @override
      */
     create(response, options) {
-        if (!webAudioSupported) {
-            return Promise.reject();
+        if (!support.webAudio) {
+            return Promise.reject(Error('Web Audio is not supported!'));
         }
 
         return super

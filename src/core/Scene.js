@@ -37,8 +37,8 @@ export default class Scene extends EventEmitter {
         return this._game;
     }
 
-    set game(value) {
-        this._game = value;
+    set game(game) {
+        this._game = game;
     }
 
     /**

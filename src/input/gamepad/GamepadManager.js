@@ -46,10 +46,12 @@ export default class GamepadManager extends ChannelHandler {
     update() {
         this.updateGamepads();
 
-        if (this.active) {
-            for (const gamepad of this._gamepads.values()) {
-                gamepad.update();
-            }
+        if (!this.active) {
+            return;
+        }
+
+        for (const gamepad of this._gamepads.values()) {
+            gamepad.update();
         }
     }
 
@@ -58,29 +60,29 @@ export default class GamepadManager extends ChannelHandler {
      */
     updateGamepads() {
         const game = this._game,
-            activeGamepads = this._gamepads,
-            nativeGamepads = navigator.getGamepads(),
-            length = nativeGamepads.length;
+            currentGamepads = this._gamepads,
+            fetchedGamepads = navigator.getGamepads(),
+            length = fetchedGamepads.length;
 
-        for (let index = 0; index < length; index++) {
-            if (!nativeGamepads[index] === !activeGamepads.has(index)) {
+        for (let i = 0; i < length; i++) {
+            if (!!fetchedGamepads[i] === currentGamepads.has(i)) {
                 continue;
             }
 
-            if (nativeGamepads[index]) {
-                const newGamepad = new Gamepad(nativeGamepads[index], this.channelBuffer);
+            if (fetchedGamepads[i]) {
+                const gamepad = new Gamepad(fetchedGamepads[i], this.channelBuffer);
 
-                activeGamepads.set(index, newGamepad);
-                game.trigger('gamepad:add', newGamepad, index, activeGamepads);
+                currentGamepads.set(i, gamepad);
+                game.trigger('gamepad:add', gamepad, currentGamepads);
             } else {
-                const oldGamepad = activeGamepads.get(index);
+                const gamepad = currentGamepads.get(i);
 
-                activeGamepads.delete(index);
-                game.trigger('gamepad:remove', oldGamepad, index, activeGamepads);
-                oldGamepad.destroy();
+                currentGamepads.delete(i);
+                game.trigger('gamepad:remove', gamepad, currentGamepads);
+                gamepad.destroy();
             }
 
-            game.trigger('gamepad:change', activeGamepads);
+            game.trigger('gamepad:change', currentGamepads);
         }
     }
 

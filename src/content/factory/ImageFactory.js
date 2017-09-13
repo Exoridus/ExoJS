@@ -8,6 +8,28 @@ import { getMimeType } from '../../utils';
 export default class ImageFactory extends BlobFactory {
 
     /**
+     * @constructor
+     */
+    constructor() {
+        super();
+
+        /**
+         * @private
+         * @member {Set<String>}
+         */
+        this._objectURLs = new Set();
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Set<String>}
+     */
+    get objectURLs() {
+        return this._objectURLs;
+    }
+
+    /**
      * @override
      */
     get storageType() {
@@ -21,13 +43,28 @@ export default class ImageFactory extends BlobFactory {
         return super
             .create(response, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {
-                const image = new Image();
+                const image = new Image(),
+                    objectURL = URL.createObjectURL(blob);
+
+                this._objectURLs.add(objectURL);
 
                 image.addEventListener('load', () => resolve(image));
                 image.addEventListener('error', () => reject(image));
                 image.addEventListener('abort', () => reject(image));
 
-                image.src = URL.createObjectURL(blob);
+                image.src = objectURL;
             }));
+    }
+
+    /**
+     * @override
+     */
+    destroy() {
+        for (const objectURL of this._objectURLs) {
+            URL.revokeObjectURL(objectURL);
+        }
+
+        this._objectURLs.clear();
+        this._objectURLs = null;
     }
 }

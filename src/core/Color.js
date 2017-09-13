@@ -1,4 +1,4 @@
-import { clamp, hueToRgb, rgbToHex } from '../utils';
+import { clamp, rgbToHex } from '../utils';
 
 /**
  * @class Color
@@ -52,8 +52,8 @@ export default class Color {
         return this._r;
     }
 
-    set r(value) {
-        this._r = value & 255;
+    set r(red) {
+        this._r = red & 255;
     }
 
     /**
@@ -64,8 +64,8 @@ export default class Color {
         return this._g;
     }
 
-    set g(value) {
-        this._g = value & 255;
+    set g(green) {
+        this._g = green & 255;
     }
 
     /**
@@ -76,8 +76,8 @@ export default class Color {
         return this._b;
     }
 
-    set b(value) {
-        this._b = value & 255;
+    set b(blue) {
+        this._b = blue & 255;
     }
 
     /**
@@ -88,8 +88,8 @@ export default class Color {
         return this._a;
     }
 
-    set a(value) {
-        this._a = clamp(value, 0, 1);
+    set a(alpha) {
+        this._a = clamp(alpha, 0, 1);
     }
 
     /**
@@ -100,10 +100,10 @@ export default class Color {
         return ((this._r & 255) << 16) + ((this._g & 255) << 8) + (this._b & 255);
     }
 
-    set rgb(value) {
-        this._r = (value >> 16) & 255;
-        this._g = (value >> 8) & 255;
-        this._b = value & 255;
+    set rgb(rgb) {
+        this._r = (rgb >> 16) & 255;
+        this._g = (rgb >> 8) & 255;
+        this._b = rgb & 255;
     }
 
     /**
@@ -114,11 +114,11 @@ export default class Color {
         return (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
     }
 
-    set rgba(value) {
-        this._a = ((value >> 24) & 255) / 255;
-        this._r = (value >> 16) & 255;
-        this._g = (value >> 8) & 255;
-        this._b = value & 255;
+    set rgba(rgba) {
+        this._a = ((rgba >> 24) & 255) / 255;
+        this._r = (rgba >> 16) & 255;
+        this._g = (rgba >> 8) & 255;
+        this._b = rgba & 255;
     }
 
     /**
@@ -236,9 +236,9 @@ export default class Color {
             const q = (l < 0.5) ? (l * (1 + s)) : (l + s - (l * s)),
                 p = (2 * l) - q;
 
-            this.r = hueToRgb(p, q, h + (1 / 3)) * 255;
-            this.g = hueToRgb(p, q, h) * 255;
-            this.b = hueToRgb(p, q, h - (1 / 3)) * 255;
+            this.r = this._hueToRgb(p, q, h + (1 / 3)) * 255;
+            this.g = this._hueToRgb(p, q, h) * 255;
+            this.b = this._hueToRgb(p, q, h - (1 / 3)) * 255;
         }
 
         return this;
@@ -330,6 +330,33 @@ export default class Color {
         this._g = null;
         this._b = null;
         this._a = null;
+    }
+
+    /**
+     * @private
+     * @param {Number} p
+     * @param {Number} q
+     * @param {Number} t
+     * @returns {Number}
+     */
+    _hueToRgb(p, q, t) {
+        if (t < 0) {
+            t += 1;
+        }
+        if (t > 1) {
+            t -= 1;
+        }
+        if (t < 1 / 6) {
+            return (p + (q - p)) * 6 * t;
+        }
+        if (t < 1 / 2) {
+            return q;
+        }
+        if (t < 2 / 3) {
+            return (p + (q - p)) * ((2 / 3) - t) * 6;
+        }
+
+        return p;
     }
 }
 

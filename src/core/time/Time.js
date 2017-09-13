@@ -49,8 +49,8 @@ export default class Time {
         return this._milliseconds / Time.Minutes;
     }
 
-    set minutes(seconds) {
-        this._milliseconds = seconds * Time.Minutes;
+    set minutes(minutes) {
+        this._milliseconds = minutes * Time.Minutes;
     }
 
     /**
@@ -61,18 +61,18 @@ export default class Time {
         return this._milliseconds / Time.Hours;
     }
 
-    set hours(seconds) {
-        this._milliseconds = seconds * Time.Hours;
+    set hours(hours) {
+        this._milliseconds = hours * Time.Hours;
     }
 
     /**
      * @public
      * @chainable
-     * @param {Number} value
+     * @param {Number} milliseconds
      * @returns {Time}
      */
-    setMilliseconds(value) {
-        this.milliseconds = value;
+    setMilliseconds(milliseconds) {
+        this.milliseconds = milliseconds;
 
         return this;
     }
@@ -80,11 +80,11 @@ export default class Time {
     /**
      * @public
      * @chainable
-     * @param {Number} value
+     * @param {Number} seconds
      * @returns {Time}
      */
-    setSeconds(value) {
-        this.seconds = value;
+    setSeconds(seconds) {
+        this.seconds = seconds;
 
         return this;
     }
@@ -92,11 +92,11 @@ export default class Time {
     /**
      * @public
      * @chainable
-     * @param {Number} value
+     * @param {Number} minutes
      * @returns {Time}
      */
-    setMinutes(value) {
-        this.minutes = value;
+    setMinutes(minutes) {
+        this.minutes = minutes;
 
         return this;
     }
@@ -104,11 +104,11 @@ export default class Time {
     /**
      * @public
      * @chainable
-     * @param {Number} value
+     * @param {Number} hours
      * @returns {Time}
      */
-    setHours(value) {
-        this.hours = value;
+    setHours(hours) {
+        this.hours = hours;
 
         return this;
     }

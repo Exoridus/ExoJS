@@ -6,9 +6,6 @@ import { ATTRIBUTE_TYPE } from '../const';
 export default class ShaderAttribute {
 
     /**
-     * Private: context, program, location
-     * Parent: offset, stride
-     *
      * @constructor
      * @param {Object} options
      * @param {String} options.name
@@ -112,8 +109,8 @@ export default class ShaderAttribute {
         return this._enabled;
     }
 
-    set enabled(value) {
-        this.setEnabled(value);
+    set enabled(enabled) {
+        this.setEnabled(enabled);
     }
 
     /**

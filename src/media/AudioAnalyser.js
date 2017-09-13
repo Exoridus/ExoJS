@@ -5,7 +5,7 @@ export default class AudioAnalyser {
 
     /**
      * @constructor
-     * @param {Sound|Music|AudioManager} target
+     * @param {Sound|Music|Video|MediaManager} target
      * @param {Object} [options]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
@@ -19,7 +19,7 @@ export default class AudioAnalyser {
 
         /**
          * @private
-         * @member {Sound|Music|AudioManager}
+         * @member {Sound|Music|Video|MediaManager}
          */
         this._target = target;
 
@@ -40,7 +40,7 @@ export default class AudioAnalyser {
             return;
         }
 
-        if (!this._target.context) {
+        if (!this._target.audioContext) {
             throw new Error('Failed to provide an AudioContext from the target.');
         }
 
@@ -52,7 +52,7 @@ export default class AudioAnalyser {
          * @private
          * @member {AudioContext}
          */
-        this._context = this._target.context;
+        this._context = this._target.audioContext;
 
         /**
          * @private

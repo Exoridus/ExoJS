@@ -1,5 +1,5 @@
-import Shader from '../Shader';
-import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../../const';
+import Shader from './Shader';
+import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../const';
 
 /**
  * @class SpriteShader

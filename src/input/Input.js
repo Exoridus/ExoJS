@@ -18,7 +18,7 @@ export default class Input extends EventEmitter {
      * @param {Function} [options.trigger]
      * @param {*} [options.context]
      */
-    constructor(channels, { triggerThreshold = settings.TRIGGER_THRESHOLD, start, stop, active, trigger, context } = {}) {
+    constructor(channels, { triggerThreshold = 300, start, stop, active, trigger, context } = {}) {
         super();
 
         /**
@@ -88,16 +88,20 @@ export default class Input extends EventEmitter {
         return this._triggerThreshold;
     }
 
-    set triggerThreshold(value) {
-        this._triggerThreshold = value;
+    set triggerThreshold(threshold) {
+        this._triggerThreshold = threshold;
     }
 
     /**
      * @public
-     * @param {Float32Array} channels
+     * @param {Float32Array} activeChannels
      */
-    update(channels) {
-        this._value = [...this._channels].reduce((value, channel) => Math.max(channels[channel], value), 0);
+    update(activeChannels) {
+        this._value = 0;
+
+        for (const channel of this._channels) {
+            this._value = Math.max(activeChannels[channel], this._value);
+        }
 
         if (this._value) {
             if (!this._triggerStart) {

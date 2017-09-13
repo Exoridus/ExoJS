@@ -1,11 +1,11 @@
 import RenderTarget from './RenderTarget';
-import SpriteRenderer from './sprite/SpriteRenderer';
-import ParticleRenderer from './particle/ParticleRenderer';
+import SpriteRenderer from './SpriteRenderer';
+import ParticleRenderer from '../particle/ParticleRenderer';
 import Color from '../core/Color';
 import Matrix from '../core/Matrix';
-import { webGLSupported } from '../utils';
 import { BLEND_MODE } from '../const';
 import BlendMode from './BlendMode';
+import support from '../support';
 
 /**
  * @class DisplayManager
@@ -15,7 +15,7 @@ export default class DisplayManager {
     /**
      * @constructor
      * @param {Game} game
-     * @param {Object} [config={}]
+     * @param {Object} [config]
      * @param {Number} [config.width=800]
      * @param {Number} [config.height=600]
      * @param {Color} [config.clearColor=Color.White]
@@ -23,7 +23,7 @@ export default class DisplayManager {
      * @param {Object} [config.contextOptions]
      */
     constructor(game, { width = 800, height = 600, clearColor = Color.White, clearBeforeRender = true, contextOptions } = {}) {
-        if (!webGLSupported) {
+        if (!support.webGL) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
@@ -42,6 +42,12 @@ export default class DisplayManager {
         if (!this._context) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._contextLost = this._context.isContextLost();
 
         /**
          * @private
@@ -78,12 +84,6 @@ export default class DisplayManager {
          * @member {Matrix}
          */
         this._worldTransform = new Matrix();
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._contextLost = false;
 
         /**
          * @private
@@ -152,8 +152,8 @@ export default class DisplayManager {
         return this._renderTarget;
     }
 
-    set renderTarget(value) {
-        this.setRenderTarget(value);
+    set renderTarget(renderTarget) {
+        this.setRenderTarget(renderTarget);
     }
 
     /**
@@ -164,8 +164,8 @@ export default class DisplayManager {
         return this._currentBlendMode;
     }
 
-    set currentBlendMode(value) {
-        this.setBlendMode(value);
+    set currentBlendMode(blendMode) {
+        this.setBlendMode(blendMode);
     }
 
     /**
@@ -176,8 +176,8 @@ export default class DisplayManager {
         return this._clearColor;
     }
 
-    set clearColor(value) {
-        this.setClearColor(value);
+    set clearColor(color) {
+        this.setClearColor(color);
     }
 
     /**

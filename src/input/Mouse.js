@@ -306,10 +306,16 @@ export default class Mouse extends ChannelHandler {
             deltaX = x - this.x,
             deltaY = y - this.y;
 
+        // MoveLeft
         channels[11] = Math.abs(Math.min(0, deltaX));
+
+        // MoveRight
         channels[12] = Math.max(0, deltaX);
 
+        // MoveUp
         channels[13] = Math.abs(Math.min(0, deltaY));
+
+        // MoveDown
         channels[14] = Math.max(0, deltaY);
 
         this._position.set(x, y);
@@ -370,16 +376,6 @@ export default class Mouse extends ChannelHandler {
      */
     static getChannelCode(key) {
         return CHANNEL_OFFSET.MOUSE + (key % CHANNEL_LENGTH.DEVICE);
-    }
-
-    /**
-     * @public
-     * @static
-     * @param {Number} channel
-     * @returns {Number}
-     */
-    static getKey(channel) {
-        return channel % CHANNEL_LENGTH.DEVICE;
     }
 }
 

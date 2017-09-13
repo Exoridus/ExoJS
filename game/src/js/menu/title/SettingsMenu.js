@@ -15,7 +15,8 @@ export default class SettingsMenu extends Menu {
     constructor(game, previousMenu) {
         super(game, previousMenu);
 
-        const canvas = game.canvas;
+        const canvas = game.canvas,
+            mediaManager = game.mediaManager;
 
         /**
          * @private
@@ -28,8 +29,8 @@ export default class SettingsMenu extends Menu {
          * @private
          * @member {MenuItem}
          */
-        this._musicVolumeButton = new MenuItem(
-            `Music Volume: ${(game.audioManager.musicVolume * 100 | 0)}%`,
+        this._masterVolumeButton = new MenuItem(
+            `Master Volume: ${(mediaManager.masterVolume * 100 | 0)}%`,
             this._settingsTitle
         );
 
@@ -37,9 +38,18 @@ export default class SettingsMenu extends Menu {
          * @private
          * @member {MenuItem}
          */
-        this._soundsVolumeButton = new MenuItem(
-            `Sound Volume: ${(game.audioManager.soundVolume * 100 | 0)}%`,
-            this._musicVolumeButton
+        this._musicVolumeButton = new MenuItem(
+            `Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`,
+            this._masterVolumeButton
+        );
+
+        /**
+         * @private
+         * @member {MenuItem}
+         */
+        this._soundsVolumeButton = new MenuItem('', this._musicVolumeButton);new MenuItem(
+            `Sound Volume: ${(mediaManager.soundVolume * 100 | 0)}%`,
+            this._musicVolumeButton,
         );
 
         /**
@@ -83,6 +93,7 @@ export default class SettingsMenu extends Menu {
         this._onOptionRightHandler = null;
 
         this._settingsTitle = null;
+        this._masterVolumeButton = null;
         this._musicVolumeButton = null;
         this._soundsVolumeButton = null;
         this._backButton = null;
@@ -93,6 +104,7 @@ export default class SettingsMenu extends Menu {
      */
     _addItems() {
         this.addChild(this._settingsTitle);
+        this.addChild(this._masterVolumeButton);
         this.addChild(this._musicVolumeButton);
         this.addChild(this._soundsVolumeButton);
         this.addChild(this._backButton);
@@ -102,15 +114,18 @@ export default class SettingsMenu extends Menu {
      * @private
      */
     _addPaths() {
+        this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up');
         this.addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up');
         this.addPath(this._soundsVolumeButton, this._backButton, 'down', 'up');
-        this.addPath(this._backButton, this._musicVolumeButton, 'down', 'up');
+        this.addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
     }
 
     /**
      * @private
      */
     _addActions() {
+        this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left');
+        this.addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right');
         this.addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left');
         this.addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right');
         this.addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left');
@@ -123,13 +138,21 @@ export default class SettingsMenu extends Menu {
      * @param {MenuAction} action
      */
     _onOptionLeft(action) {
-        const activeButton = action.item;
+        const mediaManager = this._game.mediaManager;
 
-        if (activeButton === this._musicVolumeButton) {
-            this._addMusicVolume(this._volumeStep * -1);
-        } else if (activeButton === this._soundsVolumeButton) {
-            this._addSoundVolume(this._volumeStep * -1);
+        switch (action.item) {
+            case this._masterVolumeButton:
+                mediaManager.masterVolume -= this._volumeStep;
+                break;
+            case this._musicVolumeButton:
+                mediaManager.musicVolume -= this._volumeStep;
+                break;
+            case this._soundsVolumeButton:
+                mediaManager.soundVolume -= this._volumeStep;
+                break;
         }
+
+        this._updateButtons();
     }
 
     /**
@@ -137,36 +160,28 @@ export default class SettingsMenu extends Menu {
      * @param {MenuAction} action
      */
     _onOptionRight(action) {
-        const activeButton = action.item;
+        const mediaManager = this._game.mediaManager;
 
-        if (activeButton === this._musicVolumeButton) {
-            this._addMusicVolume(this._volumeStep);
-        } else if (activeButton === this._soundsVolumeButton) {
-            this._addSoundVolume(this._volumeStep);
+        switch (action.item) {
+            case this._masterVolumeButton:
+                mediaManager.masterVolume += this._volumeStep;
+                break;
+            case this._musicVolumeButton:
+                mediaManager.musicVolume += this._volumeStep;
+                break;
+            case this._soundsVolumeButton:
+                mediaManager.soundVolume += this._volumeStep;
+                break;
         }
+
+        this._updateButtons();
     }
 
-    /**
-     * @private
-     * @param {Number} volume
-     */
-    _addMusicVolume(volume) {
-        const audioManager = this._game.audioManager;
+    _updateButtons() {
+        const mediaManager = this._game.mediaManager;
 
-        audioManager.musicVolume += volume;
-
-        this._musicVolumeButton.text = `Music Volume: ${(audioManager.musicVolume * 100 | 0)}%`;
-    }
-
-    /**
-     * @private
-     * @param {Number} volume
-     */
-    _addSoundVolume(volume) {
-        const audioManager = this._game.audioManager;
-
-        audioManager.soundVolume += volume;
-
-        this._soundsVolumeButton.text = `Sound Volume: ${(audioManager.soundVolume * 100 | 0)}%`;
+        this._masterVolumeButton.text = `Master Volume: ${(mediaManager.musicVolume * 100 | 0)}%`;
+        this._musicVolumeButton.text = `Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`;
+        this._soundsVolumeButton.text = `Sound Volume: ${(mediaManager.soundVolume * 100 | 0)}%`;
     }
 }

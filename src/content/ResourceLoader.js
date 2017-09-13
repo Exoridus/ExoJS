@@ -82,8 +82,8 @@ export default class ResourceLoader extends EventEmitter {
         return this._basePath;
     }
 
-    set basePath(value) {
-        this._basePath = value;
+    set basePath(basePath) {
+        this._basePath = basePath;
     }
 
     /**
@@ -94,8 +94,8 @@ export default class ResourceLoader extends EventEmitter {
         return this._request;
     }
 
-    set request(value) {
-        this._request = value;
+    set request(request) {
+        this._request = request;
     }
 
     /**
@@ -247,11 +247,15 @@ export default class ResourceLoader extends EventEmitter {
     destroy() {
         super.destroy();
 
-        this._queue.clear();
-        this._queue = null;
+        for (const factory of this._factories.values()) {
+            factory.destroy();
+        }
 
         this._resources.destroy();
         this._resources = null;
+
+        this._queue.clear();
+        this._queue = null;
 
         this._factories.clear();
         this._factories = null;

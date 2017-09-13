@@ -94,8 +94,8 @@ export default class GLTexture {
         return this._source;
     }
 
-    set source(value) {
-        this.setSource(value);
+    set source(source) {
+        this.setSource(source);
     }
 
     /**
@@ -106,8 +106,8 @@ export default class GLTexture {
         return this._scaleMode;
     }
 
-    set scaleMode(value) {
-        this.setScaleMode(value);
+    set scaleMode(scaleMode) {
+        this.setScaleMode(scaleMode);
     }
 
     /**
@@ -118,8 +118,8 @@ export default class GLTexture {
         return this._wrapMode;
     }
 
-    set wrapMode(value) {
-        this.setWrapMode(value);
+    set wrapMode(wrapMode) {
+        this.setWrapMode(wrapMode);
     }
 
     /**
@@ -130,8 +130,8 @@ export default class GLTexture {
         return this._premultiplyAlpha;
     }
 
-    set premultiplyAlpha(value) {
-        this.setPremultiplyAlpha(value);
+    set premultiplyAlpha(premultiplyAlpha) {
+        this.setPremultiplyAlpha(premultiplyAlpha);
     }
 
     /**
@@ -158,8 +158,18 @@ export default class GLTexture {
     setSource(source) {
         if (this._source !== source) {
             this._source = source;
+            this.updateSource();
         }
 
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {GLTexture}
+     */
+    updateSource() {
         if (this._source) {
             this._flags |= flags.SOURCE;
         } else {
@@ -217,12 +227,15 @@ export default class GLTexture {
     /**
      * @public
      * @chainable
+     * @param {Number} [unit]
      * @returns {GLTexture}
      */
-    update() {
+    update(unit) {
         if (!this._flags) {
             return this;
         }
+
+        this.bind(unit);
 
         const gl = this._context;
 
@@ -262,7 +275,9 @@ export default class GLTexture {
 
     /**
      * @public
+     * @chainable
      * @param {Number} [unit]
+     * @returns {GLTexture}
      */
     bind(unit) {
         const gl = this._context;
@@ -273,16 +288,20 @@ export default class GLTexture {
 
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
 
-        this.update();
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {GLTexture}
      */
     unbind() {
         const gl = this._context;
 
         gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return this;
     }
 
     /**

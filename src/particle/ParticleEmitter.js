@@ -1,8 +1,8 @@
 import Particle from './Particle';
-import Rectangle from '../../core/shape/Rectangle';
-import Vector from '../../core/shape/Vector';
-import Color from '../../core/Color';
-import Time from '../../core/time/Time';
+import Rectangle from '../core/shape/Rectangle';
+import Vector from '../core/shape/Vector';
+import Color from '../core/Color';
+import Time from '../core/time/Time';
 
 /**
  * @class ParticleEmitter
@@ -147,8 +147,8 @@ export default class ParticleEmitter {
         return this._textureCoords;
     }
 
-    set textureCoords(value) {
-        this._textureCoords.copy(value);
+    set textureCoords(textureCoords) {
+        this._textureCoords.copy(textureCoords);
     }
 
     /**

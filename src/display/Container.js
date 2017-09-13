@@ -44,8 +44,8 @@ export default class Container extends Renderable {
         return this._parent;
     }
 
-    set parent(value) {
-        this._parent = value;
+    set parent(parent) {
+        this._parent = parent;
     }
 
     /**
@@ -56,8 +56,8 @@ export default class Container extends Renderable {
         return this._size;
     }
 
-    set size(value) {
-        this._size.copy(value);
+    set size(size) {
+        this._size.copy(size);
     }
 
     /**
@@ -68,8 +68,8 @@ export default class Container extends Renderable {
         return this._size.x;
     }
 
-    set width(value) {
-        this._size.x = value;
+    set width(width) {
+        this._size.x = width;
     }
 
     /**
@@ -80,8 +80,8 @@ export default class Container extends Renderable {
         return this._size.y;
     }
 
-    set height(value) {
-        this._size.y = value;
+    set height(height) {
+        this._size.y = height;
     }
 
     /**
@@ -257,7 +257,7 @@ export default class Container extends Renderable {
      */
     render(displayManager, parentTransform) {
         if (!this.visible) {
-            return;
+            return this;
         }
 
         this._worldTransform.copy(parentTransform);
@@ -266,20 +266,15 @@ export default class Container extends Renderable {
         for (let i = 0, len = this._children.length; i < len; i++) {
             this._children[i].render(displayManager, this._worldTransform);
         }
+
+        return this;
     }
 
     /**
      * @override
-     * @param {Boolean} [destroyChildren=false]
      */
-    destroy(destroyChildren = false) {
+    destroy() {
         super.destroy();
-
-        if (destroyChildren) {
-            for (const child of this._children) {
-                child.destroy();
-            }
-        }
 
         this._children.length = 0;
         this._children = null;

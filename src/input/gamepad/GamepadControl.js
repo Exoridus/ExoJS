@@ -32,7 +32,7 @@ export default class GamepadControl {
          * @private
          * @member {Number}
          */
-        this._key = channel % CHANNEL_OFFSET.CHILD;
+        this._key = channel % CHANNEL_LENGTH.CHILD;
 
         /**
          * @private
@@ -65,8 +65,8 @@ export default class GamepadControl {
         return this._index;
     }
 
-    set index(value) {
-        this._index = value;
+    set index(index) {
+        this._index = index;
     }
 
     /**
@@ -77,8 +77,8 @@ export default class GamepadControl {
         return this._channel;
     }
 
-    set channel(value) {
-        this._channel = value;
+    set channel(channel) {
+        this._channel = channel;
         this._key = this._channel % CHANNEL_LENGTH.CHILD;
     }
 
@@ -90,8 +90,8 @@ export default class GamepadControl {
         return this._key;
     }
 
-    set key(value) {
-        this._key = value % CHANNEL_LENGTH.CHILD;
+    set key(key) {
+        this._key = key % CHANNEL_LENGTH.CHILD;
         this._channel = CHANNEL_OFFSET.GAMEPAD + this._key;
     }
 
@@ -103,8 +103,8 @@ export default class GamepadControl {
         return this._threshold;
     }
 
-    set threshold(value) {
-        this._threshold = value;
+    set threshold(threshold) {
+        this._threshold = threshold;
     }
 
     /**
@@ -115,8 +115,8 @@ export default class GamepadControl {
         return this._negate;
     }
 
-    set negate(value) {
-        this._negate = value;
+    set negate(negate) {
+        this._negate = negate;
     }
 
     /**
@@ -127,8 +127,8 @@ export default class GamepadControl {
         return this._normalize;
     }
 
-    set normalize(value) {
-        this._normalize = value;
+    set normalize(normalize) {
+        this._normalize = normalize;
     }
 
     /**

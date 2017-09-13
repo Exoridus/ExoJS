@@ -29,7 +29,7 @@ window.game.start(new Exo.Scene({
          * @private
          * @member {Exo.AudioAnalyser}
          */
-        this._analyser = new Exo.AudioAnalyser(game.audioManager);
+        this._analyser = new Exo.AudioAnalyser(game.mediaManager);
 
         /**
          * @private
@@ -80,7 +80,8 @@ window.game.start(new Exo.Scene({
          * @member {Exo.Input}
          */
         this._input = new Exo.Input([
-            Exo.Keyboard.Space
+            Exo.Keyboard.Space,
+            Exo.Gamepad.FaceButtonBottom,
         ], {
             context: this,
             trigger() {
@@ -91,34 +92,7 @@ window.game.start(new Exo.Scene({
         canvas.parentNode.appendChild(this._canvas);
 
         game.trigger('input:add', this._input)
-            .trigger('audio:play', this._music, { loop: true });
-    },
-
-    /**
-     * @private
-     */
-    _updateCanvas() {
-        const canvas = this._canvas,
-            context = this._context,
-            width = window.innerWidth,
-            height = window.innerHeight,
-            effectHeight = height * 0.75 | 0,
-            gradient = context.createLinearGradient(0, 0, 0, effectHeight);
-
-        gradient.addColorStop(0, '#f70');
-        gradient.addColorStop(0.5, '#f30');
-        gradient.addColorStop(1, '#f70');
-
-        this.game.trigger('display:resize', width, height);
-
-        canvas.width = width;
-        canvas.height = effectHeight;
-
-        context.fillStyle = gradient;
-        context.strokeStyle = '#fff';
-        context.lineWidth = 4;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
+            .trigger('media:play', this._music, { loop: true });
     },
 
     update(delta) {

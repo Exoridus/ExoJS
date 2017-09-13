@@ -13,23 +13,23 @@ export default class TorqueModifier extends ParticleModifier {
     constructor(angularAcceleration) {
         super();
 
-        this._angularAcceleration = angularAcceleration;
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._angularAcceleration = angularAcceleration || 0;
     }
 
     /**
      * @public
-     * @param {Number} angularAcceleration
+     * @member {Number}
      */
-    setAngularAcceleration(angularAcceleration) {
-        this._angularAcceleration = angularAcceleration;
+    get angularAcceleration() {
+        return this._acceleration;
     }
 
-    /**
-     * @public
-     * @returns {Vector}
-     */
-    getAngularAcceleration() {
-        return this._angularAcceleration;
+    set angularAcceleration(angularAcceleration) {
+        this._angularAcceleration = angularAcceleration;
     }
 
     /**

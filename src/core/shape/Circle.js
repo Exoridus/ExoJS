@@ -46,8 +46,8 @@ export default class Circle extends Shape {
         return this._position;
     }
 
-    set position(value) {
-        this._position.copy(value);
+    set position(position) {
+        this._position.copy(position);
     }
 
     /**
@@ -58,8 +58,8 @@ export default class Circle extends Shape {
         return this._position.x;
     }
 
-    set x(value) {
-        this._position.x = value;
+    set x(x) {
+        this._position.x = x;
     }
 
     /**
@@ -70,8 +70,8 @@ export default class Circle extends Shape {
         return this._position.y;
     }
 
-    set y(value) {
-        this._position.y = value;
+    set y(y) {
+        this._position.y = y;
     }
 
     /**
@@ -82,8 +82,8 @@ export default class Circle extends Shape {
         return this._radius;
     }
 
-    set radius(value) {
-        this._radius = value;
+    set radius(radius) {
+        this._radius = radius;
     }
 
     /**

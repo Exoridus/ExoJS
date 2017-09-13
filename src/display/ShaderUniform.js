@@ -228,7 +228,8 @@ export default class ShaderUniform {
             case UNIFORM_TYPE.SAMPLER_2D:
                 value.glTexture
                     .setContext(this._context)
-                    .bind(this._unit);
+                    .bind(this._unit)
+                    .update(this._unit);
 
                 return gl.uniform1i(location, this._unit);
             default:

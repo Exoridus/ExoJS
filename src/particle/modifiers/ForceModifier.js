@@ -1,4 +1,5 @@
 import ParticleModifier from '../ParticleModifier';
+import Vector from '../../core/shape/Vector';
 
 /**
  * @class ForceModifier
@@ -13,23 +14,23 @@ export default class ForceModifier extends ParticleModifier {
     constructor(acceleration) {
         super();
 
-        this._acceleration = acceleration.clone();
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._acceleration = (acceleration && acceleration.clone()) || new Vector();
     }
 
     /**
      * @public
-     * @param {Vector} acceleration
+     * @member {Vector}
      */
-    setAcceleration(acceleration) {
-        this._acceleration.copy(acceleration);
-    }
-
-    /**
-     * @public
-     * @returns {Vector}
-     */
-    getAcceleration() {
+    get acceleration() {
         return this._acceleration;
+    }
+
+    set acceleration(acceleration) {
+        this._acceleration.copy(acceleration);
     }
 
     /**

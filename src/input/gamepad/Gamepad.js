@@ -46,8 +46,8 @@ export default class Gamepad extends ChannelHandler {
         return this._mapping;
     }
 
-    set mapping(value) {
-        this._mapping = value;
+    set mapping(mapping) {
+        this._mapping = mapping;
     }
 
     /**
@@ -88,18 +88,18 @@ export default class Gamepad extends ChannelHandler {
         const channels = this.channels,
             buttonMapping = this._mapping.buttons,
             axesMapping = this._mapping.axes,
-            buttons = this._gamepad.buttons,
-            axes = this._gamepad.axes;
+            gamepdaButtons = this._gamepad.buttons,
+            gamepadAxes = this._gamepad.axes;
 
         for (const button of buttonMapping) {
-            if (button.index in buttons) {
-                channels[button.key] = button.transformValue(buttons[button.index].value);
+            if (button.index in gamepdaButtons) {
+                channels[button.key] = button.transformValue(gamepdaButtons[button.index].value);
             }
         }
 
         for (const axis of axesMapping) {
-            if (axis.index in axes) {
-                channels[axis.key] = axis.transformValue(axes[axis.index]);
+            if (axis.index in gamepadAxes) {
+                channels[axis.key] = axis.transformValue(gamepadAxes[axis.index]);
             }
         }
     }

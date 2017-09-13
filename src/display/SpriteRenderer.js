@@ -1,5 +1,6 @@
-import Renderer from '../Renderer';
+import Renderer from './Renderer';
 import SpriteShader from './SpriteShader';
+import settings from '../settings';
 
 /**
  * @class SpriteRenderer
@@ -14,36 +15,42 @@ export default class SpriteRenderer extends Renderer {
         super();
 
         /**
-         * Vertex property count times the vertices per sprite.
-         *
-         * @private
-         * @member {Number}
-         */
-        this._spriteVertexSize = 20;
-
-        /**
-         * 2 triangles = 6 edges / indices
-         *
          * @private
          * @member {Number}
          */
         this._indexCount = 6;
 
         /**
-         * 10922 possible sprites per batch
+         * @private
+         * @member {Number}
+         */
+        this._vertexCount = 4;
+
+        /**
+         * 2 = position (x, y) +
+         * 2 = texCoord (x, y) +
+         * 1 = color    (ARGB int)
          *
          * @private
          * @member {Number}
          */
-        this._maxSprites = (Math.pow(2, 16) / this._indexCount) | 0;
+        this._vertexPropCount = 5;
 
         /**
+         * Vertex property count times the vertices per sprite.
          *
-         * maximum sprite amount per batch *
-         * vertex amount per Sprite        *
-         * property count per vertex       *
-         * byte size
-         *
+         * @private
+         * @member {Number}
+         */
+        this._spriteVertexSize = this._vertexCount * this._vertexPropCount;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._maxSprites = settings.SPRITE_BATCH_SIZE;
+
+        /**
          * @private
          * @member {ArrayBuffer}
          */
@@ -149,8 +156,9 @@ export default class SpriteRenderer extends Renderer {
     render(sprite) {
         if (this._currentTexture !== sprite.texture) {
             this.flush();
+
+            this._shader.setSpriteTexture(sprite.texture);
             this._currentTexture = sprite.texture;
-            this._shader.setSpriteTexture(this._currentTexture);
         }
 
         if (this._batchSize >= this._maxSprites) {
@@ -162,6 +170,8 @@ export default class SpriteRenderer extends Renderer {
             transform = sprite.worldTransform,
             vertexData = sprite.vertexData,
             index = this._batchSize * this._spriteVertexSize;
+
+        this._currentTexture.glTexture.update();
 
         // X & Y
         vertexBuffer[index] = (vertexData[0] * transform.a) + (vertexData[1] * transform.b) + transform.x;

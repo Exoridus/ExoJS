@@ -1,7 +1,7 @@
-import Renderable from '../Renderable';
-import Rectangle from '../../core/shape/Rectangle';
-import Color from '../../core/Color';
-import ObservableVector from '../../core/ObservableVector';
+import Renderable from './Renderable';
+import Rectangle from '../core/shape/Rectangle';
+import Color from '../core/Color';
+import ObservableVector from '../core/ObservableVector';
 
 /**
  * @class Sprite
@@ -42,7 +42,7 @@ export default class Sprite extends Renderable {
 
         /**
          * @private
-         * @member {Vector}
+         * @member {ObservableVector}
          */
         this._size = new ObservableVector(this._updatePositions, this);
 
@@ -65,8 +65,8 @@ export default class Sprite extends Renderable {
         return this._texture;
     }
 
-    set texture(value) {
-        this.setTexture(value);
+    set texture(texture) {
+        this.setTexture(texture);
     }
 
     /**
@@ -77,8 +77,8 @@ export default class Sprite extends Renderable {
         return this._textureRect;
     }
 
-    set textureRect(value) {
-        this.setTextureRect(value);
+    set textureRect(textureRect) {
+        this.setTextureRect(textureRect);
     }
 
     /**
@@ -89,8 +89,8 @@ export default class Sprite extends Renderable {
         return this._tint;
     }
 
-    set tint(value) {
-        this._tint.copy(value);
+    set tint(tint) {
+        this._tint.copy(tint);
     }
 
     /**
@@ -113,14 +113,14 @@ export default class Sprite extends Renderable {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {ObservableVector}
      */
     get size() {
         return this._size;
     }
 
-    set size(value) {
-        this._size.copy(value);
+    set size(size) {
+        this._size.copy(size);
     }
 
     /**
@@ -131,8 +131,8 @@ export default class Sprite extends Renderable {
         return this._size.x;
     }
 
-    set width(value) {
-        this._size.x = value;
+    set width(width) {
+        this._size.x = width;
     }
 
     /**
@@ -143,8 +143,8 @@ export default class Sprite extends Renderable {
         return this._size.y;
     }
 
-    set height(value) {
-        this._size.y = value;
+    set height(height) {
+        this._size.y = height;
     }
 
     /**
@@ -250,6 +250,17 @@ export default class Sprite extends Renderable {
     setTexture(texture) {
         this._texture = texture;
         this.setTextureRect(texture.frame);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Sprite}
+     */
+    updateTexture() {
+        this._texture.updateSource();
 
         return this;
     }

@@ -37,9 +37,9 @@ export default class ObservableVector extends Vector {
         return this._x;
     }
 
-    set x(value) {
-        if (this._x !== value) {
-            this._x = value;
+    set x(x) {
+        if (this._x !== x) {
+            this._x = x;
             this._callback.call(this._scope);
         }
     }
@@ -52,9 +52,9 @@ export default class ObservableVector extends Vector {
         return this._y;
     }
 
-    set y(value) {
-        if (this._y !== value) {
-            this._y = value;
+    set y(y) {
+        if (this._y !== y) {
+            this._y = y;
             this._callback.call(this._scope);
         }
     }
