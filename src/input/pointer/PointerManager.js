@@ -29,23 +29,19 @@ export default class PointerManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Pointer[]}
+         * @member {Map<Number, Pointer>}
          */
-        this._pointers = [];
+        this._pointers = new Map();
 
         this._addEventListeners();
     }
 
-    getPointers() {
-        return this._pointers;
-    }
-
     /**
-     * @param {Number} index
-     * @returns {Pointer}
+     * @public
+     * @member {Map<Number, Pointer>}
      */
-    getPointer(index) {
-        return this._pointers[index];
+    get pointers() {
+        return this._pointers;
     }
 
     /**
@@ -55,6 +51,11 @@ export default class PointerManager extends ChannelHandler {
         super.destroy();
 
         this._removeEventListeners();
+
+        this._pointers.clear();
+        this._pointers = null;
+
+        this._canvas = null;
         this._game = null;
     }
 
@@ -62,22 +63,26 @@ export default class PointerManager extends ChannelHandler {
      * @private
      */
     _addEventListeners() {
+        const canvas = this._canvas;
+
         this._onTouchStartHandler = this._onTouchStart.bind(this);
         this._onTouchEndHandler = this._onTouchEnd.bind(this);
         this._onTouchMoveHandler = this._onTouchMove.bind(this);
 
-        this._canvas.addEventListener('touchstart', this._onTouchStartHandler, true);
-        this._canvas.addEventListener('touchend', this._onTouchEndHandler, true);
-        this._canvas.addEventListener('touchmove', this._onTouchMoveHandler, true);
+        canvas.addEventListener('touchstart', this._onTouchStartHandler, true);
+        canvas.addEventListener('touchend', this._onTouchEndHandler, true);
+        canvas.addEventListener('touchmove', this._onTouchMoveHandler, true);
     }
 
     /**
      * @private
      */
     _removeEventListeners() {
-        this._canvas.removeEventListener('touchstart', this._onTouchStartHandler, true);
-        this._canvas.removeEventListener('touchend', this._onTouchEndHandler, true);
-        this._canvas.removeEventListener('touchmove', this._onTouchMoveHandler, true);
+        const canvas = this._canvas;
+
+        canvas.removeEventListener('touchstart', this._onTouchStartHandler, true);
+        canvas.removeEventListener('touchend', this._onTouchEndHandler, true);
+        canvas.removeEventListener('touchmove', this._onTouchMoveHandler, true);
 
         this._onTouchStartHandler = null;
         this._onTouchEndHandler = null;
@@ -85,26 +90,14 @@ export default class PointerManager extends ChannelHandler {
     }
 
     _onTouchStart(event) {
-        if (!this.active) {
-            return;
-        }
-
         console.log('touchdown', event);
     }
 
     _onTouchEnd(event) {
-        if (!this.active) {
-            return;
-        }
-
         console.log('touchup', event);
     }
 
     _onTouchMove(event) {
-        if (!this.active) {
-            return;
-        }
-
         console.log('touchmove', event);
     }
 }

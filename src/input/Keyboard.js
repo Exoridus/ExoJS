@@ -1,6 +1,11 @@
 import ChannelHandler from './ChannelHandler';
 import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
 
+const flags = {
+    KEY_DOWN: 1 << 0,
+    KEY_UP: 1 << 1,
+};
+
 /**
  * @class Keyboard
  * @extends {ChannelHandler}
@@ -21,7 +26,47 @@ export default class Keyboard extends ChannelHandler {
          */
         this._game = game;
 
+        /**
+         * @private
+         * @member {Set<Number>}
+         */
+        this._channelsPressed = new Set();
+
+        /**
+         * @private
+         * @member {Set<Number>}
+         */
+        this._channelsReleased = new Set();
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._flags = 0;
+
         this._addEventListeners();
+    }
+
+    /**
+     * @override
+     */
+    update() {
+        if (!this._flags) {
+            return;
+        }
+
+        if (this._flags & flags.KEY_DOWN) {
+            this.trigger('keyboard:down', this._channelsPressed, this);
+            this._channelsPressed.clear();
+        }
+
+        if (this._flags & flags.KEY_UP) {
+            this.trigger('keyboard:up', this._channelsReleased, this);
+            this._channelsReleased.clear();
+        }
+
+        this._flags = 0;
+
     }
 
     /**
@@ -31,6 +76,14 @@ export default class Keyboard extends ChannelHandler {
         super.destroy();
 
         this._removeEventListeners();
+
+        this._channelsPressed.clear();
+        this._channelsPressed = null;
+
+        this._channelsReleased.clear();
+        this._channelsReleased = null;
+
+        this._flags = null;
         this._game = null;
     }
 
@@ -61,12 +114,10 @@ export default class Keyboard extends ChannelHandler {
      * @param {Event} event
      */
     _onKeyDown(event) {
-        if (!this.active) {
-            return;
-        }
+        this.channels[event.keyCode] = 1;
+        this._channelsPressed.add(Keyboard.getChannelCode(event.keyCode));
 
-        this._channels[event.keyCode] = 1;
-        this.trigger('keyboard:down', Keyboard.getChannelCode(event.keyCode), this);
+        this._flags |= flags.KEY_DOWN;
     }
 
     /**
@@ -74,12 +125,10 @@ export default class Keyboard extends ChannelHandler {
      * @param {Event} event
      */
     _onKeyUp(event) {
-        if (!this.active) {
-            return;
-        }
+        this.channels[event.keyCode] = 0;
+        this._channelsReleased.add(Keyboard.getChannelCode(event.keyCode));
 
-        this._channels[event.keyCode] = 0;
-        this.trigger('keyboard:up', Keyboard.getChannelCode(event.keyCode), this);
+        this._flags |= flags.KEY_UP;
     }
 
     /**

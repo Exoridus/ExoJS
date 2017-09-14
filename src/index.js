@@ -17,5 +17,4 @@ export * from './content';
 export * from './input';
 export * from './media';
 export * from './display';
-export * from './animation';
 export * from './particle';

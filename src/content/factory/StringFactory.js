@@ -16,7 +16,14 @@ export default class StringFactory extends ResourceFactory {
     /**
      * @override
      */
-    create(response, options) {
-        return Promise.resolve(response.text());
+    process(response) {
+        return response.text();
+    }
+
+    /**
+     * @override
+     */
+    create(source, options) {
+        return Promise.resolve(source);
     }
 }

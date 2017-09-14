@@ -117,6 +117,7 @@ export default class InputManager extends ChannelHandler {
             input.update(this.channels);
         }
 
+        this._keyboard.update();
         this._mouse.update();
     }
 

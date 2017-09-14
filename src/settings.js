@@ -12,6 +12,7 @@ export default {
      * @property {Number} soundVolume=1
      * @property {Number} musicVolume=1
      * @property {Number} masterVolume=1
+     * @property {Number} videoVolume=1
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
      * @property {Color} clearColor=Color.White
@@ -31,6 +32,7 @@ export default {
         soundVolume: 1,
         musicVolume: 1,
         masterVolume: 1,
+        videoVolume: 1,
         canvas: null,
         canvasParent: null,
         clearColor: Color.White,
@@ -89,6 +91,30 @@ export default {
         miterLimit: 10,
         padding: 0,
     },
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'image/png'
+     */
+    MIME_TYPE_IMAGE: 'image/png',
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'audio/ogg'
+     */
+    MIME_TYPE_AUDIO: 'audio/ogg',
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'video/ogg'
+     */
+    MIME_TYPE_VIDEO: 'video/ogg',
 
     /**
      * @public

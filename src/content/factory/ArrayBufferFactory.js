@@ -16,7 +16,14 @@ export default class ArrayBufferFactory extends ResourceFactory {
     /**
      * @override
      */
-    create(response, options) {
-        return Promise.resolve(response.arrayBuffer());
+    process(response) {
+        return response.arrayBuffer();
+    }
+
+    /**
+     * @override
+     */
+    create(source, options) {
+        return Promise.resolve(source);
     }
 }

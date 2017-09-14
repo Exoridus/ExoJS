@@ -11,8 +11,10 @@ window.addEventListener('load', () => {
         canvas: '#game-canvas',
     });
 
-    game.loader.requestQuery = `?no-cache=${Date.now()}`;
-    // game.loader.database = new Exo.Database('game', 1);
+    indexedDB.deleteDatabase('game');
+
+    game.loader.request.cache = 'no-cache';
+    game.loader.database = new Exo.Database('game', 2);
 
     game.start(new LauncherScene());
 }, false);

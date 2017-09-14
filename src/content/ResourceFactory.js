@@ -35,6 +35,16 @@ export default class ResourceFactory {
     /**
      * @public
      * @abstract
+     * @param {Response} response
+     * @returns {Promise<*>}
+     */
+    process(response) {
+        return Promise.resolve(null);
+    }
+
+    /**
+     * @public
+     * @abstract
      * @param {Response} source
      * @param {Object} [options]
      * @returns {Promise<*>}
@@ -54,6 +64,7 @@ export default class ResourceFactory {
     load(path, request, options) {
         return this
             .request(path, request)
+            .then((response) => this.process(response))
             .then((source) => this.create(source, options));
     }
 

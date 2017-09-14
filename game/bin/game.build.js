@@ -418,7 +418,7 @@ exports.default = Menu;
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -434,92 +434,92 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {Exo.Text}
  */
 var MenuItem = function (_Exo$Text) {
-  _inherits(MenuItem, _Exo$Text);
-
-  /**
-   * @constructor
-   * @param {String} text
-   * @param {MenuItem} [previousItem]
-   */
-  function MenuItem(text, previousItem) {
-    _classCallCheck(this, MenuItem);
+    _inherits(MenuItem, _Exo$Text);
 
     /**
-     * @private
-     * @member {Number}
+     * @constructor
+     * @param {String} text
+     * @param {MenuItem} [previousItem]
      */
-    var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, {
-      color: 'white',
-      fontSize: 45,
-      fontFamily: 'AndyBold',
-      outlineColor: 'black',
-      outlineWidth: 5
-    }));
+    function MenuItem(text, previousItem) {
+        _classCallCheck(this, MenuItem);
 
-    _this._ticker = 0;
+        /**
+         * @private
+         * @member {Number}
+         */
+        var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, {
+            fill: 'white',
+            fontSize: 45,
+            fontFamily: 'AndyBold',
+            stroke: 'black',
+            strokeThickness: 5
+        }));
 
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._scalingFactor = 1.2;
+        _this._ticker = 0;
 
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._scalingSpeed = 2;
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._scalingFactor = 1.2;
 
-    _this.setOrigin(0.5, 0.5);
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._scalingSpeed = 2;
 
-    if (previousItem) {
-      _this.setPosition(previousItem.x, previousItem.bottom + _this.height * _this._scalingFactor / 2);
-    }
-    return _this;
-  }
+        _this.setOrigin(0.5, 0.5);
 
-  /**
-   * @public
-   */
-
-
-  _createClass(MenuItem, [{
-    key: 'activate',
-    value: function activate() {
-      this.tint = Exo.Color.Yellow;
-      this._ticker = 0;
-    }
-
-    /**
-     * @public
-     * @param {Exo.Time} delta
-     */
-
-  }, {
-    key: 'update',
-    value: function update(delta) {
-      var time = this._ticker * this._scalingSpeed,
-          scalingCenter = (this._scalingFactor - 1) / 2,
-          scale = 1 + Math.sin(time * Math.PI) * scalingCenter + scalingCenter;
-
-      this.setScale(scale, scale);
-      this._ticker += delta.asSeconds();
+        if (previousItem) {
+            _this.setPosition(previousItem.x, previousItem.bottom + _this.height * _this._scalingFactor / 2);
+        }
+        return _this;
     }
 
     /**
      * @public
      */
 
-  }, {
-    key: 'reset',
-    value: function reset() {
-      this.tint = Exo.Color.White;
-      this.setScale(1, 1);
-      this._ticker = 0;
-    }
-  }]);
 
-  return MenuItem;
+    _createClass(MenuItem, [{
+        key: 'activate',
+        value: function activate() {
+            this.tint = Exo.Color.Yellow;
+            this._ticker = 0;
+        }
+
+        /**
+         * @public
+         * @param {Exo.Time} delta
+         */
+
+    }, {
+        key: 'update',
+        value: function update(delta) {
+            var time = this._ticker * this._scalingSpeed,
+                scalingCenter = (this._scalingFactor - 1) / 2,
+                scale = 1 + Math.sin(time * Math.PI) * scalingCenter + scalingCenter;
+
+            this.setScale(scale, scale);
+            this._ticker += delta.seconds;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'reset',
+        value: function reset() {
+            this.tint = Exo.Color.White;
+            this.setScale(1, 1);
+            this._ticker = 0;
+        }
+    }]);
+
+    return MenuItem;
 }(Exo.Text);
 
 exports.default = MenuItem;
@@ -547,8 +547,10 @@ window.addEventListener('load', function () {
         canvas: '#game-canvas'
     });
 
-    game.loader.requestQuery = '?no-cache=' + Date.now();
-    // game.loader.database = new Exo.Database('game', 1);
+    indexedDB.deleteDatabase('game');
+
+    game.loader.request.cache = 'no-cache';
+    game.loader.database = new Exo.Database('game', 2);
 
     game.start(new _LauncherScene2.default());
 }, false); /* global WebFont */
@@ -657,7 +659,9 @@ var LauncherScene = function (_Exo$Scene) {
             }).addList('music', {
                 'title/background': 'audio/title/background.ogg',
                 'game/background': 'audio/game/background.ogg'
-            }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2').load().then(function () {
+            }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
+                family: 'AndyBold'
+            }).load().then(function () {
                 return _this2.game.trigger('scene:start');
             });
 
@@ -838,7 +842,7 @@ var TitleScene = function (_Exo$Scene) {
        */
       this._titleMusic = resources.get('music', 'title/background');
 
-      this.game.trigger('audio:play', this._titleMusic, {
+      this.game.trigger('media:play', this._titleMusic, {
         loop: true
       });
     }
@@ -1007,42 +1011,48 @@ var MenuManager = function () {
          * @member {Exo.Input[]}
          */
         this._inputs = [new Exo.Input([Keyboard.Up, Gamepad.DPadUp, Gamepad.LeftStickUp], {
+            context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputUp();
                 }
             }
-        }, this), new Exo.Input([Keyboard.Down, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+        }), new Exo.Input([Keyboard.Down, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+            context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
-        }, this), new Exo.Input([Keyboard.Left, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+        }), new Exo.Input([Keyboard.Left, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+            context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
-        }, this), new Exo.Input([Keyboard.Right, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+        }), new Exo.Input([Keyboard.Right, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+            context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
-        }, this), new Exo.Input([Keyboard.Enter, Gamepad.FaceButtonBottom], {
+        }), new Exo.Input([Keyboard.Enter, Gamepad.FaceButtonBottom], {
+            context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
-        }, this), new Exo.Input([Keyboard.Backspace, Gamepad.FaceButtonRight], {
+        }), new Exo.Input([Keyboard.Backspace, Gamepad.FaceButtonRight], {
+            context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputBack();
                 }
             }
-        }, this)];
+        })];
     }
 
     /**
@@ -1308,7 +1318,7 @@ var MainMenu = function (_Menu) {
         this._activeChild.update(delta);
       }
 
-      this._ticker += delta.asSeconds();
+      this._ticker += delta.seconds;
       this._gameLogo.rotation = Math.sin(this._ticker * Math.PI / 2) * -10;
     }
 
@@ -1634,19 +1644,15 @@ var VersionText = function (_Exo$Text) {
         _classCallCheck(this, VersionText);
 
         var _this = _possibleConstructorReturn(this, (VersionText.__proto__ || Object.getPrototypeOf(VersionText)).call(this, text, {
-            color: 'white',
+            fill: 'white',
             fontSie: 25,
             fontFamily: 'AndyBold',
-            outlineColor: 'black',
-            outlineWidth: 3
+            stroke: 'black',
+            strokeThickness: 3
         }));
 
         _this.setOrigin(1, 1);
-        _this.setPosition(0, viewportHeight);
-
-        setInterval(function () {
-            _this.text += 'A';
-        }, 1000);
+        _this.setPosition(viewportWidth - 10, viewportHeight);
         return _this;
     }
 
@@ -1889,6 +1895,7 @@ var GameScene = function (_Exo$Scene) {
              * @member {Exo.Input[]}
              */
             this._inputs = [new Exo.Input([Keyboard.Escape, Gamepad.Start], {
+                context: this,
                 trigger: function trigger() {
                     this._paused = !this._paused;
 
@@ -1898,34 +1905,39 @@ var GameScene = function (_Exo$Scene) {
                             // hide pause menu
                         }
                 }
-            }, this), new Exo.Input([Keyboard.Up, Keyboard.W, Gamepad.LeftStickUp, Gamepad.DPadUp], {
+            }), new Exo.Input([Keyboard.Up, Keyboard.W, Gamepad.LeftStickUp, Gamepad.DPadUp], {
+                context: this,
                 active: function active(value) {
                     this._movePlayer(0, value * -1);
                 }
-            }, this), new Exo.Input([Keyboard.Down, Keyboard.S, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+            }), new Exo.Input([Keyboard.Down, Keyboard.S, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+                context: this,
                 active: function active(value) {
                     this._movePlayer(0, value);
                 }
-            }, this), new Exo.Input([Keyboard.Left, Keyboard.A, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+            }), new Exo.Input([Keyboard.Left, Keyboard.A, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+                context: this,
                 active: function active(value) {
                     this._movePlayer(value * -1, 0);
                 }
-            }, this), new Exo.Input([Keyboard.Right, Keyboard.D, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+            }), new Exo.Input([Keyboard.Right, Keyboard.D, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+                context: this,
                 active: function active(value) {
                     this._movePlayer(value, 0);
                 }
-            }, this), new Exo.Input([Keyboard.Shift, Gamepad.RightTriggerTop], {
+            }), new Exo.Input([Keyboard.Shift, Gamepad.RightTriggerTop], {
+                context: this,
                 start: function start() {
                     this._player.running = true;
                 },
                 stop: function stop() {
                     this._player.running = false;
                 }
-            }, this)];
+            })];
 
             this.game.trigger('input:add', this._inputs);
 
-            game.trigger('audio:play', this._backgroundMusic, {
+            game.trigger('media:play', this._backgroundMusic, {
                 loop: true
             });
 
@@ -3068,7 +3080,7 @@ exports.default = LoadGameMenu;
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -3096,195 +3108,202 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {Menu}
  */
 var SettingsMenu = function (_Menu) {
-  _inherits(SettingsMenu, _Menu);
-
-  /**
-   * @constructor
-   * @param {Exo.Game} game
-   * @param {String} previousMenu
-   */
-  function SettingsMenu(game, previousMenu) {
-    _classCallCheck(this, SettingsMenu);
-
-    var _this = _possibleConstructorReturn(this, (SettingsMenu.__proto__ || Object.getPrototypeOf(SettingsMenu)).call(this, game, previousMenu));
-
-    var canvas = game.canvas;
+    _inherits(SettingsMenu, _Menu);
 
     /**
-     * @private
-     * @member {MenuItem}
+     * @constructor
+     * @param {Exo.Game} game
+     * @param {String} previousMenu
      */
-    _this._settingsTitle = new _MenuItem2.default('Settings:');
-    _this._settingsTitle.setPosition(canvas.width / 2, canvas.height / 3);
+    function SettingsMenu(game, previousMenu) {
+        _classCallCheck(this, SettingsMenu);
 
-    /**
-     * @private
-     * @member {MenuItem}
-     */
-    _this._musicVolumeButton = new _MenuItem2.default('Music Volume: ' + (game.audioManager.musicVolume * 100 | 0) + '%', _this._settingsTitle);
+        var _this = _possibleConstructorReturn(this, (SettingsMenu.__proto__ || Object.getPrototypeOf(SettingsMenu)).call(this, game, previousMenu));
 
-    /**
-     * @private
-     * @member {MenuItem}
-     */
-    _this._soundsVolumeButton = new _MenuItem2.default('Sound Volume: ' + (game.audioManager.soundVolume * 100 | 0) + '%', _this._musicVolumeButton);
+        var canvas = game.canvas,
+            mediaManager = game.mediaManager;
 
-    /**
-     * @private
-     * @member {MenuItem}
-     */
-    _this._backButton = new _MenuItem2.default('Back', _this._soundsVolumeButton);
+        /**
+         * @private
+         * @member {MenuItem}
+         */
+        _this._settingsTitle = new _MenuItem2.default('Settings:');
+        _this._settingsTitle.setPosition(canvas.width / 2, canvas.height / 3);
 
-    /**
-     * @private
-     * @member {Function}
-     */
-    _this._onOptionLeftHandler = _this._onOptionLeft.bind(_this);
+        /**
+         * @private
+         * @member {MenuItem}
+         */
+        _this._masterVolumeButton = new _MenuItem2.default('Master Volume: ' + (mediaManager.masterVolume * 100 | 0) + '%', _this._settingsTitle);
 
-    /**
-     * @private
-     * @member {Function}
-     */
-    _this._onOptionRightHandler = _this._onOptionRight.bind(_this);
+        /**
+         * @private
+         * @member {MenuItem}
+         */
+        _this._musicVolumeButton = new _MenuItem2.default('Music Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%', _this._masterVolumeButton);
 
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._volumeStep = 0.05;
+        /**
+         * @private
+         * @member {MenuItem}
+         */
+        _this._soundsVolumeButton = new _MenuItem2.default('', _this._musicVolumeButton);new _MenuItem2.default('Sound Volume: ' + (mediaManager.soundVolume * 100 | 0) + '%', _this._musicVolumeButton);
 
-    _this._addItems();
-    _this._addPaths();
-    _this._addActions();
+        /**
+         * @private
+         * @member {MenuItem}
+         */
+        _this._backButton = new _MenuItem2.default('Back', _this._soundsVolumeButton);
 
-    _this.setStartChild(_this._musicVolumeButton);
-    return _this;
-  }
+        /**
+         * @private
+         * @member {Function}
+         */
+        _this._onOptionLeftHandler = _this._onOptionLeft.bind(_this);
 
-  /**
-   * @override
-   */
+        /**
+         * @private
+         * @member {Function}
+         */
+        _this._onOptionRightHandler = _this._onOptionRight.bind(_this);
 
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._volumeStep = 0.05;
 
-  _createClass(SettingsMenu, [{
-    key: 'destroy',
-    value: function destroy() {
-      _get(SettingsMenu.prototype.__proto__ || Object.getPrototypeOf(SettingsMenu.prototype), 'destroy', this).call(this);
+        _this._addItems();
+        _this._addPaths();
+        _this._addActions();
 
-      this._onOptionLeftHandler = null;
-      this._onOptionRightHandler = null;
-
-      this._settingsTitle = null;
-      this._musicVolumeButton = null;
-      this._soundsVolumeButton = null;
-      this._backButton = null;
+        _this.setStartChild(_this._musicVolumeButton);
+        return _this;
     }
 
     /**
-     * @private
+     * @override
      */
 
-  }, {
-    key: '_addItems',
-    value: function _addItems() {
-      this.addChild(this._settingsTitle);
-      this.addChild(this._musicVolumeButton);
-      this.addChild(this._soundsVolumeButton);
-      this.addChild(this._backButton);
-    }
 
-    /**
-     * @private
-     */
+    _createClass(SettingsMenu, [{
+        key: 'destroy',
+        value: function destroy() {
+            _get(SettingsMenu.prototype.__proto__ || Object.getPrototypeOf(SettingsMenu.prototype), 'destroy', this).call(this);
 
-  }, {
-    key: '_addPaths',
-    value: function _addPaths() {
-      this.addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up');
-      this.addPath(this._soundsVolumeButton, this._backButton, 'down', 'up');
-      this.addPath(this._backButton, this._musicVolumeButton, 'down', 'up');
-    }
+            this._onOptionLeftHandler = null;
+            this._onOptionRightHandler = null;
 
-    /**
-     * @private
-     */
+            this._settingsTitle = null;
+            this._masterVolumeButton = null;
+            this._musicVolumeButton = null;
+            this._soundsVolumeButton = null;
+            this._backButton = null;
+        }
 
-  }, {
-    key: '_addActions',
-    value: function _addActions() {
-      this.addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left');
-      this.addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right');
-      this.addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left');
-      this.addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right');
-      this.addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
-    }
+        /**
+         * @private
+         */
 
-    /**
-     * @private
-     * @param {MenuAction} action
-     */
+    }, {
+        key: '_addItems',
+        value: function _addItems() {
+            this.addChild(this._settingsTitle);
+            this.addChild(this._masterVolumeButton);
+            this.addChild(this._musicVolumeButton);
+            this.addChild(this._soundsVolumeButton);
+            this.addChild(this._backButton);
+        }
 
-  }, {
-    key: '_onOptionLeft',
-    value: function _onOptionLeft(action) {
-      var activeButton = action.item;
+        /**
+         * @private
+         */
 
-      if (activeButton === this._musicVolumeButton) {
-        this._addMusicVolume(this._volumeStep * -1);
-      } else if (activeButton === this._soundsVolumeButton) {
-        this._addSoundVolume(this._volumeStep * -1);
-      }
-    }
+    }, {
+        key: '_addPaths',
+        value: function _addPaths() {
+            this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up');
+            this.addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up');
+            this.addPath(this._soundsVolumeButton, this._backButton, 'down', 'up');
+            this.addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
+        }
 
-    /**
-     * @private
-     * @param {MenuAction} action
-     */
+        /**
+         * @private
+         */
 
-  }, {
-    key: '_onOptionRight',
-    value: function _onOptionRight(action) {
-      var activeButton = action.item;
+    }, {
+        key: '_addActions',
+        value: function _addActions() {
+            this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left');
+            this.addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right');
+            this.addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left');
+            this.addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right');
+            this.addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left');
+            this.addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right');
+            this.addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
+        }
 
-      if (activeButton === this._musicVolumeButton) {
-        this._addMusicVolume(this._volumeStep);
-      } else if (activeButton === this._soundsVolumeButton) {
-        this._addSoundVolume(this._volumeStep);
-      }
-    }
+        /**
+         * @private
+         * @param {MenuAction} action
+         */
 
-    /**
-     * @private
-     * @param {Number} volume
-     */
+    }, {
+        key: '_onOptionLeft',
+        value: function _onOptionLeft(action) {
+            var mediaManager = this._game.mediaManager;
 
-  }, {
-    key: '_addMusicVolume',
-    value: function _addMusicVolume(volume) {
-      var audioManager = this._game.audioManager;
+            switch (action.item) {
+                case this._masterVolumeButton:
+                    mediaManager.masterVolume -= this._volumeStep;
+                    break;
+                case this._musicVolumeButton:
+                    mediaManager.musicVolume -= this._volumeStep;
+                    break;
+                case this._soundsVolumeButton:
+                    mediaManager.soundVolume -= this._volumeStep;
+                    break;
+            }
 
-      audioManager.musicVolume += volume;
+            this._updateButtons();
+        }
 
-      this._musicVolumeButton.text = 'Music Volume: ' + (audioManager.musicVolume * 100 | 0) + '%';
-    }
+        /**
+         * @private
+         * @param {MenuAction} action
+         */
 
-    /**
-     * @private
-     * @param {Number} volume
-     */
+    }, {
+        key: '_onOptionRight',
+        value: function _onOptionRight(action) {
+            var mediaManager = this._game.mediaManager;
 
-  }, {
-    key: '_addSoundVolume',
-    value: function _addSoundVolume(volume) {
-      var audioManager = this._game.audioManager;
+            switch (action.item) {
+                case this._masterVolumeButton:
+                    mediaManager.masterVolume += this._volumeStep;
+                    break;
+                case this._musicVolumeButton:
+                    mediaManager.musicVolume += this._volumeStep;
+                    break;
+                case this._soundsVolumeButton:
+                    mediaManager.soundVolume += this._volumeStep;
+                    break;
+            }
 
-      audioManager.soundVolume += volume;
+            this._updateButtons();
+        }
+    }, {
+        key: '_updateButtons',
+        value: function _updateButtons() {
+            var mediaManager = this._game.mediaManager;
 
-      this._soundsVolumeButton.text = 'Sound Volume: ' + (audioManager.soundVolume * 100 | 0) + '%';
-    }
-  }]);
+            this._masterVolumeButton.text = 'Master Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%';
+            this._musicVolumeButton.text = 'Music Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%';
+            this._soundsVolumeButton.text = 'Sound Volume: ' + (mediaManager.soundVolume * 100 | 0) + '%';
+        }
+    }]);
 
-  return SettingsMenu;
+    return SettingsMenu;
 }(_Menu3.default);
 
 exports.default = SettingsMenu;

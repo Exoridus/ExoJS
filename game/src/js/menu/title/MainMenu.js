@@ -72,7 +72,7 @@ export default class MainMenu extends Menu {
             this._activeChild.update(delta);
         }
 
-        this._ticker += delta.asSeconds();
+        this._ticker += delta.seconds;
         this._gameLogo.rotation = Math.sin(this._ticker * Math.PI / 2) * -10;
     }
 

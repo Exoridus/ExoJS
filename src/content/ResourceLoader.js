@@ -50,6 +50,12 @@ export default class ResourceLoader extends EventEmitter {
             cache: 'default',
         };
 
+        /**
+         * @private
+         * @member {?Database}
+         */
+        this._database = null;
+
         this.addFactory('arrayBuffer', new Factories.ArrayBufferFactory())
             .addFactory('audioBuffer', new Factories.AudioBufferFactory())
             .addFactory('audio', new Factories.AudioFactory())
@@ -96,6 +102,18 @@ export default class ResourceLoader extends EventEmitter {
 
     set request(request) {
         this._request = request;
+    }
+
+    /**
+     * @public
+     * @member {?Database}
+     */
+    get database() {
+        return this._database;
+    }
+
+    set database(request) {
+        this._database = request;
     }
 
     /**
@@ -166,10 +184,11 @@ export default class ResourceLoader extends EventEmitter {
         if (this._database) {
             return this._database
                 .loadData(factory.storageType, name)
-                .then((data) => data || factory.request(this._basePath + path, this._request)
+                .then((result) => result.data || factory.request(this._basePath + path, this._request)
+                    .then((response) => factory.process(response))
                     .then((data) => this._database.saveData(factory.storageType, name, data))
-                    .then(({ data }) => data))
-                .then((data) => factory.create(data, options))
+                    .then((result) => result.data))
+                .then((source) => factory.create(source, options))
                 .then((resource) => {
                     this._resources.set(type, name, resource);
 
@@ -249,6 +268,11 @@ export default class ResourceLoader extends EventEmitter {
 
         for (const factory of this._factories.values()) {
             factory.destroy();
+        }
+
+        if (this._database) {
+            this._database.destroy();
+            this._database = null;
         }
 
         this._resources.destroy();

@@ -37,7 +37,7 @@ window.game.start(new Exo.Scene({
         this.emitter.addModifier(new Exo.TorqueModifier(100));
         this.emitter.addModifier(new Exo.ForceModifier(new Exo.Vector(0, 100)));
 
-        this.game.on('mouse:move', (mouse) => {
+        this.game.on('mouse:move', (delta, mouse) => {
             this.emitter.particlePosition.set(mouse.x - (this.texture.width / 2), mouse.y - (this.texture.height / 2));
         });
     },

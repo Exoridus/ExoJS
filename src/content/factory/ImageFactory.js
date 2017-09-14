@@ -1,5 +1,5 @@
 import BlobFactory from './BlobFactory';
-import { getMimeType } from '../../utils';
+import { determineMimeType } from '../../utils';
 
 /**
  * @class ImageFactory
@@ -39,9 +39,9 @@ export default class ImageFactory extends BlobFactory {
     /**
      * @override
      */
-    create(response, { mimeType = getMimeType(response, 'image') } = {}) {
+    create(source, { mimeType = determineMimeType(source) } = {}) {
         return super
-            .create(response, { mimeType })
+            .create(source, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {
                 const image = new Image(),
                     objectURL = URL.createObjectURL(blob);

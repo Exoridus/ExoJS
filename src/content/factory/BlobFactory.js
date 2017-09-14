@@ -16,9 +16,9 @@ export default class BlobFactory extends ArrayBufferFactory {
     /**
      * @override
      */
-    create(response, { mimeType = 'text/plain' } = {}) {
+    create(source, { mimeType = 'text/plain' } = {}) {
         return super
-            .create(response, null)
+            .create(source, null)
             .then((arrayBuffer) => new Blob([arrayBuffer], { type: mimeType }));
     }
 }

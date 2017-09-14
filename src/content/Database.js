@@ -2,6 +2,13 @@ import { DATABASE_TYPES } from '../const';
 import support from '../support';
 
 /**
+ * @typedef {Object} DatabaseResult
+ * @property {String} type
+ * @property {String} name
+ * @property {?Object} data
+ */
+
+/**
  * @class Database
  */
 export default class Database {
@@ -136,11 +143,7 @@ export default class Database {
             return Promise.reject(Error(`Could not find ObjectStore named "${type}".`));
         }
 
-        return this
-            .open()
-            .then(() => this._database
-                .transaction([type], transactionMode)
-                .objectStore(type));
+        return this.open().then((database) => database.transaction([type], transactionMode).objectStore(type));
     }
 
     /**
@@ -168,8 +171,7 @@ export default class Database {
      * @returns {Promise}
      */
     delete() {
-        return this
-            .close()
+        return this.close()
             .then(() => new Promise((resolve, reject) => {
                 const request = indexedDB.deleteDatabase(this._name);
 
@@ -182,7 +184,7 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Promise<Object>}
+     * @returns {Promise<DatabaseResult>}
      */
     loadData(type, name) {
         return this
@@ -192,13 +194,9 @@ export default class Database {
 
                 request.addEventListener('success', (event) => {
                     const result = event.target.result,
-                        data = (result && result.value) || null;
+                        data = (result && result.data) || null;
 
-                    resolve({
-                        data,
-                        type,
-                        name,
-                    });
+                    resolve({ type, name, data });
                 });
 
                 request.addEventListener('error', (event) => reject(event));
@@ -209,23 +207,16 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @param {*} data
-     * @returns {Promise<Object>}
+     * @param {Object} data
+     * @returns {Promise<DatabaseResult>}
      */
     saveData(type, name, data) {
         return this
             .getObjectStore(type, 'readwrite')
             .then((store) => new Promise((resolve, reject) => {
-                const request = store.put({
-                    key: name,
-                    value: data,
-                });
+                const request = store.put({ name, data });
 
-                request.addEventListener('success', () => resolve({
-                    type,
-                    name,
-                    data,
-                }));
+                request.addEventListener('success', () => resolve({ type, name, data }));
                 request.addEventListener('error', (event) => reject(event));
             }));
     }
@@ -234,7 +225,7 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Promise<Object>}
+     * @returns {Promise<DatabaseResult>}
      */
     removeData(type, name) {
         return this
@@ -242,10 +233,7 @@ export default class Database {
             .then((store) => new Promise((resolve, reject) => {
                 const request = store.delete(name);
 
-                request.addEventListener('success', () => resolve({
-                    type,
-                    name,
-                }));
+                request.addEventListener('success', () => resolve({ type, name, data: null }));
                 request.addEventListener('error', (event) => reject(event));
             }));
     }

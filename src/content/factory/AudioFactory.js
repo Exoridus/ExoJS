@@ -1,5 +1,5 @@
 import BlobFactory from './BlobFactory';
-import { getMimeType } from '../../utils';
+import { determineMimeType } from '../../utils';
 
 /**
  * @class AudioFactory
@@ -39,9 +39,9 @@ export default class AudioFactory extends BlobFactory {
     /**
      * @override
      */
-    create(response, { mimeType = getMimeType(response, 'audio'), loadEvent = 'canplaythrough' } = {}) {
+    create(source, { mimeType = determineMimeType(source), loadEvent = 'canplaythrough' } = {}) {
         return super
-            .create(response, { mimeType })
+            .create(source, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {
                 const audio = document.createElement('audio'),
                     objectURL = URL.createObjectURL(blob);

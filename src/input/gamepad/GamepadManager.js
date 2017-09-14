@@ -46,10 +46,6 @@ export default class GamepadManager extends ChannelHandler {
     update() {
         this.updateGamepads();
 
-        if (!this.active) {
-            return;
-        }
-
         for (const gamepad of this._gamepads.values()) {
             gamepad.update();
         }

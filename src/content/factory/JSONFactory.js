@@ -16,7 +16,14 @@ export default class JSONFactory extends ResourceFactory {
     /**
      * @override
      */
-    create(response, options) {
-        return Promise.resolve(response.json());
+    process(response) {
+        return response.json();
+    }
+
+    /**
+     * @override
+     */
+    create(source, options) {
+        return Promise.resolve(source);
     }
 }

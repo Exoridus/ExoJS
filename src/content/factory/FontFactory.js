@@ -17,9 +17,9 @@ export default class FontFactory extends ArrayBufferFactory {
     /**
      * @override
      */
-    create(response, { addToDocument = true, family = getFilename(response.url), destriptors } = {}) {
+    create(source, { family, destriptors, addToDocument = true } = {}) {
         return super
-            .create(response, null)
+            .create(source, null)
             .then((arrayBuffer) => new Promise((resolve, reject) => {
                 const fontFace = new FontFace(family, arrayBuffer, destriptors),
                     promise = fontFace.load();

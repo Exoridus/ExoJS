@@ -81,10 +81,6 @@ export default class Gamepad extends ChannelHandler {
      * @public
      */
     update() {
-        if (!this.active) {
-            return;
-        }
-
         const channels = this.channels,
             buttonMapping = this._mapping.buttons,
             axesMapping = this._mapping.axes,

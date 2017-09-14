@@ -1,5 +1,5 @@
 import BlobFactory from './BlobFactory';
-import { getMimeType } from '../../utils';
+import { determineMimeType } from '../../utils';
 
 /**
  * @class VideoFactory
@@ -39,9 +39,9 @@ export default class VideoFactory extends BlobFactory {
     /**
      * @override
      */
-    create(response, { mimeType = getMimeType(response, 'video'), loadEvent = 'canplaythrough' } = {}) {
+    create(source, { mimeType = determineMimeType(source), loadEvent = 'canplaythrough' } = {}) {
         return super
-            .create(response, { mimeType })
+            .create(source, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {
                 const video = document.createElement('video'),
                     objectURL = URL.createObjectURL(blob);

@@ -1,4 +1,4 @@
-import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED } from './const';
+import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED, FILE_FORMATS, IMAGE_TYPES, TYPE_PATTERN } from './const';
 import support from './support';
 
 const audio = document.createElement('audio'),
@@ -15,7 +15,8 @@ export const
      */
     supportsCodec = (...codecs) => {
         for (const codec of codecs) {
-            if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
+            if (audio.canPlayType(codec)
+                    .replace(CODEC_NOT_SUPPORTED, '')) {
                 return true;
             }
         }
@@ -157,18 +158,77 @@ export const
      * @type {Function}
      * @returns {String}
      */
-    getExtension = (url) => url.substring(url.lastIndexOf('.') + 1)
-        .toLowerCase(),
+    getExtension = (url) => url.substring(url.lastIndexOf('.') + 1).toLowerCase(),
 
     /**
      * @public
      * @constant
      * @type {Function}
-     * @param {Response} response
-     * @param {String} type
+     * @param {ArrayBuffer} arrayBuffer
      * @returns {String}
      */
-    getMimeType = (response, type) => response.headers.get('Content-Type') || `${type}/${getExtension(response.url)}`,
+    determineMimeType = (arrayBuffer) => {
+        const header = new Uint8Array(arrayBuffer);
+
+        for (const type of TYPE_PATTERN) {
+            if (header.length < type.pattern.length) {
+                continue;
+            }
+
+            if (type.pattern.every((item, index) => (header[index] & type.mask[index]) === item)) {
+                return type.mimeType;
+            }
+        }
+
+        if (matchesMP4Video(arrayBuffer)) {
+            return 'video/mp4';
+        }
+
+        if (matchesWebMVideo(arrayBuffer)) {
+            return 'video/webm';
+        }
+
+        return 'text/plain';
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {ArrayBuffer} arrayBuffer
+     * @returns {Boolean}
+     */
+    matchesMP4Video = (arrayBuffer) => {
+        const header = new Uint8Array(arrayBuffer),
+            view = new DataView(arrayBuffer),
+            boxSize = view.getUint32(0, false);
+
+        if (header.length < 12 || header.length < boxSize || boxSize % 4 !== 0) {
+            return false;
+        }
+
+        return String.fromCharCode(...header.subarray(4, 11)) === 'ftypmp4';
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {ArrayBuffer} arrayBuffer
+     * @returns {Boolean}
+     */
+    matchesWebMVideo = (arrayBuffer) => {
+        const header = new Uint8Array(arrayBuffer),
+            matching = [0x1A, 0x45, 0xDF, 0xA3].every((byte, i) => (byte === header[i])),
+            sliced = header.subarray(4, 4 + 4096),
+            index = sliced.findIndex((el, i, arr) => (arr[i] === 0x42 && arr[i + 1] === 0x82));
+
+        if (!matching || index === -1) {
+            return false;
+        }
+
+        return String.fromCharCode(...sliced.subarray(index + 3, index + 7)) === 'webm';
+    },
 
     /**
      * @public

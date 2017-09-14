@@ -17,9 +17,9 @@ export default class SpriteFactory extends TextureFactory {
     /**
      * @override
      */
-    create(response, options) {
+    create(source, options) {
         return super
-            .create(response, options)
+            .create(source, options)
             .then((texture) => new Sprite(texture));
     }
 }

@@ -17,9 +17,9 @@ export default class AudioBufferFactory extends ArrayBufferFactory {
     /**
      * @override
      */
-    create(response, options) {
+    create(source, options) {
         return super
-            .create(response, options)
+            .create(source, options)
             .then((arrayBuffer) => decodeAudioBuffer(arrayBuffer));
     }
 }

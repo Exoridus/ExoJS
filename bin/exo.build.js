@@ -61,7 +61,7 @@ var Exo =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 59);
+/******/ 	return __webpack_require__(__webpack_require__.s = 57);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -358,7 +358,68 @@ CODEC_NOT_SUPPORTED = exports.CODEC_NOT_SUPPORTED = /^no$/,
  * @name NEWLINE
  * @type {RegExp}
  */
-NEWLINE = exports.NEWLINE = /(?:\r\n|\r|\n)/;
+NEWLINE = exports.NEWLINE = /(?:\r\n|\r|\n)/,
+    TYPE_PATTERN = exports.TYPE_PATTERN = [{
+    mimeType: 'image/x-icon',
+    pattern: [0x00, 0x00, 0x01, 0x00],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'image/x-icon',
+    pattern: [0x00, 0x00, 0x02, 0x00],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'image/bmp',
+    pattern: [0x42, 0x4D],
+    mask: [0xFF, 0xFF]
+}, {
+    mimeType: 'image/gif',
+    pattern: [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'image/gif',
+    pattern: [0x47, 0x49, 0x46, 0x38, 0x39, 0x61],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'image/webp',
+    pattern: [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'image/png',
+    pattern: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'image/jpeg',
+    pattern: [0xFF, 0xD8, 0xFF],
+    mask: [0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'audio/basic',
+    pattern: [0x2E, 0x73, 0x6E, 0x64],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'audio/mpeg',
+    pattern: [0x49, 0x44, 0x33],
+    mask: [0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'audio/wave',
+    pattern: [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'audio/midi',
+    pattern: [0x4D, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'audio/aiff',
+    pattern: [0x46, 0x4F, 0x52, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x41, 0x49, 0x46, 0x46],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'video/avi',
+    pattern: [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x41, 0x56, 0x49, 0x20],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF]
+}, {
+    mimeType: 'application/ogg',
+    pattern: [0x4F, 0x67, 0x67, 0x53, 0x00],
+    mask: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+}];
 
 /***/ }),
 /* 1 */
@@ -370,7 +431,9 @@ NEWLINE = exports.NEWLINE = /(?:\r\n|\r|\n)/;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.compileProgram = exports.compileShader = exports.getMimeType = exports.getExtension = exports.getFilename = exports.removeItems = exports.rgbToHex = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = undefined;
+exports.compileProgram = exports.compileShader = exports.matchesWebMVideo = exports.matchesMP4Video = exports.determineMimeType = exports.getExtension = exports.getFilename = exports.removeItems = exports.rgbToHex = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = undefined;
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _const = __webpack_require__(0);
 
@@ -379,6 +442,8 @@ var _support = __webpack_require__(5);
 var _support2 = _interopRequireDefault(_support);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 var audio = document.createElement('audio'),
     audioContext = _support2.default.webAudio ? new AudioContext() : null;
@@ -595,12 +660,113 @@ getExtension = exports.getExtension = function getExtension(url) {
  * @public
  * @constant
  * @type {Function}
- * @param {Response} response
- * @param {String} type
+ * @param {ArrayBuffer} arrayBuffer
  * @returns {String}
  */
-getMimeType = exports.getMimeType = function getMimeType(response, type) {
-    return response.headers.get('Content-Type') || type + '/' + getExtension(response.url);
+determineMimeType = exports.determineMimeType = function determineMimeType(arrayBuffer) {
+    var header = new Uint8Array(arrayBuffer);
+
+    var _loop = function _loop(type) {
+        if (header.length < type.pattern.length) {
+            return 'continue';
+        }
+
+        if (type.pattern.every(function (item, index) {
+            return (header[index] & type.mask[index]) === item;
+        })) {
+            return {
+                v: type.mimeType
+            };
+        }
+    };
+
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
+
+    try {
+        for (var _iterator2 = _const.TYPE_PATTERN[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var type = _step2.value;
+
+            var _ret = _loop(type);
+
+            switch (_ret) {
+                case 'continue':
+                    continue;
+
+                default:
+                    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+            }
+        }
+    } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                _iterator2.return();
+            }
+        } finally {
+            if (_didIteratorError2) {
+                throw _iteratorError2;
+            }
+        }
+    }
+
+    if (matchesMP4Video(arrayBuffer)) {
+        return 'video/mp4';
+    }
+
+    if (matchesWebMVideo(arrayBuffer)) {
+        return 'video/webm';
+    }
+
+    return 'text/plain';
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Boolean}
+ */
+matchesMP4Video = exports.matchesMP4Video = function matchesMP4Video(arrayBuffer) {
+    var header = new Uint8Array(arrayBuffer),
+        view = new DataView(arrayBuffer),
+        boxSize = view.getUint32(0, false);
+
+    if (header.length < 12 || header.length < boxSize || boxSize % 4 !== 0) {
+        return false;
+    }
+
+    return String.fromCharCode.apply(String, _toConsumableArray(header.subarray(4, 11))) === 'ftypmp4';
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Boolean}
+ */
+matchesWebMVideo = exports.matchesWebMVideo = function matchesWebMVideo(arrayBuffer) {
+    var header = new Uint8Array(arrayBuffer),
+        matching = [0x1A, 0x45, 0xDF, 0xA3].every(function (byte, i) {
+        return byte === header[i];
+    }),
+        sliced = header.subarray(4, 4 + 4096),
+        index = sliced.findIndex(function (el, i, arr) {
+        return arr[i] === 0x42 && arr[i + 1] === 0x82;
+    });
+
+    if (!matching || index === -1) {
+        return false;
+    }
+
+    return String.fromCharCode.apply(String, _toConsumableArray(sliced.subarray(index + 3, index + 7))) === 'webm';
 },
 
 
@@ -966,8 +1132,8 @@ var Vector = function (_Shape) {
         get: function get() {
             return this._x;
         },
-        set: function set(value) {
-            this._x = value;
+        set: function set(x) {
+            this._x = x;
         }
 
         /**
@@ -980,8 +1146,8 @@ var Vector = function (_Shape) {
         get: function get() {
             return this._y;
         },
-        set: function set(value) {
-            this._y = value;
+        set: function set(y) {
+            this._y = y;
         }
 
         /**
@@ -1233,8 +1399,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this._position;
         },
-        set: function set(value) {
-            this._position.copy(value);
+        set: function set(position) {
+            this._position.copy(position);
         }
 
         /**
@@ -1247,8 +1413,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this._position.x;
         },
-        set: function set(value) {
-            this._position.x = value;
+        set: function set(x) {
+            this._position.x = x;
         }
 
         /**
@@ -1261,8 +1427,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this._position.y;
         },
-        set: function set(value) {
-            this._position.y = value;
+        set: function set(y) {
+            this._position.y = y;
         }
 
         /**
@@ -1275,8 +1441,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this._size;
         },
-        set: function set(value) {
-            this._size.copy(value);
+        set: function set(size) {
+            this._size.copy(size);
         }
 
         /**
@@ -1289,8 +1455,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this._size.x;
         },
-        set: function set(value) {
-            this._size.x = value;
+        set: function set(width) {
+            this._size.x = width;
         }
 
         /**
@@ -1303,8 +1469,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this._size.y;
         },
-        set: function set(value) {
-            this._size.y = value;
+        set: function set(height) {
+            this._size.y = height;
         }
 
         /**
@@ -1317,8 +1483,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this.x;
         },
-        set: function set(value) {
-            this.x = value;
+        set: function set(left) {
+            this.x = left;
         }
 
         /**
@@ -1331,8 +1497,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this.x + this.width;
         },
-        set: function set(value) {
-            this.x = value - this.width;
+        set: function set(right) {
+            this.x = right - this.width;
         }
 
         /**
@@ -1345,8 +1511,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this.y;
         },
-        set: function set(value) {
-            this.y = value;
+        set: function set(top) {
+            this.y = top;
         }
 
         /**
@@ -1359,8 +1525,8 @@ var Rectangle = function (_Shape) {
         get: function get() {
             return this.y + this.height;
         },
-        set: function set(value) {
-            this.y = value - this.height;
+        set: function set(bottom) {
+            this.y = bottom - this.height;
         }
     }]);
 
@@ -1399,6 +1565,7 @@ exports.default = {
      * @property {Number} soundVolume=1
      * @property {Number} musicVolume=1
      * @property {Number} masterVolume=1
+     * @property {Number} videoVolume=1
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
      * @property {Color} clearColor=Color.White
@@ -1418,6 +1585,7 @@ exports.default = {
         soundVolume: 1,
         musicVolume: 1,
         masterVolume: 1,
+        videoVolume: 1,
         canvas: null,
         canvasParent: null,
         clearColor: _Color2.default.White,
@@ -1476,6 +1644,30 @@ exports.default = {
         miterLimit: 10,
         padding: 0
     },
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'image/png'
+     */
+    MIME_TYPE_IMAGE: 'image/png',
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'audio/ogg'
+     */
+    MIME_TYPE_AUDIO: 'audio/ogg',
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'video/ogg'
+     */
+    MIME_TYPE_VIDEO: 'video/ogg',
 
     /**
      * @public
@@ -1609,12 +1801,6 @@ var ChannelHandler = function (_EventEmitter) {
          * @member {Float32Array}
          */
         _this._channels = new Float32Array(channelBuffer, offset * 4, length);
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        _this._active = true;
         return _this;
     }
 
@@ -1626,22 +1812,12 @@ var ChannelHandler = function (_EventEmitter) {
 
 
     _createClass(ChannelHandler, [{
-        key: 'toggle',
-
-
-        /**
-         * @public
-         */
-        value: function toggle() {
-            this._active = !this._active;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
         key: 'resetChannels',
+
+
+        /**
+         * @public
+         */
         value: function resetChannels() {
             this._channels.fill(0);
         }
@@ -1656,9 +1832,9 @@ var ChannelHandler = function (_EventEmitter) {
             _get(ChannelHandler.prototype.__proto__ || Object.getPrototypeOf(ChannelHandler.prototype), 'destroy', this).call(this);
 
             this.resetChannels();
+
             this._channelBuffer = null;
             this._channels = null;
-            this._active = null;
         }
     }, {
         key: 'channelBuffer',
@@ -1676,20 +1852,6 @@ var ChannelHandler = function (_EventEmitter) {
         key: 'channels',
         get: function get() {
             return this._channels;
-        }
-
-        /**
-         * @public
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'active',
-        get: function get() {
-            return this._active;
-        },
-        set: function set(value) {
-            this._active = value;
         }
     }]);
 
@@ -2314,8 +2476,8 @@ var Color = function () {
     get: function get() {
       return this._r;
     },
-    set: function set(value) {
-      this._r = value & 255;
+    set: function set(red) {
+      this._r = red & 255;
     }
 
     /**
@@ -2328,8 +2490,8 @@ var Color = function () {
     get: function get() {
       return this._g;
     },
-    set: function set(value) {
-      this._g = value & 255;
+    set: function set(green) {
+      this._g = green & 255;
     }
 
     /**
@@ -2342,8 +2504,8 @@ var Color = function () {
     get: function get() {
       return this._b;
     },
-    set: function set(value) {
-      this._b = value & 255;
+    set: function set(blue) {
+      this._b = blue & 255;
     }
 
     /**
@@ -2356,8 +2518,8 @@ var Color = function () {
     get: function get() {
       return this._a;
     },
-    set: function set(value) {
-      this._a = (0, _utils.clamp)(value, 0, 1);
+    set: function set(alpha) {
+      this._a = (0, _utils.clamp)(alpha, 0, 1);
     }
 
     /**
@@ -2370,10 +2532,10 @@ var Color = function () {
     get: function get() {
       return ((this._r & 255) << 16) + ((this._g & 255) << 8) + (this._b & 255);
     },
-    set: function set(value) {
-      this._r = value >> 16 & 255;
-      this._g = value >> 8 & 255;
-      this._b = value & 255;
+    set: function set(rgb) {
+      this._r = rgb >> 16 & 255;
+      this._g = rgb >> 8 & 255;
+      this._b = rgb & 255;
     }
 
     /**
@@ -2386,11 +2548,11 @@ var Color = function () {
     get: function get() {
       return ((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r >>> 0;
     },
-    set: function set(value) {
-      this._a = (value >> 24 & 255) / 255;
-      this._r = value >> 16 & 255;
-      this._g = value >> 8 & 255;
-      this._b = value & 255;
+    set: function set(rgba) {
+      this._a = (rgba >> 24 & 255) / 255;
+      this._r = rgba >> 16 & 255;
+      this._g = rgba >> 8 & 255;
+      this._b = rgba & 255;
     }
 
     /**
@@ -4040,11 +4202,11 @@ var Time = function () {
         /**
          * @public
          * @chainable
-         * @param {Number} value
+         * @param {Number} milliseconds
          * @returns {Time}
          */
-        value: function setMilliseconds(value) {
-            this.milliseconds = value;
+        value: function setMilliseconds(milliseconds) {
+            this.milliseconds = milliseconds;
 
             return this;
         }
@@ -4052,14 +4214,14 @@ var Time = function () {
         /**
          * @public
          * @chainable
-         * @param {Number} value
+         * @param {Number} seconds
          * @returns {Time}
          */
 
     }, {
         key: "setSeconds",
-        value: function setSeconds(value) {
-            this.seconds = value;
+        value: function setSeconds(seconds) {
+            this.seconds = seconds;
 
             return this;
         }
@@ -4067,14 +4229,14 @@ var Time = function () {
         /**
          * @public
          * @chainable
-         * @param {Number} value
+         * @param {Number} minutes
          * @returns {Time}
          */
 
     }, {
         key: "setMinutes",
-        value: function setMinutes(value) {
-            this.minutes = value;
+        value: function setMinutes(minutes) {
+            this.minutes = minutes;
 
             return this;
         }
@@ -4082,14 +4244,14 @@ var Time = function () {
         /**
          * @public
          * @chainable
-         * @param {Number} value
+         * @param {Number} hours
          * @returns {Time}
          */
 
     }, {
         key: "setHours",
-        value: function setHours(value) {
-            this.hours = value;
+        value: function setHours(hours) {
+            this.hours = hours;
 
             return this;
         }
@@ -4228,8 +4390,8 @@ var Time = function () {
         get: function get() {
             return this._milliseconds / Time.Minutes;
         },
-        set: function set(seconds) {
-            this._milliseconds = seconds * Time.Minutes;
+        set: function set(minutes) {
+            this._milliseconds = minutes * Time.Minutes;
         }
 
         /**
@@ -4242,8 +4404,8 @@ var Time = function () {
         get: function get() {
             return this._milliseconds / Time.Hours;
         },
-        set: function set(seconds) {
-            this._milliseconds = seconds * Time.Hours;
+        set: function set(hours) {
+            this._milliseconds = hours * Time.Hours;
         }
     }]);
 
@@ -4328,14 +4490,24 @@ var ArrayBufferFactory = function (_ResourceFactory) {
     }
 
     _createClass(ArrayBufferFactory, [{
-        key: 'create',
+        key: 'process',
 
 
         /**
          * @override
          */
-        value: function create(response, options) {
-            return Promise.resolve(response.arrayBuffer());
+        value: function process(response) {
+            return response.arrayBuffer();
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'create',
+        value: function create(source, options) {
+            return Promise.resolve(source);
         }
     }, {
         key: 'storageType',
@@ -4405,6 +4577,19 @@ var ResourceFactory = function () {
         /**
          * @public
          * @abstract
+         * @param {Response} response
+         * @returns {Promise<*>}
+         */
+
+    }, {
+        key: 'process',
+        value: function process(response) {
+            return Promise.resolve(null);
+        }
+
+        /**
+         * @public
+         * @abstract
          * @param {Response} source
          * @param {Object} [options]
          * @returns {Promise<*>}
@@ -4430,7 +4615,9 @@ var ResourceFactory = function () {
         value: function load(path, request, options) {
             var _this = this;
 
-            return this.request(path, request).then(function (source) {
+            return this.request(path, request).then(function (response) {
+                return _this.process(response);
+            }).then(function (source) {
                 return _this.create(source, options);
             });
         }
@@ -4512,12 +4699,12 @@ var BlobFactory = function (_ArrayBufferFactory) {
         /**
          * @override
          */
-        value: function create(response) {
+        value: function create(source) {
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$mimeType = _ref.mimeType,
                 mimeType = _ref$mimeType === undefined ? 'text/plain' : _ref$mimeType;
 
-            return _get(BlobFactory.prototype.__proto__ || Object.getPrototypeOf(BlobFactory.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
+            return _get(BlobFactory.prototype.__proto__ || Object.getPrototypeOf(BlobFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
                 return new Blob([arrayBuffer], { type: mimeType });
             });
         }
@@ -4730,8 +4917,8 @@ var Playable = function () {
         get: function get() {
             return this._source.volume;
         },
-        set: function set(value) {
-            this._source.volume = (0, _utils.clamp)(value, 0, 2);
+        set: function set(volume) {
+            this._source.volume = (0, _utils.clamp)(volume, 0, 2);
         }
 
         /**
@@ -4744,8 +4931,8 @@ var Playable = function () {
         get: function get() {
             return this._source.currentTime;
         },
-        set: function set(value) {
-            this._source.currentTime = Math.max(0, value);
+        set: function set(currentTime) {
+            this._source.currentTime = Math.max(0, currentTime);
         }
 
         /**
@@ -4758,8 +4945,8 @@ var Playable = function () {
         get: function get() {
             return this._source.loop;
         },
-        set: function set(value) {
-            this._source.loop = !!value;
+        set: function set(loop) {
+            this._source.loop = loop;
         }
 
         /**
@@ -4772,8 +4959,8 @@ var Playable = function () {
         get: function get() {
             return this._source.playbackRate;
         },
-        set: function set(value) {
-            this._source.playbackRate = Math.max(0, value);
+        set: function set(playbackRate) {
+            this._source.playbackRate = Math.max(0, playbackRate);
         }
 
         /**
@@ -4786,8 +4973,8 @@ var Playable = function () {
         get: function get() {
             return this._source.paused;
         },
-        set: function set(value) {
-            if (value) {
+        set: function set(paused) {
+            if (paused) {
                 this.pause();
             } else {
                 this.play();
@@ -4804,8 +4991,8 @@ var Playable = function () {
         get: function get() {
             return !this.paused;
         },
-        set: function set(value) {
-            if (value) {
+        set: function set(playing) {
+            if (playing) {
                 this.play();
             } else {
                 this.pause();
@@ -4856,7 +5043,7 @@ var _Rectangle = __webpack_require__(3);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _GLTexture = __webpack_require__(69);
+var _GLTexture = __webpack_require__(67);
 
 var _GLTexture2 = _interopRequireDefault(_GLTexture);
 
@@ -4985,8 +5172,8 @@ var Texture = function () {
         get: function get() {
             return this._source;
         },
-        set: function set(value) {
-            this.setSource(value);
+        set: function set(source) {
+            this.setSource(source);
         }
 
         /**
@@ -4999,8 +5186,8 @@ var Texture = function () {
         get: function get() {
             return this._glTexture.scaleMode;
         },
-        set: function set(value) {
-            this._glTexture.setScaleMode(value);
+        set: function set(scaleMode) {
+            this._glTexture.setScaleMode(scaleMode);
         }
 
         /**
@@ -5013,8 +5200,8 @@ var Texture = function () {
         get: function get() {
             return this._glTexture.wrapMode;
         },
-        set: function set(value) {
-            this._glTexture.setWrapMode(value);
+        set: function set(wrapMode) {
+            this._glTexture.setWrapMode(wrapMode);
         }
 
         /**
@@ -5027,8 +5214,8 @@ var Texture = function () {
         get: function get() {
             return this._glTexture.premultiplyAlpha;
         },
-        set: function set(value) {
-            this._glTexture.setPremultiplyAlpha(value);
+        set: function set(premultiplyAlpha) {
+            this._glTexture.setPremultiplyAlpha(premultiplyAlpha);
         }
 
         /**
@@ -5112,7 +5299,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderable2 = __webpack_require__(25);
+var _Renderable2 = __webpack_require__(24);
 
 var _Renderable3 = _interopRequireDefault(_Renderable2);
 
@@ -5124,7 +5311,7 @@ var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _ObservableVector = __webpack_require__(20);
+var _ObservableVector = __webpack_require__(19);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -5384,8 +5571,8 @@ var Sprite = function (_Renderable) {
         get: function get() {
             return this._texture;
         },
-        set: function set(value) {
-            this.setTexture(value);
+        set: function set(texture) {
+            this.setTexture(texture);
         }
 
         /**
@@ -5398,8 +5585,8 @@ var Sprite = function (_Renderable) {
         get: function get() {
             return this._textureRect;
         },
-        set: function set(value) {
-            this.setTextureRect(value);
+        set: function set(textureRect) {
+            this.setTextureRect(textureRect);
         }
 
         /**
@@ -5412,8 +5599,8 @@ var Sprite = function (_Renderable) {
         get: function get() {
             return this._tint;
         },
-        set: function set(value) {
-            this._tint.copy(value);
+        set: function set(tint) {
+            this._tint.copy(tint);
         }
 
         /**
@@ -5450,8 +5637,8 @@ var Sprite = function (_Renderable) {
         get: function get() {
             return this._size;
         },
-        set: function set(value) {
-            this._size.copy(value);
+        set: function set(size) {
+            this._size.copy(size);
         }
 
         /**
@@ -5464,8 +5651,8 @@ var Sprite = function (_Renderable) {
         get: function get() {
             return this._size.x;
         },
-        set: function set(value) {
-            this._size.x = value;
+        set: function set(width) {
+            this._size.x = width;
         }
 
         /**
@@ -5478,8 +5665,8 @@ var Sprite = function (_Renderable) {
         get: function get() {
             return this._size.y;
         },
-        set: function set(value) {
-            this._size.y = value;
+        set: function set(height) {
+            this._size.y = height;
         }
 
         /**
@@ -5552,49 +5739,6 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
- * @interface Animation
- */
-var Animation = function () {
-  function Animation() {
-    _classCallCheck(this, Animation);
-  }
-
-  _createClass(Animation, [{
-    key: "apply",
-
-
-    /**
-     * @public
-     * @virtual
-     * @param {*} animated
-     * @param {Number} progress
-     */
-    value: function apply(animated, progress) {
-      // do nothing
-    }
-  }]);
-
-  return Animation;
-}();
-
-exports.default = Animation;
-
-/***/ }),
-/* 19 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
  * @interface ParticleModifier
  */
 var ParticleModifier = function () {
@@ -5623,7 +5767,7 @@ var ParticleModifier = function () {
 exports.default = ParticleModifier;
 
 /***/ }),
-/* 20 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5812,9 +5956,9 @@ var ObservableVector = function (_Vector) {
         get: function get() {
             return this._x;
         },
-        set: function set(value) {
-            if (this._x !== value) {
-                this._x = value;
+        set: function set(x) {
+            if (this._x !== x) {
+                this._x = x;
                 this._callback.call(this._scope);
             }
         }
@@ -5829,9 +5973,9 @@ var ObservableVector = function (_Vector) {
         get: function get() {
             return this._y;
         },
-        set: function set(value) {
-            if (this._y !== value) {
-                this._y = value;
+        set: function set(y) {
+            if (this._y !== y) {
+                this._y = y;
                 this._callback.call(this._scope);
             }
         }
@@ -5843,7 +5987,7 @@ var ObservableVector = function (_Vector) {
 exports.default = ObservableVector;
 
 /***/ }),
-/* 21 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6052,7 +6196,7 @@ var Clock = function () {
 exports.default = Clock;
 
 /***/ }),
-/* 22 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6209,7 +6353,7 @@ var Renderer = function () {
 exports.default = Renderer;
 
 /***/ }),
-/* 23 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6221,11 +6365,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ShaderAttribute = __webpack_require__(34);
+var _ShaderAttribute = __webpack_require__(33);
 
 var _ShaderAttribute2 = _interopRequireDefault(_ShaderAttribute);
 
-var _ShaderUniform = __webpack_require__(35);
+var _ShaderUniform = __webpack_require__(34);
 
 var _ShaderUniform2 = _interopRequireDefault(_ShaderUniform);
 
@@ -6737,7 +6881,7 @@ var Shader = function () {
 exports.default = Shader;
 
 /***/ }),
-/* 24 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6755,7 +6899,7 @@ var _ChannelHandler2 = __webpack_require__(6);
 
 var _ChannelHandler3 = _interopRequireDefault(_ChannelHandler2);
 
-var _DefaultGamepadMapping = __webpack_require__(44);
+var _DefaultGamepadMapping = __webpack_require__(43);
 
 var _DefaultGamepadMapping2 = _interopRequireDefault(_DefaultGamepadMapping);
 
@@ -6815,10 +6959,6 @@ var Gamepad = function (_ChannelHandler) {
      * @public
      */
     value: function update() {
-      if (!this.active) {
-        return;
-      }
-
       var channels = this.channels,
           buttonMapping = this._mapping.buttons,
           axesMapping = this._mapping.axes,
@@ -6919,8 +7059,8 @@ var Gamepad = function (_ChannelHandler) {
     get: function get() {
       return this._mapping;
     },
-    set: function set(value) {
-      this._mapping = value;
+    set: function set(mapping) {
+      this._mapping = mapping;
     }
 
     /**
@@ -7157,7 +7297,7 @@ Gamepad.RightStickUp = _const.CHANNEL_OFFSET.GAMEPAD + 23;
 Gamepad.RightStickDown = _const.CHANNEL_OFFSET.GAMEPAD + 24;
 
 /***/ }),
-/* 25 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7171,7 +7311,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Transformable2 = __webpack_require__(26);
+var _Transformable2 = __webpack_require__(25);
 
 var _Transformable3 = _interopRequireDefault(_Transformable2);
 
@@ -7288,8 +7428,8 @@ var Renderable = function (_Transformable) {
         get: function get() {
             return this._worldTransform;
         },
-        set: function set(value) {
-            this._worldTransform.copy(value);
+        set: function set(worldTransform) {
+            this._worldTransform.copy(worldTransform);
         }
 
         /**
@@ -7302,8 +7442,8 @@ var Renderable = function (_Transformable) {
         get: function get() {
             return this._visible;
         },
-        set: function set(value) {
-            this._visible = value;
+        set: function set(visible) {
+            this._visible = visible;
         }
 
         /**
@@ -7316,8 +7456,8 @@ var Renderable = function (_Transformable) {
         get: function get() {
             return this._parent;
         },
-        set: function set(value) {
-            this._parent = value;
+        set: function set(parent) {
+            this._parent = parent;
         }
 
         /**
@@ -7338,7 +7478,7 @@ var Renderable = function (_Transformable) {
 exports.default = Renderable;
 
 /***/ }),
-/* 26 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7356,7 +7496,7 @@ var _EventEmitter2 = __webpack_require__(7);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ObservableVector = __webpack_require__(20);
+var _ObservableVector = __webpack_require__(19);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -7598,8 +7738,8 @@ var Transformable = function (_EventEmitter) {
         get: function get() {
             return this._position.x;
         },
-        set: function set(value) {
-            this._position.x = value;
+        set: function set(x) {
+            this._position.x = x;
         }
 
         /**
@@ -7612,8 +7752,8 @@ var Transformable = function (_EventEmitter) {
         get: function get() {
             return this._position.y;
         },
-        set: function set(value) {
-            this._position.y = value;
+        set: function set(y) {
+            this._position.y = y;
         }
 
         /**
@@ -7626,8 +7766,8 @@ var Transformable = function (_EventEmitter) {
         get: function get() {
             return this._position;
         },
-        set: function set(value) {
-            this._position.copy(value);
+        set: function set(position) {
+            this._position.copy(position);
         }
 
         /**
@@ -7640,8 +7780,8 @@ var Transformable = function (_EventEmitter) {
         get: function get() {
             return this._scale;
         },
-        set: function set(value) {
-            this._scale.copy(value);
+        set: function set(scale) {
+            this._scale.copy(scale);
         }
 
         /**
@@ -7654,8 +7794,8 @@ var Transformable = function (_EventEmitter) {
         get: function get() {
             return this._origin;
         },
-        set: function set(value) {
-            this._origin.copy(value);
+        set: function set(origin) {
+            this._origin.copy(origin);
         }
 
         /**
@@ -7668,8 +7808,8 @@ var Transformable = function (_EventEmitter) {
         get: function get() {
             return this._rotation;
         },
-        set: function set(value) {
-            this.setRotation(value);
+        set: function set(rotation) {
+            this.setRotation(rotation);
         }
 
         /**
@@ -7687,8 +7827,8 @@ var Transformable = function (_EventEmitter) {
 
             return this._transform;
         },
-        set: function set(value) {
-            this._transform.copy(value);
+        set: function set(transform) {
+            this._transform.copy(transform);
         }
     }]);
 
@@ -7698,7 +7838,7 @@ var Transformable = function (_EventEmitter) {
 exports.default = Transformable;
 
 /***/ }),
-/* 27 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7826,7 +7966,7 @@ var RC4 = function () {
 exports.default = RC4;
 
 /***/ }),
-/* 28 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7964,7 +8104,7 @@ var SceneManager = function () {
 exports.default = SceneManager;
 
 /***/ }),
-/* 29 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7976,15 +8116,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _RenderTarget = __webpack_require__(30);
+var _RenderTarget = __webpack_require__(29);
 
 var _RenderTarget2 = _interopRequireDefault(_RenderTarget);
 
-var _SpriteRenderer = __webpack_require__(32);
+var _SpriteRenderer = __webpack_require__(31);
 
 var _SpriteRenderer2 = _interopRequireDefault(_SpriteRenderer);
 
-var _ParticleRenderer = __webpack_require__(36);
+var _ParticleRenderer = __webpack_require__(35);
 
 var _ParticleRenderer2 = _interopRequireDefault(_ParticleRenderer);
 
@@ -7998,7 +8138,7 @@ var _Matrix2 = _interopRequireDefault(_Matrix);
 
 var _const = __webpack_require__(0);
 
-var _BlendMode = __webpack_require__(38);
+var _BlendMode = __webpack_require__(37);
 
 var _BlendMode2 = _interopRequireDefault(_BlendMode);
 
@@ -8592,8 +8732,8 @@ var DisplayManager = function () {
         get: function get() {
             return this._renderTarget;
         },
-        set: function set(value) {
-            this.setRenderTarget(value);
+        set: function set(renderTarget) {
+            this.setRenderTarget(renderTarget);
         }
 
         /**
@@ -8606,8 +8746,8 @@ var DisplayManager = function () {
         get: function get() {
             return this._currentBlendMode;
         },
-        set: function set(value) {
-            this.setBlendMode(value);
+        set: function set(blendMode) {
+            this.setBlendMode(blendMode);
         }
 
         /**
@@ -8620,8 +8760,8 @@ var DisplayManager = function () {
         get: function get() {
             return this._clearColor;
         },
-        set: function set(value) {
-            this.setClearColor(value);
+        set: function set(color) {
+            this.setClearColor(color);
         }
     }]);
 
@@ -8631,7 +8771,7 @@ var DisplayManager = function () {
 exports.default = DisplayManager;
 
 /***/ }),
-/* 30 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8643,7 +8783,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _View = __webpack_require__(31);
+var _View = __webpack_require__(30);
 
 var _View2 = _interopRequireDefault(_View);
 
@@ -8837,8 +8977,8 @@ var RenderTarget = function () {
         get: function get() {
             return this._size;
         },
-        set: function set(value) {
-            this._size.copy(value);
+        set: function set(size) {
+            this._size.copy(size);
         }
 
         /**
@@ -8851,8 +8991,8 @@ var RenderTarget = function () {
         get: function get() {
             return this._size.x;
         },
-        set: function set(value) {
-            this._size.x = value | 0;
+        set: function set(width) {
+            this._size.x = width | 0;
         }
 
         /**
@@ -8865,8 +9005,8 @@ var RenderTarget = function () {
         get: function get() {
             return this._size.y;
         },
-        set: function set(value) {
-            this._size.y = value | 0;
+        set: function set(height) {
+            this._size.y = height | 0;
         }
 
         /**
@@ -8888,7 +9028,7 @@ var RenderTarget = function () {
 exports.default = RenderTarget;
 
 /***/ }),
-/* 31 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8900,7 +9040,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ObservableVector = __webpack_require__(20);
+var _ObservableVector = __webpack_require__(19);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -9213,8 +9353,8 @@ var View = function () {
         get: function get() {
             return this._center;
         },
-        set: function set(value) {
-            this._center.copy(value);
+        set: function set(center) {
+            this._center.copy(center);
         }
 
         /**
@@ -9227,8 +9367,8 @@ var View = function () {
         get: function get() {
             return this._size;
         },
-        set: function set(value) {
-            this._size.copy(value);
+        set: function set(size) {
+            this._size.copy(size);
         }
 
         /**
@@ -9241,8 +9381,8 @@ var View = function () {
         get: function get() {
             return this._rotation;
         },
-        set: function set(value) {
-            this.setRotation(value);
+        set: function set(rotation) {
+            this.setRotation(rotation);
         }
 
         /**
@@ -9255,8 +9395,8 @@ var View = function () {
         get: function get() {
             return this._viewport;
         },
-        set: function set(value) {
-            this._viewport.copy(value);
+        set: function set(viewport) {
+            this._viewport.copy(viewport);
             this._dirtyTransform = true;
         }
 
@@ -9275,8 +9415,8 @@ var View = function () {
 
             return this._transform;
         },
-        set: function set(value) {
-            this._transform.copy(value);
+        set: function set(transform) {
+            this._transform.copy(transform);
         }
     }]);
 
@@ -9286,7 +9426,7 @@ var View = function () {
 exports.default = View;
 
 /***/ }),
-/* 32 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9300,11 +9440,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderer2 = __webpack_require__(22);
+var _Renderer2 = __webpack_require__(21);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
-var _SpriteShader = __webpack_require__(33);
+var _SpriteShader = __webpack_require__(32);
 
 var _SpriteShader2 = _interopRequireDefault(_SpriteShader);
 
@@ -9603,7 +9743,7 @@ var SpriteRenderer = function (_Renderer) {
 exports.default = SpriteRenderer;
 
 /***/ }),
-/* 33 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9615,7 +9755,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Shader2 = __webpack_require__(23);
+var _Shader2 = __webpack_require__(22);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -9706,7 +9846,7 @@ var SpriteShader = function (_Shader) {
 exports.default = SpriteShader;
 
 /***/ }),
-/* 34 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9955,8 +10095,8 @@ var ShaderAttribute = function () {
         get: function get() {
             return this._enabled;
         },
-        set: function set(value) {
-            this.setEnabled(value);
+        set: function set(enabled) {
+            this.setEnabled(enabled);
         }
 
         /**
@@ -10003,7 +10143,7 @@ var ShaderAttribute = function () {
 exports.default = ShaderAttribute;
 
 /***/ }),
-/* 35 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10309,7 +10449,7 @@ var ShaderUniform = function () {
 exports.default = ShaderUniform;
 
 /***/ }),
-/* 36 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10323,11 +10463,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderer2 = __webpack_require__(22);
+var _Renderer2 = __webpack_require__(21);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
-var _ParticleShader = __webpack_require__(37);
+var _ParticleShader = __webpack_require__(36);
 
 var _ParticleShader2 = _interopRequireDefault(_ParticleShader);
 
@@ -10642,7 +10782,7 @@ var ParticleRenderer = function (_Renderer) {
 exports.default = ParticleRenderer;
 
 /***/ }),
-/* 37 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10654,7 +10794,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Shader2 = __webpack_require__(23);
+var _Shader2 = __webpack_require__(22);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -10755,7 +10895,7 @@ var ParticleShader = function (_Shader) {
 exports.default = ParticleShader;
 
 /***/ }),
-/* 38 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10858,7 +10998,7 @@ var BlendMode = function () {
 exports.default = BlendMode;
 
 /***/ }),
-/* 39 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11176,8 +11316,8 @@ var MediaManager = function () {
         get: function get() {
             return this._masterVolume;
         },
-        set: function set(value) {
-            this.setMasterVolume(value);
+        set: function set(volume) {
+            this.setMasterVolume(volume);
         }
 
         /**
@@ -11190,8 +11330,8 @@ var MediaManager = function () {
         get: function get() {
             return this._soundVolume;
         },
-        set: function set(value) {
-            this.setSoundVolume(value);
+        set: function set(volume) {
+            this.setSoundVolume(volume);
         }
 
         /**
@@ -11204,8 +11344,8 @@ var MediaManager = function () {
         get: function get() {
             return this._musicVolume;
         },
-        set: function set(value) {
-            this.setMusicVolume(value);
+        set: function set(volume) {
+            this.setMusicVolume(volume);
         }
 
         /**
@@ -11218,8 +11358,8 @@ var MediaManager = function () {
         get: function get() {
             return this._videoVolume;
         },
-        set: function set(value) {
-            this.setVideoVolume(value);
+        set: function set(volume) {
+            this.setVideoVolume(volume);
         }
     }]);
 
@@ -11229,7 +11369,7 @@ var MediaManager = function () {
 exports.default = MediaManager;
 
 /***/ }),
-/* 40 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11247,19 +11387,19 @@ var _ChannelHandler2 = __webpack_require__(6);
 
 var _ChannelHandler3 = _interopRequireDefault(_ChannelHandler2);
 
-var _Keyboard = __webpack_require__(41);
+var _Keyboard = __webpack_require__(40);
 
 var _Keyboard2 = _interopRequireDefault(_Keyboard);
 
-var _Mouse = __webpack_require__(42);
+var _Mouse = __webpack_require__(41);
 
 var _Mouse2 = _interopRequireDefault(_Mouse);
 
-var _GamepadManager = __webpack_require__(43);
+var _GamepadManager = __webpack_require__(42);
 
 var _GamepadManager2 = _interopRequireDefault(_GamepadManager);
 
-var _PointerManager = __webpack_require__(47);
+var _PointerManager = __webpack_require__(46);
 
 var _PointerManager2 = _interopRequireDefault(_PointerManager);
 
@@ -11486,6 +11626,7 @@ var InputManager = function (_ChannelHandler) {
                 }
             }
 
+            this._keyboard.update();
             this._mouse.update();
         }
 
@@ -11525,7 +11666,7 @@ var InputManager = function (_ChannelHandler) {
 exports.default = InputManager;
 
 /***/ }),
-/* 41 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11553,10 +11694,16 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+var flags = {
+  KEY_DOWN: 1 << 0,
+  KEY_UP: 1 << 1
+};
+
 /**
  * @class Keyboard
  * @extends {ChannelHandler}
  */
+
 var Keyboard = function (_ChannelHandler) {
   _inherits(Keyboard, _ChannelHandler);
 
@@ -11576,6 +11723,24 @@ var Keyboard = function (_ChannelHandler) {
 
     _this._game = game;
 
+    /**
+     * @private
+     * @member {Set<Number>}
+     */
+    _this._channelsPressed = new Set();
+
+    /**
+     * @private
+     * @member {Set<Number>}
+     */
+    _this._channelsReleased = new Set();
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._flags = 0;
+
     _this._addEventListeners();
     return _this;
   }
@@ -11586,11 +11751,43 @@ var Keyboard = function (_ChannelHandler) {
 
 
   _createClass(Keyboard, [{
+    key: 'update',
+    value: function update() {
+      if (!this._flags) {
+        return;
+      }
+
+      if (this._flags & flags.KEY_DOWN) {
+        this.trigger('keyboard:down', this._channelsPressed, this);
+        this._channelsPressed.clear();
+      }
+
+      if (this._flags & flags.KEY_UP) {
+        this.trigger('keyboard:up', this._channelsReleased, this);
+        this._channelsReleased.clear();
+      }
+
+      this._flags = 0;
+    }
+
+    /**
+     * @override
+     */
+
+  }, {
     key: 'destroy',
     value: function destroy() {
       _get(Keyboard.prototype.__proto__ || Object.getPrototypeOf(Keyboard.prototype), 'destroy', this).call(this);
 
       this._removeEventListeners();
+
+      this._channelsPressed.clear();
+      this._channelsPressed = null;
+
+      this._channelsReleased.clear();
+      this._channelsReleased = null;
+
+      this._flags = null;
       this._game = null;
     }
 
@@ -11630,12 +11827,10 @@ var Keyboard = function (_ChannelHandler) {
   }, {
     key: '_onKeyDown',
     value: function _onKeyDown(event) {
-      if (!this.active) {
-        return;
-      }
+      this.channels[event.keyCode] = 1;
+      this._channelsPressed.add(Keyboard.getChannelCode(event.keyCode));
 
-      this._channels[event.keyCode] = 1;
-      this.trigger('keyboard:down', Keyboard.getChannelCode(event.keyCode), this);
+      this._flags |= flags.KEY_DOWN;
     }
 
     /**
@@ -11646,12 +11841,10 @@ var Keyboard = function (_ChannelHandler) {
   }, {
     key: '_onKeyUp',
     value: function _onKeyUp(event) {
-      if (!this.active) {
-        return;
-      }
+      this.channels[event.keyCode] = 0;
+      this._channelsReleased.add(Keyboard.getChannelCode(event.keyCode));
 
-      this._channels[event.keyCode] = 0;
-      this.trigger('keyboard:up', Keyboard.getChannelCode(event.keyCode), this);
+      this._flags |= flags.KEY_UP;
     }
 
     /**
@@ -12368,14 +12561,14 @@ Keyboard.ClosedBracket = _const.CHANNEL_OFFSET.KEYBOARD + 221;
 Keyboard.Quotes = _const.CHANNEL_OFFSET.KEYBOARD + 222;
 
 /***/ }),
-/* 42 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+        value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -12400,10 +12593,13 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var SCALE_MODE_DIRTY = 0x01,
-    WRAP_MODE_DIRTY = 0x02,
-    PREMULTIPLY_ALPHA_DIRTY = 0x04,
-    SOURCE_DIRTY = 0x08;
+var flags = {
+        POSITION: 1 << 0,
+        WHEEL: 1 << 1,
+        WINDOW_STATE: 1 << 2,
+        BUTTON_DOWN: 1 << 3,
+        BUTTON_UP: 1 << 4
+};
 
 /**
  * @class Mouse
@@ -12411,445 +12607,536 @@ var SCALE_MODE_DIRTY = 0x01,
  */
 
 var Mouse = function (_ChannelHandler) {
-    _inherits(Mouse, _ChannelHandler);
-
-    /**
-     * @constructor
-     * @param {Game} game
-     * @param {ArrayBuffer} channelBuffer
-     */
-    function Mouse(game, channelBuffer) {
-        _classCallCheck(this, Mouse);
+        _inherits(Mouse, _ChannelHandler);
 
         /**
-         * @private
-         * @member {Game}
+         * @constructor
+         * @param {Game} game
+         * @param {ArrayBuffer} channelBuffer
          */
-        var _this = _possibleConstructorReturn(this, (Mouse.__proto__ || Object.getPrototypeOf(Mouse)).call(this, channelBuffer, _const.CHANNEL_OFFSET.MOUSE, _const.CHANNEL_LENGTH.DEVICE));
+        function Mouse(game, channelBuffer) {
+                _classCallCheck(this, Mouse);
 
-        _this._game = game;
+                /**
+                 * @private
+                 * @member {Game}
+                 */
+                var _this = _possibleConstructorReturn(this, (Mouse.__proto__ || Object.getPrototypeOf(Mouse)).call(this, channelBuffer, _const.CHANNEL_OFFSET.MOUSE, _const.CHANNEL_LENGTH.DEVICE));
+
+                _this._game = game;
+
+                /**
+                 * @private
+                 * @member {HTMLCanvasElement}
+                 */
+                _this._canvas = game.canvas;
+
+                /**
+                 * @private
+                 * @member {Vector}
+                 */
+                _this._position = new _Vector2.default();
+
+                /**
+                 * @private
+                 * @member {Vector}
+                 */
+                _this._positionDelta = new _Vector2.default();
+
+                /**
+                 * @private
+                 * @member {Vector}
+                 */
+                _this._scrollDelta = new _Vector2.default();
+
+                /**
+                 * @private
+                 * @member {Boolean}
+                 */
+                _this._insideWindow = false;
+
+                /**
+                 * @private
+                 * @member {Set<Number>}
+                 */
+                _this._channelsPressed = new Set();
+
+                /**
+                 * @private
+                 * @member {Set<Number>}
+                 */
+                _this._channelsReleased = new Set();
+
+                /**
+                 * @private
+                 * @member {Number}
+                 */
+                _this._flags = 0;
+
+                _this._addEventListeners();
+
+                /**
+                 * @event Mouse#leave
+                 * @member {Function}
+                 * @property {Mouse} mouse
+                 */
+
+                /**
+                 * @event Mouse#enter
+                 * @member {Function}
+                 * @property {Mouse} mouse
+                 */
+
+                /**
+                 * @event Mouse#scroll
+                 * @member {Function}
+                 * @property {Mouse} mouse
+                 */
+
+                /**
+                 * @event Mouse#move
+                 * @member {Function}
+                 * @property {Mouse} mouse
+                 */
+
+                /**
+                 * @event Mouse#down
+                 * @member {Function}
+                 * @property {Mouse} mouse
+                 */
+
+                /**
+                 * @event Mouse#up
+                 * @member {Function}
+                 * @property {Mouse} mouse
+                 */
+                return _this;
+        }
 
         /**
-         * @private
-         * @member {HTMLCanvasElement}
-         */
-        _this._canvas = game.canvas;
-
-        /**
-         * @private
+         * @public
+         * @readonly
          * @member {Vector}
          */
-        _this._position = new _Vector2.default();
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._dirty = 0;
-
-        _this._addEventListeners();
-
-        /**
-         * @event Mouse#leave
-         * @member {Function}
-         * @property {Mouse} mouse
-         */
-
-        /**
-         * @event Mouse#enter
-         * @member {Function}
-         * @property {Mouse} mouse
-         */
-
-        /**
-         * @event Mouse#move
-         * @member {Function}
-         * @property {Mouse} mouse
-         */
-
-        /**
-         * @event Mouse#scroll
-         * @member {Function}
-         * @property {Mouse} mouse
-         */
-        return _this;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-
-
-    _createClass(Mouse, [{
-        key: 'update',
-
-
-        /**
-         * @public
-         * @fires Mouse#enter
-         * @fires Mouse#leave
-         * @fires Mouse#move
-         * @fires Mouse#scroll
-         */
-        value: function update() {
-            if (!this.active) {
-                return;
-            }
-
-            if (this._wheelChanged) {
-                this._game.trigger('mouse:scroll', this);
-                this._wheelChanged = false;
-            }
-
-            if (this._positionChanged) {
-                this._game.trigger('mouse:move', this);
-                this._positionChanged = false;
-            }
-
-            if (this._stateChanged) {
-                this._game.trigger(this.hasEnteredWindow ? 'mouse:enter' : 'mouse:leave', this);
-                this._stateChanged = false;
-            }
-
-            this.channels.fill(0, 5);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            _get(Mouse.prototype.__proto__ || Object.getPrototypeOf(Mouse.prototype), 'destroy', this).call(this);
-
-            this._removeEventListeners();
-            this._wheelChanged = null;
-            this._positionChanged = null;
-            this._stateChanged = null;
-            this._game = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_addEventListeners',
-        value: function _addEventListeners() {
-            var canvas = this._canvas;
-
-            this._onMouseDownHandler = this._onMouseDown.bind(this);
-            this._onMouseUpHandler = this._onMouseUp.bind(this);
-            this._onMouseMoveHandler = this._onMouseMove.bind(this);
-            this._onMouseOverHandler = this._onMouseOver.bind(this);
-            this._onMouseOutHandler = this._onMouseOut.bind(this);
-            this._onMouseWheelHandler = this._onMouseWheel.bind(this);
-            this._killEventHandler = this._killEvent.bind(this);
-
-            canvas.addEventListener('mousedown', this._onMouseDownHandler, true);
-            canvas.addEventListener('mouseup', this._onMouseUpHandler, true);
-            canvas.addEventListener('mousemove', this._onMouseMoveHandler, true);
-            canvas.addEventListener('mouseover', this._onMouseOverHandler, true);
-            canvas.addEventListener('mouseout', this._onMouseOutHandler, true);
-            canvas.addEventListener('wheel', this._onMouseWheelHandler, true);
-
-            // Disable right clicking context menu
-            canvas.addEventListener('contextmenu', this._killEventHandler, true);
-
-            // Disable mouse selection
-            canvas.addEventListener('selectstart', this._killEventHandler, true);
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_removeEventListeners',
-        value: function _removeEventListeners() {
-            var canvas = this._canvas;
-
-            canvas.removeEventListener('mousedown', this._onMouseDownHandler, true);
-            canvas.removeEventListener('mouseup', this._onMouseUpHandler, true);
-            canvas.removeEventListener('mousemove', this._onMouseMoveHandler, true);
-            canvas.removeEventListener('mouseover', this._onMouseOverHandler, true);
-            canvas.removeEventListener('mouseout', this._onMouseOutHandler, true);
-            canvas.removeEventListener('wheel', this._onMouseWheelHandler, true);
-            canvas.removeEventListener('contextmenu', this._killEventHandler, true);
-            canvas.removeEventListener('selectstart', this._killEventHandler, true);
-
-            this._onMouseDownHandler = null;
-            this._onMouseUpHandler = null;
-            this._onMouseMoveHandler = null;
-            this._onMouseOverHandler = null;
-            this._onMouseOutHandler = null;
-            this._onMouseWheelHandler = null;
-            this._killEventHandler = null;
-        }
-
-        /**
-         * @private
-         * @param {Event} event
-         */
-
-    }, {
-        key: '_killEvent',
-        value: function _killEvent(event) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-        }
-
-        /**
-         * @private
-         * @param {MouseEvent} event
-         */
-
-    }, {
-        key: '_onMouseDown',
-        value: function _onMouseDown(event) {
-            event.preventDefault();
-
-            var button = Math.min(event.button, 4);
-
-            this.channels[button] = 1;
-            this._game.trigger('mouse:down', Mouse.getChannelCode(button), this);
-        }
-
-        /**
-         * @private
-         * @param {MouseEvent} event
-         */
-
-    }, {
-        key: '_onMouseUp',
-        value: function _onMouseUp(event) {
-            event.preventDefault();
-
-            var button = Math.min(event.button, 4);
-
-            this.channels[button] = 0;
-            this._game.trigger('mouse:up', Mouse.getChannelCode(button), this);
-        }
-
-        /**
-         * @private
-         * @param {MouseEvent} event
-         */
-
-    }, {
-        key: '_onMouseMove',
-        value: function _onMouseMove(event) {
-            event.preventDefault();
-
-            var channels = this.channels,
-                bounds = this._canvas.getBoundingClientRect(),
-                x = event.clientX - bounds.left,
-                y = event.clientY - bounds.top,
-                deltaX = x - this.x,
-                deltaY = y - this.y;
-
-            // MoveLeft
-            channels[11] = Math.abs(Math.min(0, deltaX));
-
-            // MoveRight
-            channels[12] = Math.max(0, deltaX);
-
-            // MoveUp
-            channels[13] = Math.abs(Math.min(0, deltaY));
-
-            // MoveDown
-            channels[14] = Math.max(0, deltaY);
-
-            this._position.set(x, y);
-            this._positionChanged = true;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_onMouseOver',
-        value: function _onMouseOver() {
-            var channels = this.channels;
-
-            channels[15] = 1;
-            channels[16] = 0;
-
-            this._stateChanged = true;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_onMouseOut',
-        value: function _onMouseOut() {
-            var channels = this.channels;
-
-            channels[15] = 0;
-            channels[16] = 1;
-
-            this._stateChanged = true;
-        }
-
-        /**
-         * @private
-         * @param {WheelEvent} event
-         */
-
-    }, {
-        key: '_onMouseWheel',
-        value: function _onMouseWheel(event) {
-            var channels = this.channels,
-                deltaX = event.deltaX,
-                deltaY = event.deltaY,
-                deltaZ = event.deltaZ;
-
-            channels[5] = Math.abs(Math.min(0, deltaX));
-            channels[6] = Math.max(0, deltaX);
-
-            channels[7] = Math.abs(Math.min(0, deltaY));
-            channels[8] = Math.max(0, deltaY);
-
-            channels[9] = Math.abs(Math.min(0, deltaZ));
-            channels[10] = Math.max(0, deltaZ);
-
-            this._wheelChanged = true;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Number} key
-         * @returns {Number}
-         */
-
-    }, {
-        key: 'position',
-        get: function get() {
-            return this._position;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'x',
-        get: function get() {
-            return this._position.x;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'y',
-        get: function get() {
-            return this._position.y;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'wheelX',
-        get: function get() {
-            return this._channels[5] - this._channels[6];
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'wheelY',
-        get: function get() {
-            return this._channels[7] - this._channels[8];
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'wheelZ',
-        get: function get() {
-            return this._channels[9] - this._channels[10];
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'deltaX',
-        get: function get() {
-            return this._channels[11] - this._channels[12];
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'deltaY',
-        get: function get() {
-            return this._channels[13] - this._channels[14];
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'hasEnteredWindow',
-        get: function get() {
-            return !!this._channels[15];
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'hasLeftWindow',
-        get: function get() {
-            return !!this._channels[16];
-        }
-    }], [{
-        key: 'getChannelCode',
-        value: function getChannelCode(key) {
-            return _const.CHANNEL_OFFSET.MOUSE + key % _const.CHANNEL_LENGTH.DEVICE;
-        }
-    }]);
-
-    return Mouse;
+
+
+        _createClass(Mouse, [{
+                key: 'update',
+
+
+                /**
+                 * @public
+                 * @fires Mouse#enter
+                 * @fires Mouse#leave
+                 * @fires Mouse#scroll
+                 * @fires Mouse#move
+                 * @fires Mouse#down
+                 * @fires Mouse#up
+                 */
+                value: function update() {
+                        if (!this._flags) {
+                                return;
+                        }
+
+                        if (this._flags & flags.WINDOW_STATE) {
+                                this._game.trigger(this._insideWindow ? 'mouse:enter' : 'mouse:leave', this);
+                        }
+
+                        if (this._flags & flags.WHEEL) {
+                                this._game.trigger('mouse:scroll', this._scrollDelta, this);
+                                this._scrollDelta.reset();
+                        }
+
+                        if (this._flags & flags.POSITION) {
+                                this._game.trigger('mouse:move', this._position, this);
+                                this._positionDelta.reset();
+                        }
+
+                        if (this._flags & flags.BUTTON_DOWN) {
+                                this._game.trigger('mouse:down', this._channelsPressed, this);
+                                this._channelsPressed.clear();
+                        }
+
+                        if (this._flags & flags.BUTTON_UP) {
+                                this._game.trigger('mouse:up', this._channelsReleased, this);
+                                this._channelsReleased.clear();
+                        }
+
+                        this._flags = 0;
+
+                        this.channels.fill(0, 5, 17);
+                }
+
+                /**
+                 * @override
+                 */
+
+        }, {
+                key: 'destroy',
+                value: function destroy() {
+                        _get(Mouse.prototype.__proto__ || Object.getPrototypeOf(Mouse.prototype), 'destroy', this).call(this);
+
+                        this._removeEventListeners();
+
+                        this._position.destroy();
+                        this._position = null;
+
+                        this._positionDelta.destroy();
+                        this._positionDelta = null;
+
+                        this._scrollDelta.destroy();
+                        this._scrollDelta = null;
+
+                        this._channelsPressed.clear();
+                        this._channelsPressed = null;
+
+                        this._channelsReleased.clear();
+                        this._channelsReleased = null;
+
+                        this._flags = null;
+                        this._insideWindow = null;
+                        this._canvas = null;
+                        this._game = null;
+                }
+
+                /**
+                 * @private
+                 */
+
+        }, {
+                key: '_addEventListeners',
+                value: function _addEventListeners() {
+                        var canvas = this._canvas;
+
+                        this._onMouseDownHandler = this._onMouseDown.bind(this);
+                        this._onMouseUpHandler = this._onMouseUp.bind(this);
+                        this._onMouseMoveHandler = this._onMouseMove.bind(this);
+                        this._onMouseOverHandler = this._onMouseOver.bind(this);
+                        this._onMouseOutHandler = this._onMouseOut.bind(this);
+                        this._onMouseWheelHandler = this._onMouseWheel.bind(this);
+                        this._killEventHandler = this._killEvent.bind(this);
+
+                        canvas.addEventListener('mousedown', this._onMouseDownHandler, true);
+                        canvas.addEventListener('mouseup', this._onMouseUpHandler, true);
+                        canvas.addEventListener('mousemove', this._onMouseMoveHandler, true);
+                        canvas.addEventListener('mouseover', this._onMouseOverHandler, true);
+                        canvas.addEventListener('mouseout', this._onMouseOutHandler, true);
+                        canvas.addEventListener('wheel', this._onMouseWheelHandler, true);
+                        canvas.addEventListener('contextmenu', this._killEventHandler, true);
+                        canvas.addEventListener('selectstart', this._killEventHandler, true);
+                }
+
+                /**
+                 * @private
+                 */
+
+        }, {
+                key: '_removeEventListeners',
+                value: function _removeEventListeners() {
+                        var canvas = this._canvas;
+
+                        canvas.removeEventListener('mousedown', this._onMouseDownHandler, true);
+                        canvas.removeEventListener('mouseup', this._onMouseUpHandler, true);
+                        canvas.removeEventListener('mousemove', this._onMouseMoveHandler, true);
+                        canvas.removeEventListener('mouseover', this._onMouseOverHandler, true);
+                        canvas.removeEventListener('mouseout', this._onMouseOutHandler, true);
+                        canvas.removeEventListener('wheel', this._onMouseWheelHandler, true);
+                        canvas.removeEventListener('contextmenu', this._killEventHandler, true);
+                        canvas.removeEventListener('selectstart', this._killEventHandler, true);
+
+                        this._onMouseDownHandler = null;
+                        this._onMouseUpHandler = null;
+                        this._onMouseMoveHandler = null;
+                        this._onMouseOverHandler = null;
+                        this._onMouseOutHandler = null;
+                        this._onMouseWheelHandler = null;
+                        this._killEventHandler = null;
+                }
+
+                /**
+                 * @private
+                 * @param {Event} event
+                 */
+
+        }, {
+                key: '_killEvent',
+                value: function _killEvent(event) {
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                }
+
+                /**
+                 * @private
+                 * @param {MouseEvent} event
+                 */
+
+        }, {
+                key: '_onMouseDown',
+                value: function _onMouseDown(event) {
+                        var button = Math.min(event.button, 4);
+
+                        this.channels[button] = 1;
+                        this._channelsPressed.add(Mouse.getChannelCode(button));
+
+                        this._flags |= flags.BUTTON_DOWN;
+
+                        event.preventDefault();
+                }
+
+                /**
+                 * @private
+                 * @param {MouseEvent} event
+                 */
+
+        }, {
+                key: '_onMouseUp',
+                value: function _onMouseUp(event) {
+                        var button = Math.min(event.button, 4);
+
+                        this.channels[button] = 0;
+                        this._channelsReleased.add(Mouse.getChannelCode(button));
+
+                        this._flags |= flags.BUTTON_UP;
+
+                        event.preventDefault();
+                }
+
+                /**
+                 * @private
+                 * @param {MouseEvent} event
+                 */
+
+        }, {
+                key: '_onMouseMove',
+                value: function _onMouseMove(event) {
+                        var channels = this.channels,
+                            bounds = this._canvas.getBoundingClientRect(),
+                            x = event.clientX - bounds.left,
+                            y = event.clientY - bounds.top,
+                            deltaX = x - this.x,
+                            deltaY = y - this.y;
+
+                        // Move
+                        channels[5] = 1;
+
+                        // MoveLeft
+                        channels[6] = Math.abs(Math.min(0, deltaX));
+
+                        // MoveRight
+                        channels[7] = Math.max(0, deltaX);
+
+                        // MoveUp
+                        channels[8] = Math.abs(Math.min(0, deltaY));
+
+                        // MoveDown
+                        channels[9] = Math.max(0, deltaY);
+
+                        this._positionDelta.set(deltaX, deltaY);
+                        this._position.set(x, y);
+
+                        this._flags |= flags.POSITION;
+
+                        event.preventDefault();
+                }
+
+                /**
+                 * @private
+                 * @param {WheelEvent} event
+                 */
+
+        }, {
+                key: '_onMouseWheel',
+                value: function _onMouseWheel(event) {
+                        var channels = this.channels;
+
+                        // Scroll
+                        channels[10] = 1;
+
+                        // ScrollLeft
+                        channels[11] = Math.abs(Math.min(0, event.deltaX));
+
+                        // ScrollRight
+                        channels[12] = Math.max(0, event.deltaX);
+
+                        // ScrollUp
+                        channels[13] = Math.abs(Math.min(0, event.deltaY));
+
+                        // ScrollDown
+                        channels[14] = Math.max(0, event.deltaY);
+
+                        this._scrollDelta.set(event.deltaX, event.deltaY);
+
+                        this._flags |= flags.WHEEL;
+                }
+
+                /**
+                 * @private
+                 */
+
+        }, {
+                key: '_onMouseOver',
+                value: function _onMouseOver() {
+                        var channels = this.channels;
+
+                        // EnterWindow
+                        channels[15] = 1;
+
+                        // LeaveWindow
+                        channels[16] = 0;
+
+                        this._insideWindow = true;
+
+                        this._flags |= flags.WINDOW_STATE;
+                }
+
+                /**
+                 * @private
+                 */
+
+        }, {
+                key: '_onMouseOut',
+                value: function _onMouseOut() {
+                        var channels = this.channels;
+
+                        // EnterWindow
+                        channels[15] = 0;
+
+                        // LeaveWindow
+                        channels[16] = 1;
+
+                        this._insideWindow = false;
+
+                        this._flags |= flags.WINDOW_STATE;
+                }
+
+                /**
+                 * @public
+                 * @static
+                 * @param {Number} key
+                 * @returns {Number}
+                 */
+
+        }, {
+                key: 'position',
+                get: function get() {
+                        return this._position;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Number}
+                 */
+
+        }, {
+                key: 'x',
+                get: function get() {
+                        return this._position.x;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Number}
+                 */
+
+        }, {
+                key: 'y',
+                get: function get() {
+                        return this._position.y;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Vector}
+                 */
+
+        }, {
+                key: 'positionDelta',
+                get: function get() {
+                        return this._positionDelta;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Number}
+                 */
+
+        }, {
+                key: 'deltaX',
+                get: function get() {
+                        return this._positionDelta.x;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Number}
+                 */
+
+        }, {
+                key: 'deltaY',
+                get: function get() {
+                        return this._positionDelta.y;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Vector}
+                 */
+
+        }, {
+                key: 'scrollDelta',
+                get: function get() {
+                        return this._scrollDelta;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Number}
+                 */
+
+        }, {
+                key: 'scrollX',
+                get: function get() {
+                        return this._scrollDelta.x;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Number}
+                 */
+
+        }, {
+                key: 'scrollY',
+                get: function get() {
+                        return this._scrollDelta.y;
+                }
+
+                /**
+                 * @public
+                 * @readonly
+                 * @member {Boolean}
+                 */
+
+        }, {
+                key: 'insideWindow',
+                get: function get() {
+                        return this._insideWindow;
+                }
+        }], [{
+                key: 'getChannelCode',
+                value: function getChannelCode(key) {
+                        return _const.CHANNEL_OFFSET.MOUSE + key % _const.CHANNEL_LENGTH.DEVICE;
+                }
+        }]);
+
+        return Mouse;
 }(_ChannelHandler3.default);
 
 /**
@@ -12895,70 +13182,70 @@ Mouse.ForwardButton = _const.CHANNEL_OFFSET.MOUSE + 4;
  * @static
  * @member {Number}
  */
-Mouse.ScrollLeft = _const.CHANNEL_OFFSET.MOUSE + 5;
+Mouse.Move = _const.CHANNEL_OFFSET.MOUSE + 5;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollRight = _const.CHANNEL_OFFSET.MOUSE + 6;
+Mouse.MoveLeft = _const.CHANNEL_OFFSET.MOUSE + 6;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollUp = _const.CHANNEL_OFFSET.MOUSE + 7;
+Mouse.MoveRight = _const.CHANNEL_OFFSET.MOUSE + 7;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollDown = _const.CHANNEL_OFFSET.MOUSE + 8;
+Mouse.MoveUp = _const.CHANNEL_OFFSET.MOUSE + 8;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollForward = _const.CHANNEL_OFFSET.MOUSE + 9;
+Mouse.MoveDown = _const.CHANNEL_OFFSET.MOUSE + 9;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.ScrollBackward = _const.CHANNEL_OFFSET.MOUSE + 10;
+Mouse.Scroll = _const.CHANNEL_OFFSET.MOUSE + 10;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveLeft = _const.CHANNEL_OFFSET.MOUSE + 11;
+Mouse.ScrollLeft = _const.CHANNEL_OFFSET.MOUSE + 11;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveRight = _const.CHANNEL_OFFSET.MOUSE + 12;
+Mouse.ScrollRight = _const.CHANNEL_OFFSET.MOUSE + 12;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveUp = _const.CHANNEL_OFFSET.MOUSE + 13;
+Mouse.ScrollUp = _const.CHANNEL_OFFSET.MOUSE + 13;
 
 /**
  * @public
  * @static
  * @member {Number}
  */
-Mouse.MoveDown = _const.CHANNEL_OFFSET.MOUSE + 14;
+Mouse.ScrollDown = _const.CHANNEL_OFFSET.MOUSE + 14;
 
 /**
  * @public
@@ -12975,7 +13262,7 @@ Mouse.EnterWindow = _const.CHANNEL_OFFSET.MOUSE + 15;
 Mouse.LeaveWindow = _const.CHANNEL_OFFSET.MOUSE + 16;
 
 /***/ }),
-/* 43 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12989,7 +13276,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Gamepad = __webpack_require__(24);
+var _Gamepad = __webpack_require__(23);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -13057,10 +13344,6 @@ var GamepadManager = function (_ChannelHandler) {
          */
         value: function update() {
             this.updateGamepads();
-
-            if (!this.active) {
-                return;
-            }
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
@@ -13174,7 +13457,7 @@ var GamepadManager = function (_ChannelHandler) {
 exports.default = GamepadManager;
 
 /***/ }),
-/* 44 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13184,15 +13467,15 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _GamepadMapping2 = __webpack_require__(45);
+var _GamepadMapping2 = __webpack_require__(44);
 
 var _GamepadMapping3 = _interopRequireDefault(_GamepadMapping2);
 
-var _GamepadControl = __webpack_require__(46);
+var _GamepadControl = __webpack_require__(45);
 
 var _GamepadControl2 = _interopRequireDefault(_GamepadControl);
 
-var _Gamepad = __webpack_require__(24);
+var _Gamepad = __webpack_require__(23);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -13226,7 +13509,7 @@ var DefaultGamepadMapping = function (_GamepadMapping) {
 exports.default = DefaultGamepadMapping;
 
 /***/ }),
-/* 45 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13363,8 +13646,8 @@ var GamepadMapping = function () {
         get: function get() {
             return this._buttons;
         },
-        set: function set(value) {
-            this.setButtons(value);
+        set: function set(buttons) {
+            this.setButtons(buttons);
         }
 
         /**
@@ -13377,8 +13660,8 @@ var GamepadMapping = function () {
         get: function get() {
             return this._axes;
         },
-        set: function set(value) {
-            this.setAxes(value);
+        set: function set(axes) {
+            this.setAxes(axes);
         }
     }]);
 
@@ -13388,7 +13671,7 @@ var GamepadMapping = function () {
 exports.default = GamepadMapping;
 
 /***/ }),
-/* 46 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13501,8 +13784,8 @@ var GamepadControl = function () {
         get: function get() {
             return this._index;
         },
-        set: function set(value) {
-            this._index = value;
+        set: function set(index) {
+            this._index = index;
         }
 
         /**
@@ -13515,8 +13798,8 @@ var GamepadControl = function () {
         get: function get() {
             return this._channel;
         },
-        set: function set(value) {
-            this._channel = value;
+        set: function set(channel) {
+            this._channel = channel;
             this._key = this._channel % _const.CHANNEL_LENGTH.CHILD;
         }
 
@@ -13530,8 +13813,8 @@ var GamepadControl = function () {
         get: function get() {
             return this._key;
         },
-        set: function set(value) {
-            this._key = value % _const.CHANNEL_LENGTH.CHILD;
+        set: function set(key) {
+            this._key = key % _const.CHANNEL_LENGTH.CHILD;
             this._channel = _const.CHANNEL_OFFSET.GAMEPAD + this._key;
         }
 
@@ -13545,8 +13828,8 @@ var GamepadControl = function () {
         get: function get() {
             return this._threshold;
         },
-        set: function set(value) {
-            this._threshold = value;
+        set: function set(threshold) {
+            this._threshold = threshold;
         }
 
         /**
@@ -13559,8 +13842,8 @@ var GamepadControl = function () {
         get: function get() {
             return this._negate;
         },
-        set: function set(value) {
-            this._negate = value;
+        set: function set(negate) {
+            this._negate = negate;
         }
 
         /**
@@ -13573,8 +13856,8 @@ var GamepadControl = function () {
         get: function get() {
             return this._normalize;
         },
-        set: function set(value) {
-            this._normalize = value;
+        set: function set(normalize) {
+            this._normalize = normalize;
         }
     }]);
 
@@ -13584,7 +13867,7 @@ var GamepadControl = function () {
 exports.default = GamepadControl;
 
 /***/ }),
-/* 47 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13643,41 +13926,36 @@ var PointerManager = function (_ChannelHandler) {
 
         /**
          * @private
-         * @member {Pointer[]}
+         * @member {Map<Number, Pointer>}
          */
-        _this._pointers = [];
+        _this._pointers = new Map();
 
         _this._addEventListeners();
         return _this;
     }
 
+    /**
+     * @public
+     * @member {Map<Number, Pointer>}
+     */
+
+
     _createClass(PointerManager, [{
-        key: 'getPointers',
-        value: function getPointers() {
-            return this._pointers;
-        }
+        key: 'destroy',
 
-        /**
-         * @param {Number} index
-         * @returns {Pointer}
-         */
-
-    }, {
-        key: 'getPointer',
-        value: function getPointer(index) {
-            return this._pointers[index];
-        }
 
         /**
          * @override
          */
-
-    }, {
-        key: 'destroy',
         value: function destroy() {
             _get(PointerManager.prototype.__proto__ || Object.getPrototypeOf(PointerManager.prototype), 'destroy', this).call(this);
 
             this._removeEventListeners();
+
+            this._pointers.clear();
+            this._pointers = null;
+
+            this._canvas = null;
             this._game = null;
         }
 
@@ -13688,13 +13966,15 @@ var PointerManager = function (_ChannelHandler) {
     }, {
         key: '_addEventListeners',
         value: function _addEventListeners() {
+            var canvas = this._canvas;
+
             this._onTouchStartHandler = this._onTouchStart.bind(this);
             this._onTouchEndHandler = this._onTouchEnd.bind(this);
             this._onTouchMoveHandler = this._onTouchMove.bind(this);
 
-            this._canvas.addEventListener('touchstart', this._onTouchStartHandler, true);
-            this._canvas.addEventListener('touchend', this._onTouchEndHandler, true);
-            this._canvas.addEventListener('touchmove', this._onTouchMoveHandler, true);
+            canvas.addEventListener('touchstart', this._onTouchStartHandler, true);
+            canvas.addEventListener('touchend', this._onTouchEndHandler, true);
+            canvas.addEventListener('touchmove', this._onTouchMoveHandler, true);
         }
 
         /**
@@ -13704,9 +13984,11 @@ var PointerManager = function (_ChannelHandler) {
     }, {
         key: '_removeEventListeners',
         value: function _removeEventListeners() {
-            this._canvas.removeEventListener('touchstart', this._onTouchStartHandler, true);
-            this._canvas.removeEventListener('touchend', this._onTouchEndHandler, true);
-            this._canvas.removeEventListener('touchmove', this._onTouchMoveHandler, true);
+            var canvas = this._canvas;
+
+            canvas.removeEventListener('touchstart', this._onTouchStartHandler, true);
+            canvas.removeEventListener('touchend', this._onTouchEndHandler, true);
+            canvas.removeEventListener('touchmove', this._onTouchMoveHandler, true);
 
             this._onTouchStartHandler = null;
             this._onTouchEndHandler = null;
@@ -13715,29 +13997,22 @@ var PointerManager = function (_ChannelHandler) {
     }, {
         key: '_onTouchStart',
         value: function _onTouchStart(event) {
-            if (!this.active) {
-                return;
-            }
-
             console.log('touchdown', event);
         }
     }, {
         key: '_onTouchEnd',
         value: function _onTouchEnd(event) {
-            if (!this.active) {
-                return;
-            }
-
             console.log('touchup', event);
         }
     }, {
         key: '_onTouchMove',
         value: function _onTouchMove(event) {
-            if (!this.active) {
-                return;
-            }
-
             console.log('touchmove', event);
+        }
+    }, {
+        key: 'pointers',
+        get: function get() {
+            return this._pointers;
         }
     }]);
 
@@ -13747,7 +14022,7 @@ var PointerManager = function (_ChannelHandler) {
 exports.default = PointerManager;
 
 /***/ }),
-/* 48 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13767,11 +14042,11 @@ var _EventEmitter2 = __webpack_require__(7);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ResourceContainer = __webpack_require__(49);
+var _ResourceContainer = __webpack_require__(48);
 
 var _ResourceContainer2 = _interopRequireDefault(_ResourceContainer);
 
-var _factory = __webpack_require__(50);
+var _factory = __webpack_require__(49);
 
 var Factories = _interopRequireWildcard(_factory);
 
@@ -13841,6 +14116,12 @@ var ResourceLoader = function (_EventEmitter) {
             mode: 'cors',
             cache: 'default'
         };
+
+        /**
+         * @private
+         * @member {?Database}
+         */
+        _this._database = null;
 
         _this.addFactory('arrayBuffer', new Factories.ArrayBufferFactory()).addFactory('audioBuffer', new Factories.AudioBufferFactory()).addFactory('audio', new Factories.AudioFactory()).addFactory('blob', new Factories.BlobFactory()).addFactory('font', new Factories.FontFactory()).addFactory('image', new Factories.ImageFactory()).addFactory('json', new Factories.JSONFactory()).addFactory('music', new Factories.MusicFactory()).addFactory('sound', new Factories.SoundFactory()).addFactory('sprite', new Factories.SpriteFactory()).addFactory('string', new Factories.StringFactory()).addFactory('texture', new Factories.TextureFactory()).addFactory('video', new Factories.VideoFactory());
         return _this;
@@ -13946,15 +14227,16 @@ var ResourceLoader = function (_EventEmitter) {
             var factory = this.getFactory(type);
 
             if (this._database) {
-                return this._database.loadData(factory.storageType, name).then(function (data) {
-                    return data || factory.request(_this3._basePath + path, _this3._request).then(function (data) {
+                return this._database.loadData(factory.storageType, name).then(function (result) {
+                    return result.data || factory.request(_this3._basePath + path, _this3._request).then(function (response) {
+                        return factory.process(response);
+                    }).then(function (data) {
                         return _this3._database.saveData(factory.storageType, name, data);
-                    }).then(function (_ref3) {
-                        var data = _ref3.data;
-                        return data;
+                    }).then(function (result) {
+                        return result.data;
                     });
-                }).then(function (data) {
-                    return factory.create(data, options);
+                }).then(function (source) {
+                    return factory.create(source, options);
                 }).then(function (resource) {
                     _this3._resources.set(type, name, resource);
 
@@ -14016,12 +14298,12 @@ var ResourceLoader = function (_EventEmitter) {
 
             try {
                 for (var _iterator = items[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _ref4 = _step.value;
+                    var _ref3 = _step.value;
 
-                    var _ref5 = _slicedToArray(_ref4, 2);
+                    var _ref4 = _slicedToArray(_ref3, 2);
 
-                    var name = _ref5[0];
-                    var path = _ref5[1];
+                    var name = _ref4[0];
+                    var path = _ref4[1];
 
                     this.addItem(type, name, path, options);
                 }
@@ -14093,6 +14375,11 @@ var ResourceLoader = function (_EventEmitter) {
                 }
             }
 
+            if (this._database) {
+                this._database.destroy();
+                this._database = null;
+            }
+
             this._resources.destroy();
             this._resources = null;
 
@@ -14121,8 +14408,8 @@ var ResourceLoader = function (_EventEmitter) {
         get: function get() {
             return this._basePath;
         },
-        set: function set(value) {
-            this._basePath = value;
+        set: function set(basePath) {
+            this._basePath = basePath;
         }
 
         /**
@@ -14135,8 +14422,22 @@ var ResourceLoader = function (_EventEmitter) {
         get: function get() {
             return this._request;
         },
-        set: function set(value) {
-            this._request = value;
+        set: function set(request) {
+            this._request = request;
+        }
+
+        /**
+         * @public
+         * @member {?Database}
+         */
+
+    }, {
+        key: 'database',
+        get: function get() {
+            return this._database;
+        },
+        set: function set(request) {
+            this._database = request;
         }
     }]);
 
@@ -14146,7 +14447,7 @@ var ResourceLoader = function (_EventEmitter) {
 exports.default = ResourceLoader;
 
 /***/ }),
-/* 49 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14368,7 +14669,7 @@ var ResourceContainer = function () {
 exports.default = ResourceContainer;
 
 /***/ }),
-/* 50 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14387,7 +14688,7 @@ Object.defineProperty(exports, 'ArrayBufferFactory', {
   }
 });
 
-var _AudioBufferFactory = __webpack_require__(51);
+var _AudioBufferFactory = __webpack_require__(50);
 
 Object.defineProperty(exports, 'AudioBufferFactory', {
   enumerable: true,
@@ -14396,7 +14697,7 @@ Object.defineProperty(exports, 'AudioBufferFactory', {
   }
 });
 
-var _AudioFactory = __webpack_require__(52);
+var _AudioFactory = __webpack_require__(51);
 
 Object.defineProperty(exports, 'AudioFactory', {
   enumerable: true,
@@ -14414,7 +14715,7 @@ Object.defineProperty(exports, 'BlobFactory', {
   }
 });
 
-var _FontFactory = __webpack_require__(64);
+var _FontFactory = __webpack_require__(62);
 
 Object.defineProperty(exports, 'FontFactory', {
   enumerable: true,
@@ -14423,7 +14724,7 @@ Object.defineProperty(exports, 'FontFactory', {
   }
 });
 
-var _ImageFactory = __webpack_require__(53);
+var _ImageFactory = __webpack_require__(52);
 
 Object.defineProperty(exports, 'ImageFactory', {
   enumerable: true,
@@ -14432,7 +14733,7 @@ Object.defineProperty(exports, 'ImageFactory', {
   }
 });
 
-var _JSONFactory = __webpack_require__(65);
+var _JSONFactory = __webpack_require__(63);
 
 Object.defineProperty(exports, 'JSONFactory', {
   enumerable: true,
@@ -14441,7 +14742,7 @@ Object.defineProperty(exports, 'JSONFactory', {
   }
 });
 
-var _MusicFactory = __webpack_require__(66);
+var _MusicFactory = __webpack_require__(64);
 
 Object.defineProperty(exports, 'MusicFactory', {
   enumerable: true,
@@ -14450,7 +14751,7 @@ Object.defineProperty(exports, 'MusicFactory', {
   }
 });
 
-var _SoundFactory = __webpack_require__(67);
+var _SoundFactory = __webpack_require__(65);
 
 Object.defineProperty(exports, 'SoundFactory', {
   enumerable: true,
@@ -14459,7 +14760,7 @@ Object.defineProperty(exports, 'SoundFactory', {
   }
 });
 
-var _SpriteFactory = __webpack_require__(68);
+var _SpriteFactory = __webpack_require__(66);
 
 Object.defineProperty(exports, 'SpriteFactory', {
   enumerable: true,
@@ -14468,7 +14769,7 @@ Object.defineProperty(exports, 'SpriteFactory', {
   }
 });
 
-var _StringFactory = __webpack_require__(70);
+var _StringFactory = __webpack_require__(68);
 
 Object.defineProperty(exports, 'StringFactory', {
   enumerable: true,
@@ -14477,7 +14778,7 @@ Object.defineProperty(exports, 'StringFactory', {
   }
 });
 
-var _TextureFactory = __webpack_require__(56);
+var _TextureFactory = __webpack_require__(55);
 
 Object.defineProperty(exports, 'TextureFactory', {
   enumerable: true,
@@ -14486,7 +14787,7 @@ Object.defineProperty(exports, 'TextureFactory', {
   }
 });
 
-var _VideoFactory = __webpack_require__(71);
+var _VideoFactory = __webpack_require__(69);
 
 Object.defineProperty(exports, 'VideoFactory', {
   enumerable: true,
@@ -14498,7 +14799,7 @@ Object.defineProperty(exports, 'VideoFactory', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 51 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14546,8 +14847,8 @@ var AudioBufferFactory = function (_ArrayBufferFactory) {
         /**
          * @override
          */
-        value: function create(response, options) {
-            return _get(AudioBufferFactory.prototype.__proto__ || Object.getPrototypeOf(AudioBufferFactory.prototype), 'create', this).call(this, response, options).then(function (arrayBuffer) {
+        value: function create(source, options) {
+            return _get(AudioBufferFactory.prototype.__proto__ || Object.getPrototypeOf(AudioBufferFactory.prototype), 'create', this).call(this, source, options).then(function (arrayBuffer) {
                 return (0, _utils.decodeAudioBuffer)(arrayBuffer);
             });
         }
@@ -14569,7 +14870,7 @@ var AudioBufferFactory = function (_ArrayBufferFactory) {
 exports.default = AudioBufferFactory;
 
 /***/ }),
-/* 52 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14634,16 +14935,16 @@ var AudioFactory = function (_BlobFactory) {
         /**
          * @override
          */
-        value: function create(response) {
+        value: function create(source) {
             var _this2 = this;
 
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$mimeType = _ref.mimeType,
-                mimeType = _ref$mimeType === undefined ? (0, _utils.getMimeType)(response, 'audio') : _ref$mimeType,
+                mimeType = _ref$mimeType === undefined ? (0, _utils.determineMimeType)(source) : _ref$mimeType,
                 _ref$loadEvent = _ref.loadEvent,
                 loadEvent = _ref$loadEvent === undefined ? 'canplaythrough' : _ref$loadEvent;
 
-            return _get(AudioFactory.prototype.__proto__ || Object.getPrototypeOf(AudioFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
+            return _get(AudioFactory.prototype.__proto__ || Object.getPrototypeOf(AudioFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var audio = document.createElement('audio'),
                         objectURL = URL.createObjectURL(blob);
@@ -14723,7 +15024,7 @@ var AudioFactory = function (_BlobFactory) {
 exports.default = AudioFactory;
 
 /***/ }),
-/* 53 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14788,14 +15089,14 @@ var ImageFactory = function (_BlobFactory) {
         /**
          * @override
          */
-        value: function create(response) {
+        value: function create(source) {
             var _this2 = this;
 
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$mimeType = _ref.mimeType,
-                mimeType = _ref$mimeType === undefined ? (0, _utils.getMimeType)(response, 'image') : _ref$mimeType;
+                mimeType = _ref$mimeType === undefined ? (0, _utils.determineMimeType)(source) : _ref$mimeType;
 
-            return _get(ImageFactory.prototype.__proto__ || Object.getPrototypeOf(ImageFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
+            return _get(ImageFactory.prototype.__proto__ || Object.getPrototypeOf(ImageFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var image = new Image(),
                         objectURL = URL.createObjectURL(blob);
@@ -14875,7 +15176,7 @@ var ImageFactory = function (_BlobFactory) {
 exports.default = ImageFactory;
 
 /***/ }),
-/* 54 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15009,9 +15310,9 @@ var Music = function (_Playable) {
         get: function get() {
             return this._audioContext ? this._gainNode.gain.value : 1;
         },
-        set: function set(value) {
+        set: function set(volume) {
             if (this._audioContext) {
-                this._gainNode.gain.value = (0, _utils.clamp)(value, 0, 1);
+                this._gainNode.gain.value = (0, _utils.clamp)(volume, 0, 1);
             }
         }
 
@@ -15034,7 +15335,7 @@ var Music = function (_Playable) {
 exports.default = Music;
 
 /***/ }),
-/* 55 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15252,8 +15553,8 @@ var Sound = function (_Playable) {
         get: function get() {
             return this._volume;
         },
-        set: function set(value) {
-            this._volume = (0, _utils.clamp)(value, 0, 2);
+        set: function set(volume) {
+            this._volume = (0, _utils.clamp)(volume, 0, 2);
 
             if (this._gainNode) {
                 this._gainNode.gain.value = this._volume;
@@ -15273,9 +15574,9 @@ var Sound = function (_Playable) {
 
             return this._currentTime + this._audioContext.currentTime - this._startTime;
         },
-        set: function set(value) {
+        set: function set(currentTime) {
             this.pause();
-            this._currentTime = Math.max(0, value);
+            this._currentTime = Math.max(0, currentTime);
             this.play();
         }
 
@@ -15288,8 +15589,8 @@ var Sound = function (_Playable) {
         get: function get() {
             return this._loop;
         },
-        set: function set(value) {
-            this._loop = !!value;
+        set: function set(loop) {
+            this._loop = loop;
 
             if (this._sourceNode) {
                 this._sourceNode.loop = this._loop;
@@ -15305,8 +15606,8 @@ var Sound = function (_Playable) {
         get: function get() {
             return this._playbackRate;
         },
-        set: function set(value) {
-            this._playbackRate = Math.max(0, value);
+        set: function set(playbackRate) {
+            this._playbackRate = Math.max(0, playbackRate);
 
             if (this._sourceNode) {
                 this._sourceNode.playbackRate.value = this._playbackRate;
@@ -15326,8 +15627,8 @@ var Sound = function (_Playable) {
 
             return this.currentTime >= this.duration;
         },
-        set: function set(value) {
-            if (value) {
+        set: function set(paused) {
+            if (paused) {
                 this.pause();
             } else {
                 this.play();
@@ -15343,8 +15644,8 @@ var Sound = function (_Playable) {
         get: function get() {
             return !this._paused;
         },
-        set: function set(value) {
-            if (value) {
+        set: function set(playing) {
+            if (playing) {
                 this.play();
             } else {
                 this.pause();
@@ -15368,7 +15669,7 @@ var Sound = function (_Playable) {
 exports.default = Sound;
 
 /***/ }),
-/* 56 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15382,7 +15683,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ImageFactory2 = __webpack_require__(53);
+var _ImageFactory2 = __webpack_require__(52);
 
 var _ImageFactory3 = _interopRequireDefault(_ImageFactory2);
 
@@ -15422,7 +15723,7 @@ var TextureFactory = function (_ImageFactory) {
         /**
          * @override
          */
-        value: function create(response) {
+        value: function create(source) {
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 mimeType = _ref.mimeType,
                 _ref$scaleMode = _ref.scaleMode,
@@ -15432,7 +15733,7 @@ var TextureFactory = function (_ImageFactory) {
                 _ref$premultiplyAlpha = _ref.premultiplyAlpha,
                 premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha;
 
-            return _get(TextureFactory.prototype.__proto__ || Object.getPrototypeOf(TextureFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (image) {
+            return _get(TextureFactory.prototype.__proto__ || Object.getPrototypeOf(TextureFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (image) {
                 return new _Texture2.default(image, {
                     scaleMode: scaleMode,
                     wrapMode: wrapMode,
@@ -15458,135 +15759,7 @@ var TextureFactory = function (_ImageFactory) {
 exports.default = TextureFactory;
 
 /***/ }),
-/* 57 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class AnimationFrame
- */
-var AnimationFrame = function () {
-
-    /**
-     * @constructor
-     * @param {Number} duration
-     * @param {Rectangle} rectangle
-     * @param {Vector} [origin=null]
-     */
-    function AnimationFrame(duration, rectangle) {
-        var origin = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-
-        _classCallCheck(this, AnimationFrame);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._duration = duration;
-
-        /**
-         * @private
-         * @member {Rectangle}
-         */
-        this._rectangle = rectangle.clone();
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._origin = origin;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._applyOrigin = !!origin;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-
-
-    _createClass(AnimationFrame, [{
-        key: "duration",
-        get: function get() {
-            return this._duration;
-        },
-        set: function set(value) {
-            this._duration = value;
-        }
-
-        /**
-         * @public
-         * @member {Rectangle}
-         */
-
-    }, {
-        key: "rectangle",
-        get: function get() {
-            return this._rectangle;
-        },
-        set: function set(value) {
-            this._rectangle.copy(value);
-        }
-
-        /**
-         * @public
-         * @member {Vector}
-         */
-
-    }, {
-        key: "origin",
-        get: function get() {
-            return this._origin;
-        },
-        set: function set(value) {
-            if (!value) {
-                this._origin = null;
-                this._applyOrigin = false;
-
-                return;
-            }
-
-            if (this._origin) {
-                this._origin.copy(value);
-            } else {
-                this._origin = value.clone();
-            }
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Boolean}
-         */
-
-    }, {
-        key: "applyOrigin",
-        get: function get() {
-            return this._applyOrigin;
-        }
-    }]);
-
-    return AnimationFrame;
-}();
-
-exports.default = AnimationFrame;
-
-/***/ }),
-/* 58 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15717,8 +15890,8 @@ var Particle = function () {
         get: function get() {
             return this._position;
         },
-        set: function set(value) {
-            this._position.copy(value);
+        set: function set(position) {
+            this._position.copy(position);
         }
 
         /**
@@ -15731,8 +15904,8 @@ var Particle = function () {
         get: function get() {
             return this._velocity;
         },
-        set: function set(value) {
-            this._velocity.copy(value);
+        set: function set(velocity) {
+            this._velocity.copy(velocity);
         }
 
         /**
@@ -15745,8 +15918,8 @@ var Particle = function () {
         get: function get() {
             return this._rotation;
         },
-        set: function set(value) {
-            this._rotation = value;
+        set: function set(rotation) {
+            this._rotation = rotation;
         }
 
         /**
@@ -15759,8 +15932,8 @@ var Particle = function () {
         get: function get() {
             return this._rotationSpeed;
         },
-        set: function set(value) {
-            this._rotationSpeed = value;
+        set: function set(rotationSpeed) {
+            this._rotationSpeed = rotationSpeed;
         }
 
         /**
@@ -15773,8 +15946,8 @@ var Particle = function () {
         get: function get() {
             return this._scale;
         },
-        set: function set(value) {
-            this._velocity.copy(value);
+        set: function set(scale) {
+            this._velocity.copy(scale);
         }
 
         /**
@@ -15787,8 +15960,8 @@ var Particle = function () {
         get: function get() {
             return this._color;
         },
-        set: function set(value) {
-            this._color.copy(value);
+        set: function set(color) {
+            this._color.copy(color);
         }
 
         /**
@@ -15801,8 +15974,8 @@ var Particle = function () {
         get: function get() {
             return this._elapsedLifetime;
         },
-        set: function set(value) {
-            this._elapsedLifetime.copy(value);
+        set: function set(elapsedLifetime) {
+            this._elapsedLifetime.copy(elapsedLifetime);
         }
 
         /**
@@ -15815,8 +15988,8 @@ var Particle = function () {
         get: function get() {
             return this._totalLifetime;
         },
-        set: function set(value) {
-            this._totalLifetime.copy(value);
+        set: function set(totalLifetime) {
+            this._totalLifetime.copy(totalLifetime);
         }
 
         /**
@@ -15862,7 +16035,7 @@ var Particle = function () {
 exports.default = Particle;
 
 /***/ }),
-/* 59 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15885,7 +16058,7 @@ Object.keys(_const).forEach(function (key) {
     });
 });
 
-var _core = __webpack_require__(60);
+var _core = __webpack_require__(58);
 
 Object.keys(_core).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -15897,7 +16070,7 @@ Object.keys(_core).forEach(function (key) {
     });
 });
 
-var _content = __webpack_require__(76);
+var _content = __webpack_require__(74);
 
 Object.keys(_content).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -15909,7 +16082,7 @@ Object.keys(_content).forEach(function (key) {
     });
 });
 
-var _input = __webpack_require__(78);
+var _input = __webpack_require__(76);
 
 Object.keys(_input).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -15921,7 +16094,7 @@ Object.keys(_input).forEach(function (key) {
     });
 });
 
-var _media = __webpack_require__(81);
+var _media = __webpack_require__(79);
 
 Object.keys(_media).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -15933,7 +16106,7 @@ Object.keys(_media).forEach(function (key) {
     });
 });
 
-var _display = __webpack_require__(85);
+var _display = __webpack_require__(83);
 
 Object.keys(_display).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -15945,19 +16118,7 @@ Object.keys(_display).forEach(function (key) {
     });
 });
 
-var _animation = __webpack_require__(88);
-
-Object.keys(_animation).forEach(function (key) {
-    if (key === "default" || key === "__esModule") return;
-    Object.defineProperty(exports, key, {
-        enumerable: true,
-        get: function get() {
-            return _animation[key];
-        }
-    });
-});
-
-var _particle = __webpack_require__(93);
+var _particle = __webpack_require__(86);
 
 Object.keys(_particle).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -15991,7 +16152,7 @@ exports.utils = utils;
 exports.settings = settings;
 
 /***/ }),
-/* 60 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16019,7 +16180,7 @@ Object.defineProperty(exports, 'Color', {
   }
 });
 
-var _Transformable = __webpack_require__(26);
+var _Transformable = __webpack_require__(25);
 
 Object.defineProperty(exports, 'Transformable', {
   enumerable: true,
@@ -16028,7 +16189,7 @@ Object.defineProperty(exports, 'Transformable', {
   }
 });
 
-var _RC = __webpack_require__(27);
+var _RC = __webpack_require__(26);
 
 Object.defineProperty(exports, 'RC4', {
   enumerable: true,
@@ -16037,7 +16198,7 @@ Object.defineProperty(exports, 'RC4', {
   }
 });
 
-var _Random = __webpack_require__(61);
+var _Random = __webpack_require__(59);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -16055,7 +16216,7 @@ Object.defineProperty(exports, 'Time', {
   }
 });
 
-var _Clock = __webpack_require__(21);
+var _Clock = __webpack_require__(20);
 
 Object.defineProperty(exports, 'Clock', {
   enumerable: true,
@@ -16064,7 +16225,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(62);
+var _Timer = __webpack_require__(60);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -16073,7 +16234,7 @@ Object.defineProperty(exports, 'Timer', {
   }
 });
 
-var _Game = __webpack_require__(63);
+var _Game = __webpack_require__(61);
 
 Object.defineProperty(exports, 'Game', {
   enumerable: true,
@@ -16082,7 +16243,7 @@ Object.defineProperty(exports, 'Game', {
   }
 });
 
-var _Scene = __webpack_require__(72);
+var _Scene = __webpack_require__(70);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -16091,7 +16252,7 @@ Object.defineProperty(exports, 'Scene', {
   }
 });
 
-var _SceneManager = __webpack_require__(28);
+var _SceneManager = __webpack_require__(27);
 
 Object.defineProperty(exports, 'SceneManager', {
   enumerable: true,
@@ -16100,7 +16261,7 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
-var _Quadtree = __webpack_require__(73);
+var _Quadtree = __webpack_require__(71);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -16136,7 +16297,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(74);
+var _Circle = __webpack_require__(72);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -16145,7 +16306,7 @@ Object.defineProperty(exports, 'Circle', {
   }
 });
 
-var _Polygon = __webpack_require__(75);
+var _Polygon = __webpack_require__(73);
 
 Object.defineProperty(exports, 'Polygon', {
   enumerable: true,
@@ -16157,7 +16318,7 @@ Object.defineProperty(exports, 'Polygon', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 61 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16171,7 +16332,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _RC = __webpack_require__(27);
+var _RC = __webpack_require__(26);
 
 var _RC2 = _interopRequireDefault(_RC);
 
@@ -16332,9 +16493,9 @@ var Random = function () {
         get: function get() {
             return this._seed;
         },
-        set: function set(value) {
-            this._seed = value;
-            this._rc4.setKeys(this.getMixedKeys(this.flatten(value)));
+        set: function set(seed) {
+            this._seed = seed;
+            this._rc4.setKeys(this.getMixedKeys(this.flatten(seed)));
         }
     }], [{
         key: 'generateSeed',
@@ -16359,7 +16520,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 62 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16371,7 +16532,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Clock2 = __webpack_require__(21);
+var _Clock2 = __webpack_require__(20);
 
 var _Clock3 = _interopRequireDefault(_Clock2);
 
@@ -16529,7 +16690,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 63 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16547,27 +16708,27 @@ var _EventEmitter2 = __webpack_require__(7);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _Clock = __webpack_require__(21);
+var _Clock = __webpack_require__(20);
 
 var _Clock2 = _interopRequireDefault(_Clock);
 
-var _SceneManager = __webpack_require__(28);
+var _SceneManager = __webpack_require__(27);
 
 var _SceneManager2 = _interopRequireDefault(_SceneManager);
 
-var _DisplayManager = __webpack_require__(29);
+var _DisplayManager = __webpack_require__(28);
 
 var _DisplayManager2 = _interopRequireDefault(_DisplayManager);
 
-var _MediaManager = __webpack_require__(39);
+var _MediaManager = __webpack_require__(38);
 
 var _MediaManager2 = _interopRequireDefault(_MediaManager);
 
-var _InputManager = __webpack_require__(40);
+var _InputManager = __webpack_require__(39);
 
 var _InputManager2 = _interopRequireDefault(_InputManager);
 
-var _ResourceLoader = __webpack_require__(48);
+var _ResourceLoader = __webpack_require__(47);
 
 var _ResourceLoader2 = _interopRequireDefault(_ResourceLoader);
 
@@ -16912,7 +17073,7 @@ var Game = function (_EventEmitter) {
 exports.default = Game;
 
 /***/ }),
-/* 64 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16960,15 +17121,14 @@ var FontFactory = function (_ArrayBufferFactory) {
         /**
          * @override
          */
-        value: function create(response) {
+        value: function create(source) {
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                family = _ref.family,
+                destriptors = _ref.destriptors,
                 _ref$addToDocument = _ref.addToDocument,
-                addToDocument = _ref$addToDocument === undefined ? true : _ref$addToDocument,
-                _ref$family = _ref.family,
-                family = _ref$family === undefined ? (0, _utils.getFilename)(response.url) : _ref$family,
-                destriptors = _ref.destriptors;
+                addToDocument = _ref$addToDocument === undefined ? true : _ref$addToDocument;
 
-            return _get(FontFactory.prototype.__proto__ || Object.getPrototypeOf(FontFactory.prototype), 'create', this).call(this, response, null).then(function (arrayBuffer) {
+            return _get(FontFactory.prototype.__proto__ || Object.getPrototypeOf(FontFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
                 return new Promise(function (resolve, reject) {
                     var fontFace = new FontFace(family, arrayBuffer, destriptors),
                         promise = fontFace.load();
@@ -17005,7 +17165,7 @@ var FontFactory = function (_ArrayBufferFactory) {
 exports.default = FontFactory;
 
 /***/ }),
-/* 65 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17043,14 +17203,24 @@ var JSONFactory = function (_ResourceFactory) {
     }
 
     _createClass(JSONFactory, [{
-        key: 'create',
+        key: 'process',
 
 
         /**
          * @override
          */
-        value: function create(response, options) {
-            return Promise.resolve(response.json());
+        value: function process(response) {
+            return response.json();
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'create',
+        value: function create(source, options) {
+            return Promise.resolve(source);
         }
     }, {
         key: 'storageType',
@@ -17070,7 +17240,7 @@ var JSONFactory = function (_ResourceFactory) {
 exports.default = JSONFactory;
 
 /***/ }),
-/* 66 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17084,11 +17254,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _AudioFactory2 = __webpack_require__(52);
+var _AudioFactory2 = __webpack_require__(51);
 
 var _AudioFactory3 = _interopRequireDefault(_AudioFactory2);
 
-var _Music = __webpack_require__(54);
+var _Music = __webpack_require__(53);
 
 var _Music2 = _interopRequireDefault(_Music);
 
@@ -17124,12 +17294,12 @@ var MusicFactory = function (_AudioFactory) {
         /**
          * @override
          */
-        value: function create(response, options) {
+        value: function create(source, options) {
             if (!_support2.default.webAudio) {
                 return Promise.reject(Error('Web Audio is not supported!'));
             }
 
-            return _get(MusicFactory.prototype.__proto__ || Object.getPrototypeOf(MusicFactory.prototype), 'create', this).call(this, response, options).then(function (audio) {
+            return _get(MusicFactory.prototype.__proto__ || Object.getPrototypeOf(MusicFactory.prototype), 'create', this).call(this, source, options).then(function (audio) {
                 return new _Music2.default(audio);
             });
         }
@@ -17151,7 +17321,7 @@ var MusicFactory = function (_AudioFactory) {
 exports.default = MusicFactory;
 
 /***/ }),
-/* 67 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17165,11 +17335,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _AudioBufferFactory2 = __webpack_require__(51);
+var _AudioBufferFactory2 = __webpack_require__(50);
 
 var _AudioBufferFactory3 = _interopRequireDefault(_AudioBufferFactory2);
 
-var _Sound = __webpack_require__(55);
+var _Sound = __webpack_require__(54);
 
 var _Sound2 = _interopRequireDefault(_Sound);
 
@@ -17205,12 +17375,12 @@ var SoundFactory = function (_AudioBufferFactory) {
         /**
          * @override
          */
-        value: function create(response, options) {
+        value: function create(source, options) {
             if (!_support2.default.webAudio) {
                 return Promise.reject(Error('Web Audio is not supported!'));
             }
 
-            return _get(SoundFactory.prototype.__proto__ || Object.getPrototypeOf(SoundFactory.prototype), 'create', this).call(this, response, options).then(function (audioBuffer) {
+            return _get(SoundFactory.prototype.__proto__ || Object.getPrototypeOf(SoundFactory.prototype), 'create', this).call(this, source, options).then(function (audioBuffer) {
                 return new _Sound2.default(audioBuffer);
             });
         }
@@ -17232,7 +17402,7 @@ var SoundFactory = function (_AudioBufferFactory) {
 exports.default = SoundFactory;
 
 /***/ }),
-/* 68 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17246,7 +17416,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _TextureFactory2 = __webpack_require__(56);
+var _TextureFactory2 = __webpack_require__(55);
 
 var _TextureFactory3 = _interopRequireDefault(_TextureFactory2);
 
@@ -17282,8 +17452,8 @@ var SpriteFactory = function (_TextureFactory) {
         /**
          * @override
          */
-        value: function create(response, options) {
-            return _get(SpriteFactory.prototype.__proto__ || Object.getPrototypeOf(SpriteFactory.prototype), 'create', this).call(this, response, options).then(function (texture) {
+        value: function create(source, options) {
+            return _get(SpriteFactory.prototype.__proto__ || Object.getPrototypeOf(SpriteFactory.prototype), 'create', this).call(this, source, options).then(function (texture) {
                 return new _Sprite2.default(texture);
             });
         }
@@ -17305,7 +17475,7 @@ var SpriteFactory = function (_TextureFactory) {
 exports.default = SpriteFactory;
 
 /***/ }),
-/* 69 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17657,8 +17827,8 @@ var GLTexture = function () {
         get: function get() {
             return this._source;
         },
-        set: function set(value) {
-            this.setSource(value);
+        set: function set(source) {
+            this.setSource(source);
         }
 
         /**
@@ -17671,8 +17841,8 @@ var GLTexture = function () {
         get: function get() {
             return this._scaleMode;
         },
-        set: function set(value) {
-            this.setScaleMode(value);
+        set: function set(scaleMode) {
+            this.setScaleMode(scaleMode);
         }
 
         /**
@@ -17685,8 +17855,8 @@ var GLTexture = function () {
         get: function get() {
             return this._wrapMode;
         },
-        set: function set(value) {
-            this.setWrapMode(value);
+        set: function set(wrapMode) {
+            this.setWrapMode(wrapMode);
         }
 
         /**
@@ -17699,8 +17869,8 @@ var GLTexture = function () {
         get: function get() {
             return this._premultiplyAlpha;
         },
-        set: function set(value) {
-            this.setPremultiplyAlpha(value);
+        set: function set(premultiplyAlpha) {
+            this.setPremultiplyAlpha(premultiplyAlpha);
         }
     }]);
 
@@ -17710,7 +17880,7 @@ var GLTexture = function () {
 exports.default = GLTexture;
 
 /***/ }),
-/* 70 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17748,14 +17918,24 @@ var StringFactory = function (_ResourceFactory) {
     }
 
     _createClass(StringFactory, [{
-        key: 'create',
+        key: 'process',
 
 
         /**
          * @override
          */
-        value: function create(response, options) {
-            return Promise.resolve(response.text());
+        value: function process(response) {
+            return response.text();
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'create',
+        value: function create(source, options) {
+            return Promise.resolve(source);
         }
     }, {
         key: 'storageType',
@@ -17775,7 +17955,7 @@ var StringFactory = function (_ResourceFactory) {
 exports.default = StringFactory;
 
 /***/ }),
-/* 71 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17840,16 +18020,16 @@ var VideoFactory = function (_BlobFactory) {
         /**
          * @override
          */
-        value: function create(response) {
+        value: function create(source) {
             var _this2 = this;
 
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 _ref$mimeType = _ref.mimeType,
-                mimeType = _ref$mimeType === undefined ? (0, _utils.getMimeType)(response, 'video') : _ref$mimeType,
+                mimeType = _ref$mimeType === undefined ? (0, _utils.determineMimeType)(source) : _ref$mimeType,
                 _ref$loadEvent = _ref.loadEvent,
                 loadEvent = _ref$loadEvent === undefined ? 'canplaythrough' : _ref$loadEvent;
 
-            return _get(VideoFactory.prototype.__proto__ || Object.getPrototypeOf(VideoFactory.prototype), 'create', this).call(this, response, { mimeType: mimeType }).then(function (blob) {
+            return _get(VideoFactory.prototype.__proto__ || Object.getPrototypeOf(VideoFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (blob) {
                 return new Promise(function (resolve, reject) {
                     var video = document.createElement('video'),
                         objectURL = URL.createObjectURL(blob);
@@ -17929,7 +18109,7 @@ var VideoFactory = function (_BlobFactory) {
 exports.default = VideoFactory;
 
 /***/ }),
-/* 72 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18058,8 +18238,8 @@ var Scene = function (_EventEmitter) {
         get: function get() {
             return this._game;
         },
-        set: function set(value) {
-            this._game = value;
+        set: function set(game) {
+            this._game = game;
         }
     }]);
 
@@ -18069,7 +18249,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 73 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18377,7 +18557,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 74 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18619,8 +18799,8 @@ var Circle = function (_Shape) {
         get: function get() {
             return this._position;
         },
-        set: function set(value) {
-            this._position.copy(value);
+        set: function set(position) {
+            this._position.copy(position);
         }
 
         /**
@@ -18633,8 +18813,8 @@ var Circle = function (_Shape) {
         get: function get() {
             return this._position.x;
         },
-        set: function set(value) {
-            this._position.x = value;
+        set: function set(x) {
+            this._position.x = x;
         }
 
         /**
@@ -18647,8 +18827,8 @@ var Circle = function (_Shape) {
         get: function get() {
             return this._position.y;
         },
-        set: function set(value) {
-            this._position.y = value;
+        set: function set(y) {
+            this._position.y = y;
         }
 
         /**
@@ -18661,8 +18841,8 @@ var Circle = function (_Shape) {
         get: function get() {
             return this._radius;
         },
-        set: function set(value) {
-            this._radius = value;
+        set: function set(radius) {
+            this._radius = radius;
         }
     }]);
 
@@ -18672,7 +18852,7 @@ var Circle = function (_Shape) {
 exports.default = Circle;
 
 /***/ }),
-/* 75 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18845,7 +19025,7 @@ var Polygon = function (_Shape) {
 exports.default = Polygon;
 
 /***/ }),
-/* 76 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18855,7 +19035,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(77);
+var _Database = __webpack_require__(75);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -18864,7 +19044,7 @@ Object.defineProperty(exports, 'Database', {
   }
 });
 
-var _ResourceLoader = __webpack_require__(48);
+var _ResourceLoader = __webpack_require__(47);
 
 Object.defineProperty(exports, 'ResourceLoader', {
   enumerable: true,
@@ -18873,7 +19053,7 @@ Object.defineProperty(exports, 'ResourceLoader', {
   }
 });
 
-var _ResourceContainer = __webpack_require__(49);
+var _ResourceContainer = __webpack_require__(48);
 
 Object.defineProperty(exports, 'ResourceContainer', {
   enumerable: true,
@@ -18891,7 +19071,7 @@ Object.defineProperty(exports, 'ResourceFactory', {
   }
 });
 
-var _factory = __webpack_require__(50);
+var _factory = __webpack_require__(49);
 
 Object.keys(_factory).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -18906,7 +19086,7 @@ Object.keys(_factory).forEach(function (key) {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 77 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18929,6 +19109,13 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @typedef {Object} DatabaseResult
+ * @property {String} type
+ * @property {String} name
+ * @property {?Object} data
+ */
 
 /**
  * @class Database
@@ -19105,16 +19292,14 @@ var Database = function () {
     }, {
         key: 'getObjectStore',
         value: function getObjectStore(type) {
-            var _this2 = this;
-
             var transactionMode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'readonly';
 
             if (!_const.DATABASE_TYPES.includes(type)) {
                 return Promise.reject(Error('Could not find ObjectStore named "' + type + '".'));
             }
 
-            return this.open().then(function () {
-                return _this2._database.transaction([type], transactionMode).objectStore(type);
+            return this.open().then(function (database) {
+                return database.transaction([type], transactionMode).objectStore(type);
             });
         }
 
@@ -19127,14 +19312,14 @@ var Database = function () {
     }, {
         key: 'clear',
         value: function clear() {
-            var _this3 = this;
+            var _this2 = this;
 
             var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
 
             if (type === '*') {
                 return _const.DATABASE_TYPES.reduce(function (promise, type) {
                     return promise.then(function () {
-                        return _this3.clear(type);
+                        return _this2.clear(type);
                     });
                 }, Promise.resolve());
             }
@@ -19161,11 +19346,11 @@ var Database = function () {
     }, {
         key: 'delete',
         value: function _delete() {
-            var _this4 = this;
+            var _this3 = this;
 
             return this.close().then(function () {
                 return new Promise(function (resolve, reject) {
-                    var request = indexedDB.deleteDatabase(_this4._name);
+                    var request = indexedDB.deleteDatabase(_this3._name);
 
                     request.addEventListener('success', function (event) {
                         return resolve(event);
@@ -19181,7 +19366,7 @@ var Database = function () {
          * @public
          * @param {String} type
          * @param {String} name
-         * @returns {Promise<Object>}
+         * @returns {Promise<DatabaseResult>}
          */
 
     }, {
@@ -19193,13 +19378,9 @@ var Database = function () {
 
                     request.addEventListener('success', function (event) {
                         var result = event.target.result,
-                            data = result && result.value || null;
+                            data = result && result.data || null;
 
-                        resolve({
-                            data: data,
-                            type: type,
-                            name: name
-                        });
+                        resolve({ type: type, name: name, data: data });
                     });
 
                     request.addEventListener('error', function (event) {
@@ -19213,8 +19394,8 @@ var Database = function () {
          * @public
          * @param {String} type
          * @param {String} name
-         * @param {*} data
-         * @returns {Promise<Object>}
+         * @param {Object} data
+         * @returns {Promise<DatabaseResult>}
          */
 
     }, {
@@ -19222,17 +19403,10 @@ var Database = function () {
         value: function saveData(type, name, data) {
             return this.getObjectStore(type, 'readwrite').then(function (store) {
                 return new Promise(function (resolve, reject) {
-                    var request = store.put({
-                        key: name,
-                        value: data
-                    });
+                    var request = store.put({ name: name, data: data });
 
                     request.addEventListener('success', function () {
-                        return resolve({
-                            type: type,
-                            name: name,
-                            data: data
-                        });
+                        return resolve({ type: type, name: name, data: data });
                     });
                     request.addEventListener('error', function (event) {
                         return reject(event);
@@ -19245,7 +19419,7 @@ var Database = function () {
          * @public
          * @param {String} type
          * @param {String} name
-         * @returns {Promise<Object>}
+         * @returns {Promise<DatabaseResult>}
          */
 
     }, {
@@ -19256,10 +19430,7 @@ var Database = function () {
                     var request = store.delete(name);
 
                     request.addEventListener('success', function () {
-                        return resolve({
-                            type: type,
-                            name: name
-                        });
+                        return resolve({ type: type, name: name, data: null });
                     });
                     request.addEventListener('error', function (event) {
                         return reject(event);
@@ -19335,7 +19506,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 78 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19354,7 +19525,7 @@ Object.defineProperty(exports, 'ChannelHandler', {
   }
 });
 
-var _Input = __webpack_require__(79);
+var _Input = __webpack_require__(77);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -19363,7 +19534,7 @@ Object.defineProperty(exports, 'Input', {
   }
 });
 
-var _InputManager = __webpack_require__(40);
+var _InputManager = __webpack_require__(39);
 
 Object.defineProperty(exports, 'InputManager', {
   enumerable: true,
@@ -19372,7 +19543,7 @@ Object.defineProperty(exports, 'InputManager', {
   }
 });
 
-var _Keyboard = __webpack_require__(41);
+var _Keyboard = __webpack_require__(40);
 
 Object.defineProperty(exports, 'Keyboard', {
   enumerable: true,
@@ -19381,7 +19552,7 @@ Object.defineProperty(exports, 'Keyboard', {
   }
 });
 
-var _Mouse = __webpack_require__(42);
+var _Mouse = __webpack_require__(41);
 
 Object.defineProperty(exports, 'Mouse', {
   enumerable: true,
@@ -19390,7 +19561,7 @@ Object.defineProperty(exports, 'Mouse', {
   }
 });
 
-var _GamepadControl = __webpack_require__(46);
+var _GamepadControl = __webpack_require__(45);
 
 Object.defineProperty(exports, 'GamepadControl', {
   enumerable: true,
@@ -19399,7 +19570,7 @@ Object.defineProperty(exports, 'GamepadControl', {
   }
 });
 
-var _GamepadMapping = __webpack_require__(45);
+var _GamepadMapping = __webpack_require__(44);
 
 Object.defineProperty(exports, 'GamepadMapping', {
   enumerable: true,
@@ -19408,7 +19579,7 @@ Object.defineProperty(exports, 'GamepadMapping', {
   }
 });
 
-var _DefaultGamepadMapping = __webpack_require__(44);
+var _DefaultGamepadMapping = __webpack_require__(43);
 
 Object.defineProperty(exports, 'GamepadDefaultMapping', {
   enumerable: true,
@@ -19417,7 +19588,7 @@ Object.defineProperty(exports, 'GamepadDefaultMapping', {
   }
 });
 
-var _Gamepad = __webpack_require__(24);
+var _Gamepad = __webpack_require__(23);
 
 Object.defineProperty(exports, 'Gamepad', {
   enumerable: true,
@@ -19426,7 +19597,7 @@ Object.defineProperty(exports, 'Gamepad', {
   }
 });
 
-var _GamepadManager = __webpack_require__(43);
+var _GamepadManager = __webpack_require__(42);
 
 Object.defineProperty(exports, 'GamepadManager', {
   enumerable: true,
@@ -19435,7 +19606,7 @@ Object.defineProperty(exports, 'GamepadManager', {
   }
 });
 
-var _Pointer = __webpack_require__(80);
+var _Pointer = __webpack_require__(78);
 
 Object.defineProperty(exports, 'Pointer', {
   enumerable: true,
@@ -19444,7 +19615,7 @@ Object.defineProperty(exports, 'Pointer', {
   }
 });
 
-var _PointerManager = __webpack_require__(47);
+var _PointerManager = __webpack_require__(46);
 
 Object.defineProperty(exports, 'PointerManager', {
   enumerable: true,
@@ -19456,7 +19627,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 79 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19613,7 +19784,7 @@ var Input = function (_EventEmitter) {
             } else {
                 this.trigger('stop', this._value);
 
-                if (this._triggerStart && Date.now() - this._triggerStart > this._triggerThreshold) {
+                if (this._triggerStart && Date.now() - this._triggerStart < this._triggerThreshold) {
                     this._triggerStart = 0;
                     this.trigger('trigger', this._value);
                 }
@@ -19664,8 +19835,8 @@ var Input = function (_EventEmitter) {
         get: function get() {
             return this._triggerThreshold;
         },
-        set: function set(value) {
-            this._triggerThreshold = value;
+        set: function set(threshold) {
+            this._triggerThreshold = threshold;
         }
     }]);
 
@@ -19675,7 +19846,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 80 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19742,7 +19913,7 @@ var Pointer = function (_ChannelHandler) {
 exports.default = Pointer;
 
 /***/ }),
-/* 81 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19761,7 +19932,7 @@ Object.defineProperty(exports, 'Playable', {
   }
 });
 
-var _Audio = __webpack_require__(82);
+var _Audio = __webpack_require__(80);
 
 Object.defineProperty(exports, 'Audio', {
   enumerable: true,
@@ -19770,7 +19941,7 @@ Object.defineProperty(exports, 'Audio', {
   }
 });
 
-var _Sound = __webpack_require__(55);
+var _Sound = __webpack_require__(54);
 
 Object.defineProperty(exports, 'Sound', {
   enumerable: true,
@@ -19779,7 +19950,7 @@ Object.defineProperty(exports, 'Sound', {
   }
 });
 
-var _Music = __webpack_require__(54);
+var _Music = __webpack_require__(53);
 
 Object.defineProperty(exports, 'Music', {
   enumerable: true,
@@ -19788,7 +19959,7 @@ Object.defineProperty(exports, 'Music', {
   }
 });
 
-var _MediaManager = __webpack_require__(39);
+var _MediaManager = __webpack_require__(38);
 
 Object.defineProperty(exports, 'MediaManager', {
   enumerable: true,
@@ -19797,7 +19968,7 @@ Object.defineProperty(exports, 'MediaManager', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(83);
+var _AudioAnalyser = __webpack_require__(81);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -19806,7 +19977,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
   }
 });
 
-var _Video = __webpack_require__(84);
+var _Video = __webpack_require__(82);
 
 Object.defineProperty(exports, 'Video', {
   enumerable: true,
@@ -19818,7 +19989,7 @@ Object.defineProperty(exports, 'Video', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 82 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19895,11 +20066,11 @@ var Audio = function (_Playable) {
         get: function get() {
             return this._parentVolume;
         },
-        set: function set(value) {
-            var volume = (0, _utils.clamp)(value, 0, 1);
+        set: function set(volume) {
+            var newVolume = (0, _utils.clamp)(volume, 0, 1);
 
-            if (this._parentVolume !== volume) {
-                this._parentVolume = volume;
+            if (this._parentVolume !== newVolume) {
+                this._parentVolume = newVolume;
                 this._source.volume = this._volume * this._parentVolume;
             }
         }
@@ -19913,13 +20084,23 @@ var Audio = function (_Playable) {
         get: function get() {
             return this._volume;
         },
-        set: function set(value) {
-            var volume = (0, _utils.clamp)(value, 0, 2);
+        set: function set(volume) {
+            var newVolume = (0, _utils.clamp)(volume, 0, 2);
 
-            if (this._volume !== volume) {
-                this._volume = volume;
+            if (this._volume !== newVolume) {
+                this._volume = newVolume;
                 this._source.volume = this._volume * this._parentVolume;
             }
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'analyserTarget',
+        get: function get() {
+            throw new Error('Audio class cannot be analysed.');
         }
     }]);
 
@@ -19929,7 +20110,7 @@ var Audio = function (_Playable) {
 exports.default = Audio;
 
 /***/ }),
-/* 83 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20148,7 +20329,7 @@ var AudioAnalyser = function () {
 exports.default = AudioAnalyser;
 
 /***/ }),
-/* 84 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20431,9 +20612,9 @@ var Video = function (_Sprite) {
         get: function get() {
             return this._audioContext ? this._gainNode.gain.value : 1;
         },
-        set: function set(value) {
+        set: function set(volume) {
             if (this._audioContext) {
-                this._gainNode.gain.value = (0, _utils.clamp)(value, 0, 1);
+                this._gainNode.gain.value = (0, _utils.clamp)(volume, 0, 1);
             }
         }
 
@@ -20447,8 +20628,8 @@ var Video = function (_Sprite) {
         get: function get() {
             return this._source.currentTime;
         },
-        set: function set(value) {
-            this._source.currentTime = Math.max(0, value);
+        set: function set(currentTime) {
+            this._source.currentTime = Math.max(0, currentTime);
         }
 
         /**
@@ -20461,8 +20642,8 @@ var Video = function (_Sprite) {
         get: function get() {
             return this._source.loop;
         },
-        set: function set(value) {
-            this._source.loop = !!value;
+        set: function set(loop) {
+            this._source.loop = loop;
         }
 
         /**
@@ -20475,8 +20656,8 @@ var Video = function (_Sprite) {
         get: function get() {
             return this._source.playbackRate;
         },
-        set: function set(value) {
-            this._source.playbackRate = Math.max(0, value);
+        set: function set(playbackRate) {
+            this._source.playbackRate = Math.max(0, playbackRate);
         }
 
         /**
@@ -20489,8 +20670,8 @@ var Video = function (_Sprite) {
         get: function get() {
             return this._source.paused;
         },
-        set: function set(value) {
-            if (value) {
+        set: function set(paused) {
+            if (paused) {
                 this.pause();
             } else {
                 this.play();
@@ -20507,8 +20688,8 @@ var Video = function (_Sprite) {
         get: function get() {
             return !this.paused;
         },
-        set: function set(value) {
-            if (value) {
+        set: function set(playing) {
+            if (playing) {
                 this.play();
             } else {
                 this.pause();
@@ -20534,7 +20715,7 @@ var Video = function (_Sprite) {
 exports.default = Video;
 
 /***/ }),
-/* 85 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20544,7 +20725,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _DisplayManager = __webpack_require__(29);
+var _DisplayManager = __webpack_require__(28);
 
 Object.defineProperty(exports, 'DisplayManager', {
   enumerable: true,
@@ -20553,7 +20734,7 @@ Object.defineProperty(exports, 'DisplayManager', {
   }
 });
 
-var _RenderTarget = __webpack_require__(30);
+var _RenderTarget = __webpack_require__(29);
 
 Object.defineProperty(exports, 'RenderTarget', {
   enumerable: true,
@@ -20571,7 +20752,7 @@ Object.defineProperty(exports, 'Texture', {
   }
 });
 
-var _View = __webpack_require__(31);
+var _View = __webpack_require__(30);
 
 Object.defineProperty(exports, 'View', {
   enumerable: true,
@@ -20580,7 +20761,7 @@ Object.defineProperty(exports, 'View', {
   }
 });
 
-var _BlendMode = __webpack_require__(38);
+var _BlendMode = __webpack_require__(37);
 
 Object.defineProperty(exports, 'BlendMode', {
   enumerable: true,
@@ -20589,7 +20770,7 @@ Object.defineProperty(exports, 'BlendMode', {
   }
 });
 
-var _Renderable = __webpack_require__(25);
+var _Renderable = __webpack_require__(24);
 
 Object.defineProperty(exports, 'Renderable', {
   enumerable: true,
@@ -20598,7 +20779,7 @@ Object.defineProperty(exports, 'Renderable', {
   }
 });
 
-var _Container = __webpack_require__(86);
+var _Container = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Container', {
   enumerable: true,
@@ -20607,7 +20788,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Renderer = __webpack_require__(22);
+var _Renderer = __webpack_require__(21);
 
 Object.defineProperty(exports, 'Renderer', {
   enumerable: true,
@@ -20616,7 +20797,7 @@ Object.defineProperty(exports, 'Renderer', {
   }
 });
 
-var _Shader = __webpack_require__(23);
+var _Shader = __webpack_require__(22);
 
 Object.defineProperty(exports, 'Shader', {
   enumerable: true,
@@ -20625,7 +20806,7 @@ Object.defineProperty(exports, 'Shader', {
   }
 });
 
-var _ShaderAttribute = __webpack_require__(34);
+var _ShaderAttribute = __webpack_require__(33);
 
 Object.defineProperty(exports, 'ShaderAttribute', {
   enumerable: true,
@@ -20634,7 +20815,7 @@ Object.defineProperty(exports, 'ShaderAttribute', {
   }
 });
 
-var _ShaderUniform = __webpack_require__(35);
+var _ShaderUniform = __webpack_require__(34);
 
 Object.defineProperty(exports, 'ShaderUniform', {
   enumerable: true,
@@ -20652,7 +20833,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Text = __webpack_require__(87);
+var _Text = __webpack_require__(85);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -20661,7 +20842,7 @@ Object.defineProperty(exports, 'Text', {
   }
 });
 
-var _SpriteShader = __webpack_require__(33);
+var _SpriteShader = __webpack_require__(32);
 
 Object.defineProperty(exports, 'SpriteShader', {
   enumerable: true,
@@ -20670,7 +20851,7 @@ Object.defineProperty(exports, 'SpriteShader', {
   }
 });
 
-var _SpriteRenderer = __webpack_require__(32);
+var _SpriteRenderer = __webpack_require__(31);
 
 Object.defineProperty(exports, 'SpriteRenderer', {
   enumerable: true,
@@ -20682,7 +20863,7 @@ Object.defineProperty(exports, 'SpriteRenderer', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 86 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20696,7 +20877,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Renderable2 = __webpack_require__(25);
+var _Renderable2 = __webpack_require__(24);
 
 var _Renderable3 = _interopRequireDefault(_Renderable2);
 
@@ -21001,8 +21182,8 @@ var Container = function (_Renderable) {
         get: function get() {
             return this._parent;
         },
-        set: function set(value) {
-            this._parent = value;
+        set: function set(parent) {
+            this._parent = parent;
         }
 
         /**
@@ -21015,8 +21196,8 @@ var Container = function (_Renderable) {
         get: function get() {
             return this._size;
         },
-        set: function set(value) {
-            this._size.copy(value);
+        set: function set(size) {
+            this._size.copy(size);
         }
 
         /**
@@ -21029,8 +21210,8 @@ var Container = function (_Renderable) {
         get: function get() {
             return this._size.x;
         },
-        set: function set(value) {
-            this._size.x = value;
+        set: function set(width) {
+            this._size.x = width;
         }
 
         /**
@@ -21043,8 +21224,8 @@ var Container = function (_Renderable) {
         get: function get() {
             return this._size.y;
         },
-        set: function set(value) {
-            this._size.y = value;
+        set: function set(height) {
+            this._size.y = height;
         }
     }]);
 
@@ -21054,7 +21235,7 @@ var Container = function (_Renderable) {
 exports.default = Container;
 
 /***/ }),
-/* 87 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21325,11 +21506,11 @@ var Text = function (_Sprite) {
         get: function get() {
             return this._text;
         },
-        set: function set(value) {
-            var text = value || ' ';
+        set: function set(text) {
+            var newText = text || ' ';
 
-            if (this._text !== text) {
-                this._text = text;
+            if (this._text !== newText) {
+                this._text = newText;
                 this._dirty = true;
             }
         }
@@ -21356,7 +21537,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 88 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21366,425 +21547,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Animation = __webpack_require__(18);
-
-Object.defineProperty(exports, 'Animation', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_Animation).default;
-  }
-});
-
-var _ColorAnimation = __webpack_require__(89);
-
-Object.defineProperty(exports, 'ColorAnimation', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_ColorAnimation).default;
-  }
-});
-
-var _FadeAnimation = __webpack_require__(90);
-
-Object.defineProperty(exports, 'FadeAnimation', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_FadeAnimation).default;
-  }
-});
-
-var _FrameAnimation = __webpack_require__(91);
-
-Object.defineProperty(exports, 'FrameAnimation', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_FrameAnimation).default;
-  }
-});
-
-var _AnimationFrame = __webpack_require__(57);
-
-Object.defineProperty(exports, 'AnimationFrame', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_AnimationFrame).default;
-  }
-});
-
-var _Animator = __webpack_require__(92);
-
-Object.defineProperty(exports, 'Animator', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_Animator).default;
-  }
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-/* 89 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _Animation2 = __webpack_require__(18);
-
-var _Animation3 = _interopRequireDefault(_Animation2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class ColorAnimation
- * @implements {Animation}
- */
-var ColorAnimation = function (_Animation) {
-  _inherits(ColorAnimation, _Animation);
-
-  /**
-   * @constructor
-   * @param {...Color} colors
-   */
-  function ColorAnimation() {
-    _classCallCheck(this, ColorAnimation);
-
-    /**
-     * @private
-     * @member {Color[]}
-     */
-    var _this = _possibleConstructorReturn(this, (ColorAnimation.__proto__ || Object.getPrototypeOf(ColorAnimation)).call(this));
-
-    for (var _len = arguments.length, colors = Array(_len), _key = 0; _key < _len; _key++) {
-      colors[_key] = arguments[_key];
-    }
-
-    _this._colorGradient = colors;
-    return _this;
-  }
-
-  return ColorAnimation;
-}(_Animation3.default);
-
-exports.default = ColorAnimation;
-
-/***/ }),
-/* 90 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _Animation2 = __webpack_require__(18);
-
-var _Animation3 = _interopRequireDefault(_Animation2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class FadeAnimation
- * @implements {Animation}
- */
-var FadeAnimation = function (_Animation) {
-    _inherits(FadeAnimation, _Animation);
-
-    /**
-     * @constructor
-     * @param {Number} inRatio
-     * @param {Number} outRatio
-     */
-    function FadeAnimation(inRatio, outRatio) {
-        _classCallCheck(this, FadeAnimation);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        var _this = _possibleConstructorReturn(this, (FadeAnimation.__proto__ || Object.getPrototypeOf(FadeAnimation)).call(this));
-
-        _this._inRatio = inRatio;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._outRatio = outRatio;
-        return _this;
-    }
-
-    /**
-     * @override
-     */
-
-
-    _createClass(FadeAnimation, [{
-        key: 'apply',
-        value: function apply(animated, progress) {
-            var inRatio = this._inRatio,
-                outRatio = this._outRatio;
-
-            if (progress < inRatio) {
-                animated.color.a = 255 * progress / inRatio;
-            } else if (progress > 1 - outRatio) {
-                animated.color.a = 255 * (1 - progress) / outRatio;
-            }
-        }
-    }]);
-
-    return FadeAnimation;
-}(_Animation3.default);
-
-exports.default = FadeAnimation;
-
-/***/ }),
-/* 91 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _Animation2 = __webpack_require__(18);
-
-var _Animation3 = _interopRequireDefault(_Animation2);
-
-var _AnimationFrame = __webpack_require__(57);
-
-var _AnimationFrame2 = _interopRequireDefault(_AnimationFrame);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class FrameAnimation
- * @implements {Animation}
- */
-var FrameAnimation = function (_Animation) {
-    _inherits(FrameAnimation, _Animation);
-
-    /**
-     * @constructor
-     */
-    function FrameAnimation() {
-        _classCallCheck(this, FrameAnimation);
-
-        /**
-         * @private
-         * @member {AnimationFrame[]}
-         */
-        var _this = _possibleConstructorReturn(this, (FrameAnimation.__proto__ || Object.getPrototypeOf(FrameAnimation)).call(this));
-
-        _this._frames = [];
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        _this._normalized = false;
-        return _this;
-    }
-
-    /**
-     * @public
-     * @param {Number} relativeDuration
-     * @param {Rectangle} rectangle
-     * @param {Vector} [origin]
-     */
-
-
-    _createClass(FrameAnimation, [{
-        key: 'addFrame',
-        value: function addFrame(relativeDuration, rectangle, origin) {
-            this._frames.push(new _AnimationFrame2.default(relativeDuration, rectangle, origin));
-            this._normalized = false;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'ensureNormalized',
-        value: function ensureNormalized() {
-            if (this._normalized) {
-                return;
-            }
-
-            var sum = this._frames.reduce(function (val, frame) {
-                return val + frame.duration;
-            }, 0);
-
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = this._frames[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var frame = _step.value;
-
-                    frame.duration /= sum;
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            this._normalized = true;
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'apply',
-        value: function apply(target, progress) {
-            if (!this._frames.length || progress < 0 || progress > 1) {
-                return;
-            }
-
-            this.ensureNormalized();
-
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
-
-            try {
-                for (var _iterator2 = this._frames[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var frame = _step2.value;
-
-                    progress -= frame.duration;
-
-                    if (progress <= 0) {
-                        target.setTextureRect(frame.rectangle);
-
-                        if (frame.applyOrigin) {
-                            target.setOrigin(frame.origin);
-                        }
-
-                        break;
-                    }
-                }
-            } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
-                    }
-                } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
-                    }
-                }
-            }
-        }
-    }]);
-
-    return FrameAnimation;
-}(_Animation3.default);
-
-exports.default = FrameAnimation;
-
-/***/ }),
-/* 92 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @interface Animator
- */
-var Animator = function () {
-  function Animator() {
-    _classCallCheck(this, Animator);
-  }
-
-  _createClass(Animator, [{
-    key: "addAnimation",
-
-
-    /**
-     * @public
-     * @virtual
-     * @param {String} name
-     * @param {Animation} animation
-     * @param {Number} duration
-     */
-    value: function addAnimation(name, animation, duration) {
-      // do nothing
-    }
-  }]);
-
-  return Animator;
-}();
-
-exports.default = Animator;
-
-/***/ }),
-/* 93 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _Particle = __webpack_require__(58);
+var _Particle = __webpack_require__(56);
 
 Object.defineProperty(exports, 'Particle', {
   enumerable: true,
@@ -21793,7 +21556,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(94);
+var _ParticleEmitter = __webpack_require__(87);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -21802,7 +21565,7 @@ Object.defineProperty(exports, 'ParticleEmitter', {
   }
 });
 
-var _ParticleShader = __webpack_require__(37);
+var _ParticleShader = __webpack_require__(36);
 
 Object.defineProperty(exports, 'ParticleShader', {
   enumerable: true,
@@ -21811,7 +21574,7 @@ Object.defineProperty(exports, 'ParticleShader', {
   }
 });
 
-var _ParticleRenderer = __webpack_require__(36);
+var _ParticleRenderer = __webpack_require__(35);
 
 Object.defineProperty(exports, 'ParticleRenderer', {
   enumerable: true,
@@ -21820,7 +21583,7 @@ Object.defineProperty(exports, 'ParticleRenderer', {
   }
 });
 
-var _ParticleModifier = __webpack_require__(19);
+var _ParticleModifier = __webpack_require__(18);
 
 Object.defineProperty(exports, 'ParticleModifier', {
   enumerable: true,
@@ -21829,7 +21592,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(95);
+var _ForceModifier = __webpack_require__(88);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -21838,7 +21601,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(96);
+var _ScaleModifier = __webpack_require__(89);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -21847,7 +21610,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(97);
+var _TorqueModifier = __webpack_require__(90);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -21859,7 +21622,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 94 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21871,7 +21634,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Particle = __webpack_require__(58);
+var _Particle = __webpack_require__(56);
 
 var _Particle2 = _interopRequireDefault(_Particle);
 
@@ -22189,8 +21952,8 @@ var ParticleEmitter = function () {
         get: function get() {
             return this._textureCoords;
         },
-        set: function set(value) {
-            this._textureCoords.copy(value);
+        set: function set(textureCoords) {
+            this._textureCoords.copy(textureCoords);
         }
 
         /**
@@ -22312,7 +22075,7 @@ var ParticleEmitter = function () {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 95 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22324,7 +22087,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(19);
+var _ParticleModifier2 = __webpack_require__(18);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -22399,7 +22162,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 96 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22411,7 +22174,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(19);
+var _ParticleModifier2 = __webpack_require__(18);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -22486,7 +22249,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 97 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22498,7 +22261,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(19);
+var _ParticleModifier2 = __webpack_require__(18);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 

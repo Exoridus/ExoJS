@@ -18,13 +18,13 @@ export default class MusicFactory extends AudioFactory {
     /**
      * @override
      */
-    create(response, options) {
+    create(source, options) {
         if (!support.webAudio) {
             return Promise.reject(Error('Web Audio is not supported!'));
         }
 
         return super
-            .create(response, options)
+            .create(source, options)
             .then((audio) => new Music(audio));
     }
 }

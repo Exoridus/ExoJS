@@ -61,7 +61,7 @@ export default class MenuItem extends Exo.Text {
             scale = 1 + (Math.sin(time * Math.PI) * scalingCenter) + scalingCenter;
 
         this.setScale(scale, scale);
-        this._ticker += delta.asSeconds();
+        this._ticker += delta.seconds;
     }
 
     /**
