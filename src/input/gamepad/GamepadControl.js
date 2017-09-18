@@ -137,14 +137,16 @@ export default class GamepadControl {
      * @returns {Number}
      */
     transformValue(value) {
+        let result = value;
+
         if (this._negate) {
-            value *= -1;
+            result *= -1;
         }
 
         if (this._normalize) {
-            value = (value + 1) / 2;
+            result = (result + 1) / 2;
         }
 
-        return (value > this._threshold) ? value : 0;
+        return (result > this._threshold) ? result : 0;
     }
 }

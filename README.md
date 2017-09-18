@@ -11,11 +11,12 @@ A lightweight, flexibile and powerful game engine.
 * Animation system
 * Modular design
 * Seeded pseudo random generator
+* Video rendering
+* Quadtree implementation
 
 ### WIP / Planned ###
 * Collision detection/response by SAT
 * Primitive rendering
-* Video rendering
 * Rendertarget / Rendertexture
 * Filters
 * Masking
@@ -24,5 +25,4 @@ A lightweight, flexibile and powerful game engine.
 * Premultiplied alpha support
 * Mesh rendering
 * Shapes
-* Quadtree implementation
 * Tilemap with Autotiles

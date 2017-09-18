@@ -24,7 +24,7 @@ export default class Input extends EventEmitter {
         stop,
         active,
         trigger,
-        context
+        context,
     } = {}) {
         super();
 

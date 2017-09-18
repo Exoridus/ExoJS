@@ -20,17 +20,18 @@ export default class FontFactory extends ArrayBufferFactory {
         return super
             .create(source, null)
             .then((arrayBuffer) => new Promise((resolve, reject) => {
-                const fontFace = new FontFace(family, arrayBuffer, destriptors),
-                    promise = fontFace.load();
+                const fontFace = new FontFace(family, arrayBuffer, destriptors);
 
-                if (addToDocument) {
-                    promise.then(() => document.fonts.add(fontFace));
-                }
+                fontFace
+                    .load()
+                    .then(() => {
+                        if (addToDocument) {
+                            document.fonts.add(fontFace);
+                        }
 
-                promise.then(
-                    () => resolve(fontFace),
-                    () => reject(fontFace)
-                );
+                        resolve(fontFace);
+                    })
+                    .catch(() => reject(fontFace));
             }));
     }
 }

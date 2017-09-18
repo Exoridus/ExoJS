@@ -49,8 +49,8 @@ export default class ImageFactory extends BlobFactory {
                 this._objectURLs.add(objectURL);
 
                 image.addEventListener('load', () => resolve(image));
-                image.addEventListener('error', () => reject(image));
-                image.addEventListener('abort', () => reject(image));
+                image.addEventListener('error', () => reject(Error('Error loading image source.')));
+                image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
 
                 image.src = objectURL;
             }));

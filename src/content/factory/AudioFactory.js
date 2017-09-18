@@ -49,8 +49,8 @@ export default class AudioFactory extends BlobFactory {
                 this._objectURLs.add(objectURL);
 
                 audio.addEventListener(loadEvent, () => resolve(audio));
-                audio.addEventListener('error', () => reject(audio));
-                audio.addEventListener('abort', () => reject(audio));
+                audio.addEventListener('error', () => reject(Error('Error loading audio source.')));
+                audio.addEventListener('abort', () => reject(Error('Audio loading was canceled.')));
 
                 audio.src = objectURL;
             }));

@@ -49,8 +49,8 @@ export default class VideoFactory extends BlobFactory {
                 this._objectURLs.add(objectURL);
 
                 video.addEventListener(loadEvent, () => resolve(video));
-                video.addEventListener('error', () => reject(video));
-                video.addEventListener('abort', () => reject(video));
+                video.addEventListener('error', () => reject(Error('Error loading video source.')));
+                video.addEventListener('abort', () => reject(Error('Video loading was canceled.')));
 
                 video.src = objectURL;
             }));
