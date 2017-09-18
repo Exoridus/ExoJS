@@ -111,7 +111,7 @@ export default class Color {
      * @member {Number}
      */
     get rgba() {
-        return (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
+        return this._a && (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
     }
 
     set rgba(rgba) {
@@ -224,22 +224,49 @@ export default class Color {
     /**
      * @public
      * @chainable
-     * @param {Number} h
-     * @param {Number} s
-     * @param {Number} l
+     * @param {Number} hue
+     * @param {Number} saturation
+     * @param {Number} lightness
      * @returns {Color}
      */
-    setHsl(h, s, l) {
-        if (s === 0) {
-            this.r = this.g = this.b = 255;
-        } else {
-            const q = (l < 0.5) ? (l * (1 + s)) : (l + s - (l * s)),
-                p = (2 * l) - q;
+    setHsl(hue, saturation, lightness) {
+        const chroma = (1 - (Math.abs((2 * lightness) - 1) * saturation)),
+            huePrime = (hue / 60),
+            secondComponent = chroma * (1 - Math.abs((huePrime % 2) - 1)),
+            lightnessAdjust = lightness - (chroma / 2);
 
-            this.r = this._hueToRgb(p, q, h + (1 / 3)) * 255;
-            this.g = this._hueToRgb(p, q, h) * 255;
-            this.b = this._hueToRgb(p, q, h - (1 / 3)) * 255;
+        let [red, green, blue] = [0, 0, 0];
+
+        switch (huePrime | 0) {
+            case 0:
+                red = chroma;
+                green = secondComponent;
+                break;
+            case 1:
+                red = secondComponent;
+                green = chroma;
+                break;
+            case 2:
+                green = chroma;
+                blue = secondComponent;
+                break;
+            case 3:
+                green = secondComponent;
+                blue = chroma;
+                break;
+            case 4:
+                red = secondComponent;
+                blue = chroma;
+                break;
+            case 5:
+                red = chroma;
+                blue = secondComponent;
+                break;
         }
+
+        this.r = Math.round((red + lightnessAdjust) * 255);
+        this.g = Math.round((green + lightnessAdjust) * 255);
+        this.b = Math.round((blue + lightnessAdjust) * 255);
 
         return this;
     }
@@ -343,15 +370,19 @@ export default class Color {
         if (t < 0) {
             t += 1;
         }
+
         if (t > 1) {
             t -= 1;
         }
+
         if (t < 1 / 6) {
-            return (p + (q - p)) * 6 * t;
+            return (p + (q - p)) * t * 6;
         }
+
         if (t < 1 / 2) {
             return q;
         }
+
         if (t < 2 / 3) {
             return (p + (q - p)) * ((2 / 3) - t) * 6;
         }

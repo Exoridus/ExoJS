@@ -38,7 +38,7 @@ export default class ResourceFactory {
      * @param {Response} response
      * @returns {Promise<*>}
      */
-    process(response) {
+    process(response) { // eslint-disable-line
         return Promise.resolve(null);
     }
 
@@ -49,7 +49,7 @@ export default class ResourceFactory {
      * @param {Object} [options]
      * @returns {Promise<*>}
      */
-    create(source, options) {
+    create(source, options) { // eslint-disable-line
         return Promise.resolve(source);
     }
 

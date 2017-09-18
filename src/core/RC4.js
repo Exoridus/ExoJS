@@ -32,36 +32,31 @@ export default class RC4 {
 
     /**
      * @public
-     * @param {Number[]} newKeys
+     * @param {Number[]} keys
      */
-    setKeys(newKeys) {
-        const keys = this._keys,
+    setKeys(keys) {
+        const oldKeys = this._keys,
+            newKeys = (keys && keys.length) || [1],
+            len = newKeys.length,
             width = 256,
             mask = 255;
-
-        let len = newKeys.length,
-            j = 0;
 
         this._i = 0;
         this._j = 0;
 
-        keys.length = 0;
-
-        if (!len) {
-            newKeys = [len++];
-        }
+        oldKeys.length = 0;
 
         for (let i = 0; i < width; i++) {
-            keys[i] = i;
+            oldKeys[i] = i;
         }
 
-        for (let i = 0; i < width; i++) {
-            const t = keys[i];
+        for (let i = 0, j = 0; i < width; i++) {
+            const t = oldKeys[i];
 
             j = mask & (j + newKeys[i % len] + t);
 
-            keys[i] = keys[j];
-            keys[j] = t;
+            oldKeys[i] = oldKeys[j];
+            oldKeys[j] = t;
         }
 
         this.next(width);
@@ -75,12 +70,13 @@ export default class RC4 {
     next(count) {
         const keys = this._keys;
 
-        let result = 0,
+        let c = count,
+            result = 0,
             i = this._i,
             j = this._j,
             t;
 
-        while (count--) {
+        while (c--) {
             i = 255 & (i + 1);
             t = keys[i];
             j = 255 & (j + t);

@@ -22,7 +22,20 @@ export default class DisplayManager {
      * @param {Boolean} [config.clearBeforeRender=true]
      * @param {Object} [config.contextOptions]
      */
-    constructor(game, { width = 800, height = 600, clearColor = Color.White, clearBeforeRender = true, contextOptions } = {}) {
+    constructor(game, {
+        width = 800,
+        height = 600,
+        clearColor = Color.White,
+        clearBeforeRender = true,
+        contextOptions = {
+            alpha: false,
+            antialias: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            stencil: true,
+            depth: false,
+        },
+    } = {}) {
         if (!support.webGL) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
@@ -403,23 +416,9 @@ export default class DisplayManager {
     /**
      * @override
      */
-    _createContext({ alpha = false, antialias = false, premultipliedAlpha = false, preserveDrawingBuffer = false, stencil = true, depth = false } = {}) {
+    _createContext(options) {
         try {
-            return this._canvas.getContext('webgl', {
-                alpha,
-                antialias,
-                premultipliedAlpha,
-                preserveDrawingBuffer,
-                stencil,
-                depth,
-            }) || this._canvas.getContext('experimental-webgl', {
-                alpha,
-                antialias,
-                premultipliedAlpha,
-                preserveDrawingBuffer,
-                stencil,
-                depth,
-            });
+            return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
         } catch (e) {
             return null;
         }

@@ -1,12 +1,5 @@
 import settings from '../settings';
 
-const flags = {
-    SCALE_MODE: 1 << 0,
-    WRAP_MODE: 1 << 1,
-    PREMULTIPLY_ALPHA: 1 << 2,
-    SOURCE: 1 << 3,
-};
-
 /**
  * @class GLTexture
  */
@@ -21,7 +14,15 @@ export default class GLTexture {
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
      */
-    constructor({ context, source, width = -1, height = -1, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
+    constructor({
+        context,
+        source,
+        width = -1,
+        height = -1,
+        scaleMode = settings.SCALE_MODE,
+        wrapMode = settings.WRAP_MODE,
+        premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
+    } = {}) {
 
         /**
          * @private
@@ -75,7 +76,7 @@ export default class GLTexture {
          * @private
          * @member {Number}
          */
-        this._flags = (flags.SCALE_MODE | flags.WRAP_MODE | flags.PREMULTIPLY_ALPHA);
+        this._flags = (GLTexture.FLAGS.SCALE_MODE | GLTexture.FLAGS.WRAP_MODE | GLTexture.FLAGS.PREMULTIPLY_ALPHA);
 
         if (context !== undefined) {
             this.setContext(context);
@@ -171,9 +172,9 @@ export default class GLTexture {
      */
     updateSource() {
         if (this._source) {
-            this._flags |= flags.SOURCE;
+            this._flags |= GLTexture.FLAGS.SOURCE;
         } else {
-            this._flags &= ~flags.SOURCE;
+            this._flags &= ~GLTexture.FLAGS.SOURCE;
         }
 
         return this;
@@ -188,7 +189,7 @@ export default class GLTexture {
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags |= flags.SCALE_MODE;
+            this._flags |= GLTexture.FLAGS.SCALE_MODE;
         }
 
         return this;
@@ -203,7 +204,7 @@ export default class GLTexture {
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags |= flags.WRAP_MODE;
+            this._flags |= GLTexture.FLAGS.WRAP_MODE;
         }
 
         return this;
@@ -218,7 +219,7 @@ export default class GLTexture {
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags |= flags.PREMULTIPLY_ALPHA;
+            this._flags |= GLTexture.FLAGS.PREMULTIPLY_ALPHA;
         }
 
         return this;
@@ -239,21 +240,21 @@ export default class GLTexture {
 
         const gl = this._context;
 
-        if (this._flags & flags.SCALE_MODE) {
+        if (this._flags & GLTexture.FLAGS.SCALE_MODE) {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
         }
 
-        if (this._flags & flags.WRAP_MODE) {
+        if (this._flags & GLTexture.FLAGS.WRAP_MODE) {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
         }
 
-        if (this._flags & flags.PREMULTIPLY_ALPHA) {
+        if (this._flags & GLTexture.FLAGS.PREMULTIPLY_ALPHA) {
             gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
         }
 
-        if (this._flags & flags.SOURCE) {
+        if (this._flags & GLTexture.FLAGS.SOURCE) {
             const source = this._source,
                 width = source.videoWidth || source.width,
                 height = source.videoHeight || source.height;
@@ -268,7 +269,7 @@ export default class GLTexture {
             }
         }
 
-        this._flags = 0;
+        this._flags = GLTexture.FLAGS.NONE;
 
         return this;
     }
@@ -323,3 +324,21 @@ export default class GLTexture {
         this._flags = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @type {Object<String, Number>}
+ * @property {Number} NONE
+ * @property {Number} SCALE_MODE
+ * @property {Number} WRAP_MODE
+ * @property {Number} PREMULTIPLY_ALPHA
+ * @property {Number} SOURCE
+ */
+GLTexture.FLAGS = {
+    NONE: 0,
+    SCALE_MODE: 1 << 0,
+    WRAP_MODE: 1 << 1,
+    PREMULTIPLY_ALPHA: 1 << 2,
+    SOURCE: 1 << 3,
+};

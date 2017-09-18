@@ -114,8 +114,8 @@ export default class Text extends Sprite {
             lineWidths = lines.map((line) => context.measureText(line).width),
             maxLineWidth = lineWidths.reduce((max, width) => Math.max(max, width), 0),
             lineHeight = this._determineFontHeight(font) + strokeThickness,
-            width = Math.ceil(maxLineWidth + strokeThickness + style.padding * 2),
-            height = Math.ceil(lineHeight * lines.length + style.padding * 2);
+            width = Math.ceil(maxLineWidth + strokeThickness + (style.padding * 2)),
+            height = Math.ceil((lineHeight * lines.length) + (style.padding * 2));
 
         canvas.width = width;
         canvas.height = height;
@@ -133,7 +133,7 @@ export default class Text extends Sprite {
 
         lines.forEach((line, index) => {
             const lineWidth = (maxLineWidth - lineWidths[index]),
-                offset = (style.align === 'right') ? lineWidth : (style.align === 'center') ? lineWidth / 2 : 0,
+                offset = (style.align === 'right') ? lineWidth : lineWidth / 2,
                 lineX = (strokeThickness / 2) + (style.align === 'left' ? 0 : offset),
                 lineY = (strokeThickness / 2) + (lineHeight * index);
 

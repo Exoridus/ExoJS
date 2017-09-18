@@ -147,4 +147,12 @@ export default {
      * @default 5000
      */
     PARTICLE_BATCH_SIZE: 5000,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 300
+     */
+    TRIGGER_THRESHOLD: 300,
 };

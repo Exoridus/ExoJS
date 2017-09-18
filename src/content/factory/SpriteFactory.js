@@ -3,7 +3,7 @@ import Sprite from '../../display/Sprite';
 
 /**
  * @class SpriteFactory
- * @extends {ResourceFactory}
+ * @extends {TextureFactory}
  */
 export default class SpriteFactory extends TextureFactory {
 

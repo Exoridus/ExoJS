@@ -1,6 +1,5 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
-import { compileProgram } from '../utils';
 
 /**
  * @class Shader
@@ -99,7 +98,7 @@ export default class Shader {
         }
 
         this._context = gl;
-        this._program = compileProgram(gl, this._vertexSource, this._fragmentSource);
+        this._program = this.compileProgram();
 
         for (const attribute of this._attributes.values()) {
             attribute.setContext(gl, this._program);
@@ -217,6 +216,64 @@ export default class Shader {
         }
 
         return this._uniforms.get(name);
+    }
+
+    /**
+     * @public
+     * @constant
+     * @param {Number} type
+     * @param {String} source
+     * @returns {WebGLShader}
+     */
+    compileShader(type, source) {
+        const gl = this._context,
+            shader = gl.createShader(type);
+
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
+
+            return null;
+        }
+
+        return shader;
+    }
+
+    /**
+     * @public
+     * @constant
+     * @returns {?WebGLProgram}
+     */
+    compileProgram() {
+        const gl = this._context,
+            vertexShader = this.compileShader(gl.VERTEX_SHADER, this._vertexSource),
+            fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, this._fragmentSource),
+            program = gl.createProgram();
+
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+
+        gl.linkProgram(program);
+
+        gl.deleteShader(vertexShader);
+        gl.deleteShader(fragmentShader);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            gl.deleteProgram(program);
+
+            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
+            console.error('gl.getError()', gl.getError()); // eslint-disable-line
+
+            if (gl.getProgramInfoLog(program)) {
+                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
+            }
+
+            return null;
+        }
+
+        return program;
     }
 
     /**

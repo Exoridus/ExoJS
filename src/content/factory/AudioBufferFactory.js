@@ -3,7 +3,7 @@ import { decodeAudioBuffer } from '../../utils';
 
 /**
  * @class AudioBufferFactory
- * @extends {ResourceFactory}
+ * @extends {ArrayBufferFactory}
  */
 export default class AudioBufferFactory extends ArrayBufferFactory {
 

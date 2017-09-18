@@ -145,7 +145,7 @@ export default class Circle extends Shape {
             this._x - this._radius,
             this._y - this._radius,
             this._radius * 2,
-            this._radius * 2,
+            this._radius * 2
         );
     }
 
@@ -154,19 +154,16 @@ export default class Circle extends Shape {
      */
     contains(shape) {
         switch (shape.type) {
-            case SHAPE.POINT:
-                const dx = (this.x - shape.x),
-                    dy = (this.y - shape.y);
-
-                return (dx * dx) + (dy * dy) <= (this._radius * this._radius);
+            case SHAPE.POINT: {
+                return this.distanceTo(shape) < this._radius;
+            }
             case SHAPE.CIRCLE:
             case SHAPE.RECTANGLE:
             case SHAPE.POLYGON:
-            default:
                 return false;
+            default:
+                throw new Error('Passed item is not a valid shape!', shape);
         }
-
-        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**
@@ -180,21 +177,21 @@ export default class Circle extends Shape {
                 return this.distanceTo(shape) < (this._radius + shape.radius);
             case SHAPE.RECTANGLE:
             case SHAPE.POLYGON:
-            default:
                 return false;
+            default:
+                throw new Error('Passed item is not a valid shape!', shape);
         }
 
-        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**
      * @public
-     * @param {Cirlce} circle
+     * @param {Cirlce|Vector} entity
      * @returns {Number}
      */
-    distanceTo(circle) {
-        const x = this._x - circle.x,
-            y = this._y - circle.y;
+    distanceTo(entity) {
+        const x = this._x - entity.x,
+            y = this._y - entity.y;
 
         return Math.sqrt((x * x) + (y * y));
     }

@@ -152,24 +152,6 @@ export default class Sprite extends Renderable {
      * @readonly
      * @member {Number}
      */
-    get top() {
-        return this.y - this.height + this.origin.y;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get bottom() {
-        return this.y + this.height + this.origin.y;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
     get left() {
         return this.x - this.width + this.origin.x;
     }
@@ -179,8 +161,26 @@ export default class Sprite extends Renderable {
      * @readonly
      * @member {Number}
      */
+    get top() {
+        return this.y - this.height + this.origin.y;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
     get right() {
         return this.x + this.width + this.origin.x;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get bottom() {
+        return this.y + this.height + this.origin.y;
     }
 
     /**
@@ -243,8 +243,7 @@ export default class Sprite extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Rectangle} rectangle
-     * @param {Boolean} [updateSize=true]
+     * @param {Texture} texture
      * @returns {Sprite}
      */
     setTexture(texture) {

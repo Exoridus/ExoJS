@@ -228,16 +228,15 @@ export default class Rectangle extends Shape {
             case SHAPE.CIRCLE:
                 return this.contains(shape.bounds);
             case SHAPE.RECTANGLE:
-                return inRange(shape.left, this.left, this.right) &&
-                    inRange(shape.right, this.left, this.right) &&
-                    inRange(shape.top, this.top, this.bottom) &&
-                    inRange(shape.bottom, this.top, this.bottom);
+                return inRange(shape.left, this.left, this.right)
+                    && inRange(shape.right, this.left, this.right)
+                    && inRange(shape.top, this.top, this.bottom)
+                    && inRange(shape.bottom, this.top, this.bottom);
             case SHAPE.POLYGON:
-            default:
                 return false;
+            default:
+                throw new Error('Passed item is not a valid shape!', shape);
         }
-
-        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**
@@ -250,14 +249,14 @@ export default class Rectangle extends Shape {
             case SHAPE.CIRCLE:
                 return this.intersects(shape.bounds);
             case SHAPE.RECTANGLE:
-                return rangeIntersect(this.left, this.right, shape.left, shape.right) &&
-                    rangeIntersect(this.top, this.bottom, shape.top, shape.bottom);
+                return rangeIntersect(this.left, this.right, shape.left, shape.right)
+                    && rangeIntersect(this.top, this.bottom, shape.top, shape.bottom);
             case SHAPE.POLYGON:
-            default:
                 return false;
+            default:
+                throw new Error('Passed item is not a valid shape!', shape);
         }
 
-        throw new Error('Passed item is not a valid shape!', shape);
     }
 
     /**

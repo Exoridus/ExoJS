@@ -99,7 +99,7 @@ export default class Renderable extends Transformable {
      * @param {Matrix} worldTransform
      * @returns {Renderable}
      */
-    render(renderManager, worldTransform) {
+    render(renderManager, worldTransform) { // eslint-disable-line
         return this;
     }
 

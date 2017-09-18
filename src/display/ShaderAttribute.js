@@ -176,6 +176,8 @@ export default class ShaderAttribute {
 
     /**
      * @public
+     * @param {Number} stride
+     * @param {Number} offset
      */
     bind(stride, offset) {
         if (!this._bound) {

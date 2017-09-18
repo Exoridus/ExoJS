@@ -10,6 +10,7 @@ export default class Pointer extends ChannelHandler {
     /**
      * @constructor
      * @param {ArrayBuffer} channelBuffer
+     * @param {Number} index
      */
     constructor(channelBuffer, index) {
         super(channelBuffer, CHANNEL_OFFSET.POINTER + (index * CHANNEL_LENGTH.CHILD), CHANNEL_LENGTH.CHILD);

@@ -4,7 +4,7 @@ import settings from '../../settings';
 
 /**
  * @class TextureFactory
- * @extends {ResourceFactory}
+ * @extends {ImageFactory}
  */
 export default class TextureFactory extends ImageFactory {
 
@@ -18,7 +18,12 @@ export default class TextureFactory extends ImageFactory {
     /**
      * @override
      */
-    create(source, { mimeType, scaleMode = settings.SCALE_MODE, wrapMode = settings.WRAP_MODE, premultiplyAlpha = settings.PREMULTIPLY_ALPHA } = {}) {
+    create(source, {
+        mimeType,
+        scaleMode = settings.SCALE_MODE,
+        wrapMode = settings.WRAP_MODE,
+        premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
+    } = {}) {
         return super
             .create(source, { mimeType })
             .then((image) => new Texture(image, {

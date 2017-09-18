@@ -249,7 +249,7 @@ export default class ParticleEmitter {
 
     /**
      * @public
-     * @param {Rectangle} rect
+     * @param {Rectangle} rectangle
      */
     setTextureRect(rectangle) {
         const texture = this._texture,
@@ -273,6 +273,7 @@ export default class ParticleEmitter {
     /**
      * @public
      * @param {Time} time
+     * @returns {Number}
      */
     computeParticleCount(time) {
         const particleAmount = (this._emissionRate * time.seconds) + this._emissionDelta,

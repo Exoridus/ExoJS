@@ -431,7 +431,7 @@ NEWLINE = exports.NEWLINE = /(?:\r\n|\r|\n)/,
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.compileProgram = exports.compileShader = exports.matchesWebMVideo = exports.matchesMP4Video = exports.determineMimeType = exports.getExtension = exports.getFilename = exports.removeItems = exports.rgbToHex = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = undefined;
+exports.compileProgram = exports.compileShader = exports.matchesWebMVideo = exports.matchesMP4Video = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.rangeIntersect = exports.inRange = exports.isPowerOfTwo = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = undefined;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -638,28 +638,6 @@ removeItems = exports.removeItems = function removeItems(array, startIndex, amou
  * @public
  * @constant
  * @type {Function}
- * @returns {String}
- */
-getFilename = exports.getFilename = function getFilename(url) {
-    return url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.'));
-},
-
-
-/**
- * @public
- * @constant
- * @type {Function}
- * @returns {String}
- */
-getExtension = exports.getExtension = function getExtension(url) {
-    return url.substring(url.lastIndexOf('.') + 1).toLowerCase();
-},
-
-
-/**
- * @public
- * @constant
- * @type {Function}
  * @param {ArrayBuffer} arrayBuffer
  * @returns {String}
  */
@@ -671,8 +649,8 @@ determineMimeType = exports.determineMimeType = function determineMimeType(array
             return 'continue';
         }
 
-        if (type.pattern.every(function (item, index) {
-            return (header[index] & type.mask[index]) === item;
+        if (type.pattern.every(function (p, i) {
+            return (header[i] & type.mask[i]) === p;
         })) {
             return {
                 v: type.mimeType
@@ -737,7 +715,7 @@ matchesMP4Video = exports.matchesMP4Video = function matchesMP4Video(arrayBuffer
         view = new DataView(arrayBuffer),
         boxSize = view.getUint32(0, false);
 
-    if (header.length < 12 || header.length < boxSize || boxSize % 4 !== 0) {
+    if (header.length < Math.max(12, boxSize) || boxSize % 4 !== 0) {
         return false;
     }
 
@@ -14192,10 +14170,10 @@ var ResourceLoader = function (_EventEmitter) {
                 return sequence.then(function () {
                     return promise;
                 }).then(function (resource) {
-                    return _this2.trigger('progress', items.length, ++loaded, resource);
+                    return _this2.trigger('progress', items.length, ++loaded, items, resource);
                 });
             }, Promise.resolve()).then(function () {
-                return _this2.trigger('complete', items.length, loaded, _this2._resources);
+                return _this2.trigger('complete', items.length, loaded, items, _this2._resources);
             });
         }
 
@@ -14224,31 +14202,28 @@ var ResourceLoader = function (_EventEmitter) {
                 return Promise.resolve(this._resources.get(type, name));
             }
 
-            var factory = this.getFactory(type);
+            var factory = this.getFactory(type),
+                addToResources = function addToResources(resource) {
+                _this3._resources.set(type, name, resource);
+
+                return resource;
+            };
 
             if (this._database) {
                 return this._database.loadData(factory.storageType, name).then(function (result) {
                     return result.data || factory.request(_this3._basePath + path, _this3._request).then(function (response) {
                         return factory.process(response);
                     }).then(function (data) {
-                        return _this3._database.saveData(factory.storageType, name, data);
-                    }).then(function (result) {
-                        return result.data;
+                        return _this3._database.saveData(factory.storageType, name, data).then(function (result) {
+                            return result.data;
+                        });
                     });
                 }).then(function (source) {
                     return factory.create(source, options);
-                }).then(function (resource) {
-                    _this3._resources.set(type, name, resource);
-
-                    return resource;
-                });
+                }).then(addToResources);
             }
 
-            return factory.load(this._basePath + path, this._request, options).then(function (resource) {
-                _this3._resources.set(type, name, resource);
-
-                return resource;
-            });
+            return factory.load(this._basePath + path, this._request, options).then(addToResources);
         }
 
         /**
@@ -14282,7 +14257,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @public
          * @chainable
          * @param {String} type
-         * @param {Map<String, String>|Object<String, String>} list
+         * @param {Object<String, String>} list
          * @param {Object} [options]
          * @returns {ResourceLoader}
          */
@@ -14290,14 +14265,12 @@ var ResourceLoader = function (_EventEmitter) {
     }, {
         key: 'addList',
         value: function addList(type, list, options) {
-            var items = list instanceof Map ? list : Object.entries(list);
-
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
             var _iteratorError = undefined;
 
             try {
-                for (var _iterator = items[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                for (var _iterator = Object.entries(list)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                     var _ref3 = _step.value;
 
                     var _ref4 = _slicedToArray(_ref3, 2);
@@ -17090,8 +17063,6 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 var _ArrayBufferFactory2 = __webpack_require__(12);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
-
-var _utils = __webpack_require__(1);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 

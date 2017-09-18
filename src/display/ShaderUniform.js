@@ -115,8 +115,7 @@ export default class ShaderUniform {
 
     /**
      * @public
-     * @param {WebGLRenderingContext} gl
-     * @param {WebGLProgram} program
+     * @param {*} value
      */
     setValue(value) {
         this._value = value;
@@ -129,6 +128,7 @@ export default class ShaderUniform {
 
     /**
      * @param {Matrix} matrix
+     * @param {Boolean} [transpose=this._transpose]
      */
     setMatrix(matrix, transpose = this._transpose) {
         this._transpose = transpose;
@@ -183,6 +183,9 @@ export default class ShaderUniform {
         this._transpose = null;
     }
 
+    /**
+     * @private
+     */
     _upload() {
         if (!this._dirty) {
             return;
@@ -196,42 +199,74 @@ export default class ShaderUniform {
 
         switch (this._type) {
             case UNIFORM_TYPE.INT:
-                return gl.uniform1i(location, value);
+                gl.uniform1i(location, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT:
-                return gl.uniform1f(location, value);
+                gl.uniform1f(location, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT_VEC2:
-                return gl.uniform2fv(location, value);
+                gl.uniform2fv(location, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT_VEC3:
-                return gl.uniform3fv(location, value);
+                gl.uniform3fv(location, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT_VEC4:
-                return gl.uniform4fv(location, value);
+                gl.uniform4fv(location, value);
+
+                return;
             case UNIFORM_TYPE.INT_VEC2:
-                return gl.uniform2iv(location, value);
+                gl.uniform2iv(location, value);
+
+                return;
             case UNIFORM_TYPE.INT_VEC3:
-                return gl.uniform3iv(location, value);
+                gl.uniform3iv(location, value);
+
+                return;
             case UNIFORM_TYPE.INT_VEC4:
-                return gl.uniform4iv(location, value);
+                gl.uniform4iv(location, value);
+
+                return;
             case UNIFORM_TYPE.BOOL:
-                return gl.uniform1i(location, value);
+                gl.uniform1i(location, value);
+
+                return;
             case UNIFORM_TYPE.BOOL_VEC2:
-                return gl.uniform2iv(location, value);
+                gl.uniform2iv(location, value);
+
+                return;
             case UNIFORM_TYPE.BOOL_VEC3:
-                return gl.uniform3iv(location, value);
+                gl.uniform3iv(location, value);
+
+                return;
             case UNIFORM_TYPE.BOOL_VEC4:
-                return gl.uniform4iv(location, value);
+                gl.uniform4iv(location, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT_MAT2:
-                return gl.uniformMatrix2fv(location, this._transpose, value);
+                gl.uniformMatrix2fv(location, this._transpose, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT_MAT3:
-                return gl.uniformMatrix3fv(location, this._transpose, value);
+                gl.uniformMatrix3fv(location, this._transpose, value);
+
+                return;
             case UNIFORM_TYPE.FLOAT_MAT4:
-                return gl.uniformMatrix4fv(location, this._transpose, value);
+                gl.uniformMatrix4fv(location, this._transpose, value);
+
+                return;
             case UNIFORM_TYPE.SAMPLER_2D:
                 value.glTexture
                     .setContext(this._context)
                     .bind(this._unit)
                     .update(this._unit);
 
-                return gl.uniform1i(location, this._unit);
+                gl.uniform1i(location, this._unit);
+
+                return;
             default:
                 throw new Error(`Unknown uniform type ${this._type}`);
         }

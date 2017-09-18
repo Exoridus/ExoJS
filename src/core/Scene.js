@@ -46,7 +46,7 @@ export default class Scene extends EventEmitter {
      * @abstract
      * @param {ResourceLoader} loader
      */
-    load(loader) {
+    load(loader) { // eslint-disable-line
         this._game.trigger('scene:start');
     }
 
@@ -63,7 +63,7 @@ export default class Scene extends EventEmitter {
      * @abstract
      * @param {Time} delta
      */
-    update(delta) {
+    update(delta) { // eslint-disable-line
         // do nothing
     }
 

@@ -9,7 +9,7 @@ export default class ParticleModifier {
      * @param {Particle} particle
      * @param {Time} delta
      */
-    apply(particle, delta) {
-        throw new Error('Method not implemented!')
+    apply(particle, delta) { // eslint-disable-line
+        throw new Error('Method not implemented!');
     }
 }

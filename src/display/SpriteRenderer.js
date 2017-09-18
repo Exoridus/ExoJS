@@ -206,7 +206,11 @@ export default class SpriteRenderer extends Renderer {
         vertexBuffer[index + 18] = vertexData[15];
 
         // Tint
-        colorBuffer[index + 4] = colorBuffer[index + 9] = colorBuffer[index + 14] = colorBuffer[index + 19] = sprite.tint.rgba;
+        colorBuffer[index + 4]
+            = colorBuffer[index + 9]
+            = colorBuffer[index + 14]
+            = colorBuffer[index + 19]
+            = sprite.tint.rgba;
 
         this._batchSize++;
     }

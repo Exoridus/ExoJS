@@ -6,13 +6,15 @@ export { default as Color } from './Color';
 export { default as Transformable } from './Transformable';
 export { default as RC4 } from './RC4';
 export { default as Random } from './Random';
-export { default as Time } from './time/Time';
-export { default as Clock } from './time/Clock';
-export { default as Timer } from './time/Timer';
 export { default as Game } from './Game';
 export { default as Scene } from './Scene';
 export { default as SceneManager } from './SceneManager';
 export { default as Quadtree } from './Quadtree';
+
+// Time
+export { default as Time } from './time/Time';
+export { default as Clock } from './time/Clock';
+export { default as Timer } from './time/Timer';
 
 // Shape
 export { default as Shape } from './shape/Shape';

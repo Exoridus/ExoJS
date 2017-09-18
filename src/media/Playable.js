@@ -132,7 +132,7 @@ export default class Playable {
      * @abstract
      * @param {MediaManager} mediaManager
      */
-    connect(mediaManager) {
+    connect(mediaManager) { // eslint-disable-line
         // do nothing
     }
 

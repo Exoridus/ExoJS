@@ -9,7 +9,7 @@ export default class Polygon extends Shape {
 
     /**
      * @constructor
-     * @param {?Vector[]} vectors
+     * @param {Vector[]} vectors=[]
      */
     constructor(vectors = []) {
         super();

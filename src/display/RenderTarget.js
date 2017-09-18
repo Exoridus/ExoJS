@@ -137,7 +137,7 @@ export default class RenderTarget {
             (0.5 + (width * viewport.x)) | 0,
             (0.5 + (height * viewport.y)) | 0,
             (0.5 + (width * viewport.width)) | 0,
-            (0.5 + (height * viewport.height)) | 0,
+            (0.5 + (height * viewport.height)) | 0
         );
     }
 

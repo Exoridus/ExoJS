@@ -3,7 +3,7 @@ import { determineMimeType } from '../../utils';
 
 /**
  * @class AudioFactory
- * @extends {ResourceFactory}
+ * @extends {BlobFactory}
  */
 export default class AudioFactory extends BlobFactory {
 

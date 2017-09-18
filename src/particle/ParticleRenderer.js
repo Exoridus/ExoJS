@@ -178,7 +178,8 @@ export default class ParticleRenderer extends Renderer {
 
             const index = this._batchSize * this._particleVertexSize;
 
-            vertexData[index] = vertexData[index + 1] = vertexData[index + 11] = vertexData[index + 20] = 0;
+            vertexData[index] = vertexData[index + 11] = textureRect.x;
+            vertexData[index + 1] = vertexData[index + 20] = textureRect.y;
 
             vertexData[index + 2] = vertexData[index + 22] = textureCoords.x;
             vertexData[index + 3] = vertexData[index + 13] = textureCoords.y;
@@ -189,15 +190,33 @@ export default class ParticleRenderer extends Renderer {
             vertexData[index + 12] = vertexData[index + 32] = textureCoords.width;
             vertexData[index + 23] = vertexData[index + 33] = textureCoords.height;
 
-            vertexData[index + 4] = vertexData[index + 14] = vertexData[index + 24] = vertexData[index + 34] = particle.position.x;
-            vertexData[index + 5] = vertexData[index + 15] = vertexData[index + 25] = vertexData[index + 35] = particle.position.y;
+            vertexData[index + 4]
+                = vertexData[index + 14]
+                = vertexData[index + 24]
+                = vertexData[index + 34] = particle.position.x;
+            vertexData[index + 5]
+                = vertexData[index + 15]
+                = vertexData[index + 25]
+                = vertexData[index + 35] = particle.position.y;
 
-            vertexData[index + 6] = vertexData[index + 16] = vertexData[index + 26] = vertexData[index + 36] = particle.scale.x;
-            vertexData[index + 7] = vertexData[index + 17] = vertexData[index + 27] = vertexData[index + 37] = particle.scale.y;
+            vertexData[index + 6]
+                = vertexData[index + 16]
+                = vertexData[index + 26]
+                = vertexData[index + 36] = particle.scale.x;
+            vertexData[index + 7]
+                = vertexData[index + 17]
+                = vertexData[index + 27]
+                = vertexData[index + 37] = particle.scale.y;
 
-            vertexData[index + 8] = vertexData[index + 18] = vertexData[index + 28] = vertexData[index + 38] = degreesToRadians(particle.rotation);
+            vertexData[index + 8]
+                = vertexData[index + 18]
+                = vertexData[index + 28]
+                = vertexData[index + 38] = degreesToRadians(particle.rotation);
 
-            colorData[index + 9] = colorData[index + 19] = colorData[index + 29] = colorData[index + 39] = particle.color.rgba;
+            colorData[index + 9]
+                = colorData[index + 19]
+                = colorData[index + 29]
+                = colorData[index + 39] = particle.color.rgba;
 
             this._batchSize++;
         }

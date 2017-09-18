@@ -129,6 +129,7 @@ export default class Database {
      */
     close() {
         this._closeConnection();
+
         return Promise.resolve();
     }
 
@@ -143,7 +144,10 @@ export default class Database {
             return Promise.reject(Error(`Could not find ObjectStore named "${type}".`));
         }
 
-        return this.open().then((database) => database.transaction([type], transactionMode).objectStore(type));
+        return this.open()
+            .then((database) => database
+                .transaction([type], transactionMode)
+                .objectStore(type));
     }
 
     /**

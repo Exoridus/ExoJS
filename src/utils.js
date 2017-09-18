@@ -1,10 +1,21 @@
-import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED, FILE_FORMATS, IMAGE_TYPES, TYPE_PATTERN } from './const';
+import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED, TYPE_PATTERN } from './const';
 import support from './support';
 
-const audio = document.createElement('audio'),
-    audioContext = support.webAudio ? new AudioContext() : null;
+const
 
-export const
+    /**
+     * @private
+     * @constant
+     * @type {HTMLAudioElement}
+     */
+    audio = document.createElement('audio'),
+
+    /**
+     * @private
+     * @constant
+     * @type {AudioContext}
+     */
+    audioContext = support.webAudio ? new AudioContext() : null,
 
     /**
      * @public
@@ -15,8 +26,7 @@ export const
      */
     supportsCodec = (...codecs) => {
         for (const codec of codecs) {
-            if (audio.canPlayType(codec)
-                    .replace(CODEC_NOT_SUPPORTED, '')) {
+            if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
                 return true;
             }
         }
@@ -68,7 +78,20 @@ export const
      * @param {Number} max
      * @returns {Number}
      */
-    clamp = (value, min, max) => Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max)),
+    clamp = (value, min, max) => (
+        Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max))
+    ),
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {Number} value
+     * @returns {Number}
+     */
+    sign = (value) => (
+        value && (value < 0 ? -1 : 1)
+    ),
 
     /**
      * @public
@@ -77,7 +100,9 @@ export const
      * @param {Number} value
      * @returns {Boolean}
      */
-    isPowerOfTwo = (value) => ((value !== 0) && ((value & (value - 1)) === 0)),
+    isPowerOfTwo = (value) => (
+        (value !== 0) && ((value & (value - 1)) === 0)
+    ),
 
     /**
      * @public
@@ -88,7 +113,9 @@ export const
      * @param {Number} max
      * @returns {Boolean}
      */
-    inRange = (value, min, max) => (value >= Math.min(min, max)) && (value <= Math.max(min, max)),
+    inRange = (value, min, max) => (
+        (value >= Math.min(min, max)) && (value <= Math.max(min, max))
+    ),
 
     /**
      * @public
@@ -100,7 +127,9 @@ export const
      * @param {Number} maxB
      * @returns {Boolean}
      */
-    rangeIntersect = (minA, maxA, minB, maxB) => Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB),
+    rangeIntersect = (minA, maxA, minB, maxB) => (
+        Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB)
+    ),
 
     /**
      * @public
@@ -145,54 +174,7 @@ export const
     },
 
     /**
-     * @public
-     * @constant
-     * @type {Function}
-     * @returns {String}
-     */
-    getFilename = (url) => url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('.')),
-
-    /**
-     * @public
-     * @constant
-     * @type {Function}
-     * @returns {String}
-     */
-    getExtension = (url) => url.substring(url.lastIndexOf('.') + 1).toLowerCase(),
-
-    /**
-     * @public
-     * @constant
-     * @type {Function}
-     * @param {ArrayBuffer} arrayBuffer
-     * @returns {String}
-     */
-    determineMimeType = (arrayBuffer) => {
-        const header = new Uint8Array(arrayBuffer);
-
-        for (const type of TYPE_PATTERN) {
-            if (header.length < type.pattern.length) {
-                continue;
-            }
-
-            if (type.pattern.every((item, index) => (header[index] & type.mask[index]) === item)) {
-                return type.mimeType;
-            }
-        }
-
-        if (matchesMP4Video(arrayBuffer)) {
-            return 'video/mp4';
-        }
-
-        if (matchesWebMVideo(arrayBuffer)) {
-            return 'video/webm';
-        }
-
-        return 'text/plain';
-    },
-
-    /**
-     * @public
+     * @private
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
@@ -203,7 +185,7 @@ export const
             view = new DataView(arrayBuffer),
             boxSize = view.getUint32(0, false);
 
-        if (header.length < 12 || header.length < boxSize || boxSize % 4 !== 0) {
+        if (header.length < Math.max(12, boxSize) || boxSize % 4 !== 0) {
             return false;
         }
 
@@ -211,7 +193,7 @@ export const
     },
 
     /**
-     * @public
+     * @private
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
@@ -233,59 +215,45 @@ export const
     /**
      * @public
      * @constant
-     * @param {WebGLRenderingContext} gl
-     * @param {Number} type
-     * @param {String} source
-     * @returns {WebGLShader}
+     * @type {Function}
+     * @param {ArrayBuffer} arrayBuffer
+     * @returns {String}
      */
-    compileShader = (gl, type, source) => {
-        const shader = gl.createShader(type);
+    determineMimeType = (arrayBuffer) => {
+        const header = new Uint8Array(arrayBuffer);
 
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            console.log(gl.getShaderInfoLog(shader));
-
-            return null;
-        }
-
-        return shader;
-    },
-
-    /**
-     * @public
-     * @constant
-     * @param {WebGLRenderingContext} gl
-     * @param {String} vertexSource
-     * @param {String} fragmentSource
-     * @returns {?WebGLProgram}
-     */
-    compileProgram = (gl, vertexSource, fragmentSource) => {
-        const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexSource),
-            fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource),
-            program = gl.createProgram();
-
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-
-        gl.linkProgram(program);
-
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            gl.deleteProgram(program);
-
-            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS));
-            console.error('gl.getError()', gl.getError());
-
-            if (gl.getProgramInfoLog(program)) {
-                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program));
+        for (const type of TYPE_PATTERN) {
+            if (header.length < type.pattern.length) {
+                continue;
             }
 
-            return null;
+            if (type.pattern.every((p, i) => (header[i] & type.mask[i]) === p)) {
+                return type.mimeType;
+            }
         }
 
-        return program;
+        if (matchesMP4Video(arrayBuffer)) {
+            return 'video/mp4';
+        }
+
+        if (matchesWebMVideo(arrayBuffer)) {
+            return 'video/webm';
+        }
+
+        return 'text/plain';
     };
+
+export {
+    supportsCodec,
+    decodeAudioBuffer,
+    degreesToRadians,
+    radiansToDegrees,
+    clamp,
+    sign,
+    isPowerOfTwo,
+    inRange,
+    rangeIntersect,
+    rgbToHex,
+    removeItems,
+    determineMimeType,
+};

@@ -1,9 +1,8 @@
 import ArrayBufferFactory from './ArrayBufferFactory';
-import { getFilename } from '../../utils';
 
 /**
  * @class FontFactory
- * @extends {ResourceFactory}
+ * @extends {ArrayBufferFactory}
  */
 export default class FontFactory extends ArrayBufferFactory {
 
@@ -30,7 +29,7 @@ export default class FontFactory extends ArrayBufferFactory {
 
                 promise.then(
                     () => resolve(fontFace),
-                    () => reject(fontFace),
+                    () => reject(fontFace)
                 );
             }));
     }

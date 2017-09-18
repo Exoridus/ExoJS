@@ -3,7 +3,7 @@ import { determineMimeType } from '../../utils';
 
 /**
  * @class ImageFactory
- * @extends {ResourceFactory}
+ * @extends {BlobFactory}
  */
 export default class ImageFactory extends BlobFactory {
 

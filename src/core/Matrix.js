@@ -169,7 +169,7 @@ export default class Matrix {
         return this.set(
             matrix.a, matrix.b, matrix.x,
             matrix.c, matrix.d, matrix.y,
-            matrix.e, matrix.f, matrix.z,
+            matrix.e, matrix.f, matrix.z
         );
     }
 
@@ -181,7 +181,7 @@ export default class Matrix {
         return new Matrix(
             this.a, this.b, this.x,
             this.c, this.d, this.y,
-            this.e, this.f, this.z,
+            this.e, this.f, this.z
         );
     }
 
@@ -203,7 +203,7 @@ export default class Matrix {
 
             (this.a * matrix.e) + (this.c * matrix.f) + (this.e * matrix.z),
             (this.b * matrix.e) + (this.d * matrix.f) + (this.f * matrix.z),
-            (this.x * matrix.e) + (this.y * matrix.f) + (this.z * matrix.z),
+            (this.x * matrix.e) + (this.y * matrix.f) + (this.z * matrix.z)
         );
     }
 
@@ -224,13 +224,12 @@ export default class Matrix {
         return this.set(
             1, 0, 0,
             0, 1, 0,
-            0, 0, 1,
+            0, 0, 1
         );
     }
 
     /**
      * @public
-     * @returns {Matrix}
      */
     destroy() {
         if (this._array) {
@@ -241,14 +240,6 @@ export default class Matrix {
         this.a = this.c = this.e = null;
         this.b = this.d = this.f = null;
         this.x = this.y = this.z = null;
-
-        this.c = null;
-        this.d = null;
-        this.y = null;
-
-        this.e = null;
-        this.f = null;
-        this.z = null;
     }
 
     /**
@@ -273,6 +264,10 @@ export default class Matrix {
      * @member {Matrix}
      */
     static get Identity() {
-        return new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
+        return new Matrix(
+            1, 0, 0,
+            0, 1, 0,
+            0, 0, 1
+        );
     }
 }

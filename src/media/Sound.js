@@ -241,7 +241,12 @@ export default class Sound extends Playable {
         const duration = this.duration,
             currentTime = this.currentTime;
 
-        this._currentTime = (currentTime <= duration) ? currentTime : (currentTime - duration) * ((currentTime / duration) | 0);
+        if (currentTime <= duration) {
+            this._currentTime = currentTime;
+        } else {
+            this._currentTime = (currentTime - duration) * ((currentTime / duration) | 0);
+        }
+
         this._sourceNode.stop(0);
     }
 

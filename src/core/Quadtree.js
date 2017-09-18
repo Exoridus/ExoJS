@@ -176,30 +176,4 @@ export default class Quadtree {
 
         return null;
     }
-
-    /**
-     * @private
-     * @param {Object} entity
-     * @returns {?Quadtree}
-     */
-    _getChildNode(entity) {
-        const children = this._children,
-            bounds = this._bounds,
-            horizontalCenter = bounds.x + (bounds.width / 2),
-            verticalCenter = bounds.y + (bounds.height / 2),
-            topQuadrant = (entity.top < verticalCenter) && (entity.bottom < verticalCenter),
-            bottomQuadrant = (entity.top > horizontalCenter);
-
-        if (!children.size || (!topQuadrant && !bottomQuadrant)) {
-            return null;
-        }
-
-        if ((entity.left < horizontalCenter) && (entity.right < horizontalCenter)) {
-            return topQuadrant ? children.get(0) : children.get(2);
-        } else if (entity.left > horizontalCenter) {
-            return topQuadrant ? children.get(1) : children.get(3);
-        }
-
-        return null;
-    }
 }

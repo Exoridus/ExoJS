@@ -60,7 +60,7 @@ export default class Shape {
      * @abstract
      * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
      */
-    copy(shape) {
+    copy(shape) { // eslint-disable-line
         throw new Error('Method not implemented!');
     }
 
@@ -105,7 +105,7 @@ export default class Shape {
      * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
      * @returns {Boolean}
      */
-    contains(shape) {
+    contains(shape) { // eslint-disable-line
         throw new Error('Method not implemented!');
     }
 
@@ -115,7 +115,7 @@ export default class Shape {
      * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
      * @returns {Boolean}
      */
-    intersects(shape) {
+    intersects(shape) { // eslint-disable-line
         throw new Error('Method not implemented!');
     }
 

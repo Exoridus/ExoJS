@@ -91,19 +91,7 @@ export default class Container extends Renderable {
      * @returns {Container}
      */
     addChild(child) {
-        if (child === this) {
-            return this;
-        }
-
-        if (child.parent) {
-            child.parent.removeChild(child);
-        }
-
-        child.parent = this;
-
-        this._children.push(child);
-
-        return this;
+        return this.addChildAt(child, this._children.length);
     }
 
     /**

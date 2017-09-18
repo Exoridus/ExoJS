@@ -64,7 +64,7 @@ export default class Renderer {
      * @public
      * @param {*} renderable
      */
-    render(renderable) {
+    render(renderable) { // eslint-disable-line
         // do nothing
     }
 

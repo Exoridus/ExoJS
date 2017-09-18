@@ -1,5 +1,3 @@
-import Vector from '../core/shape/Vector';
-import settings from '../settings';
 import Rectangle from '../core/shape/Rectangle';
 import GLTexture from './GLTexture';
 

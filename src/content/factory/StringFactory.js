@@ -23,7 +23,7 @@ export default class StringFactory extends ResourceFactory {
     /**
      * @override
      */
-    create(source, options) {
+    create(source, options) { // eslint-disable-line
         return Promise.resolve(source);
     }
 }

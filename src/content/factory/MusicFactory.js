@@ -4,7 +4,7 @@ import support from '../../support';
 
 /**
  * @class MusicFactory
- * @extends {ResourceFactory}
+ * @extends {AudioFactory}
  */
 export default class MusicFactory extends AudioFactory {
 

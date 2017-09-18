@@ -14,10 +14,11 @@
         "sourceType": "module"
     },
     "rules": {
-        // Possible Errors
         "comma-dangle": [1, "always-multiline"],
         "no-cond-assign": [1, "except-parens"],
-        "no-console": 1,
+        "no-console": [1, {
+            "allow": ["warn", "error"]
+        }],
         "no-constant-condition": 1,
         "no-control-regex": 1,
         "no-debugger": 1,
@@ -110,7 +111,7 @@
         "no-new-wrappers": 1,
         "no-octal": 1,
         "no-octal-escape": 1,
-        "no-param-reassign": 0,
+        "no-param-reassign": 1,
         "no-proto": 1,
         "no-redeclare": 1,
         "no-return-assign": 1,
@@ -124,7 +125,7 @@
         "no-unused-labels": 1,
         "no-useless-call": 1,
         "no-useless-concat": 1,
-        "no-useless-escape": 0,
+        "no-useless-escape": 1,
         "no-void": 1,
         "no-warning-comments": 0,
         "no-with": 1,
@@ -280,7 +281,7 @@
         "prefer-const": 1,
         "prefer-reflect": 0,
         "prefer-rest-params": 0,
-        "prefer-spread": 0,
+        "prefer-spread": 1,
         "prefer-template": 1,
         "require-yield": 1,
         "rest-spread-spacing": [1, "never"],

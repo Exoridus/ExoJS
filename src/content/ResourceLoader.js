@@ -159,10 +159,10 @@ export default class ResourceLoader extends EventEmitter {
         return items
             .map((item) => this.loadItem(item))
             .reduce((sequence, promise) => sequence
-                    .then(() => promise)
-                    .then((resource) => this.trigger('progress', items.length, ++loaded, resource)),
-                Promise.resolve())
-            .then(() => this.trigger('complete', items.length, loaded, this._resources));
+                .then(() => promise)
+                .then((resource) => this.trigger('progress', items.length, ++loaded, items, resource)),
+            Promise.resolve())
+            .then(() => this.trigger('complete', items.length, loaded, items, this._resources));
     }
 
     /**
@@ -184,10 +184,12 @@ export default class ResourceLoader extends EventEmitter {
         if (this._database) {
             return this._database
                 .loadData(factory.storageType, name)
-                .then((result) => result.data || factory.request(this._basePath + path, this._request)
+                .then((result) => result.data || factory
+                    .request(this._basePath + path, this._request)
                     .then((response) => factory.process(response))
-                    .then((data) => this._database.saveData(factory.storageType, name, data))
-                    .then((result) => result.data))
+                    .then((data) => this._database
+                        .saveData(factory.storageType, name, data)
+                        .then((result) => result.data)))
                 .then((source) => factory.create(source, options))
                 .then((resource) => {
                     this._resources.set(type, name, resource);
@@ -233,29 +235,14 @@ export default class ResourceLoader extends EventEmitter {
      * @public
      * @chainable
      * @param {String} type
-     * @param {Map<String, String>|Object<String, String>} list
+     * @param {Object<String, String>} list
      * @param {Object} [options]
      * @returns {ResourceLoader}
      */
     addList(type, list, options) {
-        const items = (list instanceof Map) ? list : Object.entries(list);
-
-        for (const [name, path] of items) {
+        for (const [name, path] of Object.entries(list)) {
             this.addItem(type, name, path, options);
         }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {ResourceLoader}
-     */
-    reset() {
-        this._resources.clear();
-        this._queue.clear();
-        this.off();
 
         return this;
     }

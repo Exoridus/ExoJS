@@ -1,11 +1,6 @@
 import ChannelHandler from './ChannelHandler';
 import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
 
-const flags = {
-    KEY_DOWN: 1 << 0,
-    KEY_UP: 1 << 1,
-};
-
 /**
  * @class Keyboard
  * @extends {ChannelHandler}
@@ -42,7 +37,7 @@ export default class Keyboard extends ChannelHandler {
          * @private
          * @member {Number}
          */
-        this._flags = 0;
+        this._flags = Keyboard.FLAGS.NONE;
 
         this._addEventListeners();
     }
@@ -55,12 +50,12 @@ export default class Keyboard extends ChannelHandler {
             return;
         }
 
-        if (this._flags & flags.KEY_DOWN) {
+        if (this._flags & Keyboard.FLAGS.KEY_DOWN) {
             this.trigger('keyboard:down', this._channelsPressed, this);
             this._channelsPressed.clear();
         }
 
-        if (this._flags & flags.KEY_UP) {
+        if (this._flags & Keyboard.FLAGS.KEY_UP) {
             this.trigger('keyboard:up', this._channelsReleased, this);
             this._channelsReleased.clear();
         }
@@ -117,7 +112,7 @@ export default class Keyboard extends ChannelHandler {
         this.channels[event.keyCode] = 1;
         this._channelsPressed.add(Keyboard.getChannelCode(event.keyCode));
 
-        this._flags |= flags.KEY_DOWN;
+        this._flags |= Keyboard.FLAGS.KEY_DOWN;
     }
 
     /**
@@ -128,7 +123,7 @@ export default class Keyboard extends ChannelHandler {
         this.channels[event.keyCode] = 0;
         this._channelsReleased.add(Keyboard.getChannelCode(event.keyCode));
 
-        this._flags |= flags.KEY_UP;
+        this._flags |= Keyboard.FLAGS.KEY_UP;
     }
 
     /**
@@ -141,6 +136,20 @@ export default class Keyboard extends ChannelHandler {
         return CHANNEL_OFFSET.KEYBOARD + (key % CHANNEL_LENGTH.DEVICE);
     }
 }
+
+/**
+ * @public
+ * @static
+ * @type {Object<String, Number>}
+ * @property {Number} NONE
+ * @property {Number} KEY_DOWN
+ * @property {Number} KEY_UP
+ */
+Keyboard.FLAGS = {
+    NONE: 0,
+    KEY_DOWN: 1 << 0,
+    KEY_UP: 1 << 1,
+};
 
 /**
  * @public
