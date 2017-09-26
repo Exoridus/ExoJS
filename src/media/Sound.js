@@ -13,11 +13,11 @@ export default class Sound extends Playable {
      * @param {AudioBuffer} audioBuffer
      */
     constructor(audioBuffer) {
+        super(audioBuffer);
+
         if (!support.webAudio) {
             throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
         }
-
-        super(audioBuffer);
 
         /**
          * @private
@@ -54,33 +54,20 @@ export default class Sound extends Playable {
          * @member {Number}
          */
         this._currentTime = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._volume = 1;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._playbackRate = 1;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._loop = false;
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {?AudioContext}
+     * @override
      */
     get audioContext() {
         return this._audioContext;
+    }
+
+    /**
+     * @override
+     */
+    get analyserTarget() {
+        return this._gainNode;
     }
 
     /**
@@ -90,11 +77,45 @@ export default class Sound extends Playable {
         return this._volume;
     }
 
-    set volume(volume) {
-        this._volume = clamp(volume, 0, 2);
+    set volume(value) {
+        const volume = clamp(value, 0, 2);
 
-        if (this._gainNode) {
-            this._gainNode.gain.value = this._volume;
+        if (this._volume !== volume) {
+            this._volume = volume;
+
+            if (this._gainNode) {
+                this._gainNode.gain.value = volume;
+            }
+        }
+    }
+
+    /**
+     * @override
+     */
+    set loop(value) {
+        const loop = !!value;
+
+        if (this._loop !== loop) {
+            this._loop = loop;
+
+            if (this._sourceNode) {
+                this._sourceNode.loop = loop;
+            }
+        }
+    }
+
+    /**
+     * @override
+     */
+    set speed(value) {
+        const speed = Math.max(0, value);
+
+        if (this._speed !== speed) {
+            this._speed = speed;
+
+            if (this._sourceNode) {
+                this._sourceNode.playbackRate.value = speed;
+            }
         }
     }
 
@@ -118,36 +139,6 @@ export default class Sound extends Playable {
     /**
      * @override
      */
-    get loop() {
-        return this._loop;
-    }
-
-    set loop(loop) {
-        this._loop = loop;
-
-        if (this._sourceNode) {
-            this._sourceNode.loop = this._loop;
-        }
-    }
-
-    /**
-     * @override
-     */
-    get playbackRate() {
-        return this._playbackRate;
-    }
-
-    set playbackRate(playbackRate) {
-        this._playbackRate = Math.max(0, playbackRate);
-
-        if (this._sourceNode) {
-            this._sourceNode.playbackRate.value = this._playbackRate;
-        }
-    }
-
-    /**
-     * @override
-     */
     get paused() {
         if (!this._paused || this._loop) {
             return false;
@@ -156,34 +147,11 @@ export default class Sound extends Playable {
         return (this.currentTime >= this.duration);
     }
 
-    set paused(paused) {
-        if (paused) {
-            this.pause();
-        } else {
-            this.play();
-        }
-    }
-
     /**
      * @override
      */
     get playing() {
         return !this._paused;
-    }
-
-    set playing(playing) {
-        if (playing) {
-            this.play();
-        } else {
-            this.pause();
-        }
-    }
-
-    /**
-     * @override
-     */
-    get analyserTarget() {
-        return this._gainNode;
     }
 
     /**
@@ -198,6 +166,7 @@ export default class Sound extends Playable {
 
         this._gainNode = this._audioContext.createGain();
         this._gainNode.connect(mediaManager.soundGain);
+        this._gainNode.gain.value = this._volume;
     }
 
     /**
@@ -208,24 +177,20 @@ export default class Sound extends Playable {
             return;
         }
 
-        this._paused = false;
-
-        if (this._sourceNode) {
-            this._sourceNode.stop(0);
-            this._sourceNode.disconnect();
-        }
-
         this.applyOptions(options);
 
         this._sourceNode = this._audioContext.createBufferSource();
         this._sourceNode.buffer = this._source;
         this._sourceNode.loop = this._loop;
-        this._sourceNode.playbackRate.value = this._playbackRate;
+        this._sourceNode.playbackRate.value = this._speed;
 
         this._sourceNode.connect(this._gainNode);
         this._sourceNode.start(0, this._currentTime);
 
         this._startTime = this._audioContext.currentTime;
+        this._paused = false;
+
+        this.trigger('start');
     }
 
     /**
@@ -235,8 +200,6 @@ export default class Sound extends Playable {
         if (this._paused) {
             return;
         }
-
-        this._paused = true;
 
         const duration = this.duration,
             currentTime = this.currentTime;
@@ -248,6 +211,11 @@ export default class Sound extends Playable {
         }
 
         this._sourceNode.stop(0);
+        this._sourceNode.disconnect();
+        this._sourceNode = null;
+        this._paused = true;
+
+        this.trigger('stop');
     }
 
     /**
@@ -257,13 +225,13 @@ export default class Sound extends Playable {
         super.destroy();
 
         if (this._audioContext) {
+            this._audioContext = null;
+
             this._sourceNode.disconnect();
             this._sourceNode = null;
 
             this._gainNode.disconnect();
             this._gainNode = null;
-
-            this._audioContext = null;
         }
     }
 }

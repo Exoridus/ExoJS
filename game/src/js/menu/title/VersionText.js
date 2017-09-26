@@ -1,6 +1,6 @@
 /**
  * @class VersionText
- * @extends {Exo.Text}
+ * @extends {ext}
  */
 export default class VersionText extends Exo.Text {
 

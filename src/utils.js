@@ -1,4 +1,4 @@
-import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED, TYPE_PATTERN } from './const';
+import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED, FILE_TYPES } from './const';
 import support from './support';
 
 const
@@ -222,7 +222,7 @@ const
     determineMimeType = (arrayBuffer) => {
         const header = new Uint8Array(arrayBuffer);
 
-        for (const type of TYPE_PATTERN) {
+        for (const type of FILE_TYPES) {
             if (header.length < type.pattern.length) {
                 continue;
             }

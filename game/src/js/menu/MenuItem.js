@@ -1,6 +1,6 @@
 /**
  * @class MenuItem
- * @extends {Exo.Text}
+ * @extends {Text}
  */
 export default class MenuItem extends Exo.Text {
 
@@ -53,7 +53,7 @@ export default class MenuItem extends Exo.Text {
 
     /**
      * @public
-     * @param {Exo.Time} delta
+     * @param {Time} delta
      */
     update(delta) {
         const time = this._ticker * this._scalingSpeed,

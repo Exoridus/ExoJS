@@ -1,5 +1,4 @@
 import Renderable from './Renderable';
-import Vector from '../core/shape/Vector';
 import { removeItems } from '../utils';
 
 /**
@@ -19,12 +18,6 @@ export default class Container extends Renderable {
          * @member {Renderable[]}
          */
         this._children = [];
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._size = new Vector();
     }
 
     /**
@@ -38,50 +31,56 @@ export default class Container extends Renderable {
 
     /**
      * @public
-     * @member {Renderable|Container}
-     */
-    get parent() {
-        return this._parent;
-    }
-
-    set parent(parent) {
-        this._parent = parent;
-    }
-
-    /**
-     * @public
-     * @member {Vector}
-     */
-    get size() {
-        return this._size;
-    }
-
-    set size(size) {
-        this._size.copy(size);
-    }
-
-    /**
-     * @public
+     * @readonly
      * @member {Number}
      */
     get width() {
-        return this._size.x;
-    }
-
-    set width(width) {
-        this._size.x = width;
+        return this.getBounds().width;
     }
 
     /**
      * @public
+     * @readonly
      * @member {Number}
      */
     get height() {
-        return this._size.y;
+        return this.getBounds().height;
     }
 
-    set height(height) {
-        this._size.y = height;
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get left() {
+        return (this.x - this.width + this.origin.x);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get top() {
+        return (this.y - this.height + this.origin.y);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get right() {
+        return (this.x + this.width + this.origin.x);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get bottom() {
+        return (this.y + this.height + this.origin.y);
     }
 
     /**
@@ -129,12 +128,10 @@ export default class Container extends Renderable {
      * @returns {Container}
      */
     swapChildren(firstChild, secondChild) {
-        if (firstChild === secondChild) {
-            return this;
+        if (firstChild !== secondChild) {
+            this._children[this.getChildIndex(firstChild)] = secondChild;
+            this._children[this.getChildIndex(secondChild)] = firstChild;
         }
-
-        this._children[this.getChildIndex(firstChild)] = secondChild;
-        this._children[this.getChildIndex(secondChild)] = firstChild;
 
         return this;
     }
@@ -166,7 +163,7 @@ export default class Container extends Renderable {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
 
-        removeItems(this._children, this.getChildIndex(index), 1);
+        removeItems(this._children, this.getChildIndex(child), 1);
         this._children.splice(index, 0, child);
 
         return this;
@@ -194,12 +191,9 @@ export default class Container extends Renderable {
     removeChild(child) {
         const index = this._children.indexOf(child);
 
-        if (index === -1) {
-            return this;
+        if (index !== -1) {
+            this.removeChildAt(index);
         }
-
-        child.parent = null;
-        removeItems(this._children, index, 1);
 
         return this;
     }
@@ -211,7 +205,6 @@ export default class Container extends Renderable {
      * @returns {Container}
      */
     removeChildAt(index) {
-        this.getChildAt(index).parent = null;
         removeItems(this._children, index, 1);
 
         return this;
@@ -227,15 +220,13 @@ export default class Container extends Renderable {
     removeChildren(begin = 0, end = this._children.length) {
         const range = (end - begin);
 
-        if (!range && !this._children.length) {
-            return this;
-        }
-
-        if (range < 0 && range > end) {
+        if (range < 0 || range > end) {
             throw new Error('removeChildren: numeric values are outside the acceptable range.');
         }
 
-        this._children.splice(begin, range);
+        if (range || this._children.length) {
+            this._children.splice(begin, range);
+        }
 
         return this;
     }
@@ -243,19 +234,37 @@ export default class Container extends Renderable {
     /**
      * @override
      */
-    render(displayManager, parentTransform) {
-        if (!this.visible) {
-            return this;
-        }
+    render(displayManager, worldTransform) {
+        if (this.visible) {
+            const transform = this.worldTransform
+                .copy(worldTransform)
+                .multiply(this.getTransform());
 
-        this._worldTransform.copy(parentTransform);
-        this._worldTransform.multiply(this.transform);
-
-        for (let i = 0, len = this._children.length; i < len; i++) {
-            this._children[i].render(displayManager, this._worldTransform);
+            for (const child of this._children) {
+                child.render(displayManager, transform);
+            }
         }
 
         return this;
+    }
+
+    /**
+     * @override
+     */
+    getBounds() {
+        const bounds = this.bounds.reset();
+
+        bounds.addRectangle(this.getTransform(), this.getLocalBounds());
+
+        for (const child of this._children) {
+            if (!child.visible) {
+                continue;
+            }
+
+            bounds.addBounds(child.getBounds());
+        }
+
+        return bounds.set(minX, minY, maxX, maxY);
     }
 
     /**
@@ -266,8 +275,5 @@ export default class Container extends Renderable {
 
         this._children.length = 0;
         this._children = null;
-
-        this._size.destroy();
-        this._size = null;
     }
 }

@@ -9,23 +9,23 @@ export default class PointerManager extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */
-    constructor(game, channelBuffer) {
+    constructor(app, channelBuffer) {
         super(channelBuffer, CHANNEL_OFFSET.POINTER, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = game.canvas;
+        this._canvas = app.canvas;
 
         /**
          * @private
@@ -47,6 +47,13 @@ export default class PointerManager extends ChannelHandler {
     /**
      * @override
      */
+    update() {
+
+    }
+
+    /**
+     * @override
+     */
     destroy() {
         super.destroy();
 
@@ -56,7 +63,7 @@ export default class PointerManager extends ChannelHandler {
         this._pointers = null;
 
         this._canvas = null;
-        this._game = null;
+        this._app = null;
     }
 
     /**
@@ -65,13 +72,27 @@ export default class PointerManager extends ChannelHandler {
     _addEventListeners() {
         const canvas = this._canvas;
 
-        this._onTouchStartHandler = this._onTouchStart.bind(this);
-        this._onTouchEndHandler = this._onTouchEnd.bind(this);
-        this._onTouchMoveHandler = this._onTouchMove.bind(this);
+        this._onPointerDownHandler = this._onPointerDown.bind(this);
+        this._onPointerUpHandler = this._onPointerUp.bind(this);
+        this._onPointerCancelHandler = this._onPointerCancel.bind(this);
+        this._onPointerMoveHandler = this._onPointerMove.bind(this);
+        this._onPointerOverHandler = this._onPointerOver.bind(this);
+        this._onPointerOutHandler = this._onPointerOut.bind(this);
+        this._onWheelHandler = this._onWheel.bind(this);
+        this._stopEventHandler = this._stopEvent.bind(this);
 
-        canvas.addEventListener('touchstart', this._onTouchStartHandler, true);
-        canvas.addEventListener('touchend', this._onTouchEndHandler, true);
-        canvas.addEventListener('touchmove', this._onTouchMoveHandler, true);
+        // Pointer events
+        canvas.addEventListener('pointerdown', this._onPointerDownHandler, true);
+        canvas.addEventListener('pointerup', this._onPointerUpHandler, true);
+        canvas.addEventListener('pointercancel', this._onPointerCancelHandler, true);
+        canvas.addEventListener('pointermove', this._onPointerMoveHandler, true);
+        canvas.addEventListener('pointerover', this._onPointerOverHandler, true);
+        canvas.addEventListener('pointerout', this._onPointerOutHandler, true);
+
+        // Mouse events
+        canvas.addEventListener('wheel', this._onWheelHandler, true);
+        canvas.addEventListener('contextmenu', this._stopEventHandler, true);
+        canvas.addEventListener('selectstart', this._stopEventHandler, true);
     }
 
     /**
@@ -80,24 +101,62 @@ export default class PointerManager extends ChannelHandler {
     _removeEventListeners() {
         const canvas = this._canvas;
 
-        canvas.removeEventListener('touchstart', this._onTouchStartHandler, true);
-        canvas.removeEventListener('touchend', this._onTouchEndHandler, true);
-        canvas.removeEventListener('touchmove', this._onTouchMoveHandler, true);
+        // Pointer events
+        canvas.removeEventListener('pointerdown', this._onPointerDownHandler, true);
+        canvas.removeEventListener('pointerup', this._onPointerUpHandler, true);
+        canvas.removeEventListener('pointercancel', this._onPointerCancelHandler, true);
+        canvas.removeEventListener('pointermove', this._onPointerMoveHandler, true);
+        canvas.removeEventListener('pointerover', this._onPointerOverHandler, true);
+        canvas.removeEventListener('pointerout', this._onPointerOutHandler, true);
 
-        this._onTouchStartHandler = null;
-        this._onTouchEndHandler = null;
-        this._onTouchMoveHandler = null;
+        // Mouse specific
+        canvas.removeEventListener('wheel', this._onWheelHandler, true);
+        canvas.removeEventListener('contextmenu', this._stopEventHandler, true);
+        canvas.removeEventListener('selectstart', this._stopEventHandler, true);
+
+        this._onPointerDownHandler = null;
+        this._onPointerUpHandler = null;
+        this._onPointerCancelHandler = null;
+        this._onPointerMoveHandler = null;
+        this._onPointerOverHandler = null;
+        this._onPointerOutHandler = null;
+        this._stopEventHandler = null;
     }
 
-    _onTouchStart(event) {
-        console.log('touchdown', event);
+    /**
+     * @private
+     * @param {Event} event
+     */
+    _stopEvent(event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
     }
 
-    _onTouchEnd(event) {
-        console.log('touchup', event);
+    _onPointerDown(event) {
+        console.log('pointerdown', event);
     }
 
-    _onTouchMove(event) {
-        console.log('touchmove', event);
+    _onPointerUp(event) {
+        console.log('pointerup', event);
+    }
+
+    _onPointerCancel(event) {
+        console.log('pointercancel', event);
+    }
+
+    _onPointerMove(event) {
+        // console.log('pointermove', event);
+    }
+
+    _onPointerOver(event) {
+        console.log('pointerover', event);
+    }
+
+    _onPointerOut(event) {
+        console.log('pointerout', event);
+    }
+
+    _onWheel(event) {
+        console.log('wheel', event);
     }
 }

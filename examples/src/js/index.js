@@ -4,9 +4,9 @@
             return;
         }
 
-        if (window.game) {
-            window.game.destroy();
-            window.game = null;
+        if (window.app) {
+            window.app.destroy();
+            window.app = null;
 
             node = document.querySelector('#current-example');
             node.parentNode.removeChild(node);

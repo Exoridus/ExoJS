@@ -1,3 +1,5 @@
+import { degreesToRadians } from '../utils';
+
 /**
  * | a | b | x |
  * | c | d | y |
@@ -19,7 +21,11 @@ export default class Matrix {
      * @param {Number} [f=0]
      * @param {Number} [z=1]
      */
-    constructor(a = 1, b = 0, x = 0, c = 0, d = 1, y = 0, e = 0, f = 0, z = 1) {
+    constructor(
+        a = 1, b = 0, x = 0,
+        c = 0, d = 1, y = 0,
+        e = 0, f = 0, z = 1
+    ) {
 
         /**
          * @public
@@ -77,8 +83,9 @@ export default class Matrix {
 
         /**
          * @private
-         * @member {Float32Array} _array
+         * @member {?Float32Array} _array
          */
+        this._array = null;
     }
 
     /**
@@ -145,16 +152,14 @@ export default class Matrix {
      * @param {Number} z
      * @returns {Matrix}
      */
-    set(a, b, x, c, d, y, e, f, z) {
-        this.a = a;
-        this.b = b;
-        this.x = x;
-        this.c = c;
-        this.d = d;
-        this.y = y;
-        this.e = e;
-        this.f = f;
-        this.z = z;
+    set(
+        a = this.a, b = this.b, x = this.x,
+        c = this.c, d = this.d, y = this.y,
+        e = this.e, f = this.f, z = this.z
+    ) {
+        this.a = a; this.c = c; this.e = e;
+        this.b = b; this.d = d; this.f = f;
+        this.x = x; this.y = y; this.z = z;
 
         return this;
     }
@@ -166,11 +171,11 @@ export default class Matrix {
      * @returns {Matrix}
      */
     copy(matrix) {
-        return this.set(
-            matrix.a, matrix.b, matrix.x,
-            matrix.c, matrix.d, matrix.y,
-            matrix.e, matrix.f, matrix.z
-        );
+        this.a = matrix.a; this.c = matrix.c; this.e = matrix.e;
+        this.b = matrix.b; this.d = matrix.d; this.f = matrix.f;
+        this.x = matrix.x; this.y = matrix.y; this.z = matrix.z;
+
+        return this;
     }
 
     /**
@@ -209,11 +214,45 @@ export default class Matrix {
 
     /**
      * @public
-     * @param {Boolean} [transpose=false]
-     * @returns {Float32Array}
+     * @param {Vector} vector
+     * @returns {Matrix}
      */
-    toArray(transpose = false) {
-        return transpose ? this.transposedArray : this.array;
+    translate(translation) {
+        return this.multiply(new Matrix(
+            1, 0, translation.x,
+            0, 1, translation.y,
+            0, 0, 1
+        ));
+    }
+
+    /**
+     * @public
+     * @param {Number} angle
+     * @returns {Matrix}
+     */
+    rotate(angle) {
+        const radian = degreesToRadians(angle),
+            cos = Math.cos(radian),
+            sin = Math.sin(radian);
+
+        return this.multiply(new Matrix(
+            cos, -sin, 0,
+            sin, cos, 0,
+            0, 0, 1,
+        ));
+    }
+
+    /**
+     * @public
+     * @param {Number} angle
+     * @returns {Matrix}
+     */
+    scale(scale) {
+        return this.multiply(new Matrix(
+            scale.x, 0, 0,
+            0, scale.y, 0,
+            0, 0, 1
+        ));
     }
 
     /**
@@ -230,6 +269,15 @@ export default class Matrix {
 
     /**
      * @public
+     * @param {Boolean} [transpose=false]
+     * @returns {Float32Array}
+     */
+    toArray(transpose = false) {
+        return transpose ? this.transposedArray : this.array;
+    }
+
+    /**
+     * @public
      */
     destroy() {
         if (this._array) {
@@ -237,25 +285,17 @@ export default class Matrix {
             this._array = null;
         }
 
-        this.a = this.c = this.e = null;
-        this.b = this.d = this.f = null;
-        this.x = this.y = this.z = null;
-    }
+        this.a = null;
+        this.b = null;
+        this.x = null;
 
-    /**
-     * @public
-     * @static
-     * @param {...Matrix} matrices
-     * @returns {Matrix}
-     */
-    static multiply(...matrices) {
-        const result = new Matrix();
+        this.c = null;
+        this.d = null;
+        this.y = null;
 
-        for (const matrix of matrices) {
-            result.multiply(matrix);
-        }
-
-        return result;
+        this.e = null;
+        this.f = null;
+        this.z = null;
     }
 
     /**

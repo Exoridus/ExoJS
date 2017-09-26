@@ -13,16 +13,16 @@ export default class InputManager extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      */
-    constructor(game) {
+    constructor(app) {
         super(new ArrayBuffer(CHANNEL_LENGTH.GLOBAL * 4), 0, CHANNEL_LENGTH.GLOBAL);
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
@@ -34,27 +34,27 @@ export default class InputManager extends ChannelHandler {
          * @private
          * @member {Keyboard}
          */
-        this._keyboard = new Keyboard(game, this.channelBuffer);
+        this._keyboard = new Keyboard(app, this.channelBuffer);
 
         /**
          * @private
          * @member {Mouse}
          */
-        this._mouse = new Mouse(game, this.channelBuffer);
+        this._mouse = new Mouse(app, this.channelBuffer);
 
         /**
          * @private
          * @member {GamepadManager}
          */
-        this._gamepadManager = new GamepadManager(game, this.channelBuffer);
+        this._gamepadManager = new GamepadManager(app, this.channelBuffer);
 
         /**
          * @private
          * @member {PointerManager}
          */
-        this._pointerManager = new PointerManager(game, this.channelBuffer);
+        this._pointerManager = new PointerManager(app, this.channelBuffer);
 
-        game.on('input:add', this.add, this)
+        app.on('input:add', this.add, this)
             .on('input:remove', this.remove, this)
             .on('input:clear', this.clear, this);
     }
@@ -127,7 +127,7 @@ export default class InputManager extends ChannelHandler {
     destroy() {
         super.destroy();
 
-        this._game
+        this._app
             .off('input:add', this.add, this)
             .off('input:remove', this.remove, this)
             .off('input:clear', this.clear, this);
@@ -147,6 +147,6 @@ export default class InputManager extends ChannelHandler {
         this._pointerManager.destroy();
         this._pointerManager = null;
 
-        this._game = null;
+        this._app = null;
     }
 }

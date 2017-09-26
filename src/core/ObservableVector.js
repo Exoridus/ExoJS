@@ -1,4 +1,4 @@
-import Vector from './shape/Vector';
+import Vector from './Vector';
 
 /**
  * @class ObservableVector
@@ -104,9 +104,7 @@ export default class ObservableVector extends Vector {
      * @override
      */
     normalize() {
-        const mag = this.magnitude;
-
-        return this.set(this._x / mag, this._y / mag);
+        return this.divide(this.magnitude);
     }
 
     /**

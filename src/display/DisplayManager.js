@@ -4,7 +4,6 @@ import ParticleRenderer from '../particle/ParticleRenderer';
 import Color from '../core/Color';
 import Matrix from '../core/Matrix';
 import { BLEND_MODE } from '../const';
-import BlendMode from './BlendMode';
 import support from '../support';
 
 /**
@@ -14,7 +13,7 @@ export default class DisplayManager {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      * @param {Object} [config]
      * @param {Number} [config.width=800]
      * @param {Number} [config.height=600]
@@ -22,7 +21,7 @@ export default class DisplayManager {
      * @param {Boolean} [config.clearBeforeRender=true]
      * @param {Object} [config.contextOptions]
      */
-    constructor(game, {
+    constructor(app, {
         width = 800,
         height = 600,
         clearColor = Color.White,
@@ -44,7 +43,7 @@ export default class DisplayManager {
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = game.canvas;
+        this._canvas = app.canvas;
 
         /**
          * @private
@@ -112,9 +111,9 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map<Number, BlendMode>}
+         * @member {Map<Number, Object<String, Number>>}
          */
-        this._blendModes = this._createBlendModes(this._context);
+        this._blendModes = new Map();
 
         /**
          * @private
@@ -129,9 +128,10 @@ export default class DisplayManager {
         this._projection = new Matrix();
 
         this._addEvents();
+        this._addBlendmodes();
         this._setGLFlags();
 
-        this.setBlendMode(BLEND_MODE.SOURCE_OVER);
+        this.setBlendMode(BLEND_MODE.NORMAL);
         this.setClearColor(this._clearColor);
         this.setRenderTarget(this._rootRenderTarget);
 
@@ -140,7 +140,7 @@ export default class DisplayManager {
 
         this.resize(width, height);
 
-        game.on('display:begin', this.begin, this)
+        app.on('display:begin', this.begin, this)
             .on('display:render', this.render, this)
             .on('display:end', this.end, this)
             .on('display:clear', this.clear, this)
@@ -261,7 +261,7 @@ export default class DisplayManager {
             const blending = this._blendModes.get(blendMode);
 
             this._currentBlendMode = blendMode;
-            this._context.blendFunc(blending.sFactor, blending.dFactor);
+            this._context.blendFunc(blending.src, blending.dst);
         }
     }
 
@@ -381,10 +381,6 @@ export default class DisplayManager {
             renderer.destroy();
         }
 
-        for (const blendMode of this._blendModes.values()) {
-            blendMode.destroy();
-        }
-
         this._renderers.clear();
         this._renderers = null;
 
@@ -425,33 +421,28 @@ export default class DisplayManager {
     }
 
     /**
-     * @override
+     * @private
      */
-    _createBlendModes(gl) {
-        const one = gl.ONE,
-            srcAlpha = gl.SRC_ALPHA,
-            dstAlpha = gl.DST_ALPHA,
-            oneMinusSrcAlpha = gl.ONE_MINUS_SRC_ALPHA;
+    _addBlendmodes() {
+        const gl = this._context;
 
-        return new Map([
-            [BLEND_MODE.SOURCE_OVER, new BlendMode(one, oneMinusSrcAlpha, 'source-over')],
-            [BLEND_MODE.ADD, new BlendMode(srcAlpha, dstAlpha, 'lighter')],
-            [BLEND_MODE.MULTIPLY, new BlendMode(dstAlpha, oneMinusSrcAlpha, 'multiply')],
-            [BLEND_MODE.SCREEN, new BlendMode(srcAlpha, one, 'screen')],
-            [BLEND_MODE.OVERLAY, new BlendMode(one, oneMinusSrcAlpha, 'overlay')],
-            [BLEND_MODE.DARKEN, new BlendMode(one, oneMinusSrcAlpha, 'darken')],
-            [BLEND_MODE.LIGHTEN, new BlendMode(one, oneMinusSrcAlpha, 'lighten')],
-            [BLEND_MODE.COLOR_DODGE, new BlendMode(one, oneMinusSrcAlpha, 'color-dodge')],
-            [BLEND_MODE.COLOR_BURN, new BlendMode(one, oneMinusSrcAlpha, 'color-burn')],
-            [BLEND_MODE.HARD_LIGHT, new BlendMode(one, oneMinusSrcAlpha, 'hard-light')],
-            [BLEND_MODE.SOFT_LIGHT, new BlendMode(one, oneMinusSrcAlpha, 'soft-light')],
-            [BLEND_MODE.DIFFERENCE, new BlendMode(one, oneMinusSrcAlpha, 'difference')],
-            [BLEND_MODE.EXCLUSION, new BlendMode(one, oneMinusSrcAlpha, 'exclusion')],
-            [BLEND_MODE.HUE, new BlendMode(one, oneMinusSrcAlpha, 'hue')],
-            [BLEND_MODE.SATURATION, new BlendMode(one, oneMinusSrcAlpha, 'saturation')],
-            [BLEND_MODE.COLOR, new BlendMode(one, oneMinusSrcAlpha, 'color')],
-            [BLEND_MODE.LUMINOSITY, new BlendMode(one, oneMinusSrcAlpha, 'luminosity')],
-        ]);
+        this._blendModes
+            .set(BLEND_MODE.NORMAL, {
+                src: gl.ONE,
+                dst: gl.ONE_MINUS_SRC_ALPHA,
+            })
+            .set(BLEND_MODE.ADD, {
+                src: gl.SRC_ALPHA,
+                dst: gl.DST_ALPHA,
+            })
+            .set(BLEND_MODE.MULTIPLY, {
+                src: gl.DST_ALPHA,
+                dst: gl.ONE_MINUS_SRC_ALPHA,
+            })
+            .set(BLEND_MODE.SCREEN, {
+                src: gl.SRC_ALPHA,
+                dst: gl.ONE,
+            });
     }
 
     /**

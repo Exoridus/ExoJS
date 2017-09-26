@@ -9,13 +9,13 @@ const FACE_DIRECTION = {
 
 /**
  * @class Player
- * @extends {Exo.Sprite}
+ * @extends {Sprite}
  */
-export default class Player extends Exo.Sprite {
+export default class Player extends Sprite {
 
     /**
      * @constructor
-     * @param {Exo.Texture} texture
+     * @param {Texture} texture
      */
     constructor(texture) {
         super(texture);
@@ -40,13 +40,13 @@ export default class Player extends Exo.Sprite {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._frame = new Exo.Rectangle(0, 0, playerWidth, playerHeight);
 
         /**
          * @private
-         * @member {Exo.FrameAnimation}
+         * @member {FrameAnimation}
          */
         this._frameAnimation = new Exo.FrameAnimation();
 

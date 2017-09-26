@@ -39,9 +39,10 @@ export default class Color {
         this._a = clamp(a, 0, 1);
 
         /**
-         * @private
-         * @member {Float32Array} _array
+         * @public
+         * @member {?Float32Array}
          */
+        this._array = null;
     }
 
     /**
@@ -267,38 +268,6 @@ export default class Color {
         this.r = Math.round((red + lightnessAdjust) * 255);
         this.g = Math.round((green + lightnessAdjust) * 255);
         this.b = Math.round((blue + lightnessAdjust) * 255);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} percentage
-     * @returns {Color}
-     */
-    darken(percentage) {
-        const value = Math.round(255 / 100 * percentage);
-
-        this.r = Math.max(0, this.r - value);
-        this.g = Math.max(0, this.g - value);
-        this.b = Math.max(0, this.b - value);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} percentage
-     * @returns {Color}
-     */
-    lighten(percentage) {
-        const value = Math.round(255 / 100 * percentage);
-
-        this.r = Math.min(255, this.r + value);
-        this.g = Math.min(255, this.g + value);
-        this.b = Math.min(255, this.b + value);
 
         return this;
     }

@@ -80,9 +80,10 @@ export default class Quadtree {
      * @returns {Quadtree}
      */
     clear() {
-        for (const quadtree of this._children) {
-            quadtree.clear();
+        for (const child of this._children.values()) {
+            child.clear();
         }
+
         this._children.clear();
         this._entities.clear();
 
@@ -162,14 +163,10 @@ export default class Quadtree {
      * @returns {?Quadtree}
      */
     _getChildNode(entity) {
-        const children = this._children,
-            length = children.size,
-            bounds = entity.getBounds();
+        const bounds = entity.getBounds();
 
-        for (let i = 0; i < length; i++) {
-            const child = children.get(i);
-
-            if (child.bounds.contains(bounds)) {
+        for (const child of this._children.values()) {
+            if (child.bounds.inside(bounds)) {
                 return child;
             }
         }

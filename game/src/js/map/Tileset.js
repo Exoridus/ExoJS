@@ -7,14 +7,14 @@ export default class Tileset {
 
     /**
      * @constructor
-     * @param {Exo.Texture} texture
+     * @param {Texture} texture
      * @param {Number} tileSize
      */
     constructor(texture, tileSize) {
 
         /**
          * @private
-         * @member {Exo.Texture}
+         * @member {Texture}
          */
         this._texture = texture;
 
@@ -70,7 +70,7 @@ export default class Tileset {
 
     /**
      * @public
-     * @member {Exo.Texture}
+     * @member {Texture}
      */
     get texture() {
         return this._texture;
@@ -78,7 +78,7 @@ export default class Tileset {
 
     /**
      * @public
-     * @param {Exo.Sprite} tile
+     * @param {Sprite} tile
      * @param {Number} level
      */
     setBlock(tile, level) {

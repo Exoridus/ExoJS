@@ -1,4 +1,5 @@
 {
+  "plugins": ["static-fs"],
   "presets": [
     ["env", {
       "targets": {

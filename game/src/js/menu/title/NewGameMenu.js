@@ -10,13 +10,13 @@ export default class NewGameMenu extends Menu {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      * @param {?String} [parentMenu=null]
      */
-    constructor(game, parentMenu) {
-        super(game, parentMenu);
+    constructor(app, parentMenu) {
+        super(app, parentMenu);
 
-        const canvas = game.canvas;
+        const canvas = app.canvas;
 
         /**
          * @private
@@ -70,11 +70,11 @@ export default class NewGameMenu extends Menu {
     }
 
     _onSelectCreateWorld() {
-        this._game.trigger('scene:change', new GameScene());
+        this._app.trigger('scene:change', new GameScene());
     }
 
     _onSelectCreateCharacter() {
-        this._game.trigger('scene:change', new GameScene());
+        this._app.trigger('scene:change', new GameScene());
     }
 
     destroy() {

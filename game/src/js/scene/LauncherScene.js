@@ -6,7 +6,7 @@ const Keyboard = Exo.Keyboard,
 
 /**
  * @class LauncherScene
- * @extends {Exo.Scene}
+ * @extends {Scene}
  */
 export default class LauncherScene extends Exo.Scene {
 
@@ -54,11 +54,9 @@ export default class LauncherScene extends Exo.Scene {
         this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
         loader.on('progress', (length, index, resource) => this._renderProgress(index / length * 100))
-            .addList('sprite', {
+            .addList('texture', {
                 'title/logo': 'image/title/logo.png',
                 'title/background': 'image/title/background.jpg',
-            })
-            .addList('texture', {
                 'game/tileset': 'image/game/tileset.png',
                 'game/player': 'image/game/player.png',
             })
@@ -70,7 +68,7 @@ export default class LauncherScene extends Exo.Scene {
                 family: 'AndyBold'
             })
             .load()
-            .then(() => this.game.trigger('scene:start'));
+            .then(() => this.app.trigger('scene:start'));
 
         this._renderProgress(0);
     }
@@ -88,7 +86,7 @@ export default class LauncherScene extends Exo.Scene {
 
         /**
          * @private
-         * @member {Exo.Input}
+         * @member {Input}
          */
         this._playInput = new Exo.Input([
             Keyboard.Enter,
@@ -102,14 +100,14 @@ export default class LauncherScene extends Exo.Scene {
         this._$indicatorText.html('PLAY');
         this._$indicatorText.on('click', this._openTitleHandler);
 
-        this.game.trigger('input:add', this._playInput);
+        this.app.trigger('input:add', this._playInput);
     }
 
     /**
      * @override
      */
     unload() {
-        this.game.trigger('input:remove', this._playInput);
+        this.app.trigger('input:remove', this._playInput);
         this._$indicatorText.off('click', this._openTitleHandler);
 
         this._playInput.destroy();
@@ -169,6 +167,6 @@ export default class LauncherScene extends Exo.Scene {
      * @private
      */
     _openTitle() {
-        this.game.trigger('scene:change', new TitleScene());
+        this.app.trigger('scene:change', new TitleScene());
     }
 }

@@ -1,24 +1,24 @@
-window.game = new Exo.Game({
+window.app = new Exo.Application({
     basePath: 'assets/',
     canvasParent: '.container-canvas',
     width: 800,
     height: 600,
 });
 
-window.game.start(new Exo.Scene({
+window.app.start(new Exo.Scene({
 
     load(loader) {
         loader.addItem('texture', 'bunny', 'image/bunny.png')
             .load()
-            .then(() => this.game.trigger('scene:start'));
+            .then(() => this.app.trigger('scene:start'));
     },
 
     init() {
-        const game = this.game,
-            canvas = game.canvas;
+        const app = this.app,
+            canvas = app.canvas;
 
         this.bunnies = [];
-        this.bunnyTexture = game.loader.resources.get('texture', 'bunny');
+        this.bunnyTexture = app.loader.resources.get('texture', 'bunny');
 
         this.startAmount = 10;
         this.addAmount = 50;
@@ -26,7 +26,7 @@ window.game.start(new Exo.Scene({
         this.maxX = canvas.width;
         this.maxY = canvas.height;
 
-        game.trigger('input:add', new Exo.Input([
+        app.trigger('input:add', new Exo.Input([
             Exo.Keyboard.Space,
             Exo.Mouse.LeftButton,
             Exo.Gamepad.FaceButtonBottom,
@@ -52,13 +52,13 @@ window.game.start(new Exo.Scene({
     },
 
     update() {
-        const game = this.game,
+        const app = this.app,
             bunnies = this.bunnies,
             len = bunnies.length,
             maxX = this.maxX,
             maxY = this.maxY;
 
-        game.trigger('display:begin');
+        app.trigger('display:begin');
 
         for (let i = 0; i < len; i++) {
             const bunny = bunnies[i];
@@ -86,9 +86,9 @@ window.game.start(new Exo.Scene({
                 bunny.y = 0;
             }
 
-            game.trigger('display:render', bunny);
+            app.trigger('display:render', bunny);
         }
 
-        game.trigger('display:end');
+        app.trigger('display:end');
     },
 }));

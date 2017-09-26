@@ -15,16 +15,12 @@ export default class Renderer {
         this._context = null;
 
         /**
-         * Vertex buffer that will be fed by the vertexData.
-         *
          * @private
          * @member {?WebGLBuffer}
          */
         this._vertexBuffer = null;
 
         /**
-         * Index buffer that will be fed by the indexData.
-         *
          * @private
          * @member {?WebGLBuffer}
          */
@@ -62,6 +58,7 @@ export default class Renderer {
 
     /**
      * @public
+     * @abstract
      * @param {*} renderable
      */
     render(renderable) { // eslint-disable-line
@@ -70,6 +67,7 @@ export default class Renderer {
 
     /**
      * @public
+     * @abstract
      */
     flush() {
         // do nothing

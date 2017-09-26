@@ -100,7 +100,7 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Boolean}
          */
-        this._bound = false;
+        this._isBound = false;
     }
 
     /**
@@ -126,7 +126,7 @@ export default class ParticleRenderer extends Renderer {
      * @override
      */
     bind() {
-        if (!this._bound) {
+        if (!this._isBound) {
             const gl = this._context;
 
             gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
@@ -136,7 +136,7 @@ export default class ParticleRenderer extends Renderer {
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
 
             this._shader.bind();
-            this._bound = true;
+            this._isBound = true;
         }
     }
 
@@ -144,10 +144,10 @@ export default class ParticleRenderer extends Renderer {
      * @override
      */
     unbind() {
-        if (this._bound) {
+        if (this._isBound) {
             this.flush();
             this._shader.unbind();
-            this._bound = false;
+            this._isBound = false;
         }
     }
 
@@ -244,7 +244,7 @@ export default class ParticleRenderer extends Renderer {
     destroy() {
         super.destroy();
 
-        if (this._bound) {
+        if (this._isBound) {
             this.unbind();
         }
 
@@ -262,6 +262,6 @@ export default class ParticleRenderer extends Renderer {
         this._maxParticles = null;
         this._batchSize = null;
         this._currentTexture = null;
-        this._bound = null;
+        this._isBound = null;
     }
 }

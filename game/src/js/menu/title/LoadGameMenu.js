@@ -9,13 +9,13 @@ export default class LoadGameMenu extends Menu {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      * @param {String} parentMenu
      */
-    constructor(game, parentMenu) {
-        super(game, parentMenu);
+    constructor(app, parentMenu) {
+        super(app, parentMenu);
 
-        const canvas = game.canvas;
+        const canvas = app.canvas;
 
         /**
          * @private
@@ -60,7 +60,7 @@ export default class LoadGameMenu extends Menu {
     }
 
     _onSelectLoadWorld() {
-        this._game.setCurrentScene('game');
+        this._app.trigger('scene:change', 'game');
     }
 
     destroy() {

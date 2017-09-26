@@ -1,3 +1,10 @@
+/**
+ * @typedef {Object} FileType
+ * @property {String} mimeType
+ * @property {Number[]} pattern
+ * @property {Number[]} mask
+ */
+
 export const
 
     /**
@@ -54,7 +61,6 @@ export const
         RECTANGLE: 2,
         CIRCLE: 3,
         ELLIPSIS: 4,
-        POINT: 5,
     },
 
     /**
@@ -207,42 +213,16 @@ export const
      * @constant
      * @name BLEND_MODE
      * @type {Object<String, Number>}
-     * @property {Number} SOURCE_OVER
+     * @property {Number} NORMAL
      * @property {Number} ADD
      * @property {Number} MULTIPLY
      * @property {Number} SCREEN
-     * @property {Number} OVERLAY
-     * @property {Number} DARKEN
-     * @property {Number} LIGHTEN
-     * @property {Number} COLOR_DODGE
-     * @property {Number} COLOR_BURN
-     * @property {Number} HARD_LIGHT
-     * @property {Number} SOFT_LIGHT
-     * @property {Number} DIFFERENCE
-     * @property {Number} EXCLUSION
-     * @property {Number} HUE
-     * @property {Number} SATURATION
-     * @property {Number} COLOR
-     * @property {Number} LUMINOSITY
      */
     BLEND_MODE = {
         SOURCE_OVER: 0,
         ADD: 1,
         MULTIPLY: 2,
         SCREEN: 3,
-        OVERLAY: 4,
-        DARKEN: 5,
-        LIGHTEN: 6,
-        COLOR_DODGE: 7,
-        COLOR_BURN: 8,
-        HARD_LIGHT: 9,
-        SOFT_LIGHT: 10,
-        DIFFERENCE: 11,
-        EXCLUSION: 12,
-        HUE: 13,
-        SATURATION: 14,
-        COLOR: 15,
-        LUMINOSITY: 16,
     },
 
     /**
@@ -280,7 +260,13 @@ export const
      */
     NEWLINE = /(?:\r\n|\r|\n)/,
 
-    TYPE_PATTERN = [{
+    /**
+     * @public
+     * @constant
+     * @name FILE_TYPES
+     * @type {FileType[]}
+     */
+    FILE_TYPES = [{
         mimeType: 'image/x-icon',
         pattern: [0x00, 0x00, 0x01, 0x00],
         mask: [0xFF, 0xFF, 0xFF, 0xFF],

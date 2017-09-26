@@ -8,10 +8,10 @@ import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
 
 /**
- * @class Game
+ * @class Application
  * @extends {EventEmitter}
  */
-export default class Game extends EventEmitter {
+export default class Application extends EventEmitter {
 
     /**
      * @constructor
@@ -101,7 +101,7 @@ export default class Game extends EventEmitter {
          * @private
          * @member {Boolean}
          */
-        this._running = false;
+        this._isRunning = false;
 
         if (this._canvasParent) {
             this._canvasParent.appendChild(this._canvas);
@@ -176,11 +176,11 @@ export default class Game extends EventEmitter {
      * @param {Scene} scene
      */
     start(scene) {
-        if (this._running) {
+        if (this._isRunning) {
             throw new Error('Game instance is already running!');
         }
 
-        this._running = true;
+        this._isRunning = true;
 
         this.trigger('scene:change', scene);
         this._startGameLoop();
@@ -190,11 +190,11 @@ export default class Game extends EventEmitter {
      * @public
      */
     stop() {
-        if (!this._running) {
+        if (!this._isRunning) {
             throw new Error('Game instance is not running.');
         }
 
-        this._running = false;
+        this._isRunning = false;
 
         this.trigger('scene:stop');
         this._stopGameLoop();
@@ -206,7 +206,9 @@ export default class Game extends EventEmitter {
     destroy() {
         super.destroy();
 
-        this._stopGameLoop();
+        if (this._isRunning) {
+            this.stop();
+        }
 
         if (this._canvasParent) {
             this._canvasParent.removeChild(this._canvas);
@@ -235,7 +237,7 @@ export default class Game extends EventEmitter {
         this._canvasParent = null;
         this._updateHandler = null;
         this._updateId = null;
-        this._running = null;
+        this._isRunning = null;
     }
 
     /**

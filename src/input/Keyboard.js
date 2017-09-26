@@ -9,17 +9,17 @@ export default class Keyboard extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */
-    constructor(game, channelBuffer) {
+    constructor(app, channelBuffer) {
         super(channelBuffer, CHANNEL_OFFSET.KEYBOARD, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
@@ -79,7 +79,7 @@ export default class Keyboard extends ChannelHandler {
         this._channelsReleased = null;
 
         this._flags = null;
-        this._game = null;
+        this._app = null;
     }
 
     /**

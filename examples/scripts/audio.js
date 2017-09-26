@@ -1,35 +1,35 @@
-window.game = new Exo.Game({
+window.app = new Exo.Application({
     basePath: 'assets/',
     canvasParent: '.container-canvas',
     width: 800,
     height: 600,
 });
 
-window.game.start(new Exo.Scene({
+window.app.start(new Exo.Scene({
 
     load(loader) {
         loader.addItem('music', 'example', 'audio/example.ogg')
             .load()
-            .then(() => this.game.trigger('scene:start'));
+            .then(() => this.app.trigger('scene:start'));
     },
 
     init() {
-        const game = this.game,
-            canvas = game.canvas,
+        const app = this.app,
+            canvas = app.canvas,
             width = canvas.width,
             height = canvas.height;
 
         /**
          * @private
-         * @member {Exo.Music}
+         * @member {Music}
          */
-        this._music = game.loader.resources.get('music', 'example');
+        this._music = app.loader.resources.get('music', 'example');
 
         /**
          * @private
-         * @member {Exo.AudioAnalyser}
+         * @member {AudioAnalyser}
          */
-        this._analyser = new Exo.AudioAnalyser(game.mediaManager);
+        this._analyser = new Exo.AudioAnalyser(app.mediaManager);
 
         /**
          * @private
@@ -65,19 +65,19 @@ window.game.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Exo.Color}
+         * @member {Color}
          */
         this._color = new Exo.Color();
 
         /**
          * @private
-         * @member {Exo.Time}
+         * @member {Time}
          */
         this._time = new Exo.Time();
 
         /**
          * @private
-         * @member {Exo.Input}
+         * @member {Input}
          */
         this._input = new Exo.Input([
             Exo.Keyboard.Space,
@@ -91,7 +91,7 @@ window.game.start(new Exo.Scene({
 
         canvas.parentNode.appendChild(this._canvas);
 
-        game.trigger('input:add', this._input)
+        app.trigger('input:add', this._input)
             .trigger('media:play', this._music, { loop: true });
     },
 
@@ -130,7 +130,7 @@ window.game.start(new Exo.Scene({
             }
         }
 
-        this.game.trigger('display:clear', this._color.set(r / length, g / length, b / length));
+        this.app.trigger('display:clear', this._color.set(r / length, g / length, b / length));
 
         context.clearRect(0, 0, width, height);
         context.beginPath();

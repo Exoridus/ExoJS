@@ -1,4 +1,5 @@
 import { SHAPE } from '../../const';
+import Vector from '../Vector';
 
 /**
  * @abstract
@@ -7,14 +8,28 @@ import { SHAPE } from '../../const';
 export default class Shape {
 
     /**
-     * @private
-     * @member {Float32Array} _array
+     * @constructor
      */
+    constructor(x = 0, y = 0) {
 
-    /**
-     * @private
-     * @member {Rectangle} _bounds
-     */
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._position = new Vector(x, y);
+
+        /**
+         * @private
+         * @member {Float32Array} _array
+         */
+        this._array = null;
+
+        /**
+         * @private
+         * @member {Rectangle} _bounds
+         */
+        this._bounds = null;
+    }
 
     /**
      * @public
@@ -24,6 +39,42 @@ export default class Shape {
      */
     get type() {
         return SHAPE.NONE;
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get position() {
+        return this._position;
+    }
+
+    set position(position) {
+        this._position.copy(position);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get x() {
+        return this._position.x;
+    }
+
+    set x(x) {
+        this._position.x = x;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get y() {
+        return this._position.y;
+    }
+
+    set y(y) {
+        this._position.y = y;
     }
 
     /**
@@ -58,16 +109,16 @@ export default class Shape {
     /**
      * @public
      * @abstract
-     * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
+     * @param {Shape|Rectangle|Circle} shape
      */
-    copy(shape) { // eslint-disable-line
+    copy(shape) {
         throw new Error('Method not implemented!');
     }
 
     /**
      * @public
      * @abstract
-     * @returns {Shape|Vector|Rectangle|Cirlce|Polygon}
+     * @returns {Shape|Rectangle|Circle}
      */
     clone() {
         throw new Error('Method not implemented!');
@@ -78,6 +129,15 @@ export default class Shape {
      * @abstract
      */
     reset() {
+        throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @param {Shape|Rectangle|Circle} shape
+     */
+    equals(shape) {
         throw new Error('Method not implemented!');
     }
 
@@ -102,20 +162,30 @@ export default class Shape {
     /**
      * @public
      * @abstract
-     * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
+     * @param {Vector} vector
      * @returns {Boolean}
      */
-    contains(shape) { // eslint-disable-line
+    contains(vector) {
         throw new Error('Method not implemented!');
     }
 
     /**
      * @public
      * @abstract
-     * @param {Shape|Vector|Rectangle|Cirlce|Polygon} shape
+     * @param {Shape|Rectangle|Circle} shape
      * @returns {Boolean}
      */
-    intersects(shape) { // eslint-disable-line
+    intersects(shape) {
+        throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @param {Shape|Rectangle|Circle} shape
+     * @returns {Boolean}
+     */
+    inside(shape) {
         throw new Error('Method not implemented!');
     }
 
@@ -133,5 +203,8 @@ export default class Shape {
             this._bounds.destroy();
             this._bounds = null;
         }
+
+        this._position.destroy();
+        this._position = null;
     }
 }

@@ -1,7 +1,7 @@
 import EventEmitter from './EventEmitter';
 import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
-import { DEG_TO_RAD } from '../const';
+import { degreesToRadians } from '../utils';
 
 /**
  * @class Transformable
@@ -37,7 +37,7 @@ export default class Transformable extends EventEmitter {
          * @private
          * @member {ObservableVector}
          */
-        this._origin = new ObservableVector(this._setDirty, this, 0, 0);
+        this._origin = new ObservableVector(this._setDirty, this);
 
         /**
          * @private
@@ -50,6 +50,18 @@ export default class Transformable extends EventEmitter {
          * @member {Boolean}
          */
         this._dirtyTransform = true;
+    }
+
+    /**
+     * @public
+     * @member {ObservableVector}
+     */
+    get position() {
+        return this._position;
+    }
+
+    set position(position) {
+        this._position.copy(position);
     }
 
     /**
@@ -78,19 +90,7 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Vector}
-     */
-    get position() {
-        return this._position;
-    }
-
-    set position(position) {
-        this._position.copy(position);
-    }
-
-    /**
-     * @public
-     * @member {Vector}
+     * @member {ObservableVector}
      */
     get scale() {
         return this._scale;
@@ -102,7 +102,7 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {ObservableVector}
      */
     get origin() {
         return this._origin;
@@ -129,6 +129,19 @@ export default class Transformable extends EventEmitter {
      * @member {Matrix}
      */
     get transform() {
+        return this.getTransform();
+    }
+
+    set transform(transform) {
+        this._transform.copy(transform);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Matrix}
+     */
+    getTransform() {
         if (this._dirtyTransform) {
             this.updateTransform();
             this._dirtyTransform = false;
@@ -137,8 +150,33 @@ export default class Transformable extends EventEmitter {
         return this._transform;
     }
 
-    set transform(transform) {
-        this._transform.copy(transform);
+    /**
+     * @public
+     * @chainable
+     * @returns {Transformable}
+     */
+    updateTransform() {
+        const transform = this._transform,
+            position = this._position,
+            scale = this._scale,
+            origin = this._origin,
+            radian = degreesToRadians(this._rotation),
+            cos = Math.cos(radian),
+            sin = Math.sin(radian),
+            sxc = scale.x * cos,
+            syc = scale.y * cos,
+            sxs = scale.x * sin,
+            sys = scale.y * sin;
+
+        transform.a = sxc;
+        transform.b = sys;
+        transform.x = (origin.x * -sxc) - (origin.y * sys) + position.x;
+
+        transform.c = -sxs;
+        transform.d = syc;
+        transform.y = (origin.x * sxs) - (origin.y * syc) + position.y;
+
+        return this;
     }
 
     /**
@@ -214,35 +252,6 @@ export default class Transformable extends EventEmitter {
      */
     rotate(angle) {
         return this.setRotation(this._rotation + angle);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Transformable}
-     */
-    updateTransform() {
-        const transform = this._transform,
-            position = this._position,
-            scale = this._scale,
-            origin = this._origin,
-            angle = this._rotation * DEG_TO_RAD,
-            cos = Math.cos(angle),
-            sin = Math.sin(angle),
-            sxc = scale.x * cos,
-            syc = scale.y * cos,
-            sxs = scale.x * sin,
-            sys = scale.y * sin;
-
-        transform.a = sxc;
-        transform.b = sys;
-        transform.x = (origin.x * -sxc) - (origin.y * sys) + position.x;
-
-        transform.c = -sxs;
-        transform.d = syc;
-        transform.y = (origin.x * sxs) - (origin.y * syc) + position.y;
-
-        return this;
     }
 
     /**

@@ -5,15 +5,15 @@ export default class SceneManager {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      */
-    constructor(game) {
+    constructor(app) {
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
@@ -25,9 +25,9 @@ export default class SceneManager {
          * @private
          * @member {Boolean}
          */
-        this._sceneActive = false;
+        this._isSceneActive = false;
 
-        game.on('scene:change', this.onSceneChange, this)
+        app.on('scene:change', this.onSceneChange, this)
             .on('scene:start', this.onSceneStart, this)
             .on('scene:stop', this.onSceneStop, this);
     }
@@ -37,11 +37,9 @@ export default class SceneManager {
      * @param {Time} delta
      */
     update(delta) {
-        if (!this._currentScene || !this._sceneActive) {
-            return;
+        if (this._currentScene || this._isSceneActive) {
+            this._currentScene.update(delta);
         }
-
-        this._currentScene.update(delta);
     }
 
     /**
@@ -49,11 +47,11 @@ export default class SceneManager {
      * @param {Scene} scene
      */
     onSceneChange(scene) {
-        this._game.trigger('scene:stop');
+        this._app.trigger('scene:stop');
 
         this._currentScene = scene;
-        this._currentScene.game = this._game;
-        this._currentScene.load(this._game.loader);
+        this._currentScene.app = this._app;
+        this._currentScene.load(this._app.loader);
     }
 
     /**
@@ -64,11 +62,11 @@ export default class SceneManager {
             throw new Error('No scene was specified, use scene:change!');
         }
 
-        if (this._sceneActive) {
+        if (this._isSceneActive) {
             throw new Error('Scene can only be started once!');
         }
 
-        this._sceneActive = true;
+        this._isSceneActive = true;
         this._currentScene.init();
     }
 
@@ -80,26 +78,26 @@ export default class SceneManager {
             return;
         }
 
-        if (this._sceneActive) {
+        if (this._isSceneActive) {
             this._currentScene.unload();
-            this._sceneActive = false;
+            this._isSceneActive = false;
         }
 
         this._currentScene.destroy();
         this._currentScene = null;
 
-        this._game.loader.off();
+        this._app.loader.off();
     }
 
     /**
      * @public
      */
     destroy() {
-        this._game.trigger('scene:stop')
+        this._app.trigger('scene:stop')
             .off('scene:change', this.onSceneChange, this)
             .off('scene:start', this.onSceneStart, this)
             .off('scene:stop', this.onSceneStop, this);
 
-        this._game = null;
+        this._app = null;
     }
 }

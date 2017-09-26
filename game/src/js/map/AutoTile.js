@@ -31,7 +31,7 @@ export default class AutoTile {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._fullRect = new Exo.Rectangle(
             x * this._width,
@@ -42,7 +42,7 @@ export default class AutoTile {
 
         /**
          * @private
-         * @member {Exo.Rectangle}
+         * @member {Rectangle}
          */
         this._tileRect = new Exo.Rectangle(
             this._fullRect.x + (tileSize * 0.5),
@@ -90,7 +90,7 @@ export default class AutoTile {
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get fullRect() {
         return this._fullRect;
@@ -102,7 +102,7 @@ export default class AutoTile {
 
     /**
      * @public
-     * @member {Exo.Rectangle}
+     * @member {Rectangle}
      */
     get tileRect() {
         return this._tileRect;

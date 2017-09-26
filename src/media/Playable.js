@@ -1,22 +1,69 @@
 import { clamp } from '../utils';
+import EventEmitter from '../core/EventEmitter';
 
 /**
  * @abstract
  * @class Playable
+ * @extends {EventEmitter}
  */
-export default class Playable {
+export default class Playable extends EventEmitter {
 
     /**
      * @constructor
-     * @param {HTMLMediaElement|*} source
+     * @param {HTMLMediaElement|AudioBuffer} source
      */
     constructor(source) {
+        super();
 
         /**
          * @private
-         * @member {HTMLMediaElement|*}
+         * @member {HTMLMediaElement|AudioBuffer}
          */
         this._source = source;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._duration = source.duration || 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._volume = source.volume || 1;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._speed = source.playbackRate || 1;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._loop = source.loop || false;
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @readonly
+     * @member {?AudioContext}
+     */
+    get audioContext() {
+        return null;
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @readonly
+     * @member {?AudioNode}
+     */
+    get analyserTarget() {
+        return null;
     }
 
     /**
@@ -34,7 +81,7 @@ export default class Playable {
      * @member {Number}
      */
     get duration() {
-        return this._source.duration;
+        return this._duration;
     }
 
     /**
@@ -42,11 +89,47 @@ export default class Playable {
      * @member {Number}
      */
     get volume() {
-        return this._source.volume;
+        return this._volume;
     }
 
-    set volume(volume) {
-        this._source.volume = clamp(volume, 0, 2);
+    set volume(value) {
+        const volume = clamp(value, 0, 2);
+
+        if (this.volume !== volume) {
+            this._source.volume = this._volume = volume;
+        }
+    }
+
+    /**
+     * @public
+     * @member {Boolean}
+     */
+    get loop() {
+        return this._loop;
+    }
+
+    set loop(value) {
+        const loop = !!value;
+
+        if (this.loop !== loop) {
+            this._source.loop = this._loop = loop;
+        }
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get speed() {
+        return this._speed;
+    }
+
+    set speed(value) {
+        const speed = Math.max(0, value);
+
+        if (this.speed !== speed) {
+            this._source.playbackRate = this._speed = speed;
+        }
     }
 
     /**
@@ -59,30 +142,6 @@ export default class Playable {
 
     set currentTime(currentTime) {
         this._source.currentTime = Math.max(0, currentTime);
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get loop() {
-        return this._source.loop;
-    }
-
-    set loop(loop) {
-        this._source.loop = loop;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get playbackRate() {
-        return this._source.playbackRate;
-    }
-
-    set playbackRate(playbackRate) {
-        this._source.playbackRate = Math.max(0, playbackRate);
     }
 
     /**
@@ -120,16 +179,6 @@ export default class Playable {
     /**
      * @public
      * @abstract
-     * @readonly
-     * @member {?AudioNode}
-     */
-    get analyserTarget() {
-        return null;
-    }
-
-    /**
-     * @public
-     * @abstract
      * @param {MediaManager} mediaManager
      */
     connect(mediaManager) { // eslint-disable-line
@@ -138,10 +187,9 @@ export default class Playable {
 
     /**
      * @public
-     * @abstract
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
-     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
@@ -149,22 +197,22 @@ export default class Playable {
         if (this.paused) {
             this.applyOptions(options);
             this._source.play();
+            this.trigger('start');
         }
     }
 
     /**
      * @public
-     * @abstract
      */
     pause() {
         if (this.playing) {
             this._source.pause();
+            this.trigger('stop');
         }
     }
 
     /**
      * @public
-     * @abstract
      */
     stop() {
         this.pause();
@@ -173,7 +221,6 @@ export default class Playable {
 
     /**
      * @public
-     * @abstract
      */
     toggle() {
         if (this.paused) {
@@ -185,20 +232,19 @@ export default class Playable {
 
     /**
      * @public
-     * @abstract
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
-     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
-    applyOptions({ loop, playbackRate, volume, time } = {}) {
+    applyOptions({ loop, speed, volume, time } = {}) {
         if (loop !== undefined) {
             this.loop = loop;
         }
 
-        if (playbackRate !== undefined) {
-            this.playbackRate = playbackRate;
+        if (speed !== undefined) {
+            this.speed = speed;
         }
 
         if (volume !== undefined) {
@@ -212,11 +258,16 @@ export default class Playable {
 
     /**
      * @public
-     * @abstract
      */
     destroy() {
+        super.destroy();
+
         this.stop();
 
         this._source = null;
+        this._duration = null;
+        this._volume = null;
+        this._speed = null;
+        this._loop = null;
     }
 }

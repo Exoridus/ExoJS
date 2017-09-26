@@ -1,6 +1,6 @@
 import ChannelHandler from '../ChannelHandler';
-import DefaultGamepadMapping from './DefaultGamepadMapping';
 import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
+import settings from '../../settings';
 
 /**
  * @class Gamepad
@@ -26,7 +26,7 @@ export default class Gamepad extends ChannelHandler {
          * @private
          * @member {GamepadMapping}
          */
-        this._mapping = new DefaultGamepadMapping();
+        this._mapping = settings.GAMEPAD_MAPPING;
     }
 
     /**

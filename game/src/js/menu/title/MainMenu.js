@@ -10,19 +10,20 @@ export default class MainMenu extends Menu {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      * @param {String} parentMenu
      */
-    constructor(game, parentMenu = null) {
-        super(game, parentMenu);
+    constructor(app, parentMenu = null) {
+        super(app, parentMenu);
 
-        const canvas = game.canvas;
+        const canvas = app.canvas,
+            resources = app.loader.resources;
 
         /**
          * @private
-         * @member {Exo.Sprite}
+         * @member {Sprite}
          */
-        this._gameLogo = game.loader.resources.get('sprite', 'title/logo');
+        this._gameLogo = new Exo.Sprite(resources.get('texture', 'title/logo'));
         this._gameLogo.setOrigin(0.5, 0.8);
         this._gameLogo.setPosition(canvas.width / 2, 50 + (this._gameLogo.height * 0.8));
 

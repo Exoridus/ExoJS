@@ -9,14 +9,14 @@ export default class SettingsMenu extends Menu {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      * @param {String} previousMenu
      */
-    constructor(game, previousMenu) {
-        super(game, previousMenu);
+    constructor(app, previousMenu) {
+        super(app, previousMenu);
 
-        const canvas = game.canvas,
-            mediaManager = game.mediaManager;
+        const canvas = app.canvas,
+            mediaManager = app.mediaManager;
 
         /**
          * @private
@@ -138,7 +138,7 @@ export default class SettingsMenu extends Menu {
      * @param {MenuAction} action
      */
     _onOptionLeft(action) {
-        const mediaManager = this._game.mediaManager;
+        const mediaManager = this.app.mediaManager;
 
         switch (action.item) {
             case this._masterVolumeButton:
@@ -160,7 +160,7 @@ export default class SettingsMenu extends Menu {
      * @param {MenuAction} action
      */
     _onOptionRight(action) {
-        const mediaManager = this._game.mediaManager;
+        const mediaManager = this._app.mediaManager;
 
         switch (action.item) {
             case this._masterVolumeButton:
@@ -178,7 +178,7 @@ export default class SettingsMenu extends Menu {
     }
 
     _updateButtons() {
-        const mediaManager = this._game.mediaManager;
+        const mediaManager = this._app.mediaManager;
 
         this._masterVolumeButton.text = `Master Volume: ${(mediaManager.musicVolume * 100 | 0)}%`;
         this._musicVolumeButton.text = `Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`;

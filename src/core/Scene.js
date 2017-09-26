@@ -20,9 +20,9 @@ export default class Scene extends EventEmitter {
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = null;
+        this._app = null;
 
         if (prototype) {
             Object.assign(this, prototype);
@@ -33,12 +33,12 @@ export default class Scene extends EventEmitter {
      * @public
      * @member {Game}
      */
-    get game() {
-        return this._game;
+    get app() {
+        return this._app;
     }
 
-    set game(game) {
-        this._game = game;
+    set app(app) {
+        this._app = app;
     }
 
     /**
@@ -47,7 +47,7 @@ export default class Scene extends EventEmitter {
      * @param {ResourceLoader} loader
      */
     load(loader) { // eslint-disable-line
-        this._game.trigger('scene:start');
+        this._app.trigger('scene:start');
     }
 
     /**
@@ -82,6 +82,6 @@ export default class Scene extends EventEmitter {
     destroy() {
         super.destroy();
 
-        this._game = null;
+        this._app = null;
     }
 }

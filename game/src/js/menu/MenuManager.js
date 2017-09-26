@@ -8,15 +8,15 @@ export default class MenuManager {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      */
-    constructor(game) {
+    constructor(app) {
 
         /**
          * @private
-         * @member {Exo.Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
@@ -34,11 +34,11 @@ export default class MenuManager {
          * @private
          * @member {Boolean}
          */
-        this._enabled = false;
+        this._isEnabled = false;
 
         /**
          * @private
-         * @member {Exo.Input[]}
+         * @member {Input[]}
          */
         this._inputs = [
             new Exo.Input([
@@ -119,12 +119,12 @@ export default class MenuManager {
      * @param {String} startMenu
      */
     enable(startMenu) {
-        if (this._enabled) {
+        if (this._isEnabled) {
             return;
         }
 
-        this._enabled = true;
-        this._game.trigger('input:add', this._inputs);
+        this._isEnabled = true;
+        this._app.trigger('input:add', this._inputs);
 
         this.openMenu(startMenu);
     }
@@ -133,13 +133,13 @@ export default class MenuManager {
      * @public
      */
     disable() {
-        if (!this._enabled) {
+        if (!this._isEnabled) {
             return;
         }
 
-        this._enabled = false;
+        this._isEnabled = false;
 
-        this._game.trigger('input:remove', this._inputs);
+        this._app.trigger('input:remove', this._inputs);
 
         if (this._currentMenu) {
             this._currentMenu.reset();
@@ -193,7 +193,7 @@ export default class MenuManager {
 
     /**
      * @public
-     * @param {Exo.Time} delta
+     * @param {Time} delta
      */
     update(delta) {
         if (this._currentMenu) {
@@ -203,8 +203,8 @@ export default class MenuManager {
 
     /**
      * @public
-     * @param {Exo.DisplayManager} displayManager
-     * @param {Exo.Matrix} worldTransform
+     * @param {DisplayManager} displayManager
+     * @param {Matrix} worldTransform
      */
     render(displayManager, worldTransform) {
         if (this._currentMenu) {
@@ -217,7 +217,7 @@ export default class MenuManager {
      * @param {Boolean} [destroyChildren=false]
      */
     destroy() {
-        if (this._enabled) {
+        if (this._isEnabled) {
             this.disable();
         }
 
@@ -228,6 +228,6 @@ export default class MenuManager {
         this._menus = null;
 
         this._currentMenu = null;
-        this._game = null;
+        this._app = null;
     }
 }

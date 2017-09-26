@@ -16,7 +16,6 @@ export { default as ImageFactory } from './factory/ImageFactory';
 export { default as JSONFactory } from './factory/JSONFactory';
 export { default as MusicFactory } from './factory/MusicFactory';
 export { default as SoundFactory } from './factory/SoundFactory';
-export { default as SpriteFactory } from './factory/SpriteFactory';
 export { default as StringFactory } from './factory/StringFactory';
 export { default as TextureFactory } from './factory/TextureFactory';
 export { default as VideoFactory } from './factory/VideoFactory';

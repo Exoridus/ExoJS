@@ -1,11 +1,11 @@
 import Rectangle from './Rectangle';
-import Vector from './Vector';
+import Vector from '../Vector';
 import Shape from './Shape';
 import { SHAPE } from '../../const';
 
 /**
  * @class Circle
- * @implements {Shape}
+ * @extends {Shape}
  */
 export default class Circle extends Shape {
 
@@ -16,13 +16,7 @@ export default class Circle extends Shape {
      * @param {Number} [radius=0]
      */
     constructor(x = 0, y = 0, radius = 0) {
-        super();
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._position = new Vector(x, y);
+        super(x, y);
 
         /**
          * @private
@@ -36,42 +30,6 @@ export default class Circle extends Shape {
      */
     get type() {
         return SHAPE.CIRCLE;
-    }
-
-    /**
-     * @public
-     * @member {Vector}
-     */
-    get position() {
-        return this._position;
-    }
-
-    set position(position) {
-        this._position.copy(position);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get x() {
-        return this._position.x;
-    }
-
-    set x(x) {
-        this._position.x = x;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get y() {
-        return this._position.y;
-    }
-
-    set y(y) {
-        this._position.y = y;
     }
 
     /**
@@ -90,7 +48,7 @@ export default class Circle extends Shape {
      * @override
      */
     set(x, y, radius) {
-        this._position.set(x, y);
+        this.position.set(x, y);
         this._radius = radius;
 
         return this;
@@ -100,7 +58,7 @@ export default class Circle extends Shape {
      * @override
      */
     copy(circle) {
-        this._position.copy(circle.position);
+        this.position.copy(circle.position);
         this._radius = circle.radius;
 
         return this;
@@ -123,6 +81,13 @@ export default class Circle extends Shape {
     /**
      * @override
      */
+    equals(circle) {
+        return (this.position.equals(circle.position) && this._radius === circle.radius);
+    }
+
+    /**
+     * @override
+     */
     toArray() {
         const array = this._array || (this._array = new Float32Array(3));
 
@@ -137,63 +102,28 @@ export default class Circle extends Shape {
      * @override
      */
     getBounds() {
-        if (!this._bounds) {
-            this._bounds = new Rectangle();
-        }
+        const bounds = this._bounds || (this._bounds = new Rectangle());
 
-        return this._bounds.set(
+        return bounds.set(
             this._x - this._radius,
             this._y - this._radius,
             this._radius * 2,
-            this._radius * 2
+            this._radius * 2,
         );
     }
 
     /**
      * @override
      */
-    contains(shape) {
-        switch (shape.type) {
-            case SHAPE.POINT: {
-                return this.distanceTo(shape) < this._radius;
-            }
-            case SHAPE.CIRCLE:
-            case SHAPE.RECTANGLE:
-            case SHAPE.POLYGON:
-                return false;
-            default:
-                throw new Error('Passed item is not a valid shape!', shape);
-        }
+    contains(vector) {
+        return this.position.getDistance(vector) < this._radius;
     }
 
     /**
      * @override
      */
-    intersects(shape) {
-        switch (shape.type) {
-            case SHAPE.POINT:
-                return this.contains(shape);
-            case SHAPE.CIRCLE:
-                return this.distanceTo(shape) < (this._radius + shape.radius);
-            case SHAPE.RECTANGLE:
-            case SHAPE.POLYGON:
-                return false;
-            default:
-                throw new Error('Passed item is not a valid shape!', shape);
-        }
-
-    }
-
-    /**
-     * @public
-     * @param {Cirlce|Vector} entity
-     * @returns {Number}
-     */
-    distanceTo(entity) {
-        const x = this._x - entity.x,
-            y = this._y - entity.y;
-
-        return Math.sqrt((x * x) + (y * y));
+    intersects(circle) {
+        return this.position.getDistance(circle.position) < (this._radius + circle.radius);
     }
 
     /**
@@ -202,8 +132,6 @@ export default class Circle extends Shape {
     destroy() {
         super.destroy();
 
-        this._position.destroy();
-        this._position = null;
         this._radius = null;
     }
 }

@@ -2,7 +2,7 @@
 import LauncherScene from './scene/LauncherScene';
 
 window.addEventListener('load', () => {
-    const game = new Exo.Game({
+    const app = new Exo.Application({
         basePath: 'assets/',
         width: 1280,
         height: 720,
@@ -11,10 +11,8 @@ window.addEventListener('load', () => {
         canvas: '#game-canvas',
     });
 
-    indexedDB.deleteDatabase('game');
+    app.loader.request.cache = 'no-cache';
+    app.loader.database = new Exo.Database('game', 3);
 
-    game.loader.request.cache = 'no-cache';
-    game.loader.database = new Exo.Database('game', 2);
-
-    game.start(new LauncherScene());
+    app.start(new LauncherScene());
 }, false);

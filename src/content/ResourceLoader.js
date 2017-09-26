@@ -1,6 +1,18 @@
 import EventEmitter from '../core/EventEmitter';
 import ResourceContainer from './ResourceContainer';
-import * as Factories from './factory';
+import ArrayBufferFactory from './factory/ArrayBufferFactory';
+import AudioBufferFactory from './factory/AudioBufferFactory';
+import AudioFactory from './factory/AudioFactory';
+import BlobFactory from './factory/BlobFactory';
+import FontFactory from './factory/FontFactory';
+import ImageFactory from './factory/ImageFactory';
+import JSONFactory from './factory/JSONFactory';
+import MusicFactory from './factory/MusicFactory';
+import SoundFactory from './factory/SoundFactory';
+import StringFactory from './factory/StringFactory';
+import TextureFactory from './factory/TextureFactory';
+import VideoFactory from './factory/VideoFactory';
+
 
 /**
  * @class ResourceLoader
@@ -56,19 +68,18 @@ export default class ResourceLoader extends EventEmitter {
          */
         this._database = null;
 
-        this.addFactory('arrayBuffer', new Factories.ArrayBufferFactory())
-            .addFactory('audioBuffer', new Factories.AudioBufferFactory())
-            .addFactory('audio', new Factories.AudioFactory())
-            .addFactory('blob', new Factories.BlobFactory())
-            .addFactory('font', new Factories.FontFactory())
-            .addFactory('image', new Factories.ImageFactory())
-            .addFactory('json', new Factories.JSONFactory())
-            .addFactory('music', new Factories.MusicFactory())
-            .addFactory('sound', new Factories.SoundFactory())
-            .addFactory('sprite', new Factories.SpriteFactory())
-            .addFactory('string', new Factories.StringFactory())
-            .addFactory('texture', new Factories.TextureFactory())
-            .addFactory('video', new Factories.VideoFactory());
+        this.addFactory('arrayBuffer', new ArrayBufferFactory())
+            .addFactory('audioBuffer', new AudioBufferFactory())
+            .addFactory('audio', new AudioFactory())
+            .addFactory('blob', new BlobFactory())
+            .addFactory('font', new FontFactory())
+            .addFactory('image', new ImageFactory())
+            .addFactory('json', new JSONFactory())
+            .addFactory('music', new MusicFactory())
+            .addFactory('sound', new SoundFactory())
+            .addFactory('string', new StringFactory())
+            .addFactory('texture', new TextureFactory())
+            .addFactory('video', new VideoFactory());
     }
 
     /**

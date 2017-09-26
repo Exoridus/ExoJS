@@ -8,7 +8,7 @@ const Keyboard = Exo.Keyboard,
 
 /**
  * @class GameScene
- * @extends {Exo.Scene}
+ * @extends {Scene}
  */
 export default class GameScene extends Exo.Scene {
 
@@ -16,8 +16,8 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     init() {
-        const game = this.game,
-            resources = game.loader.resources;
+        const app = this.app,
+            resources = app.loader.resources;
 
         /**
          * @private
@@ -34,13 +34,13 @@ export default class GameScene extends Exo.Scene {
 
         /**
          * @private
-         * @member {Exo.View}
+         * @member {View}
          */
-        this._camera = new Exo.View(new Exo.Rectangle(0, 0, game.canvas.width, game.canvas.height));
+        this._camera = new Exo.View(new Exo.Rectangle(0, 0, app.canvas.width, app.canvas.height));
 
         /**
          * @private
-         * @member {Exo.Music}
+         * @member {Music}
          */
         this._backgroundMusic = resources.get('music', 'game/background');
 
@@ -48,11 +48,11 @@ export default class GameScene extends Exo.Scene {
          * @private
          * @member {Boolean}
          */
-        this._paused = false;
+        this._isPaused = false;
 
         /**
          * @private
-         * @member {Exo.Input[]}
+         * @member {Input[]}
          */
         this._inputs = [
             new Exo.Input([
@@ -61,9 +61,9 @@ export default class GameScene extends Exo.Scene {
             ], {
                 context: this,
                 trigger() {
-                    this._paused = !this._paused;
+                    this._isPaused = !this._isPaused;
 
-                    if (this._paused) {
+                    if (this._isPaused) {
                         // show pause menu
                     } else {
                         // hide pause menu
@@ -128,9 +128,9 @@ export default class GameScene extends Exo.Scene {
             }),
         ];
 
-        this.game.trigger('input:add', this._inputs);
+        this.app.trigger('input:add', this._inputs);
 
-        game.trigger('media:play', this._backgroundMusic, {
+        app.trigger('media:play', this._backgroundMusic, {
             loop: true,
         });
 
@@ -141,9 +141,9 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     update(delta) {
-        this._worldMap.render(this.game, this._camera);
+        this._worldMap.render(this.app, this._camera);
 
-        this.game
+        this.app
             .trigger('display:begin')
             .trigger('display:render', this._player)
             .trigger('display:end');
@@ -153,7 +153,7 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     unload() {
-        this.game.trigger('input:remove', this._inputs, true);
+        this.app.trigger('input:remove', this._inputs, true);
 
         this._worldMap.destroy();
         this._worldMap = null;
@@ -205,6 +205,6 @@ export default class GameScene extends Exo.Scene {
             clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight),
         );
 
-        this.game.trigger('display:view', camera);
+        this.app.trigger('display:view', camera);
     }
 }

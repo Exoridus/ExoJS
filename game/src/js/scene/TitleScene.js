@@ -2,7 +2,7 @@ import TitleMenuManager from '../menu/title/TitleMenuManager';
 
 /**
  * @class TitleScene
- * @extends {Exo.Scene}
+ * @extends {Scene}
  */
 export default class TitleScene extends Exo.Scene {
 
@@ -10,28 +10,28 @@ export default class TitleScene extends Exo.Scene {
      * @override
      */
     init() {
-        const resources = this.game.loader.resources;
+        const resources = this.app.loader.resources;
 
         /**
          * @private
          * @member {TitleMenuManager}
          */
-        this._menuManager = new TitleMenuManager(this.game);
+        this._menuManager = new TitleMenuManager(this.app);
         this._menuManager.enable('main');
 
         /**
          * @private
-         * @member {Exo.Sprite}
+         * @member {Sprite}
          */
-        this._titleBackground = resources.get('sprite', 'title/background');
+        this._titleBackground = new Exo.Sprite(resources.get('sprite', 'title/background'));
 
         /**
          * @private
-         * @member {Exo.Music}
+         * @member {Music}
          */
         this._titleMusic = resources.get('music', 'title/background');
 
-        this.game.trigger('media:play', this._titleMusic, {
+        this.app.trigger('media:play', this._titleMusic, {
             loop: true,
         });
     }
@@ -42,7 +42,7 @@ export default class TitleScene extends Exo.Scene {
     update(delta) {
         this._menuManager.update(delta);
 
-        this.game
+        this.app
             .trigger('display:begin')
             .trigger('display:render', this._titleBackground)
             .trigger('display:render', this._menuManager)

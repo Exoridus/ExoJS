@@ -7,20 +7,20 @@ export default class MediaManager {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      * @param {Object} [options={}]
      * @param {Number} [options.masterVolume=1]
      * @param {Number} [options.musicVolume=1]
      * @param {Number} [options.soundVolume=1]
      * @param {Number} [options.videoVolume=1]
      */
-    constructor(game, { masterVolume = 1, musicVolume = 1, soundVolume = 1, videoVolume = 1 } = {}) {
+    constructor(app, { masterVolume = 1, musicVolume = 1, soundVolume = 1, videoVolume = 1 } = {}) {
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
@@ -98,7 +98,7 @@ export default class MediaManager {
         this.setMusicVolume(musicVolume);
         this.setVideoVolume(videoVolume);
 
-        game.on('media:play', this.play, this)
+        app.on('media:play', this.play, this)
             .on('media:volume:master', this.setMasterVolume, this)
             .on('media:volume:sound', this.setSoundVolume, this)
             .on('media:volume:music', this.setMusicVolume, this)
@@ -207,7 +207,7 @@ export default class MediaManager {
      * @param {Music|Sound|Video} media
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
-     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
@@ -268,7 +268,7 @@ export default class MediaManager {
      * @public
      */
     destroy() {
-        this._game
+        this._app
             .off('media:play', this.play, this)
             .off('media:volume:master', this.setMasterVolume, this)
             .off('media:volume:sound', this.setSoundVolume, this)
@@ -297,6 +297,6 @@ export default class MediaManager {
         this._musicVolume = null;
         this._videoVolume = null;
         this._destination = null;
-        this._game = null;
+        this._app = null;
     }
 }

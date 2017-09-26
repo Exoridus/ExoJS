@@ -1,6 +1,7 @@
 import { clamp } from '../utils';
 import Sprite from '../display/Sprite';
 import Texture from '../display/Texture';
+import support from '../support';
 
 /**
  * @class Video
@@ -14,6 +15,10 @@ export default class Video extends Sprite {
      */
     constructor(videoElement) {
         super(new Texture(videoElement));
+
+        if (!support.webAudio) {
+            throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
+        }
 
         /**
          * @private
@@ -38,6 +43,30 @@ export default class Video extends Sprite {
          * @member {?GainNode}
          */
         this._gainNode = null;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._duration = videoElement.duration;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._volume = videoElement.volume;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._speed = videoElement.playbackRate;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._loop = videoElement.loop;
     }
 
     /**
@@ -47,6 +76,15 @@ export default class Video extends Sprite {
      */
     get audioContext() {
         return this._audioContext;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?GainNode}
+     */
+    get analyserTarget() {
+        return this._gainNode;
     }
 
     /**
@@ -64,19 +102,57 @@ export default class Video extends Sprite {
      * @member {Number}
      */
     get duration() {
-        return this._source.duration;
+        return this._duration;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get volume() {
+        return this._volume;
+    }
+
+    set volume(value) {
+        const volume = clamp(value, 0, 2);
+
+        if (this._volume !== volume) {
+            this._volume = volume;
+
+            if (this._gainNode) {
+                this._gainNode.gain.value = volume;
+            }
+        }
     }
 
     /**
      * @override
      */
-    get volume() {
-        return this._audioContext ? this._gainNode.gain.value : 1;
+    get loop() {
+        return this._loop;
     }
 
-    set volume(volume) {
-        if (this._audioContext) {
-            this._gainNode.gain.value = clamp(volume, 0, 1);
+    set loop(value) {
+        const loop = !!value;
+
+        if (this._loop !== loop) {
+            this._source.loop = this._loop = loop;
+        }
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get speed() {
+        return this._speed;
+    }
+
+    set speed(value) {
+        const speed = Math.max(0, value);
+
+        if (this._speed !== speed) {
+            this._source.playbackRate = this._speed = speed;
         }
     }
 
@@ -90,30 +166,6 @@ export default class Video extends Sprite {
 
     set currentTime(currentTime) {
         this._source.currentTime = Math.max(0, currentTime);
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get loop() {
-        return this._source.loop;
-    }
-
-    set loop(loop) {
-        this._source.loop = loop;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get playbackRate() {
-        return this._source.playbackRate;
-    }
-
-    set playbackRate(playbackRate) {
-        this._source.playbackRate = Math.max(0, playbackRate);
     }
 
     /**
@@ -149,15 +201,6 @@ export default class Video extends Sprite {
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {?GainNode}
-     */
-    get analyserTarget() {
-        return this._gainNode;
-    }
-
-    /**
      * @override
      */
     render(displayManager, parentTransform) {
@@ -167,8 +210,9 @@ export default class Video extends Sprite {
 
         this.updateTexture();
 
-        this.worldTransform.copy(parentTransform);
-        this.worldTransform.multiply(this.transform);
+        this.worldTransform
+            .copy(parentTransform)
+            .multiply(this.getTransform());
 
         displayManager
             .getRenderer('sprite')
@@ -191,8 +235,9 @@ export default class Video extends Sprite {
 
         this._gainNode = this._audioContext.createGain();
         this._gainNode.connect(mediaManager.videoGain);
+        this._gainNode.gain.value = this._volume;
 
-        this._sourceNode = this._audioContext.createMediaElementSource(this._source);
+        this._sourceNode = this._audioContext.createMediaElementSource(this.source);
         this._sourceNode.connect(this._gainNode);
     }
 
@@ -201,7 +246,7 @@ export default class Video extends Sprite {
      * @abstract
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
-     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
@@ -209,6 +254,7 @@ export default class Video extends Sprite {
         if (this.paused) {
             this.applyOptions(options);
             this._source.play();
+            this.trigger('start');
         }
     }
 
@@ -219,6 +265,7 @@ export default class Video extends Sprite {
     pause() {
         if (this.playing) {
             this._source.pause();
+            this.trigger('stop');
         }
     }
 
@@ -248,17 +295,17 @@ export default class Video extends Sprite {
      * @abstract
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
-     * @param {Number} [options.playbackRate]
+     * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
      */
-    applyOptions({ loop, playbackRate, volume, time } = {}) {
+    applyOptions({ loop, speed, volume, time } = {}) {
         if (loop !== undefined) {
             this.loop = loop;
         }
 
-        if (playbackRate !== undefined) {
-            this.playbackRate = playbackRate;
+        if (speed !== undefined) {
+            this.speed = speed;
         }
 
         if (volume !== undefined) {
@@ -279,8 +326,6 @@ export default class Video extends Sprite {
 
         this.stop();
 
-        this._source = null;
-
         if (this._audioContext) {
             this._audioContext = null;
 
@@ -290,5 +335,11 @@ export default class Video extends Sprite {
             this._gainNode.disconnect();
             this._gainNode = null;
         }
+
+        this._source = null;
+        this._duration = null;
+        this._volume = null;
+        this._speed = null;
+        this._loop = null;
     }
 }

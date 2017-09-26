@@ -1,35 +1,35 @@
-window.game = new Exo.Game({
+window.app = new Exo.Application({
     basePath: 'assets/',
     canvasParent: '.container-canvas',
     width: 800,
     height: 600,
 });
 
-window.game.start(new Exo.Scene({
+window.app.start(new Exo.Scene({
 
     load(loader) {
         loader.addItem('texture', 'particle', 'image/particle.png')
             .load()
-            .then(() => this.game.trigger('scene:start'));
+            .then(() => this.app.trigger('scene:start'));
     },
 
     init() {
 
         /**
          * @private
-         * @member {Exo.Texture}
+         * @member {Texture}
          */
-        this.texture = this.game.loader.resources.get('texture', 'particle');
+        this.texture = this.app.loader.resources.get('texture', 'particle');
 
         /**
          * @private
-         * @member {Exo.Random}
+         * @member {Random}
          */
         this.random = new Exo.Random();
 
         /**
          * @private
-         * @member {Exo.ParticleEmitter}
+         * @member {ParticleEmitter}
          */
         this.emitter = new Exo.ParticleEmitter(this.texture);
         this.emitter.emissionRate = 30;
@@ -37,13 +37,13 @@ window.game.start(new Exo.Scene({
         this.emitter.addModifier(new Exo.TorqueModifier(100));
         this.emitter.addModifier(new Exo.ForceModifier(new Exo.Vector(0, 100)));
 
-        this.game.on('mouse:move', (delta, mouse) => {
+        this.app.on('mouse:move', (delta, mouse) => {
             this.emitter.particlePosition.set(mouse.x - (this.texture.width / 2), mouse.y - (this.texture.height / 2));
         });
     },
 
     /**
-     * @param {Exo.Time} delta
+     * @param {Time} delta
      */
     update(delta) {
         const emitter = this.emitter,
@@ -53,7 +53,7 @@ window.game.start(new Exo.Scene({
         emitter.particleVelocity.set(random.next(-100, 100), random.next(-100, 0));
         emitter.update(delta);
 
-        this.game
+        this.app
             .trigger('display:begin')
             .trigger('display:render', emitter)
             .trigger('display:end');

@@ -1,5 +1,5 @@
 import ChannelHandler from './ChannelHandler';
-import Vector from '../core/shape/Vector';
+import Vector from '../core/Vector';
 import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
 
 /**
@@ -10,23 +10,23 @@ export default class Mouse extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */
-    constructor(game, channelBuffer) {
+    constructor(app, channelBuffer) {
         super(channelBuffer, CHANNEL_OFFSET.MOUSE, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = game.canvas;
+        this._canvas = app.canvas;
 
         /**
          * @private
@@ -214,26 +214,26 @@ export default class Mouse extends ChannelHandler {
         }
 
         if (this._flags & Mouse.FLAGS.WINDOW_STATE) {
-            this._game.trigger(this._insideWindow ? 'mouse:enter' : 'mouse:leave', this);
+            this._app.trigger(this._insideWindow ? 'mouse:enter' : 'mouse:leave', this);
         }
 
         if (this._flags & Mouse.FLAGS.SCROLL) {
-            this._game.trigger('mouse:scroll', this._scrollDelta, this);
+            this._app.trigger('mouse:scroll', this._scrollDelta, this);
             this._scrollDelta.reset();
         }
 
         if (this._flags & Mouse.FLAGS.POSITION) {
-            this._game.trigger('mouse:move', this._position, this);
+            this._app.trigger('mouse:move', this._position, this);
             this._positionDelta.reset();
         }
 
         if (this._flags & Mouse.FLAGS.BUTTON_DOWN) {
-            this._game.trigger('mouse:down', this._channelsPressed, this);
+            this._app.trigger('mouse:down', this._channelsPressed, this);
             this._channelsPressed.clear();
         }
 
         if (this._flags & Mouse.FLAGS.BUTTON_UP) {
-            this._game.trigger('mouse:up', this._channelsReleased, this);
+            this._app.trigger('mouse:up', this._channelsReleased, this);
             this._channelsReleased.clear();
         }
 
@@ -268,7 +268,7 @@ export default class Mouse extends ChannelHandler {
         this._flags = null;
         this._insideWindow = null;
         this._canvas = null;
-        this._game = null;
+        this._app = null;
     }
 
     /**

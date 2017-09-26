@@ -1,6 +1,6 @@
 import View from './View';
 import Rectangle from '../core/shape/Rectangle';
-import Vector from '../core/shape/Vector';
+import Vector from '../core/Vector';
 
 /**
  * @class RenderTarget

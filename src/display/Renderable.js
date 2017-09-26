@@ -1,6 +1,8 @@
 import Transformable from '../core/Transformable';
 import Matrix from '../core/Matrix';
 import Rectangle from '../core/shape/Rectangle';
+import ObservableVector from '../core/ObservableVector';
+import Bounds from './Bounds';
 
 /**
  * @class Renderable
@@ -16,15 +18,9 @@ export default class Renderable extends Transformable {
 
         /**
          * @private
-         * @member {Matrix}
+         * @member {?Renderable}
          */
-        this._worldTransform = new Matrix();
-
-        /**
-         * @private
-         * @member {Rectangle}
-         */
-        this._bounds = new Rectangle();
+        this._parent = null;
 
         /**
          * @private
@@ -34,33 +30,15 @@ export default class Renderable extends Transformable {
 
         /**
          * @private
-         * @member {?Renderable}
+         * @member {Matrix}
          */
-        this._parent = null;
-    }
+        this._worldTransform = new Matrix();
 
-    /**
-     * @public
-     * @member {Matrix}
-     */
-    get worldTransform() {
-        return this._worldTransform;
-    }
-
-    set worldTransform(worldTransform) {
-        this._worldTransform.copy(worldTransform);
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get visible() {
-        return this._visible;
-    }
-
-    set visible(visible) {
-        this._visible = visible;
+        /**
+         * @private
+         * @member {Bounds}
+         */
+        this._bounds = new Bounds();
     }
 
     /**
@@ -77,7 +55,20 @@ export default class Renderable extends Transformable {
 
     /**
      * @public
-     * @member {Rectangle}
+     * @member {Boolean}
+     */
+    get visible() {
+        return this._visible;
+    }
+
+    set visible(visible) {
+        this._visible = visible;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Bounds}
      */
     get bounds() {
         return this.getBounds();
@@ -85,10 +76,36 @@ export default class Renderable extends Transformable {
 
     /**
      * @public
+     * @member {Matrix}
+     */
+    get worldTransform() {
+        return this._worldTransform;
+    }
+
+    set worldTransform(worldTransform) {
+        this._worldTransform.copy(worldTransform);
+    }
+
+    /**
+     * @public
+     * @returns {Rectangle}
+     */
+    getLocalBounds() {
+        if (!this._localBounds) {
+            this._localBounds = new Rectangle();
+        }
+
+        return this._localBounds.set(0, 0, this.width, this.height);
+    }
+
+    /**
+     * @public
      * @returns {Rectangle}
      */
     getBounds() {
-        return this._bounds.set(this.x, this.y, 0, 0);
+        this._bounds.reset();
+
+        return this._bounds.getRect();
     }
 
     /**
@@ -99,7 +116,13 @@ export default class Renderable extends Transformable {
      * @param {Matrix} worldTransform
      * @returns {Renderable}
      */
-    render(renderManager, worldTransform) { // eslint-disable-line
+    render(renderManager, worldTransform) {
+        if (this.visible) {
+            this.worldTransform
+                .copy(worldTransform)
+                .multiply(this.getTransform());
+        }
+
         return this;
     }
 
@@ -109,13 +132,19 @@ export default class Renderable extends Transformable {
     destroy() {
         super.destroy();
 
+        if (this._localBounds) {
+            this._localBounds.destroy();
+            this._localBounds = null;
+        }
+
+        if (this._bounds) {
+            this._bounds.destroy();
+            this._bounds = null;
+        }
+
         this._worldTransform.destroy();
         this._worldTransform = null;
 
-        this._bounds.destroy();
-        this._bounds = null;
-
         this._visible = null;
-        this._parent = null;
     }
 }

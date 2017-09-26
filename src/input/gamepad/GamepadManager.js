@@ -12,17 +12,17 @@ export default class GamepadManager extends ChannelHandler {
 
     /**
      * @constructor
-     * @param {Game} game
+     * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */
-    constructor(game, channelBuffer) {
+    constructor(app, channelBuffer) {
         super(channelBuffer, CHANNEL_OFFSET.GAMEPAD, CHANNEL_LENGTH.DEVICE);
 
         /**
          * @private
-         * @member {Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @private
@@ -55,7 +55,7 @@ export default class GamepadManager extends ChannelHandler {
      * @public
      */
     updateGamepads() {
-        const game = this._game,
+        const app = this._app,
             currentGamepads = this._gamepads,
             fetchedGamepads = navigator.getGamepads(),
             length = fetchedGamepads.length;
@@ -69,16 +69,16 @@ export default class GamepadManager extends ChannelHandler {
                 const gamepad = new Gamepad(fetchedGamepads[i], this.channelBuffer);
 
                 currentGamepads.set(i, gamepad);
-                game.trigger('gamepad:add', gamepad, currentGamepads);
+                app.trigger('gamepad:add', gamepad, currentGamepads);
             } else {
                 const gamepad = currentGamepads.get(i);
 
                 currentGamepads.delete(i);
-                game.trigger('gamepad:remove', gamepad, currentGamepads);
+                app.trigger('gamepad:remove', gamepad, currentGamepads);
                 gamepad.destroy();
             }
 
-            game.trigger('gamepad:change', currentGamepads);
+            app.trigger('gamepad:change', currentGamepads);
         }
     }
 
@@ -95,6 +95,6 @@ export default class GamepadManager extends ChannelHandler {
         this._gamepads.clear();
         this._gamepads = null;
 
-        this._game = null;
+        this._app = null;
     }
 }

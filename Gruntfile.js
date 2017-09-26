@@ -53,9 +53,9 @@ module.exports = (grunt) => {
                 },
                 plugins: [
                     new webpack.DefinePlugin({
-                        __VERSION__: JSON.stringify(package.version)
-                    })
-                ]
+                        __VERSION__: JSON.stringify(package.version),
+                    }),
+                ],
             },
             examples: {
                 entry: '<%= dirs.examples %>/src/js/index.js',
@@ -105,31 +105,31 @@ module.exports = (grunt) => {
         cssmin: {
             examples: {
                 src: '<%= dirs.examples %>/bin/examples.build.css',
-                dest: '<%= dirs.examples %>/bin/examples.min.css'
-            }
+                dest: '<%= dirs.examples %>/bin/examples.min.css',
+            },
         },
     });
 
-    grunt.registerTask('default', ['build']);
-
-    grunt.registerTask('build', ['webpack:dist']);
-    grunt.registerTask('build-deploy', [
+    grunt.registerTask('default', [
         'build',
-        'uglify'
     ]);
-
+    grunt.registerTask('build', [
+        'webpack:dist',
+    ]);
     grunt.registerTask('examples', [
         'webpack:examples',
         'sass:examples',
     ]);
-    grunt.registerTask('examples-deploy', [
-        'examples',
-        'uglify:examples',
-        'cssmin:examples',
-    ]);
-
     grunt.registerTask('game', [
         'webpack:game',
         'sass:game',
+    ]);
+    grunt.registerTask('deploy', [
+        'build',
+        'examples',
+        'game',
+        'uglify:dist',
+        'uglify:examples',
+        'cssmin:examples',
     ]);
 };

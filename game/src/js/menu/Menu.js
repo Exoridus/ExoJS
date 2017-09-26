@@ -3,23 +3,23 @@ import MenuAction from './MenuAction';
 
 /**
  * @class Menu
- * @extends {Exo.Container}
+ * @extends {Container}
  */
 export default class Menu extends Exo.Container {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      * @param {String} [previousMenu=null]
      */
-    constructor(game, previousMenu = null) {
+    constructor(app, previousMenu = null) {
         super();
 
         /**
          * @public
-         * @member {Exo.Game}
+         * @member {Application}
          */
-        this._game = game;
+        this._app = app;
 
         /**
          * @public
@@ -119,7 +119,7 @@ export default class Menu extends Exo.Container {
 
     /**
      * @public
-     * @param {Exo.Time} delta
+     * @param {Time} delta
      */
     update(delta) {
         if (this._activeChild) {
@@ -248,6 +248,6 @@ export default class Menu extends Exo.Container {
         this._previousMenu = null;
         this._startChild = null;
         this._activeChild = null;
-        this._game = null;
+        this._app = null;
     }
 }

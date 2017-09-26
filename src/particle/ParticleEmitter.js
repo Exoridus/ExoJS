@@ -1,6 +1,6 @@
 import Particle from './Particle';
 import Rectangle from '../core/shape/Rectangle';
-import Vector from '../core/shape/Vector';
+import Vector from '../core/Vector';
 import Color from '../core/Color';
 import Time from '../core/time/Time';
 

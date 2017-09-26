@@ -12,15 +12,15 @@ export default class TitleMenuManager extends MenuManager {
 
     /**
      * @constructor
-     * @param {Exo.Game} game
+     * @param {Application} app
      */
-    constructor(game) {
-        super(game);
+    constructor(app) {
+        super(app);
 
-        this.addMenu('main', new MainMenu(game));
-        this.addMenu('newGame', new NewGameMenu(game, 'main'));
-        this.addMenu('loadGame', new LoadGameMenu(game, 'main'));
-        this.addMenu('settings', new SettingsMenu(game, 'main'));
+        this.addMenu('main', new MainMenu(app));
+        this.addMenu('newGame', new NewGameMenu(app, 'main'));
+        this.addMenu('loadGame', new LoadGameMenu(app, 'main'));
+        this.addMenu('settings', new SettingsMenu(app, 'main'));
 
         this.openMenu('main');
     }

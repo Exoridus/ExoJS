@@ -1,7 +1,7 @@
 import ObservableVector from '../core/ObservableVector';
 import Rectangle from '../core/shape/Rectangle';
 import Matrix from '../core/Matrix';
-import { DEG_TO_RAD } from '../const';
+import { degreesToRadians } from '../utils';
 
 /**
  * @class View
@@ -251,11 +251,11 @@ export default class View {
      */
     updateTransform() {
         const transform = this._transform,
-            angle = this._rotation * DEG_TO_RAD,
+            radian = degreesToRadians(this._rotation),
             center = this._center,
             size = this._size,
-            cos = Math.cos(angle),
-            sin = Math.sin(angle),
+            cos = Math.cos(radian),
+            sin = Math.sin(radian),
 
             a = 2 / size.x,
             b = -2 / size.y,

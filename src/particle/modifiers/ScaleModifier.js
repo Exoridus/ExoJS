@@ -1,5 +1,5 @@
 import ParticleModifier from '../ParticleModifier';
-import Vector from '../../core/shape/Vector';
+import Vector from '../../core/Vector';
 
 /**
  * @class ScaleModifier

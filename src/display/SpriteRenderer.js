@@ -173,35 +173,27 @@ export default class SpriteRenderer extends Renderer {
 
         this._currentTexture.glTexture.update();
 
-        // X & Y
+        // Vertex 1 (X / Y / U / V)
         vertexBuffer[index] = (vertexData[0] * transform.a) + (vertexData[1] * transform.b) + transform.x;
         vertexBuffer[index + 1] = (vertexData[0] * transform.c) + (vertexData[1] * transform.d) + transform.y;
-
-        // U & V
         vertexBuffer[index + 2] = vertexData[2];
         vertexBuffer[index + 3] = vertexData[3];
 
-        // X & Y
+        // Vertex 2 (X / Y / U / V)
         vertexBuffer[index + 5] = (vertexData[4] * transform.a) + (vertexData[5] * transform.b) + transform.x;
         vertexBuffer[index + 6] = (vertexData[4] * transform.c) + (vertexData[5] * transform.d) + transform.y;
-
-        // U & V
         vertexBuffer[index + 7] = vertexData[6];
         vertexBuffer[index + 8] = vertexData[7];
 
-        // X & Y
+        // Vertex 3 (X / Y / U / V)
         vertexBuffer[index + 10] = (vertexData[8] * transform.a) + (vertexData[9] * transform.b) + transform.x;
         vertexBuffer[index + 11] = (vertexData[8] * transform.c) + (vertexData[9] * transform.d) + transform.y;
-
-        // U & V
         vertexBuffer[index + 12] = vertexData[10];
         vertexBuffer[index + 13] = vertexData[11];
 
-        // X & Y
+        // Vertex 4 (X / Y / U / V)
         vertexBuffer[index + 15] = (vertexData[12] * transform.a) + (vertexData[13] * transform.b) + transform.x;
         vertexBuffer[index + 16] = (vertexData[12] * transform.c) + (vertexData[13] * transform.d) + transform.y;
-
-        // U & V
         vertexBuffer[index + 17] = vertexData[14];
         vertexBuffer[index + 18] = vertexData[15];
 

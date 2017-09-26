@@ -51,7 +51,7 @@ export default class WorldMap {
 
         /**
          * @private
-         * @member {Exo.Sprite}
+         * @member {Sprite}
          */
         this._tile = new Exo.Sprite(tileset.texture);
         this._tile.setSize(this._tileSize, this._tileSize);
@@ -77,10 +77,10 @@ export default class WorldMap {
 
     /**
      * @public
-     * @param {Exo.Game} game
-     * @param {Exo.View} camera
+     * @param {Application} app
+     * @param {View} camera
      */
-    render(game, camera) {
+    render(app, camera) {
         const width = this._width,
             height = this._height,
             mapData = this._mapData,
@@ -94,7 +94,7 @@ export default class WorldMap {
             startTileIndex = (startTileY * width) + startTileX,
             tilesTotal = tilesHorizontal * tilesVertical;
 
-        game.trigger('display:begin');
+        app.trigger('display:begin');
 
         for (let i = 0; i < tilesTotal; i++) {
             const x = (i % tilesHorizontal) | 0,
@@ -106,9 +106,9 @@ export default class WorldMap {
             tile.x = (startTileX + x) * tileSize;
             tile.y = (startTileY + y) * tileSize;
 
-            game.trigger('display:render', tile);
+            app.trigger('display:render', tile);
         }
 
-        game.trigger('display:end');
+        app.trigger('display:end');
     }
 }
