@@ -203,20 +203,14 @@ export default class Video extends Sprite {
     /**
      * @override
      */
-    render(displayManager, parentTransform) {
-        if (!this.visible) {
-            return this;
+    render(displayManager) {
+        if (this.active) {
+            this.updateTexture();
+
+            displayManager
+                .getRenderer('sprite')
+                .render(this);
         }
-
-        this.updateTexture();
-
-        this.worldTransform
-            .copy(parentTransform)
-            .multiply(this.getTransform());
-
-        displayManager
-            .getRenderer('sprite')
-            .render(this);
 
         return this;
     }

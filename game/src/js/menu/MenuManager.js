@@ -34,7 +34,7 @@ export default class MenuManager {
          * @private
          * @member {Boolean}
          */
-        this._isEnabled = false;
+        this._active = false;
 
         /**
          * @private
@@ -116,14 +116,26 @@ export default class MenuManager {
 
     /**
      * @public
+     * @member {Boolean}
+     */
+    get active() {
+        return this._active;
+    }
+
+    set active(active) {
+        this._active = active;
+    }
+
+    /**
+     * @public
      * @param {String} startMenu
      */
     enable(startMenu) {
-        if (this._isEnabled) {
+        if (this._active) {
             return;
         }
 
-        this._isEnabled = true;
+        this._active = true;
         this._app.trigger('input:add', this._inputs);
 
         this.openMenu(startMenu);
@@ -133,11 +145,11 @@ export default class MenuManager {
      * @public
      */
     disable() {
-        if (!this._isEnabled) {
+        if (!this._active) {
             return;
         }
 
-        this._isEnabled = false;
+        this._active = false;
 
         this._app.trigger('input:remove', this._inputs);
 
@@ -204,11 +216,10 @@ export default class MenuManager {
     /**
      * @public
      * @param {DisplayManager} displayManager
-     * @param {Matrix} worldTransform
      */
-    render(displayManager, worldTransform) {
+    render(displayManager) {
         if (this._currentMenu) {
-            this._currentMenu.render(displayManager, worldTransform);
+            this._currentMenu.render(displayManager);
         }
     }
 
@@ -217,13 +228,14 @@ export default class MenuManager {
      * @param {Boolean} [destroyChildren=false]
      */
     destroy() {
-        if (this._isEnabled) {
+        if (this._active) {
             this.disable();
         }
 
         this._menus.forEach((menu) => {
             menu.destroy();
         });
+
         this._menus.clear();
         this._menus = null;
 

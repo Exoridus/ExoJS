@@ -1,6 +1,5 @@
 import Container from './Container';
 import Rectangle from '../core/shape/Rectangle';
-import Color from '../core/Color';
 
 /**
  * @class Sprite
@@ -22,9 +21,9 @@ export default class Sprite extends Container {
         this._texture = null;
 
         /**
-         * 4 vertices x 4 properties:
-         * 2 = posCoordinates (x, y) +
-         * 2 = texCoordinates (u, v)
+         * 8 Properties:
+         * X/Y/U/V from Top-Left Corner
+         * X/Y/U/V from Bottom-Right Corner
          *
          * @private
          * @type {Float32Array}
@@ -36,12 +35,6 @@ export default class Sprite extends Container {
          * @member {Rectangle}
          */
         this._textureRect = new Rectangle();
-
-        /**
-         * @private
-         * @member {Color}
-         */
-        this._tint = Color.White.clone();
 
         if (texture) {
             this.setTexture(texture);
@@ -74,14 +67,26 @@ export default class Sprite extends Container {
 
     /**
      * @public
-     * @member {Color}
+     * @member {Number}
      */
-    get tint() {
-        return this._tint;
+    get width() {
+        return Math.abs(this._scale.x) * this._texture.width;
     }
 
-    set tint(tint) {
-        this._tint.copy(tint);
+    set width(value) {
+        this._scale.x = value / this._texture.width;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get height() {
+        return Math.abs(this._scale.y) * this._texture.height;
+    }
+
+    set height(value) {
+        this._scale.y = value / this._texture.height;
     }
 
     /**
@@ -91,21 +96,6 @@ export default class Sprite extends Container {
      */
     get vertexData() {
         return this._vertexData;
-    }
-
-    /**
-     * @override
-     */
-    setOrigin(x, y, absolute = false) {
-        const bounds = this.getLocalBounds();
-
-        if (absolute) {
-            this.origin.set(x, y);
-        } else {
-            this.origin.set(x * bounds.width, y * bounds.height);
-        }
-
-        return this;
     }
 
     /**
@@ -128,14 +118,11 @@ export default class Sprite extends Container {
      * @returns {Sprite}
      */
     setTextureRect(rectangle) {
-        if (!this._textureRect.equals(rectangle)) {
-            this._textureRect.copy(rectangle);
+        this._textureRect.copy(rectangle);
+        this._localBounds.set(0, 0, this._textureRect.width, this._textureRect.height);
 
-            this.setSize(rectangle.width, rectangle.height);
-
-            this._updatePositions();
-            this._updateTexCoords();
-        }
+        this._updatePositions();
+        this._updateTexCoords();
 
         return this;
     }
@@ -154,18 +141,14 @@ export default class Sprite extends Container {
     /**
      * @override
      */
-    render(displayManager, worldTransform) {
-        if (this.visible) {
-            const transform = this.worldTransform
-                .copy(worldTransform)
-                .multiply(this.getTransform());
-
+    render(displayManager) {
+        if (this.active) {
             displayManager
                 .getRenderer('sprite')
                 .render(this);
 
             for (const child of this.children) {
-                child.render(displayManager, transform);
+                child.render(displayManager);
             }
         }
 
@@ -183,9 +166,6 @@ export default class Sprite extends Container {
 
         this._textureRect.destroy();
         this._textureRect = null;
-
-        this._tint.destroy();
-        this._tint = null;
     }
 
     /**
@@ -195,10 +175,10 @@ export default class Sprite extends Container {
         const vertexData = this._vertexData,
             bounds = this.getLocalBounds();
 
-        vertexData[0] = vertexData[5] = bounds.x;
-        vertexData[1] = vertexData[8] = bounds.y;
-        vertexData[4] = vertexData[12] = bounds.width;
-        vertexData[9] = vertexData[13] = bounds.height;
+        vertexData[0] = bounds.x;
+        vertexData[1] = bounds.y;
+        vertexData[4] = bounds.width;
+        vertexData[5] = bounds.height;
     }
 
     /**
@@ -211,9 +191,9 @@ export default class Sprite extends Container {
             left = (textureRect.x / texture.width),
             top = (textureRect.y / texture.height);
 
-        vertexData[2] = vertexData[10] = left;
-        vertexData[3] = vertexData[7] = top;
-        vertexData[6] = vertexData[14] = left + (textureRect.width / texture.width);
-        vertexData[11] = vertexData[15] = top + (textureRect.height / texture.height);
+        vertexData[2] = left;
+        vertexData[3] = top;
+        vertexData[6] = left + (textureRect.width / texture.width);
+        vertexData[7] = top + (textureRect.height / texture.height);
     }
 }

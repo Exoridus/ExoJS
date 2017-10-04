@@ -24,7 +24,7 @@ export default class MainMenu extends Menu {
          * @member {Sprite}
          */
         this._gameLogo = new Exo.Sprite(resources.get('texture', 'title/logo'));
-        this._gameLogo.setOrigin(0.5, 0.8);
+        this._gameLogo.setOrigin(this._gameLogo.width / 2, this._gameLogo.height * 0.8);
         this._gameLogo.setPosition(canvas.width / 2, 50 + (this._gameLogo.height * 0.8));
 
         /**

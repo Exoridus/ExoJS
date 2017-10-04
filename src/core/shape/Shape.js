@@ -195,7 +195,6 @@ export default class Shape {
      */
     destroy() {
         if (this._array) {
-            this._array.fill(0);
             this._array = null;
         }
 

@@ -139,7 +139,7 @@ export default {
      * @type {Number}
      * @default 2500
      */
-    SPRITE_BATCH_SIZE: 2500,
+    BATCH_SIZE_SPRITES: 2500,
 
     /**
      * @public
@@ -147,7 +147,7 @@ export default {
      * @type {Number}
      * @default 5000
      */
-    PARTICLE_BATCH_SIZE: 5000,
+    BATCH_SIZE_PARTICLES: 5000,
 
     /**
      * @public

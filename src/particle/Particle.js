@@ -126,7 +126,7 @@ export default class Particle {
     }
 
     set scale(scale) {
-        this._velocity.copy(scale);
+        this._scale.copy(scale);
     }
 
     /**

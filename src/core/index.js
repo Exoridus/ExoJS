@@ -8,6 +8,7 @@ export { default as RC4 } from './RC4';
 export { default as Random } from './Random';
 export { default as Application } from './Application';
 export { default as Scene } from './Scene';
+export { default as SceneNode } from './SceneNode';
 export { default as SceneManager } from './SceneManager';
 export { default as Quadtree } from './Quadtree';
 export { default as Vector } from './Vector';

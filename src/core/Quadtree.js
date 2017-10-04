@@ -166,7 +166,7 @@ export default class Quadtree {
         const bounds = entity.getBounds();
 
         for (const child of this._children.values()) {
-            if (child.bounds.inside(bounds)) {
+            if (child.getBounds().inside(bounds)) {
                 return child;
             }
         }

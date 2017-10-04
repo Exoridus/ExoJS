@@ -17,7 +17,6 @@ window.app.start(new Exo.Scene({
         const app = this.app,
             canvas = app.canvas;
 
-        this.bunnies = [];
         this.bunnyTexture = app.loader.resources.get('texture', 'bunny');
 
         this.startAmount = 10;
@@ -47,36 +46,26 @@ window.app.start(new Exo.Scene({
             bunny.speedX = Math.random() * 10;
             bunny.speedY = Math.random() * 10;
 
-            this.bunnies.push(bunny);
+            this.addNode(bunny);
         }
     },
 
     update() {
-        const app = this.app,
-            bunnies = this.bunnies,
-            len = bunnies.length,
-            maxX = this.maxX,
-            maxY = this.maxY;
-
-        app.trigger('display:begin');
-
-        for (let i = 0; i < len; i++) {
-            const bunny = bunnies[i];
-
+        for (const bunny of this.nodes) {
             bunny.speedY += 0.75;
-            bunny.move(bunny.speedX, bunny.speedY);
+            bunny.translate(bunny.speedX, bunny.speedY);
 
-            if (bunny.x + bunny.width > maxX) {
+            if (bunny.x + bunny.width > this.maxX) {
                 bunny.speedX *= -1;
-                bunny.x = maxX - bunny.width;
+                bunny.x = this.maxX - bunny.width;
             } else if (bunny.x < 0) {
                 bunny.speedX *= -1;
                 bunny.x = 0;
             }
 
-            if (bunny.y + bunny.height > maxY) {
+            if (bunny.y + bunny.height > this.maxY) {
                 bunny.speedY *= -0.85;
-                bunny.y = maxY - bunny.height;
+                bunny.y = this.maxY - bunny.height;
 
                 if (Math.random() > 0.5) {
                     bunny.speedY -= Math.random() * 6;
@@ -85,10 +74,6 @@ window.app.start(new Exo.Scene({
                 bunny.speedY *= -1;
                 bunny.y = 0;
             }
-
-            app.trigger('display:render', bunny);
         }
-
-        app.trigger('display:end');
     },
 }));

@@ -2,6 +2,7 @@ import ObservableVector from '../core/ObservableVector';
 import Rectangle from '../core/shape/Rectangle';
 import Matrix from '../core/Matrix';
 import { degreesToRadians } from '../utils';
+import Bounds from './Bounds';
 
 /**
  * @class View
@@ -34,6 +35,18 @@ export default class View {
 
         /**
          * @private
+         * @member {Number}
+         */
+        this._sin = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._cos = 1;
+
+        /**
+         * @private
          * @member {Rectangle}
          */
         this._viewport = new Rectangle(0, 0, 1, 1);
@@ -51,60 +64,6 @@ export default class View {
         this._dirtyTransform = true;
 
         this.reset(viewRectangle);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get width() {
-        return this._size.x;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get height() {
-        return this._size.y;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get left() {
-        return this._center.x - (this._size.x / 2);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get top() {
-        return this._center.y - (this._size.y / 2);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get right() {
-        return this._center.x + (this._size.x / 2);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get bottom() {
-        return this._center.y + (this._size.y / 2);
     }
 
     /**
@@ -175,103 +134,208 @@ export default class View {
 
     /**
      * @public
+     * @readonly
+     * @member {Number}
+     */
+    get width() {
+        return this._size.x;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get height() {
+        return this._size.y;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get left() {
+        return this._center.x - (this._size.x / 2);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get top() {
+        return this._center.y - (this._size.y / 2);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get right() {
+        return this._center.x + (this._size.x / 2);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get bottom() {
+        return this._center.y + (this._size.y / 2);
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
+     * @returns {View}
      */
     setCenter(x, y) {
         this._center.set(x, y);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} width
      * @param {Number} height
+     * @returns {View}
      */
     setSize(width, height) {
         this._size.set(width, height);
+
+        return this;
     }
 
     /**
      * @public
-     * @param {Number} angle
+     * @chainable
+     * @param {Number} degrees
+     * @returns {View}
      */
-    setRotation(angle) {
-        const rotation = angle % 360;
+    setRotation(degrees) {
+        const trimmed = degrees % 360,
+            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
+            radians = degreesToRadians(rotation);
 
         this._rotation = (rotation < 0) ? rotation + 360 : rotation;
-        this._dirtyTransform = true;
+        this._cos = Math.cos(radians);
+        this._sin = Math.sin(radians);
+
+        this._setDirty();
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Rectangle} rectangle
+     * @returns {View}
      */
     setViewport(rectangle) {
         this._viewport.copy(rectangle);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
+     * @returns {View}
      */
     move(x, y) {
-        this.setCenter(this._center.x + x, this._center.y + y);
+        return this.setCenter(this._center.x + x, this._center.y + y);
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} factor
+     * @returns {View}
      */
     zoom(factor) {
-        this.setSize(this._size.x * factor, this._size.y * factor);
+        return this.setSize(this._size.x * factor, this._size.y * factor);
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} angle
+     * @returns {View}
      */
     rotate(angle) {
-        this.setRotation(this._rotation + angle);
+        return this.setRotation(this._rotation + angle);
     }
 
     /**
      * @public
+     * @chainable
      * @param {Rectangle} rectangle
+     * @returns {View}
      */
     reset(rectangle) {
         this._center.set(rectangle.x + (rectangle.width / 2) | 0, rectangle.y + (rectangle.height / 2) | 0);
         this._size.set(rectangle.width, rectangle.height);
         this._rotation = 0;
-        this._dirtyTransform = true;
+        this._cos = 1;
+        this._sin = 0;
+
+        this._setDirty();
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {View}
      */
     updateTransform() {
         const transform = this._transform,
-            radian = degreesToRadians(this._rotation),
             center = this._center,
             size = this._size,
-            cos = Math.cos(radian),
-            sin = Math.sin(radian),
 
             a = 2 / size.x,
             b = -2 / size.y,
+            x = (-center.x * this._cos) - (center.y * this._sin) + center.x,
+
             c = -a * center.x,
             d = -b * center.y,
+            y = (center.x * this._sin) - (center.y * this._cos) + center.y;
 
-            tx = (-center.x * cos) - (center.y * sin) + center.x,
-            ty = (center.x * sin) - (center.y * cos) + center.y;
+        transform.a = a * this._cos;
+        transform.b = a * this._sin;
+        transform.x = (a * x) + c;
 
-        transform.a = a * cos;
-        transform.b = a * sin;
-        transform.x = (a * tx) + c;
+        transform.c = -b * this._sin;
+        transform.d = b * this._cos;
+        transform.y = (b * y) + d;
 
-        transform.c = -b * sin;
-        transform.d = b * cos;
-        transform.y = (b * ty) + d;
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {View} view
+     * @returns {View}
+     */
+    copy(view) {
+        this.center = view.center;
+        this.size = view.size;
+        this.viewport = view.viewport;
+        this.transform = view.transform;
+        this.rotation = view.rotation;
+
+        return this;
     }
 
     /**
@@ -291,6 +355,9 @@ export default class View {
         this._transform = null;
 
         this._rotation = null;
+        this._cos = null;
+        this._sin = null;
+
         this._dirtyTransform = null;
     }
 

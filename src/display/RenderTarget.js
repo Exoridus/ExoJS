@@ -1,5 +1,3 @@
-import View from './View';
-import Rectangle from '../core/shape/Rectangle';
 import Vector from '../core/Vector';
 
 /**
@@ -38,24 +36,6 @@ export default class RenderTarget {
          * @member {Vector}
          */
         this._size = new Vector(width, height);
-
-        /**
-         * @private
-         * @member {Rectangle}
-         */
-        this._viewport = new Rectangle();
-
-        /**
-         * @private
-         * @member {View}
-         */
-        this._defaultView = new View(new Rectangle(0, 0, width, height));
-
-        /**
-         * @private
-         * @member {View}
-         */
-        this._view = this._defaultView;
     }
 
     /**
@@ -96,15 +76,6 @@ export default class RenderTarget {
 
     /**
      * @public
-     * @readonly
-     * @member {Matrix}
-     */
-    get projection() {
-        return this._view.transform;
-    }
-
-    /**
-     * @public
      * @param {WebGLRenderingContext} gl
      */
     setContext(gl) {
@@ -125,55 +96,6 @@ export default class RenderTarget {
 
     /**
      * @public
-     * @param {View} view
-     * @returns {Rectangle}
-     */
-    getViewport(view) {
-        const width = this.width,
-            height = this.height,
-            viewport = view.viewport;
-
-        return this._viewport.set(
-            (0.5 + (width * viewport.x)) | 0,
-            (0.5 + (height * viewport.y)) | 0,
-            (0.5 + (width * viewport.width)) | 0,
-            (0.5 + (height * viewport.height)) | 0
-        );
-    }
-
-    /**
-     * @public
-     */
-    updateViewport() {
-        const gl = this._context,
-            viewport = this.getViewport(this._view);
-
-        gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-    }
-
-    /**
-     * @public
-     * @param {Number} width
-     * @param {Number} height
-     */
-    resize(width, height) {
-        this._size.set(width, height);
-
-        this.updateViewport();
-    }
-
-    /**
-     * @public
-     * @param {View} view
-     */
-    setView(view) {
-        this._view = view;
-
-        this.updateViewport();
-    }
-
-    /**
-     * @public
      */
     destroy() {
         if (this._frameBuffer) {
@@ -181,16 +103,9 @@ export default class RenderTarget {
             this._frameBuffer = null;
         }
 
-        this._defaultView.destroy();
-        this._defaultView = null;
-
-        this._viewport.destroy();
-        this._viewport = null;
-
         this._size.destroy();
         this._size = null;
 
-        this._view = null;
         this._isRoot = null;
         this._context = null;
     }

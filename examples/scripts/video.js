@@ -14,20 +14,19 @@ window.app.start(new Exo.Scene({
     },
 
     init() {
-        const app = this.app;
-
         /**
          * @private
          * @member {HTMLVideoElement}
          */
-        this._videoElement = app.loader.resources.get('video', 'example');
+        this.videoElement = this.app.loader.resources.get('video', 'example');
 
         /**
          * @private
          * @member {Video}
          */
-        this._video = new Exo.Video(this._videoElement);
-        this._video.size.set(800, 600);
+        this.video = new Exo.Video(this.videoElement);
+        this.video.width = 800;
+        this.video.height = 600;
 
         /**
          * @private
@@ -38,18 +37,14 @@ window.app.start(new Exo.Scene({
         ], {
             context: this,
             trigger() {
-                this._video.toggle();
+                this.video.toggle();
             },
         });
 
-        app.trigger('input:add', this._input)
-            .trigger('media:play', this._video, { loop: true });
-    },
-
-    update() {
         this.app
-            .trigger('display:begin')
-            .trigger('display:render', this._video)
-            .trigger('display:end');
+            .trigger('input:add', this._input)
+            .trigger('media:play', this.video, { loop: true });
+
+        this.addNode(this.video);
     },
 }));

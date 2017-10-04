@@ -18,16 +18,13 @@ window.app.start(new Exo.Scene({
             resources = app.loader.resources;
 
         this.bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
-        this.bunny.setOrigin(0.5, 0.5);
+        this.bunny.setOrigin(0.5);
         this.bunny.setPosition(app.canvas.width / 2 | 0, app.canvas.height / 2 | 0);
+
+        this.addNode(this.bunny);
     },
 
     update(delta) {
         this.bunny.rotate(delta.seconds * 360);
-
-        this.app
-            .trigger('display:begin')
-            .trigger('display:render', this.bunny)
-            .trigger('display:end');
     },
 }));

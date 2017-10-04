@@ -31,20 +31,26 @@ export default class Container extends Renderable {
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
     get width() {
-        return this.getBounds().width;
+        return Math.abs(this._scale.x) * this.getBounds().width;
+    }
+
+    set width(value) {
+        this._scale.x = value / this.getBounds().width;
     }
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
     get height() {
-        return this.getBounds().height;
+        return Math.abs(this._scale.y) * this.getBounds().height;
+    }
+
+    set height(value) {
+        this._scale.y = value / this.getBounds().height;
     }
 
     /**
@@ -164,6 +170,7 @@ export default class Container extends Renderable {
         }
 
         removeItems(this._children, this.getChildIndex(child), 1);
+
         this._children.splice(index, 0, child);
 
         return this;
@@ -221,12 +228,10 @@ export default class Container extends Renderable {
         const range = (end - begin);
 
         if (range < 0 || range > end) {
-            throw new Error('removeChildren: numeric values are outside the acceptable range.');
+            throw new Error('Values are outside the acceptable range.');
         }
 
-        if (range || this._children.length) {
-            this._children.splice(begin, range);
-        }
+        removeItems(this._children, begin, range);
 
         return this;
     }
@@ -234,14 +239,10 @@ export default class Container extends Renderable {
     /**
      * @override
      */
-    render(displayManager, worldTransform) {
-        if (this.visible) {
-            const transform = this.worldTransform
-                .copy(worldTransform)
-                .multiply(this.getTransform());
-
+    render(displayManager) {
+        if (this.active) {
             for (const child of this._children) {
-                child.render(displayManager, transform);
+                child.render(displayManager);
             }
         }
 
@@ -251,20 +252,17 @@ export default class Container extends Renderable {
     /**
      * @override
      */
-    getBounds() {
-        const bounds = this.bounds.reset();
-
-        bounds.addRectangle(this.getTransform(), this.getLocalBounds());
+    updateBounds() {
+        this._bounds.reset()
+            .addRect(this.getLocalBounds(), this.getGlobalTransform());
 
         for (const child of this._children) {
-            if (!child.visible) {
-                continue;
+            if (child.active) {
+                this._bounds.addRect(child.getBounds());
             }
-
-            bounds.addBounds(child.getBounds());
         }
 
-        return bounds.set(minX, minY, maxX, maxY);
+        return this;
     }
 
     /**

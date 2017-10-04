@@ -21,11 +21,9 @@ export default class Matrix {
      * @param {Number} [f=0]
      * @param {Number} [z=1]
      */
-    constructor(
-        a = 1, b = 0, x = 0,
-        c = 0, d = 1, y = 0,
-        e = 0, f = 0, z = 1
-    ) {
+    constructor(a = 1, b = 0, x = 0,
+                c = 0, d = 1, y = 0,
+                e = 0, f = 0, z = 1) {
 
         /**
          * @public
@@ -152,14 +150,20 @@ export default class Matrix {
      * @param {Number} z
      * @returns {Matrix}
      */
-    set(
-        a = this.a, b = this.b, x = this.x,
+    set(a = this.a, b = this.b, x = this.x,
         c = this.c, d = this.d, y = this.y,
-        e = this.e, f = this.f, z = this.z
-    ) {
-        this.a = a; this.c = c; this.e = e;
-        this.b = b; this.d = d; this.f = f;
-        this.x = x; this.y = y; this.z = z;
+        e = this.e, f = this.f, z = this.z) {
+        this.a = a;
+        this.b = b;
+        this.x = x;
+
+        this.c = c;
+        this.d = d;
+        this.y = y;
+
+        this.e = e;
+        this.f = f;
+        this.z = z;
 
         return this;
     }
@@ -171,9 +175,19 @@ export default class Matrix {
      * @returns {Matrix}
      */
     copy(matrix) {
-        this.a = matrix.a; this.c = matrix.c; this.e = matrix.e;
-        this.b = matrix.b; this.d = matrix.d; this.f = matrix.f;
-        this.x = matrix.x; this.y = matrix.y; this.z = matrix.z;
+        if (matrix !== this) {
+            this.a = matrix.a;
+            this.b = matrix.b;
+            this.x = matrix.x;
+
+            this.c = matrix.c;
+            this.d = matrix.d;
+            this.y = matrix.y;
+
+            this.e = matrix.e;
+            this.f = matrix.f;
+            this.z = matrix.z;
+        }
 
         return this;
     }
@@ -218,7 +232,7 @@ export default class Matrix {
      * @returns {Matrix}
      */
     translate(translation) {
-        return this.multiply(new Matrix(
+        return this.multiply(Matrix.temp.set(
             1, 0, translation.x,
             0, 1, translation.y,
             0, 0, 1
@@ -235,10 +249,10 @@ export default class Matrix {
             cos = Math.cos(radian),
             sin = Math.sin(radian);
 
-        return this.multiply(new Matrix(
+        return this.multiply(Matrix.temp.set(
             cos, -sin, 0,
             sin, cos, 0,
-            0, 0, 1,
+            0, 0, 1
         ));
     }
 
@@ -248,7 +262,7 @@ export default class Matrix {
      * @returns {Matrix}
      */
     scale(scale) {
-        return this.multiply(new Matrix(
+        return this.multiply(Matrix.temp.set(
             scale.x, 0, 0,
             0, scale.y, 0,
             0, 0, 1
@@ -281,7 +295,6 @@ export default class Matrix {
      */
     destroy() {
         if (this._array) {
-            this._array.fill(0);
             this._array = null;
         }
 
@@ -297,17 +310,20 @@ export default class Matrix {
         this.f = null;
         this.z = null;
     }
-
-    /**
-     * @public
-     * @static
-     * @member {Matrix}
-     */
-    static get Identity() {
-        return new Matrix(
-            1, 0, 0,
-            0, 1, 0,
-            0, 0, 1
-        );
-    }
 }
+
+/**
+ * @public
+ * @static
+ * @readonly
+ * @member {Matrix}
+ */
+Matrix.Identity = new Matrix();
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Matrix}
+ */
+Matrix.temp = new Matrix();

@@ -19,12 +19,6 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._indexCount = 6;
-
-        /**
-         * @private
-         * @member {Number}
-         */
         this._vertexCount = 4;
 
         /**
@@ -50,7 +44,7 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._maxParticles = settings.PARTICLE_BATCH_SIZE;
+        this._maxParticles = settings.BATCH_SIZE_PARTICLES;
 
         /**
          * @private
@@ -74,7 +68,7 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Uint16Array}
          */
-        this._indexData = Renderer.createIndexBuffer(this._maxParticles * this._indexCount);
+        this._indexData = Renderer.createIndexBuffer(this._maxParticles);
 
         /**
          * Current amount of elements inside the batch to draw.
@@ -233,7 +227,7 @@ export default class ParticleRenderer extends Renderer {
         const gl = this._context;
 
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, this._batchSize * this._particleVertexSize));
-        gl.drawElements(gl.TRIANGLES, this._batchSize * this._indexCount, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, this._batchSize * 6, gl.UNSIGNED_SHORT, 0);
 
         this._batchSize = 0;
     }
@@ -258,7 +252,6 @@ export default class ParticleRenderer extends Renderer {
         this._vertexCount = null;
         this._vertexPropCount = null;
         this._particleVertexSize = null;
-        this._indexCount = null;
         this._maxParticles = null;
         this._batchSize = null;
         this._currentTexture = null;

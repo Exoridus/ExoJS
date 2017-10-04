@@ -18,12 +18,6 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._indexCount = 6;
-
-        /**
-         * @private
-         * @member {Number}
-         */
         this._vertexCount = 4;
 
         /**
@@ -48,7 +42,7 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._maxSprites = settings.SPRITE_BATCH_SIZE;
+        this._maxSprites = settings.BATCH_SIZE_SPRITES;
 
         /**
          * @private
@@ -72,7 +66,7 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Uint16Array}
          */
-        this._indexData = Renderer.createIndexBuffer(this._maxSprites * this._indexCount);
+        this._indexData = Renderer.createIndexBuffer(this._maxSprites);
 
         /**
          * Current amount of elements inside the batch to draw.
@@ -167,7 +161,7 @@ export default class SpriteRenderer extends Renderer {
 
         const vertexBuffer = this._vertexView,
             colorBuffer = this._colorView,
-            transform = sprite.worldTransform,
+            transform = sprite.globalTransform,
             vertexData = sprite.vertexData,
             index = this._batchSize * this._spriteVertexSize;
 
@@ -180,22 +174,22 @@ export default class SpriteRenderer extends Renderer {
         vertexBuffer[index + 3] = vertexData[3];
 
         // Vertex 2 (X / Y / U / V)
-        vertexBuffer[index + 5] = (vertexData[4] * transform.a) + (vertexData[5] * transform.b) + transform.x;
-        vertexBuffer[index + 6] = (vertexData[4] * transform.c) + (vertexData[5] * transform.d) + transform.y;
+        vertexBuffer[index + 5] = (vertexData[4] * transform.a) + (vertexData[0] * transform.b) + transform.x;
+        vertexBuffer[index + 6] = (vertexData[4] * transform.c) + (vertexData[0] * transform.d) + transform.y;
         vertexBuffer[index + 7] = vertexData[6];
-        vertexBuffer[index + 8] = vertexData[7];
+        vertexBuffer[index + 8] = vertexData[3];
 
         // Vertex 3 (X / Y / U / V)
-        vertexBuffer[index + 10] = (vertexData[8] * transform.a) + (vertexData[9] * transform.b) + transform.x;
-        vertexBuffer[index + 11] = (vertexData[8] * transform.c) + (vertexData[9] * transform.d) + transform.y;
-        vertexBuffer[index + 12] = vertexData[10];
-        vertexBuffer[index + 13] = vertexData[11];
+        vertexBuffer[index + 10] = (vertexData[1] * transform.a) + (vertexData[5] * transform.b) + transform.x;
+        vertexBuffer[index + 11] = (vertexData[1] * transform.c) + (vertexData[5] * transform.d) + transform.y;
+        vertexBuffer[index + 12] = vertexData[2];
+        vertexBuffer[index + 13] = vertexData[7];
 
         // Vertex 4 (X / Y / U / V)
-        vertexBuffer[index + 15] = (vertexData[12] * transform.a) + (vertexData[13] * transform.b) + transform.x;
-        vertexBuffer[index + 16] = (vertexData[12] * transform.c) + (vertexData[13] * transform.d) + transform.y;
-        vertexBuffer[index + 17] = vertexData[14];
-        vertexBuffer[index + 18] = vertexData[15];
+        vertexBuffer[index + 15] = (vertexData[4] * transform.a) + (vertexData[5] * transform.b) + transform.x;
+        vertexBuffer[index + 16] = (vertexData[4] * transform.c) + (vertexData[5] * transform.d) + transform.y;
+        vertexBuffer[index + 17] = vertexData[6];
+        vertexBuffer[index + 18] = vertexData[7];
 
         // Tint
         colorBuffer[index + 4]
@@ -218,7 +212,7 @@ export default class SpriteRenderer extends Renderer {
         }
 
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, this._batchSize * this._spriteVertexSize));
-        gl.drawElements(gl.TRIANGLES, this._batchSize * this._indexCount, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, this._batchSize * 6, gl.UNSIGNED_SHORT, 0);
 
         this._batchSize = 0;
     }
@@ -241,7 +235,6 @@ export default class SpriteRenderer extends Renderer {
         this._colorView = null;
         this._indexData = null;
         this._spriteVertexSize = null;
-        this._indexCount = null;
         this._maxSprites = null;
         this._batchSize = null;
         this._currentTexture = null;

@@ -54,7 +54,8 @@ export default class WorldMap {
          * @member {Sprite}
          */
         this._tile = new Exo.Sprite(tileset.texture);
-        this._tile.setSize(this._tileSize, this._tileSize);
+        this._tile.width = this._tileSize;
+        this._tile.height = this._tileSize;
     }
 
     /**
@@ -81,7 +82,8 @@ export default class WorldMap {
      * @param {View} camera
      */
     render(app, camera) {
-        const width = this._width,
+        const displayManager = app.displayManager,
+            width = this._width,
             height = this._height,
             mapData = this._mapData,
             tileset = this._tileset,
@@ -94,7 +96,7 @@ export default class WorldMap {
             startTileIndex = (startTileY * width) + startTileX,
             tilesTotal = tilesHorizontal * tilesVertical;
 
-        app.trigger('display:begin');
+        displayManager.begin();
 
         for (let i = 0; i < tilesTotal; i++) {
             const x = (i % tilesHorizontal) | 0,
@@ -106,9 +108,9 @@ export default class WorldMap {
             tile.x = (startTileX + x) * tileSize;
             tile.y = (startTileY + y) * tileSize;
 
-            app.trigger('display:render', tile);
+            displayManager.render(tile);
         }
 
-        app.trigger('display:end');
+        displayManager.end();
     }
 }

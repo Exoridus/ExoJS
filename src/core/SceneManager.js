@@ -27,7 +27,8 @@ export default class SceneManager {
          */
         this._isSceneActive = false;
 
-        app.on('scene:change', this.onSceneChange, this)
+        app
+            .on('scene:change', this.onSceneChange, this)
             .on('scene:start', this.onSceneStart, this)
             .on('scene:stop', this.onSceneStop, this);
     }
@@ -37,9 +38,21 @@ export default class SceneManager {
      * @param {Time} delta
      */
     update(delta) {
-        if (this._currentScene || this._isSceneActive) {
-            this._currentScene.update(delta);
+        if (!this._currentScene || !this._isSceneActive) {
+            return;
         }
+
+        const displayManager = this._app.displayManager;
+
+        this._currentScene.update(delta);
+
+        displayManager.begin();
+
+        for (const node of this._currentScene.nodes) {
+            displayManager.render(node);
+        }
+
+        displayManager.end();
     }
 
     /**

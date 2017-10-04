@@ -23,7 +23,7 @@ export default class TitleScene extends Exo.Scene {
          * @private
          * @member {Sprite}
          */
-        this._titleBackground = new Exo.Sprite(resources.get('sprite', 'title/background'));
+        this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
 
         /**
          * @private
@@ -31,9 +31,10 @@ export default class TitleScene extends Exo.Scene {
          */
         this._titleMusic = resources.get('music', 'title/background');
 
-        this.app.trigger('media:play', this._titleMusic, {
-            loop: true,
-        });
+        this.app.trigger('media:play', this._titleMusic, { loop: true });
+
+        this.addNode(this._titleBackground)
+            .addNode(this._menuManager);
     }
 
     /**
@@ -41,12 +42,6 @@ export default class TitleScene extends Exo.Scene {
      */
     update(delta) {
         this._menuManager.update(delta);
-
-        this.app
-            .trigger('display:begin')
-            .trigger('display:render', this._titleBackground)
-            .trigger('display:render', this._menuManager)
-            .trigger('display:end');
     }
 
     /**

@@ -106,29 +106,6 @@ export default class Rectangle extends Shape {
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Matrix} matrix
-     * @returns {Rectangle}
-     */
-    transform(matrix) {
-        let vector = new Vector(),
-            [left, top, right, bottom] = [0, 0, 0, 0];
-
-        for (let i = 0; i < 4; i++) {
-            vector.set((i < 2 ? this.left : this.right), (i % 2 === 0 ? this.top : this.bottom))
-                .transform(matrix);
-
-            left = Math.min(left, vector.x);
-            right = Math.max(right, vector.x);
-            top = Math.min(top, vector.y);
-            bottom = Math.max(bottom, vector.y);
-        }
-
-        return this.set(left, top, right - left, bottom - top);
-    }
-
-    /**
      * @override
      */
     set(x, y, width, height) {
@@ -187,9 +164,11 @@ export default class Rectangle extends Shape {
      * @override
      */
     getBounds() {
-        const bounds = this._bounds || (this._bounds = new Rectangle());
+        if (!this._bounds) {
+            this._bounds = new Rectangle();
+        }
 
-        return bounds.copy(this);
+        return this._bounds.copy(this);
     }
 
     /**
@@ -208,7 +187,6 @@ export default class Rectangle extends Shape {
      * @override
      */
     intersects(rectangle) {
-
         return rangeIntersect(this.left, this.right, rectangle.left, rectangle.right)
             && rangeIntersect(this.top, this.bottom, rectangle.top, rectangle.bottom);
     }
@@ -229,10 +207,15 @@ export default class Rectangle extends Shape {
     destroy() {
         super.destroy();
 
-        this._position.destroy();
-        this._position = null;
-
         this._size.destroy();
         this._size = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Rectangle}
+ */
+Rectangle.temp = new Rectangle();

@@ -5,6 +5,8 @@ import Color from '../core/Color';
 import Matrix from '../core/Matrix';
 import { BLEND_MODE } from '../const';
 import support from '../support';
+import View from './View';
+import Rectangle from '../core/shape/Rectangle';
 
 /**
  * @class DisplayManager
@@ -93,12 +95,6 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Matrix}
-         */
-        this._worldTransform = new Matrix();
-
-        /**
-         * @private
          * @member {RenderTarget}
          */
         this._rootRenderTarget = new RenderTarget(width, height, true);
@@ -127,6 +123,18 @@ export default class DisplayManager {
          */
         this._projection = new Matrix();
 
+        /**
+         * @private
+         * @member {Rectangle}
+         */
+        this._viewport = new Rectangle();
+
+        /**
+         * @private
+         * @member {View}
+         */
+        this._view = new View(new Rectangle(0, 0, width, height));
+
         this._addEvents();
         this._addBlendmodes();
         this._setGLFlags();
@@ -139,13 +147,6 @@ export default class DisplayManager {
         this.addRenderer('particle', new ParticleRenderer());
 
         this.resize(width, height);
-
-        app.on('display:begin', this.begin, this)
-            .on('display:render', this.render, this)
-            .on('display:end', this.end, this)
-            .on('display:clear', this.clear, this)
-            .on('display:resize', this.resize, this)
-            .on('display:view', this.setView, this);
     }
 
     /**
@@ -191,6 +192,15 @@ export default class DisplayManager {
 
     set clearColor(color) {
         this.setClearColor(color);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Matrix}
+     */
+    get projection() {
+        return this._view.transform;
     }
 
     /**
@@ -274,8 +284,7 @@ export default class DisplayManager {
         this._canvas.width = width;
         this._canvas.height = height;
 
-        this._rootRenderTarget.resize(width, height);
-        this.setProjection(this._rootRenderTarget.projection);
+        this.updateViewport();
     }
 
     /**
@@ -283,11 +292,44 @@ export default class DisplayManager {
      * @param {View} view
      */
     setView(view) {
-        this._renderTarget.setView(view);
+        this._view.copy(view);
 
-        if (this._renderTarget === this._rootRenderTarget) {
-            this.setProjection(this._rootRenderTarget.projection);
-        }
+        this.updateViewport();
+    }
+
+    /**
+     * @public
+     */
+    resetView() {
+        this._view.reset(Rectangle.temp.set(0, 0, this._renderTarget.width, this._renderTarget.height));
+
+        this.updateViewport();
+    }
+
+    /**
+     * @public
+     */
+    updateViewport() {
+        const gl = this._context,
+            width = this._renderTarget.width,
+            height = this._renderTarget.height,
+            viewport = this._view.viewport;
+
+        this._viewport.set(
+            (0.5 + (width * viewport.x)) | 0,
+            (0.5 + (height * viewport.y)) | 0,
+            (0.5 + (width * viewport.width)) | 0,
+            (0.5 + (height * viewport.height)) | 0
+        );
+
+        gl.viewport(
+            this._viewport.x,
+            this._viewport.y,
+            this._viewport.width,
+            this._viewport.height
+        );
+
+        this.setProjection(this._view.transform);
     }
 
     /**
@@ -351,8 +393,8 @@ export default class DisplayManager {
             throw new Error('Renderer needs to begin first!');
         }
 
-        if (!this._contextLost) {
-            renderable.render(this, this._worldTransform);
+        if (!this._contextLost && this.isVisible(renderable)) {
+            renderable.render(this);
         }
     }
 
@@ -369,6 +411,15 @@ export default class DisplayManager {
         if (this._currentRenderer && !this._contextLost) {
             this._currentRenderer.flush();
         }
+    }
+
+    /**
+     * @public
+     * @param {Renderable} renderable
+     * @returns {Boolean}
+     */
+    isVisible(renderable) {
+        return renderable.active;
     }
 
     /**
@@ -390,14 +441,16 @@ export default class DisplayManager {
         this._clearColor.destroy();
         this._clearColor = null;
 
-        this._worldTransform.destroy();
-        this._worldTransform = null;
-
         this._rootRenderTarget.destroy();
         this._rootRenderTarget = null;
 
         this._projection.destroy();
         this._projection = null;
+
+        this._viewport.destroy();
+        this._viewport = null;
+
+        this._view = null;
 
         this._clearBeforeRender = null;
         this._isRendering = null;

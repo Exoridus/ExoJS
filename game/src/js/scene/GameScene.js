@@ -128,11 +128,10 @@ export default class GameScene extends Exo.Scene {
             }),
         ];
 
-        this.app.trigger('input:add', this._inputs);
+        app.trigger('media:play', this._backgroundMusic, { loop: true })
+            .trigger('input:add', this._inputs);
 
-        app.trigger('media:play', this._backgroundMusic, {
-            loop: true,
-        });
+        this.addNode(this._player);
 
         this._updateCamera();
     }
@@ -142,11 +141,6 @@ export default class GameScene extends Exo.Scene {
      */
     update(delta) {
         this._worldMap.render(this.app, this._camera);
-
-        this.app
-            .trigger('display:begin')
-            .trigger('display:render', this._player)
-            .trigger('display:end');
     }
 
     /**
@@ -205,6 +199,6 @@ export default class GameScene extends Exo.Scene {
             clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight),
         );
 
-        this.app.trigger('display:view', camera);
+        this.app.displayManager.setView(camera);
     }
 }

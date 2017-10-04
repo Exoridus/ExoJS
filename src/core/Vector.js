@@ -175,12 +175,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Vector|Object} [vector]
-     * @param {Number} [vector.x=0]
-     * @param {Number} [vector.y=0]
+     * @param {Number} x=0
+     * @param {Number} y=x
      * @returns {Vector}
      */
-    add({ x = 0, y = 0 } = {}) {
+    add(x = 0, y = x) {
         this._x += x;
         this._y += y;
 
@@ -190,12 +189,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Vector|Object} [vector]
-     * @param {Number} [vector.x=0]
-     * @param {Number} [vector.y=0]
+     * @param {Number} x=0
+     * @param {Number} y=x
      * @returns {Vector}
      */
-    subtract({ x = 0, y = 0 } = {}) {
+    subtract(x = 0, y = x) {
         this._x -= x;
         this._y -= y;
 
@@ -205,12 +203,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Vector|Object} [vector]
-     * @param {Number} [vector.x=1]
-     * @param {Number} [vector.y=1]
+     * @param {Number} x=1
+     * @param {Number} y=x
      * @returns {Vector}
      */
-    multiply({ x = 1, y = 1 } = {}) {
+    multiply(x = 1, y = x) {
         this._x *= x;
         this._y *= y;
 
@@ -220,12 +217,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Vector|Object} [vector]
-     * @param {Number} [vector.x=1]
-     * @param {Number} [vector.y=1]
+     * @param {Number} x=1
+     * @param {Number} y=x
      * @returns {Vector}
      */
-    divide({ x = 1, y = 1 } = {}) {
+    divide(x = 1, y = x) {
         this._x /= x;
         this._y /= y;
 
@@ -235,13 +231,13 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Matrix} matrix
+     * @param {Matrix} transform
      * @returns {Vector}
      */
-    transform(matrix) {
+    transform(transform) {
         return this.set(
-            (matrix.a * this._x) + (matrix.c * this._y) + matrix.x,
-            (matrix.b * this._x) + (matrix.d * this._y) + matrix.y,
+            (transform.a * this._x) + (transform.b * this._y) + transform.x,
+            (transform.c * this._x) + (transform.d * this._y) + transform.y
         );
     }
 
@@ -280,7 +276,6 @@ export default class Vector {
      */
     destroy() {
         if (this._array) {
-            this._array.fill(0);
             this._array = null;
         }
 
@@ -288,3 +283,11 @@ export default class Vector {
         this._y = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Vector}
+ */
+Vector.temp = new Vector();

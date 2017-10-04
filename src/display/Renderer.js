@@ -90,11 +90,11 @@ export default class Renderer {
 
     /**
      * @public
-     * @param {Number} length
+     * @param {Number} size
      * @returns {Uint16Array}
      */
-    static createIndexBuffer(length) {
-        const buffer = new Uint16Array(length),
+    static createIndexBuffer(size) {
+        const buffer = new Uint16Array(size * 6),
             len = buffer.length;
 
         for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {

@@ -98,6 +98,12 @@ export default class ParticleEmitter {
          * @member {Color}
          */
         this._particleColor = Color.White.clone();
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._active = true;
     }
 
     /**
@@ -249,6 +255,18 @@ export default class ParticleEmitter {
 
     /**
      * @public
+     * @member {Boolean}
+     */
+    get active() {
+        return this._active;
+    }
+
+    set active(active) {
+        this._active = active;
+    }
+
+    /**
+     * @public
      * @param {Rectangle} rectangle
      */
     setTextureRect(rectangle) {
@@ -321,11 +339,17 @@ export default class ParticleEmitter {
 
     /**
      * @public
+     * @chainable
      * @param {DisplayManager} displayManager
+     * @returns {ParticleEmitter}
      */
     render(displayManager) {
-        displayManager
-            .getRenderer('particle')
-            .render(this);
+        if (this.active) {
+            displayManager
+                .getRenderer('particle')
+                .render(this);
+        }
+
+        return this;
     }
 }

@@ -47,6 +47,18 @@ export default class Transformable extends EventEmitter {
 
         /**
          * @private
+         * @member {Number}
+         */
+        this._sin = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._cos = 1;
+
+        /**
+         * @private
          * @member {Boolean}
          */
         this._dirtyTransform = true;
@@ -157,24 +169,21 @@ export default class Transformable extends EventEmitter {
      */
     updateTransform() {
         const transform = this._transform,
-            position = this._position,
             scale = this._scale,
             origin = this._origin,
-            radian = degreesToRadians(this._rotation),
-            cos = Math.cos(radian),
-            sin = Math.sin(radian),
-            sxc = scale.x * cos,
-            syc = scale.y * cos,
-            sxs = scale.x * sin,
-            sys = scale.y * sin;
+            position = this._position,
+            cx = scale.x * this._cos,
+            sx = scale.x * this._sin,
+            cy = scale.y * this._cos,
+            sy = scale.y * this._sin;
 
-        transform.a = sxc;
-        transform.b = sys;
-        transform.x = (origin.x * -sxc) - (origin.y * sys) + position.x;
+        transform.a = cx;
+        transform.b = sy;
+        transform.x = (origin.x * -cx) - (origin.y * sy) + position.x;
 
-        transform.c = -sxs;
-        transform.d = syc;
-        transform.y = (origin.x * sxs) - (origin.y * syc) + position.y;
+        transform.c = -sx;
+        transform.d = cy;
+        transform.y = (origin.x * sx) - (origin.y * cy) + position.y;
 
         return this;
     }
@@ -183,10 +192,10 @@ export default class Transformable extends EventEmitter {
      * @public
      * @chainable
      * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [y=x]
      * @returns {Transformable}
      */
-    setPosition(x, y) {
+    setPosition(x, y = x) {
         this._position.set(x, y);
 
         return this;
@@ -196,10 +205,10 @@ export default class Transformable extends EventEmitter {
      * @public
      * @chainable
      * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [y=x]
      * @returns {Transformable}
      */
-    setScale(x, y) {
+    setScale(x, y = x) {
         this._scale.set(x, y);
 
         return this;
@@ -209,10 +218,10 @@ export default class Transformable extends EventEmitter {
      * @public
      * @chainable
      * @param {Number} x
-     * @param {Number} y
+     * @param {Number} [y=x]
      * @returns {Transformable}
      */
-    setOrigin(x, y) {
+    setOrigin(x, y = x)  {
         this._origin.set(x, y);
 
         return this;
@@ -224,11 +233,16 @@ export default class Transformable extends EventEmitter {
      * @param {Number} angle
      * @returns {Transformable}
      */
-    setRotation(angle) {
-        const rotation = angle % 360;
+    setRotation(degrees) {
+        const trimmed = degrees % 360,
+            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
+            radians = degreesToRadians(rotation);
 
-        this._rotation = (rotation < 0) ? rotation + 360 : rotation;
-        this._dirtyTransform = true;
+        this._rotation = rotation;
+        this._cos = Math.cos(radians);
+        this._sin = Math.sin(radians);
+
+        this._setDirty();
 
         return this;
     }
@@ -240,7 +254,7 @@ export default class Transformable extends EventEmitter {
      * @param {Number} y
      * @returns {Transformable}
      */
-    move(x, y) {
+    translate(x, y) {
         return this.setPosition(this.x + x, this.y + y);
     }
 
@@ -273,6 +287,9 @@ export default class Transformable extends EventEmitter {
         this._origin = null;
 
         this._rotation = null;
+        this._cos = null;
+        this._sin = null;
+
         this._dirtyTransform = null;
     }
 

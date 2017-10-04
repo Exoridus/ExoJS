@@ -1,5 +1,9 @@
 import Rectangle from '../core/shape/Rectangle';
 import Vector from '../core/Vector';
+import Matrix from '../core/Matrix';
+
+const tempVector = new Vector(),
+    tempRect = new Rectangle();
 
 /**
  * @class Bounds
@@ -37,9 +41,9 @@ export default class Bounds {
 
         /**
          * @private
-         * @type {?Rectangle}
+         * @type {Rectangle}
          */
-        this._rectangle = null;
+        this._rect = new Rectangle();
     }
 
     /**
@@ -80,14 +84,6 @@ export default class Bounds {
 
     /**
      * @public
-     * @member {Boolean}
-     */
-    get isEmpty() {
-        return this._minX > this._maxX || this._minY > this._maxY;
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {Vector} point
      * @returns {Bounds}
@@ -104,49 +100,30 @@ export default class Bounds {
     /**
      * @public
      * @chainable
-     * @param {Matrix} transform
-     * @param {Rectangle} rectangle
+     * @param {Rectangle} rect
+     * @param {Matrix} [transform=Matrix.Identity]
      * @returns {Bounds}
      */
-    addRectangle(transform, rectangle) {
-        const vector = new Vector();
+    addRect(rect, transform = Matrix.Identity) {
+        const point = Vector.temp;
 
-        this.addPoint(
-            vector.set(rectangle.x, rectangle.y)
-                .transform(transform),
-        );
-
-        this.addPoint(
-            vector.set(rectangle.x, rectangle.height)
+        return this
+            .addPoint(point
+                .set(rect.left, rect.top)
                 .transform(transform)
-        );
-
-        this.addPoint(
-            vector.set(rectangle.width, rectangle.y)
+            )
+            .addPoint(point
+                .set(rect.left, rect.bottom)
                 .transform(transform)
-        );
-
-        this.addPoint(
-            vector.set(rectangle.width,rectangle.height)
+            )
+            .addPoint(point
+                .set(rect.right, rect.top)
                 .transform(transform)
-        );
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Bounds} bounds
-     * @returns {Bounds}
-     */
-    addBounds(bounds) {
-        this._minX = Math.min(this._minX, bounds.minX);
-        this._minY = Math.min(this._minY, bounds.minY);
-        this._maxX = Math.max(this._maxX, bounds.maxX);
-        this._maxY = Math.max(this._maxY, bounds.maxY);
-
-        return this;
+            )
+            .addPoint(point
+                .set(rect.right, rect.bottom)
+                .transform(transform)
+            );
     }
 
     /**
@@ -154,15 +131,11 @@ export default class Bounds {
      * @returns {Rectangle}
      */
     getRect() {
-        if (!this._rectangle) {
-            this._rectangle = new Rectangle();
-        }
-
-        return this._rectangle.set(
+        return this._rect.set(
             this._minX,
             this._minY,
             this._maxX - this._minX,
-            this._maxY - this._minY,
+            this._maxY - this._minY
         );
     }
 
@@ -184,10 +157,8 @@ export default class Bounds {
      * @public
      */
     destroy() {
-        if (this._rectangle) {
-            this._rectangle.destroy();
-            this._rectangle = null;
-        }
+        this._rect.destroy();
+        this._rect = null;
 
         this._minX = null;
         this._minY = null;

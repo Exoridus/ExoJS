@@ -11,7 +11,7 @@ const FACE_DIRECTION = {
  * @class Player
  * @extends {Sprite}
  */
-export default class Player extends Sprite {
+export default class Player extends Exo.Sprite {
 
     /**
      * @constructor
@@ -44,12 +44,6 @@ export default class Player extends Sprite {
          */
         this._frame = new Exo.Rectangle(0, 0, playerWidth, playerHeight);
 
-        /**
-         * @private
-         * @member {FrameAnimation}
-         */
-        this._frameAnimation = new Exo.FrameAnimation();
-
         this.setOrigin(0.5, 1);
         this.setPosition(640, 320);
         this._setFaceDirection(FACE_DIRECTION.DOWN);
@@ -60,12 +54,11 @@ export default class Player extends Sprite {
      */
     move(x, y) {
         const speed = this._running ? this._runningSpeed : this._speed,
-            mag = Math.sqrt((x * x) + (y * y));
+            mag = Math.sqrt((x * x) + (y * y)),
+            offsetX = mag > 1 ? (x / mag) : x,
+            offsetY = mag > 1 ? (y / mag) : y;
 
-        this.setPosition(
-            this.x + ((mag > 1 ? (x / mag) : x) * speed),
-            this.y + ((mag > 1 ? (y / mag) : y) * speed)
-        );
+        this.translate(offsetX * speed, offsetY * speed);
 
         if (x > 0) {
             this._setFaceDirection(FACE_DIRECTION.RIGHT);

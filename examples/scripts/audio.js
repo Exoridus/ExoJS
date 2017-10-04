@@ -130,7 +130,7 @@ window.app.start(new Exo.Scene({
             }
         }
 
-        this.app.trigger('display:clear', this._color.set(r / length, g / length, b / length));
+        this.app.displayManager.clear(this._color.set(r / length, g / length, b / length));
 
         context.clearRect(0, 0, width, height);
         context.beginPath();

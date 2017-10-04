@@ -326,4 +326,16 @@ export const
         mimeType: 'application/ogg',
         pattern: [0x4F, 0x67, 0x67, 0x53, 0x00],
         mask: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF],
-    }];
+    }],
+
+    /**
+     * @public
+     * @constant
+     * @name DIRTY
+     * @type {Object<String, Number>}
+     */
+    FLAGS = {
+        NONE: 0,
+        DIRTY_TRANSFORM: 1 << 0,
+        DIRTY_BOUNDS: 1 << 1,
+    };

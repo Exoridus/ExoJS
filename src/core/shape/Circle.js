@@ -93,7 +93,7 @@ export default class Circle extends Shape {
 
         array[0] = this.x;
         array[1] = this.y;
-        array[2] = this._radius;
+        array[2] = this.radius;
 
         return array;
     }
@@ -102,13 +102,15 @@ export default class Circle extends Shape {
      * @override
      */
     getBounds() {
-        const bounds = this._bounds || (this._bounds = new Rectangle());
+        if (!this._bounds) {
+            this._bounds = new Rectangle();
+        }
 
-        return bounds.set(
+        return this._bounds.set(
             this._x - this._radius,
             this._y - this._radius,
             this._radius * 2,
-            this._radius * 2,
+            this._radius * 2
         );
     }
 
