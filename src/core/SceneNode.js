@@ -160,8 +160,6 @@ export default class SceneNode extends Transformable {
             this._dirtyTransform = false;
         }
 
-        this.updateGlobalTransform();
-
         return this;
     }
 
@@ -170,24 +168,13 @@ export default class SceneNode extends Transformable {
      * @returns {Matrix}
      */
     getGlobalTransform() {
-        this.updateGlobalTransform();
-
-        return this._globalTransform;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {SceneNode}
-     */
-    updateGlobalTransform() {
         this._globalTransform.copy(this.getTransform());
 
         if (this._parent) {
-            this._globalTransform.multiply(this._parent.getGlobalTransform());
+            this._globalTransform.combine(this._parent.getGlobalTransform());
         }
 
-        return this;
+        return this._globalTransform;
     }
 
     /**

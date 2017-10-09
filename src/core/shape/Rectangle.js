@@ -12,11 +12,11 @@ export default class Rectangle extends Shape {
     /**
      * @constructor
      * @param {Number} [x=0]
-     * @param {Number} [y=0]
-     * @param {Number} [width=1]
-     * @param {Number} [height=1]
+     * @param {Number} [y=x]
+     * @param {Number} [width=0]
+     * @param {Number} [height=width]
      */
-    constructor(x = 0, y = 0, width = 1, height = 1) {
+    constructor(x = 0, y = x, width = 0, height = width) {
         super(x, y);
 
         /**
@@ -136,7 +136,7 @@ export default class Rectangle extends Shape {
      * @override
      */
     reset() {
-        return this.set(0, 0, 1, 1);
+        return this.set(0, 0, 0, 0);
     }
 
     /**
@@ -174,13 +174,11 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    contains(vector) {
-        const minX = Math.min(this.left, this.right),
-            maxX = Math.max(this.left, this.right),
-            minY = Math.min(this.top, this.bottom),
-            maxY = Math.max(this.top, this.bottom);
-
-        return (vector.x >= minX) && (vector.x < maxX) && (vector.y >= minY) && (vector.y < maxY);
+    contains(x, y) {
+        return (x >= Math.min(this.left, this.right))
+            && (x < Math.max(this.left, this.right))
+            && (y >= Math.min(this.top, this.bottom))
+            && (y < Math.max(this.top, this.bottom));
     }
 
     /**
@@ -218,4 +216,12 @@ export default class Rectangle extends Shape {
  * @constant
  * @member {Rectangle}
  */
-Rectangle.temp = new Rectangle();
+Rectangle.Empty = new Rectangle(0, 0, 0, 0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Rectangle}
+ */
+Rectangle.Temp = new Rectangle();

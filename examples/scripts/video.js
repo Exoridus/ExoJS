@@ -33,7 +33,7 @@ window.app.start(new Exo.Scene({
          * @member {Input}
          */
         this._input = new Exo.Input([
-            Exo.Keyboard.Space,
+            Exo.KEYS.Space,
         ], {
             context: this,
             trigger() {

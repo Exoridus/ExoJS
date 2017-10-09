@@ -1,5 +1,13 @@
 import settings from '../settings';
 
+const FLAGS = {
+    NONE: 0,
+    SCALE_MODE: 1 << 0,
+    WRAP_MODE: 1 << 1,
+    PREMULTIPLY_ALPHA: 1 << 2,
+    SOURCE: 1 << 3,
+};
+
 /**
  * @class GLTexture
  */
@@ -76,7 +84,7 @@ export default class GLTexture {
          * @private
          * @member {Number}
          */
-        this._flags = (GLTexture.FLAGS.SCALE_MODE | GLTexture.FLAGS.WRAP_MODE | GLTexture.FLAGS.PREMULTIPLY_ALPHA);
+        this._flags = (FLAGS.SCALE_MODE | FLAGS.WRAP_MODE | FLAGS.PREMULTIPLY_ALPHA);
 
         if (context !== undefined) {
             this.setContext(context);
@@ -172,9 +180,9 @@ export default class GLTexture {
      */
     updateSource() {
         if (this._source) {
-            this._flags |= GLTexture.FLAGS.SOURCE;
+            this._flags |= FLAGS.SOURCE;
         } else {
-            this._flags &= ~GLTexture.FLAGS.SOURCE;
+            this._flags &= ~FLAGS.SOURCE;
         }
 
         return this;
@@ -189,7 +197,7 @@ export default class GLTexture {
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags |= GLTexture.FLAGS.SCALE_MODE;
+            this._flags |= FLAGS.SCALE_MODE;
         }
 
         return this;
@@ -204,7 +212,7 @@ export default class GLTexture {
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags |= GLTexture.FLAGS.WRAP_MODE;
+            this._flags |= FLAGS.WRAP_MODE;
         }
 
         return this;
@@ -219,7 +227,7 @@ export default class GLTexture {
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags |= GLTexture.FLAGS.PREMULTIPLY_ALPHA;
+            this._flags |= FLAGS.PREMULTIPLY_ALPHA;
         }
 
         return this;
@@ -240,21 +248,21 @@ export default class GLTexture {
 
         const gl = this._context;
 
-        if (this._flags & GLTexture.FLAGS.SCALE_MODE) {
+        if (this._flags & FLAGS.SCALE_MODE) {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
         }
 
-        if (this._flags & GLTexture.FLAGS.WRAP_MODE) {
+        if (this._flags & FLAGS.WRAP_MODE) {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
         }
 
-        if (this._flags & GLTexture.FLAGS.PREMULTIPLY_ALPHA) {
+        if (this._flags & FLAGS.PREMULTIPLY_ALPHA) {
             gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
         }
 
-        if (this._flags & GLTexture.FLAGS.SOURCE) {
+        if (this._flags & FLAGS.SOURCE) {
             const source = this._source,
                 width = source.videoWidth || source.width,
                 height = source.videoHeight || source.height;
@@ -269,7 +277,7 @@ export default class GLTexture {
             }
         }
 
-        this._flags = GLTexture.FLAGS.NONE;
+        this._flags = FLAGS.NONE;
 
         return this;
     }
@@ -324,21 +332,3 @@ export default class GLTexture {
         this._flags = null;
     }
 }
-
-/**
- * @public
- * @static
- * @type {Object<String, Number>}
- * @property {Number} NONE
- * @property {Number} SCALE_MODE
- * @property {Number} WRAP_MODE
- * @property {Number} PREMULTIPLY_ALPHA
- * @property {Number} SOURCE
- */
-GLTexture.FLAGS = {
-    NONE: 0,
-    SCALE_MODE: 1 << 0,
-    WRAP_MODE: 1 << 1,
-    PREMULTIPLY_ALPHA: 1 << 2,
-    SOURCE: 1 << 3,
-};

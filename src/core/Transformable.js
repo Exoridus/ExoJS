@@ -171,19 +171,16 @@ export default class Transformable extends EventEmitter {
         const transform = this._transform,
             scale = this._scale,
             origin = this._origin,
-            position = this._position,
-            cx = scale.x * this._cos,
-            sx = scale.x * this._sin,
-            cy = scale.y * this._cos,
-            sy = scale.y * this._sin;
+            position = this._position;
 
-        transform.a = cx;
-        transform.b = sy;
-        transform.x = (origin.x * -cx) - (origin.y * sy) + position.x;
+        transform.a = (scale.x * this._cos);
+        transform.b = (scale.y * this._sin);
 
-        transform.c = -sx;
-        transform.d = cy;
-        transform.y = (origin.x * sx) - (origin.y * cy) + position.y;
+        transform.c = (scale.x * -this._sin);
+        transform.d = (scale.y * this._cos);
+
+        transform.x = (origin.x * -transform.a) - (origin.y * transform.b) + position.x;
+        transform.y = (origin.x * -transform.c) - (origin.y * transform.d) + position.y;
 
         return this;
     }

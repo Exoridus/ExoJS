@@ -1,5 +1,6 @@
 import Container from './Container';
 import Rectangle from '../core/shape/Rectangle';
+import Vector from '../core/Vector';
 
 /**
  * @class Sprite
@@ -151,6 +152,45 @@ export default class Sprite extends Container {
                 child.render(displayManager);
             }
         }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Sprite}
+     */
+    updateVertices() {
+        const vertexData = this._vertexData,
+            transform = this.getGlobalTransform(),
+            bounds = this.getLocalBounds(),
+            texture = this._texture,
+            textureRect = this._textureRect,
+            topLeft = transform.transformPoint(new Vector(bounds.top, bounds.left)),
+            topRight = transform.transformPoint(new Vector(bounds.top, bounds.right)),
+            bottomLeft = transform.transformPoint(new Vector(bounds.bottom, bounds.left)),
+            bottomRight = transform.transformPoint(new Vector(bounds.bottom, bounds.right));
+
+        vertexData[0] = topLeft.x;
+        vertexData[1] = topLeft.y;
+        // (textureRect.x / texture.width);
+        // (textureRect.y / texture.height);
+
+        vertexData[2] = topRight.x;
+        vertexData[3] = topRight.y;
+        // (textureRect.x / texture.width) + (textureRect.width / texture.width);
+        // (textureRect.y / texture.height);
+
+        vertexData[4] = bottomLeft.x;
+        vertexData[5] = bottomLeft.y;
+        // (textureRect.x / texture.width);
+        // (textureRect.y / texture.height) + (textureRect.height / texture.height);
+
+        vertexData[6] = bottomRight.x;
+        vertexData[7] = bottomRight.y;
+        // (textureRect.x / texture.width) + (textureRect.width / texture.width);
+        // (textureRect.y / texture.height) + (textureRect.height / texture.height);
 
         return this;
     }

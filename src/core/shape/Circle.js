@@ -117,15 +117,15 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    contains(vector) {
-        return this.position.getDistance(vector) < this._radius;
+    contains(x, y) {
+        return this.position.distanceTo(x, y) < this._radius;
     }
 
     /**
      * @override
      */
     intersects(circle) {
-        return this.position.getDistance(circle.position) < (this._radius + circle.radius);
+        return this.position.distanceTo(circle.x, circle.y) < (this._radius + circle.radius);
     }
 
     /**
@@ -137,3 +137,19 @@ export default class Circle extends Shape {
         this._radius = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Circle}
+ */
+Circle.Empty = new Circle(0, 0, 0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Circle}
+ */
+Circle.Temp = new Circle();

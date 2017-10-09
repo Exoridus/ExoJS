@@ -301,7 +301,7 @@ export default class DisplayManager {
      * @public
      */
     resetView() {
-        this._view.reset(Rectangle.temp.set(0, 0, this._renderTarget.width, this._renderTarget.height));
+        this._view.reset(Rectangle.Temp.set(0, 0, this._renderTarget.width, this._renderTarget.height));
 
         this.updateViewport();
     }

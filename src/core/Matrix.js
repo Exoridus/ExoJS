@@ -1,4 +1,5 @@
 import { degreesToRadians } from '../utils';
+import Vector from './Vector';
 
 /**
  * | a | b | x |
@@ -94,17 +95,9 @@ export default class Matrix {
     get array() {
         const array = this._array || (this._array = new Float32Array(9));
 
-        array[0] = this.a;
-        array[1] = this.c;
-        array[2] = this.e;
-
-        array[3] = this.b;
-        array[4] = this.d;
-        array[5] = this.f;
-
-        array[6] = this.x;
-        array[7] = this.y;
-        array[8] = this.z;
+        array[0] = this.a; array[1] = this.c; array[2] = this.e;
+        array[3] = this.b; array[4] = this.d; array[5] = this.f;
+        array[6] = this.x; array[7] = this.y; array[8] = this.z;
 
         return array;
     }
@@ -117,17 +110,9 @@ export default class Matrix {
     get transposedArray() {
         const array = this._array || (this._array = new Float32Array(9));
 
-        array[0] = this.a;
-        array[1] = this.b;
-        array[2] = this.x;
-
-        array[3] = this.c;
-        array[4] = this.d;
-        array[5] = this.y;
-
-        array[6] = this.e;
-        array[7] = this.f;
-        array[8] = this.z;
+        array[0] = this.a; array[1] = this.b; array[2] = this.x;
+        array[3] = this.c; array[4] = this.d; array[5] = this.y;
+        array[6] = this.e; array[7] = this.f; array[8] = this.z;
 
         return array;
     }
@@ -139,31 +124,25 @@ export default class Matrix {
      *
      * @public
      * @chainable
-     * @param {Number} a
-     * @param {Number} b
-     * @param {Number} x
-     * @param {Number} c
-     * @param {Number} d
-     * @param {Number} y
-     * @param {Number} e
-     * @param {Number} f
-     * @param {Number} z
+     * @param {Number} [a=this.a]
+     * @param {Number} [b=this.b]
+     * @param {Number} [x=this.x]
+     * @param {Number} [c=this.c]
+     * @param {Number} [d=this.d]
+     * @param {Number} [y=this.y]
+     * @param {Number} [e=this.e]
+     * @param {Number} [f=this.f]
+     * @param {Number} [z=this.z]
      * @returns {Matrix}
      */
-    set(a = this.a, b = this.b, x = this.x,
+    set(
+        a = this.a, b = this.b, x = this.x,
         c = this.c, d = this.d, y = this.y,
-        e = this.e, f = this.f, z = this.z) {
-        this.a = a;
-        this.b = b;
-        this.x = x;
-
-        this.c = c;
-        this.d = d;
-        this.y = y;
-
-        this.e = e;
-        this.f = f;
-        this.z = z;
+        e = this.e, f = this.f, z = this.z
+    ) {
+        this.a = a; this.b = b; this.x = x;
+        this.c = c; this.d = d; this.y = y;
+        this.e = e; this.f = f; this.z = z;
 
         return this;
     }
@@ -176,17 +155,9 @@ export default class Matrix {
      */
     copy(matrix) {
         if (matrix !== this) {
-            this.a = matrix.a;
-            this.b = matrix.b;
-            this.x = matrix.x;
-
-            this.c = matrix.c;
-            this.d = matrix.d;
-            this.y = matrix.y;
-
-            this.e = matrix.e;
-            this.f = matrix.f;
-            this.z = matrix.z;
+            this.a = matrix.a; this.b = matrix.b; this.x = matrix.x;
+            this.c = matrix.c; this.d = matrix.d; this.y = matrix.y;
+            this.e = matrix.e; this.f = matrix.f; this.z = matrix.z;
         }
 
         return this;
@@ -210,7 +181,7 @@ export default class Matrix {
      * @param {Matrix} matrix
      * @returns {Matrix}
      */
-    multiply(matrix) {
+    combine(matrix) {
         return this.set(
             (this.a * matrix.a) + (this.c * matrix.b) + (this.e * matrix.x),
             (this.b * matrix.a) + (this.d * matrix.b) + (this.f * matrix.x),
@@ -228,49 +199,56 @@ export default class Matrix {
 
     /**
      * @public
-     * @param {Vector} vector
+     * @chainable
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @returns {Matrix}
      */
-    translate(translation) {
-        return this.multiply(Matrix.temp.set(
-            1, 0, translation.x,
-            0, 1, translation.y,
-            0, 0, 1
+    translate(x, y = x) {
+        return this.combine(Matrix.Temp.set(
+            1, 0, x,
+            0, 1, y
         ));
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} angle
+     * @param {Number} [centerX=0]
+     * @param {Number} [centerY=centerX]
      * @returns {Matrix}
      */
-    rotate(angle) {
+    rotate(angle, centerX = 0, centerY = centerX) {
         const radian = degreesToRadians(angle),
             cos = Math.cos(radian),
             sin = Math.sin(radian);
 
-        return this.multiply(Matrix.temp.set(
-            cos, -sin, 0,
-            sin, cos, 0,
-            0, 0, 1
+        return this.combine(Matrix.Temp.set(
+            cos, -sin, (centerX * (1 - cos)) + (centerY * sin),
+            sin,  cos, (centerY * (1 - cos)) - (centerX * sin)
         ));
     }
 
     /**
      * @public
-     * @param {Number} angle
+     * @chainable
+     * @param {Number} scaleX
+     * @param {Number} [scaleY=scaleX]
+     * @param {Number} [centerX=0]
+     * @param {Number} [centerY=centerX]
      * @returns {Matrix}
      */
-    scale(scale) {
-        return this.multiply(Matrix.temp.set(
-            scale.x, 0, 0,
-            0, scale.y, 0,
-            0, 0, 1
+    scale(scaleX, scaleY = scaleX, centerX = 0, centerY = centerX) {
+        return this.combine(Matrix.Temp.set(
+            scaleX, 0, (centerX * (1 - scaleX)),
+            0, scaleY, (centerY * (1 - scaleY))
         ));
     }
 
     /**
      * @public
+     * @chainable
      * @returns {Matrix}
      */
     reset() {
@@ -292,23 +270,63 @@ export default class Matrix {
 
     /**
      * @public
+     * @chainable
+     * @param {Vector} point
+     * @param {Vector} [result=point]
+     * @returns {Vector}
+     */
+    transformPoint(point, result = point) {
+        return result.set(
+            (this.a * point.x) + (this.b * point.y) + this.x,
+            (this.c * point.x) + (this.d * point.y) + this.y
+        );
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Rectangle} rect
+     * @param {Rectangle} [result=rect]
+     * @returns {Rectangle}
+     */
+    transformRect(rect, result = rect) {
+        const point = Vector.Temp,
+            { position, size, left, top, right, bottom } = rect;
+
+        this.transformPoint(point.set(left, top));
+
+        position.copy(point);
+        size.copy(point);
+
+        this.transformPoint(point.set(left, bottom));
+
+        position.min(point);
+        size.max(point);
+
+        this.transformPoint(point.set(right, top));
+
+        position.min(point);
+        size.max(point);
+
+        this.transformPoint(point.set(right, bottom));
+
+        position.min(point);
+        size.max(point).subtract(position.x, position.y);
+
+        return result;
+    }
+
+    /**
+     * @public
      */
     destroy() {
         if (this._array) {
             this._array = null;
         }
 
-        this.a = null;
-        this.b = null;
-        this.x = null;
-
-        this.c = null;
-        this.d = null;
-        this.y = null;
-
-        this.e = null;
-        this.f = null;
-        this.z = null;
+        this.a = null; this.b = null; this.x = null;
+        this.c = null; this.d = null; this.y = null;
+        this.e = null; this.f = null; this.z = null;
     }
 }
 
@@ -318,7 +336,11 @@ export default class Matrix {
  * @readonly
  * @member {Matrix}
  */
-Matrix.Identity = new Matrix();
+Matrix.Identity = new Matrix(
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1
+);
 
 /**
  * @public
@@ -326,4 +348,4 @@ Matrix.Identity = new Matrix();
  * @constant
  * @member {Matrix}
  */
-Matrix.temp = new Matrix();
+Matrix.Temp = new Matrix();

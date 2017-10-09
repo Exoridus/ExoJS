@@ -215,11 +215,7 @@ export default class Color {
             h /= 6;
         }
 
-        return {
-            h,
-            s,
-            l,
-        };
+        return { h, s, l };
     }
 
     /**
@@ -279,12 +275,7 @@ export default class Color {
      * @returns {Color}
      */
     copy(color) {
-        this._r = color.r;
-        this._g = color.g;
-        this._b = color.b;
-        this._a = color.a;
-
-        return this;
+        return this.set(color.r, color.g, color.b, color.a);
     }
 
     /**

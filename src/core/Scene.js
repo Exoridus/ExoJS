@@ -1,6 +1,5 @@
 import EventEmitter from './EventEmitter';
 import SceneNode from './SceneNode';
-import Matrix from './Matrix';
 
 /**
  * @class Scene

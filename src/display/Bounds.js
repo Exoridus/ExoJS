@@ -2,9 +2,6 @@ import Rectangle from '../core/shape/Rectangle';
 import Vector from '../core/Vector';
 import Matrix from '../core/Matrix';
 
-const tempVector = new Vector(),
-    tempRect = new Rectangle();
-
 /**
  * @class Bounds
  */
@@ -101,29 +98,19 @@ export default class Bounds {
      * @public
      * @chainable
      * @param {Rectangle} rect
-     * @param {Matrix} [transform=Matrix.Identity]
+     * @param {Matrix} [transform]
      * @returns {Bounds}
      */
-    addRect(rect, transform = Matrix.Identity) {
-        const point = Vector.temp;
+    addRect(rect, transform) {
+        const temp = Rectangle.Temp.copy(rect);
+
+        if (transform) {
+            transform.transformRect(temp);
+        }
 
         return this
-            .addPoint(point
-                .set(rect.left, rect.top)
-                .transform(transform)
-            )
-            .addPoint(point
-                .set(rect.left, rect.bottom)
-                .transform(transform)
-            )
-            .addPoint(point
-                .set(rect.right, rect.top)
-                .transform(transform)
-            )
-            .addPoint(point
-                .set(rect.right, rect.bottom)
-                .transform(transform)
-            );
+            .addPoint(temp.position)
+            .addPoint(temp.position.add(temp.width, temp.height));
     }
 
     /**

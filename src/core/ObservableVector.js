@@ -75,28 +75,28 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    add(x = 0, y = 0) {
+    add(x, y = x) {
         return this.set(this._x + x, this._y + y);
     }
 
     /**
      * @override
      */
-    subtract(x = 0, y = 0) {
+    subtract(x, y = x) {
         return this.set(this._x - x, this._y - y);
     }
 
     /**
      * @override
      */
-    multiply(x = 1, y = 1) {
+    multiply(x, y = x) {
         return this.set(this._x * x, this._y * y);
     }
 
     /**
      * @override
      */
-    divide(x = 1, y = 1) {
+    divide(x, y = x) {
         return this.set(this._x / x, this._y / y);
     }
 

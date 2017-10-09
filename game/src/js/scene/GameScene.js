@@ -2,8 +2,8 @@ import WorldMap from '../map/WorldMap';
 import Player from '../entity/Player';
 import Tileset from '../map/Tileset';
 
-const Keyboard = Exo.Keyboard,
-    Gamepad = Exo.Gamepad,
+const KEYS = Exo.KEYS,
+    GAMEPAD = Exo.GAMEPAD,
     clamp = Exo.utils.clamp;
 
 /**
@@ -56,8 +56,8 @@ export default class GameScene extends Exo.Scene {
          */
         this._inputs = [
             new Exo.Input([
-                Keyboard.Escape,
-                Gamepad.Start,
+                KEYS.Escape,
+                GAMEPAD.Start,
             ], {
                 context: this,
                 trigger() {
@@ -71,10 +71,10 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                Keyboard.Up,
-                Keyboard.W,
-                Gamepad.LeftStickUp,
-                Gamepad.DPadUp,
+                KEYS.Up,
+                KEYS.W,
+                GAMEPAD.LeftStickUp,
+                GAMEPAD.DPadUp,
             ], {
                 context: this,
                 active(value) {
@@ -82,10 +82,10 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                Keyboard.Down,
-                Keyboard.S,
-                Gamepad.LeftStickDown,
-                Gamepad.DPadDown,
+                KEYS.Down,
+                KEYS.S,
+                GAMEPAD.LeftStickDown,
+                GAMEPAD.DPadDown,
             ], {
                 context: this,
                 active(value) {
@@ -93,10 +93,10 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                Keyboard.Left,
-                Keyboard.A,
-                Gamepad.LeftStickLeft,
-                Gamepad.DPadLeft,
+                KEYS.Left,
+                KEYS.A,
+                GAMEPAD.LeftStickLeft,
+                GAMEPAD.DPadLeft,
             ], {
                 context: this,
                 active(value) {
@@ -104,10 +104,10 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                Keyboard.Right,
-                Keyboard.D,
-                Gamepad.LeftStickRight,
-                Gamepad.DPadRight,
+                KEYS.Right,
+                KEYS.D,
+                GAMEPAD.LeftStickRight,
+                GAMEPAD.DPadRight,
             ], {
                 context: this,
                 active(value) {
@@ -115,8 +115,8 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                Keyboard.Shift,
-                Gamepad.RightTriggerTop,
+                KEYS.Shift,
+                GAMEPAD.RightTriggerTop,
             ], {
                 context: this,
                 start() {

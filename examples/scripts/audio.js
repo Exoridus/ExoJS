@@ -80,8 +80,8 @@ window.app.start(new Exo.Scene({
          * @member {Input}
          */
         this._input = new Exo.Input([
-            Exo.Keyboard.Space,
-            Exo.Gamepad.FaceButtonBottom,
+            Exo.KEYS.Space,
+            Exo.GAMEPAD.FaceButtonBottom,
         ], {
             context: this,
             trigger() {

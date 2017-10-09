@@ -162,10 +162,11 @@ export default class Shape {
     /**
      * @public
      * @abstract
-     * @param {Vector} vector
+     * @param {Number} x
+     * @param {Number} y
      * @returns {Boolean}
      */
-    contains(vector) {
+    contains(x, y) {
         throw new Error('Method not implemented!');
     }
 

@@ -83,11 +83,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Number} [x]
-     * @param {Number} [y]
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @returns {Vector}
      */
-    set(x = this._x, y = this._y) {
+    set(x, y = x) {
         this._x = x;
         this._y = y;
 
@@ -166,8 +166,8 @@ export default class Vector {
      * @returns {Vector}
      */
     negate() {
-        this._x = -this._x;
-        this._y = -this._y;
+        this._x *= -1;
+        this._y *= -1;
 
         return this;
     }
@@ -175,11 +175,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Number} x=0
-     * @param {Number} y=x
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @returns {Vector}
      */
-    add(x = 0, y = x) {
+    add(x, y = x) {
         this._x += x;
         this._y += y;
 
@@ -189,11 +189,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Number} x=0
-     * @param {Number} y=x
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @returns {Vector}
      */
-    subtract(x = 0, y = x) {
+    subtract(x, y = x) {
         this._x -= x;
         this._y -= y;
 
@@ -203,11 +203,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Number} x=1
-     * @param {Number} y=x
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @returns {Vector}
      */
-    multiply(x = 1, y = x) {
+    multiply(x, y = x) {
         this._x *= x;
         this._y *= y;
 
@@ -217,11 +217,11 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @param {Number} x=1
-     * @param {Number} y=x
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @returns {Vector}
      */
-    divide(x = 1, y = x) {
+    divide(x, y = x) {
         this._x /= x;
         this._y /= y;
 
@@ -230,14 +230,27 @@ export default class Vector {
 
     /**
      * @public
-     * @chainable
-     * @param {Matrix} transform
+     * @param {Vector} vector
+     * @param {Vector} [result=this]
      * @returns {Vector}
      */
-    transform(transform) {
-        return this.set(
-            (transform.a * this._x) + (transform.b * this._y) + transform.x,
-            (transform.c * this._x) + (transform.d * this._y) + transform.y
+    min(vector, result = this) {
+        return result.set(
+            Math.min(this._x, vector.x),
+            Math.min(this._y, vector.y)
+        );
+    }
+
+    /**
+     * @public
+     * @param {Vector} vector
+     * @param {Vector} [result=this]
+     * @returns {Vector}
+     */
+    max(vector, result = this) {
+        return result.set(
+            Math.max(this._x, vector.x),
+            Math.max(this._y, vector.y)
         );
     }
 
@@ -261,14 +274,15 @@ export default class Vector {
 
     /**
      * @public
-     * @param {Vector} vector
+     * @param {Number} x
+     * @param {Number} y
      * @returns {Number}
      */
-    getDistance(vector) {
-        const x = this._x - vector.x,
-            y = this._y - vector.y;
+    distanceTo(x, y) {
+        const offsetX = (this._x - x),
+            offsetY = (this._y - y);
 
-        return Math.sqrt((x * x) + (y * y));
+        return Math.sqrt((offsetX * offsetX) + (offsetY * offsetY));
     }
 
     /**
@@ -290,4 +304,12 @@ export default class Vector {
  * @constant
  * @type {Vector}
  */
-Vector.temp = new Vector();
+Vector.Empty = new Vector(0, 0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Vector}
+ */
+Vector.Temp = new Vector();

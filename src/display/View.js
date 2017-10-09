@@ -2,7 +2,6 @@ import ObservableVector from '../core/ObservableVector';
 import Rectangle from '../core/shape/Rectangle';
 import Matrix from '../core/Matrix';
 import { degreesToRadians } from '../utils';
-import Bounds from './Bounds';
 
 /**
  * @class View
@@ -302,21 +301,20 @@ export default class View {
         const transform = this._transform,
             center = this._center,
             size = this._size,
-
             a = 2 / size.x,
             b = -2 / size.y,
-            x = (-center.x * this._cos) - (center.y * this._sin) + center.x,
-
-            c = -a * center.x,
-            d = -b * center.y,
+            c = (center.x * -a),
+            d = (center.y * -b),
+            x = (center.x * -this._cos) - (center.y * this._sin) + center.x,
             y = (center.x * this._sin) - (center.y * this._cos) + center.y;
 
-        transform.a = a * this._cos;
-        transform.b = a * this._sin;
-        transform.x = (a * x) + c;
+        transform.a = (a * this._cos);
+        transform.b = (a * this._sin);
 
-        transform.c = -b * this._sin;
-        transform.d = b * this._cos;
+        transform.c = (b * -this._sin);
+        transform.d = (b * this._cos);
+
+        transform.x = (a * x) + c;
         transform.y = (b * y) + d;
 
         return this;

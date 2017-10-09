@@ -1,9 +1,5 @@
 import TitleScene from './TitleScene';
 
-const Keyboard = Exo.Keyboard,
-    Gamepad = Exo.Gamepad,
-    degreesToRadians = Exo.utils.degreesToRadians;
-
 /**
  * @class LauncherScene
  * @extends {Scene}
@@ -89,9 +85,9 @@ export default class LauncherScene extends Exo.Scene {
          * @member {Input}
          */
         this._playInput = new Exo.Input([
-            Keyboard.Enter,
-            Gamepad.Start,
-            Gamepad.FaceButtonBottom,
+            Exo.KEYS.Enter,
+            Exo.GAMEPAD.Start,
+            Exo.GAMEPAD.FaceButtonBottom,
         ]);
 
         this._playInput.on('trigger', this._openTitleHandler);
@@ -155,8 +151,8 @@ export default class LauncherScene extends Exo.Scene {
             centerX,
             centerY,
             radius,
-            degreesToRadians(offsetAngle),
-            degreesToRadians((percentage * 3.6) + offsetAngle),
+            Exo.utils.degreesToRadians(offsetAngle),
+            Exo.utils.degreesToRadians((percentage * 3.6) + offsetAngle),
             true,
         );
         context.clip();
