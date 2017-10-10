@@ -141,11 +141,17 @@ export default class Texture {
     setSource(source) {
         if (this._source !== source) {
             this._source = source;
+
+            if (source) {
+                this._frame.set(0, 0, (source.videoWidth || source.width), (source.videoHeight || source.height));
+            } else {
+                this._frame.set(0, 0, 0, 0);
+            }
+
             this._glTexture.setSource(source);
         }
 
-        this.updateSource();
-        this.updateFrame();
+        this._glTexture.invalidateSource();
 
         return this;
     }
@@ -155,25 +161,10 @@ export default class Texture {
      * @chainable
      * @returns {Texture}
      */
-    updateFrame() {
-        const source = this._source;
-
-        if (source) {
-            this._frame.set(0, 0, (source.videoWidth || source.width), (source.videoHeight || source.height));
-        } else {
-            this._frame.set(0, 0, 0, 0);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Texture}
-     */
-    updateSource() {
-        this._glTexture.updateSource();
+    update() {
+        this._glTexture
+            .invalidateSource()
+            .update();
 
         return this;
     }

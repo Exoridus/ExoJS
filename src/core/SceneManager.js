@@ -28,9 +28,9 @@ export default class SceneManager {
         this._sceneActive = false;
 
         app
-            .on('scene:change', this.onSceneChange, this)
-            .on('scene:start', this.onSceneStart, this)
-            .on('scene:stop', this.onSceneStop, this);
+            .on('scene:change', this.changeScene, this)
+            .on('scene:start', this.startScene, this)
+            .on('scene:stop', this.stopScene, this);
     }
 
     /**
@@ -42,11 +42,9 @@ export default class SceneManager {
             return;
         }
 
-        const displayManager = this._app.displayManager;
-
         this._currentScene.update(delta);
 
-        displayManager.begin();
+        const displayManager = this._app.displayManager.begin();
 
         for (const node of this._currentScene.nodes) {
             displayManager.render(node);
@@ -56,21 +54,9 @@ export default class SceneManager {
     }
 
     /**
-     * @private
-     * @param {Scene} scene
+     * @public
      */
-    onSceneChange(scene) {
-        this._app.trigger('scene:stop');
-
-        this._currentScene = scene;
-        this._currentScene.app = this._app;
-        this._currentScene.load(this._app.loader);
-    }
-
-    /**
-     * @private
-     */
-    onSceneStart() {
+    startScene() {
         if (!this._currentScene) {
             throw new Error('No scene was specified, use scene:change!');
         }
@@ -84,9 +70,9 @@ export default class SceneManager {
     }
 
     /**
-     * @private
+     * @public
      */
-    onSceneStop() {
+    stopScene() {
         if (!this._currentScene) {
             return;
         }
@@ -104,12 +90,24 @@ export default class SceneManager {
 
     /**
      * @public
+     * @param {Scene} scene
+     */
+    changeScene(scene) {
+        this.stopScene();
+
+        this._currentScene = scene;
+        this._currentScene.app = this._app;
+        this._currentScene.load(this._app.loader);
+    }
+
+    /**
+     * @public
      */
     destroy() {
         this._app.trigger('scene:stop')
-            .off('scene:change', this.onSceneChange, this)
-            .off('scene:start', this.onSceneStart, this)
-            .off('scene:stop', this.onSceneStop, this);
+            .off('scene:change', this.changeScene, this)
+            .off('scene:start', this.startScene, this)
+            .off('scene:stop', this.stopScene, this);
 
         this._app = null;
     }

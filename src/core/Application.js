@@ -31,41 +31,43 @@ export default class Application extends EventEmitter {
     constructor(options) {
         super();
 
+        const config = Object.assign({}, settings.GAME_CONFIG, options);
+
         /**
          * @private
          * @member {Object}
          */
-        this._config = Object.assign({}, settings.GAME_CONFIG, options);
+        this._config = config;
 
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = this._getElement(this._config.canvas) || document.createElement('canvas');
+        this._canvas = (config.canvas instanceof HTMLCanvasElement) ? config.canvas : document.createElement('canvas');
 
         /**
          * @private
          * @member {HTMLElement}
          */
-        this._canvasParent = this._getElement(this._config.canvasParent);
+        this._canvasParent = (typeof config.canvasParent === 'string' ? document.querySelector(config.canvasParent) : config.canvasParent) || null;
 
         /**
          * @private
          * @member {ResourceLoader}
          */
-        this._loader = new ResourceLoader(this._config);
+        this._loader = new ResourceLoader(config);
 
         /**
          * @private
          * @member {DisplayManager}
          */
-        this._displayManager = new DisplayManager(this, this._config);
+        this._displayManager = new DisplayManager(this, config);
 
         /**
          * @private
          * @member {MediaManager}
          */
-        this._mediaManager = new MediaManager(this, this._config);
+        this._mediaManager = new MediaManager(this, config);
 
         /**
          * @private
@@ -83,7 +85,7 @@ export default class Application extends EventEmitter {
          * @private
          * @member {Function}
          */
-        this._updateHandler = this._updateGameLoop.bind(this);
+        this._updateHandler = this.update.bind(this);
 
         /**
          * @private
@@ -173,31 +175,54 @@ export default class Application extends EventEmitter {
 
     /**
      * @public
+     * @chainable
      * @param {Scene} scene
+     * @returns {Application}
      */
     start(scene) {
-        if (this._isRunning) {
-            throw new Error('Game instance is already running!');
+        if (!this._isRunning) {
+            this._isRunning = true;
+            this._sceneManager.changeScene(scene);
+            this._delta.restart();
+
+            this._updateId = requestAnimationFrame(this._updateHandler);
         }
 
-        this._isRunning = true;
-
-        this.trigger('scene:change', scene);
-        this._startGameLoop();
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Application}
      */
     stop() {
-        if (!this._isRunning) {
-            throw new Error('Game instance is not running.');
+        if (this._isRunning) {
+            this._isRunning = false;
+            this._sceneManager.stopScene();
+            this._delta.stop();
+
+            cancelAnimationFrame(this._updateId);
         }
 
-        this._isRunning = false;
+        return this;
+    }
 
-        this.trigger('scene:stop');
-        this._stopGameLoop();
+    /**
+     * @public
+     * @chainable
+     * @returns {Application}
+     */
+    update() {
+        if (this._isRunning) {
+            this._inputManager.update();
+            this._sceneManager.update(this._delta.getElapsedTime());
+            this._delta.restart();
+
+            this._updateId = requestAnimationFrame(this._updateHandler);
+        }
+
+        return this;
     }
 
     /**
@@ -238,49 +263,5 @@ export default class Application extends EventEmitter {
         this._updateHandler = null;
         this._updateId = null;
         this._isRunning = null;
-    }
-
-    /**
-     * @private
-     * @param {?String|?HTMLElement} element
-     * @returns {?HTMLElement|?HTMLCanvasElement}
-     */
-    _getElement(element) {
-        if (!element) {
-            return null;
-        }
-
-        if (element instanceof HTMLElement) {
-            return element;
-        }
-
-        return (typeof element === 'string' && document.querySelector(element)) || null;
-    }
-
-    /**
-     * @private
-     */
-    _startGameLoop() {
-        this._updateId = requestAnimationFrame(this._updateHandler);
-        this._delta.restart();
-    }
-
-    /**
-     * @private
-     */
-    _updateGameLoop() {
-        this._inputManager.update();
-        this._sceneManager.update(this._delta.getElapsedTime());
-        this._delta.restart();
-
-        this._updateId = requestAnimationFrame(this._updateHandler);
-    }
-
-    /**
-     * @private
-     */
-    _stopGameLoop() {
-        cancelAnimationFrame(this._updateId);
-        this._delta.stop();
     }
 }

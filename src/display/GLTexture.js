@@ -167,7 +167,7 @@ export default class GLTexture {
     setSource(source) {
         if (this._source !== source) {
             this._source = source;
-            this.updateSource();
+            this.invalidateSource();
         }
 
         return this;
@@ -178,7 +178,7 @@ export default class GLTexture {
      * @chainable
      * @returns {GLTexture}
      */
-    updateSource() {
+    invalidateSource() {
         if (this._source) {
             this._flags |= FLAGS.SOURCE;
         } else {

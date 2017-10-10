@@ -121,20 +121,6 @@ const
      * @public
      * @constant
      * @type {Function}
-     * @param {Number} minA
-     * @param {Number} maxA
-     * @param {Number} minB
-     * @param {Number} maxB
-     * @returns {Boolean}
-     */
-    isOverlapping = (minA, maxA, minB, maxB) => (
-        Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB)
-    ),
-
-    /**
-     * @public
-     * @constant
-     * @type {Function}
      * @param {Number} r
      * @param {Number} g
      * @param {Number} b
@@ -252,7 +238,6 @@ export {
     sign,
     isPowerOfTwo,
     inRange,
-    isOverlapping,
     rgbToHex,
     removeItems,
     determineMimeType,

@@ -25,9 +25,9 @@ export default class SpriteShader extends Shader {
             normalized: false,
         }, {
             name: 'aTextureCoord',
-            type: ATTRIBUTE_TYPE.FLOAT,
+            type: ATTRIBUTE_TYPE.UNSIGNED_SHORT,
             size: 2,
-            normalized: false,
+            normalized: true,
         }, {
             name: 'aColor',
             type: ATTRIBUTE_TYPE.UNSIGNED_BYTE,

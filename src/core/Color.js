@@ -39,10 +39,16 @@ export default class Color {
         this._a = clamp(a, 0, 1);
 
         /**
-         * @public
+         * @private
          * @member {?Float32Array}
          */
         this._array = null;
+
+        /**
+         * @private
+         * @member {?Number}
+         */
+        this._rgba = null;
     }
 
     /**
@@ -55,6 +61,7 @@ export default class Color {
 
     set r(red) {
         this._r = red & 255;
+        this._rgba = null;
     }
 
     /**
@@ -67,6 +74,7 @@ export default class Color {
 
     set g(green) {
         this._g = green & 255;
+        this._rgba = null;
     }
 
     /**
@@ -79,6 +87,7 @@ export default class Color {
 
     set b(blue) {
         this._b = blue & 255;
+        this._rgba = null;
     }
 
     /**
@@ -91,20 +100,7 @@ export default class Color {
 
     set a(alpha) {
         this._a = clamp(alpha, 0, 1);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get rgb() {
-        return ((this._r & 255) << 16) + ((this._g & 255) << 8) + (this._b & 255);
-    }
-
-    set rgb(rgb) {
-        this._r = (rgb >> 16) & 255;
-        this._g = (rgb >> 8) & 255;
-        this._b = rgb & 255;
+        this._rgba = null;
     }
 
     /**
@@ -112,14 +108,11 @@ export default class Color {
      * @member {Number}
      */
     get rgba() {
-        return this._a && (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
+        return this.getRGBA();
     }
 
     set rgba(rgba) {
-        this._a = ((rgba >> 24) & 255) / 255;
-        this._r = (rgba >> 16) & 255;
-        this._g = (rgba >> 8) & 255;
-        this._b = rgba & 255;
+        this.setRGBA(rgba);
     }
 
     /**
@@ -133,139 +126,50 @@ export default class Color {
 
     /**
      * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        const array = this._array || (this._array = new Float32Array(4));
-
-        array[0] = this._r;
-        array[1] = this._g;
-        array[2] = this._b;
-        array[3] = this._a;
-
-        return array;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get normalizedArray() {
-        const array = this._array || (this._array = new Float32Array(4));
-
-        array[0] = this._r / 255;
-        array[1] = this._g / 255;
-        array[2] = this._b / 255;
-        array[3] = this._a;
-
-        return array;
-    }
-
-    /**
-     * @public
      * @chainable
-     * @param {Number} [r]
-     * @param {Number} [g]
-     * @param {Number} [b]
-     * @param {Number} [a]
+     * @param {Number} [r=this._r]
+     * @param {Number} [g=this._g]
+     * @param {Number} [b=this._b]
+     * @param {Number} [a=this._a]
      * @returns {Color}
      */
     set(r = this._r, g = this._g, b = this._b, a = this._a) {
-        this.r = r;
-        this.g = g;
-        this.b = b;
-        this.a = a;
+        this._r = r & 255;
+        this._g = g & 255;
+        this._b = b & 255;
+        this._a = clamp(a, 0, 1);
+
+        this._rgba = null;
 
         return this;
-    }
-
-    /**
-     * @public
-     * @returns {Object<String, Number>}
-     */
-    getHsl() {
-        const r = this.r / 255,
-            g = this.g / 255,
-            b = this.b / 255,
-            min = Math.min(r, g, b),
-            max = Math.max(r, g, b),
-            d = max - min,
-            l = (max + min) / 2;
-
-        let h = 0,
-            s = 0;
-
-        if (max !== min) {
-            s = (l > 0.5) ? d / (2 - max - min) : d / (max + min);
-
-            switch (max) {
-                case r:
-                    h = (g - b) / (d + (g < b ? 6 : 0));
-                    break;
-                case g:
-                    h = (b - r) / (d + 2);
-                    break;
-                case b:
-                    h = (r - g) / (d + 4);
-                    break;
-            }
-
-            h /= 6;
-        }
-
-        return { h, s, l };
     }
 
     /**
      * @public
      * @chainable
-     * @param {Number} hue
-     * @param {Number} saturation
-     * @param {Number} lightness
      * @returns {Color}
      */
-    setHsl(hue, saturation, lightness) {
-        const chroma = (1 - (Math.abs((2 * lightness) - 1) * saturation)),
-            huePrime = (hue / 60),
-            secondComponent = chroma * (1 - Math.abs((huePrime % 2) - 1)),
-            lightnessAdjust = lightness - (chroma / 2);
+    setRGBA(rgba) {
+        this._a = ((rgba >> 24) & 255) / 255;
+        this._r = (rgba >> 16) & 255;
+        this._g = (rgba >> 8) & 255;
+        this._b = rgba & 255;
 
-        let [red, green, blue] = [0, 0, 0];
-
-        switch (huePrime | 0) {
-            case 0:
-                red = chroma;
-                green = secondComponent;
-                break;
-            case 1:
-                red = secondComponent;
-                green = chroma;
-                break;
-            case 2:
-                green = chroma;
-                blue = secondComponent;
-                break;
-            case 3:
-                green = secondComponent;
-                blue = chroma;
-                break;
-            case 4:
-                red = secondComponent;
-                blue = chroma;
-                break;
-            case 5:
-                red = chroma;
-                blue = secondComponent;
-                break;
-        }
-
-        this.r = Math.round((red + lightnessAdjust) * 255);
-        this.g = Math.round((green + lightnessAdjust) * 255);
-        this.b = Math.round((blue + lightnessAdjust) * 255);
+        this._rgba = rgba;
 
         return this;
+    }
+
+    /**
+     * @public
+     * @returns {Number}
+     */
+    getRGBA() {
+        if (this._rgba === null) {
+            this._rgba = this._a && (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
+        }
+
+        return this._rgba;
     }
 
     /**
@@ -302,7 +206,21 @@ export default class Color {
      * @returns {Float32Array}
      */
     toArray(normalized = false) {
-        return normalized ? this.normalizedArray : this.array;
+        const array = this._array || (this._array = new Float32Array(4));
+
+        if (normalized) {
+            array[0] = this._r / 255;
+            array[1] = this._g / 255;
+            array[2] = this._b / 255;
+            array[3] = this._a;
+        } else {
+            array[0] = this._r;
+            array[1] = this._g;
+            array[2] = this._b;
+            array[3] = this._a;
+        }
+
+        return array;
     }
 
     /**
@@ -317,6 +235,8 @@ export default class Color {
         this._g = null;
         this._b = null;
         this._a = null;
+
+        this._rgba = null;
     }
 }
 

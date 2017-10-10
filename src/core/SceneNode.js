@@ -213,7 +213,8 @@ export default class SceneNode extends Transformable {
         this._bounds.destroy();
         this._bounds = null;
 
-        this._active = null;
+        this._scene = null;
         this._parent = null;
+        this._active = null;
     }
 }

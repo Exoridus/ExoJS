@@ -22,20 +22,44 @@ export default class Sprite extends Container {
         this._texture = null;
 
         /**
-         * 8 Properties:
-         * X/Y/U/V from Top-Left Corner
-         * X/Y/U/V from Bottom-Right Corner
-         *
-         * @private
-         * @type {Float32Array}
-         */
-        this._vertexData = new Float32Array(16);
-
-        /**
          * @private
          * @member {Rectangle}
          */
-        this._textureRect = new Rectangle();
+        this._textureFrame = new Rectangle();
+
+        /**
+         * 48 Bytes for 12 4-Byte Properties:
+         *
+         * X/Y Top-Left
+         * X/Y Top-Right
+         * X/Y Bottom-Left
+         * X/Y Bottom-Right
+         *
+         * U/V Top-Left (Packed)
+         * U/V Bottom-Right (Packed)
+         *
+         * @private
+         * @type {ArrayBuffer}
+         */
+        this._vertexData = new ArrayBuffer(48);
+
+        /**
+         * @private
+         * @type {Float32Array}
+         */
+        this._positionData = new Float32Array(this._vertexData, 0, 8);
+
+        /**
+         * @private
+         * @type {Uint32Array}
+         */
+        this._texCoordData = new Uint32Array(this._vertexData, 32, 4);
+
+        /**
+         * @private
+         * @type {Boolean}
+         */
+        this._updateTexCoords = true;
 
         if (texture) {
             this.setTexture(texture);
@@ -58,12 +82,12 @@ export default class Sprite extends Container {
      * @public
      * @member {Rectangle}
      */
-    get textureRect() {
-        return this._textureRect;
+    get textureFrame() {
+        return this._textureFrame;
     }
 
-    set textureRect(textureRect) {
-        this.setTextureRect(textureRect);
+    set textureFrame(frame) {
+        this.setTextureFrame(frame);
     }
 
     /**
@@ -71,11 +95,11 @@ export default class Sprite extends Container {
      * @member {Number}
      */
     get width() {
-        return Math.abs(this.scale.x) * this._texture.width;
+        return Math.abs(this.scaleX) * this._texture.width;
     }
 
     set width(value) {
-        this.scale.x = value / this._texture.width;
+        this.scaleX = value / this._texture.width;
     }
 
     /**
@@ -83,20 +107,11 @@ export default class Sprite extends Container {
      * @member {Number}
      */
     get height() {
-        return Math.abs(this.scale.y) * this._texture.height;
+        return Math.abs(this.scaleY) * this._texture.height;
     }
 
     set height(value) {
-        this.scale.y = value / this._texture.height;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get vertexData() {
-        return this._vertexData;
+        this.scaleY = value / this._texture.height;
     }
 
     /**
@@ -107,7 +122,9 @@ export default class Sprite extends Container {
      */
     setTexture(texture) {
         this._texture = texture;
-        this.setTextureRect(texture.frame);
+        this._localBounds.set(0, 0, texture.width, texture.height);
+        this.setTextureFrame(texture.frame);
+        this.scale.set(1, 1);
 
         return this;
     }
@@ -118,23 +135,9 @@ export default class Sprite extends Container {
      * @param {Rectangle} rectangle
      * @returns {Sprite}
      */
-    setTextureRect(rectangle) {
-        this._textureRect.copy(rectangle);
-        this._localBounds.set(0, 0, this._textureRect.width, this._textureRect.height);
-
-        this._updatePositions();
-        this._updateTexCoords();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Sprite}
-     */
-    updateTexture() {
-        this._texture.updateSource();
+    setTextureFrame(rectangle) {
+        this._textureFrame.copy(rectangle);
+        this._updateTexCoords = true;
 
         return this;
     }
@@ -158,39 +161,70 @@ export default class Sprite extends Container {
 
     /**
      * @public
+     * @returns {Float32Array}
+     */
+    getPositionData() {
+        this.updatePositionData();
+
+        return this._positionData;
+    }
+
+    /**
+     * @public
      * @chainable
      * @returns {Sprite}
      */
-    updateVertices() {
-        const vertexData = this._vertexData,
-            transform = this.getGlobalTransform(),
-            bounds = this.getLocalBounds(),
-            texture = this._texture,
-            textureRect = this._textureRect,
-            topLeft = transform.transformPoint(new Vector(bounds.top, bounds.left)),
-            topRight = transform.transformPoint(new Vector(bounds.top, bounds.right)),
-            bottomLeft = transform.transformPoint(new Vector(bounds.bottom, bounds.left)),
-            bottomRight = transform.transformPoint(new Vector(bounds.bottom, bounds.right));
+    updatePositionData() {
+        const positionData = this._positionData,
+            { left, top, right, bottom } = this.getLocalBounds(),
+            { a, b, c, d, x, y } = this.getGlobalTransform();
 
-        vertexData[0] = topLeft.x;
-        vertexData[1] = topLeft.y;
-        // (textureRect.x / texture.width);
-        // (textureRect.y / texture.height);
+        positionData[0] = (left * a) + (top * b) + x;
+        positionData[1] = (left * c) + (top * d) + y;
 
-        vertexData[2] = topRight.x;
-        vertexData[3] = topRight.y;
-        // (textureRect.x / texture.width) + (textureRect.width / texture.width);
-        // (textureRect.y / texture.height);
+        positionData[2] = (right * a) + (top * b) + x;
+        positionData[3] = (right * c) + (top * d) + y;
 
-        vertexData[4] = bottomLeft.x;
-        vertexData[5] = bottomLeft.y;
-        // (textureRect.x / texture.width);
-        // (textureRect.y / texture.height) + (textureRect.height / texture.height);
+        positionData[4] = (left * a) + (bottom * b) + x;
+        positionData[5] = (left * c) + (bottom * d) + y;
 
-        vertexData[6] = bottomRight.x;
-        vertexData[7] = bottomRight.y;
-        // (textureRect.x / texture.width) + (textureRect.width / texture.width);
-        // (textureRect.y / texture.height) + (textureRect.height / texture.height);
+        positionData[6] = (right * a) + (bottom * b) + x;
+        positionData[7] = (right * c) + (bottom * d) + y;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @returns {Uint32Array}
+     */
+    getTexCoordData() {
+        if (this._updateTexCoords) {
+            this.updateTexCoordData();
+            this._updateTexCoords = false;
+        }
+
+        return this._texCoordData;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Sprite}
+     */
+    updateTexCoordData() {
+        const texCoordData = this._texCoordData,
+            { left, top, right, bottom } = this._textureFrame,
+            { width, height } = this._texture,
+            minX = (left / width * 65535 & 65535),
+            minY = (top / height * 65535 & 65535) << 16,
+            maxX = (right / width * 65535 & 65535),
+            maxY = (bottom / height * 65535 & 65535) << 16;
+
+        texCoordData[0] = (minY | minX);
+        texCoordData[1] = (minY | maxX);
+        texCoordData[2] = (maxY | minX);
+        texCoordData[3] = (maxY | maxX);
 
         return this;
     }
@@ -202,38 +236,13 @@ export default class Sprite extends Container {
         super.destroy();
 
         this._texture = null;
+
+        this._textureFrame.destroy();
+        this._textureFrame = null;
+
         this._vertexData = null;
-
-        this._textureRect.destroy();
-        this._textureRect = null;
-    }
-
-    /**
-     * @private
-     */
-    _updatePositions() {
-        const vertexData = this._vertexData,
-            bounds = this.getLocalBounds();
-
-        vertexData[0] = bounds.x;
-        vertexData[1] = bounds.y;
-        vertexData[4] = bounds.width;
-        vertexData[5] = bounds.height;
-    }
-
-    /**
-     * @private
-     */
-    _updateTexCoords() {
-        const vertexData = this._vertexData,
-            texture = this._texture,
-            textureRect = this._textureRect,
-            left = (textureRect.x / texture.width),
-            top = (textureRect.y / texture.height);
-
-        vertexData[2] = left;
-        vertexData[3] = top;
-        vertexData[6] = left + (textureRect.width / texture.width);
-        vertexData[7] = top + (textureRect.height / texture.height);
+        this._positionData = null;
+        this._texCoordData = null;
+        this._updateTexCoords = null;
     }
 }

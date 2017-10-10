@@ -2577,10 +2577,16 @@ var Color = function () {
     this._a = (0, _utils.clamp)(a, 0, 1);
 
     /**
-     * @public
+     * @private
      * @member {?Float32Array}
      */
     this._array = null;
+
+    /**
+     * @private
+     * @member {?Number}
+     */
+    this._rgba = null;
   }
 
   /**
@@ -2596,10 +2602,10 @@ var Color = function () {
     /**
      * @public
      * @chainable
-     * @param {Number} [r]
-     * @param {Number} [g]
-     * @param {Number} [b]
-     * @param {Number} [a]
+     * @param {Number} [r=this._r]
+     * @param {Number} [g=this._g]
+     * @param {Number} [b=this._b]
+     * @param {Number} [a=this._a]
      * @returns {Color}
      */
     value: function set() {
@@ -2608,108 +2614,48 @@ var Color = function () {
       var b = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this._b;
       var a = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : this._a;
 
-      this.r = r;
-      this.g = g;
-      this.b = b;
-      this.a = a;
+      this._r = r & 255;
+      this._g = g & 255;
+      this._b = b & 255;
+      this._a = (0, _utils.clamp)(a, 0, 1);
+
+      this._rgba = null;
 
       return this;
-    }
-
-    /**
-     * @public
-     * @returns {Object<String, Number>}
-     */
-
-  }, {
-    key: 'getHsl',
-    value: function getHsl() {
-      var r = this.r / 255,
-          g = this.g / 255,
-          b = this.b / 255,
-          min = Math.min(r, g, b),
-          max = Math.max(r, g, b),
-          d = max - min,
-          l = (max + min) / 2;
-
-      var h = 0,
-          s = 0;
-
-      if (max !== min) {
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-        switch (max) {
-          case r:
-            h = (g - b) / (d + (g < b ? 6 : 0));
-            break;
-          case g:
-            h = (b - r) / (d + 2);
-            break;
-          case b:
-            h = (r - g) / (d + 4);
-            break;
-        }
-
-        h /= 6;
-      }
-
-      return { h: h, s: s, l: l };
     }
 
     /**
      * @public
      * @chainable
-     * @param {Number} hue
-     * @param {Number} saturation
-     * @param {Number} lightness
      * @returns {Color}
      */
 
   }, {
-    key: 'setHsl',
-    value: function setHsl(hue, saturation, lightness) {
-      var chroma = 1 - Math.abs(2 * lightness - 1) * saturation,
-          huePrime = hue / 60,
-          secondComponent = chroma * (1 - Math.abs(huePrime % 2 - 1)),
-          lightnessAdjust = lightness - chroma / 2;
+    key: 'setRGBA',
+    value: function setRGBA(rgba) {
+      this._a = (rgba >> 24 & 255) / 255;
+      this._r = rgba >> 16 & 255;
+      this._g = rgba >> 8 & 255;
+      this._b = rgba & 255;
 
-      var red = 0,
-          green = 0,
-          blue = 0;
-
-
-      switch (huePrime | 0) {
-        case 0:
-          red = chroma;
-          green = secondComponent;
-          break;
-        case 1:
-          red = secondComponent;
-          green = chroma;
-          break;
-        case 2:
-          green = chroma;
-          blue = secondComponent;
-          break;
-        case 3:
-          green = secondComponent;
-          blue = chroma;
-          break;
-        case 4:
-          red = secondComponent;
-          blue = chroma;
-          break;
-        case 5:
-          red = chroma;
-          blue = secondComponent;
-          break;
-      }
-
-      this.r = Math.round((red + lightnessAdjust) * 255);
-      this.g = Math.round((green + lightnessAdjust) * 255);
-      this.b = Math.round((blue + lightnessAdjust) * 255);
+      this._rgba = rgba;
 
       return this;
+    }
+
+    /**
+     * @public
+     * @returns {Number}
+     */
+
+  }, {
+    key: 'getRGBA',
+    value: function getRGBA() {
+      if (this._rgba === null) {
+        this._rgba = this._a && ((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r >>> 0;
+      }
+
+      return this._rgba;
     }
 
     /**
@@ -2762,7 +2708,21 @@ var Color = function () {
     value: function toArray() {
       var normalized = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
-      return normalized ? this.normalizedArray : this.array;
+      var array = this._array || (this._array = new Float32Array(4));
+
+      if (normalized) {
+        array[0] = this._r / 255;
+        array[1] = this._g / 255;
+        array[2] = this._b / 255;
+        array[3] = this._a;
+      } else {
+        array[0] = this._r;
+        array[1] = this._g;
+        array[2] = this._b;
+        array[3] = this._a;
+      }
+
+      return array;
     }
 
     /**
@@ -2780,6 +2740,8 @@ var Color = function () {
       this._g = null;
       this._b = null;
       this._a = null;
+
+      this._rgba = null;
     }
   }, {
     key: 'r',
@@ -2788,6 +2750,7 @@ var Color = function () {
     },
     set: function set(red) {
       this._r = red & 255;
+      this._rgba = null;
     }
 
     /**
@@ -2802,6 +2765,7 @@ var Color = function () {
     },
     set: function set(green) {
       this._g = green & 255;
+      this._rgba = null;
     }
 
     /**
@@ -2816,6 +2780,7 @@ var Color = function () {
     },
     set: function set(blue) {
       this._b = blue & 255;
+      this._rgba = null;
     }
 
     /**
@@ -2830,22 +2795,7 @@ var Color = function () {
     },
     set: function set(alpha) {
       this._a = (0, _utils.clamp)(alpha, 0, 1);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-
-  }, {
-    key: 'rgb',
-    get: function get() {
-      return ((this._r & 255) << 16) + ((this._g & 255) << 8) + (this._b & 255);
-    },
-    set: function set(rgb) {
-      this._r = rgb >> 16 & 255;
-      this._g = rgb >> 8 & 255;
-      this._b = rgb & 255;
+      this._rgba = null;
     }
 
     /**
@@ -2856,13 +2806,10 @@ var Color = function () {
   }, {
     key: 'rgba',
     get: function get() {
-      return this._a && ((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r >>> 0;
+      return this.getRGBA();
     },
     set: function set(rgba) {
-      this._a = (rgba >> 24 & 255) / 255;
-      this._r = rgba >> 16 & 255;
-      this._g = rgba >> 8 & 255;
-      this._b = rgba & 255;
+      this.setRGBA(rgba);
     }
 
     /**
@@ -2875,44 +2822,6 @@ var Color = function () {
     key: 'hex',
     get: function get() {
       return (0, _utils.rgbToHex)(this._r, this._g, this._b);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-
-  }, {
-    key: 'array',
-    get: function get() {
-      var array = this._array || (this._array = new Float32Array(4));
-
-      array[0] = this._r;
-      array[1] = this._g;
-      array[2] = this._b;
-      array[3] = this._a;
-
-      return array;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-
-  }, {
-    key: 'normalizedArray',
-    get: function get() {
-      var array = this._array || (this._array = new Float32Array(4));
-
-      array[0] = this._r / 255;
-      array[1] = this._g / 255;
-      array[2] = this._b / 255;
-      array[3] = this._a;
-
-      return array;
     }
   }]);
 
@@ -5945,11 +5854,17 @@ var Texture = function () {
         value: function setSource(source) {
             if (this._source !== source) {
                 this._source = source;
+
+                if (source) {
+                    this._frame.set(0, 0, source.videoWidth || source.width, source.videoHeight || source.height);
+                } else {
+                    this._frame.set(0, 0, 0, 0);
+                }
+
                 this._glTexture.setSource(source);
             }
 
-            this.updateSource();
-            this.updateFrame();
+            this._glTexture.invalidateSource();
 
             return this;
         }
@@ -5961,29 +5876,9 @@ var Texture = function () {
          */
 
     }, {
-        key: 'updateFrame',
-        value: function updateFrame() {
-            var source = this._source;
-
-            if (source) {
-                this._frame.set(0, 0, source.videoWidth || source.width, source.videoHeight || source.height);
-            } else {
-                this._frame.set(0, 0, 0, 0);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Texture}
-         */
-
-    }, {
-        key: 'updateSource',
-        value: function updateSource() {
-            this._glTexture.updateSource();
+        key: 'update',
+        value: function update() {
+            this._glTexture.invalidateSource().update();
 
             return this;
         }
@@ -8294,20 +8189,44 @@ var Sprite = function (_Container) {
         _this._texture = null;
 
         /**
-         * 8 Properties:
-         * X/Y/U/V from Top-Left Corner
-         * X/Y/U/V from Bottom-Right Corner
-         *
-         * @private
-         * @type {Float32Array}
-         */
-        _this._vertexData = new Float32Array(16);
-
-        /**
          * @private
          * @member {Rectangle}
          */
-        _this._textureRect = new _Rectangle2.default();
+        _this._textureFrame = new _Rectangle2.default();
+
+        /**
+         * 48 Bytes for 12 4-Byte Properties:
+         *
+         * X/Y Top-Left
+         * X/Y Top-Right
+         * X/Y Bottom-Left
+         * X/Y Bottom-Right
+         *
+         * U/V Top-Left (Packed)
+         * U/V Bottom-Right (Packed)
+         *
+         * @private
+         * @type {ArrayBuffer}
+         */
+        _this._vertexData = new ArrayBuffer(48);
+
+        /**
+         * @private
+         * @type {Float32Array}
+         */
+        _this._positionData = new Float32Array(_this._vertexData, 0, 8);
+
+        /**
+         * @private
+         * @type {Uint32Array}
+         */
+        _this._texCoordData = new Uint32Array(_this._vertexData, 32, 4);
+
+        /**
+         * @private
+         * @type {Boolean}
+         */
+        _this._updateTexCoords = true;
 
         if (texture) {
             _this.setTexture(texture);
@@ -8333,7 +8252,9 @@ var Sprite = function (_Container) {
          */
         value: function setTexture(texture) {
             this._texture = texture;
-            this.setTextureRect(texture.frame);
+            this._localBounds.set(0, 0, texture.width, texture.height);
+            this.setTextureFrame(texture.frame);
+            this.scale.set(1, 1);
 
             return this;
         }
@@ -8346,27 +8267,10 @@ var Sprite = function (_Container) {
          */
 
     }, {
-        key: 'setTextureRect',
-        value: function setTextureRect(rectangle) {
-            this._textureRect.copy(rectangle);
-            this._localBounds.set(0, 0, this._textureRect.width, this._textureRect.height);
-
-            this._updatePositions();
-            this._updateTexCoords();
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Sprite}
-         */
-
-    }, {
-        key: 'updateTexture',
-        value: function updateTexture() {
-            this._texture.updateSource();
+        key: 'setTextureFrame',
+        value: function setTextureFrame(rectangle) {
+            this._textureFrame.copy(rectangle);
+            this._updateTexCoords = true;
 
             return this;
         }
@@ -8412,42 +8316,100 @@ var Sprite = function (_Container) {
 
         /**
          * @public
+         * @returns {Float32Array}
+         */
+
+    }, {
+        key: 'getPositionData',
+        value: function getPositionData() {
+            this.updatePositionData();
+
+            return this._positionData;
+        }
+
+        /**
+         * @public
          * @chainable
          * @returns {Sprite}
          */
 
     }, {
-        key: 'updateVertices',
-        value: function updateVertices() {
-            var vertexData = this._vertexData,
-                transform = this.getGlobalTransform(),
-                bounds = this.getLocalBounds(),
-                texture = this._texture,
-                textureRect = this._textureRect,
-                topLeft = transform.transformPoint(new _Vector2.default(bounds.top, bounds.left)),
-                topRight = transform.transformPoint(new _Vector2.default(bounds.top, bounds.right)),
-                bottomLeft = transform.transformPoint(new _Vector2.default(bounds.bottom, bounds.left)),
-                bottomRight = transform.transformPoint(new _Vector2.default(bounds.bottom, bounds.right));
+        key: 'updatePositionData',
+        value: function updatePositionData() {
+            var positionData = this._positionData,
+                _getLocalBounds = this.getLocalBounds(),
+                left = _getLocalBounds.left,
+                top = _getLocalBounds.top,
+                right = _getLocalBounds.right,
+                bottom = _getLocalBounds.bottom,
+                _getGlobalTransform = this.getGlobalTransform(),
+                a = _getGlobalTransform.a,
+                b = _getGlobalTransform.b,
+                c = _getGlobalTransform.c,
+                d = _getGlobalTransform.d,
+                x = _getGlobalTransform.x,
+                y = _getGlobalTransform.y;
 
-            vertexData[0] = topLeft.x;
-            vertexData[1] = topLeft.y;
-            // (textureRect.x / texture.width);
-            // (textureRect.y / texture.height);
 
-            vertexData[2] = topRight.x;
-            vertexData[3] = topRight.y;
-            // (textureRect.x / texture.width) + (textureRect.width / texture.width);
-            // (textureRect.y / texture.height);
+            positionData[0] = left * a + top * b + x;
+            positionData[1] = left * c + top * d + y;
 
-            vertexData[4] = bottomLeft.x;
-            vertexData[5] = bottomLeft.y;
-            // (textureRect.x / texture.width);
-            // (textureRect.y / texture.height) + (textureRect.height / texture.height);
+            positionData[2] = right * a + top * b + x;
+            positionData[3] = right * c + top * d + y;
 
-            vertexData[6] = bottomRight.x;
-            vertexData[7] = bottomRight.y;
-            // (textureRect.x / texture.width) + (textureRect.width / texture.width);
-            // (textureRect.y / texture.height) + (textureRect.height / texture.height);
+            positionData[4] = left * a + bottom * b + x;
+            positionData[5] = left * c + bottom * d + y;
+
+            positionData[6] = right * a + bottom * b + x;
+            positionData[7] = right * c + bottom * d + y;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @returns {Uint32Array}
+         */
+
+    }, {
+        key: 'getTexCoordData',
+        value: function getTexCoordData() {
+            if (this._updateTexCoords) {
+                this.updateTexCoordData();
+                this._updateTexCoords = false;
+            }
+
+            return this._texCoordData;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Sprite}
+         */
+
+    }, {
+        key: 'updateTexCoordData',
+        value: function updateTexCoordData() {
+            var texCoordData = this._texCoordData,
+                _textureFrame = this._textureFrame,
+                left = _textureFrame.left,
+                top = _textureFrame.top,
+                right = _textureFrame.right,
+                bottom = _textureFrame.bottom,
+                _texture = this._texture,
+                width = _texture.width,
+                height = _texture.height,
+                minX = left / width * 65535 & 65535,
+                minY = (top / height * 65535 & 65535) << 16,
+                maxX = right / width * 65535 & 65535,
+                maxY = (bottom / height * 65535 & 65535) << 16;
+
+
+            texCoordData[0] = minY | minX;
+            texCoordData[1] = minY | maxX;
+            texCoordData[2] = maxY | minX;
+            texCoordData[3] = maxY | maxX;
 
             return this;
         }
@@ -8461,46 +8423,14 @@ var Sprite = function (_Container) {
         value: function destroy() {
             _get(Sprite.prototype.__proto__ || Object.getPrototypeOf(Sprite.prototype), 'destroy', this).call(this);
 
+            this._textureFrame.destroy();
+            this._textureFrame = null;
+
             this._texture = null;
             this._vertexData = null;
-
-            this._textureRect.destroy();
-            this._textureRect = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_updatePositions',
-        value: function _updatePositions() {
-            var vertexData = this._vertexData,
-                bounds = this.getLocalBounds();
-
-            vertexData[0] = bounds.x;
-            vertexData[1] = bounds.y;
-            vertexData[4] = bounds.width;
-            vertexData[5] = bounds.height;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_updateTexCoords',
-        value: function _updateTexCoords() {
-            var vertexData = this._vertexData,
-                texture = this._texture,
-                textureRect = this._textureRect,
-                left = textureRect.x / texture.width,
-                top = textureRect.y / texture.height;
-
-            vertexData[2] = left;
-            vertexData[3] = top;
-            vertexData[6] = left + textureRect.width / texture.width;
-            vertexData[7] = top + textureRect.height / texture.height;
+            this._positionData = null;
+            this._texCoordData = null;
+            this._updateTexCoords = null;
         }
     }, {
         key: 'texture',
@@ -8517,12 +8447,12 @@ var Sprite = function (_Container) {
          */
 
     }, {
-        key: 'textureRect',
+        key: 'textureFrame',
         get: function get() {
-            return this._textureRect;
+            return this._textureFrame;
         },
-        set: function set(textureRect) {
-            this.setTextureRect(textureRect);
+        set: function set(frame) {
+            this.setTextureFrame(frame);
         }
 
         /**
@@ -8533,10 +8463,10 @@ var Sprite = function (_Container) {
     }, {
         key: 'width',
         get: function get() {
-            return Math.abs(this.scale.x) * this._texture.width;
+            return Math.abs(this.scaleX) * this._texture.width;
         },
         set: function set(value) {
-            this.scale.x = value / this._texture.width;
+            this.scaleX = value / this._texture.width;
         }
 
         /**
@@ -8547,22 +8477,10 @@ var Sprite = function (_Container) {
     }, {
         key: 'height',
         get: function get() {
-            return Math.abs(this.scale.y) * this._texture.height;
+            return Math.abs(this.scaleY) * this._texture.height;
         },
         set: function set(value) {
-            this.scale.y = value / this._texture.height;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Float32Array}
-         */
-
-    }, {
-        key: 'vertexData',
-        get: function get() {
-            return this._vertexData;
+            this.scaleY = value / this._texture.height;
         }
     }]);
 
@@ -8917,6 +8835,34 @@ var Transformable = function (_EventEmitter) {
 
         /**
          * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'scaleX',
+        get: function get() {
+            return this._scale.x;
+        },
+        set: function set(value) {
+            this._scale.x = value;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'scaleY',
+        get: function get() {
+            return this._scale.y;
+        },
+        set: function set(value) {
+            this._scale.y = value;
+        }
+
+        /**
+         * @public
          * @member {ObservableVector}
          */
 
@@ -8927,6 +8873,34 @@ var Transformable = function (_EventEmitter) {
         },
         set: function set(origin) {
             this._origin.copy(origin);
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'originX',
+        get: function get() {
+            return this._origin.x;
+        },
+        set: function set(value) {
+            this._origin.x = value;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'originY',
+        get: function get() {
+            return this._origin.y;
+        },
+        set: function set(value) {
+            this._origin.y = value;
         }
 
         /**
@@ -10369,68 +10343,53 @@ var SpriteRenderer = function (_Renderer) {
                 _classCallCheck(this, SpriteRenderer);
 
                 /**
-                 * @private
-                 * @member {Number}
-                 */
-                var _this = _possibleConstructorReturn(this, (SpriteRenderer.__proto__ || Object.getPrototypeOf(SpriteRenderer)).call(this));
-
-                _this._vertexCount = 4;
-
-                /**
+                 * 4 x 4 Properties:
                  * 2 = position (x, y) +
-                 * 2 = texCoord (x, y) +
+                 * 1 = texCoord (ushort) +
                  * 1 = color    (ARGB int)
                  *
                  * @private
                  * @member {Number}
                  */
-                _this._vertexPropCount = 5;
+                var _this = _possibleConstructorReturn(this, (SpriteRenderer.__proto__ || Object.getPrototypeOf(SpriteRenderer)).call(this));
 
-                /**
-                 * Vertex property count times the vertices per sprite.
-                 *
-                 * @private
-                 * @member {Number}
-                 */
-                _this._spriteVertexSize = _this._vertexCount * _this._vertexPropCount;
+                _this._attributeCount = 16;
 
                 /**
                  * @private
                  * @member {Number}
                  */
-                _this._maxSprites = _settings2.default.BATCH_SIZE_SPRITES;
+                _this._batchSize = 0;
+
+                /**
+                 * @private
+                 * @member {Number}
+                 */
+                _this._batchLimit = _settings2.default.BATCH_SIZE_SPRITES;
 
                 /**
                  * @private
                  * @member {ArrayBuffer}
                  */
-                _this._vertexData = new ArrayBuffer(_this._maxSprites * _this._spriteVertexSize * 4);
-
-                /**
-                 * @private
-                 * @member {Float32Array}
-                 */
-                _this._vertexView = new Float32Array(_this._vertexData);
-
-                /**
-                 * @private
-                 * @member {Uint32Array}
-                 */
-                _this._colorView = new Uint32Array(_this._vertexData);
+                _this._vertexData = new ArrayBuffer(_this._batchLimit * _this._attributeCount * 4);
 
                 /**
                  * @private
                  * @member {Uint16Array}
                  */
-                _this._indexData = _Renderer3.default.createIndexBuffer(_this._maxSprites);
+                _this._indexData = _Renderer3.default.createIndexBuffer(_this._batchLimit);
 
                 /**
-                 * Current amount of elements inside the batch to draw.
-                 *
                  * @private
-                 * @member {Number}
+                 * @member {Float32Array}
                  */
-                _this._batchSize = 0;
+                _this._floatView = new Float32Array(_this._vertexData);
+
+                /**
+                 * @private
+                 * @member {Uint32Array}
+                 */
+                _this._uintView = new Uint32Array(_this._vertexData);
 
                 /**
                  * @private
@@ -10528,44 +10487,42 @@ var SpriteRenderer = function (_Renderer) {
                                 this._currentTexture = sprite.texture;
                         }
 
-                        if (this._batchSize >= this._maxSprites) {
+                        if (this._batchSize >= this._batchLimit) {
                                 this.flush();
                         }
 
-                        var vertexBuffer = this._vertexView,
-                            colorBuffer = this._colorView,
-                            transform = sprite.globalTransform,
-                            vertexData = sprite.vertexData,
-                            index = this._batchSize * this._spriteVertexSize;
-
                         this._currentTexture.glTexture.update();
 
-                        // Vertex 1 (X / Y / U / V)
-                        vertexBuffer[index] = vertexData[0] * transform.a + vertexData[1] * transform.b + transform.x;
-                        vertexBuffer[index + 1] = vertexData[0] * transform.c + vertexData[1] * transform.d + transform.y;
-                        vertexBuffer[index + 2] = vertexData[2];
-                        vertexBuffer[index + 3] = vertexData[3];
+                        var index = this._batchSize * this._attributeCount,
+                            floatView = this._floatView,
+                            uintView = this._uintView,
+                            positionData = sprite.getPositionData(),
+                            texCoordData = sprite.getTexCoordData(),
+                            tint = sprite.tint.getRGBA();
 
-                        // Vertex 2 (X / Y / U / V)
-                        vertexBuffer[index + 5] = vertexData[4] * transform.a + vertexData[0] * transform.b + transform.x;
-                        vertexBuffer[index + 6] = vertexData[4] * transform.c + vertexData[0] * transform.d + transform.y;
-                        vertexBuffer[index + 7] = vertexData[6];
-                        vertexBuffer[index + 8] = vertexData[3];
+                        // X / Y / U / V / Tint
+                        floatView[index + 0] = positionData[0];
+                        floatView[index + 1] = positionData[1];
+                        uintView[index + 2] = texCoordData[0];
+                        uintView[index + 3] = tint;
 
-                        // Vertex 3 (X / Y / U / V)
-                        vertexBuffer[index + 10] = vertexData[1] * transform.a + vertexData[5] * transform.b + transform.x;
-                        vertexBuffer[index + 11] = vertexData[1] * transform.c + vertexData[5] * transform.d + transform.y;
-                        vertexBuffer[index + 12] = vertexData[2];
-                        vertexBuffer[index + 13] = vertexData[7];
+                        // X / Y / U / V / Tint
+                        floatView[index + 4] = positionData[2];
+                        floatView[index + 5] = positionData[3];
+                        uintView[index + 6] = texCoordData[1];
+                        uintView[index + 7] = tint;
 
-                        // Vertex 4 (X / Y / U / V)
-                        vertexBuffer[index + 15] = vertexData[4] * transform.a + vertexData[5] * transform.b + transform.x;
-                        vertexBuffer[index + 16] = vertexData[4] * transform.c + vertexData[5] * transform.d + transform.y;
-                        vertexBuffer[index + 17] = vertexData[6];
-                        vertexBuffer[index + 18] = vertexData[7];
+                        // X / Y / U / V / Tint
+                        floatView[index + 8] = positionData[4];
+                        floatView[index + 9] = positionData[5];
+                        uintView[index + 10] = texCoordData[2];
+                        uintView[index + 11] = tint;
 
-                        // Tint
-                        colorBuffer[index + 4] = colorBuffer[index + 9] = colorBuffer[index + 14] = colorBuffer[index + 19] = sprite.tint.rgba;
+                        // X / Y / U / V / Tint
+                        floatView[index + 12] = positionData[6];
+                        floatView[index + 13] = positionData[7];
+                        uintView[index + 14] = texCoordData[3];
+                        uintView[index + 15] = tint;
 
                         this._batchSize++;
                 }
@@ -10577,13 +10534,13 @@ var SpriteRenderer = function (_Renderer) {
         }, {
                 key: 'flush',
                 value: function flush() {
-                        var gl = this._context;
-
                         if (!this._batchSize) {
                                 return;
                         }
 
-                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._vertexView.subarray(0, this._batchSize * this._spriteVertexSize));
+                        var gl = this._context;
+
+                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._floatView.subarray(0, this._batchSize * this._attributeCount));
                         gl.drawElements(gl.TRIANGLES, this._batchSize * 6, gl.UNSIGNED_SHORT, 0);
 
                         this._batchSize = 0;
@@ -10606,12 +10563,14 @@ var SpriteRenderer = function (_Renderer) {
                         this._shader = null;
 
                         this._vertexData = null;
-                        this._vertexView = null;
-                        this._colorView = null;
                         this._indexData = null;
-                        this._spriteVertexSize = null;
-                        this._maxSprites = null;
+
+                        this._floatView = null;
+                        this._uintView = null;
+
                         this._batchSize = null;
+                        this._batchLimit = null;
+                        this._attributeCount = null;
                         this._currentTexture = null;
                         this._bound = null;
                 }
@@ -10666,7 +10625,7 @@ var SpriteShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (SpriteShader.__proto__ || Object.getPrototypeOf(SpriteShader)).call(this));
 
-        _this.setVertexSource('precision lowp float;\n\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute vec4 aColor;\n\nuniform mat3 projectionMatrix;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vColor;\n\nvoid main(void) {\n    vTextureCoord = aTextureCoord;\n    vColor = vec4(aColor.rgb * aColor.a, aColor.a);\n    gl_Position = vec4((projectionMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);\n}\n');
+        _this.setVertexSource('precision lowp float;\n\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute vec4 aColor;\n\nuniform mat3 projectionMatrix;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vColor;\n\nvoid main(void) {\n    vTextureCoord = aTextureCoord;\n    vColor = vec4(aColor.rgb * aColor.a, aColor.a);\n\n    gl_Position = vec4((projectionMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);\n}\n');
         _this.setFragmentSource('precision lowp float;\n\nuniform sampler2D uSampler;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vColor;\n\nvoid main(void) {\n    gl_FragColor = texture2D(uSampler, vTextureCoord) * vColor;\n}\n');
 
         _this.setAttributes([{
@@ -10676,9 +10635,9 @@ var SpriteShader = function (_Shader) {
             normalized: false
         }, {
             name: 'aTextureCoord',
-            type: _const.ATTRIBUTE_TYPE.FLOAT,
+            type: _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT,
             size: 2,
-            normalized: false
+            normalized: true
         }, {
             name: 'aColor',
             type: _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE,
@@ -17393,47 +17352,6 @@ var Quadtree = function () {
 
         /**
          * @public
-         * @chainable
-         * @param {Rectangle} bounds
-         * @returns {Quadtree}
-         */
-
-    }, {
-        key: 'setBounds',
-        value: function setBounds(bounds) {
-            return this.resize(bounds.x, bounds.y, bounds.width, bounds.height);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} x
-         * @param {Number} y
-         * @param {Number} width
-         * @param {Number} height
-         * @returns {Quadtree}
-         */
-
-    }, {
-        key: 'resize',
-        value: function resize(x, y, width, height) {
-            var childWidth = width / 2 | 0,
-                childHeight = height / 2 | 0;
-
-            this._bounds.set(x, y, width, height);
-
-            if (this._children.size) {
-                this._children.get(0).resize(x, y, childWidth, childHeight);
-                this._children.get(1).resize(x + childWidth, y, childWidth, childHeight);
-                this._children.get(2).resize(x, y + childHeight, childWidth, childHeight);
-                this._children.get(3).resize(x + childWidth, y + childHeight, childWidth, childHeight);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
          */
 
     }, {
@@ -19601,7 +19519,7 @@ var GLTexture = function () {
         value: function setSource(source) {
             if (this._source !== source) {
                 this._source = source;
-                this.updateSource();
+                this.invalidateSource();
             }
 
             return this;
@@ -19614,8 +19532,8 @@ var GLTexture = function () {
          */
 
     }, {
-        key: 'updateSource',
-        value: function updateSource() {
+        key: 'invalidateSource',
+        value: function invalidateSource() {
             if (this._source) {
                 this._flags |= FLAGS.SOURCE;
             } else {
@@ -22236,7 +22154,7 @@ var Video = function (_Sprite) {
          */
         value: function render(displayManager) {
             if (this.active) {
-                this.updateTexture();
+                this.texture.update();
 
                 displayManager.getRenderer('sprite').render(this);
             }
