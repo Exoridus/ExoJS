@@ -1,7 +1,7 @@
-import Transformable from './Transformable';
-import Matrix from './Matrix';
-import Rectangle from './shape/Rectangle';
-import Bounds from '../display/Bounds';
+import Transformable from '../math/Transformable';
+import Matrix from '../math/Matrix';
+import Rectangle from '../math/Rectangle';
+import Bounds from './Bounds';
 
 /**
  * @class SceneNode

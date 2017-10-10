@@ -1,12 +1,13 @@
-import Renderer from './Renderer';
-import SpriteShader from './SpriteShader';
-import settings from '../settings';
+import Renderer from '../../display/Renderer';
+import ParticleShader from './ParticleShader';
+import { degreesToRadians } from '../../utils';
+import settings from '../../settings';
 
 /**
- * @class SpriteRenderer
+ * @class ParticleRenderer
  * @extends {Renderer}
  */
-export default class SpriteRenderer extends Renderer {
+export default class ParticleRenderer extends Renderer {
 
     /**
      * @constructor
@@ -15,15 +16,18 @@ export default class SpriteRenderer extends Renderer {
         super();
 
         /**
-         * 4 x 4 Properties:
-         * 2 = position (x, y) +
-         * 1 = texCoord (packed uv) +
-         * 1 = color    (ARGB int)
+         * 4 x 10 Properties:
+         * 2 = vertexPos     (x, y) +
+         * 2 = textureCoords (x, y) +
+         * 2 = position      (x, y) +
+         * 2 = scale         (x, y) +
+         * 1 = rotation      (x, y) +
+         * 1 = color         (ARGB int)
          *
          * @private
          * @member {Number}
          */
-        this._attributeCount = 16;
+        this._attributeCount = 40;
 
         /**
          * @private
@@ -35,7 +39,7 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._batchLimit = settings.BATCH_LIMIT_SPRITES;
+        this._batchLimit = settings.BATCH_LIMIT_PARTICLES;
 
         /**
          * @private
@@ -63,13 +67,13 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {SpriteShader}
+         * @member {?ParticleShader}
          */
-        this._shader = new SpriteShader();
+        this._shader = new ParticleShader();
 
         /**
-         * @private
          * @member {?Texture}
+         * @private
          */
         this._currentTexture = null;
 
@@ -130,58 +134,88 @@ export default class SpriteRenderer extends Renderer {
 
     /**
      * @override
-     * @param {Sprite} sprite
      */
-    render(sprite) {
+    render(emitter) {
         const batchLimitReached = this._batchSize >= this._batchLimit,
-            textureChanged = this._currentTexture !== sprite.texture,
+            textureChanged = this._currentTexture !== emitter.texture,
             flush = (textureChanged || batchLimitReached),
-            index = flush ? 0 : this._batchSize * this._attributeCount,
             floatView = this._floatView,
             uintView = this._uintView,
-            positionData = sprite.getPositionData(),
-            texCoordData = sprite.getTexCoordData();
+            particles = emitter.particles,
+            textureFrame = emitter.textureFrame,
+            textureCoords = emitter.textureCoords;
 
         if (flush) {
             this.flush();
 
             if (textureChanged) {
-                this._currentTexture = sprite.texture;
-                this._shader.setSpriteTexture(this._currentTexture);
+                this._currentTexture = emitter.texture;
+                this._shader.setParticleTexture(this._currentTexture);
             }
         }
 
         this._currentTexture.glTexture.update();
 
-        // X / Y
-        floatView[index] = positionData[0];
-        floatView[index + 1] = positionData[1];
+        for (const particle of particles) {
+            if (this._batchSize >= this._batchLimit) {
+                this.flush();
+            }
 
-        // X / Y
-        floatView[index + 4] = positionData[2];
-        floatView[index + 5] = positionData[3];
+            const index = this._batchSize * this._attributeCount,
+                { position, scale, rotation, color } = particle;
 
-        // X / Y
-        floatView[index + 8] = positionData[4];
-        floatView[index + 9] = positionData[5];
+            floatView[index] =
+                floatView[index + 11] = textureFrame.x;
+            floatView[index + 1] =
+                floatView[index + 20] = textureFrame.y;
 
-        // X / Y
-        floatView[index + 12] = positionData[6];
-        floatView[index + 13] = positionData[7];
+            floatView[index + 10] =
+                floatView[index + 30] = textureFrame.width;
+            floatView[index + 21] =
+                floatView[index + 31] = textureFrame.height;
 
-        // U / V
-        uintView[index + 2] = texCoordData[0];
-        uintView[index + 6] = texCoordData[1];
-        uintView[index + 10] = texCoordData[2];
-        uintView[index + 14] = texCoordData[3];
+            floatView[index + 2] =
+                floatView[index + 22] = textureCoords.x;
+            floatView[index + 3] =
+                floatView[index + 13] = textureCoords.y;
 
-        // Tint
-        uintView[index + 3] =
-            uintView[index + 7] =
-                uintView[index + 11] =
-                    uintView[index + 15] = sprite.tint.getRGBA();
+            floatView[index + 12] =
+                floatView[index + 32] = textureCoords.width;
+            floatView[index + 23] =
+                floatView[index + 33] = textureCoords.height;
 
-        this._batchSize++;
+            floatView[index + 4] =
+                floatView[index + 14] =
+                    floatView[index + 24] =
+                        floatView[index + 34] = position.x;
+
+            floatView[index + 5] =
+                floatView[index + 15] =
+                    floatView[index + 25] =
+                        floatView[index + 35] = position.y;
+
+            floatView[index + 6] =
+                floatView[index + 16] =
+                    floatView[index + 26] =
+                        floatView[index + 36] = scale.x;
+
+            floatView[index + 7] =
+                floatView[index + 17] =
+                    floatView[index + 27] =
+                        floatView[index + 37] = scale.y;
+
+            floatView[index + 8] =
+                floatView[index + 18] =
+                    floatView[index + 28] =
+                        floatView[index + 38] = degreesToRadians(rotation);
+
+            uintView[index + 9] =
+                uintView[index + 19] =
+                    uintView[index + 29] =
+                        uintView[index + 39] = color.getRGBA();
+
+            this._batchSize++;
+        }
     }
 
     /**

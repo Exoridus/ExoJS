@@ -1,6 +1,3 @@
-const KEYS = Exo.KEYS,
-    GAMEPAD = Exo.GAMEPAD;
-
 /**
  * @class MenuManager
  */
@@ -42,9 +39,9 @@ export default class MenuManager {
          */
         this._inputs = [
             new Exo.Input([
-                KEYS.Up,
-                GAMEPAD.DPadUp,
-                GAMEPAD.LeftStickUp,
+                Exo.KEYS.Up,
+                Exo.GAMEPAD.DPadUp,
+                Exo.GAMEPAD.LeftStickUp,
             ], {
                 context: this,
                 start() {
@@ -54,9 +51,9 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                KEYS.Down,
-                GAMEPAD.LeftStickDown,
-                GAMEPAD.DPadDown,
+                Exo.KEYS.Down,
+                Exo.GAMEPAD.LeftStickDown,
+                Exo.GAMEPAD.DPadDown,
             ], {
                 context: this,
                 start() {
@@ -66,9 +63,9 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                KEYS.Left,
-                GAMEPAD.LeftStickLeft,
-                GAMEPAD.DPadLeft,
+                Exo.KEYS.Left,
+                Exo.GAMEPAD.LeftStickLeft,
+                Exo.GAMEPAD.DPadLeft,
             ], {
                 context: this,
                 start() {
@@ -78,9 +75,9 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                KEYS.Right,
-                GAMEPAD.LeftStickRight,
-                GAMEPAD.DPadRight,
+                Exo.KEYS.Right,
+                Exo.GAMEPAD.LeftStickRight,
+                Exo.GAMEPAD.DPadRight,
             ], {
                 context: this,
                 start() {
@@ -90,8 +87,8 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                KEYS.Enter,
-                GAMEPAD.FaceButtonBottom,
+                Exo.KEYS.Enter,
+                Exo.GAMEPAD.FaceButtonBottom,
             ], {
                 context: this,
                 start() {
@@ -101,8 +98,8 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                KEYS.Backspace,
-                GAMEPAD.FaceButtonRight,
+                Exo.KEYS.Backspace,
+                Exo.GAMEPAD.FaceButtonRight,
             ], {
                 context: this,
                 start() {

@@ -1,5 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
+import { RANGE_DEVICE, OFFSET_POINTER } from '../../const';
 
 /**
  * @class PointerManager
@@ -13,7 +13,7 @@ export default class PointerManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, CHANNEL_OFFSET.POINTER, CHANNEL_LENGTH.DEVICE);
+        super(channelBuffer, OFFSET_POINTER, RANGE_DEVICE);
 
         /**
          * @private

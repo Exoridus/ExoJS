@@ -1,4 +1,4 @@
-import EventEmitter from './EventEmitter';
+import EventEmitter from '../core/EventEmitter';
 import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
 import { degreesToRadians } from '../utils';

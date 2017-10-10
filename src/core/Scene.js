@@ -1,8 +1,7 @@
 import EventEmitter from './EventEmitter';
 import SceneNode from './SceneNode';
-import Bounds from '../display/Bounds';
-import Quadtree from './Quadtree';
-import Rectangle from './shape/Rectangle';
+import Bounds from './Bounds';
+import Rectangle from '../math/Rectangle';
 
 /**
  * @class Scene

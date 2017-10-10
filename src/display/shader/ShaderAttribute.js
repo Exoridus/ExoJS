@@ -1,4 +1,4 @@
-import { ATTRIBUTE_TYPE } from '../const';
+import { ATTRIBUTE_TYPE } from '../../const';
 
 /**
  * @class ShaderAttribute

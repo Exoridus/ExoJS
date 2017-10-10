@@ -1,8 +1,8 @@
-import Vector from '../Vector';
+import Vector from './Vector';
 import Shape from './Shape';
-import { inRange } from '../../utils';
-import { SHAPE } from '../../const';
-import Collision from '../Collision';
+import Collision from './Collision';
+import { inRange } from '../utils';
+import { SHAPE } from '../const';
 
 /**
  * @class Rectangle
@@ -194,7 +194,7 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    checkCollision(shape) {
+    getCollision(shape) {
         switch (shape.type) {
             case SHAPE.RECTANGLE:
                 return Collision.checkRectangleRectangle(this, shape);

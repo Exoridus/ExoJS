@@ -1,8 +1,8 @@
 import Shape from './Shape';
-import Collision from '../Collision';
-import Bounds from '../../display/Bounds';
-import { SHAPE } from '../../const';
-import Interval from '../Interval';
+import Collision from './Collision';
+import Bounds from '../core/Bounds';
+import Interval from './Interval';
+import { SHAPE } from '../const';
 
 /**
  * @class Polygon
@@ -174,7 +174,7 @@ export default class Polygon extends Shape {
     /**
      * @override
      */
-    checkCollision(shape) {
+    getCollision(shape) {
         switch (shape.type) {
             case SHAPE.RECTANGLE:
                 return Collision.checkPolygonRectangle(this, shape);

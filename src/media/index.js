@@ -7,4 +7,3 @@ export { default as Sound } from './Sound';
 export { default as Music } from './Music';
 export { default as MediaManager } from './MediaManager';
 export { default as AudioAnalyser } from './AudioAnalyser';
-export { default as Video } from './Video';

@@ -1,4 +1,4 @@
-import { SCALE_MODE, WRAP_MODE } from './const';
+import { BLEND_MODE, SCALE_MODE, WRAP_MODE } from './const';
 import Color from './core/Color';
 import DefaultGamepadMapping from './input/gamepad/DefaultGamepadMapping';
 
@@ -75,6 +75,14 @@ export default {
     /**
      * @public
      * @static
+     * @type {Object<String, Number>}
+     * @default BLEND_MODE.NORMAL
+     */
+    BLEND_MODE: BLEND_MODE.MULTIPLY,
+
+    /**
+     * @public
+     * @static
      * @type {Object}
      */
     TEXT_STYLE: {
@@ -96,30 +104,6 @@ export default {
     /**
      * @public
      * @static
-     * @type {String}
-     * @default 'image/png'
-     */
-    MIME_TYPE_IMAGE: 'image/png',
-
-    /**
-     * @public
-     * @static
-     * @type {String}
-     * @default 'audio/ogg'
-     */
-    MIME_TYPE_AUDIO: 'audio/ogg',
-
-    /**
-     * @public
-     * @static
-     * @type {String}
-     * @default 'video/ogg'
-     */
-    MIME_TYPE_VIDEO: 'video/ogg',
-
-    /**
-     * @public
-     * @static
      * @type {Number}
      * @default 5
      */
@@ -129,9 +113,9 @@ export default {
      * @public
      * @static
      * @type {Number}
-     * @default 10
+     * @default 20
      */
-    QUAD_TREE_MAX_ENTITIES: 10,
+    QUAD_TREE_MAX_OBJECTS: 20,
 
     /**
      * @public
@@ -139,7 +123,7 @@ export default {
      * @type {Number}
      * @default 2500
      */
-    BATCH_SIZE_SPRITES: 2500,
+    BATCH_LIMIT_SPRITES: 2500,
 
     /**
      * @public
@@ -147,7 +131,7 @@ export default {
      * @type {Number}
      * @default 5000
      */
-    BATCH_SIZE_PARTICLES: 5000,
+    BATCH_LIMIT_PARTICLES: 5000,
 
     /**
      * @public

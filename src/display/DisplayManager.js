@@ -1,12 +1,12 @@
 import RenderTarget from './RenderTarget';
 import SpriteRenderer from './SpriteRenderer';
-import ParticleRenderer from '../particle/ParticleRenderer';
+import ParticleRenderer from '../extras/particle/ParticleRenderer';
 import Color from '../core/Color';
-import Matrix from '../core/Matrix';
-import { BLEND_MODE } from '../const';
-import support from '../support';
+import Matrix from '../math/Matrix';
 import View from './View';
-import Rectangle from '../core/shape/Rectangle';
+import Rectangle from '../math/Rectangle';
+import settings from '../settings';
+import support from '../support';
 
 /**
  * @class DisplayManager
@@ -63,6 +63,10 @@ export default class DisplayManager {
          */
         this._contextLost = this._context.isContextLost();
 
+        if (this._contextLost && this._context.getExtension('WEBGL_lose_context')) {
+            this._context.getExtension('WEBGL_lose_context').restoreContext();
+        }
+
         /**
          * @private
          * @member {Color}
@@ -107,18 +111,6 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map<Number, Object<String, Number>>}
-         */
-        this._blendModes = new Map();
-
-        /**
-         * @private
-         * @member {?Number}
-         */
-        this._currentBlendMode = null;
-
-        /**
-         * @private
          * @member {Matrix}
          */
         this._projection = new Matrix();
@@ -136,10 +128,8 @@ export default class DisplayManager {
         this._view = new View(new Rectangle(0, 0, width, height));
 
         this._addEvents();
-        this._addBlendmodes();
-        this._setGLFlags();
+        this._setupGL();
 
-        this.setBlendMode(BLEND_MODE.NORMAL);
         this.setClearColor(this._clearColor);
         this.setRenderTarget(this._rootRenderTarget);
 
@@ -168,18 +158,6 @@ export default class DisplayManager {
 
     set renderTarget(renderTarget) {
         this.setRenderTarget(renderTarget);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get currentBlendMode() {
-        return this._currentBlendMode;
-    }
-
-    set currentBlendMode(blendMode) {
-        this.setBlendMode(blendMode);
     }
 
     /**
@@ -260,23 +238,6 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Number} blendMode
-     */
-    setBlendMode(blendMode) {
-        if (!this._blendModes.has(blendMode)) {
-            throw new Error(`Blendmode "${blendMode}" is not supported.`);
-        }
-
-        if (blendMode !== this._currentBlendMode) {
-            const blending = this._blendModes.get(blendMode);
-
-            this._currentBlendMode = blendMode;
-            this._context.blendFunc(blending.src, blending.dst);
-        }
-    }
-
-    /**
-     * @public
      * @param {Number} width
      * @param {Number} height
      */
@@ -329,7 +290,7 @@ export default class DisplayManager {
             this._viewport.height
         );
 
-        this.setProjection(this._view.transform);
+        this.setProjection(this._view.getTransform());
     }
 
     /**
@@ -351,9 +312,7 @@ export default class DisplayManager {
     clear(color = this._clearColor) {
         const gl = this._context;
 
-        if (color) {
-            this.setClearColor(color);
-        }
+        this.setClearColor(color);
 
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
@@ -367,10 +326,14 @@ export default class DisplayManager {
             this._clearColor.copy(color);
             this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {DisplayManager}
      */
     begin() {
         if (this._isRendering) {
@@ -382,11 +345,15 @@ export default class DisplayManager {
         if (this._clearBeforeRender) {
             this.clear();
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {*} renderable
+     * @returns {DisplayManager}
      */
     render(renderable) {
         if (!this._isRendering) {
@@ -396,10 +363,14 @@ export default class DisplayManager {
         if (!this._contextLost && this.isVisible(renderable)) {
             renderable.render(this);
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {DisplayManager}
      */
     end() {
         if (!this._isRendering) {
@@ -408,9 +379,11 @@ export default class DisplayManager {
 
         this._isRendering = false;
 
-        if (this._currentRenderer && !this._contextLost) {
+        if (!this._contextLost && this._currentRenderer) {
             this._currentRenderer.flush();
         }
+
+        return this;
     }
 
     /**
@@ -435,9 +408,6 @@ export default class DisplayManager {
         this._renderers.clear();
         this._renderers = null;
 
-        this._blendModes.clear();
-        this._blendModes = null;
-
         this._clearColor.destroy();
         this._clearColor = null;
 
@@ -456,7 +426,6 @@ export default class DisplayManager {
         this._isRendering = null;
         this._contextLost = null;
         this._currentRenderer = null;
-        this._currentBlendMode = null;
         this._renderTarget = null;
         this._context = null;
         this._canvas = null;
@@ -471,31 +440,6 @@ export default class DisplayManager {
         } catch (e) {
             return null;
         }
-    }
-
-    /**
-     * @private
-     */
-    _addBlendmodes() {
-        const gl = this._context;
-
-        this._blendModes
-            .set(BLEND_MODE.NORMAL, {
-                src: gl.ONE,
-                dst: gl.ONE_MINUS_SRC_ALPHA,
-            })
-            .set(BLEND_MODE.ADD, {
-                src: gl.SRC_ALPHA,
-                dst: gl.DST_ALPHA,
-            })
-            .set(BLEND_MODE.MULTIPLY, {
-                src: gl.DST_ALPHA,
-                dst: gl.ONE_MINUS_SRC_ALPHA,
-            })
-            .set(BLEND_MODE.SCREEN, {
-                src: gl.SRC_ALPHA,
-                dst: gl.ONE,
-            });
     }
 
     /**
@@ -523,9 +467,11 @@ export default class DisplayManager {
     /**
      * @private
      */
-    _setGLFlags() {
-        const gl = this._context;
+    _setupGL() {
+        const gl = this._context,
+            blendMode = settings.BLEND_MODE;
 
+        gl.blendFunc(blendMode.src, blendMode.dst);
         gl.colorMask(true, true, true, false);
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);

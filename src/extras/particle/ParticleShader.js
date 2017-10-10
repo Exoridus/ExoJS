@@ -1,5 +1,5 @@
-import Shader from '../display/Shader';
-import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../const';
+import Shader from '../../display/shader/Shader';
+import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../../const';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -22,22 +22,27 @@ export default class ParticleShader extends Shader {
             name: 'aVertexPosition',
             type: ATTRIBUTE_TYPE.FLOAT,
             size: 2,
+            normalized: false,
         }, {
             name: 'aTextureCoord',
             type: ATTRIBUTE_TYPE.FLOAT,
             size: 2,
+            normalized: false,
         }, {
             name: 'aPosition',
             type: ATTRIBUTE_TYPE.FLOAT,
             size: 2,
+            normalized: false,
         }, {
             name: 'aScale',
             type: ATTRIBUTE_TYPE.FLOAT,
             size: 2,
+            normalized: false,
         }, {
             name: 'aRotation',
             type: ATTRIBUTE_TYPE.FLOAT,
             size: 1,
+            normalized: false,
         }, {
             name: 'aColor',
             type: ATTRIBUTE_TYPE.UNSIGNED_BYTE,

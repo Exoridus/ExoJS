@@ -5,8 +5,6 @@ export { default as Database } from './Database';
 export { default as ResourceLoader } from './ResourceLoader';
 export { default as ResourceContainer } from './ResourceContainer';
 export { default as ResourceFactory } from './ResourceFactory';
-
-// Factories
 export { default as ArrayBufferFactory } from './factory/ArrayBufferFactory';
 export { default as AudioBufferFactory } from './factory/AudioBufferFactory';
 export { default as AudioFactory } from './factory/AudioFactory';

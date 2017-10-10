@@ -1,4 +1,4 @@
-import Shader from './Shader';
+import Shader from './shader/Shader';
 import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../const';
 import { readFileSync } from 'fs';
 import { join } from 'path';

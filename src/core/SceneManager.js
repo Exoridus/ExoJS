@@ -38,13 +38,15 @@ export default class SceneManager {
      * @param {Time} delta
      */
     update(delta) {
+        const displayManager = this._app.displayManager;
+
         if (!this._currentScene || !this._sceneActive) {
             return;
         }
 
         this._currentScene.update(delta);
 
-        const displayManager = this._app.displayManager.begin();
+        displayManager.begin();
 
         for (const node of this._currentScene.nodes) {
             displayManager.render(node);

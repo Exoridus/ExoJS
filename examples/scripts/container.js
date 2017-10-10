@@ -57,14 +57,13 @@ window.app.start(new Exo.Scene({
     },
 
     update(delta) {
-        const bunnies = this.bunnies,
-            rainbow = this.rainbow,
-            bounds = bunnies.getBounds();
+        const bounds = this.bunnies.getBounds();
 
-        bunnies.rotate(delta.seconds * 36);
+        this.bunnies.rotate(delta.seconds * 36);
 
-        rainbow.setPosition(bounds.x, bounds.y);
-        rainbow.width = bounds.width;
-        rainbow.height = bounds.height;
+        this.rainbow.x = bounds.x;
+        this.rainbow.y = bounds.y;
+        this.rainbow.width = bounds.width;
+        this.rainbow.height = bounds.height;
     },
 }));

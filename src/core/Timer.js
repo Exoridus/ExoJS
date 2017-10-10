@@ -1,6 +1,6 @@
 import Clock from './Clock';
 import Time from './Time';
-import { TIME } from '../../const';
+import { TIME } from '../const';
 
 /**
  * @class Timer

@@ -1,5 +1,5 @@
 import ChannelHandler from '../ChannelHandler';
-import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
+import { RANGE_NODE, OFFSET_GAMEPAD } from '../../const';
 import settings from '../../settings';
 
 /**
@@ -14,7 +14,7 @@ export default class Gamepad extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(gamepad, channelBuffer) {
-        super(channelBuffer, CHANNEL_OFFSET.GAMEPAD + (gamepad.index * CHANNEL_LENGTH.CHILD), CHANNEL_LENGTH.CHILD);
+        super(channelBuffer, OFFSET_GAMEPAD + (gamepad.index * RANGE_NODE), RANGE_NODE);
 
         /**
          * @private
@@ -120,6 +120,6 @@ export default class Gamepad extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key, index = 0) {
-        return CHANNEL_OFFSET.GAMEPAD + (index * CHANNEL_LENGTH.CHILD) + (key % CHANNEL_LENGTH.CHILD);
+        return OFFSET_GAMEPAD + (index * RANGE_NODE) + (key % RANGE_NODE);
     }
 }

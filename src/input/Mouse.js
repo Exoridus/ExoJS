@@ -1,6 +1,6 @@
 import ChannelHandler from './ChannelHandler';
-import Vector from '../core/Vector';
-import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
+import Vector from '../math/Vector';
+import { RANGE_DEVICE, OFFSET_MOUSE } from '../const';
 
 const FLAGS = {
     NONE: 0,
@@ -23,7 +23,7 @@ export default class Mouse extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, CHANNEL_OFFSET.MOUSE, CHANNEL_LENGTH.DEVICE);
+        super(channelBuffer, OFFSET_MOUSE, RANGE_DEVICE);
 
         /**
          * @private
@@ -470,7 +470,7 @@ export default class Mouse extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return CHANNEL_OFFSET.MOUSE + (key % CHANNEL_LENGTH.DEVICE);
+        return OFFSET_MOUSE + (key % RANGE_DEVICE);
     }
 }
 

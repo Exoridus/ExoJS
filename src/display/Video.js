@@ -1,6 +1,6 @@
 import { clamp } from '../utils';
-import Sprite from '../display/Sprite';
-import Texture from '../display/Texture';
+import Sprite from './Sprite';
+import Texture from './Texture';
 import support from '../support';
 
 /**

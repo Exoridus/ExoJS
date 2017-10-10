@@ -1,6 +1,6 @@
-import Rectangle from '../core/shape/Rectangle';
-import Vector from '../core/Vector';
-import Matrix from '../core/Matrix';
+import Rectangle from '../math/Rectangle';
+import Vector from '../math/Vector';
+import Matrix from '../math/Matrix';
 
 /**
  * @class Bounds

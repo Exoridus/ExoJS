@@ -1,5 +1,5 @@
-import { SHAPE } from '../../const';
-import Vector from '../Vector';
+import Vector from './Vector';
+import { SHAPE } from '../const';
 
 /**
  * @abstract
@@ -143,7 +143,7 @@ export default class Shape {
      * @param {Shape|Rectangle|Circle|Polygon} shape
      * @returns {?Collision}
      */
-    checkCollision(shape) {
+    getCollision(shape) {
         throw new Error('Method not implemented!');
     }
 

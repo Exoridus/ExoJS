@@ -1,4 +1,4 @@
-import { TIME } from '../../const';
+import { TIME } from '../const';
 
 /**
  * @class Time
@@ -65,6 +65,19 @@ export default class Time {
 
     set hours(hours) {
         this._milliseconds = hours * TIME.HOURS;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} [time=0]
+     * @param {Number} [factor=TIME.MILLISECONDS]
+     * @returns {Time}
+     */
+    set(time = 0, factor = TIME.MILLISECONDS) {
+        this._milliseconds = time * factor;
+
+        return this;
     }
 
     /**
@@ -193,3 +206,19 @@ export default class Time {
         this._milliseconds = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.Empty = new Time(0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.Temp = new Time();

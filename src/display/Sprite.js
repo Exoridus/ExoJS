@@ -1,6 +1,6 @@
 import Container from './Container';
-import Rectangle from '../core/shape/Rectangle';
-import Vector from '../core/Vector';
+import Rectangle from '../math/Rectangle';
+import Vector from '../math/Vector';
 
 /**
  * @class Sprite
@@ -132,11 +132,11 @@ export default class Sprite extends Container {
     /**
      * @public
      * @chainable
-     * @param {Rectangle} rectangle
+     * @param {Rectangle} frame
      * @returns {Sprite}
      */
-    setTextureFrame(rectangle) {
-        this._textureFrame.copy(rectangle);
+    setTextureFrame(frame) {
+        this._textureFrame.copy(frame);
         this._updateTexCoords = true;
 
         return this;
@@ -147,8 +147,7 @@ export default class Sprite extends Container {
      */
     render(displayManager) {
         if (this.active) {
-            displayManager
-                .getRenderer('sprite')
+            displayManager.getRenderer('sprite')
                 .render(this);
 
             for (const child of this.children) {

@@ -1,4 +1,4 @@
-import Rectangle from './shape/Rectangle';
+import Rectangle from '../math/Rectangle';
 import settings from '../settings';
 
 /**
@@ -11,7 +11,7 @@ export default class Quadtree {
      * @param {Rectangle} bounds
      * @param {Number} [level=0]
      */
-    constructor(bounds, level = 0) {
+    constructor(bounds = Rectangle.Empty, level = 0) {
 
         /**
          * @private
@@ -29,13 +29,13 @@ export default class Quadtree {
          * @private
          * @member {Map<Number, Quadtree>}
          */
-        this._children = new Map();
+        this._nodes = new Map();
 
         /**
          * @private
-         * @member {Set<Object>}
+         * @member {Set<SceneNode>}
          */
-        this._entities = new Set();
+        this._children = new Set();
     }
 
     /**
@@ -61,17 +61,17 @@ export default class Quadtree {
      * @readonly
      * @member {Map<Number, Quadtree>}
      */
-    get children() {
-        return this._children;
+    get nodes() {
+        return this._nodes;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Set<Object>}
+     * @member {Set<SceneNode>}
      */
-    get entities() {
-        return this._entities;
+    get children() {
+        return this._children;
     }
 
     /**
@@ -80,12 +80,12 @@ export default class Quadtree {
      * @returns {Quadtree}
      */
     clear() {
-        for (const child of this._children.values()) {
-            child.clear();
+        for (const node of this._nodes.values()) {
+            node.clear();
         }
 
+        this._nodes.clear();
         this._children.clear();
-        this._entities.clear();
 
         return this;
     }
@@ -93,30 +93,30 @@ export default class Quadtree {
     /**
      * @public
      * @chainable
-     * @param {Object} entity
+     * @param {SceneNode} child
      * @returns {Quadtree}
      */
-    insert(entity) {
-        const entities = this._entities,
-            childNode = this._getChildNode(entity);
+    insert(child) {
+        const children = this._children,
+            node = this._getNode(child);
 
-        if (childNode) {
-            childNode.insert(entity);
+        if (node) {
+            node.insert(child);
 
             return this;
         }
 
-        entities.add(entity);
+        children.add(child);
 
-        if ((entities.size > settings.QUAD_TREE_MAX_ENTITIES) && (this._level < settings.QUAD_TREE_MAX_LEVEL)) {
+        if ((children.size > settings.QUAD_TREE_MAX_OBJECTS) && (this._level < settings.QUAD_TREE_MAX_LEVEL)) {
             this._split();
 
-            for (const entity of entities) {
-                const childNode = this._getChildNode(entity);
+            for (const child of children) {
+                const node = this._getNode(child);
 
-                if (childNode) {
-                    entities.delete(entity);
-                    childNode.insert(entity);
+                if (node) {
+                    children.delete(child);
+                    node.insert(child);
                 }
             }
         }
@@ -126,13 +126,13 @@ export default class Quadtree {
 
     /**
      * @public
-     * @param {Object} entity
-     * @returns {Object[]}
+     * @param {SceneNode} child
+     * @returns {SceneNode[]}
      */
-    getRelatedEntities(entity) {
-        const childNode = this._getChildNode(entity);
+    getRelatedChildren(child) {
+        const node = this._getNode(child);
 
-        return childNode ? [...childNode.getRelatedEntities(entity), ...this._entities] : [...this._entities];
+        return node ? [...node.getRelatedChildren(child), ...this._children] : [...this._children];
     }
 
     /**
@@ -142,11 +142,11 @@ export default class Quadtree {
         this._bounds.destroy();
         this._bounds = null;
 
+        this._nodes.clear();
+        this._nodes = null;
+
         this._children.clear();
         this._children = null;
-
-        this._entities.clear();
-        this._entities = null;
 
         this._level = null;
     }
@@ -155,35 +155,38 @@ export default class Quadtree {
      * @private
      */
     _split() {
-        if (this._children.size) {
+        if (!this._nodes.size) {
             return;
         }
 
-        const bounds = this._bounds,
-            childLevel = this._level + 1,
-            childWidth = (bounds.width / 2) | 0,
-            childHeight = (bounds.height / 2) | 0,
-            x = bounds.x,
-            y = bounds.y;
+        const rect = Rectangle.Temp,
+            nodeLevel = this._level + 1,
+            bounds = this._bounds,
+            width = (bounds.width / 2) | 0,
+            height = (bounds.height / 2) | 0,
+            left = bounds.left,
+            top = bounds.top,
+            right = left + width,
+            bottom = top + height;
 
-        this._children
-            .set(0, new Quadtree(new Rectangle(x, y, childWidth, childHeight), childLevel))
-            .set(1, new Quadtree(new Rectangle(x + childWidth, y, childWidth, childHeight), childLevel))
-            .set(2, new Quadtree(new Rectangle(x, y + childHeight, childWidth, childHeight), childLevel))
-            .set(3, new Quadtree(new Rectangle(x + childWidth, y + childHeight, childWidth, childHeight), childLevel));
+        this._nodes
+            .set(0, new Quadtree(rect.set(left, top, width, height), nodeLevel))
+            .set(1, new Quadtree(rect.set(right, top, width, height), nodeLevel))
+            .set(2, new Quadtree(rect.set(left, bottom, width, height), nodeLevel))
+            .set(3, new Quadtree(rect.set(right, bottom, width, height), nodeLevel));
     }
 
     /**
      * @private
-     * @param {Object} entity
+     * @param {SceneNode} child
      * @returns {?Quadtree}
      */
-    _getChildNode(entity) {
-        const bounds = entity.getBounds();
+    _getNode(child) {
+        const bounds = child.getBounds();
 
-        for (const child of this._children.values()) {
-            if (bounds.containsRect(child.getBounds())) {
-                return child;
+        for (const node of this._nodes.values()) {
+            if (bounds.containsRect(node.getBounds())) {
+                return node;
             }
         }
 

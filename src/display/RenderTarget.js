@@ -1,4 +1,4 @@
-import Vector from '../core/Vector';
+import Vector from '../math/Vector';
 
 /**
  * @class RenderTarget

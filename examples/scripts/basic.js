@@ -14,12 +14,12 @@ window.app.start(new Exo.Scene({
     },
 
     init() {
-        const app = this.app,
-            resources = app.loader.resources;
+        const resources = this.app.loader.resources,
+            canvas = this.app.canvas;
 
         this.bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
         this.bunny.setOrigin(0.5);
-        this.bunny.setPosition(app.canvas.width / 2 | 0, app.canvas.height / 2 | 0);
+        this.bunny.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
 
         this.addNode(this.bunny);
     },

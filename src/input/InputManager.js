@@ -3,7 +3,7 @@ import Keyboard from './Keyboard';
 import Mouse from './Mouse';
 import GamepadManager from './gamepad/GamepadManager';
 import PointerManager from './pointer/PointerManager';
-import { CHANNEL_LENGTH } from '../const';
+import { RANGE_GLOBAL } from '../const';
 
 /**
  * @class InputManager
@@ -16,7 +16,7 @@ export default class InputManager extends ChannelHandler {
      * @param {Application} app
      */
     constructor(app) {
-        super(new ArrayBuffer(CHANNEL_LENGTH.GLOBAL * 4), 0, CHANNEL_LENGTH.GLOBAL);
+        super(new ArrayBuffer(RANGE_GLOBAL * 4), 0, RANGE_GLOBAL);
 
         /**
          * @private

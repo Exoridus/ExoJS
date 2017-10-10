@@ -1,4 +1,4 @@
-import Rectangle from '../core/shape/Rectangle';
+import Rectangle from '../math/Rectangle';
 import GLTexture from './GLTexture';
 
 /**

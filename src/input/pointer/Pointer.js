@@ -1,6 +1,6 @@
 import ChannelHandler from '../ChannelHandler';
-import Vector from '../../core/Vector';
-import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
+import Vector from '../../math/Vector';
+import { RANGE_NODE, OFFSET_POINTER } from '../../const';
 
 const FLAGS = {
     NONE: 0,
@@ -21,7 +21,7 @@ export default class Pointer extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(channelBuffer) {
-        super(channelBuffer, CHANNEL_OFFSET.POINTER, CHANNEL_LENGTH.CHILD);
+        super(channelBuffer, OFFSET_POINTER, RANGE_NODE);
 
         /**
          * @private

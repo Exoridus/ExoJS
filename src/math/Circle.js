@@ -1,8 +1,8 @@
 import Rectangle from './Rectangle';
 import Shape from './Shape';
-import Collision from '../Collision';
-import { SHAPE } from '../../const';
-import Vector from '../Vector';
+import Collision from './Collision';
+import Vector from './Vector';
+import { SHAPE } from '../const';
 
 /**
  * @class Circle
@@ -111,7 +111,7 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    checkCollision(shape) {
+    getCollision(shape) {
         switch (shape.type) {
             case SHAPE.RECTANGLE:
                 return Collision.checkCircleRectangle(this, shape);

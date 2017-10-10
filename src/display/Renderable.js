@@ -1,5 +1,6 @@
 import SceneNode from '../core/SceneNode';
 import Color from '../core/Color';
+import settings from '../settings';
 
 /**
  * @class Renderable
@@ -18,6 +19,12 @@ export default class Renderable extends SceneNode {
          * @member {Color}
          */
         this._tint = Color.White.clone();
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._blendMode = settings.BLEND_MODE;
     }
 
     /**
@@ -30,6 +37,18 @@ export default class Renderable extends SceneNode {
 
     set tint(tint) {
         this._tint.copy(tint);
+    }
+
+    /**
+     * @public
+     * @member {Object}
+     */
+    get blendMode() {
+        return this._blendMode;
+    }
+
+    set blendMode(blendMode) {
+        this._blendMode = blendMode;
     }
 
     /**
@@ -51,5 +70,7 @@ export default class Renderable extends SceneNode {
 
         this._tint.destroy();
         this._tint = null;
+
+        this._blendMode = null;
     }
 }

@@ -1,5 +1,5 @@
-import { UNIFORM_TYPE } from '../const';
-import Matrix from '../core/Matrix';
+import { UNIFORM_TYPE } from '../../const';
+import Matrix from '../../math/Matrix';
 
 /**
  * @class ShaderUniform

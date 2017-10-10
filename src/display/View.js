@@ -1,6 +1,6 @@
-import ObservableVector from '../core/ObservableVector';
-import Rectangle from '../core/shape/Rectangle';
-import Matrix from '../core/Matrix';
+import ObservableVector from '../math/ObservableVector';
+import Rectangle from '../math/Rectangle';
+import Matrix from '../math/Matrix';
 import { degreesToRadians } from '../utils';
 
 /**
@@ -119,12 +119,7 @@ export default class View {
      * @member {Matrix}
      */
     get transform() {
-        if (this._dirtyTransform) {
-            this.updateTransform();
-            this._dirtyTransform = false;
-        }
-
-        return this._transform;
+        return this.getTransform();
     }
 
     set transform(transform) {
@@ -290,6 +285,19 @@ export default class View {
         this._setDirty();
 
         return this;
+    }
+
+    /**
+     * @public
+     * @returns {Matrix}
+     */
+    getTransform() {
+        if (this._dirtyTransform) {
+            this.updateTransform();
+            this._dirtyTransform = false;
+        }
+
+        return this._transform;
     }
 
     /**

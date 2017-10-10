@@ -1,6 +1,6 @@
 import Gamepad from './Gamepad';
 import ChannelHandler from '../ChannelHandler';
-import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../../const';
+import { RANGE_DEVICE, OFFSET_GAMEPAD } from '../../const';
 
 const navigator = window.navigator;
 
@@ -16,7 +16,7 @@ export default class GamepadManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, CHANNEL_OFFSET.GAMEPAD, CHANNEL_LENGTH.DEVICE);
+        super(channelBuffer, OFFSET_GAMEPAD, RANGE_DEVICE);
 
         /**
          * @private

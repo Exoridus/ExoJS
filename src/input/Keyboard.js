@@ -1,5 +1,5 @@
 import ChannelHandler from './ChannelHandler';
-import { CHANNEL_OFFSET, CHANNEL_LENGTH } from '../const';
+import { RANGE_DEVICE, OFFSET_KEYBOARD } from '../const';
 
 const FLAGS = {
     NONE: 0,
@@ -19,7 +19,7 @@ export default class Keyboard extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, CHANNEL_OFFSET.KEYBOARD, CHANNEL_LENGTH.DEVICE);
+        super(channelBuffer, OFFSET_KEYBOARD, RANGE_DEVICE);
 
         /**
          * @private
@@ -139,6 +139,6 @@ export default class Keyboard extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return CHANNEL_OFFSET.KEYBOARD + (key % CHANNEL_LENGTH.DEVICE);
+        return OFFSET_KEYBOARD + (key % RANGE_DEVICE);
     }
 }

@@ -197,7 +197,7 @@ export default class Color {
      * @param {Boolean} [ignoreAlpha=false]
      */
     equals(color, ignoreAlpha = false) {
-        return (this._r === color.r && this._g === color.g && this._b === color.b) && (ignoreAlpha || this._a === color.a);
+        return color === this || (this._r === color.r && this._g === color.g && this._b === color.b) && (ignoreAlpha || this._a === color.a);
     }
 
     /**
@@ -212,13 +212,13 @@ export default class Color {
             array[0] = this._r / 255;
             array[1] = this._g / 255;
             array[2] = this._b / 255;
-            array[3] = this._a;
         } else {
             array[0] = this._r;
             array[1] = this._g;
             array[2] = this._b;
-            array[3] = this._a;
         }
+
+        array[3] = this._a;
 
         return array;
     }

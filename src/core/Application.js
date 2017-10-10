@@ -1,5 +1,5 @@
 import EventEmitter from './EventEmitter';
-import Clock from './time/Clock';
+import Clock from './Clock';
 import SceneManager from './SceneManager';
 import DisplayManager from '../display/DisplayManager';
 import MediaManager from '../media/MediaManager';
@@ -175,6 +175,15 @@ export default class Application extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Number}
+     */
+    get FPS() {
+        return (1000 / this._delta.getElapsedTime().milliseconds);
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Scene} scene
      * @returns {Application}
@@ -226,7 +235,7 @@ export default class Application extends EventEmitter {
     }
 
     /**
-     * @private
+     * @public
      */
     destroy() {
         super.destroy();
