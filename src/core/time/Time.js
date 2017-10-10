@@ -1,3 +1,5 @@
+import { TIME } from '../../const';
+
 /**
  * @class Time
  */
@@ -6,9 +8,9 @@ export default class Time {
     /**
      * @constructor
      * @param {Number} [time=0]
-     * @param {Number} [factor=Time.Milliseconds]
+     * @param {Number} [factor=TIME.MILLISECONDS]
      */
-    constructor(time = 0, factor = Time.Milliseconds) {
+    constructor(time = 0, factor = TIME.MILLISECONDS) {
 
         /**
          * @private
@@ -34,11 +36,11 @@ export default class Time {
      * @member {Number}
      */
     get seconds() {
-        return this._milliseconds / Time.Seconds;
+        return this._milliseconds / TIME.SECONDS;
     }
 
     set seconds(seconds) {
-        this._milliseconds = seconds * Time.Seconds;
+        this._milliseconds = seconds * TIME.SECONDS;
     }
 
     /**
@@ -46,11 +48,11 @@ export default class Time {
      * @member {Number}
      */
     get minutes() {
-        return this._milliseconds / Time.Minutes;
+        return this._milliseconds / TIME.MINUTES;
     }
 
     set minutes(minutes) {
-        this._milliseconds = minutes * Time.Minutes;
+        this._milliseconds = minutes * TIME.MINUTES;
     }
 
     /**
@@ -58,11 +60,11 @@ export default class Time {
      * @member {Number}
      */
     get hours() {
-        return this._milliseconds / Time.Hours;
+        return this._milliseconds / TIME.HOURS;
     }
 
     set hours(hours) {
-        this._milliseconds = hours * Time.Hours;
+        this._milliseconds = hours * TIME.HOURS;
     }
 
     /**
@@ -191,39 +193,3 @@ export default class Time {
         this._milliseconds = null;
     }
 }
-
-/**
- * @public
- * @static
- * @constant
- * @readonly
- * @member {Number}
- */
-Time.Milliseconds = 1;
-
-/**
- * @public
- * @static
- * @constant
- * @readonly
- * @member {Number}
- */
-Time.Seconds = 1000;
-
-/**
- * @public
- * @static
- * @constant
- * @readonly
- * @member {Number}
- */
-Time.Minutes = 60000;
-
-/**
- * @public
- * @static
- * @constant
- * @readonly
- * @member {Number}
- */
-Time.Hours = 3600000;

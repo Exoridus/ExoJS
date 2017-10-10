@@ -1,6 +1,7 @@
 import Vector from '../core/Vector';
 import Color from '../core/Color';
 import Time from '../core/time/Time';
+import { TIME } from '../const';
 
 /**
  * @class Particle
@@ -24,7 +25,7 @@ export default class Particle {
          * @private
          * @member {Time}
          */
-        this._totalLifetime = (lifetime && lifetime.clone()) || new Time(1, Time.Seconds);
+        this._totalLifetime = (lifetime && lifetime.clone()) || new Time(1, TIME.SECONDS);
 
         /**
          * @private

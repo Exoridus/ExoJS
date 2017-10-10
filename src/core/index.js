@@ -12,6 +12,8 @@ export { default as SceneNode } from './SceneNode';
 export { default as SceneManager } from './SceneManager';
 export { default as Quadtree } from './Quadtree';
 export { default as Vector } from './Vector';
+export { default as Interval } from './Interval';
+export { default as Collision } from './Collision';
 
 // Time
 export { default as Time } from './time/Time';
@@ -22,3 +24,4 @@ export { default as Timer } from './time/Timer';
 export { default as Shape } from './shape/Shape';
 export { default as Rectangle } from './shape/Rectangle';
 export { default as Circle } from './shape/Circle';
+export { default as Polygon } from './shape/Polygon';

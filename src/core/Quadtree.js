@@ -136,6 +136,22 @@ export default class Quadtree {
     }
 
     /**
+     * @public
+     */
+    destroy() {
+        this._bounds.destroy();
+        this._bounds = null;
+
+        this._children.clear();
+        this._children = null;
+
+        this._entities.clear();
+        this._entities = null;
+
+        this._level = null;
+    }
+
+    /**
      * @private
      */
     _split() {
@@ -166,7 +182,7 @@ export default class Quadtree {
         const bounds = entity.getBounds();
 
         for (const child of this._children.values()) {
-            if (child.getBounds().inside(bounds)) {
+            if (bounds.containsRect(child.getBounds())) {
                 return child;
             }
         }

@@ -161,7 +161,7 @@ export default class Texture {
         if (source) {
             this._frame.set(0, 0, (source.videoWidth || source.width), (source.videoHeight || source.height));
         } else {
-            this._frame.reset();
+            this._frame.set(0, 0, 0, 0);
         }
 
         return this;

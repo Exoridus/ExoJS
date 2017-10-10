@@ -34,11 +34,11 @@ export default class Container extends Renderable {
      * @member {Number}
      */
     get width() {
-        return Math.abs(this._scale.x) * this.getBounds().width;
+        return Math.abs(this.scale.x) * this.bounds.width;
     }
 
     set width(value) {
-        this._scale.x = value / this.getBounds().width;
+        this.scale.x = value / this.bounds.width;
     }
 
     /**
@@ -46,11 +46,11 @@ export default class Container extends Renderable {
      * @member {Number}
      */
     get height() {
-        return Math.abs(this._scale.y) * this.getBounds().height;
+        return Math.abs(this.scale.y) * this.bounds.height;
     }
 
     set height(value) {
-        this._scale.y = value / this.getBounds().height;
+        this.scale.y = value / this.bounds.height;
     }
 
     /**

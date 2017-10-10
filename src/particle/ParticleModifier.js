@@ -1,11 +1,12 @@
 /**
- * @interface ParticleModifier
+ * @abstract
+ * @class ParticleModifier
  */
 export default class ParticleModifier {
 
     /**
      * @public
-     * @virtual
+     * @abstract
      * @param {Particle} particle
      * @param {Time} delta
      */

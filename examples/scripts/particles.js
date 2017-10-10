@@ -20,7 +20,7 @@ window.app.start(new Exo.Scene({
             emitter = new Exo.ParticleEmitter(texture);
 
         emitter.emissionRate = 30;
-        emitter.particleLifetime = new Exo.Time(5, Exo.Time.Seconds);
+        emitter.particleLifetime = new Exo.Time(5, Exo.TIME.SECONDS);
         emitter.addModifier(new Exo.TorqueModifier(100));
         emitter.addModifier(new Exo.ForceModifier(new Exo.Vector(0, 100)));
         emitter.particlePosition.set(canvas.width / 2 - (texture.width / 2), canvas.height / 2 - (texture.height / 2));

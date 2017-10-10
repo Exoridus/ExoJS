@@ -561,7 +561,7 @@ window.addEventListener('load', function () {
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -580,194 +580,189 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var Keyboard = Exo.Keyboard,
-    Gamepad = Exo.Gamepad,
-    degreesToRadians = Exo.utils.degreesToRadians;
-
 /**
  * @class LauncherScene
  * @extends {Scene}
  */
-
 var LauncherScene = function (_Exo$Scene) {
-    _inherits(LauncherScene, _Exo$Scene);
+  _inherits(LauncherScene, _Exo$Scene);
 
-    function LauncherScene() {
-        _classCallCheck(this, LauncherScene);
+  function LauncherScene() {
+    _classCallCheck(this, LauncherScene);
 
-        return _possibleConstructorReturn(this, (LauncherScene.__proto__ || Object.getPrototypeOf(LauncherScene)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (LauncherScene.__proto__ || Object.getPrototypeOf(LauncherScene)).apply(this, arguments));
+  }
+
+  _createClass(LauncherScene, [{
+    key: 'load',
+
+
+    /**
+     * @override
+     */
+    value: function load(loader) {
+      var _this2 = this;
+
+      /**
+       * @private
+       * @member {jQuery}
+       */
+      this._$launcher = jQuery('.launcher');
+      this._$launcher.removeClass('hidden');
+
+      /**
+       * @private
+       * @member {jQuery}
+       */
+      this._$indicator = this._$launcher.find('.loading-indicator');
+      this._$indicator.removeClass('finished');
+
+      /**
+       * @private
+       * @member {jQuery}
+       */
+      this._$indicatorText = this._$indicator.find('.indicator-text');
+
+      /**
+       * @private
+       * @member {HTMLImageElement}
+       */
+      this._indicatorProgress = this._$indicator.find('.indicator-progress')[0];
+
+      /**
+       * @private
+       * @member {HTMLCanvasElement}
+       */
+      this._indicatorCanvas = this._$indicator.find('.indicator-canvas')[0];
+
+      /**
+       * @private
+       * @member {CanvasRenderingContext2D}
+       */
+      this._indicatorContext = this._indicatorCanvas.getContext('2d');
+
+      loader.on('progress', function (length, index, resource) {
+        return _this2._renderProgress(index / length * 100);
+      }).addList('texture', {
+        'title/logo': 'image/title/logo.png',
+        'title/background': 'image/title/background.jpg',
+        'game/tileset': 'image/game/tileset.png',
+        'game/player': 'image/game/player.png'
+      }).addList('music', {
+        'title/background': 'audio/title/background.ogg',
+        'game/background': 'audio/game/background.ogg'
+      }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
+        family: 'AndyBold'
+      }).load().then(function () {
+        return _this2.app.trigger('scene:start');
+      });
+
+      this._renderProgress(0);
     }
 
-    _createClass(LauncherScene, [{
-        key: 'load',
+    /**
+     * @override
+     */
 
+  }, {
+    key: 'init',
+    value: function init() {
 
-        /**
-         * @override
-         */
-        value: function load(loader) {
-            var _this2 = this;
+      /**
+       * @private
+       * @member {Function}
+       */
+      this._openTitleHandler = this._openTitle.bind(this);
 
-            /**
-             * @private
-             * @member {jQuery}
-             */
-            this._$launcher = jQuery('.launcher');
-            this._$launcher.removeClass('hidden');
+      /**
+       * @private
+       * @member {Input}
+       */
+      this._playInput = new Exo.Input([Exo.KEYS.Enter, Exo.GAMEPAD.Start, Exo.GAMEPAD.FaceButtonBottom]);
 
-            /**
-             * @private
-             * @member {jQuery}
-             */
-            this._$indicator = this._$launcher.find('.loading-indicator');
-            this._$indicator.removeClass('finished');
+      this._playInput.on('trigger', this._openTitleHandler);
 
-            /**
-             * @private
-             * @member {jQuery}
-             */
-            this._$indicatorText = this._$indicator.find('.indicator-text');
+      this._$indicator.addClass('finished');
+      this._$indicatorText.html('PLAY');
+      this._$indicatorText.on('click', this._openTitleHandler);
 
-            /**
-             * @private
-             * @member {HTMLImageElement}
-             */
-            this._indicatorProgress = this._$indicator.find('.indicator-progress')[0];
+      this.app.trigger('input:add', this._playInput);
+    }
 
-            /**
-             * @private
-             * @member {HTMLCanvasElement}
-             */
-            this._indicatorCanvas = this._$indicator.find('.indicator-canvas')[0];
+    /**
+     * @override
+     */
 
-            /**
-             * @private
-             * @member {CanvasRenderingContext2D}
-             */
-            this._indicatorContext = this._indicatorCanvas.getContext('2d');
+  }, {
+    key: 'unload',
+    value: function unload() {
+      this.app.trigger('input:remove', this._playInput);
+      this._$indicatorText.off('click', this._openTitleHandler);
 
-            loader.on('progress', function (length, index, resource) {
-                return _this2._renderProgress(index / length * 100);
-            }).addList('texture', {
-                'title/logo': 'image/title/logo.png',
-                'title/background': 'image/title/background.jpg',
-                'game/tileset': 'image/game/tileset.png',
-                'game/player': 'image/game/player.png'
-            }).addList('music', {
-                'title/background': 'audio/title/background.ogg',
-                'game/background': 'audio/game/background.ogg'
-            }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
-                family: 'AndyBold'
-            }).load().then(function () {
-                return _this2.app.trigger('scene:start');
-            });
+      this._playInput.destroy();
+      this._playInput = null;
 
-            this._renderProgress(0);
-        }
+      this._openTitleHandler = null;
+    }
 
-        /**
-         * @override
-         */
+    /**
+     * @override
+     */
 
-    }, {
-        key: 'init',
-        value: function init() {
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      _get(LauncherScene.prototype.__proto__ || Object.getPrototypeOf(LauncherScene.prototype), 'destroy', this).call(this);
 
-            /**
-             * @private
-             * @member {Function}
-             */
-            this._openTitleHandler = this._openTitle.bind(this);
+      this._$launcher.addClass('hidden');
 
-            /**
-             * @private
-             * @member {Input}
-             */
-            this._playInput = new Exo.Input([Keyboard.Enter, Gamepad.Start, Gamepad.FaceButtonBottom]);
+      this._$launcher = null;
+      this._$indicator = null;
+      this._$indicatorText = null;
+      this._indicatorProgress = null;
+      this._indicatorCanvas = null;
+      this._indicatorContext = null;
+    }
 
-            this._playInput.on('trigger', this._openTitleHandler);
+    /**
+     * @private
+     * @param {Number} percentage
+     */
 
-            this._$indicator.addClass('finished');
-            this._$indicatorText.html('PLAY');
-            this._$indicatorText.on('click', this._openTitleHandler);
+  }, {
+    key: '_renderProgress',
+    value: function _renderProgress(percentage) {
+      var context = this._indicatorContext,
+          canvas = this._indicatorCanvas,
+          width = canvas.width,
+          height = canvas.height,
+          centerX = width / 2 | 0,
+          centerY = height / 2 | 0,
+          radius = (centerX + centerY) / 2 | 0,
+          offsetAngle = 270;
 
-            this.app.trigger('input:add', this._playInput);
-        }
+      this._$indicatorText.html((percentage | 0) + '%');
 
-        /**
-         * @override
-         */
+      context.drawImage(this._indicatorProgress, 0, 0, width, height);
+      context.beginPath();
+      context.moveTo(centerX, centerY);
+      context.arc(centerX, centerY, radius, Exo.utils.degreesToRadians(offsetAngle), Exo.utils.degreesToRadians(percentage * 3.6 + offsetAngle), true);
+      context.clip();
+      context.clearRect(0, 0, width, height);
+    }
 
-    }, {
-        key: 'unload',
-        value: function unload() {
-            this.app.trigger('input:remove', this._playInput);
-            this._$indicatorText.off('click', this._openTitleHandler);
+    /**
+     * @private
+     */
 
-            this._playInput.destroy();
-            this._playInput = null;
+  }, {
+    key: '_openTitle',
+    value: function _openTitle() {
+      this.app.trigger('scene:change', new _TitleScene2.default());
+    }
+  }]);
 
-            this._openTitleHandler = null;
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            _get(LauncherScene.prototype.__proto__ || Object.getPrototypeOf(LauncherScene.prototype), 'destroy', this).call(this);
-
-            this._$launcher.addClass('hidden');
-
-            this._$launcher = null;
-            this._$indicator = null;
-            this._$indicatorText = null;
-            this._indicatorProgress = null;
-            this._indicatorCanvas = null;
-            this._indicatorContext = null;
-        }
-
-        /**
-         * @private
-         * @param {Number} percentage
-         */
-
-    }, {
-        key: '_renderProgress',
-        value: function _renderProgress(percentage) {
-            var context = this._indicatorContext,
-                canvas = this._indicatorCanvas,
-                width = canvas.width,
-                height = canvas.height,
-                centerX = width / 2 | 0,
-                centerY = height / 2 | 0,
-                radius = (centerX + centerY) / 2 | 0,
-                offsetAngle = 270;
-
-            this._$indicatorText.html((percentage | 0) + '%');
-
-            context.drawImage(this._indicatorProgress, 0, 0, width, height);
-            context.beginPath();
-            context.moveTo(centerX, centerY);
-            context.arc(centerX, centerY, radius, degreesToRadians(offsetAngle), degreesToRadians(percentage * 3.6 + offsetAngle), true);
-            context.clip();
-            context.clearRect(0, 0, width, height);
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_openTitle',
-        value: function _openTitle() {
-            this.app.trigger('scene:change', new _TitleScene2.default());
-        }
-    }]);
-
-    return LauncherScene;
+  return LauncherScene;
 }(Exo.Scene);
 
 exports.default = LauncherScene;
@@ -961,8 +956,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Keyboard = Exo.Keyboard,
-    Gamepad = Exo.Gamepad;
+var KEYS = Exo.KEYS,
+    GAMEPAD = Exo.GAMEPAD;
 
 /**
  * @class MenuManager
@@ -1005,42 +1000,42 @@ var MenuManager = function () {
          * @private
          * @member {Input[]}
          */
-        this._inputs = [new Exo.Input([Keyboard.Up, Gamepad.DPadUp, Gamepad.LeftStickUp], {
+        this._inputs = [new Exo.Input([KEYS.Up, GAMEPAD.DPadUp, GAMEPAD.LeftStickUp], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputUp();
                 }
             }
-        }), new Exo.Input([Keyboard.Down, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+        }), new Exo.Input([KEYS.Down, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
-        }), new Exo.Input([Keyboard.Left, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+        }), new Exo.Input([KEYS.Left, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
-        }), new Exo.Input([Keyboard.Right, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+        }), new Exo.Input([KEYS.Right, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
-        }), new Exo.Input([Keyboard.Enter, Gamepad.FaceButtonBottom], {
+        }), new Exo.Input([KEYS.Enter, GAMEPAD.FaceButtonBottom], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
-        }), new Exo.Input([Keyboard.Backspace, Gamepad.FaceButtonRight], {
+        }), new Exo.Input([KEYS.Backspace, GAMEPAD.FaceButtonRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
@@ -1840,8 +1835,8 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var Keyboard = Exo.Keyboard,
-    Gamepad = Exo.Gamepad,
+var KEYS = Exo.KEYS,
+    GAMEPAD = Exo.GAMEPAD,
     clamp = Exo.utils.clamp;
 
 /**
@@ -1904,7 +1899,7 @@ var GameScene = function (_Exo$Scene) {
              * @private
              * @member {Input[]}
              */
-            this._inputs = [new Exo.Input([Keyboard.Escape, Gamepad.Start], {
+            this._inputs = [new Exo.Input([KEYS.Escape, GAMEPAD.Start], {
                 context: this,
                 trigger: function trigger() {
                     this._isPaused = !this._isPaused;
@@ -1915,27 +1910,27 @@ var GameScene = function (_Exo$Scene) {
                             // hide pause menu
                         }
                 }
-            }), new Exo.Input([Keyboard.Up, Keyboard.W, Gamepad.LeftStickUp, Gamepad.DPadUp], {
+            }), new Exo.Input([KEYS.Up, KEYS.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(0, value * -1);
                 }
-            }), new Exo.Input([Keyboard.Down, Keyboard.S, Gamepad.LeftStickDown, Gamepad.DPadDown], {
+            }), new Exo.Input([KEYS.Down, KEYS.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(0, value);
                 }
-            }), new Exo.Input([Keyboard.Left, Keyboard.A, Gamepad.LeftStickLeft, Gamepad.DPadLeft], {
+            }), new Exo.Input([KEYS.Left, KEYS.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(value * -1, 0);
                 }
-            }), new Exo.Input([Keyboard.Right, Keyboard.D, Gamepad.LeftStickRight, Gamepad.DPadRight], {
+            }), new Exo.Input([KEYS.Right, KEYS.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(value, 0);
                 }
-            }), new Exo.Input([Keyboard.Shift, Gamepad.RightTriggerTop], {
+            }), new Exo.Input([KEYS.Shift, GAMEPAD.RightTriggerTop], {
                 context: this,
                 start: function start() {
                     this._player.running = true;

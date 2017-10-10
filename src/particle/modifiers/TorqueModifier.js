@@ -2,7 +2,7 @@ import ParticleModifier from '../ParticleModifier';
 
 /**
  * @class TorqueModifier
- * @implements {ParticleModifier}
+ * @extends {ParticleModifier}
  */
 export default class TorqueModifier extends ParticleModifier {
 

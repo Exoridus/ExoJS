@@ -127,7 +127,7 @@ const
      * @param {Number} maxB
      * @returns {Boolean}
      */
-    rangeIntersect = (minA, maxA, minB, maxB) => (
+    isOverlapping = (minA, maxA, minB, maxB) => (
         Math.max(minA, maxA) >= Math.min(minB, maxB) && Math.min(minA, maxB) <= Math.max(minB, maxB)
     ),
 
@@ -158,7 +158,7 @@ const
      * @param {Number} amount
      */
     removeItems = (array, startIndex, amount) => {
-        if (startIndex >= array.length || !amount) {
+        if (startIndex >= array.length || amount <= 0) {
             return;
         }
 
@@ -252,7 +252,7 @@ export {
     sign,
     isPowerOfTwo,
     inRange,
-    rangeIntersect,
+    isOverlapping,
     rgbToHex,
     removeItems,
     determineMimeType,

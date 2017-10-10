@@ -1,7 +1,8 @@
 import Vector from '../Vector';
 import Shape from './Shape';
-import { inRange, rangeIntersect } from '../../utils';
+import { inRange } from '../../utils';
 import { SHAPE } from '../../const';
+import Collision from '../Collision';
 
 /**
  * @class Rectangle
@@ -83,8 +84,8 @@ export default class Rectangle extends Shape {
      * @readonly
      * @member {Number}
      */
-    get right() {
-        return this.x + this.width;
+    get top() {
+        return this.y;
     }
 
     /**
@@ -92,8 +93,8 @@ export default class Rectangle extends Shape {
      * @readonly
      * @member {Number}
      */
-    get top() {
-        return this.y;
+    get right() {
+        return this.x + this.width;
     }
 
     /**
@@ -106,10 +107,22 @@ export default class Rectangle extends Shape {
     }
 
     /**
+     * @public
+     * @chainable
+     * @param {Matrix} matrix
+     * @returns {Rectangle}
+     */
+    transform(matrix) {
+        matrix.transformRect(this);
+
+        return this;
+    }
+
+    /**
      * @override
      */
     set(x, y, width, height) {
-        this._position.set(x, y);
+        this.position.set(x, y);
         this._size.set(width, height);
 
         return this;
@@ -119,7 +132,7 @@ export default class Rectangle extends Shape {
      * @override
      */
     copy(rectangle) {
-        this._position.copy(rectangle.position);
+        this.position.copy(rectangle.position);
         this._size.copy(rectangle.size);
 
         return this;
@@ -135,29 +148,8 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    reset() {
-        return this.set(0, 0, 0, 0);
-    }
-
-    /**
-     * @override
-     */
     equals(rectangle) {
-        return (this._position.equals(rectangle.position) && this._size.equals(rectangle.size));
-    }
-
-    /**
-     * @override
-     */
-    toArray() {
-        const array = this._array || (this._array = new Float32Array(4));
-
-        array[0] = this.x;
-        array[1] = this.y;
-        array[2] = this.width;
-        array[3] = this.height;
-
-        return array;
+        return rectangle === this || (this.position.equals(rectangle.position) && this._size.equals(rectangle.size));
     }
 
     /**
@@ -174,29 +166,46 @@ export default class Rectangle extends Shape {
     /**
      * @override
      */
-    contains(x, y) {
-        return (x >= Math.min(this.left, this.right))
-            && (x < Math.max(this.left, this.right))
-            && (y >= Math.min(this.top, this.bottom))
-            && (y < Math.max(this.top, this.bottom));
+    contains(x, y, transform) {
+        let min = new Vector(this.left, this.top),
+            max = new Vector(this.right, this.bottom);
+
+        if (transform) {
+            min = transform.transformPoint(min);
+            max = transform.transformPoint(max);
+        }
+
+        return inRange(x, min.x, max.x)
+            && inRange(y, min.y, max.y);
+    }
+
+    /**
+     * @public
+     * @param {Rectangle} rect
+     * @returns {Boolean}
+     */
+    containsRect(rect) {
+        return inRange(rect.left, this.left, this.right)
+            && inRange(rect.right, this.left, this.right)
+            && inRange(rect.top, this.top, this.bottom)
+            && inRange(rect.bottom, this.top, this.bottom);
     }
 
     /**
      * @override
      */
-    intersects(rectangle) {
-        return rangeIntersect(this.left, this.right, rectangle.left, rectangle.right)
-            && rangeIntersect(this.top, this.bottom, rectangle.top, rectangle.bottom);
-    }
-
-    /**
-     * @override
-     */
-    inside(rectangle) {
-        return inRange(this.left, rectangle.left, rectangle.right)
-            && inRange(this.right, rectangle.left, rectangle.right)
-            && inRange(this.top, rectangle.top, rectangle.bottom)
-            && inRange(this.bottom, rectangle.top, rectangle.bottom);
+    checkCollision(shape) {
+        switch (shape.type) {
+            case SHAPE.RECTANGLE:
+                return Collision.checkRectangleRectangle(this, shape);
+            case SHAPE.CIRCLE:
+                return Collision.checkCircleRectangle(shape, this);
+            case SHAPE.POLYGON:
+                return Collision.checkPolygonRectangle(shape, this);
+            case SHAPE.NONE:
+            default:
+                throw new Error(`Invalid Shape Type "${shape.type}".`);
+        }
     }
 
     /**

@@ -248,19 +248,6 @@ export default class Matrix {
 
     /**
      * @public
-     * @chainable
-     * @returns {Matrix}
-     */
-    reset() {
-        return this.set(
-            1, 0, 0,
-            0, 1, 0,
-            0, 0, 1
-        );
-    }
-
-    /**
-     * @public
      * @param {Boolean} [transpose=false]
      * @returns {Float32Array}
      */
@@ -270,7 +257,6 @@ export default class Matrix {
 
     /**
      * @public
-     * @chainable
      * @param {Vector} point
      * @param {Vector} [result=point]
      * @returns {Vector}
@@ -284,36 +270,47 @@ export default class Matrix {
 
     /**
      * @public
-     * @chainable
-     * @param {Rectangle} rect
-     * @param {Rectangle} [result=rect]
+     * @param {Rectangle} rectangle
+     * @param {Rectangle} [result=rectangle]
      * @returns {Rectangle}
      */
-    transformRect(rect, result = rect) {
-        const point = Vector.Temp,
-            { position, size, left, top, right, bottom } = rect;
+    transformRect(rectangle, result = rectangle) {
+        const point = Vector.Temp;
 
-        this.transformPoint(point.set(left, top));
+        let minX, minY, maxX, maxY;
 
-        position.copy(point);
-        size.copy(point);
+        this.transformPoint(point.set(rectangle.left, rectangle.top));
 
-        this.transformPoint(point.set(left, bottom));
+        minX = maxX = point.x;
+        minY = maxY = point.y;
 
-        position.min(point);
-        size.max(point);
+        this.transformPoint(point.set(rectangle.left, rectangle.bottom));
 
-        this.transformPoint(point.set(right, top));
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
 
-        position.min(point);
-        size.max(point);
+        this.transformPoint(point.set(rectangle.right, rectangle.top));
 
-        this.transformPoint(point.set(right, bottom));
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
 
-        position.min(point);
-        size.max(point).subtract(position.x, position.y);
+        this.transformPoint(point.set(rectangle.right, rectangle.bottom));
 
-        return result;
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+
+        return result.set(
+            minX,
+            minY,
+            maxX - minX,
+            maxY - minY
+        );
     }
 
     /**

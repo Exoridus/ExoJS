@@ -117,15 +117,6 @@ export default class Vector {
 
     /**
      * @public
-     * @chainable
-     * @returns {Vector}
-     */
-    reset() {
-        return this.set(0, 0);
-    }
-
-    /**
-     * @public
      * @param {Vector} vector
      * @returns {Boolean}
      */
@@ -154,8 +145,10 @@ export default class Vector {
     normalize() {
         const mag = this.magnitude;
 
-        this._x /= mag;
-        this._y /= mag;
+        if (mag > 0) {
+            this._x /= mag;
+            this._y /= mag;
+        }
 
         return this;
     }
@@ -165,7 +158,7 @@ export default class Vector {
      * @chainable
      * @returns {Vector}
      */
-    negate() {
+    reverse() {
         this._x *= -1;
         this._y *= -1;
 
@@ -230,28 +223,35 @@ export default class Vector {
 
     /**
      * @public
-     * @param {Vector} vector
+     * @chainable
+     * @param {Matrix} matrix
      * @param {Vector} [result=this]
      * @returns {Vector}
      */
-    min(vector, result = this) {
-        return result.set(
-            Math.min(this._x, vector.x),
-            Math.min(this._y, vector.y)
-        );
+    transform(matrix, result = this) {
+        return matrix.transformPoint(this, result);
     }
 
     /**
      * @public
-     * @param {Vector} vector
      * @param {Vector} [result=this]
      * @returns {Vector}
      */
-    max(vector, result = this) {
-        return result.set(
-            Math.max(this._x, vector.x),
-            Math.max(this._y, vector.y)
-        );
+    perp(result = this) {
+        return result.set(this._y, this._x * -1);
+    }
+
+    /**
+     * @public
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {Number}
+     */
+    distanceTo(x, y) {
+        const offsetX = this._x - x,
+            offsetY = this._y - y;
+
+        return Math.sqrt((offsetX * offsetX) + (offsetY * offsetY));
     }
 
     /**
@@ -274,15 +274,29 @@ export default class Vector {
 
     /**
      * @public
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {Number}
+     * @chainable
+     * @param {Vector} vector
+     * @returns {Vector}
      */
-    distanceTo(x, y) {
-        const offsetX = (this._x - x),
-            offsetY = (this._y - y);
+    project(vector) {
+        const dot = this.dot(vector) / vector.dot(vector);
 
-        return Math.sqrt((offsetX * offsetX) + (offsetY * offsetY));
+        return this.set(dot * vector.x, dot * vector.y);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Vector} axis
+     * @returns {Vector}
+     */
+    reflect(axis) {
+        const x = this._x,
+            y = this._y;
+
+        return this.project(axis)
+            .multiply(2)
+            .subtract(x, y);
     }
 
     /**

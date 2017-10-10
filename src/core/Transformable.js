@@ -227,7 +227,7 @@ export default class Transformable extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @param {Number} angle
+     * @param {Number} degrees
      * @returns {Transformable}
      */
     setRotation(degrees) {

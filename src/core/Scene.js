@@ -1,5 +1,8 @@
 import EventEmitter from './EventEmitter';
 import SceneNode from './SceneNode';
+import Bounds from '../display/Bounds';
+import Quadtree from './Quadtree';
+import Rectangle from './shape/Rectangle';
 
 /**
  * @class Scene
@@ -31,6 +34,12 @@ export default class Scene extends EventEmitter {
          */
         this._nodes = new Set();
 
+        /**
+         * @private
+         * @member {Bounds}
+         */
+        this._bounds = new Bounds();
+
         if (prototype) {
             Object.assign(this, prototype);
         }
@@ -59,6 +68,15 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Rectangle}
+     */
+    get bounds() {
+        return this.getBounds();
+    }
+
+    /**
+     * @public
      * @param {SceneNode} node
      * @returns {Boolean}
      */
@@ -74,13 +92,12 @@ export default class Scene extends EventEmitter {
      */
     addNode(node) {
         if (node.scene !== this) {
-            this._nodes.add(node);
-
             if (node.scene) {
                 node.scene.removeNode(node);
             }
 
             node.scene = this;
+            this._nodes.add(node);
         }
 
         return this;
@@ -94,9 +111,8 @@ export default class Scene extends EventEmitter {
      */
     removeNode(node) {
         if (node.scene === this) {
-            this._nodes.delete(node);
-
             node.scene = null;
+            this._nodes.delete(node);
         }
 
         return this;
@@ -113,6 +129,22 @@ export default class Scene extends EventEmitter {
         }
 
         return this;
+    }
+
+    /**
+     * @public
+     * @returns {Rectangle}
+     */
+    getBounds() {
+        this._bounds.reset();
+
+        for (const node of this._nodes) {
+            if (node.active) {
+                this._bounds.addRect(node.getBounds());
+            }
+        }
+
+        return this._bounds.getRect();
     }
 
     /**
@@ -157,6 +189,9 @@ export default class Scene extends EventEmitter {
         super.destroy();
 
         this.clearNodes();
+
+        this._bounds.destroy();
+        this._bounds = null;
 
         this._nodes = null;
         this._app = null;

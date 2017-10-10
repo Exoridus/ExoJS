@@ -128,7 +128,7 @@ export default class SceneNode extends Transformable {
      * @returns {Rectangle}
      */
     getBounds() {
-        this.updateTransformTree();
+        this.updateParentTransforms();
         this.updateBounds();
 
         return this._bounds.getRect();
@@ -148,11 +148,12 @@ export default class SceneNode extends Transformable {
 
     /**
      * @public
+     * @chainable
      * @returns {SceneNode}
      */
-    updateTransformTree() {
+    updateParentTransforms() {
         if (this._parent) {
-            this._parent.updateTransformTree();
+            this._parent.updateParentTransforms();
         }
 
         if (this._dirtyTransform) {
@@ -178,8 +179,11 @@ export default class SceneNode extends Transformable {
     }
 
     /**
-     * @override
+     * @public
+     * @param {Number} x
+     * @param {Number} [y=x]
      * @param {Boolean} [relative=true]
+     * @returns {SceneNode}
      */
     setOrigin(x, y = x, relative = true) {
         if (relative) {

@@ -43,7 +43,7 @@ export default class Audio extends Playable {
 
         if (this.volume !== volume) {
             this._volume = volume;
-            this._source.volume = (volume * this._parentVolume);
+            this.source.volume = (volume * this._parentVolume);
         }
     }
 
@@ -60,7 +60,7 @@ export default class Audio extends Playable {
 
         if (this.parentVolume !== parentVolume) {
             this._parentVolume = parentVolume;
-            this._source.volume = (this._volume * parentVolume);
+            this.source.volume = (this._volume * parentVolume);
         }
     }
 

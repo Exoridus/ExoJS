@@ -3,6 +3,7 @@ import Rectangle from '../core/shape/Rectangle';
 import Vector from '../core/Vector';
 import Color from '../core/Color';
 import Time from '../core/time/Time';
+import { TIME } from '../const';
 
 /**
  * @class ParticleEmitter
@@ -61,7 +62,7 @@ export default class ParticleEmitter {
          * @private
          * @member {Time}
          */
-        this._particleLifetime = new Time(1, Time.Seconds);
+        this._particleLifetime = new Time(1, TIME.SECONDS);
 
         /**
          * @private

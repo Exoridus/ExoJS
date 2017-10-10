@@ -3,7 +3,7 @@ import Vector from '../../core/Vector';
 
 /**
  * @class ForceModifier
- * @implements {ParticleModifier}
+ * @extends {ParticleModifier}
  */
 export default class ForceModifier extends ParticleModifier {
 

@@ -3,7 +3,7 @@ import Vector from '../../core/Vector';
 
 /**
  * @class ScaleModifier
- * @implements {ParticleModifier}
+ * @extends {ParticleModifier}
  */
 export default class ScaleModifier extends ParticleModifier {
 

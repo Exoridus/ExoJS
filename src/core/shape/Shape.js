@@ -20,13 +20,7 @@ export default class Shape {
 
         /**
          * @private
-         * @member {Float32Array} _array
-         */
-        this._array = null;
-
-        /**
-         * @private
-         * @member {Rectangle} _bounds
+         * @member {?Rectangle|?Bounds} _bounds
          */
         this._bounds = null;
     }
@@ -79,22 +73,11 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
      * @readonly
      * @member {Rectangle}
      */
     get bounds() {
         return this.getBounds();
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        return this.toArray();
     }
 
     /**
@@ -109,7 +92,7 @@ export default class Shape {
     /**
      * @public
      * @abstract
-     * @param {Shape|Rectangle|Circle} shape
+     * @param {Shape|Rectangle|Circle|Polygon} shape
      */
     copy(shape) {
         throw new Error('Method not implemented!');
@@ -118,7 +101,7 @@ export default class Shape {
     /**
      * @public
      * @abstract
-     * @returns {Shape|Rectangle|Circle}
+     * @returns {Shape|Rectangle|Circle|Polygon}
      */
     clone() {
         throw new Error('Method not implemented!');
@@ -127,26 +110,9 @@ export default class Shape {
     /**
      * @public
      * @abstract
-     */
-    reset() {
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @param {Shape|Rectangle|Circle} shape
+     * @param {Shape|Rectangle|Circle|Polygon} shape
      */
     equals(shape) {
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @returns {Float32Array}
-     */
-    toArray() {
         throw new Error('Method not implemented!');
     }
 
@@ -164,29 +130,20 @@ export default class Shape {
      * @abstract
      * @param {Number} x
      * @param {Number} y
+     * @param {Matrix} [transform]
      * @returns {Boolean}
      */
-    contains(x, y) {
+    contains(x, y, transform) {
         throw new Error('Method not implemented!');
     }
 
     /**
      * @public
      * @abstract
-     * @param {Shape|Rectangle|Circle} shape
-     * @returns {Boolean}
+     * @param {Shape|Rectangle|Circle|Polygon} shape
+     * @returns {?Collision}
      */
-    intersects(shape) {
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @param {Shape|Rectangle|Circle} shape
-     * @returns {Boolean}
-     */
-    inside(shape) {
+    checkCollision(shape) {
         throw new Error('Method not implemented!');
     }
 
@@ -195,10 +152,6 @@ export default class Shape {
      * @abstract
      */
     destroy() {
-        if (this._array) {
-            this._array = null;
-        }
-
         if (this._bounds) {
             this._bounds.destroy();
             this._bounds = null;

@@ -1,7 +1,8 @@
 import Rectangle from './Rectangle';
-import Vector from '../Vector';
 import Shape from './Shape';
+import Collision from '../Collision';
 import { SHAPE } from '../../const';
+import Vector from '../Vector';
 
 /**
  * @class Circle
@@ -74,28 +75,8 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    reset() {
-        this.set(0, 0, 0);
-    }
-
-    /**
-     * @override
-     */
     equals(circle) {
-        return (this.position.equals(circle.position) && this._radius === circle.radius);
-    }
-
-    /**
-     * @override
-     */
-    toArray() {
-        const array = this._array || (this._array = new Float32Array(3));
-
-        array[0] = this.x;
-        array[1] = this.y;
-        array[2] = this.radius;
-
-        return array;
+        return circle === this || (this.position.equals(circle.position) && this._radius === circle.radius);
     }
 
     /**
@@ -117,15 +98,31 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    contains(x, y) {
-        return this.position.distanceTo(x, y) < this._radius;
+    contains(x, y, transform) {
+        let position = this.position;
+
+        if (transform) {
+            position = transform.transformPoint(Vector.Temp.copy(position));
+        }
+
+        return position.distanceTo(x, y) <= this._radius;
     }
 
     /**
      * @override
      */
-    intersects(circle) {
-        return this.position.distanceTo(circle.x, circle.y) < (this._radius + circle.radius);
+    checkCollision(shape) {
+        switch (shape.type) {
+            case SHAPE.RECTANGLE:
+                return Collision.checkCircleRectangle(this, shape);
+            case SHAPE.CIRCLE:
+                return Collision.checkCircleCircle(this, shape);
+            case SHAPE.POLYGON:
+                return Collision.checkPolygonCircle(shape, this);
+            case SHAPE.NONE:
+            default:
+                throw new Error(`Invalid Shape Type "${shape.type}".`);
+        }
     }
 
     /**

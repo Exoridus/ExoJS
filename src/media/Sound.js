@@ -180,7 +180,7 @@ export default class Sound extends Playable {
         this.applyOptions(options);
 
         this._sourceNode = this._audioContext.createBufferSource();
-        this._sourceNode.buffer = this._source;
+        this._sourceNode.buffer = this.source;
         this._sourceNode.loop = this._loop;
         this._sourceNode.playbackRate.value = this._speed;
 

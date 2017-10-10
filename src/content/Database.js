@@ -174,7 +174,7 @@ export default class Database {
      * @public
      * @returns {Promise}
      */
-    delete() {
+    deleteDatabase() {
         return this.close()
             .then(() => new Promise((resolve, reject) => {
                 const request = indexedDB.deleteDatabase(this._name);

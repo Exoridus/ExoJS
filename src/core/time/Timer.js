@@ -1,5 +1,6 @@
 import Clock from './Clock';
 import Time from './Time';
+import { TIME } from '../../const';
 
 /**
  * @class Timer
@@ -49,10 +50,10 @@ export default class Timer extends Clock {
      * @public
      * @chainable
      * @param {Number} timeLimit
-     * @param {Number} [factor=Time.Milliseconds]
+     * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Timer}
      */
-    reset(timeLimit, factor = Time.Milliseconds) {
+    reset(timeLimit, factor = TIME.MILLISECONDS) {
         this._limit = timeLimit * factor;
         this._timeBuffer = 0;
         this._isRunning = false;
@@ -64,10 +65,10 @@ export default class Timer extends Clock {
      * @public
      * @chainable
      * @param {Number} timeLimit
-     * @param {Number} [factor=Time.Milliseconds]
+     * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Timer}
      */
-    restart(timeLimit, factor = Time.Milliseconds) {
+    restart(timeLimit, factor = TIME.MILLISECONDS) {
         return this
             .reset(timeLimit, factor)
             .start();
@@ -86,7 +87,7 @@ export default class Timer extends Clock {
      * @returns {Number}
      */
     getRemainingSeconds() {
-        return this.getRemainingMilliseconds() / Time.Seconds;
+        return this.getRemainingMilliseconds() / TIME.SECONDS;
     }
 
     /**
@@ -94,7 +95,7 @@ export default class Timer extends Clock {
      * @returns {Number}
      */
     getRemainingMinutes() {
-        return this.getRemainingMilliseconds() / Time.Minutes;
+        return this.getRemainingMilliseconds() / TIME.MINUTES;
     }
 
     /**
@@ -102,6 +103,6 @@ export default class Timer extends Clock {
      * @returns {Time}
      */
     getRemainingTime() {
-        return this._time.setMilliseconds(this.getRemainingMilliseconds());
+        return this.time.setMilliseconds(this.getRemainingMilliseconds());
     }
 }

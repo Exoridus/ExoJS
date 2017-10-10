@@ -52,15 +52,29 @@ export const
      * @property {Number} POLYGON
      * @property {Number} RECTANGLE
      * @property {Number} CIRCLE
-     * @property {Number} ELLIPSIS
-     * @property {Number} POINT
      */
     SHAPE = {
         NONE: 0,
         POLYGON: 1,
         RECTANGLE: 2,
         CIRCLE: 3,
-        ELLIPSIS: 4,
+    },
+
+    /**
+     * @public
+     * @constant
+     * @name TIME
+     * @type {Object<String, Number>}
+     * @property {Number} MILLISECONDS
+     * @property {Number} SECONDS
+     * @property {Number} MINUTES
+     * @property {Number} HOURS
+     */
+    TIME = {
+        MILLISECONDS: 1,
+        SECONDS: 1000,
+        MINUTES: 60000,
+        HOURS: 3600000,
     },
 
     /**

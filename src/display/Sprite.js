@@ -71,11 +71,11 @@ export default class Sprite extends Container {
      * @member {Number}
      */
     get width() {
-        return Math.abs(this._scale.x) * this._texture.width;
+        return Math.abs(this.scale.x) * this._texture.width;
     }
 
     set width(value) {
-        this._scale.x = value / this._texture.width;
+        this.scale.x = value / this._texture.width;
     }
 
     /**
@@ -83,11 +83,11 @@ export default class Sprite extends Container {
      * @member {Number}
      */
     get height() {
-        return Math.abs(this._scale.y) * this._texture.height;
+        return Math.abs(this.scale.y) * this._texture.height;
     }
 
     set height(value) {
-        this._scale.y = value / this._texture.height;
+        this.scale.y = value / this._texture.height;
     }
 
     /**

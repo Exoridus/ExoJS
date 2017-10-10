@@ -1,4 +1,5 @@
 import Time from './Time';
+import { TIME } from '../../const';
 
 /**
  * @class Clock
@@ -9,7 +10,7 @@ export default class Clock {
      * @constructor
      * @param {Boolean} [autoStart=false]
      */
-    constructor(autoStart) {
+    constructor(autoStart = false) {
 
         /**
          * @private
@@ -51,16 +52,23 @@ export default class Clock {
 
     /**
      * @public
+     * @readonly
+     * @member {Time}
+     */
+    get time() {
+        return this._time;
+    }
+
+    /**
+     * @public
      * @chainable
      * @returns {Clock}
      */
     start() {
-        if (this._isRunning) {
-            return this;
+        if (!this._isRunning) {
+            this._startTime = Date.now();
+            this._isRunning = true;
         }
-
-        this._startTime = Date.now();
-        this._isRunning = true;
 
         return this;
     }
@@ -71,12 +79,10 @@ export default class Clock {
      * @returns {Clock}
      */
     stop() {
-        if (!this._isRunning) {
-            return this;
+        if (this._isRunning) {
+            this._timeBuffer += (Date.now() - this._startTime);
+            this._isRunning = false;
         }
-
-        this._timeBuffer += (Date.now() - this._startTime);
-        this._isRunning = false;
 
         return this;
     }
@@ -120,7 +126,7 @@ export default class Clock {
      * @returns {Number}
      */
     getElapsedSeconds() {
-        return this.getElapsedMilliseconds() / Time.Seconds;
+        return this.getElapsedMilliseconds() / TIME.SECONDS;
     }
 
     /**
@@ -128,7 +134,7 @@ export default class Clock {
      * @returns {Number}
      */
     getElapsedMinutes() {
-        return this.getElapsedMilliseconds() / Time.Minutes;
+        return this.getElapsedMilliseconds() / TIME.MINUTES;
     }
 
     /**

@@ -25,7 +25,7 @@ export default class SceneManager {
          * @private
          * @member {Boolean}
          */
-        this._isSceneActive = false;
+        this._sceneActive = false;
 
         app
             .on('scene:change', this.onSceneChange, this)
@@ -38,7 +38,7 @@ export default class SceneManager {
      * @param {Time} delta
      */
     update(delta) {
-        if (!this._currentScene || !this._isSceneActive) {
+        if (!this._currentScene || !this._sceneActive) {
             return;
         }
 
@@ -75,11 +75,11 @@ export default class SceneManager {
             throw new Error('No scene was specified, use scene:change!');
         }
 
-        if (this._isSceneActive) {
+        if (this._sceneActive) {
             throw new Error('Scene can only be started once!');
         }
 
-        this._isSceneActive = true;
+        this._sceneActive = true;
         this._currentScene.init();
     }
 
@@ -91,9 +91,9 @@ export default class SceneManager {
             return;
         }
 
-        if (this._isSceneActive) {
+        if (this._sceneActive) {
             this._currentScene.unload();
-            this._isSceneActive = false;
+            this._sceneActive = false;
         }
 
         this._currentScene.destroy();

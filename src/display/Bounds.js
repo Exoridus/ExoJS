@@ -41,6 +41,12 @@ export default class Bounds {
          * @type {Rectangle}
          */
         this._rect = new Rectangle();
+
+        /**
+         * @private
+         * @type {Boolean}
+         */
+        this._dirty = true;
     }
 
     /**
@@ -82,14 +88,17 @@ export default class Bounds {
     /**
      * @public
      * @chainable
-     * @param {Vector} point
+     * @param {Number} x
+     * @param {Number} y
      * @returns {Bounds}
      */
-    addPoint(point) {
-        this._minX = Math.min(this._minX, point.x);
-        this._minY = Math.min(this._minY, point.y);
-        this._maxX = Math.max(this._maxX, point.x);
-        this._maxY = Math.max(this._maxY, point.y);
+    addCoords(x, y) {
+        this._minX = Math.min(this._minX, x);
+        this._minY = Math.min(this._minY, y);
+        this._maxX = Math.max(this._maxX, x);
+        this._maxY = Math.max(this._maxY, y);
+
+        this._dirty = true;
 
         return this;
     }
@@ -97,20 +106,33 @@ export default class Bounds {
     /**
      * @public
      * @chainable
-     * @param {Rectangle} rect
+     * @param {Vector} point
      * @param {Matrix} [transform]
      * @returns {Bounds}
      */
-    addRect(rect, transform) {
-        const temp = Rectangle.Temp.copy(rect);
-
+    addPoint(point, transform) {
         if (transform) {
-            transform.transformRect(temp);
+            point = transform.transformPoint(Vector.Temp.copy(point));
+        }
+
+        return this.addCoords(point.x, point.y);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Rectangle} rectangle
+     * @param {Matrix} [transform]
+     * @returns {Bounds}
+     */
+    addRect(rectangle, transform) {
+        if (transform) {
+            rectangle = transform.transformRect(Rectangle.Temp.copy(rectangle));
         }
 
         return this
-            .addPoint(temp.position)
-            .addPoint(temp.position.add(temp.width, temp.height));
+            .addCoords(rectangle.left, rectangle.top)
+            .addCoords(rectangle.right, rectangle.bottom);
     }
 
     /**
@@ -118,12 +140,18 @@ export default class Bounds {
      * @returns {Rectangle}
      */
     getRect() {
-        return this._rect.set(
-            this._minX,
-            this._minY,
-            this._maxX - this._minX,
-            this._maxY - this._minY
-        );
+        if (this._dirty) {
+            this._rect.set(
+                this._minX,
+                this._minY,
+                this._maxX - this._minX,
+                this._maxY - this._minY
+            );
+
+            this._dirty = false;
+        }
+
+        return this._rect;
     }
 
     /**
@@ -136,6 +164,8 @@ export default class Bounds {
         this._minY = Infinity;
         this._maxX = -Infinity;
         this._maxY = -Infinity;
+
+        this._dirty = true;
 
         return this;
     }
@@ -151,5 +181,7 @@ export default class Bounds {
         this._minY = null;
         this._maxX = null;
         this._maxY = null;
+
+        this._dirty = null;
     }
 }

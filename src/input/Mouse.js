@@ -228,12 +228,12 @@ export default class Mouse extends ChannelHandler {
 
         if (this._flags & FLAGS.SCROLL) {
             this._app.trigger('mouse:scroll', this._scrollDelta, this);
-            this._scrollDelta.reset();
+            this._scrollDelta.set(0, 0);
         }
 
         if (this._flags & FLAGS.POSITION) {
             this._app.trigger('mouse:move', this._position, this);
-            this._positionDelta.reset();
+            this._positionDelta.set(0, 0);
         }
 
         if (this._flags & FLAGS.BUTTON_DOWN) {

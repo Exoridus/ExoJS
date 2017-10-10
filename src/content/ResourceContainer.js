@@ -116,7 +116,7 @@ export default class ResourceContainer {
      * @param {String} name
      * @returns {ResourceContainer}
      */
-    delete(type, name) {
+    remove(type, name) {
         this.getResources(type)
             .delete(name);
 
