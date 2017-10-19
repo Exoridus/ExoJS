@@ -15,6 +15,12 @@ export default class Shader {
 
         /**
          * @private
+         * @member {?RenderState}
+         */
+        this._renderState = null;
+
+        /**
+         * @private
          * @member {?String}
          */
         this._vertexSource = null;
@@ -36,12 +42,6 @@ export default class Shader {
          * @member {Map<String, ShaderAttribute>}
          */
         this._attributes = new Map();
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
 
         /**
          * @private
@@ -90,67 +90,57 @@ export default class Shader {
 
     /**
      * @public
-     * @param {WebGLRenderingContext} gl
+     * @chainable
+     * @param {RenderState} renderState
+     * @returns {Shader}
      */
-    setContext(gl) {
-        if (this._context) {
-            return;
+    bind(renderState) {
+        if (!this._renderState) {
+            this._renderState = renderState;
+            this._program = renderState.compileProgram(this._vertexSource, this._fragmentSource);
         }
 
-        this._context = gl;
-        this._program = this.compileProgram();
+        if (!this._bound) {
+            const renderState = this._renderState,
+                program = this._program;
 
-        for (const attribute of this._attributes.values()) {
-            attribute.setContext(gl, this._program);
+            renderState.useProgram(program);
+
+            let offset = 0;
+
+            for (const attribute of this._attributes.values()) {
+                attribute.bind(renderState, program, this._stride, offset);
+
+                offset += attribute.byteSize;
+            }
+
+            for (const uniform of this._uniforms.values()) {
+                uniform.bind(renderState, program);
+            }
+
+            this._bound = true;
         }
 
-        for (const uniform of this._uniforms.values()) {
-            uniform.setContext(gl, this._program);
-        }
-    }
-
-    /**
-     * @public
-     */
-    bind() {
-        if (this._bound) {
-            return;
-        }
-
-        this._context.useProgram(this._program);
-
-        let offset = 0;
-
-        for (const attribute of this._attributes.values()) {
-            attribute.bind(this._stride, offset);
-
-            offset += attribute.byteSize;
-        }
-
-        for (const uniform of this._uniforms.values()) {
-            uniform.bind();
-        }
-
-        this._bound = true;
+        return this;
     }
 
     /**
      * @public
      */
     unbind() {
-        if (!this._bound) {
-            return;
+        if (this._bound) {
+            for (const attribute of this._attributes.values()) {
+                attribute.unbind();
+            }
+
+            for (const uniform of this._uniforms.values()) {
+                uniform.unbind();
+            }
+
+            this._bound = false;
         }
 
-        for (const attribute of this._attributes.values()) {
-            attribute.unbind();
-        }
-
-        for (const uniform of this._uniforms.values()) {
-            uniform.unbind();
-        }
-
-        this._bound = false;
+        return this;
     }
 
     /**
@@ -220,64 +210,6 @@ export default class Shader {
 
     /**
      * @public
-     * @constant
-     * @param {Number} type
-     * @param {String} source
-     * @returns {WebGLShader}
-     */
-    compileShader(type, source) {
-        const gl = this._context,
-            shader = gl.createShader(type);
-
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
-
-            return null;
-        }
-
-        return shader;
-    }
-
-    /**
-     * @public
-     * @constant
-     * @returns {?WebGLProgram}
-     */
-    compileProgram() {
-        const gl = this._context,
-            vertexShader = this.compileShader(gl.VERTEX_SHADER, this._vertexSource),
-            fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, this._fragmentSource),
-            program = gl.createProgram();
-
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-
-        gl.linkProgram(program);
-
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            gl.deleteProgram(program);
-
-            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
-            console.error('gl.getError()', gl.getError()); // eslint-disable-line
-
-            if (gl.getProgramInfoLog(program)) {
-                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
-            }
-
-            return null;
-        }
-
-        return program;
-    }
-
-    /**
-     * @public
      */
     destroy() {
         if (this._bound) {
@@ -292,10 +224,10 @@ export default class Shader {
             uniform.destroy();
         }
 
-        if (this._context) {
-            this._context.deleteProgram(this._program);
+        if (this._renderState) {
+            this._renderState.deleteProgram(this._program);
+            this._renderState = null;
             this._program = null;
-            this._context = null;
         }
 
         this._attributes.clear();

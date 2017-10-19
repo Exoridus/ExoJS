@@ -1,4 +1,4 @@
-import Renderer from '../../display/Renderer';
+import Renderer from '../../graphics/Renderer';
 import ParticleShader from './ParticleShader';
 import { degreesToRadians } from '../../utils';
 import settings from '../../settings';
@@ -14,6 +14,12 @@ export default class ParticleRenderer extends Renderer {
      */
     constructor() {
         super();
+
+        /**
+         * @private
+         * @member {?ParticleShader}
+         */
+        this._shader = new ParticleShader();
 
         /**
          * 4 x 10 Properties:
@@ -43,57 +49,76 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {ArrayBuffer}
+         * @member {?ArrayBuffer}
          */
-        this._vertexData = new ArrayBuffer(this._batchLimit * this._attributeCount * 4);
+        this._vertexData = null;
 
         /**
          * @private
-         * @member {Uint16Array}
+         * @member {?Uint16Array}
          */
-        this._indexData = Renderer.createIndexBuffer(this._batchLimit);
+        this._indexData = null;
 
         /**
          * @private
-         * @member {Float32Array}
+         * @member {?Float32Array}
          */
-        this._floatView = new Float32Array(this._vertexData);
+        this._floatView = null;
 
         /**
          * @private
-         * @member {Uint32Array}
+         * @member {?Uint32Array}
          */
-        this._uintView = new Uint32Array(this._vertexData);
-
-        /**
-         * @private
-         * @member {?ParticleShader}
-         */
-        this._shader = new ParticleShader();
+        this._uintView = null;
 
         /**
          * @member {?Texture}
          * @private
          */
         this._currentTexture = null;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._bound = false;
     }
 
     /**
      * @override
      */
-    setContext(gl) {
-        if (!this._context) {
-            this._context = gl;
-            this._indexBuffer = gl.createBuffer();
-            this._vertexBuffer = gl.createBuffer();
-            this._shader.setContext(gl);
+    bind(renderState) {
+        if (!this._renderState) {
+            this._renderState = renderState;
+
+            this._indexBuffer = renderState.createBuffer();
+            this._vertexBuffer = renderState.createBuffer();
+
+            this._indexData = renderState.createIndexBuffer(this._batchLimit);
+            this._vertexData = renderState.createVertexBuffer(this._batchLimit, this._attributeCount);
+
+            this._uintView = new Uint32Array(this._vertexData);
+            this._floatView = new Float32Array(this._vertexData);
         }
+
+        if (!this.bound) {
+            renderState
+                .bindVertexBuffer(this._vertexBuffer, this._vertexData)
+                .bindIndexBuffer(this._indexBuffer, this._indexData);
+
+            renderState.shader = this._shader;
+
+            this.bound = true;
+        }
+
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    unbind() {
+        if (this.bound) {
+            this.flush();
+            this._shader.unbind();
+            this.bound = false;
+        }
+
+        return this;
     }
 
     /**
@@ -101,35 +126,6 @@ export default class ParticleRenderer extends Renderer {
      */
     setProjection(projection) {
         this._shader.setProjection(projection);
-    }
-
-    /**
-     * @override
-     */
-    bind() {
-        if (!this._bound) {
-            const gl = this._context;
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
-
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
-
-            this._shader.bind();
-            this._bound = true;
-        }
-    }
-
-    /**
-     * @override
-     */
-    unbind() {
-        if (this._bound) {
-            this.flush();
-            this._shader.unbind();
-            this._bound = false;
-        }
     }
 
     /**
@@ -154,7 +150,7 @@ export default class ParticleRenderer extends Renderer {
             }
         }
 
-        this._currentTexture.glTexture.update();
+        this._currentTexture.update();
 
         for (const particle of particles) {
             if (this._batchSize >= this._batchLimit) {
@@ -216,6 +212,8 @@ export default class ParticleRenderer extends Renderer {
 
             this._batchSize++;
         }
+
+        return this;
     }
 
     /**
@@ -223,10 +221,8 @@ export default class ParticleRenderer extends Renderer {
      */
     flush() {
         if (this._batchSize) {
-            const gl = this._context;
-
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._floatView.subarray(0, this._batchSize * this._attributeCount));
-            gl.drawElements(gl.TRIANGLES, this._batchSize * 6, gl.UNSIGNED_SHORT, 0);
+            this._renderState.setVertexSubData(this._floatView.subarray(0, this._batchSize * this._attributeCount));
+            this._renderState.drawElements(this._batchSize * 6);
 
             this._batchSize = 0;
         }
@@ -240,23 +236,16 @@ export default class ParticleRenderer extends Renderer {
     destroy() {
         super.destroy();
 
-        if (this._bound) {
-            this.unbind();
-        }
-
         this._shader.destroy();
         this._shader = null;
 
-        this._vertexData = null;
         this._indexData = null;
-
+        this._vertexData = null;
         this._floatView = null;
         this._uintView = null;
-
         this._batchSize = null;
         this._batchLimit = null;
         this._attributeCount = null;
         this._currentTexture = null;
-        this._bound = null;
     }
 }

@@ -12,8 +12,7 @@ window.app.start(new Exo.Scene({
                 bunny: 'image/bunny.png',
                 rainbow: 'image/rainbow.png',
             })
-            .load()
-            .then(() => this.app.trigger('scene:start'));
+            .load(() => this.app.trigger('scene:start'));
     },
 
     init() {

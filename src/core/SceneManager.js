@@ -1,3 +1,5 @@
+import Renderable from '../graphics/Renderable';
+
 /**
  * @class SceneManager
  */
@@ -38,18 +40,20 @@ export default class SceneManager {
      * @param {Time} delta
      */
     update(delta) {
-        const displayManager = this._app.displayManager;
-
         if (!this._currentScene || !this._sceneActive) {
             return;
         }
+
+        const displayManager = this._app.displayManager;
 
         this._currentScene.update(delta);
 
         displayManager.begin();
 
         for (const node of this._currentScene.nodes) {
-            displayManager.render(node);
+            if (node instanceof Renderable) {
+                node.render(displayManager);
+            }
         }
 
         displayManager.end();

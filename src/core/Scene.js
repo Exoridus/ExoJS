@@ -46,7 +46,7 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @member {Game}
+     * @member {Application}
      */
     get app() {
         return this._app;
@@ -96,6 +96,7 @@ export default class Scene extends EventEmitter {
             }
 
             node.scene = this;
+
             this._nodes.add(node);
         }
 

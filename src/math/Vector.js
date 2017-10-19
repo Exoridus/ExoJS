@@ -229,7 +229,10 @@ export default class Vector {
      * @returns {Vector}
      */
     transform(matrix, result = this) {
-        return matrix.transformPoint(this, result);
+        return result.set(
+            (this._x * matrix.a) + (this._y * matrix.b) + matrix.x,
+            (this._x * matrix.c) + (this._y * matrix.d) + matrix.y
+        );
     }
 
     /**

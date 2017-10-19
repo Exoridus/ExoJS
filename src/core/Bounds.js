@@ -112,7 +112,7 @@ export default class Bounds {
      */
     addPoint(point, transform) {
         if (transform) {
-            point = transform.transformPoint(Vector.Temp.copy(point));
+            point = point.transform(transform, Vector.Temp);
         }
 
         return this.addCoords(point.x, point.y);
@@ -127,7 +127,7 @@ export default class Bounds {
      */
     addRect(rectangle, transform) {
         if (transform) {
-            rectangle = transform.transformRect(Rectangle.Temp.copy(rectangle));
+            rectangle = rectangle.transform(transform, Rectangle.Temp);
         }
 
         return this

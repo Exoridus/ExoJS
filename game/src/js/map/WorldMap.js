@@ -108,7 +108,7 @@ export default class WorldMap {
             tile.x = (startTileX + x) * tileSize;
             tile.y = (startTileY + y) * tileSize;
 
-            displayManager.render(tile);
+            tile.render(displayManager);
         }
 
         displayManager.end();

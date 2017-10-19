@@ -48,9 +48,9 @@ export default class ShaderAttribute {
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {?RenderState}
          */
-        this._context = null;
+        this._renderState = null;
 
         /**
          * @private
@@ -146,22 +146,6 @@ export default class ShaderAttribute {
 
     /**
      * @public
-     * @param {WebGLRenderingContext} gl
-     * @param {WebGLProgram} program
-     */
-    setContext(gl, program) {
-        if (this._context !== gl) {
-            this._context = gl;
-            this._location = gl.getAttribLocation(program, this._name);
-
-            if (this._location === -1) {
-                throw new Error(`Attribute location for attribute "${this._name}" is not available.`);
-            }
-        }
-    }
-
-    /**
-     * @public
      * @param {Boolean} enabled
      */
     setEnabled(enabled) {
@@ -169,7 +153,7 @@ export default class ShaderAttribute {
             this._enabled = enabled;
 
             if (this._bound) {
-                this._upload();
+                this.upload();
             }
         }
     }
@@ -179,11 +163,20 @@ export default class ShaderAttribute {
      * @param {Number} stride
      * @param {Number} offset
      */
-    bind(stride, offset) {
+    bind(renderState, program, stride, offset) {
+        if (!this._renderState) {
+            this._renderState = renderState;
+            this._location = renderState.getAttributeLocation(program, this._name);
+
+            if (this._location === -1) {
+                throw new Error(`Attribute location for attribute "${this._name}" is not available.`);
+            }
+        }
+
         if (!this._bound) {
             this._bound = true;
-            this._context.vertexAttribPointer(this._location, this._size, this._type, this._normalized, stride, offset);
-            this._upload();
+            this._renderState.setVertexPointer(this._location, this._size, this._type, this._normalized, stride, offset);
+            this.upload();
         }
     }
 
@@ -199,30 +192,22 @@ export default class ShaderAttribute {
     /**
      * @public
      */
+    upload() {
+        this._renderState.toggleVertexArray(this._location, this._enabled);
+    }
+
+    /**
+     * @public
+     */
     destroy() {
         if (this._bound) {
             this.unbind();
         }
 
-        this._context = null;
+        this._renderState = null;
         this._name = null;
         this._enabled = null;
         this._location = null;
         this._bound = null;
-    }
-
-    /**
-     * @private
-     */
-    _upload() {
-        if (!this._bound) {
-            return;
-        }
-
-        if (this._enabled) {
-            this._context.enableVertexAttribArray(this._location);
-        } else {
-            this._context.disableVertexAttribArray(this._location);
-        }
     }
 }

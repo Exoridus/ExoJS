@@ -29,4 +29,23 @@ export default {
 
         return ('WebGLRenderingContext' in window);
     })(),
+
+    /**
+     * @public
+     * @constant
+     * @type {Boolean}
+     */
+    passiveEvents: (() => {
+        let supportsPassive = false;
+
+        try {
+            window.addEventListener('test', null, {
+                get passive() {
+                    supportsPassive = true;
+                }
+            });
+        } catch (e) {}
+
+        return supportsPassive;
+    })(),
 };

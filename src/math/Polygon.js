@@ -3,6 +3,7 @@ import Collision from './Collision';
 import Bounds from '../core/Bounds';
 import Interval from './Interval';
 import { SHAPE } from '../const';
+import Vector from './Vector';
 
 /**
  * @class Polygon
@@ -150,7 +151,9 @@ export default class Polygon extends Shape {
      */
     contains(x, y, transform) {
         const points = this._points,
-            len = points.length;
+            len = points.length,
+            tempA = new Vector(),
+            tempB = new Vector();
 
         let inside = false;
 
@@ -159,8 +162,8 @@ export default class Polygon extends Shape {
                 pointB = points[j];
 
             if (transform) {
-                pointA = transform.transformPoint(pointA.clone());
-                pointB = transform.transformPoint(pointB.clone());
+                pointA = pointA.transform(transform, tempA);
+                pointB = pointB.transform(transform, tempB);
             }
 
             if (((pointA.y > y) !== (pointB.y > y)) && (x < ((pointB.x - pointA.x) * ((y - pointA.y) / (pointB.y - pointA.y))) + pointA.x)) {

@@ -197,7 +197,7 @@ export default class Color {
      * @param {Boolean} [ignoreAlpha=false]
      */
     equals(color, ignoreAlpha = false) {
-        return color === this || (this._r === color.r && this._g === color.g && this._b === color.b) && (ignoreAlpha || this._a === color.a);
+        return (color === this) || (this._r === color.r && this._g === color.g && this._b === color.b) && (ignoreAlpha || this._a === color.a);
     }
 
     /**

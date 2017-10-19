@@ -1,8 +1,8 @@
+import RenderState from './RenderState';
 import RenderTarget from './RenderTarget';
-import SpriteRenderer from './SpriteRenderer';
+import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../extras/particle/ParticleRenderer';
 import Color from '../core/Color';
-import Matrix from '../math/Matrix';
 import View from './View';
 import Rectangle from '../math/Rectangle';
 import settings from '../settings';
@@ -19,14 +19,14 @@ export default class DisplayManager {
      * @param {Object} [config]
      * @param {Number} [config.width=800]
      * @param {Number} [config.height=600]
-     * @param {Color} [config.clearColor=Color.White]
+     * @param {Color} [config.clearColor=Color.Black]
      * @param {Boolean} [config.clearBeforeRender=true]
      * @param {Object} [config.contextOptions]
      */
     constructor(app, {
         width = 800,
         height = 600,
-        clearColor = Color.White,
+        clearColor = Color.Black,
         clearBeforeRender = true,
         contextOptions = {
             alpha: false,
@@ -49,7 +49,7 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {WebGLRenderingContext}
+         * @member {?WebGLRenderingContext}
          */
         this._context = this._createContext(contextOptions);
 
@@ -69,9 +69,21 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Color}
+         * @member {Map<String, Renderer>}
          */
-        this._clearColor = clearColor.clone();
+        this._renderers = new Map();
+
+        /**
+         * @private
+         * @member {RenderTarget}
+         */
+        this._renderTarget = new RenderTarget(width, height, true);
+
+        /**
+         * @private
+         * @member {View}
+         */
+        this._view = new View(new Rectangle(0, 0, width, height));
 
         /**
          * @private
@@ -87,116 +99,42 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {Map<String, Renderer>}
+         * @member {RenderState}
          */
-        this._renderers = new Map();
+        this._renderState = new RenderState(this._context);
+        this._renderState.blendMode = settings.BLEND_MODE;
+        this._renderState.clearColor = clearColor;
 
-        /**
-         * @private
-         * @member {?Renderer}
-         */
-        this._currentRenderer = null;
-
-        /**
-         * @private
-         * @member {RenderTarget}
-         */
-        this._rootRenderTarget = new RenderTarget(width, height, true);
-
-        /**
-         * @private
-         * @member {?RenderTarget}
-         */
-        this._renderTarget = null;
-
-        /**
-         * @private
-         * @member {Matrix}
-         */
-        this._projection = new Matrix();
-
-        /**
-         * @private
-         * @member {Rectangle}
-         */
-        this._viewport = new Rectangle();
-
-        /**
-         * @private
-         * @member {View}
-         */
-        this._view = new View(new Rectangle(0, 0, width, height));
+        this._renderTarget.bind(this._renderState);
 
         this._addEvents();
         this._setupGL();
 
-        this.setClearColor(this._clearColor);
-        this.setRenderTarget(this._rootRenderTarget);
-
-        this.addRenderer('sprite', new SpriteRenderer());
-        this.addRenderer('particle', new ParticleRenderer());
-
-        this.resize(width, height);
+        this.addRenderer('sprite', new SpriteRenderer())
+            .addRenderer('particle', new ParticleRenderer())
+            .resize(width, height);
     }
 
     /**
      * @public
-     * @readonly
-     * @member {WebGLRenderingContext}
-     */
-    get context() {
-        return this._context;
-    }
-
-    /**
-     * @public
-     * @member {RenderTarget}
-     */
-    get renderTarget() {
-        return this._renderTarget;
-    }
-
-    set renderTarget(renderTarget) {
-        this.setRenderTarget(renderTarget);
-    }
-
-    /**
-     * @public
-     * @member {Color}
-     */
-    get clearColor() {
-        return this._clearColor;
-    }
-
-    set clearColor(color) {
-        this.setClearColor(color);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Matrix}
-     */
-    get projection() {
-        return this._view.transform;
-    }
-
-    /**
-     * @public
+     * @chainable
      * @param {String} name
      * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
+     * @returns {DisplayManager}
      */
     addRenderer(name, renderer) {
         if (this._renderers.has(name)) {
             throw new Error(`Renderer "${name}" was already added.`);
         }
 
-        renderer.setContext(this._context);
         this._renderers.set(name, renderer);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {String} name
      * @returns {Renderer}
      */
@@ -205,127 +143,73 @@ export default class DisplayManager {
             throw new Error(`Could not find renderer "${name}".`);
         }
 
-        const renderer = this._renderers.get(name),
-            currentRenderer = this._currentRenderer;
-
-        if (currentRenderer !== renderer) {
-            if (currentRenderer) {
-                currentRenderer.unbind();
-            }
-
-            this._currentRenderer = renderer;
-            this._currentRenderer.setProjection(this._projection);
-            this._currentRenderer.bind();
-        }
-
-        return renderer;
+        return this._renderers.get(name);
     }
 
     /**
      * @public
-     * @param {?RenderTarget} renderTarget
+     * @chainable
+     * @returns {DisplayManager}
      */
-    setRenderTarget(renderTarget) {
-        const newTarget = renderTarget || this._rootRenderTarget;
+    updateViewport() {
+        const width = this._renderTarget.width,
+            height = this._renderTarget.height,
+            ratio = this._view.viewport;
 
-        if (this._renderTarget !== newTarget) {
-            newTarget.setContext(this._context);
-            newTarget.bind();
+        this._renderState.viewport = Rectangle.Temp.set(
+            Math.round(width * ratio.x),
+            Math.round(height * ratio.y),
+            Math.round(width * ratio.width),
+            Math.round(height * ratio.height)
+        );
 
-            this._renderTarget = newTarget;
-        }
+        this._renderState.projection = this._view.getTransform();
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} width
      * @param {Number} height
+     * @returns {DisplayManager}
      */
     resize(width, height) {
         this._canvas.width = width;
         this._canvas.height = height;
 
+        this._renderTarget.width = width;
+        this._renderTarget.height = height;
+
         this.updateViewport();
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {View} view
+     * @returns {DisplayManager}
      */
     setView(view) {
         this._view.copy(view);
 
         this.updateViewport();
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {DisplayManager}
      */
     resetView() {
         this._view.reset(Rectangle.Temp.set(0, 0, this._renderTarget.width, this._renderTarget.height));
 
         this.updateViewport();
-    }
-
-    /**
-     * @public
-     */
-    updateViewport() {
-        const gl = this._context,
-            width = this._renderTarget.width,
-            height = this._renderTarget.height,
-            viewport = this._view.viewport;
-
-        this._viewport.set(
-            (0.5 + (width * viewport.x)) | 0,
-            (0.5 + (height * viewport.y)) | 0,
-            (0.5 + (width * viewport.width)) | 0,
-            (0.5 + (height * viewport.height)) | 0
-        );
-
-        gl.viewport(
-            this._viewport.x,
-            this._viewport.y,
-            this._viewport.width,
-            this._viewport.height
-        );
-
-        this.setProjection(this._view.getTransform());
-    }
-
-    /**
-     * @public
-     * @param {Matrix} projection
-     */
-    setProjection(projection) {
-        this._projection.copy(projection);
-
-        if (this._currentRenderer) {
-            this._currentRenderer.setProjection(this._projection);
-        }
-    }
-
-    /**
-     * @public
-     * @param {Color} [color=this._clearColor]
-     */
-    clear(color = this._clearColor) {
-        const gl = this._context;
-
-        this.setClearColor(color);
-
-        gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    /**
-     * @public
-     * @param {Color} color
-     */
-    setClearColor(color) {
-        if (!this._clearColor.equals(color)) {
-            this._clearColor.copy(color);
-            this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-        }
 
         return this;
     }
@@ -336,15 +220,15 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     begin() {
-        if (this._isRendering) {
-            throw new Error('Renderer has already begun!');
+        if (this._isRendering || this._contextLost) {
+            return this;
+        }
+
+        if (this._clearBeforeRender) {
+            this._renderState.clear();
         }
 
         this._isRendering = true;
-
-        if (this._clearBeforeRender) {
-            this.clear();
-        }
 
         return this;
     }
@@ -352,16 +236,18 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {*} renderable
+     * @param {Renderable} renderable
+     * @param {String} renderer
      * @returns {DisplayManager}
      */
-    render(renderable) {
-        if (!this._isRendering) {
-            throw new Error('Renderer needs to begin first!');
+    render(renderable, renderer) {
+        if (!this._isRendering || this._contextLost) {
+            return this;
         }
 
-        if (!this._contextLost && this.isVisible(renderable)) {
-            renderable.render(this);
+        if (renderable.active && this.isVisible(renderable)) {
+            this._renderState.renderer = this.getRenderer(renderer);
+            this._renderState.renderer.render(renderable);
         }
 
         return this;
@@ -373,15 +259,15 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     end() {
-        if (!this._isRendering) {
-            throw new Error('Renderer needs to begin first!');
+        if (!this._isRendering || this._contextLost) {
+            return this;
+        }
+
+        if (this._renderState.renderer) {
+            this._renderState.renderer.flush();
         }
 
         this._isRendering = false;
-
-        if (!this._contextLost && this._currentRenderer) {
-            this._currentRenderer.flush();
-        }
 
         return this;
     }
@@ -408,25 +294,14 @@ export default class DisplayManager {
         this._renderers.clear();
         this._renderers = null;
 
-        this._clearColor.destroy();
-        this._clearColor = null;
-
-        this._rootRenderTarget.destroy();
-        this._rootRenderTarget = null;
-
-        this._projection.destroy();
-        this._projection = null;
-
-        this._viewport.destroy();
-        this._viewport = null;
+        this._renderState.destroy();
+        this._renderState = null;
 
         this._view = null;
 
         this._clearBeforeRender = null;
         this._isRendering = null;
         this._contextLost = null;
-        this._currentRenderer = null;
-        this._renderTarget = null;
         this._context = null;
         this._canvas = null;
     }
@@ -468,10 +343,8 @@ export default class DisplayManager {
      * @private
      */
     _setupGL() {
-        const gl = this._context,
-            blendMode = settings.BLEND_MODE;
+        const gl = this._context;
 
-        gl.blendFunc(blendMode.src, blendMode.dst);
         gl.colorMask(true, true, true, false);
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);

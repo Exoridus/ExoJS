@@ -9,8 +9,7 @@ window.app.start(new Exo.Scene({
 
     load(loader) {
         loader.addItem('music', 'example', 'audio/example.ogg')
-            .load()
-            .then(() => this.app.trigger('scene:start'));
+            .load(() => this.app.trigger('scene:start'));
     },
 
     init() {

@@ -1,5 +1,5 @@
 import { clamp } from '../utils';
-import Sprite from './Sprite';
+import Sprite from './sprite/Sprite';
 import Texture from './Texture';
 import support from '../support';
 
@@ -201,15 +201,21 @@ export default class Video extends Sprite {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {MediaManager} mediaManager
+     * @returns {Video}
      */
-    render(displayManager) {
-        if (this.active) {
-            this.texture.update();
+    connect(mediaManager) {
+        if (!this._audioContext) {
+            this._audioContext = mediaManager.audioContext;
 
-            displayManager
-                .getRenderer('sprite')
-                .render(this);
+            this._gainNode = this._audioContext.createGain();
+            this._gainNode.connect(mediaManager.videoGain);
+            this._gainNode.gain.value = this._volume;
+
+            this._sourceNode = this._audioContext.createMediaElementSource(this.source);
+            this._sourceNode.connect(this._gainNode);
         }
 
         return this;
@@ -217,27 +223,6 @@ export default class Video extends Sprite {
 
     /**
      * @public
-     * @abstract
-     * @param {MediaManager} mediaManager
-     */
-    connect(mediaManager) {
-        if (this._audioContext) {
-            return;
-        }
-
-        this._audioContext = mediaManager.audioContext;
-
-        this._gainNode = this._audioContext.createGain();
-        this._gainNode.connect(mediaManager.videoGain);
-        this._gainNode.gain.value = this._volume;
-
-        this._sourceNode = this._audioContext.createMediaElementSource(this.source);
-        this._sourceNode.connect(this._gainNode);
-    }
-
-    /**
-     * @public
-     * @abstract
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
      * @param {Number} [options.speed]
@@ -254,7 +239,6 @@ export default class Video extends Sprite {
 
     /**
      * @public
-     * @abstract
      */
     pause() {
         if (this.playing) {
@@ -265,7 +249,6 @@ export default class Video extends Sprite {
 
     /**
      * @public
-     * @abstract
      */
     stop() {
         this.pause();
@@ -274,7 +257,6 @@ export default class Video extends Sprite {
 
     /**
      * @public
-     * @abstract
      */
     toggle() {
         if (this.paused) {
@@ -286,7 +268,6 @@ export default class Video extends Sprite {
 
     /**
      * @public
-     * @abstract
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
      * @param {Number} [options.speed]
@@ -312,8 +293,20 @@ export default class Video extends Sprite {
     }
 
     /**
-     * @public
-     * @abstract
+     * @override
+     */
+    render(displayManager) {
+        if (this.active) {
+            this.updateTexture();
+
+            super.render(displayManager);
+        }
+
+        return this;
+    }
+
+    /**
+     * @override
      */
     destroy() {
         super.destroy();

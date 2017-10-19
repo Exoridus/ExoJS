@@ -78,9 +78,6 @@ export default class Player extends Exo.Sprite {
      * @param {Number} direction
      */
     _setFaceDirection(direction) {
-        this._frame.x = direction * playerWidth;
-        this._frame.y = 0;
-
-        this.setTextureRect(this._frame);
+        this.setTextureFrame(this._frame.position.set(direction * playerWidth, 0));
     }
 }

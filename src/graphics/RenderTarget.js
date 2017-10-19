@@ -15,27 +15,33 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {Vector}
          */
-        this._context = null;
+        this._size = new Vector(width, height);
 
         /**
          * @private
-         * @member {?WebGLFramebuffer}
+         * @member {?RenderState}
          */
-        this._frameBuffer = null;
+        this._renderState = null;
 
         /**
          * @private
          * @member {Boolean}
          */
         this._isRoot = isRoot;
+    }
 
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._size = new Vector(width, height);
+    /**
+     * @public
+     * @member {Boolean}
+     */
+    get isRoot() {
+        return this._isRoot;
+    }
+
+    set isRoot(isRoot) {
+        this._isRoot = isRoot;
     }
 
     /**
@@ -76,37 +82,30 @@ export default class RenderTarget {
 
     /**
      * @public
-     * @param {WebGLRenderingContext} gl
+     * @param {RenderState} renderState
      */
-    setContext(gl) {
-        if (!this._context) {
-            this._context = gl;
-            this._frameBuffer = this._isRoot ? null : gl.createFramebuffer();
+    bind(renderState) {
+        if (!this._renderState) {
+            this._renderState = renderState;
         }
-    }
 
-    /**
-     * @public
-     */
-    bind() {
-        const gl = this._context;
+        this._renderState.bindRenderTarget(this);
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this._frameBuffer);
+        return this;
     }
 
     /**
      * @public
      */
     destroy() {
-        if (this._frameBuffer) {
-            this._context.deleteFramebuffer(this._frameBuffer);
-            this._frameBuffer = null;
+        if (this._renderState) {
+            this._renderState.removeRenderTarget(this);
+            this._renderState = null;
         }
 
         this._size.destroy();
         this._size = null;
 
         this._isRoot = null;
-        this._context = null;
     }
 }

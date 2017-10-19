@@ -1,6 +1,6 @@
-import Container from './Container';
-import Rectangle from '../math/Rectangle';
-import Vector from '../math/Vector';
+import Container from '../Container';
+import Rectangle from '../../math/Rectangle';
+import Vector from '../../math/Vector';
 
 /**
  * @class Sprite
@@ -123,7 +123,7 @@ export default class Sprite extends Container {
     setTexture(texture) {
         this._texture = texture;
         this._localBounds.set(0, 0, texture.width, texture.height);
-        this.setTextureFrame(texture.frame);
+        this.setTextureFrame(texture.sourceFrame);
         this.scale.set(1, 1);
 
         return this;
@@ -147,8 +147,7 @@ export default class Sprite extends Container {
      */
     render(displayManager) {
         if (this.active) {
-            displayManager.getRenderer('sprite')
-                .render(this);
+            displayManager.render(this, 'sprite');
 
             for (const child of this.children) {
                 child.render(displayManager);
@@ -215,15 +214,28 @@ export default class Sprite extends Container {
         const texCoordData = this._texCoordData,
             { left, top, right, bottom } = this._textureFrame,
             { width, height } = this._texture,
-            minX = (left / width * 65535 & 65535),
-            minY = (top / height * 65535 & 65535) << 16,
-            maxX = (right / width * 65535 & 65535),
-            maxY = (bottom / height * 65535 & 65535) << 16;
+            minX = ((left / width) * 65535 & 65535),
+            minY = ((top / height) * 65535 & 65535) << 16,
+            maxX = ((right / width) * 65535 & 65535),
+            maxY = ((bottom / height) * 65535 & 65535) << 16;
 
         texCoordData[0] = (minY | minX);
         texCoordData[1] = (minY | maxX);
         texCoordData[2] = (maxY | minX);
         texCoordData[3] = (maxY | maxX);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Sprite}
+     */
+    updateTexture() {
+        if (this._texture) {
+            this._texture.updateSource();
+        }
 
         return this;
     }

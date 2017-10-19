@@ -1,5 +1,6 @@
 import ChannelHandler from '../ChannelHandler';
 import { RANGE_DEVICE, OFFSET_POINTER } from '../../const';
+import support from '../../support';
 
 /**
  * @class PointerManager
@@ -70,7 +71,11 @@ export default class PointerManager extends ChannelHandler {
      * @private
      */
     _addEventListeners() {
-        const canvas = this._canvas;
+        const canvas = this._canvas,
+            passive = support.passiveEvents ? {
+                capture: true,
+                passive: true,
+            } : true;
 
         this._onPointerDownHandler = this._onPointerDown.bind(this);
         this._onPointerUpHandler = this._onPointerUp.bind(this);
@@ -90,7 +95,7 @@ export default class PointerManager extends ChannelHandler {
         canvas.addEventListener('pointerout', this._onPointerOutHandler, true);
 
         // Mouse events
-        canvas.addEventListener('wheel', this._onWheelHandler, true);
+        canvas.addEventListener('wheel', this._onWheelHandler, passive);
         canvas.addEventListener('contextmenu', this._stopEventHandler, true);
         canvas.addEventListener('selectstart', this._stopEventHandler, true);
     }
@@ -99,7 +104,11 @@ export default class PointerManager extends ChannelHandler {
      * @private
      */
     _removeEventListeners() {
-        const canvas = this._canvas;
+        const canvas = this._canvas,
+            passive = support.passiveEvents ? {
+                capture: true,
+                passive: true,
+            } : true;
 
         // Pointer events
         canvas.removeEventListener('pointerdown', this._onPointerDownHandler, true);
@@ -110,7 +119,7 @@ export default class PointerManager extends ChannelHandler {
         canvas.removeEventListener('pointerout', this._onPointerOutHandler, true);
 
         // Mouse specific
-        canvas.removeEventListener('wheel', this._onWheelHandler, true);
+        canvas.removeEventListener('wheel', this._onWheelHandler, passive);
         canvas.removeEventListener('contextmenu', this._stopEventHandler, true);
         canvas.removeEventListener('selectstart', this._stopEventHandler, true);
 

@@ -154,11 +154,9 @@ export default class Matrix {
      * @returns {Matrix}
      */
     copy(matrix) {
-        if (matrix !== this) {
-            this.a = matrix.a; this.b = matrix.b; this.x = matrix.x;
-            this.c = matrix.c; this.d = matrix.d; this.y = matrix.y;
-            this.e = matrix.e; this.f = matrix.f; this.z = matrix.z;
-        }
+        this.a = matrix.a; this.b = matrix.b; this.x = matrix.x;
+        this.c = matrix.c; this.d = matrix.d; this.y = matrix.y;
+        this.e = matrix.e; this.f = matrix.f; this.z = matrix.z;
 
         return this;
     }
@@ -200,6 +198,36 @@ export default class Matrix {
     /**
      * @public
      * @chainable
+     * @returns {Matrix}
+     */
+    inverse() {
+        const determinant =
+            (this.a * (this.z * this.d - this.y * this.f)) -
+            (this.b * (this.z * this.c - this.y * this.e)) +
+            (this.x * (this.f * this.c - this.d * this.e));
+
+        if (determinant !== 0) {
+            return this.set(
+                ((this.z * this.d) - (this.y * this.f)) / determinant,
+                ((this.z * this.c) - (this.y * this.e)) / -determinant,
+                ((this.f * this.c) - (this.d * this.e)) / determinant,
+
+                ((this.z * this.b) - (this.x * this.f)) / -determinant,
+                ((this.z * this.a) - (this.x * this.e)) / determinant,
+                ((this.f * this.a) - (this.b * this.e)) / -determinant,
+
+                ((this.y * this.b) - (this.x * this.d)) / determinant,
+                ((this.y * this.a) - (this.x * this.c)) / -determinant,
+                ((this.d * this.a) - (this.b * this.c)) / determinant
+            );
+        }
+
+        return this.copy(Matrix.Identity);
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} [y=x]
      * @returns {Matrix}
@@ -207,7 +235,8 @@ export default class Matrix {
     translate(x, y = x) {
         return this.combine(Matrix.Temp.set(
             1, 0, x,
-            0, 1, y
+            0, 1, y,
+            0, 0, 1
         ));
     }
 
@@ -226,7 +255,8 @@ export default class Matrix {
 
         return this.combine(Matrix.Temp.set(
             cos, -sin, (centerX * (1 - cos)) + (centerY * sin),
-            sin,  cos, (centerY * (1 - cos)) - (centerX * sin)
+            sin,  cos, (centerY * (1 - cos)) - (centerX * sin),
+            0, 0, 1
         ));
     }
 
@@ -242,7 +272,8 @@ export default class Matrix {
     scale(scaleX, scaleY = scaleX, centerX = 0, centerY = centerX) {
         return this.combine(Matrix.Temp.set(
             scaleX, 0, (centerX * (1 - scaleX)),
-            0, scaleY, (centerY * (1 - scaleY))
+            0, scaleY, (centerY * (1 - scaleY)),
+            0, 0, 1
         ));
     }
 
@@ -253,64 +284,6 @@ export default class Matrix {
      */
     toArray(transpose = false) {
         return transpose ? this.transposedArray : this.array;
-    }
-
-    /**
-     * @public
-     * @param {Vector} point
-     * @param {Vector} [result=point]
-     * @returns {Vector}
-     */
-    transformPoint(point, result = point) {
-        return result.set(
-            (this.a * point.x) + (this.b * point.y) + this.x,
-            (this.c * point.x) + (this.d * point.y) + this.y
-        );
-    }
-
-    /**
-     * @public
-     * @param {Rectangle} rectangle
-     * @param {Rectangle} [result=rectangle]
-     * @returns {Rectangle}
-     */
-    transformRect(rectangle, result = rectangle) {
-        const point = Vector.Temp;
-
-        let minX, minY, maxX, maxY;
-
-        this.transformPoint(point.set(rectangle.left, rectangle.top));
-
-        minX = maxX = point.x;
-        minY = maxY = point.y;
-
-        this.transformPoint(point.set(rectangle.left, rectangle.bottom));
-
-        minX = Math.min(minX, point.x);
-        minY = Math.min(minY, point.y);
-        maxX = Math.max(maxX, point.x);
-        maxY = Math.max(maxY, point.y);
-
-        this.transformPoint(point.set(rectangle.right, rectangle.top));
-
-        minX = Math.min(minX, point.x);
-        minY = Math.min(minY, point.y);
-        maxX = Math.max(maxX, point.x);
-        maxY = Math.max(maxY, point.y);
-
-        this.transformPoint(point.set(rectangle.right, rectangle.bottom));
-
-        minX = Math.min(minX, point.x);
-        minY = Math.min(minY, point.y);
-        maxX = Math.max(maxX, point.x);
-        maxY = Math.max(maxY, point.y);
-
-        return result.set(
-            minX,
-            minY,
-            maxX - minX,
-            maxY - minY
-        );
     }
 
     /**

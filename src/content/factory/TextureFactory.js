@@ -1,5 +1,5 @@
 import ImageFactory from './ImageFactory';
-import Texture from '../../display/Texture';
+import Texture from '../../graphics/Texture';
 import settings from '../../settings';
 
 /**
@@ -26,10 +26,6 @@ export default class TextureFactory extends ImageFactory {
     } = {}) {
         return super
             .create(source, { mimeType })
-            .then((image) => new Texture(image, {
-                scaleMode,
-                wrapMode,
-                premultiplyAlpha,
-            }));
+            .then((image) => new Texture(image, { scaleMode, wrapMode, premultiplyAlpha }));
     }
 }

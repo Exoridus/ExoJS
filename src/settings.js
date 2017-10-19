@@ -16,7 +16,7 @@ export default {
      * @property {Number} videoVolume=1
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
-     * @property {Color} clearColor=Color.White
+     * @property {Color} clearColor=Color.Black
      * @property {Boolean} clearBeforeRender=true
      * @property {Object} contextOptions
      * @property {Boolean} contextOptions.alpha=false
@@ -36,7 +36,7 @@ export default {
         videoVolume: 1,
         canvas: null,
         canvasParent: null,
-        clearColor: Color.White,
+        clearColor: Color.Black,
         clearBeforeRender: true,
         contextOptions: {
             alpha: false,

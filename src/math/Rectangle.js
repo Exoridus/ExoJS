@@ -110,12 +110,50 @@ export default class Rectangle extends Shape {
      * @public
      * @chainable
      * @param {Matrix} matrix
+     * @param {Rectangle} [result=this]
      * @returns {Rectangle}
      */
-    transform(matrix) {
-        matrix.transformRect(this);
+    transform(matrix, result = this) {
+        const point = Vector.Temp;
 
-        return this;
+        let minX, minY, maxX, maxY;
+
+        point.set(this.left, this.top)
+            .transform(matrix);
+
+        minX = maxX = point.x;
+        minY = maxY = point.y;
+
+        point.set(this.left, this.bottom)
+            .transform(matrix);
+
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+
+        point.set(this.right, this.top)
+            .transform(matrix);
+
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+
+        point.set(this.right, this.bottom)
+            .transform(matrix);
+
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+
+        return result.set(
+            minX,
+            minY,
+            maxX - minX,
+            maxY - minY
+        );
     }
 
     /**
@@ -149,7 +187,7 @@ export default class Rectangle extends Shape {
      * @override
      */
     equals(rectangle) {
-        return rectangle === this || (this.position.equals(rectangle.position) && this._size.equals(rectangle.size));
+        return (rectangle === this) || (this.position.equals(rectangle.position) && this._size.equals(rectangle.size));
     }
 
     /**
@@ -171,8 +209,8 @@ export default class Rectangle extends Shape {
             max = new Vector(this.right, this.bottom);
 
         if (transform) {
-            min = transform.transformPoint(min);
-            max = transform.transformPoint(max);
+            min.transform(transform);
+            max.transform(transform);
         }
 
         return inRange(x, min.x, max.x)

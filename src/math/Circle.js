@@ -102,7 +102,7 @@ export default class Circle extends Shape {
         let position = this.position;
 
         if (transform) {
-            position = transform.transformPoint(Vector.Temp.copy(position));
+            position = position.transform(transform, Vector.Temp);
         }
 
         return position.distanceTo(x, y) <= this._radius;

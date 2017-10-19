@@ -157,11 +157,17 @@ export default class ResourceLoader extends EventEmitter {
 
     /**
      * @public
+     * @param {Function} [callback]
      * @returns {Promise}
      */
-    load() {
+    load(callback) {
         const items = [...this._queue];
+
         let loaded = 0;
+
+        if (callback) {
+            this.once('complete', callback, this);
+        }
 
         this._queue.clear();
 

@@ -1,4 +1,4 @@
-import Renderable from '../../display/Renderable';
+import Renderable from '../../graphics/Renderable';
 import Particle from './Particle';
 import Rectangle from '../../math/Rectangle';
 import Time from '../../core/Time';
@@ -15,7 +15,7 @@ export default class ParticleEmitter extends Renderable {
      * @param {Texture} texture
      * @param {Object} [particleOptions = new ParticleOptions()]
      */
-    constructor(texture, particleOptions = new ParticleOptions()) {
+    constructor(texture, particleOptions) {
         super();
 
         /**
@@ -70,7 +70,7 @@ export default class ParticleEmitter extends Renderable {
          * @private
          * @member {ParticleOptions}
          */
-        this._particleOptions = particleOptions;
+        this._particleOptions = new ParticleOptions(particleOptions);
 
         if (texture) {
             this.setTexture(texture);
@@ -170,8 +170,10 @@ export default class ParticleEmitter extends Renderable {
      * @returns {ParticleEmitter}
      */
     setTexture(texture) {
-        this._texture = texture;
-        this.setTextureFrame(texture.frame);
+        if (this._texture !== texture) {
+            this._texture = texture;
+            this.setTextureFrame(texture.sourceFrame);
+        }
 
         return this;
     }
@@ -265,9 +267,7 @@ export default class ParticleEmitter extends Renderable {
      */
     render(displayManager) {
         if (this.active) {
-            displayManager
-                .getRenderer('particle')
-                .render(this);
+            displayManager.render(this, 'particle');
         }
 
         return this;

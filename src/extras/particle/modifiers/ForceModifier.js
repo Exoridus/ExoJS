@@ -11,14 +11,14 @@ export default class ForceModifier extends ParticleModifier {
      * @constructor
      * @param {Vector} acceleration
      */
-    constructor(acceleration) {
+    constructor(acceleration = Vector.Empty) {
         super();
 
         /**
          * @private
          * @member {Vector}
          */
-        this._acceleration = (acceleration && acceleration.clone()) || new Vector();
+        this._acceleration = acceleration.clone();
     }
 
     /**

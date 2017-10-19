@@ -1,6 +1,7 @@
 import ChannelHandler from './ChannelHandler';
 import Vector from '../math/Vector';
 import { RANGE_DEVICE, OFFSET_MOUSE } from '../const';
+import support from '../support';
 
 const FLAGS = {
     NONE: 0,
@@ -284,7 +285,11 @@ export default class Mouse extends ChannelHandler {
      * @private
      */
     _addEventListeners() {
-        const canvas = this._canvas;
+        const canvas = this._canvas,
+            passive = support.passiveEvents ? {
+                capture: true,
+                passive: true,
+            } : true;
 
         this._onMouseDownHandler = this._onMouseDown.bind(this);
         this._onMouseUpHandler = this._onMouseUp.bind(this);
@@ -299,7 +304,7 @@ export default class Mouse extends ChannelHandler {
         canvas.addEventListener('mousemove', this._onMouseMoveHandler, true);
         canvas.addEventListener('mouseover', this._onMouseOverHandler, true);
         canvas.addEventListener('mouseout', this._onMouseOutHandler, true);
-        canvas.addEventListener('wheel', this._onMouseWheelHandler, true);
+        canvas.addEventListener('wheel', this._onMouseWheelHandler, passive);
         canvas.addEventListener('contextmenu', this._killEventHandler, true);
         canvas.addEventListener('selectstart', this._killEventHandler, true);
     }
@@ -308,14 +313,18 @@ export default class Mouse extends ChannelHandler {
      * @private
      */
     _removeEventListeners() {
-        const canvas = this._canvas;
+        const canvas = this._canvas,
+            passive = support.passiveEvents ? {
+                capture: true,
+                passive: true,
+            } : true;
 
         canvas.removeEventListener('mousedown', this._onMouseDownHandler, true);
         canvas.removeEventListener('mouseup', this._onMouseUpHandler, true);
         canvas.removeEventListener('mousemove', this._onMouseMoveHandler, true);
         canvas.removeEventListener('mouseover', this._onMouseOverHandler, true);
         canvas.removeEventListener('mouseout', this._onMouseOutHandler, true);
-        canvas.removeEventListener('wheel', this._onMouseWheelHandler, true);
+        canvas.removeEventListener('wheel', this._onMouseWheelHandler, passive);
         canvas.removeEventListener('contextmenu', this._killEventHandler, true);
         canvas.removeEventListener('selectstart', this._killEventHandler, true);
 

@@ -5,7 +5,7 @@ export * from './const';
 
 export * from './content';
 export * from './core';
-export * from './display';
+export * from './graphics';
 export * from './extras';
 export * from './input';
 export * from './math';

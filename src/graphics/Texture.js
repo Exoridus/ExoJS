@@ -1,3 +1,5 @@
+import Rectangle from '../math/Rectangle';
+import Vector from '../math/Vector';
 import settings from '../settings';
 
 const FLAGS = {
@@ -6,43 +8,27 @@ const FLAGS = {
     WRAP_MODE: 1 << 1,
     PREMULTIPLY_ALPHA: 1 << 2,
     SOURCE: 1 << 3,
+    SOURCE_FRAME: 1 << 4,
 };
 
 /**
- * @class GLTexture
+ * @class Texture
  */
-export default class GLTexture {
+export default class Texture {
 
     /**
      * @constructor
+     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
      * @param {Object} [options={}]
-     * @param {WebGLRenderingContext} [options.context]
-     * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} [options.source]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
      */
-    constructor({
-        context,
-        source,
-        width = -1,
-        height = -1,
+    constructor(source, {
         scaleMode = settings.SCALE_MODE,
         wrapMode = settings.WRAP_MODE,
-        premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
+        premultiplyAlpha = settings.PREMULTIPLY_ALPHA
     } = {}) {
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
-
-        /**
-         * @private
-         * @member {?WebGLTexture}
-         */
-        this._texture = null;
 
         /**
          * @private
@@ -52,15 +38,15 @@ export default class GLTexture {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Rectangle}
          */
-        this._width = width;
+        this._sourceFrame = new Rectangle();
 
         /**
          * @private
-         * @member {Number}
+         * @member {?RenderState}
          */
-        this._height = height;
+        this._renderState = null;
 
         /**
          * @private
@@ -86,11 +72,7 @@ export default class GLTexture {
          */
         this._flags = (FLAGS.SCALE_MODE | FLAGS.WRAP_MODE | FLAGS.PREMULTIPLY_ALPHA);
 
-        if (context !== undefined) {
-            this.setContext(context);
-        }
-
-        if (source !== undefined) {
+        if (source) {
             this.setSource(source);
         }
     }
@@ -105,6 +87,25 @@ export default class GLTexture {
 
     set source(source) {
         this.setSource(source);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Rectangle}
+     */
+    get sourceFrame() {
+        if (this.hasFlag(FLAGS.SOURCE_FRAME)) {
+            if (this._source) {
+                this._sourceFrame.set(0, 0, (this._source.videoWidth || this._source.width), (this._source.videoHeight || this._source.height));
+            } else {
+                this._sourceFrame.set(0, 0, 0, 0);
+            }
+
+            this.removeFlag(FLAGS.SOURCE_FRAME);
+        }
+
+        return this._sourceFrame;
     }
 
     /**
@@ -145,44 +146,42 @@ export default class GLTexture {
 
     /**
      * @public
-     * @chainable
-     * @param {WebGLRenderingContext} gl
-     * @returns {GLTexture}
+     * @readonly
+     * @member {Vector}
      */
-    setContext(gl) {
-        if (this._context !== gl) {
-            this._context = gl;
-            this._texture = gl.createTexture();
-        }
+    get size() {
+        return this.sourceFrame.size;
+    }
 
-        return this;
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get width() {
+        return this.sourceFrame.width;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get height() {
+        return this.sourceFrame.height;
     }
 
     /**
      * @public
      * @chainable
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
-     * @returns {GLTexture}
+     * @returns {Texture}
      */
     setSource(source) {
         if (this._source !== source) {
             this._source = source;
-            this.invalidateSource();
-        }
 
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {GLTexture}
-     */
-    invalidateSource() {
-        if (this._source) {
-            this._flags |= FLAGS.SOURCE;
-        } else {
-            this._flags &= ~FLAGS.SOURCE;
+            this.updateSource();
         }
 
         return this;
@@ -192,12 +191,13 @@ export default class GLTexture {
      * @public
      * @chainable
      * @param {Number} scaleMode
-     * @returns {GLTexture}
+     * @returns {Texture}
      */
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags |= FLAGS.SCALE_MODE;
+
+            this.addFlag(FLAGS.SCALE_MODE);
         }
 
         return this;
@@ -207,12 +207,13 @@ export default class GLTexture {
      * @public
      * @chainable
      * @param {Number} wrapMode
-     * @returns {GLTexture}
+     * @returns {Texture}
      */
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags |= FLAGS.WRAP_MODE;
+
+            this.addFlag(FLAGS.WRAP_MODE);
         }
 
         return this;
@@ -222,12 +223,13 @@ export default class GLTexture {
      * @public
      * @chainable
      * @param {Boolean} premultiplyAlpha
-     * @returns {GLTexture}
+     * @returns {Texture}
      */
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags |= FLAGS.PREMULTIPLY_ALPHA;
+
+            this.addFlag(FLAGS.PREMULTIPLY_ALPHA);
         }
 
         return this;
@@ -236,66 +238,83 @@ export default class GLTexture {
     /**
      * @public
      * @chainable
-     * @param {Number} [unit]
-     * @returns {GLTexture}
+     * @returns {Texture}
      */
-    update(unit) {
-        if (!this._flags) {
-            return this;
-        }
+    updateSource() {
+        return this
+            .addFlag(FLAGS.SOURCE)
+            .addFlag(FLAGS.SOURCE_FRAME);
+    }
 
-        this.bind(unit);
+    /**
+     * @public
+     * @chainable
+     * @returns {Texture}
+     */
+    update() {
+        if (this._flags && this._renderState) {
+            if (this.hasFlag(FLAGS.SCALE_MODE)) {
+                this._renderState.setScaleMode(this, this._scaleMode);
 
-        const gl = this._context;
+                this.removeFlag(FLAGS.SCALE_MODE);
+            }
 
-        if (this._flags & FLAGS.SCALE_MODE) {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
-        }
+            if (this.hasFlag(FLAGS.WRAP_MODE)) {
+                this._renderState.setWrapMode(this, this._wrapMode);
 
-        if (this._flags & FLAGS.WRAP_MODE) {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
-        }
+                this.removeFlag(FLAGS.WRAP_MODE);
+            }
 
-        if (this._flags & FLAGS.PREMULTIPLY_ALPHA) {
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
-        }
+            if (this.hasFlag(FLAGS.PREMULTIPLY_ALPHA)) {
+                this._renderState.setPremultiplyAlpha(this, this._premultiplyAlpha);
 
-        if (this._flags & FLAGS.SOURCE) {
-            const source = this._source,
-                width = source.videoWidth || source.width,
-                height = source.videoHeight || source.height;
+                this.removeFlag(FLAGS.PREMULTIPLY_ALPHA);
+            }
 
-            if (this._width !== width || this._height !== height) {
-                this._width = width;
-                this._height = height;
+            if (this.hasFlag(FLAGS.SOURCE) && this._source) {
+                this._renderState.setTextureImage(this, this._source);
 
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-            } else {
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+                this.removeFlag(FLAGS.SOURCE);
             }
         }
 
-        this._flags = FLAGS.NONE;
-
         return this;
     }
 
     /**
      * @public
      * @chainable
-     * @param {Number} [unit]
-     * @returns {GLTexture}
+     * @param {RenderState} renderState
+     * @param {Number}  [unit]
+     * @returns {Texture}
      */
-    bind(unit) {
-        const gl = this._context;
-
-        if (unit !== undefined) {
-            gl.activeTexture(gl.TEXTURE0 + unit);
+    bind(renderState, unit) {
+        if (!this._renderState) {
+            this._renderState = renderState;
         }
 
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        this._renderState.bindTexture(this, unit);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @param {Number} flag
+     * @returns {Boolean}
+     */
+    hasFlag(flag) {
+        return (this._flags & flag) !== 0;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} flag
+     * @returns {Texture}
+     */
+    addFlag(flag) {
+        this._flags |= flag;
 
         return this;
     }
@@ -303,32 +322,32 @@ export default class GLTexture {
     /**
      * @public
      * @chainable
-     * @returns {GLTexture}
+     * @param {Number} flag
+     * @returns {Texture}
      */
-    unbind() {
-        const gl = this._context;
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
+    removeFlag(flag) {
+        this._flags &= ~flag;
 
         return this;
     }
 
     /**
-     * @override
+     * @public
      */
     destroy() {
-        if (this._context) {
-            this._context.deleteTexture(this._texture);
-            this._context = null;
-            this._texture = null;
+        if (this._renderState) {
+            this._renderState.removeTexture(this);
+            this._renderState = null;
         }
 
-        this._width = null;
-        this._height = null;
+        this._source = null;
+
+        this._sourceFrame.destroy();
+        this._sourceFrame = null;
+
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
-        this._source = null;
         this._flags = null;
     }
 }

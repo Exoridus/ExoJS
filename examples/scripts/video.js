@@ -9,8 +9,7 @@ window.app.start(new Exo.Scene({
 
     load(loader) {
         loader.addItem('video', 'example', 'video/example.webm')
-            .load()
-            .then(() => this.app.trigger('scene:start'));
+            .load(() => this.app.trigger('scene:start'));
     },
 
     init() {

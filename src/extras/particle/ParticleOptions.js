@@ -92,6 +92,30 @@ export default class ParticleOptions {
      * @public
      * @member {Vector}
      */
+    get scale() {
+        return this._scale;
+    }
+
+    set scale(scale) {
+        this._scale.copy(scale);
+    }
+
+    /**
+     * @public
+     * @member {Color}
+     */
+    get color() {
+        return this._color;
+    }
+
+    set color(color) {
+        this._color.copy(color);
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
     get velocity() {
         return this._velocity;
     }
@@ -122,30 +146,6 @@ export default class ParticleOptions {
 
     set rotationSpeed(speed) {
         this._rotationSpeed = speed;
-    }
-
-    /**
-     * @public
-     * @member {Vector}
-     */
-    get scale() {
-        return this._scale;
-    }
-
-    set scale(scale) {
-        this._scale.copy(scale);
-    }
-
-    /**
-     * @public
-     * @member {Color}
-     */
-    get color() {
-        return this._color;
-    }
-
-    set color(color) {
-        this._color.copy(color);
     }
 
     /**

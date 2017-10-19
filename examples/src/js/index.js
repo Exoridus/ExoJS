@@ -1,4 +1,4 @@
-((document, node) => {
+window.addEventListener('load', (document, node) => {
     const loadScript = (name) => {
         if (!name) {
             return;
@@ -30,4 +30,4 @@
     if (location.hash) {
         loadScript(location.hash.slice(1));
     }
-})(document);
+});

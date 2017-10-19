@@ -536,14 +536,20 @@ export const
     },
 
     /**
+     * @typedef {Object} BlendMode
+     * @property {Number} src
+     * @property {Number} dst
+     */
+
+    /**
      * @public
      * @constant
      * @name BLEND_MODE
-     * @type {Object<String, Object>}
-     * @property {Object<String, Number>} NORMAL
-     * @property {Object<String, Number>} ADD
-     * @property {Object<String, Number>} MULTIPLY
-     * @property {Object<String, Number>} SCREEN
+     * @type {Object<String, BlendMode>}
+     * @property {BlendMode} NORMAL
+     * @property {BlendMode} ADD
+     * @property {BlendMode} MULTIPLY
+     * @property {BlendMode} SCREEN
      */
     BLEND_MODE = {
         NORMAL: {

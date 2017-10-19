@@ -334,8 +334,8 @@ export default class Collision {
         return new Collision({
             shapeA: rectA,
             shapeB: rectB,
-            distance: null,
-            separation: null,
+            distance: 0,
+            separation: Vector.Empty,
             shapeAInB: rectB.containsRect(rectA),
             shapeBInA: rectA.containsRect(rectB),
         });
