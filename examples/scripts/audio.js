@@ -79,8 +79,8 @@ window.app.start(new Exo.Scene({
          * @member {Input}
          */
         this._input = new Exo.Input([
-            Exo.KEYS.Space,
-            Exo.GAMEPAD.FaceButtonBottom,
+            Exo.KEYBOARD.Space,
+            Exo.GAMEPAD.FaceBottom,
         ], {
             context: this,
             trigger() {
@@ -129,7 +129,7 @@ window.app.start(new Exo.Scene({
             }
         }
 
-        this.app.displayManager.clear(this._color.set(r / length, g / length, b / length));
+        this.app.displayManager.renderState.clear(this._color.set(r / length, g / length, b / length));
 
         context.clearRect(0, 0, width, height);
         context.beginPath();

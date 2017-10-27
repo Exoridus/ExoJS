@@ -1,4 +1,6 @@
-window.addEventListener('load', (document, node) => {
+window.addEventListener('load', () => {
+    let node;
+
     const loadScript = (name) => {
         if (!name) {
             return;

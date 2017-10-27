@@ -1,4 +1,5 @@
 import settings from '../settings';
+import Size from '../math/Size';
 
 /**
  * @class GLTexture
@@ -28,15 +29,9 @@ export default class GLTexture {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Size}
          */
-        this._width = -1;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._height = -1;
+        this._size = new Size(-1, -1);
     }
 
     /**
@@ -120,9 +115,8 @@ export default class GLTexture {
             width = (source.videoWidth || source.width),
             height = (source.videoHeight || source.height);
 
-        if (this._width !== width || this._height !== height) {
-            this._width = width;
-            this._height = height;
+        if (this._size.width !== width || this._size.height !== height) {
+            this._size.set(width, height);
 
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
         } else {
@@ -138,9 +132,10 @@ export default class GLTexture {
     destroy() {
         this._context.deleteTexture(this._texture);
 
-        this._context = null;
+        this._size.destroy();
+        this._size = null;
+
         this._texture = null;
-        this._width = null;
-        this._height = null;
+        this._context = null;
     }
 }

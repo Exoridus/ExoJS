@@ -1,8 +1,8 @@
+import { UNIFORM_TYPE } from '../const';
 import RenderTarget from './RenderTarget';
 import Color from '../core/Color';
 import Matrix from '../math/Matrix';
 import Rectangle from '../math/Rectangle';
-import { UNIFORM_TYPE } from '../const';
 import GLTexture from './GLTexture';
 
 /**
@@ -208,7 +208,7 @@ export default class RenderState {
     }
 
     set clearColor(color) {
-        if (color && !color.equals(this._clearColor)) {
+        if (color && !this._clearColor.equals(color, true)) {
             this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
 
             this._clearColor.copy(color);

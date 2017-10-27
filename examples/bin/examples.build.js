@@ -70,7 +70,9 @@
 "use strict";
 
 
-(function (document, node) {
+window.addEventListener('load', function () {
+    var node = void 0;
+
     var loadScript = function loadScript(name) {
         if (!name) {
             return;
@@ -104,7 +106,7 @@
     if (location.hash) {
         loadScript(location.hash.slice(1));
     }
-})(document);
+});
 
 /***/ })
 /******/ ]);

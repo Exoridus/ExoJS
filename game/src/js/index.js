@@ -1,4 +1,3 @@
-/* global WebFont */
 import LauncherScene from './scene/LauncherScene';
 
 window.addEventListener('load', () => {

@@ -2,6 +2,8 @@ import ObservableVector from '../math/ObservableVector';
 import Rectangle from '../math/Rectangle';
 import Matrix from '../math/Matrix';
 import { degreesToRadians } from '../utils';
+import ObservableSize from '../math/ObservableSize';
+import Vector from '../math/Vector';
 
 /**
  * @class View
@@ -22,9 +24,15 @@ export default class View {
 
         /**
          * @private
-         * @member {ObservableVector}
+         * @member {ObservableSize}
          */
-        this._size = new ObservableVector(this._setDirty, this);
+        this._size = new ObservableSize(this._onChangeSize, this);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._offsetCenter = new Vector();
 
         /**
          * @private
@@ -67,7 +75,7 @@ export default class View {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {ObservableVector}
      */
     get center() {
         return this._center;
@@ -79,7 +87,7 @@ export default class View {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {ObservableSize}
      */
     get size() {
         return this._size;
@@ -97,8 +105,16 @@ export default class View {
         return this._rotation;
     }
 
-    set rotation(rotation) {
-        this.setRotation(rotation);
+    set rotation(degrees) {
+        const trimmed = degrees % 360,
+            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
+            radians = degreesToRadians(rotation);
+
+        this._rotation = (rotation < 0) ? rotation + 360 : rotation;
+        this._cos = Math.cos(radians);
+        this._sin = Math.sin(radians);
+
+        this._setDirty();
     }
 
     /**
@@ -129,10 +145,19 @@ export default class View {
     /**
      * @public
      * @readonly
+     * @member {Vector}
+     */
+    get offsetCenter() {
+        return this._offsetCenter;
+    }
+
+    /**
+     * @public
+     * @readonly
      * @member {Number}
      */
     get width() {
-        return this._size.x;
+        return this._size.width;
     }
 
     /**
@@ -141,7 +166,7 @@ export default class View {
      * @member {Number}
      */
     get height() {
-        return this._size.y;
+        return this._size.height;
     }
 
     /**
@@ -150,7 +175,7 @@ export default class View {
      * @member {Number}
      */
     get left() {
-        return this._center.x - (this._size.x / 2);
+        return (this._center.x - this._offsetCenter.x);
     }
 
     /**
@@ -159,7 +184,7 @@ export default class View {
      * @member {Number}
      */
     get top() {
-        return this._center.y - (this._size.y / 2);
+        return (this._center.y - this._offsetCenter.y);
     }
 
     /**
@@ -168,7 +193,7 @@ export default class View {
      * @member {Number}
      */
     get right() {
-        return this._center.x + (this._size.x / 2);
+        return (this._center.x + this._offsetCenter.x);
     }
 
     /**
@@ -177,65 +202,7 @@ export default class View {
      * @member {Number}
      */
     get bottom() {
-        return this._center.y + (this._size.y / 2);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {View}
-     */
-    setCenter(x, y) {
-        this._center.set(x, y);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} width
-     * @param {Number} height
-     * @returns {View}
-     */
-    setSize(width, height) {
-        this._size.set(width, height);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} degrees
-     * @returns {View}
-     */
-    setRotation(degrees) {
-        const trimmed = degrees % 360,
-            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
-            radians = degreesToRadians(rotation);
-
-        this._rotation = (rotation < 0) ? rotation + 360 : rotation;
-        this._cos = Math.cos(radians);
-        this._sin = Math.sin(radians);
-
-        this._setDirty();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Rectangle} rectangle
-     * @returns {View}
-     */
-    setViewport(rectangle) {
-        this._viewport.copy(rectangle);
-
-        return this;
+        return (this._center.y + this._offsetCenter.y);
     }
 
     /**
@@ -246,7 +213,9 @@ export default class View {
      * @returns {View}
      */
     move(x, y) {
-        return this.setCenter(this._center.x + x, this._center.y + y);
+        this._center.add(x, y);
+
+        return this;
     }
 
     /**
@@ -256,17 +225,21 @@ export default class View {
      * @returns {View}
      */
     zoom(factor) {
-        return this.setSize(this._size.x * factor, this._size.y * factor);
+        this._size.multiply(factor);
+
+        return this;
     }
 
     /**
      * @public
      * @chainable
-     * @param {Number} angle
+     * @param {Number} degrees
      * @returns {View}
      */
-    rotate(angle) {
-        return this.setRotation(this._rotation + angle);
+    rotate(degrees) {
+        this.rotation += degrees;
+
+        return this;
     }
 
     /**
@@ -276,8 +249,11 @@ export default class View {
      * @returns {View}
      */
     reset(rectangle) {
-        this._center.set(rectangle.x + (rectangle.width / 2) | 0, rectangle.y + (rectangle.height / 2) | 0);
-        this._size.set(rectangle.width, rectangle.height);
+        this._size.copy(rectangle.size);
+        this._center.set(
+            (rectangle.x + this._offsetCenter.x),
+            (rectangle.y + this._offsetCenter.y)
+        );
         this._rotation = 0;
         this._cos = 1;
         this._sin = 0;
@@ -308,9 +284,8 @@ export default class View {
     updateTransform() {
         const transform = this._transform,
             center = this._center,
-            size = this._size,
-            a = 2 / size.x,
-            b = -2 / size.y,
+            a = 2 / this._size.width,
+            b = -2 / this._size.height,
             c = (center.x * -a),
             d = (center.y * -b),
             x = (center.x * -this._cos) - (center.y * this._sin) + center.x,
@@ -351,6 +326,9 @@ export default class View {
         this._center.destroy();
         this._center = null;
 
+        this._offsetCenter.destroy();
+        this._offsetCenter = null;
+
         this._size.destroy();
         this._size = null;
 
@@ -372,5 +350,13 @@ export default class View {
      */
     _setDirty() {
         this._dirtyTransform = true;
+    }
+
+    /**
+     * @private
+     */
+    _onChangeSize() {
+        this._offsetCenter.set(this._size.width / 2 | 0, this._size.height / 2 | 0);
+        this._setDirty();
     }
 }

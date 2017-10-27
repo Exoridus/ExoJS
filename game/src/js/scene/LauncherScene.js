@@ -85,9 +85,9 @@ export default class LauncherScene extends Exo.Scene {
          * @member {Input}
          */
         this._playInput = new Exo.Input([
-            Exo.KEYS.Enter,
+            Exo.KEYBOARD.Enter,
             Exo.GAMEPAD.Start,
-            Exo.GAMEPAD.FaceButtonBottom,
+            Exo.GAMEPAD.FaceBottom,
         ]);
 
         this._playInput.on('trigger', this._openTitleHandler);

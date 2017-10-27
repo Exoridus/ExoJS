@@ -1,6 +1,6 @@
+import { GAMEPAD } from '../../const';
 import GamepadMapping from './GamepadMapping';
 import GamepadControl from './GamepadControl';
-import { GAMEPAD } from '../../const';
 
 /**
  * @class DefaultGamepadMapping
@@ -13,18 +13,18 @@ export default class DefaultGamepadMapping extends GamepadMapping {
      */
     constructor() {
         super([
-            new GamepadControl(0, GAMEPAD.FaceButtonBottom),
-            new GamepadControl(1, GAMEPAD.FaceButtonLeft),
-            new GamepadControl(2, GAMEPAD.FaceButtonRight),
-            new GamepadControl(3, GAMEPAD.FaceButtonTop),
+            new GamepadControl(0, GAMEPAD.FaceBottom),
+            new GamepadControl(1, GAMEPAD.FaceLeft),
+            new GamepadControl(2, GAMEPAD.FaceRight),
+            new GamepadControl(3, GAMEPAD.FaceTop),
             new GamepadControl(4, GAMEPAD.LeftTriggerBottom),
             new GamepadControl(5, GAMEPAD.RightTriggerBottom),
             new GamepadControl(6, GAMEPAD.LeftTriggerTop),
             new GamepadControl(7, GAMEPAD.RightTriggerTop),
             new GamepadControl(8, GAMEPAD.Select),
             new GamepadControl(9, GAMEPAD.Start),
-            new GamepadControl(10, GAMEPAD.LeftStickButton),
-            new GamepadControl(11, GAMEPAD.RightStickButton),
+            new GamepadControl(10, GAMEPAD.LeftStick),
+            new GamepadControl(11, GAMEPAD.RightStick),
             new GamepadControl(12, GAMEPAD.DPadUp),
             new GamepadControl(13, GAMEPAD.DPadDown),
             new GamepadControl(14, GAMEPAD.DPadLeft),

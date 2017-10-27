@@ -1,5 +1,5 @@
-import Time from './Time';
 import { TIME } from '../const';
+import Time from './Time';
 
 /**
  * @class Clock

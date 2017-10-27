@@ -1,14 +1,14 @@
+import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET } from '../../const';
 import Gamepad from './Gamepad';
-import ChannelHandler from '../ChannelHandler';
-import { RANGE_DEVICE, OFFSET_GAMEPAD } from '../../const';
+import ChannelManager from '../ChannelManager';
 
 const navigator = window.navigator;
 
 /**
  * @class GamepadManager
- * @extends {ChannelHandler}
+ * @extends {ChannelManager}
  */
-export default class GamepadManager extends ChannelHandler {
+export default class GamepadManager extends ChannelManager {
 
     /**
      * @constructor
@@ -16,7 +16,7 @@ export default class GamepadManager extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, OFFSET_GAMEPAD, RANGE_DEVICE);
+        super(channelBuffer, INPUT_OFFSET.GAMEPAD, INPUT_CHANNELS_DEVICE);
 
         /**
          * @private
@@ -44,17 +44,6 @@ export default class GamepadManager extends ChannelHandler {
      * @public
      */
     update() {
-        this.updateGamepads();
-
-        for (const gamepad of this._gamepads.values()) {
-            gamepad.update();
-        }
-    }
-
-    /**
-     * @public
-     */
-    updateGamepads() {
         const app = this._app,
             currentGamepads = this._gamepads,
             fetchedGamepads = navigator.getGamepads(),
@@ -79,6 +68,10 @@ export default class GamepadManager extends ChannelHandler {
             }
 
             app.trigger('gamepad:change', currentGamepads);
+        }
+
+        for (const gamepad of currentGamepads.values()) {
+            gamepad.update();
         }
     }
 

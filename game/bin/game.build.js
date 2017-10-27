@@ -551,7 +551,7 @@ window.addEventListener('load', function () {
     app.loader.database = new Exo.Database('game', 3);
 
     app.start(new _LauncherScene2.default());
-}, false); /* global WebFont */
+}, false);
 
 /***/ }),
 /* 3 */
@@ -956,13 +956,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var KEYS = Exo.KEYS,
-    GAMEPAD = Exo.GAMEPAD;
-
 /**
  * @class MenuManager
  */
-
 var MenuManager = function () {
 
     /**
@@ -1000,42 +996,42 @@ var MenuManager = function () {
          * @private
          * @member {Input[]}
          */
-        this._inputs = [new Exo.Input([KEYS.Up, GAMEPAD.DPadUp, GAMEPAD.LeftStickUp], {
+        this._inputs = [new Exo.Input([Exo.KEYS.Up, Exo.GAMEPAD.DPadUp, Exo.GAMEPAD.LeftStickUp], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputUp();
                 }
             }
-        }), new Exo.Input([KEYS.Down, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
+        }), new Exo.Input([Exo.KEYS.Down, Exo.GAMEPAD.LeftStickDown, Exo.GAMEPAD.DPadDown], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
-        }), new Exo.Input([KEYS.Left, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
+        }), new Exo.Input([Exo.KEYS.Left, Exo.GAMEPAD.LeftStickLeft, Exo.GAMEPAD.DPadLeft], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
-        }), new Exo.Input([KEYS.Right, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
+        }), new Exo.Input([Exo.KEYS.Right, Exo.GAMEPAD.LeftStickRight, Exo.GAMEPAD.DPadRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
-        }), new Exo.Input([KEYS.Enter, GAMEPAD.FaceButtonBottom], {
+        }), new Exo.Input([Exo.KEYS.Enter, Exo.GAMEPAD.FaceButtonBottom], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
-        }), new Exo.Input([KEYS.Backspace, GAMEPAD.FaceButtonRight], {
+        }), new Exo.Input([Exo.KEYS.Backspace, Exo.GAMEPAD.FaceButtonRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
@@ -2149,7 +2145,7 @@ var WorldMap = function () {
         tile.x = (startTileX + x) * tileSize;
         tile.y = (startTileY + y) * tileSize;
 
-        displayManager.render(tile);
+        tile.render(displayManager);
       }
 
       displayManager.end();
@@ -2658,10 +2654,7 @@ var Player = function (_Exo$Sprite) {
     }, {
         key: "_setFaceDirection",
         value: function _setFaceDirection(direction) {
-            this._frame.x = direction * playerWidth;
-            this._frame.y = 0;
-
-            this.setTextureRect(this._frame);
+            this.setTextureFrame(this._frame.position.set(direction * playerWidth, 0));
         }
     }]);
 

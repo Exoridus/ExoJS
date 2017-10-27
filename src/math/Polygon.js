@@ -1,8 +1,8 @@
+import { SHAPE } from '../const';
 import Shape from './Shape';
 import Collision from './Collision';
 import Bounds from '../core/Bounds';
 import Interval from './Interval';
-import { SHAPE } from '../const';
 import Vector from './Vector';
 
 /**

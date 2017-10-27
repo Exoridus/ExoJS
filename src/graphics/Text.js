@@ -1,7 +1,7 @@
+import { NEWLINE } from '../const';
+import settings from '../settings';
 import Sprite from './sprite/Sprite';
 import Texture from './Texture';
-import settings from '../settings';
-import { NEWLINE } from '../const';
 
 const heightCache = new Map();
 

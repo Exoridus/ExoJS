@@ -1,5 +1,5 @@
-import Vector from './Vector';
 import { SHAPE } from '../const';
+import Vector from './Vector';
 
 /**
  * @abstract

@@ -39,7 +39,7 @@ export default class MenuManager {
          */
         this._inputs = [
             new Exo.Input([
-                Exo.KEYS.Up,
+                Exo.KEYBOARD.Up,
                 Exo.GAMEPAD.DPadUp,
                 Exo.GAMEPAD.LeftStickUp,
             ], {
@@ -51,7 +51,7 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                Exo.KEYS.Down,
+                Exo.KEYBOARD.Down,
                 Exo.GAMEPAD.LeftStickDown,
                 Exo.GAMEPAD.DPadDown,
             ], {
@@ -63,7 +63,7 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                Exo.KEYS.Left,
+                Exo.KEYBOARD.Left,
                 Exo.GAMEPAD.LeftStickLeft,
                 Exo.GAMEPAD.DPadLeft,
             ], {
@@ -75,7 +75,7 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                Exo.KEYS.Right,
+                Exo.KEYBOARD.Right,
                 Exo.GAMEPAD.LeftStickRight,
                 Exo.GAMEPAD.DPadRight,
             ], {
@@ -87,8 +87,8 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                Exo.KEYS.Enter,
-                Exo.GAMEPAD.FaceButtonBottom,
+                Exo.KEYBOARD.Enter,
+                Exo.GAMEPAD.FaceBottom,
             ], {
                 context: this,
                 start() {
@@ -98,8 +98,8 @@ export default class MenuManager {
                 },
             }),
             new Exo.Input([
-                Exo.KEYS.Backspace,
-                Exo.GAMEPAD.FaceButtonRight,
+                Exo.KEYBOARD.Backspace,
+                Exo.GAMEPAD.FaceRight,
             ], {
                 context: this,
                 start() {

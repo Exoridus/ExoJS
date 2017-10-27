@@ -139,7 +139,7 @@ export default {
      * @type {Number}
      * @default 300
      */
-    TRIGGER_THRESHOLD: 300,
+    INPUT_THRESHOLD: 300,
 
     /**
      * @public

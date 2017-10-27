@@ -1,22 +1,21 @@
-import ChannelHandler from './ChannelHandler';
+import { INPUT_CHANNELS_GLOBAL } from '../const';
+import ChannelManager from './ChannelManager';
 import Keyboard from './Keyboard';
-import Mouse from './Mouse';
 import GamepadManager from './gamepad/GamepadManager';
 import PointerManager from './pointer/PointerManager';
-import { RANGE_GLOBAL } from '../const';
 
 /**
  * @class InputManager
- * @extends {ChannelHandler}
+ * @extends {ChannelManager}
  */
-export default class InputManager extends ChannelHandler {
+export default class InputManager extends ChannelManager {
 
     /**
      * @constructor
      * @param {Application} app
      */
     constructor(app) {
-        super(new ArrayBuffer(RANGE_GLOBAL * 4), 0, RANGE_GLOBAL);
+        super(new ArrayBuffer(INPUT_CHANNELS_GLOBAL * 4), 0, INPUT_CHANNELS_GLOBAL);
 
         /**
          * @private
@@ -38,21 +37,15 @@ export default class InputManager extends ChannelHandler {
 
         /**
          * @private
-         * @member {Mouse}
+         * @member {PointerManager}
          */
-        this._mouse = new Mouse(app, this.channelBuffer);
+        this._pointerManager = new PointerManager(app, this.channelBuffer);
 
         /**
          * @private
          * @member {GamepadManager}
          */
         this._gamepadManager = new GamepadManager(app, this.channelBuffer);
-
-        /**
-         * @private
-         * @member {PointerManager}
-         */
-        this._pointerManager = new PointerManager(app, this.channelBuffer);
 
         app.on('input:add', this.add, this)
             .on('input:remove', this.remove, this)
@@ -118,7 +111,7 @@ export default class InputManager extends ChannelHandler {
         }
 
         this._keyboard.update();
-        this._mouse.update();
+        this._pointerManager.update();
     }
 
     /**
@@ -138,14 +131,11 @@ export default class InputManager extends ChannelHandler {
         this._keyboard.destroy();
         this._keyboard = null;
 
-        this._mouse.destroy();
-        this._mouse = null;
+        this._pointerManager.destroy();
+        this._pointerManager = null;
 
         this._gamepadManager.destroy();
         this._gamepadManager = null;
-
-        this._pointerManager.destroy();
-        this._pointerManager = null;
 
         this._app = null;
     }

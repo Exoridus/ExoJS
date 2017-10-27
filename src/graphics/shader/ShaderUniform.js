@@ -1,4 +1,3 @@
-import { UNIFORM_TYPE } from '../../const';
 import Matrix from '../../math/Matrix';
 
 /**

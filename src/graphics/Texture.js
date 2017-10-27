@@ -1,6 +1,7 @@
 import Rectangle from '../math/Rectangle';
 import Vector from '../math/Vector';
 import settings from '../settings';
+import { addFlag, hasFlag, removeFlag } from '../utils';
 
 const FLAGS = {
     NONE: 0,
@@ -95,14 +96,14 @@ export default class Texture {
      * @member {Rectangle}
      */
     get sourceFrame() {
-        if (this.hasFlag(FLAGS.SOURCE_FRAME)) {
+        if (hasFlag(FLAGS.SOURCE_FRAME, this._flags)) {
             if (this._source) {
                 this._sourceFrame.set(0, 0, (this._source.videoWidth || this._source.width), (this._source.videoHeight || this._source.height));
             } else {
                 this._sourceFrame.set(0, 0, 0, 0);
             }
 
-            this.removeFlag(FLAGS.SOURCE_FRAME);
+            this._flags = removeFlag(FLAGS.SOURCE_FRAME, this._flags);
         }
 
         return this._sourceFrame;
@@ -147,7 +148,7 @@ export default class Texture {
     /**
      * @public
      * @readonly
-     * @member {Vector}
+     * @member {Size}
      */
     get size() {
         return this.sourceFrame.size;
@@ -197,7 +198,7 @@ export default class Texture {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
 
-            this.addFlag(FLAGS.SCALE_MODE);
+            this._flags = addFlag(FLAGS.SCALE_MODE, this._flags);
         }
 
         return this;
@@ -213,7 +214,7 @@ export default class Texture {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
 
-            this.addFlag(FLAGS.WRAP_MODE);
+            this._flags = addFlag(FLAGS.WRAP_MODE, this._flags);
         }
 
         return this;
@@ -229,7 +230,7 @@ export default class Texture {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
 
-            this.addFlag(FLAGS.PREMULTIPLY_ALPHA);
+            this._flags = addFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
         }
 
         return this;
@@ -241,9 +242,10 @@ export default class Texture {
      * @returns {Texture}
      */
     updateSource() {
-        return this
-            .addFlag(FLAGS.SOURCE)
-            .addFlag(FLAGS.SOURCE_FRAME);
+        this._flags = addFlag(FLAGS.SOURCE, this._flags);
+        this._flags = addFlag(FLAGS.SOURCE_FRAME, this._flags);
+
+        return this;
     }
 
     /**
@@ -253,28 +255,28 @@ export default class Texture {
      */
     update() {
         if (this._flags && this._renderState) {
-            if (this.hasFlag(FLAGS.SCALE_MODE)) {
+            if (hasFlag(FLAGS.SCALE_MODE, this._flags)) {
                 this._renderState.setScaleMode(this, this._scaleMode);
 
-                this.removeFlag(FLAGS.SCALE_MODE);
+                this._flags = removeFlag(FLAGS.SCALE_MODE, this._flags);
             }
 
-            if (this.hasFlag(FLAGS.WRAP_MODE)) {
+            if (hasFlag(FLAGS.WRAP_MODE, this._flags)) {
                 this._renderState.setWrapMode(this, this._wrapMode);
 
-                this.removeFlag(FLAGS.WRAP_MODE);
+                this._flags = removeFlag(FLAGS.WRAP_MODE, this._flags);
             }
 
-            if (this.hasFlag(FLAGS.PREMULTIPLY_ALPHA)) {
+            if (hasFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
                 this._renderState.setPremultiplyAlpha(this, this._premultiplyAlpha);
 
-                this.removeFlag(FLAGS.PREMULTIPLY_ALPHA);
+                this._flags = removeFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
             }
 
-            if (this.hasFlag(FLAGS.SOURCE) && this._source) {
+            if (hasFlag(FLAGS.SOURCE, this._flags) && this._source) {
                 this._renderState.setTextureImage(this, this._source);
 
-                this.removeFlag(FLAGS.SOURCE);
+                this._flags = removeFlag(FLAGS.SOURCE, this._flags);
             }
         }
 
@@ -294,39 +296,6 @@ export default class Texture {
         }
 
         this._renderState.bindTexture(this, unit);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {Number} flag
-     * @returns {Boolean}
-     */
-    hasFlag(flag) {
-        return (this._flags & flag) !== 0;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} flag
-     * @returns {Texture}
-     */
-    addFlag(flag) {
-        this._flags |= flag;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} flag
-     * @returns {Texture}
-     */
-    removeFlag(flag) {
-        this._flags &= ~flag;
 
         return this;
     }

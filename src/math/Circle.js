@@ -1,8 +1,8 @@
+import { SHAPE } from '../const';
 import Rectangle from './Rectangle';
 import Shape from './Shape';
 import Collision from './Collision';
 import Vector from './Vector';
-import { SHAPE } from '../const';
 
 /**
  * @class Circle

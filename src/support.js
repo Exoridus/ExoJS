@@ -35,7 +35,21 @@ export default {
      * @constant
      * @type {Boolean}
      */
-    passiveEvents: (() => {
+    touchEvents: ('ontouchstart' in window),
+
+    /**
+     * @public
+     * @constant
+     * @type {Boolean}
+     */
+    pointerEvents: ('PointerEvent' in window),
+
+    /**
+     * @public
+     * @constant
+     * @type {Boolean}
+     */
+    eventOptions: (() => {
         let supportsPassive = false;
 
         try {

@@ -11,7 +11,7 @@ export default class Input extends EventEmitter {
      * @constructor
      * @param {Number[]} channels
      * @param {Object} [options={}]
-     * @param {Number} [options.triggerThreshold=settings.TRIGGER_THRESHOLD]
+     * @param {Number} [options.triggerThreshold=settings.INPUT_THRESHOLD]
      * @param {Function} [options.start]
      * @param {Function} [options.stop]
      * @param {Function} [options.active]
@@ -19,7 +19,7 @@ export default class Input extends EventEmitter {
      * @param {*} [options.context]
      */
     constructor(channels, {
-        triggerThreshold = settings.TRIGGER_THRESHOLD,
+        triggerThreshold = settings.INPUT_THRESHOLD,
         start,
         stop,
         active,

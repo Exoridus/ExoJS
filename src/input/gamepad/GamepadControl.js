@@ -1,4 +1,4 @@
-import { RANGE_NODE, OFFSET_GAMEPAD } from '../../const';
+import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET } from '../../const';
 
 /**
  * @class GamepadControl
@@ -32,7 +32,7 @@ export default class GamepadControl {
          * @private
          * @member {Number}
          */
-        this._key = channel % RANGE_NODE;
+        this._key = channel % INPUT_CHANNELS_HANDLER;
 
         /**
          * @private
@@ -79,7 +79,7 @@ export default class GamepadControl {
 
     set channel(channel) {
         this._channel = channel;
-        this._key = this._channel % RANGE_NODE;
+        this._key = this._channel % INPUT_CHANNELS_HANDLER;
     }
 
     /**
@@ -91,8 +91,8 @@ export default class GamepadControl {
     }
 
     set key(key) {
-        this._key = key % RANGE_NODE;
-        this._channel = OFFSET_GAMEPAD + this._key;
+        this._key = key % INPUT_CHANNELS_HANDLER;
+        this._channel = INPUT_OFFSET.GAMEPAD + this._key;
     }
 
     /**

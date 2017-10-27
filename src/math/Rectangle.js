@@ -1,8 +1,9 @@
+import { SHAPE } from '../const';
+import { inRange } from '../utils';
 import Vector from './Vector';
 import Shape from './Shape';
 import Collision from './Collision';
-import { inRange } from '../utils';
-import { SHAPE } from '../const';
+import Size from './Size';
 
 /**
  * @class Rectangle
@@ -21,10 +22,10 @@ export default class Rectangle extends Shape {
         super(x, y);
 
         /**
-         * @public
-         * @member {Vector}
+         * @private
+         * @member {Size}
          */
-        this._size = new Vector(width, height);
+        this._size = new Size(width, height);
     }
 
     /**
@@ -36,7 +37,7 @@ export default class Rectangle extends Shape {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {Size}
      */
     get size() {
         return this._size;
@@ -51,11 +52,11 @@ export default class Rectangle extends Shape {
      * @member {Number}
      */
     get width() {
-        return this._size.x;
+        return this._size.width;
     }
 
     set width(width) {
-        this._size.x = width;
+        this._size.width = width;
     }
 
     /**
@@ -63,11 +64,11 @@ export default class Rectangle extends Shape {
      * @member {Number}
      */
     get height() {
-        return this._size.y;
+        return this._size.height;
     }
 
     set height(height) {
-        this._size.y = height;
+        this._size.height = height;
     }
 
     /**

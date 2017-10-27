@@ -1,4 +1,5 @@
 import Vector from '../math/Vector';
+import Size from '../math/Size';
 
 /**
  * @class RenderTarget
@@ -15,9 +16,9 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {Vector}
+         * @member {Size}
          */
-        this._size = new Vector(width, height);
+        this._size = new Size(width, height);
 
         /**
          * @private
@@ -46,7 +47,7 @@ export default class RenderTarget {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {Size}
      */
     get size() {
         return this._size;
@@ -61,11 +62,11 @@ export default class RenderTarget {
      * @member {Number}
      */
     get width() {
-        return this._size.x;
+        return this._size.width;
     }
 
     set width(width) {
-        this._size.x = width | 0;
+        this._size.width = width | 0;
     }
 
     /**
@@ -73,11 +74,11 @@ export default class RenderTarget {
      * @member {Number}
      */
     get height() {
-        return this._size.y;
+        return this._size.height;
     }
 
     set height(height) {
-        this._size.y = height | 0;
+        this._size.height = height | 0;
     }
 
     /**

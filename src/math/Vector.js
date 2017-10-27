@@ -21,12 +21,6 @@ export default class Vector {
          * @member {Number}
          */
         this._y = y;
-
-        /**
-         * @public
-         * @member {?Float32Array}
-         */
-        this._array = null;
     }
 
     /**
@@ -51,15 +45,6 @@ export default class Vector {
 
     set y(y) {
         this._y = y;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        return this.toArray();
     }
 
     /**
@@ -121,20 +106,7 @@ export default class Vector {
      * @returns {Boolean}
      */
     equals(vector) {
-        return (this._x === vector.x && this._y === vector.y);
-    }
-
-    /**
-     * @public
-     * @returns {Float32Array}
-     */
-    toArray() {
-        const array = this._array || (this._array = new Float32Array(2));
-
-        array[0] = this._x;
-        array[1] = this._y;
-
-        return array;
+        return (vector === this) || (this._x === vector.x && this._y === vector.y);
     }
 
     /**
@@ -306,10 +278,6 @@ export default class Vector {
      * @override
      */
     destroy() {
-        if (this._array) {
-            this._array = null;
-        }
-
         this._x = null;
         this._y = null;
     }

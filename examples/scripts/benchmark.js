@@ -25,9 +25,9 @@ window.app.start(new Exo.Scene({
         this.maxY = canvas.height;
 
         app.trigger('input:add', new Exo.Input([
-            Exo.KEYS.Space,
-            Exo.MOUSE.LeftButton,
-            Exo.GAMEPAD.FaceButtonBottom,
+            Exo.KEYBOARD.Space,
+            Exo.POINTER.MouseLeft,
+            Exo.GAMEPAD.FaceBottom,
         ], {
             context: this,
             active() {

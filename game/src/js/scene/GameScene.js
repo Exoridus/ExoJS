@@ -2,7 +2,7 @@ import WorldMap from '../map/WorldMap';
 import Player from '../entity/Player';
 import Tileset from '../map/Tileset';
 
-const KEYS = Exo.KEYS,
+const KEYBOARD = Exo.KEYBOARD,
     GAMEPAD = Exo.GAMEPAD,
     clamp = Exo.utils.clamp;
 
@@ -56,7 +56,7 @@ export default class GameScene extends Exo.Scene {
          */
         this._inputs = [
             new Exo.Input([
-                KEYS.Escape,
+                KEYBOARD.Escape,
                 GAMEPAD.Start,
             ], {
                 context: this,
@@ -71,8 +71,8 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                KEYS.Up,
-                KEYS.W,
+                KEYBOARD.Up,
+                KEYBOARD.W,
                 GAMEPAD.LeftStickUp,
                 GAMEPAD.DPadUp,
             ], {
@@ -82,8 +82,8 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                KEYS.Down,
-                KEYS.S,
+                KEYBOARD.Down,
+                KEYBOARD.S,
                 GAMEPAD.LeftStickDown,
                 GAMEPAD.DPadDown,
             ], {
@@ -93,8 +93,8 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                KEYS.Left,
-                KEYS.A,
+                KEYBOARD.Left,
+                KEYBOARD.A,
                 GAMEPAD.LeftStickLeft,
                 GAMEPAD.DPadLeft,
             ], {
@@ -104,8 +104,8 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                KEYS.Right,
-                KEYS.D,
+                KEYBOARD.Right,
+                KEYBOARD.D,
                 GAMEPAD.LeftStickRight,
                 GAMEPAD.DPadRight,
             ], {
@@ -115,7 +115,7 @@ export default class GameScene extends Exo.Scene {
                 },
             }),
             new Exo.Input([
-                KEYS.Shift,
+                KEYBOARD.Shift,
                 GAMEPAD.RightTriggerTop,
             ], {
                 context: this,
@@ -194,7 +194,7 @@ export default class GameScene extends Exo.Scene {
             offsetWidth = camera.width / 2,
             offsetHeight = camera.height / 2;
 
-        camera.setCenter(
+        camera.center.set(
             clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth),
             clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight),
         );

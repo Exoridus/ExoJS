@@ -1,10 +1,10 @@
 import EventEmitter from '../core/EventEmitter';
 
 /**
- * @class ChannelHandler
+ * @class ChannelManager
  * @extends {EventEmitter}
  */
-export default class ChannelHandler extends EventEmitter {
+export default class ChannelManager extends EventEmitter {
 
     /**
      * @constructor

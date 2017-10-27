@@ -1,5 +1,6 @@
-import ChannelHandler from './ChannelHandler';
-import { RANGE_DEVICE, OFFSET_KEYBOARD } from '../const';
+import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET } from '../const';
+import ChannelManager from './ChannelManager';
+import { addFlag, hasFlag, removeFlag } from '../utils';
 
 const FLAGS = {
     NONE: 0,
@@ -9,9 +10,9 @@ const FLAGS = {
 
 /**
  * @class Keyboard
- * @extends {ChannelHandler}
+ * @extends {ChannelManager}
  */
-export default class Keyboard extends ChannelHandler {
+export default class Keyboard extends ChannelManager {
 
     /**
      * @constructor
@@ -19,7 +20,7 @@ export default class Keyboard extends ChannelHandler {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, OFFSET_KEYBOARD, RANGE_DEVICE);
+        super(channelBuffer, INPUT_OFFSET.KEYBOARD, INPUT_CHANNELS_DEVICE);
 
         /**
          * @private
@@ -56,18 +57,19 @@ export default class Keyboard extends ChannelHandler {
             return;
         }
 
-        if (this._flags & FLAGS.KEY_DOWN) {
+        if (hasFlag(FLAGS.KEY_DOWN, this._flags)) {
             this.trigger('keyboard:down', this._channelsPressed, this);
             this._channelsPressed.clear();
+
+            this._flags = removeFlag(FLAGS.KEY_DOWN, this._flags);
         }
 
-        if (this._flags & FLAGS.KEY_UP) {
+        if (hasFlag(FLAGS.KEY_UP, this._flags)) {
             this.trigger('keyboard:up', this._channelsReleased, this);
             this._channelsReleased.clear();
+
+            this._flags = removeFlag(FLAGS.KEY_UP, this._flags);
         }
-
-        this._flags = 0;
-
     }
 
     /**
@@ -118,7 +120,7 @@ export default class Keyboard extends ChannelHandler {
         this.channels[event.keyCode] = 1;
         this._channelsPressed.add(Keyboard.getChannelCode(event.keyCode));
 
-        this._flags |= FLAGS.KEY_DOWN;
+        this._flags = addFlag(FLAGS.KEY_DOWN, this._flags);
     }
 
     /**
@@ -129,7 +131,7 @@ export default class Keyboard extends ChannelHandler {
         this.channels[event.keyCode] = 0;
         this._channelsReleased.add(Keyboard.getChannelCode(event.keyCode));
 
-        this._flags |= FLAGS.KEY_UP;
+        this._flags = addFlag(FLAGS.KEY_UP, this._flags);
     }
 
     /**
@@ -139,6 +141,6 @@ export default class Keyboard extends ChannelHandler {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return OFFSET_KEYBOARD + (key % RANGE_DEVICE);
+        return INPUT_OFFSET.KEYBOARD + (key % INPUT_CHANNELS_DEVICE);
     }
 }

@@ -67,6 +67,8 @@ export default class DisplayManager {
             this._context.getExtension('WEBGL_lose_context').restoreContext();
         }
 
+        this._setupGL();
+
         /**
          * @private
          * @member {Map<String, Renderer>}
@@ -107,12 +109,18 @@ export default class DisplayManager {
 
         this._renderTarget.bind(this._renderState);
 
-        this._addEvents();
-        this._setupGL();
-
         this.addRenderer('sprite', new SpriteRenderer())
             .addRenderer('particle', new ParticleRenderer())
             .resize(width, height);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {RenderState}
+     */
+    get renderState() {
+        return this._renderState;
     }
 
     /**
