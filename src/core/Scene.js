@@ -159,8 +159,9 @@ export default class Scene extends EventEmitter {
     /**
      * @public
      * @abstract
+     * @param {ResourceContainer} resources
      */
-    init() {
+    init(resources) { // eslint-disable-line
         // do nothing
     }
 

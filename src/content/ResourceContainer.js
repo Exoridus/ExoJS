@@ -82,7 +82,7 @@ export default class ResourceContainer {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {ResourceContainer}
+     * @returns {*}
      */
     get(type, name) {
         const resources = this.getResources(type);

@@ -7,12 +7,18 @@ window.app = new Exo.Application({
 
 window.app.start(new Exo.Scene({
 
+    /**
+     * @param {ResourceLoader} loader
+     */
     load(loader) {
         loader.addItem('music', 'example', 'audio/example.ogg')
             .load(() => this.app.trigger('scene:start'));
     },
 
-    init() {
+    /**
+     * @param {ResourceContainer} resources
+     */
+    init(resources) {
         const app = this.app,
             canvas = app.canvas,
             width = canvas.width,
@@ -22,7 +28,7 @@ window.app.start(new Exo.Scene({
          * @private
          * @member {Music}
          */
-        this._music = app.loader.resources.get('music', 'example');
+        this._music = resources.get('music', 'example');
 
         /**
          * @private
@@ -94,6 +100,9 @@ window.app.start(new Exo.Scene({
             .trigger('media:play', this._music, { loop: true });
     },
 
+    /**
+     * @param {Time} delta
+     */
     update(delta) {
         if (this._music.paused) {
             return;

@@ -7,25 +7,27 @@ window.app = new Exo.Application({
 
 window.app.start(new Exo.Scene({
 
+    /**
+     * @param {ResourceLoader} loader
+     */
     load(loader) {
         loader.addItem('video', 'example', 'video/example.webm')
             .load(() => this.app.trigger('scene:start'));
     },
 
-    init() {
-        /**
-         * @private
-         * @member {HTMLVideoElement}
-         */
-        this.videoElement = this.app.loader.resources.get('video', 'example');
+    /**
+     * @param {ResourceContainer} resources
+     */
+    init(resources) {
+        const canvas = this.app.canvas;
 
         /**
          * @private
          * @member {Video}
          */
-        this.video = new Exo.Video(this.videoElement);
-        this.video.width = 800;
-        this.video.height = 600;
+        this._video = new Exo.Video(resources.get('video', 'example'));
+        this._video.width = canvas.width;
+        this._video.height = canvas.height;
 
         /**
          * @private
@@ -37,14 +39,14 @@ window.app.start(new Exo.Scene({
         ], {
             context: this,
             trigger() {
-                this.video.toggle();
+                this._video.toggle();
             },
         });
 
         this.app
             .trigger('input:add', this._input)
-            .trigger('media:play', this.video, { loop: true });
+            .trigger('media:play', this._video, { loop: true });
 
-        this.addNode(this.video);
+        this.addNode(this._video);
     },
 }));

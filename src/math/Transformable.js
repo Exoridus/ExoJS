@@ -114,30 +114,6 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Number}
-     */
-    get scaleX() {
-        return this._scale.x;
-    }
-
-    set scaleX(value) {
-        this._scale.x = value;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get scaleY() {
-        return this._scale.y;
-    }
-
-    set scaleY(value) {
-        this._scale.y = value;
-    }
-
-    /**
-     * @public
      * @member {ObservableVector}
      */
     get origin() {
@@ -146,30 +122,6 @@ export default class Transformable extends EventEmitter {
 
     set origin(origin) {
         this._origin.copy(origin);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get originX() {
-        return this._origin.x;
-    }
-
-    set originX(value) {
-        this._origin.x = value;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get originY() {
-        return this._origin.y;
-    }
-
-    set originY(value) {
-        this._origin.y = value;
     }
 
     /**

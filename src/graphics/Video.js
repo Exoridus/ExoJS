@@ -297,7 +297,7 @@ export default class Video extends Sprite {
      */
     render(displayManager) {
         if (this.active) {
-            this.updateTexture();
+            this._texture.updateSource();
 
             super.render(displayManager);
         }

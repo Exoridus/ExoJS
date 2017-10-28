@@ -7,10 +7,9 @@ import TitleMenuManager from '../menu/title/TitleMenuManager';
 export default class TitleScene extends Exo.Scene {
 
     /**
-     * @override
+     * @param {ResourceContainer} resources
      */
-    init() {
-        const resources = this.app.loader.resources;
+    init(resources) {
 
         /**
          * @private

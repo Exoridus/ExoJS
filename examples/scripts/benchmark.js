@@ -7,22 +7,28 @@ window.app = new Exo.Application({
 
 window.app.start(new Exo.Scene({
 
+    /**
+     * @param {ResourceLoader} loader
+     */
     load(loader) {
         loader.addItem('texture', 'bunny', 'image/bunny.png')
             .load(() => this.app.trigger('scene:start'));
     },
 
-    init() {
+    /**
+     * @param {ResourceContainer} resources
+     */
+    init(resources) {
         const app = this.app,
             canvas = app.canvas;
 
-        this.bunnyTexture = app.loader.resources.get('texture', 'bunny');
+        this._bunnyTexture = resources.get('texture', 'bunny');
 
-        this.startAmount = 10;
-        this.addAmount = 50;
+        this._startAmount = 10;
+        this._addAmount = 50;
 
-        this.maxX = canvas.width;
-        this.maxY = canvas.height;
+        this._maxX = canvas.width;
+        this._maxY = canvas.height;
 
         app.trigger('input:add', new Exo.Input([
             Exo.KEYBOARD.Space,
@@ -31,46 +37,49 @@ window.app.start(new Exo.Scene({
         ], {
             context: this,
             active() {
-                this.createBunnies(this.addAmount);
+                this.createBunnies(this._addAmount);
             },
         }));
 
-        this.createBunnies(this.startAmount);
+        this.createBunnies(this._startAmount);
     },
 
     createBunnies(amount) {
         for (let i = 0; i < amount; i++) {
-            const bunny = new Exo.Sprite(this.bunnyTexture);
+            const bunny = new Exo.Sprite(this._bunnyTexture);
 
-            bunny.speedX = Math.random() * 10;
-            bunny.speedY = Math.random() * 10;
+            bunny._speedX = Math._random() * 10;
+            bunny._speedY = Math._random() * 10;
 
             this.addNode(bunny);
         }
     },
 
-    update() {
+    /**
+     * @param {Time} delta
+     */
+    update(delta) {
         for (const bunny of this.nodes) {
-            bunny.speedY += 0.75;
-            bunny.translate(bunny.speedX, bunny.speedY);
+            bunny._speedY += 0.75;
+            bunny.translate(bunny._speedX, bunny._speedY);
 
-            if (bunny.x + bunny.width > this.maxX) {
-                bunny.speedX *= -1;
-                bunny.x = this.maxX - bunny.width;
+            if (bunny.x + bunny.width > this._maxX) {
+                bunny._speedX *= -1;
+                bunny.x = this._maxX - bunny.width;
             } else if (bunny.x < 0) {
-                bunny.speedX *= -1;
+                bunny._speedX *= -1;
                 bunny.x = 0;
             }
 
-            if (bunny.y + bunny.height > this.maxY) {
-                bunny.speedY *= -0.85;
-                bunny.y = this.maxY - bunny.height;
+            if (bunny.y + bunny.height > this._maxY) {
+                bunny._speedY *= -0.85;
+                bunny.y = this._maxY - bunny.height;
 
-                if (Math.random() > 0.5) {
-                    bunny.speedY -= Math.random() * 6;
+                if (Math._random() > 0.5) {
+                    bunny._speedY -= Math._random() * 6;
                 }
             } else if (bunny.y < 0) {
-                bunny.speedY *= -1;
+                bunny._speedY *= -1;
                 bunny.y = 0;
             }
         }

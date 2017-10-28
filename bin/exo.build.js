@@ -5560,7 +5560,6 @@ var Texture = function () {
         value: function setSource(source) {
             if (this._source !== source) {
                 this._source = source;
-
                 this.updateSource();
             }
 
@@ -5579,7 +5578,6 @@ var Texture = function () {
         value: function setScaleMode(scaleMode) {
             if (this._scaleMode !== scaleMode) {
                 this._scaleMode = scaleMode;
-
                 this._flags = (0, _utils.addFlag)(FLAGS.SCALE_MODE, this._flags);
             }
 
@@ -5598,7 +5596,6 @@ var Texture = function () {
         value: function setWrapMode(wrapMode) {
             if (this._wrapMode !== wrapMode) {
                 this._wrapMode = wrapMode;
-
                 this._flags = (0, _utils.addFlag)(FLAGS.WRAP_MODE, this._flags);
             }
 
@@ -5617,7 +5614,6 @@ var Texture = function () {
         value: function setPremultiplyAlpha(premultiplyAlpha) {
             if (this._premultiplyAlpha !== premultiplyAlpha) {
                 this._premultiplyAlpha = premultiplyAlpha;
-
                 this._flags = (0, _utils.addFlag)(FLAGS.PREMULTIPLY_ALPHA, this._flags);
             }
 
@@ -5633,8 +5629,7 @@ var Texture = function () {
     }, {
         key: 'updateSource',
         value: function updateSource() {
-            this._flags = (0, _utils.addFlag)(FLAGS.SOURCE, this._flags);
-            this._flags = (0, _utils.addFlag)(FLAGS.SOURCE_FRAME, this._flags);
+            this._flags = (0, _utils.addFlag)(FLAGS.SOURCE | FLAGS.SOURCE_FRAME, this._flags);
 
             return this;
         }
@@ -9078,9 +9073,7 @@ var Sprite = function (_Container) {
          */
         value: function setTexture(texture) {
             this._texture = texture;
-            this._localBounds.set(0, 0, texture.width, texture.height);
-            this.setTextureFrame(texture.sourceFrame);
-            this.scale.set(1, 1);
+            this.updateTexture();
 
             return this;
         }
@@ -9251,6 +9244,9 @@ var Sprite = function (_Container) {
         value: function updateTexture() {
             if (this._texture) {
                 this._texture.updateSource();
+                this._localBounds.set(0, 0, this._texture.width, this._texture.height);
+                this.setTextureFrame(this._texture.sourceFrame);
+                this.scale.set(1, 1);
             }
 
             return this;
@@ -9306,10 +9302,10 @@ var Sprite = function (_Container) {
     }, {
         key: 'width',
         get: function get() {
-            return Math.abs(this.scaleX) * this._texture.width;
+            return Math.abs(this.scale.x) * this._texture.width;
         },
         set: function set(value) {
-            this.scaleX = value / this._texture.width;
+            this.scale.x = value / this._texture.width;
         }
 
         /**
@@ -9320,10 +9316,10 @@ var Sprite = function (_Container) {
     }, {
         key: 'height',
         get: function get() {
-            return Math.abs(this.scaleY) * this._texture.height;
+            return Math.abs(this.scale.y) * this._texture.height;
         },
         set: function set(value) {
-            this.scaleY = value / this._texture.height;
+            this.scale.y = value / this._texture.height;
         }
     }]);
 
@@ -9885,7 +9881,7 @@ var ResourceContainer = function () {
          * @public
          * @param {String} type
          * @param {String} name
-         * @returns {ResourceContainer}
+         * @returns {*}
          */
 
     }, {
@@ -12054,7 +12050,7 @@ var SceneManager = function () {
             }
 
             this._sceneActive = true;
-            this._currentScene.init();
+            this._currentScene.init(this._app.loader.resources);
         }
 
         /**
@@ -12458,34 +12454,6 @@ var Transformable = function (_EventEmitter) {
 
         /**
          * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'scaleX',
-        get: function get() {
-            return this._scale.x;
-        },
-        set: function set(value) {
-            this._scale.x = value;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'scaleY',
-        get: function get() {
-            return this._scale.y;
-        },
-        set: function set(value) {
-            this._scale.y = value;
-        }
-
-        /**
-         * @public
          * @member {ObservableVector}
          */
 
@@ -12496,34 +12464,6 @@ var Transformable = function (_EventEmitter) {
         },
         set: function set(origin) {
             this._origin.copy(origin);
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'originX',
-        get: function get() {
-            return this._origin.x;
-        },
-        set: function set(value) {
-            this._origin.x = value;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'originY',
-        get: function get() {
-            return this._origin.y;
-        },
-        set: function set(value) {
-            this._origin.y = value;
         }
 
         /**
@@ -17588,7 +17528,7 @@ var PointerManager = function (_ChannelManager) {
             canvas.addEventListener('pointercancel', this._onCancelHandler, passive);
             canvas.addEventListener('pointermove', this._onMoveHandler, passive);
             canvas.addEventListener('pointerdown', this._onDownHandler, active);
-            canvas.addEventListener('pointerup', this._onUpHandler, passive);
+            canvas.addEventListener('pointerup', this._onUpHandler, active);
             canvas.addEventListener('wheel', this._onScrollHandler, active);
             canvas.addEventListener('contextmenu', this._stopEventHandler, active);
             canvas.addEventListener('selectstart', this._stopEventHandler, active);
@@ -17608,7 +17548,7 @@ var PointerManager = function (_ChannelManager) {
             canvas.removeEventListener('pointercancel', this._onCancelHandler, passive);
             canvas.removeEventListener('pointermove', this._onMoveHandler, passive);
             canvas.removeEventListener('pointerdown', this._onDownHandler, active);
-            canvas.removeEventListener('pointerup', this._onUpHandler, passive);
+            canvas.removeEventListener('pointerup', this._onUpHandler, active);
             canvas.removeEventListener('wheel', this._onScrollHandler, active);
             canvas.removeEventListener('contextmenu', this._stopEventHandler, active);
             canvas.removeEventListener('selectstart', this._stopEventHandler, active);
@@ -18531,10 +18471,10 @@ var Container = function (_Renderable) {
     }, {
         key: 'width',
         get: function get() {
-            return Math.abs(this.scaleX) * this.bounds.width;
+            return Math.abs(this.scale.x) * this.bounds.width;
         },
         set: function set(value) {
-            this.scaleX = value / this.bounds.width;
+            this.scale.x = value / this.bounds.width;
         }
 
         /**
@@ -18545,10 +18485,10 @@ var Container = function (_Renderable) {
     }, {
         key: 'height',
         get: function get() {
-            return Math.abs(this.scaleY) * this.bounds.height;
+            return Math.abs(this.scale.y) * this.bounds.height;
         },
         set: function set(value) {
-            this.scaleY = value / this.bounds.height;
+            this.scale.y = value / this.bounds.height;
         }
 
         /**
@@ -21585,11 +21525,12 @@ var Scene = function (_EventEmitter) {
         /**
          * @public
          * @abstract
+         * @param {ResourceContainer} resources
          */
 
     }, {
         key: 'init',
-        value: function init() {}
+        value: function init(resources) {} // eslint-disable-line
         // do nothing
 
 
@@ -22092,58 +22033,98 @@ var Text = function (_Sprite) {
          */
         _this._dirty = true;
 
-        _this.text = text;
-        _this.style = style;
+        _this.setText(text);
+        _this.setStyle(style);
+
+        _this.updateTexture();
         return _this;
     }
 
     /**
      * @public
-     * @member {HTMLCanvasElement}
+     * @member {String}
      */
 
 
     _createClass(Text, [{
-        key: 'updateTexture',
+        key: 'setText',
 
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} text
+         * @returns {Text}
+         */
+        value: function setText(text) {
+            if (this._text !== text) {
+                this._text = text;
+                this._dirty = true;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Object} style
+         * @returns {Text}
+         */
+
+    }, {
+        key: 'setStyle',
+        value: function setStyle(style) {
+            this._style = Object.assign({}, _settings2.default.TEXT_STYLE, style);
+            this._dirty = true;
+
+            return this;
+        }
 
         /**
          * @override
          */
+
+    }, {
+        key: 'updateTexture',
         value: function updateTexture() {
             if (this._dirty) {
-                var camvas = this._canvas,
+                this._updateContext();
+
+                var canvas = this._canvas,
                     context = this._context,
                     style = this._style,
-                    font = style.fontWeight + ' ' + style.fontSize + 'px ' + style.fontFamily,
-                    text = style.wordWrap ? this.getWordWrappedText(style.wordWrapWidth) : this._text,
+                    text = style.wordWrap ? this._getWordWrappedText(style.wordWrapWidth) : this._text,
+                    lineHeight = this._determineFontHeight(context.font) + style.strokeThickness,
                     lines = text.split(_const.NEWLINE),
-                    lineWidths = lines.map(function (line) {
-                    return context.measureText(line).width;
+                    lineMetrics = lines.map(function (line) {
+                    return context.measureText(line);
                 }),
-                    lineHeight = this.determineFontHeight(font) + style.strokeThickness,
-                    maxLineWidth = lineWidths.reduce(function (max, value) {
-                    return Math.max(max, value);
-                }, 0);
+                    maxLineWidth = lineMetrics.reduce(function (max, measure) {
+                    return Math.max(max, measure.width);
+                }, 0),
+                    canvasWidth = Math.ceil(maxLineWidth + style.strokeThickness + style.padding * 2),
+                    canvasHeight = Math.ceil(lineHeight * lines.length + style.padding * 2);
 
-                camvas.width = Math.ceil(maxLineWidth + style.strokeThickness + style.padding * 2);
-                camvas.height = Math.ceil(lineHeight * lines.length + style.padding * 2);
+                if (canvasWidth !== canvas.width || canvasHeight !== canvas.height) {
+                    canvas.width = canvasWidth;
+                    canvas.height = canvasHeight;
 
-                context.clearRect(0, 0, camvas.width, camvas.height);
+                    this.localBounds.set(0, 0, canvasWidth, canvasHeight);
+                    this.setTextureFrame(this.localBounds);
+                    this.scale.set(1, 1);
+                } else {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                }
 
-                context.font = font;
-                context.fillStyle = style.fill;
-                context.strokeStyle = style.stroke;
-                context.lineWidth = style.strokeThickness;
-                context.textBaseline = style.baseline;
-                context.lineJoin = style.lineJoin;
-                context.miterLimit = style.miterLimit;
+                this._updateContext();
 
                 for (var i = 0; i < lines.length; i++) {
-                    var lineWidth = maxLineWidth - lineWidths[i],
+                    var metrics = lineMetrics[i],
+                        lineWidth = maxLineWidth - metrics.width,
                         offset = style.align === 'right' ? lineWidth : lineWidth / 2,
-                        lineX = style.strokeThickness / 2 + (style.align === 'left' ? 0 : offset),
-                        lineY = style.strokeThickness / 2 + lineHeight * i;
+                        lineX = metrics.actualBoundingBoxLeft + style.strokeThickness / 2 + (style.align === 'left' ? 0 : offset),
+                        lineY = metrics.fontBoundingBoxAscent + style.strokeThickness / 2 + lineHeight * i;
 
                     if (style.stroke && style.strokeThickness) {
                         context.strokeText(lines[i], lineX, lineY);
@@ -22163,13 +22144,45 @@ var Text = function (_Sprite) {
         }
 
         /**
+         * @override
+         */
+
+    }, {
+        key: 'render',
+        value: function render(displayManager) {
+            if (this.active) {
+                this.updateTexture();
+
+                _get(Text.prototype.__proto__ || Object.getPrototypeOf(Text.prototype), 'render', this).call(this, displayManager);
+            }
+
+            return this;
+        }
+
+        /**
          * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            _get(Text.prototype.__proto__ || Object.getPrototypeOf(Text.prototype), 'destroy', this).call(this);
+
+            this._context = null;
+            this._canvas = null;
+            this._text = null;
+            this._style = null;
+            this._dirty = null;
+        }
+
+        /**
+         * @private
          * @returns {String}
          */
 
     }, {
-        key: 'getWordWrappedText',
-        value: function getWordWrappedText(wordWrapWidth) {
+        key: '_getWordWrappedText',
+        value: function _getWordWrappedText(wordWrapWidth) {
             var context = this._context,
                 spaceWidth = context.measureText(' ').width,
                 lines = this._text.split('\n');
@@ -22213,8 +22226,8 @@ var Text = function (_Sprite) {
          */
 
     }, {
-        key: 'determineFontHeight',
-        value: function determineFontHeight(font) {
+        key: '_determineFontHeight',
+        value: function _determineFontHeight(font) {
             if (!heightCache.has(font)) {
                 var body = document.body,
                     dummy = document.createElement('div');
@@ -22231,63 +22244,33 @@ var Text = function (_Sprite) {
         }
 
         /**
-         * @override
+         * @public
+         * @returns {Text}
          */
 
     }, {
-        key: 'render',
-        value: function render(displayManager) {
-            if (this.active) {
-                this.updateTexture();
+        key: '_updateContext',
+        value: function _updateContext() {
+            var context = this._context,
+                style = this._style;
 
-                _get(Text.prototype.__proto__ || Object.getPrototypeOf(Text.prototype), 'render', this).call(this, displayManager);
-            }
+            context.font = style.fontWeight + ' ' + style.fontSize + 'px ' + style.fontFamily;
+            context.fillStyle = style.fill;
+            context.strokeStyle = style.stroke;
+            context.lineWidth = style.strokeThickness;
+            context.textBaseline = style.baseline;
+            context.lineJoin = style.lineJoin;
+            context.miterLimit = style.miterLimit;
 
             return this;
         }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            _get(Text.prototype.__proto__ || Object.getPrototypeOf(Text.prototype), 'destroy', this).call(this);
-
-            this._context = null;
-            this._canvas = null;
-            this._text = null;
-            this._style = null;
-            this._dirty = null;
-        }
-    }, {
-        key: 'canvas',
-        get: function get() {
-            return this._canvas;
-        },
-        set: function set(value) {
-            this._canvas = value;
-            this._dirty = true;
-        }
-
-        /**
-         * @public
-         * @member {String}
-         */
-
     }, {
         key: 'text',
         get: function get() {
             return this._text;
         },
         set: function set(text) {
-            var newText = text || ' ';
-
-            if (this._text !== newText) {
-                this._text = newText;
-                this._dirty = true;
-            }
+            this.setText(text);
         }
 
         /**
@@ -22301,8 +22284,7 @@ var Text = function (_Sprite) {
             return this._style;
         },
         set: function set(style) {
-            this._style = Object.assign({}, _settings2.default.TEXT_STYLE, style);
-            this._dirty = true;
+            this.setStyle(style);
         }
     }]);
 
@@ -22550,7 +22532,7 @@ var Video = function (_Sprite) {
         key: 'render',
         value: function render(displayManager) {
             if (this.active) {
-                this.updateTexture();
+                this._texture.updateSource();
 
                 _get(Video.prototype.__proto__ || Object.getPrototypeOf(Video.prototype), 'render', this).call(this, displayManager);
             }
@@ -24171,7 +24153,7 @@ var Random = function () {
                 crypto.getRandomValues(seed);
             } else {
                 for (var i = 0; i < 256; i++) {
-                    seed[i] = Math.random() * 256 & 255;
+                    seed[i] = Math._random() * 256 & 255;
                 }
             }
 

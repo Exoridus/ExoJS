@@ -7,6 +7,9 @@ window.app = new Exo.Application({
 
 window.app.start(new Exo.Scene({
 
+    /**
+     * @param {ResourceLoader} loader
+     */
     load(loader) {
         loader.addList('texture', {
                 bunny: 'image/bunny.png',
@@ -15,15 +18,17 @@ window.app.start(new Exo.Scene({
             .load(() => this.app.trigger('scene:start'));
     },
 
-    init() {
+    /**
+     * @param {ResourceContainer} resources
+     */
+    init(resources) {
         const app = this.app,
-            resources = app.loader.resources,
             canvas = app.canvas;
 
         /**
          * @type {Texture}
          */
-        this.bunnyTexture = resources.get('texture', 'bunny');
+        this._bunnyTexture = resources.get('texture', 'bunny');
 
         /**
          * @type {Texture}
@@ -42,7 +47,7 @@ window.app.start(new Exo.Scene({
         this.bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
 
         for (let i = 0; i < 25; i++) {
-            const bunny = new Exo.Sprite(this.bunnyTexture);
+            const bunny = new Exo.Sprite(this._bunnyTexture);
 
             bunny.setPosition((i % 5) * (bunny.width + 10), (i / 5 | 0) * (bunny.height + 10));
 
@@ -55,6 +60,9 @@ window.app.start(new Exo.Scene({
             .addNode(this.bunnies);
     },
 
+    /**
+     * @param {Time} delta
+     */
     update(delta) {
         const bounds = this.bunnies.getBounds();
 

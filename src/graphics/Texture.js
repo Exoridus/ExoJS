@@ -181,7 +181,6 @@ export default class Texture {
     setSource(source) {
         if (this._source !== source) {
             this._source = source;
-
             this.updateSource();
         }
 
@@ -197,7 +196,6 @@ export default class Texture {
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-
             this._flags = addFlag(FLAGS.SCALE_MODE, this._flags);
         }
 
@@ -213,7 +211,6 @@ export default class Texture {
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-
             this._flags = addFlag(FLAGS.WRAP_MODE, this._flags);
         }
 
@@ -229,7 +226,6 @@ export default class Texture {
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-
             this._flags = addFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
         }
 
@@ -242,8 +238,7 @@ export default class Texture {
      * @returns {Texture}
      */
     updateSource() {
-        this._flags = addFlag(FLAGS.SOURCE, this._flags);
-        this._flags = addFlag(FLAGS.SOURCE_FRAME, this._flags);
+        this._flags = addFlag(FLAGS.SOURCE | FLAGS.SOURCE_FRAME, this._flags);
 
         return this;
     }

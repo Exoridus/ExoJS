@@ -7,32 +7,32 @@ window.app = new Exo.Application({
 
 window.app.start(new Exo.Scene({
 
+    /**
+     * @param {ResourceLoader} loader
+     */
     load(loader) {
         loader.addItem('font', 'example', 'font/AndyBold/AndyBold.woff2', { family: 'AndyBold' })
             .addItem('texture', 'rainbow', 'image/rainbow.png')
             .load(() => this.app.trigger('scene:start'));
     },
 
-    init() {
-        const resources = this.app.loader.resources,
-            canvas = this.app.canvas;
-
-        /**
-         * @type {Sprite}
-         */
-        this.rainbow = new Exo.Sprite(resources.get('texture', 'rainbow'));
+    /**
+     * @param {ResourceContainer} resources
+     */
+    init(resources) {
+        const canvas = this.app.canvas;
 
         /**
          * @private
-         * @member {FontFace}
+         * @member {Time}
          */
-        this.font = resources.get('font', 'example');
+        this._ticker = new Exo.Time();
 
         /**
          * @private
          * @member {Text}
          */
-        this.text = new Exo.Text('Hello World!', {
+        this._text = new Exo.Text('Hello World!', {
             align: 'left',
             fill: 'white',
             stroke: 'black',
@@ -40,22 +40,18 @@ window.app.start(new Exo.Scene({
             fontSize: 25,
             fontFamily: 'AndyBold',
         });
+        this._text.setPosition(canvas.width / 2, canvas.height / 2);
+        this._text.setOrigin(0.5, 0.5);
 
-        this.text.setPosition(canvas.width / 2, canvas.height / 2);
-        this.text.setOrigin(0.5);
-
-        this.addNode(this.rainbow)
-            .addNode(this.text);
+        this.addNode(this._text);
     },
 
+    /**
+     * @param {Time} delta
+     */
     update(delta) {
-        const bounds = this.text.getBounds();
-
-        this.text.rotate(delta.seconds * 36);
-
-        this.rainbow.x = bounds.x;
-        this.rainbow.y = bounds.y;
-        this.rainbow.width = bounds.width;
-        this.rainbow.height = bounds.height;
+        this._text
+            .setText(`Hello World! ${this._ticker.add(delta).seconds | 0}`)
+            .rotate(delta.seconds * 36);
     }
 }));

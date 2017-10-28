@@ -50,21 +50,10 @@ export default class Text extends Sprite {
          */
         this._dirty = true;
 
-        this.text = text;
-        this.style = style;
-    }
+        this.setText(text);
+        this.setStyle(style);
 
-    /**
-     * @public
-     * @member {HTMLCanvasElement}
-     */
-    get canvas() {
-        return this._canvas;
-    }
-
-    set canvas(value) {
-        this._canvas = value;
-        this._dirty = true;
+        this.updateTexture();
     }
 
     /**
@@ -76,12 +65,7 @@ export default class Text extends Sprite {
     }
 
     set text(text) {
-        const newText = text || ' ';
-
-        if (this._text !== newText) {
-            this._text = newText;
-            this._dirty = true;
-        }
+        this.setText(text);
     }
 
     /**
@@ -93,8 +77,35 @@ export default class Text extends Sprite {
     }
 
     set style(style) {
+        this.setStyle(style);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} text
+     * @returns {Text}
+     */
+    setText(text) {
+        if (this._text !== text) {
+            this._text = text;
+            this._dirty = true;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Object} style
+     * @returns {Text}
+     */
+    setStyle(style) {
         this._style = Object.assign({}, settings.TEXT_STYLE, style);
         this._dirty = true;
+
+        return this;
     }
 
     /**
@@ -102,34 +113,38 @@ export default class Text extends Sprite {
      */
     updateTexture() {
         if (this._dirty) {
-            const camvas = this._canvas,
+            this._updateContext();
+
+            const canvas = this._canvas,
                 context = this._context,
                 style = this._style,
-                font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`,
-                text = style.wordWrap ? this.getWordWrappedText(style.wordWrapWidth) : this._text,
+                text = style.wordWrap ? this._getWordWrappedText(style.wordWrapWidth) : this._text,
+                lineHeight = this._determineFontHeight(context.font) + style.strokeThickness,
                 lines = text.split(NEWLINE),
-                lineWidths = lines.map((line) => context.measureText(line).width),
-                lineHeight = this.determineFontHeight(font) + style.strokeThickness,
-                maxLineWidth = lineWidths.reduce((max, value) => Math.max(max, value), 0);
+                lineMetrics = lines.map((line) => context.measureText(line)),
+                maxLineWidth = lineMetrics.reduce((max, measure) => Math.max(max, measure.width), 0),
+                canvasWidth = Math.ceil((maxLineWidth + style.strokeThickness) + (style.padding * 2)),
+                canvasHeight = Math.ceil((lineHeight * lines.length) + (style.padding * 2));
 
-            camvas.width = Math.ceil((maxLineWidth + style.strokeThickness) + (style.padding * 2));
-            camvas.height = Math.ceil((lineHeight * lines.length) + (style.padding * 2));
+            if (canvasWidth !== canvas.width || canvasHeight !== canvas.height) {
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
 
-            context.clearRect(0, 0, camvas.width, camvas.height);
+                this.localBounds.set(0, 0, canvasWidth, canvasHeight);
+                this.setTextureFrame(this.localBounds);
+                this.scale.set(1, 1);
+            } else {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+            }
 
-            context.font = font;
-            context.fillStyle = style.fill;
-            context.strokeStyle = style.stroke;
-            context.lineWidth = style.strokeThickness;
-            context.textBaseline = style.baseline;
-            context.lineJoin = style.lineJoin;
-            context.miterLimit = style.miterLimit;
+            this._updateContext();
 
             for (let i = 0; i < lines.length; i++) {
-                const lineWidth = (maxLineWidth - lineWidths[i]),
+                const metrics = lineMetrics[i],
+                    lineWidth = (maxLineWidth - metrics.width),
                     offset = (style.align === 'right') ? lineWidth : lineWidth / 2,
-                    lineX = (style.strokeThickness / 2) + (style.align === 'left' ? 0 : offset),
-                    lineY = (style.strokeThickness / 2) + (lineHeight * i);
+                    lineX = metrics.actualBoundingBoxLeft + (style.strokeThickness / 2) + (style.align === 'left' ? 0 : offset),
+                    lineY = metrics.fontBoundingBoxAscent + (style.strokeThickness / 2) + (lineHeight * i);
 
                 if (style.stroke && style.strokeThickness) {
                     context.strokeText(lines[i], lineX, lineY);
@@ -149,10 +164,36 @@ export default class Text extends Sprite {
     }
 
     /**
+     * @override
+     */
+    render(displayManager) {
+        if (this.active) {
+            this.updateTexture();
+
+            super.render(displayManager);
+        }
+
+        return this;
+    }
+
+    /**
      * @public
+     */
+    destroy() {
+        super.destroy();
+
+        this._context = null;
+        this._canvas = null;
+        this._text = null;
+        this._style = null;
+        this._dirty = null;
+    }
+
+    /**
+     * @private
      * @returns {String}
      */
-    getWordWrappedText(wordWrapWidth) {
+    _getWordWrappedText(wordWrapWidth) {
         const context = this._context,
             spaceWidth = context.measureText(' ').width,
             lines = this._text.split('\n');
@@ -194,7 +235,7 @@ export default class Text extends Sprite {
      * @param {String} font
      * @returns {Number}
      */
-    determineFontHeight(font) {
+    _determineFontHeight(font) {
         if (!heightCache.has(font)) {
             const body = document.body,
                 dummy = document.createElement('div');
@@ -211,28 +252,21 @@ export default class Text extends Sprite {
     }
 
     /**
-     * @override
+     * @public
+     * @returns {Text}
      */
-    render(displayManager) {
-        if (this.active) {
-            this.updateTexture();
+    _updateContext() {
+        const context = this._context,
+            style = this._style;
 
-            super.render(displayManager);
-        }
+        context.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`;
+        context.fillStyle = style.fill;
+        context.strokeStyle = style.stroke;
+        context.lineWidth = style.strokeThickness;
+        context.textBaseline = style.baseline;
+        context.lineJoin = style.lineJoin;
+        context.miterLimit = style.miterLimit;
 
         return this;
-    }
-
-    /**
-     * @public
-     */
-    destroy() {
-        super.destroy();
-
-        this._context = null;
-        this._canvas = null;
-        this._text = null;
-        this._style = null;
-        this._dirty = null;
     }
 }

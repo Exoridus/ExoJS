@@ -72,7 +72,7 @@ export default class LauncherScene extends Exo.Scene {
     /**
      * @override
      */
-    init() {
+    init(resources) {
 
         /**
          * @private

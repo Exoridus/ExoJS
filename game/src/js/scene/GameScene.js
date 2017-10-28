@@ -15,9 +15,8 @@ export default class GameScene extends Exo.Scene {
     /**
      * @override
      */
-    init() {
-        const app = this.app,
-            resources = app.loader.resources;
+    init(resources) {
+        const app = this.app;
 
         /**
          * @private

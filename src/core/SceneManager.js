@@ -72,7 +72,7 @@ export default class SceneManager {
         }
 
         this._sceneActive = true;
-        this._currentScene.init();
+        this._currentScene.init(this._app.loader.resources);
     }
 
     /**

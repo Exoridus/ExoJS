@@ -7,23 +7,35 @@ window.app = new Exo.Application({
 
 window.app.start(new Exo.Scene({
 
+    /**
+     * @param {ResourceLoader} loader
+     */
     load(loader) {
         loader.addItem('texture', 'bunny', 'image/bunny.png')
             .load(() => this.app.trigger('scene:start'));
     },
 
-    init() {
-        const resources = this.app.loader.resources,
-            canvas = this.app.canvas;
+    /**
+     * @param {ResourceContainer} resources
+     */
+    init(resources) {
+        const canvas = this.app.canvas;
 
-        this.bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
-        this.bunny.setOrigin(0.5);
-        this.bunny.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
+        /**
+         * @private
+         * @member {Sprite}
+         */
+        this._bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+        this._bunny.setOrigin(0.5);
+        this._bunny.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
 
-        this.addNode(this.bunny);
+        this.addNode(this._bunny);
     },
 
+    /**
+     * @param {Time} delta
+     */
     update(delta) {
-        this.bunny.rotate(delta.seconds * 360);
+        this._bunny.rotate(delta.seconds * 360);
     },
 }));

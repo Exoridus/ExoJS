@@ -256,7 +256,7 @@ export default class PointerManager extends ChannelManager {
         canvas.addEventListener('pointercancel', this._onCancelHandler, passive);
         canvas.addEventListener('pointermove', this._onMoveHandler, passive);
         canvas.addEventListener('pointerdown', this._onDownHandler, active);
-        canvas.addEventListener('pointerup', this._onUpHandler, passive);
+        canvas.addEventListener('pointerup', this._onUpHandler, active);
         canvas.addEventListener('wheel', this._onScrollHandler, active);
         canvas.addEventListener('contextmenu', this._stopEventHandler, active);
         canvas.addEventListener('selectstart', this._stopEventHandler, active);
@@ -273,7 +273,7 @@ export default class PointerManager extends ChannelManager {
         canvas.removeEventListener('pointercancel', this._onCancelHandler, passive);
         canvas.removeEventListener('pointermove', this._onMoveHandler, passive);
         canvas.removeEventListener('pointerdown', this._onDownHandler, active);
-        canvas.removeEventListener('pointerup', this._onUpHandler, passive);
+        canvas.removeEventListener('pointerup', this._onUpHandler, active);
         canvas.removeEventListener('wheel', this._onScrollHandler, active);
         canvas.removeEventListener('contextmenu', this._stopEventHandler, active);
         canvas.removeEventListener('selectstart', this._stopEventHandler, active);
