@@ -1,3 +1,5 @@
+import support from '../support';
+
 /**
  * @class AudioAnalyser
  */
@@ -5,91 +7,136 @@ export default class AudioAnalyser {
 
     /**
      * @constructor
-     * @param {Sound|Music|Video|MediaManager} target
-     * @param {Object} [options]
+     * @param {Media|Sound|Music|Video|MediaManager} media
+     * @param {Object} [options={}]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
      * @param {Number} [options.maxDecibels=-30]
      * @param {Number} [options.smoothingTimeConstant=0.8]
      */
-    constructor(target, { fftSize = 2048, minDecibels = -100, maxDecibels = -30, smoothingTimeConstant = 0.8 } = {}) {
-        if (!target) {
-            throw new Error('No analyser target was provided.');
+    constructor(media, {
+        fftSize = 2048,
+        minDecibels = -100,
+        maxDecibels = -30,
+        smoothingTimeConstant = 0.8,
+    } = {}) {
+        if (!support.webAudio) {
+            throw new Error('Web Audio API should be enabled when using the audio analyzer.');
         }
 
         /**
          * @private
-         * @member {Sound|Music|Video|MediaManager}
+         * @member {?AnalyserNode}
          */
-        this._target = target;
+        this._analyser = null;
 
         /**
          * @private
-         * @member {Object}
+         * @member {?AudioNode}
          */
-        this._options = {
-            fftSize,
-            minDecibels,
-            maxDecibels,
-            smoothingTimeConstant,
-        };
+        this._analyserTarget = null;
+
+        /**
+         * @private
+         * @member {Media|Sound|Music|Video|MediaManager}
+         */
+        this._media = media;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._fftSize = fftSize;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._minDecibels = minDecibels;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._maxDecibels = maxDecibels;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._smoothingTimeConstant = smoothingTimeConstant;
+
+        /**
+         * @private
+         * @member {?Uint8Array}
+         */
+        this._timeDomainData = null;
+
+        /**
+         * @private
+         * @member {?Uint8Array}
+         */
+        this._frequencyData = null;
+
+        /**
+         * @private
+         * @member {?Float32Array}
+         */
+        this._preciseTimeDomainData = null;
+
+        /**
+         * @private
+         * @member {?Float32Array}
+         */
+        this._preciseFrequencyData = null;
     }
 
-    ensureContext() {
-        if (this._context) {
-            return;
+    /**
+     * @public
+     * @chainable
+     * @returns {AudioAnalyser}
+     */
+    connect() {
+        if (support.webAudio && !this._analyser) {
+            const audioContext = this._media.audioContext,
+                analyserTarget = this._media.analyserTarget;
+
+            if (!audioContext) {
+                throw new Error('Could not get AudioContext of the target.');
+            }
+
+            if (!analyserTarget) {
+                throw new Error('No AudioNode on property analyserTarget.');
+            }
+
+            this._analyser = audioContext.createAnalyser();
+            this._analyser.fftSize = this._fftSize;
+            this._analyser.minDecibels = this._minDecibels;
+            this._analyser.maxDecibels = this._maxDecibels;
+            this._analyser.smoothingTimeConstant = this._smoothingTimeConstant;
+
+            this._analyserTarget = analyserTarget;
+            this._analyserTarget.connect(this._analyser);
         }
 
-        if (!this._target.audioContext) {
-            throw new Error('Failed to provide an AudioContext from the target.');
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {AudioAnalyser}
+     */
+    disconnect() {
+        if (this._analyser) {
+            this._analyser.disconnect();
+            this._analyser = null;
+
+            this._analyserTarget.disconnect();
+            this._analyserTarget = null;
         }
 
-        if (!this._target.analyserTarget) {
-            throw new Error('Target has no valid AudioNode to analyse.');
-        }
-
-        /**
-         * @private
-         * @member {AudioContext}
-         */
-        this._context = this._target.audioContext;
-
-        /**
-         * @private
-         * @member {AnalyserNode}
-         */
-        this._analyser = Object.assign(this._context.createAnalyser(), this._options);
-
-        /**
-         * @private
-         * @member {AudioNode}
-         */
-        this._targetNode = this._target.analyserTarget;
-        this._targetNode.connect(this._analyser);
-
-        /**
-         * @private
-         * @member {Uint8Array} _timeDomainData
-         */
-        this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount);
-
-        /**
-         * @private
-         * @member {Uint8Array} _frequencyData
-         */
-        this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
-
-        /**
-         * @private
-         * @member {Float32Array} _preciseTimeDomainData
-         */
-        this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
-
-        /**
-         * @private
-         * @member {Float32Array} _preciseFrequencyData
-         */
-        this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
+        return this;
     }
 
     /**
@@ -98,7 +145,11 @@ export default class AudioAnalyser {
      * @member {Uint8Array}
      */
     get timeDomainData() {
-        this.ensureContext();
+        this.connect();
+
+        if (!this._timeDomainData) {
+            this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount);
+        }
 
         this._analyser.getByteTimeDomainData(this._timeDomainData);
 
@@ -111,7 +162,11 @@ export default class AudioAnalyser {
      * @member {Uint8Array}
      */
     get frequencyData() {
-        this.ensureContext();
+        this.connect();
+
+        if (!this._frequencyData) {
+            this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
+        }
 
         this._analyser.getByteFrequencyData(this._frequencyData);
 
@@ -124,7 +179,11 @@ export default class AudioAnalyser {
      * @member {Float32Array}
      */
     get preciseTimeDomainData() {
-        this.ensureContext();
+        this.connect();
+
+        if (!this._preciseTimeDomainData) {
+            this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
+        }
 
         this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
 
@@ -137,7 +196,11 @@ export default class AudioAnalyser {
      * @member {Float32Array}
      */
     get preciseFrequencyData() {
-        this.ensureContext();
+        this.connect();
+
+        if (!this._preciseFrequencyData) {
+            this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
+        }
 
         this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
 
@@ -148,22 +211,16 @@ export default class AudioAnalyser {
      * @public
      */
     destroy() {
-        this._target = null;
-        this._options = null;
+        this.disconnect();
 
-        if (this._context) {
-            this._context = null;
-
-            this._targetNode.disconnect(this._analyser);
-            this._targetNode = null;
-
-            this._analyser.disconnect();
-            this._analyser = null;
-
-            this._timeDomainData = null;
-            this._frequencyData = null;
-            this._preciseTimeDomainData = null;
-            this._preciseFrequencyData = null;
-        }
+        this._media = null;
+        this._fftSize = null;
+        this._minDecibels = null;
+        this._maxDecibels = null;
+        this._smoothingTimeConstant = null;
+        this._timeDomainData = null;
+        this._frequencyData = null;
+        this._preciseTimeDomainData = null;
+        this._preciseFrequencyData = null;
     }
 }

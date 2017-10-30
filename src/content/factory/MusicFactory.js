@@ -1,30 +1,18 @@
-import AudioFactory from './AudioFactory';
+import AudioSourceFactory from './AudioSourceFactory';
 import Music from '../../media/Music';
-import support from '../../support';
 
 /**
  * @class MusicFactory
- * @extends {AudioFactory}
+ * @extends {AudioSourceFactory}
  */
-export default class MusicFactory extends AudioFactory {
+export default class MusicFactory extends AudioSourceFactory {
 
     /**
      * @override
      */
-    get storageType() {
-        return 'music';
-    }
-
-    /**
-     * @override
-     */
-    create(source, options) {
-        if (!support.webAudio) {
-            return Promise.reject(Error('Web Audio is not supported!'));
-        }
-
+    create(source, { createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent } = {}) {
         return super
-            .create(source, options)
-            .then((audio) => new Music(audio));
+            .create(source, { createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
+            .then((audioSource) => new Music(audioSource));
     }
 }

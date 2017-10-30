@@ -1,8 +1,6 @@
 import EventEmitter from '../core/EventEmitter';
 import ResourceContainer from './ResourceContainer';
 import ArrayBufferFactory from './factory/ArrayBufferFactory';
-import AudioBufferFactory from './factory/AudioBufferFactory';
-import AudioFactory from './factory/AudioFactory';
 import BlobFactory from './factory/BlobFactory';
 import FontFactory from './factory/FontFactory';
 import ImageFactory from './factory/ImageFactory';
@@ -11,8 +9,9 @@ import MusicFactory from './factory/MusicFactory';
 import SoundFactory from './factory/SoundFactory';
 import StringFactory from './factory/StringFactory';
 import TextureFactory from './factory/TextureFactory';
-import VideoFactory from './factory/VideoFactory';
-
+import MediaSourceFactory from './factory/MediaSourceFactory';
+import VideoSourceFactory from './factory/VideoSourceFactory';
+import AudioSourceFactory from './factory/AudioSourceFactory';
 
 /**
  * @class ResourceLoader
@@ -69,17 +68,17 @@ export default class ResourceLoader extends EventEmitter {
         this._database = null;
 
         this.addFactory('arrayBuffer', new ArrayBufferFactory())
-            .addFactory('audioBuffer', new AudioBufferFactory())
-            .addFactory('audio', new AudioFactory())
             .addFactory('blob', new BlobFactory())
             .addFactory('font', new FontFactory())
-            .addFactory('image', new ImageFactory())
-            .addFactory('json', new JSONFactory())
+            .addFactory('media', new MediaSourceFactory())
+            .addFactory('audio', new AudioSourceFactory())
+            .addFactory('video', new VideoSourceFactory())
             .addFactory('music', new MusicFactory())
             .addFactory('sound', new SoundFactory())
-            .addFactory('string', new StringFactory())
+            .addFactory('image', new ImageFactory())
             .addFactory('texture', new TextureFactory())
-            .addFactory('video', new VideoFactory());
+            .addFactory('string', new StringFactory())
+            .addFactory('json', new JSONFactory());
     }
 
     /**

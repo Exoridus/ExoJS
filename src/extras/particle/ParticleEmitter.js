@@ -14,7 +14,7 @@ export default class ParticleEmitter extends Renderable {
     /**
      * @constructor
      * @param {Texture} texture
-     * @param {Object} [particleOptions = new ParticleOptions()]
+     * @param {ParticleOptions|Object} [particleOptions]
      */
     constructor(texture, particleOptions) {
         super();

@@ -1,7 +1,7 @@
 import { NEWLINE } from '../const';
-import settings from '../settings';
 import Sprite from './sprite/Sprite';
 import Texture from './Texture';
+import TextStyle from './TextStyle';
 
 const heightCache = new Map();
 
@@ -14,11 +14,23 @@ export default class Text extends Sprite {
     /**
      * @constructor
      * @param {String} text
-     * @param {Object} [style]
+     * @param {TextStyle|Object} [style=new TextStyle()]
      * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]
      */
-    constructor(text, style, canvas = document.createElement('canvas')) {
+    constructor(text, style = new TextStyle(), canvas = document.createElement('canvas')) {
         super(new Texture(canvas));
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._text = null;
+
+        /**
+         * @private
+         * @member {TextStyle}
+         */
+        this._style = null;
 
         /**
          * @private
@@ -34,26 +46,13 @@ export default class Text extends Sprite {
 
         /**
          * @private
-         * @member {String}
-         */
-        this._text = null;
-
-        /**
-         * @private
-         * @member {Object}
-         */
-        this._style = null;
-
-        /**
-         * @private
-         * @type {Boolean}
+         * @member {Boolean}
          */
         this._dirty = true;
 
-        this.setText(text);
-        this.setStyle(style);
-
-        this.updateTexture();
+        this.setText(text)
+            .setStyle(style)
+            .updateTexture();
     }
 
     /**
@@ -70,7 +69,7 @@ export default class Text extends Sprite {
 
     /**
      * @public
-     * @member {Object}
+     * @member {TextStyle}
      */
     get style() {
         return this._style;
@@ -78,6 +77,18 @@ export default class Text extends Sprite {
 
     set style(style) {
         this.setStyle(style);
+    }
+
+    /**
+     * @public
+     * @member {HTMLCanvasElement}
+     */
+    get canvas() {
+        return this._canvas;
+    }
+
+    set canvas(canvas) {
+        this.setCanvas(canvas);
     }
 
     /**
@@ -98,12 +109,30 @@ export default class Text extends Sprite {
     /**
      * @public
      * @chainable
-     * @param {Object} style
+     * @param {TextStyle|Object} style
      * @returns {Text}
      */
     setStyle(style) {
-        this._style = Object.assign({}, settings.TEXT_STYLE, style);
+        this._style = (style instanceof TextStyle) ? style : new TextStyle(style || {});
         this._dirty = true;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {HTMLCanvasElement} canvas
+     * @returns {Text}
+     */
+    setCanvas(canvas) {
+        if (this._canvas !== canvas) {
+            this._canvas = canvas;
+            this._context = canvas.getContext('2d');
+            this._dirty = true;
+
+            this._updateCanvas();
+        }
 
         return this;
     }
@@ -112,12 +141,10 @@ export default class Text extends Sprite {
      * @override
      */
     updateTexture() {
-        if (this._dirty) {
-            this._updateContext();
-
+        if (this._dirty || this._style.dirty) {
             const canvas = this._canvas,
                 context = this._context,
-                style = this._style,
+                style = this._style.apply(context),
                 text = style.wordWrap ? this._getWordWrappedText(style.wordWrapWidth) : this._text,
                 lineHeight = this._determineFontHeight(context.font) + style.strokeThickness,
                 lines = text.split(NEWLINE),
@@ -130,14 +157,12 @@ export default class Text extends Sprite {
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
-                this.localBounds.set(0, 0, canvasWidth, canvasHeight);
-                this.setTextureFrame(this.localBounds);
-                this.scale.set(1, 1);
+                this._updateCanvas();
             } else {
-                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.clearRect(0, 0, canvasWidth, canvasHeight);
             }
 
-            this._updateContext();
+            style.apply(context);
 
             for (let i = 0; i < lines.length; i++) {
                 const metrics = lineMetrics[i],
@@ -159,6 +184,7 @@ export default class Text extends Sprite {
             this.texture.updateSource();
 
             this._dirty = false;
+            this._style.dirty = false;
         }
 
         return this;
@@ -178,16 +204,31 @@ export default class Text extends Sprite {
     }
 
     /**
-     * @public
+     * @override
      */
     destroy() {
         super.destroy();
 
-        this._context = null;
-        this._canvas = null;
         this._text = null;
         this._style = null;
+        this._canvas = null;
+        this._context = null;
         this._dirty = null;
+    }
+
+    /**
+     * @private
+     * @chainable
+     * @returns {Text}
+     */
+    _updateCanvas() {
+        const canvas = this._canvas;
+
+        this.localBounds.set(0, 0, canvas.width, canvas.height);
+        this.setTextureFrame(this.localBounds);
+        this.scale.set(1, 1);
+
+        return this;
     }
 
     /**
@@ -250,24 +291,5 @@ export default class Text extends Sprite {
         }
 
         return heightCache.get(font);
-    }
-
-    /**
-     * @public
-     * @returns {Text}
-     */
-    _updateContext() {
-        const context = this._context,
-            style = this._style;
-
-        context.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`;
-        context.fillStyle = style.fill;
-        context.strokeStyle = style.stroke;
-        context.lineWidth = style.strokeThickness;
-        context.textBaseline = style.baseline;
-        context.lineJoin = style.lineJoin;
-        context.miterLimit = style.miterLimit;
-
-        return this;
     }
 }

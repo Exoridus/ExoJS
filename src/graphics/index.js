@@ -10,7 +10,7 @@ export { default as Renderer } from './Renderer';
 export { default as Renderable } from './Renderable';
 export { default as Container } from './Container';
 export { default as Text } from './Text';
-export { default as Video } from './Video';
+export { default as TextStyle } from './TextStyle';
 export { default as Shader } from './shader/Shader';
 export { default as ShaderAttribute } from './shader/ShaderAttribute';
 export { default as ShaderUniform } from './shader/ShaderUniform';

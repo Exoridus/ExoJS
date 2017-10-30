@@ -2,6 +2,7 @@ import Vector from '../../math/Vector';
 import Color from '../../core/Color';
 import Time from '../../core/Time';
 import { TIME } from '../../const';
+import ParticleOptions from './ParticleOptions';
 
 /**
  * @class Particle
@@ -263,11 +264,11 @@ export default class Particle {
      * @public
      */
     destroy() {
-        this._totalLifetime.destroy();
-        this._totalLifetime = null;
-
         this._elapsedLifetime.destroy();
         this._elapsedLifetime = null;
+
+        this._totalLifetime.destroy();
+        this._totalLifetime = null;
 
         this._position.destroy();
         this._position = null;

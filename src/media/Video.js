@@ -1,30 +1,56 @@
 import { clamp } from '../utils';
-import Sprite from './sprite/Sprite';
-import Texture from './Texture';
+import Sprite from '../graphics/sprite/Sprite';
+import Texture from '../graphics/Texture';
 import support from '../support';
 
 /**
  * @class Video
- * @extends {Playable}
+ * @extends {Media|Sprite}
  */
 export default class Video extends Sprite {
 
     /**
      * @constructor
-     * @param {HTMLVideoElement} videoElement
+     * @param {MediaSource} mediaSource
      */
-    constructor(videoElement) {
-        super(new Texture(videoElement));
-
-        if (!support.webAudio) {
-            throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
-        }
+    constructor(mediaSource) {
+        super(new Texture(mediaSource.mediaElement));
 
         /**
          * @private
-         * @member {HTMLVideoElement}
+         * @member {MediaSource}
          */
-        this._source = videoElement;
+        this._mediaSource = mediaSource;
+
+        /**
+         * @private
+         * @member {?HTMLMediaElement}
+         */
+        this._mediaElement = mediaSource.mediaElement;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._duration = this._mediaElement.duration || 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._volume = this._mediaElement.volume || 1;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._speed = this._mediaElement.playbackRate || 1;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._loop = this._mediaElement.loop || false;
 
         /**
          * @private
@@ -43,57 +69,24 @@ export default class Video extends Sprite {
          * @member {?GainNode}
          */
         this._gainNode = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._duration = videoElement.duration;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._volume = videoElement.volume;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._speed = videoElement.playbackRate;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._loop = videoElement.loop;
     }
 
     /**
      * @public
      * @readonly
-     * @member {?AudioContext}
+     * @member {MediaSource}
      */
-    get audioContext() {
-        return this._audioContext;
+    get mediaSource() {
+        return this._mediaSource;
     }
 
     /**
      * @public
      * @readonly
-     * @member {?GainNode}
+     * @member {?HTMLMediaElement}
      */
-    get analyserTarget() {
-        return this._gainNode;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {HTMLVideoElement}
-     */
-    get source() {
-        return this._source;
+    get mediaElement() {
+        return this._mediaElement;
     }
 
     /**
@@ -136,7 +129,7 @@ export default class Video extends Sprite {
         const loop = !!value;
 
         if (this._loop !== loop) {
-            this._source.loop = this._loop = loop;
+            this._mediaElement.loop = this._loop = loop;
         }
     }
 
@@ -152,7 +145,7 @@ export default class Video extends Sprite {
         const speed = Math.max(0, value);
 
         if (this._speed !== speed) {
-            this._source.playbackRate = this._speed = speed;
+            this._mediaElement.playbackRate = this._speed = speed;
         }
     }
 
@@ -161,11 +154,11 @@ export default class Video extends Sprite {
      * @member {Number}
      */
     get currentTime() {
-        return this._source.currentTime;
+        return this._mediaElement.currentTime;
     }
 
     set currentTime(currentTime) {
-        this._source.currentTime = Math.max(0, currentTime);
+        this._mediaElement.currentTime = Math.max(0, currentTime);
     }
 
     /**
@@ -173,7 +166,7 @@ export default class Video extends Sprite {
      * @member {Boolean}
      */
     get paused() {
-        return this._source.paused;
+        return this._mediaElement.paused;
     }
 
     set paused(paused) {
@@ -202,20 +195,37 @@ export default class Video extends Sprite {
 
     /**
      * @public
+     * @readonly
+     * @member {?AudioContext}
+     */
+    get audioContext() {
+        return this._audioContext || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?AudioNode}
+     */
+    get analyserTarget() {
+        return this._gainNode || null;
+    }
+
+    /**
+     * @public
      * @chainable
-     * @param {MediaManager} mediaManager
+     * @param {Object} [options]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
      * @returns {Video}
      */
-    connect(mediaManager) {
-        if (!this._audioContext) {
-            this._audioContext = mediaManager.audioContext;
-
-            this._gainNode = this._audioContext.createGain();
-            this._gainNode.connect(mediaManager.videoGain);
-            this._gainNode.gain.value = this._volume;
-
-            this._sourceNode = this._audioContext.createMediaElementSource(this.source);
-            this._sourceNode.connect(this._gainNode);
+    play(options) {
+        if (this.paused) {
+            this.applyOptions(options);
+            this._mediaElement.play();
+            this.trigger('start');
         }
 
         return this;
@@ -223,40 +233,34 @@ export default class Video extends Sprite {
 
     /**
      * @public
-     * @param {Object} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.speed]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
-     */
-    play(options) {
-        if (this.paused) {
-            this.applyOptions(options);
-            this._source.play();
-            this.trigger('start');
-        }
-    }
-
-    /**
-     * @public
+     * @chainable
+     * @returns {Video}
      */
     pause() {
         if (this.playing) {
-            this._source.pause();
+            this._mediaElement.pause();
             this.trigger('stop');
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Video}
      */
     stop() {
         this.pause();
         this.currentTime = 0;
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Video}
      */
     toggle() {
         if (this.paused) {
@@ -264,15 +268,19 @@ export default class Video extends Sprite {
         } else {
             this.pause();
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Object} [options]
      * @param {Boolean} [options.loop]
      * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
+     * @returns {Video}
      */
     applyOptions({ loop, speed, volume, time } = {}) {
         if (loop !== undefined) {
@@ -290,6 +298,8 @@ export default class Video extends Sprite {
         if (time !== undefined) {
             this.currentTime = time;
         }
+
+        return this;
     }
 
     /**
@@ -306,13 +316,32 @@ export default class Video extends Sprite {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {MediaManager} mediaManager
+     * @returns {Video}
      */
-    destroy() {
-        super.destroy();
+    connect(mediaManager) {
+        if (support.webAudio && !this._audioContext) {
+            this._audioContext = mediaManager.audioContext;
 
-        this.stop();
+            this._gainNode = this._audioContext.createGain();
+            this._gainNode.gain.value = this.volume;
+            this._gainNode.connect(mediaManager.videoGain);
 
+            this._sourceNode = this._audioContext.createMediaElementSource(this._mediaElement);
+            this._sourceNode.connect(this._gainNode);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Video}
+     */
+    disconnect() {
         if (this._audioContext) {
             this._audioContext = null;
 
@@ -323,7 +352,20 @@ export default class Video extends Sprite {
             this._gainNode = null;
         }
 
-        this._source = null;
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    destroy() {
+        super.destroy();
+
+        this.stop();
+        this.disconnect();
+
+        this._mediaSource = null;
+        this._mediaElement = null;
         this._duration = null;
         this._volume = null;
         this._speed = null;

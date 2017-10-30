@@ -590,15 +590,17 @@ export const
      */
     DATABASE_TYPES = [
         'arrayBuffer',
-        'audioBuffer',
-        'audio',
         'blob',
         'font',
-        'image',
-        'json',
+        'media',
+        'audio',
+        'video',
         'music',
         'sound',
+        'image',
+        'texture',
         'string',
+        'json',
     ],
 
     /**

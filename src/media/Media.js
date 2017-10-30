@@ -2,77 +2,80 @@ import { clamp } from '../utils';
 import EventEmitter from '../core/EventEmitter';
 
 /**
+ * @typedef {Object} MediaOptions
+ * @property {Boolean} loop
+ * @property {Number} speed
+ * @property {Number} volume
+ * @property {Number} time
+ */
+
+/**
  * @abstract
- * @class Playable
+ * @class Media
  * @extends {EventEmitter}
  */
-export default class Playable extends EventEmitter {
+export default class Media extends EventEmitter {
 
     /**
      * @constructor
-     * @param {HTMLMediaElement|AudioBuffer} source
+     * @param {MediaSource} mediaSource
      */
-    constructor(source) {
+    constructor(mediaSource) {
         super();
 
         /**
          * @private
-         * @member {HTMLMediaElement|AudioBuffer}
+         * @member {MediaSource}
          */
-        this._source = source;
+        this._mediaSource = mediaSource;
+
+        /**
+         * @private
+         * @member {?HTMLMediaElement}
+         */
+        this._mediaElement = mediaSource.mediaElement;
 
         /**
          * @private
          * @member {Number}
          */
-        this._duration = source.duration || 0;
+        this._duration = this._mediaElement.duration || 0;
 
         /**
          * @private
          * @member {Number}
          */
-        this._volume = source.volume || 1;
+        this._volume = this._mediaElement.volume || 1;
 
         /**
          * @private
          * @member {Number}
          */
-        this._speed = source.playbackRate || 1;
+        this._speed = this._mediaElement.playbackRate || 1;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._loop = source.loop || false;
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @readonly
-     * @member {?AudioContext}
-     */
-    get audioContext() {
-        return null;
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @readonly
-     * @member {?AudioNode}
-     */
-    get analyserTarget() {
-        return null;
+        this._loop = this._mediaElement.loop || false;
     }
 
     /**
      * @public
      * @readonly
-     * @member {HTMLMediaElement|*}
+     * @member {MediaSource}
      */
-    get source() {
-        return this._source;
+    get mediaSource() {
+        return this._mediaSource;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?HTMLMediaElement}
+     */
+    get mediaElement() {
+        return this._mediaElement;
     }
 
     /**
@@ -96,7 +99,7 @@ export default class Playable extends EventEmitter {
         const volume = clamp(value, 0, 2);
 
         if (this.volume !== volume) {
-            this._source.volume = this._volume = volume;
+            this._mediaElement.volume = this._volume = volume;
         }
     }
 
@@ -112,7 +115,7 @@ export default class Playable extends EventEmitter {
         const loop = !!value;
 
         if (this.loop !== loop) {
-            this._source.loop = this._loop = loop;
+            this._mediaElement.loop = this._loop = loop;
         }
     }
 
@@ -128,7 +131,7 @@ export default class Playable extends EventEmitter {
         const speed = Math.max(0, value);
 
         if (this.speed !== speed) {
-            this._source.playbackRate = this._speed = speed;
+            this._mediaElement.playbackRate = this._speed = speed;
         }
     }
 
@@ -137,11 +140,11 @@ export default class Playable extends EventEmitter {
      * @member {Number}
      */
     get currentTime() {
-        return this._source.currentTime;
+        return this._mediaElement.currentTime;
     }
 
     set currentTime(currentTime) {
-        this._source.currentTime = Math.max(0, currentTime);
+        this._mediaElement.currentTime = Math.max(0, currentTime);
     }
 
     /**
@@ -149,7 +152,7 @@ export default class Playable extends EventEmitter {
      * @member {Boolean}
      */
     get paused() {
-        return this._source.paused;
+        return this._mediaElement.paused;
     }
 
     set paused(paused) {
@@ -179,48 +182,69 @@ export default class Playable extends EventEmitter {
     /**
      * @public
      * @abstract
-     * @param {MediaManager} mediaManager
+     * @readonly
+     * @member {?AudioContext}
      */
-    connect(mediaManager) { // eslint-disable-line
-        // do nothing
+    get audioContext() {
+        return null;
     }
 
     /**
      * @public
-     * @param {Object} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.speed]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
+     * @abstract
+     * @readonly
+     * @member {?AudioNode}
+     */
+    get analyserTarget() {
+        return null;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {MediaOptions} [options]
+     * @returns {Media}
      */
     play(options) {
         if (this.paused) {
             this.applyOptions(options);
-            this._source.play();
+            this._mediaElement.play();
             this.trigger('start');
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Media}
      */
     pause() {
         if (this.playing) {
-            this._source.pause();
+            this._mediaElement.pause();
             this.trigger('stop');
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Media}
      */
     stop() {
         this.pause();
         this.currentTime = 0;
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Media}
      */
     toggle() {
         if (this.paused) {
@@ -228,15 +252,19 @@ export default class Playable extends EventEmitter {
         } else {
             this.pause();
         }
+
+        return this;
     }
 
     /**
      * @public
-     * @param {Object} [options]
+     * @chainable
+     * @param {MediaOptions} [options]
      * @param {Boolean} [options.loop]
      * @param {Number} [options.speed]
      * @param {Number} [options.volume]
      * @param {Number} [options.time]
+     * @returns {Media}
      */
     applyOptions({ loop, speed, volume, time } = {}) {
         if (loop !== undefined) {
@@ -254,6 +282,29 @@ export default class Playable extends EventEmitter {
         if (time !== undefined) {
             this.currentTime = time;
         }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @chainable
+     * @param {MediaManager} mediaManager
+     * @returns {Media}
+     */
+    connect(mediaManager) { // eslint-disable-line
+        return this;
+    }
+
+    /**
+     * @public
+     * @abstract
+     * @chainable
+     * @returns {Media}
+     */
+    disconnect() {
+        return this;
     }
 
     /**
@@ -263,8 +314,10 @@ export default class Playable extends EventEmitter {
         super.destroy();
 
         this.stop();
+        this.disconnect();
 
-        this._source = null;
+        this._mediaSource = null;
+        this._mediaElement = null;
         this._duration = null;
         this._volume = null;
         this._speed = null;

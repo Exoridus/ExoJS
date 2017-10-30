@@ -1,41 +1,25 @@
-import Playable from './Playable';
 import { clamp } from '../utils';
 import support from '../support';
+import Media from './Media';
 
 /**
  * @class Sound
- * @extends {Playable}
+ * @extends {Media}
  */
-export default class Sound extends Playable {
+export default class Sound extends Media {
 
     /**
      * @constructor
-     * @param {AudioBuffer} audioBuffer
+     * @param {MediaSource} mediaSource
      */
-    constructor(audioBuffer) {
-        super(audioBuffer);
-
-        if (!support.webAudio) {
-            throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
-        }
+    constructor(mediaSource) {
+        super(mediaSource);
 
         /**
          * @private
-         * @member {?AudioContext}
+         * @member {?AudioBuffer}
          */
-        this._audioContext = null;
-
-        /**
-         * @private
-         * @member {?AudioBufferSourceNode}
-         */
-        this._sourceNode = null;
-
-        /**
-         * @private
-         * @member {?GainNode}
-         */
-        this._gainNode = null;
+        this._audioBuffer = mediaSource.audioBuffer;
 
         /**
          * @private
@@ -54,20 +38,24 @@ export default class Sound extends Playable {
          * @member {Number}
          */
         this._currentTime = 0;
-    }
 
-    /**
-     * @override
-     */
-    get audioContext() {
-        return this._audioContext;
-    }
+        /**
+         * @private
+         * @member {?AudioContext}
+         */
+        this._audioContext = null;
 
-    /**
-     * @override
-     */
-    get analyserTarget() {
-        return this._gainNode;
+        /**
+         * @private
+         * @member {?AudioBufferSourceNode}
+         */
+        this._sourceNode = null;
+
+        /**
+         * @private
+         * @member {?GainNode}
+         */
+        this._gainNode = null;
     }
 
     /**
@@ -157,65 +145,107 @@ export default class Sound extends Playable {
     /**
      * @override
      */
-    connect(mediaManager) {
-        if (this._audioContext) {
-            return;
-        }
+    get audioContext() {
+        return this._audioContext || null;
+    }
 
-        this._audioContext = mediaManager.audioContext;
-
-        this._gainNode = this._audioContext.createGain();
-        this._gainNode.connect(mediaManager.soundGain);
-        this._gainNode.gain.value = this._volume;
+    /**
+     * @override
+     */
+    get analyserTarget() {
+        return this._gainNode || null;
     }
 
     /**
      * @override
      */
     play(options) {
-        if (!this._paused) {
-            return;
+        if (this._paused) {
+            this.applyOptions(options);
+
+            this._sourceNode = this.createSourceNode();
+            this._startTime = this._audioContext.currentTime;
+            this._paused = false;
+
+            this.trigger('start');
         }
 
-        this.applyOptions(options);
+        return this;
+    }
 
-        this._sourceNode = this._audioContext.createBufferSource();
-        this._sourceNode.buffer = this.source;
-        this._sourceNode.loop = this._loop;
-        this._sourceNode.playbackRate.value = this._speed;
+    /**
+     * @public
+     * @returns {AudioBufferSourceNode}
+     */
+    createSourceNode() {
+        const sourceNode = this._audioContext.createBufferSource();
 
-        this._sourceNode.connect(this._gainNode);
-        this._sourceNode.start(0, this._currentTime);
+        sourceNode.buffer = this.mediaSource.audioBuffer;
+        sourceNode.loop = this.loop;
+        sourceNode.playbackRate.value = this.speed;
+        sourceNode.connect(this._gainNode);
+        sourceNode.start(0, this._currentTime);
 
-        this._startTime = this._audioContext.currentTime;
-        this._paused = false;
-
-        this.trigger('start');
+        return sourceNode;
     }
 
     /**
      * @override
      */
     pause() {
-        if (this._paused) {
-            return;
+        if (!this._paused) {
+            const duration = this.duration,
+                currentTime = this.currentTime;
+
+            if (currentTime <= duration) {
+                this._currentTime = currentTime;
+            } else {
+                this._currentTime = (currentTime - duration) * ((currentTime / duration) | 0);
+            }
+
+            this._sourceNode.stop(0);
+            this._sourceNode.disconnect();
+            this._sourceNode = null;
+            this._paused = true;
+
+            this.trigger('stop');
         }
 
-        const duration = this.duration,
-            currentTime = this.currentTime;
+        return this;
+    }
 
-        if (currentTime <= duration) {
-            this._currentTime = currentTime;
-        } else {
-            this._currentTime = (currentTime - duration) * ((currentTime / duration) | 0);
+    /**
+     * @override
+     */
+    connect(mediaManager) {
+        if (support.webAudio && !this._audioContext) {
+            this._audioContext = mediaManager.audioContext;
+
+            this._gainNode = this._audioContext.createGain();
+            this._gainNode.gain.value = this.volume;
+            this._gainNode.connect(mediaManager.soundGain);
         }
 
-        this._sourceNode.stop(0);
-        this._sourceNode.disconnect();
-        this._sourceNode = null;
-        this._paused = true;
+        return this;
+    }
 
-        this.trigger('stop');
+    /**
+     * @override
+     */
+    disconnect() {
+        if (this._audioContext) {
+            this._audioContext = null;
+
+            if (this._sourceNode) {
+                this._sourceNode.disconnect();
+                this._sourceNode = null;
+            }
+
+            this._gainNode.disconnect();
+            this._gainNode = null;
+        }
+
+        return this;
     }
 
     /**
@@ -224,14 +254,9 @@ export default class Sound extends Playable {
     destroy() {
         super.destroy();
 
-        if (this._audioContext) {
-            this._audioContext = null;
-
-            this._sourceNode.disconnect();
-            this._sourceNode = null;
-
-            this._gainNode.disconnect();
-            this._gainNode = null;
-        }
+        this._audioBuffer = null;
+        this._paused = null;
+        this._startTime = null;
+        this._currentTime = null;
     }
 }

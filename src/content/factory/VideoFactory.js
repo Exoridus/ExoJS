@@ -1,70 +1,18 @@
-import BlobFactory from './BlobFactory';
-import { determineMimeType } from '../../utils';
+import Music from '../../media/Music';
+import VideoSourceFactory from './VideoSourceFactory';
 
 /**
  * @class VideoFactory
- * @extends {BlobFactory}
+ * @extends {VideoSourceFactory}
  */
-export default class VideoFactory extends BlobFactory {
-
-    /**
-     * @constructor
-     */
-    constructor() {
-        super();
-
-        /**
-         * @private
-         * @member {Set<String>}
-         */
-        this._objectURLs = new Set();
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Set<String>}
-     */
-    get objectURLs() {
-        return this._objectURLs;
-    }
+export default class VideoFactory extends VideoSourceFactory {
 
     /**
      * @override
      */
-    get storageType() {
-        return 'video';
-    }
-
-    /**
-     * @override
-     */
-    create(source, { mimeType = determineMimeType(source), loadEvent = 'canplaythrough' } = {}) {
+    create(source, { createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent } = {}) {
         return super
-            .create(source, { mimeType })
-            .then((blob) => new Promise((resolve, reject) => {
-                const video = document.createElement('video'),
-                    objectURL = URL.createObjectURL(blob);
-
-                this._objectURLs.add(objectURL);
-
-                video.addEventListener(loadEvent, () => resolve(video));
-                video.addEventListener('error', () => reject(Error('Error loading video source.')));
-                video.addEventListener('abort', () => reject(Error('Video loading was canceled.')));
-
-                video.src = objectURL;
-            }));
-    }
-
-    /**
-     * @override
-     */
-    destroy() {
-        for (const objectURL of this._objectURLs) {
-            URL.revokeObjectURL(objectURL);
-        }
-
-        this._objectURLs.clear();
-        this._objectURLs = null;
+            .create(source, { createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
+            .then((audioSource) => new Music(audioSource));
     }
 }

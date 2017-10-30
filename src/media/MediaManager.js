@@ -1,4 +1,5 @@
 import { clamp } from '../utils';
+import support from '../support';
 
 /**
  * @class MediaManager
@@ -24,134 +25,75 @@ export default class MediaManager {
 
         /**
          * @private
-         * @member {AudioContext}
+         * @member {Number}
          */
-        this._context = new AudioContext();
-
-        /**
-         * @private
-         * @member {AudioDestinationNode}
-         */
-        this._destination = this._context.destination;
-
-        /**
-         * @private
-         * @member {DynamicsCompressorNode}
-         */
-        this._compressor = this._context.createDynamicsCompressor();
-        this._compressor.connect(this._destination);
-
-        /**
-         * @private
-         * @member {GainNode}
-         */
-        this._masterGain = this._context.createGain();
-        this._masterGain.connect(this._compressor);
-
-        /**
-         * @private
-         * @member {GainNode}
-         */
-        this._musicGain = this._context.createGain();
-        this._musicGain.connect(this._masterGain);
-
-        /**
-         * @private
-         * @member {GainNode}
-         */
-        this._soundGain = this._context.createGain();
-        this._soundGain.connect(this._masterGain);
-
-        /**
-         * @private
-         * @member {GainNode}
-         */
-        this._videoGain = this._context.createGain();
-        this._videoGain.connect(this._masterGain);
+        this._masterVolume = clamp(masterVolume, 0, 1);
 
         /**
          * @private
          * @member {Number}
          */
-        this._masterVolume = null;
+        this._musicVolume = clamp(musicVolume, 0, 1);
 
         /**
          * @private
          * @member {Number}
          */
-        this._soundVolume = null;
+        this._soundVolume = clamp(soundVolume, 0, 1);
 
         /**
          * @private
          * @member {Number}
          */
-        this._musicVolume = null;
+        this._videoVolume = clamp(videoVolume, 0, 1);
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._videoVolume = null;
+        if (support.webAudio) {
 
-        this.setMasterVolume(masterVolume);
-        this.setSoundVolume(soundVolume);
-        this.setMusicVolume(musicVolume);
-        this.setVideoVolume(videoVolume);
+            /**
+             * @private
+             * @member {AudioContext}
+             */
+            this._audioContext = new AudioContext();
 
-        this._app
-            .on('media:volume:master', this.setMasterVolume, this)
-            .on('media:volume:sound', this.setSoundVolume, this)
-            .on('media:volume:music', this.setMusicVolume, this)
-            .on('media:volume:video', this.setVideoVolume, this);
-    }
+            /**
+             * @private
+             * @member {DynamicsCompressorNode}
+             */
+            this._compressor = this._audioContext.createDynamicsCompressor();
+            this._compressor.connect(this._audioContext.destination);
 
-    /**
-     * @public
-     * @readonly
-     * @member {AudioContext}
-     */
-    get audioContext() {
-        return this._context;
-    }
+            /**
+             * @private
+             * @member {GainNode}
+             */
+            this._masterGain = this._audioContext.createGain();
+            this._masterGain.gain.value = this._masterVolume;
+            this._masterGain.connect(this._compressor);
 
-    /**
-     * @readonly
-     * @member {GainNode}
-     */
-    get masterGain() {
-        return this._masterGain;
-    }
+            /**
+             * @private
+             * @member {GainNode}
+             */
+            this._musicGain = this._audioContext.createGain();
+            this._musicGain.gain.value = this._musicVolume;
+            this._musicGain.connect(this._masterGain);
 
-    /**
-     * @readonly
-     * @member {GainNode}
-     */
-    get soundGain() {
-        return this._soundGain;
-    }
+            /**
+             * @private
+             * @member {GainNode}
+             */
+            this._soundGain = this._audioContext.createGain();
+            this._soundGain.gain.value = this._soundVolume;
+            this._soundGain.connect(this._masterGain);
 
-    /**
-     * @readonly
-     * @member {GainNode}
-     */
-    get musicGain() {
-        return this._musicGain;
-    }
-
-    /**
-     * @readonly
-     * @member {GainNode}
-     */
-    get videoGain() {
-        return this._videoGain;
-    }
-
-    /**
-     * @readonly
-     * @member {AudioNode}
-     */
-    get analyserTarget() {
-        return this._compressor;
+            /**
+             * @private
+             * @member {GainNode}
+             */
+            this._videoGain = this._audioContext.createGain();
+            this._videoGain.gain.value = this._videoVolume;
+            this._videoGain.connect(this._masterGain);
+        }
     }
 
     /**
@@ -170,24 +112,24 @@ export default class MediaManager {
      * @public
      * @member {Number}
      */
-    get soundVolume() {
-        return this._soundVolume;
-    }
-
-    set soundVolume(volume) {
-        this.setSoundVolume(volume);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
     get musicVolume() {
         return this._musicVolume;
     }
 
     set musicVolume(volume) {
         this.setMusicVolume(volume);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get soundVolume() {
+        return this._soundVolume;
+    }
+
+    set soundVolume(volume) {
+        this.setSoundVolume(volume);
     }
 
     /**
@@ -204,99 +146,189 @@ export default class MediaManager {
 
     /**
      * @public
-     * @param {Music|Sound|Video} media
-     * @param {Object} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.speed]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
+     * @readonly
+     * @member {?AudioContext}
+     */
+    get audioContext() {
+        return this._audioContext || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?DynamicsCompressorNode}
+     */
+    get compressor() {
+        return this._compressor || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?GainNode}
+     */
+    get masterGain() {
+        return this._masterGain || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?GainNode}
+     */
+    get musicGain() {
+        return this._musicGain || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?GainNode}
+     */
+    get soundGain() {
+        return this._soundGain || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?GainNode}
+     */
+    get videoGain() {
+        return this._videoGain || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?AudioNode}
+     */
+    get analyserTarget() {
+        return this._compressor || null;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Media|Music|Sound|Video} media
+     * @param {MediaOptions} [options]
+     * @returns {MediaManager}
      */
     play(media, options) {
         media.connect(this);
         media.play(options);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} volume
+     * @returns {MediaManager}
      */
     setMasterVolume(volume) {
-        const vol = clamp(volume, 0, 1);
+        const value = clamp(volume, 0, 1);
 
-        if (this._masterVolume !== vol) {
-            this._masterGain.gain.value = this._masterVolume = vol;
+        if (this._masterVolume !== value) {
+            this._masterVolume = value;
+
+            if (this._masterGain) {
+                this._masterGain.gain.value = value;
+            }
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} volume
-     */
-    setSoundVolume(volume) {
-        const vol = clamp(volume, 0, 1);
-
-        if (this._soundVolume !== vol) {
-            this._soundGain.gain.value = this._soundVolume = volume;
-        }
-    }
-
-    /**
-     * @public
-     * @param {Number} volume
+     * @returns {MediaManager}
      */
     setMusicVolume(volume) {
-        const vol = clamp(volume, 0, 1);
+        const value = clamp(volume, 0, 1);
 
-        if (this._musicVolume !== vol) {
-            this._musicGain.gain.value = this._musicVolume = vol;
+        if (this._musicVolume !== value) {
+            this._musicVolume = value;
+
+            if (this._musicGain) {
+                this._musicGain.gain.value = value;
+            }
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Number} volume
+     * @returns {MediaManager}
+     */
+    setSoundVolume(volume) {
+        const value = clamp(volume, 0, 1);
+
+        if (this._soundVolume !== value) {
+            this._soundVolume = value;
+
+            if (this._soundGain) {
+                this._soundGain.gain.value = value;
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} volume
+     * @returns {MediaManager}
      */
     setVideoVolume(volume) {
-        const vol = clamp(volume, 0, 1);
+        const value = clamp(volume, 0, 1);
 
-        if (this._videoVolume !== vol) {
-            this._videoGain.gain.value = this._videoVolume = vol;
+        if (this._videoVolume !== value) {
+            this._videoVolume = value;
+
+            if (this._videoGain) {
+                this._videoGain.gain.value = value;
+            }
         }
+
+        return this;
     }
 
     /**
      * @public
      */
     destroy() {
-        this._app
-            .off('media:volume:master', this.setMasterVolume, this)
-            .off('media:volume:sound', this.setSoundVolume, this)
-            .off('media:volume:music', this.setMusicVolume, this)
-            .off('media:volume:video', this.setVideoVolume, this);
+        if (support.webAudio) {
+            this._videoGain.disconnect();
+            this._videoGain = null;
 
-        this._soundGain.disconnect();
-        this._soundGain = null;
+            this._soundGain.disconnect();
+            this._soundGain = null;
 
-        this._musicGain.disconnect();
-        this._musicGain = null;
+            this._musicGain.disconnect();
+            this._musicGain = null;
 
-        this._videoGain.disconnect();
-        this._videoGain = null;
+            this._masterGain.disconnect();
+            this._masterGain = null;
 
-        this._masterGain.disconnect();
-        this._masterGain = null;
+            this._compressor.disconnect();
+            this._compressor = null;
 
-        this._compressor.disconnect();
-        this._compressor = null;
+            this._audioContext.close();
+            this._audioContext = null;
+        }
 
-        this._context.close();
-        this._context = null;
-
-        this._masterVolume = null;
-        this._soundVolume = null;
-        this._musicVolume = null;
-        this._videoVolume = null;
-        this._destination = null;
         this._app = null;
+        this._masterVolume = null;
+        this._musicVolume = null;
+        this._soundVolume = null;
+        this._videoVolume = null;
     }
 }

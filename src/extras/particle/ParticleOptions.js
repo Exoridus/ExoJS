@@ -75,6 +75,18 @@ export default class ParticleOptions {
      * @public
      * @member {Time}
      */
+    get elapsedLifetime() {
+        return this._elapsedLifetime;
+    }
+
+    set elapsedLifetime(elapsedLifetime) {
+        this._elapsedLifetime.copy(elapsedLifetime);
+    }
+
+    /**
+     * @public
+     * @member {Time}
+     */
     get totalLifetime() {
         return this._totalLifetime;
     }
@@ -162,6 +174,9 @@ export default class ParticleOptions {
      */
     destroy() {
         super.destroy();
+
+        this._elapsedLifetime.destroy();
+        this._elapsedLifetime = null;
 
         this._totalLifetime.destroy();
         this._totalLifetime = null;

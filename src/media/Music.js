@@ -1,23 +1,19 @@
-import Playable from './Playable';
 import { clamp } from '../utils';
 import support from '../support';
+import Media from './Media';
 
 /**
  * @class Music
- * @extends {Playable}
+ * @extends {Media}
  */
-export default class Music extends Playable {
+export default class Music extends Media {
 
     /**
      * @constructor
-     * @param {HTMLMediaElement} audio
+     * @param {MediaSource} mediaSource
      */
-    constructor(audio) {
-        super(audio);
-
-        if (!support.webAudio) {
-            throw new Error('Web Audio API is not supported, use the fallback Audio instead.');
-        }
+    constructor(mediaSource) {
+        super(mediaSource);
 
         /**
          * @private
@@ -36,20 +32,6 @@ export default class Music extends Playable {
          * @member {?GainNode}
          */
         this._gainNode = null;
-    }
-
-    /**
-     * @override
-     */
-    get audioContext() {
-        return this._audioContext;
-    }
-
-    /**
-     * @override
-     */
-    get analyserTarget() {
-        return this._gainNode;
     }
 
     /**
@@ -74,35 +56,49 @@ export default class Music extends Playable {
     /**
      * @override
      */
-    connect(mediaManager) {
-        if (this._audioContext) {
-            return;
-        }
-
-        this._audioContext = mediaManager.audioContext;
-
-        this._gainNode = this._audioContext.createGain();
-        this._gainNode.connect(mediaManager.musicGain);
-        this._gainNode.gain.value = this._volume;
-
-        this._sourceNode = this._audioContext.createMediaElementSource(this.source);
-        this._sourceNode.connect(this._gainNode);
+    get audioContext() {
+        return this._audioContext || null;
     }
 
     /**
      * @override
      */
-    destroy() {
-        super.destroy();
+    get analyserTarget() {
+        return this._gainNode || null;
+    }
 
+    /**
+     * @override
+     */
+    connect(mediaManager) {
+        if (support.webAudio && !this._audioContext) {
+            this._audioContext = mediaManager.audioContext;
+
+            this._gainNode = this._audioContext.createGain();
+            this._gainNode.gain.value = this.volume;
+            this._gainNode.connect(mediaManager.musicGain);
+
+            this._sourceNode = this._audioContext.createMediaElementSource(this.mediaElement);
+            this._sourceNode.connect(this._gainNode);
+        }
+
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    disconnect() {
         if (this._audioContext) {
             this._audioContext = null;
 
-            this._sourceNode.disconnect();
-            this._sourceNode = null;
-
             this._gainNode.disconnect();
             this._gainNode = null;
+
+            this._sourceNode.disconnect();
+            this._sourceNode = null;
         }
+
+        return this;
     }
 }

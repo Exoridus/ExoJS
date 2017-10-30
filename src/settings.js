@@ -83,27 +83,6 @@ export default {
     /**
      * @public
      * @static
-     * @type {Object}
-     */
-    TEXT_STYLE: {
-        align: 'left',
-        fill: 'black',
-        stroke: 'black',
-        strokeThickness: 0,
-        fontSize: 20,
-        fontWeight: 'bold',
-        fontFamily: 'Arial',
-        wordWrap: false,
-        wordWrapWidth: 100,
-        baseline: 'alphabetic',
-        lineJoin: 'miter',
-        miterLimit: 10,
-        padding: 0,
-    },
-
-    /**
-     * @public
-     * @static
      * @type {Number}
      * @default 5
      */
