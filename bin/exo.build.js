@@ -22123,8 +22123,9 @@ var Text = function (_Sprite) {
                     var metrics = lineMetrics[i],
                         lineWidth = maxLineWidth - metrics.width,
                         offset = style.align === 'right' ? lineWidth : lineWidth / 2,
-                        lineX = metrics.actualBoundingBoxLeft + style.strokeThickness / 2 + (style.align === 'left' ? 0 : offset),
-                        lineY = metrics.fontBoundingBoxAscent + style.strokeThickness / 2 + lineHeight * i;
+                        padding = style.padding + style.strokeThickness / 2,
+                        lineX = metrics.actualBoundingBoxLeft + (style.align === 'left' ? 0 : offset) + padding,
+                        lineY = metrics.fontBoundingBoxAscent + lineHeight * i + padding;
 
                     if (style.stroke && style.strokeThickness) {
                         context.strokeText(lines[i], lineX, lineY);

@@ -1,4 +1,5 @@
-import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET } from '../../const';
+import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_GAMEPAD } from '../../const';
+import settings from '../../settings';
 
 /**
  * @class GamepadControl
@@ -9,12 +10,16 @@ export default class GamepadControl {
      * @constructor
      * @param {Number} index
      * @param {Number} channel
-     * @param {Object} [options]
-     * @param {Number} [options.threshold=0.2]
-     * @param {Boolean} [options.negate=false]
+     * @param {Object} [options={}]
+     * @param {Boolean} [options.invert=false]
      * @param {Boolean} [options.normalize=false]
+     * @param {Number} [options.threshold=settings.THRESHOLD_GAMEPAD]
      */
-    constructor(index, channel, { threshold = 0.2, negate = false, normalize = false } = {}) {
+    constructor(index, channel, {
+        invert = false,
+        normalize = false,
+        threshold = settings.THRESHOLD_GAMEPAD,
+    } = {}) {
 
         /**
          * @private
@@ -32,29 +37,29 @@ export default class GamepadControl {
          * @private
          * @member {Number}
          */
-        this._key = channel % INPUT_CHANNELS_HANDLER;
+        this._key = (channel % INPUT_CHANNELS_HANDLER);
+
+        /**
+         * Transform value range from {-1..1} to {1..-1}.
+         *
+         * @private
+         * @member {Boolean}
+         */
+        this._invert = invert;
+
+        /**
+         * Transform value range from {-1..1} to {0..1}.
+         *
+         * @private
+         * @member {Boolean}
+         */
+        this._normalize = normalize;
 
         /**
          * @private
          * @member {Number}
          */
         this._threshold = threshold;
-
-        /**
-         * Transform value range from [-1, 1] to [1, -1].
-         *
-         * @private
-         * @member {Boolean}
-         */
-        this._negate = negate;
-
-        /**
-         * Transform value range from [-1, 1] to [0, 1].
-         *
-         * @private
-         * @member {Boolean}
-         */
-        this._normalize = normalize;
     }
 
     /**
@@ -92,31 +97,19 @@ export default class GamepadControl {
 
     set key(key) {
         this._key = key % INPUT_CHANNELS_HANDLER;
-        this._channel = INPUT_OFFSET.GAMEPAD + this._key;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get threshold() {
-        return this._threshold;
-    }
-
-    set threshold(threshold) {
-        this._threshold = threshold;
+        this._channel = INPUT_OFFSET_GAMEPAD + this._key;
     }
 
     /**
      * @public
      * @member {Boolean}
      */
-    get negate() {
-        return this._negate;
+    get invert() {
+        return this._invert;
     }
 
-    set negate(negate) {
-        this._negate = negate;
+    set invert(invert) {
+        this._invert = invert;
     }
 
     /**
@@ -133,13 +126,25 @@ export default class GamepadControl {
 
     /**
      * @public
+     * @member {Number}
+     */
+    get threshold() {
+        return this._threshold;
+    }
+
+    set threshold(threshold) {
+        this._threshold = threshold;
+    }
+
+    /**
+     * @public
      * @param {Number} value
      * @returns {Number}
      */
     transformValue(value) {
         let result = value;
 
-        if (this._negate) {
+        if (this._invert) {
             result *= -1;
         }
 

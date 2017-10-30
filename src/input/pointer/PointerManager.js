@@ -1,4 +1,4 @@
-import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET } from '../../const';
+import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET_POINTER } from '../../const';
 import support from '../../support';
 import ChannelManager from '../ChannelManager';
 import Pointer from './Pointer';
@@ -50,7 +50,7 @@ export default class PointerManager extends ChannelManager {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET.POINTER, INPUT_CHANNELS_DEVICE);
+        super(channelBuffer, INPUT_OFFSET_POINTER, INPUT_CHANNELS_DEVICE);
 
         /**
          * @private
@@ -137,65 +137,63 @@ export default class PointerManager extends ChannelManager {
      * @override
      */
     update() {
-        for (const pointer of this._pointers.values()) {
-            pointer.update();
-        }
+        if (this._flags) {
+            if (hasFlag(FLAGS.ENTER, this._flags)) {
+                this._app.trigger('pointer:enter', this._pointersEntered, this._pointers);
+                this._pointersEntered.clear();
 
-        if (!this._flags) {
-            return;
-        }
-
-        if (hasFlag(FLAGS.ENTER, this._flags)) {
-            this._app.trigger('pointer:enter', this._pointersEntered, this._pointers);
-            this._pointersEntered.clear();
-
-            this._flags = removeFlag(FLAGS.ENTER, this._flags);
-        }
-
-        if (hasFlag(FLAGS.LEAVE, this._flags)) {
-            this._app.trigger('pointer:leave', this._pointersLeft, this._pointers);
-
-            for (const pointer of this._pointersLeft) {
-                pointer.destroy();
+                this._flags = removeFlag(FLAGS.ENTER, this._flags);
             }
 
-            this._pointersLeft.clear();
-            this._flags = removeFlag(FLAGS.LEAVE, this._flags);
+            if (hasFlag(FLAGS.LEAVE, this._flags)) {
+                this._app.trigger('pointer:leave', this._pointersLeft, this._pointers);
+
+                for (const pointer of this._pointersLeft) {
+                    pointer.destroy();
+                }
+
+                this._pointersLeft.clear();
+                this._flags = removeFlag(FLAGS.LEAVE, this._flags);
+            }
+
+            if (hasFlag(FLAGS.MOVE, this._flags)) {
+                this._app.trigger('pointer:move', this._pointersMoved, this._pointers);
+                this._pointersMoved.clear();
+
+                this._flags = removeFlag(FLAGS.MOVE, this._flags);
+            }
+
+            if (hasFlag(FLAGS.DOWN, this._flags)) {
+                this._app.trigger('pointer:down', this._pointersDown, this._pointers);
+                this._pointersDown.clear();
+
+                this._flags = removeFlag(FLAGS.DOWN, this._flags);
+            }
+
+            if (hasFlag(FLAGS.UP, this._flags)) {
+                this._app.trigger('pointer:up', this._pointersUp, this._pointers);
+                this._pointersUp.clear();
+
+                this._flags = removeFlag(FLAGS.UP, this._flags);
+            }
+
+            if (hasFlag(FLAGS.CANCEL, this._flags)) {
+                this._app.trigger('pointer:cancel', this._pointersCancelled, this._pointers);
+                this._pointersCancelled.clear();
+
+                this._flags = removeFlag(FLAGS.CANCEL, this._flags);
+            }
+
+            if (hasFlag(FLAGS.SCROLL, this._flags)) {
+                this._app.trigger('pointer:scroll', this._scrollDelta, this._pointers);
+                this._scrollDelta.set(0, 0);
+
+                this._flags = removeFlag(FLAGS.SCROLL, this._flags);
+            }
         }
 
-        if (hasFlag(FLAGS.MOVE, this._flags)) {
-            this._app.trigger('pointer:move', this._pointersMoved, this._pointers);
-            this._pointersMoved.clear();
-
-            this._flags = removeFlag(FLAGS.MOVE, this._flags);
-        }
-
-        if (hasFlag(FLAGS.DOWN, this._flags)) {
-            this._app.trigger('pointer:down', this._pointersDown, this._pointers);
-            this._pointersDown.clear();
-
-            this._flags = removeFlag(FLAGS.DOWN, this._flags);
-        }
-
-        if (hasFlag(FLAGS.UP, this._flags)) {
-            this._app.trigger('pointer:up', this._pointersUp, this._pointers);
-            this._pointersUp.clear();
-
-            this._flags = removeFlag(FLAGS.UP, this._flags);
-        }
-
-        if (hasFlag(FLAGS.CANCEL, this._flags)) {
-            this._app.trigger('pointer:cancel', this._pointersCancelled, this._pointers);
-            this._pointersCancelled.clear();
-
-            this._flags = removeFlag(FLAGS.CANCEL, this._flags);
-        }
-
-        if (hasFlag(FLAGS.SCROLL, this._flags)) {
-            this._app.trigger('pointer:scroll', this._scrollDelta, this._pointers);
-            this._scrollDelta.set(0, 0);
-
-            this._flags = removeFlag(FLAGS.SCROLL, this._flags);
+        for (const pointer of this._pointers.values()) {
+            pointer.update();
         }
     }
 

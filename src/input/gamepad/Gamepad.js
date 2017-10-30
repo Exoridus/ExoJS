@@ -1,4 +1,4 @@
-import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET } from '../../const';
+import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_GAMEPAD } from '../../const';
 import settings from '../../settings';
 import ChannelManager from '../ChannelManager';
 
@@ -14,13 +14,13 @@ export default class Gamepad extends ChannelManager {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(gamepad, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET.GAMEPAD + (gamepad.index * INPUT_CHANNELS_HANDLER), INPUT_CHANNELS_HANDLER);
+        super(channelBuffer, INPUT_OFFSET_GAMEPAD + (gamepad.index * INPUT_CHANNELS_HANDLER), INPUT_CHANNELS_HANDLER);
 
         /**
          * @private
          * @member {Gamepad}
          */
-        this._gamepad = gamepad;
+        this._gamepadIndex = gamepad;
 
         /**
          * @private
@@ -35,7 +35,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Gamepad}
      */
     get gamepad() {
-        return this._gamepad;
+        return this._gamepadIndex;
     }
 
     /**
@@ -56,7 +56,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Number}
      */
     get id() {
-        return this._gamepad.id;
+        return this._gamepadIndex.id;
     }
 
     /**
@@ -65,7 +65,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Number}
      */
     get index() {
-        return this._gamepad.index;
+        return this._gamepadIndex.index;
     }
 
     /**
@@ -74,7 +74,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Boolean}
      */
     get connected() {
-        return this._gamepad.connected;
+        return this._gamepadIndex.connected;
     }
 
     /**
@@ -84,8 +84,8 @@ export default class Gamepad extends ChannelManager {
         const channels = this.channels,
             buttonMapping = this._mapping.buttons,
             axesMapping = this._mapping.axes,
-            gamepdaButtons = this._gamepad.buttons,
-            gamepadAxes = this._gamepad.axes;
+            gamepdaButtons = this._gamepadIndex.buttons,
+            gamepadAxes = this._gamepadIndex.axes;
 
         for (const button of buttonMapping) {
             if (button.index in gamepdaButtons) {
@@ -109,17 +109,6 @@ export default class Gamepad extends ChannelManager {
         this._mapping.destroy();
         this._mapping = null;
 
-        this._gamepad = null;
-    }
-
-    /**
-     * @public
-     * @static
-     * @param {Number} key
-     * @param {Number} [index=0]
-     * @returns {Number}
-     */
-    static getChannelCode(key, index = 0) {
-        return INPUT_OFFSET.GAMEPAD + (index * INPUT_CHANNELS_HANDLER) + (key % INPUT_CHANNELS_HANDLER);
+        this._gamepadIndex = null;
     }
 }

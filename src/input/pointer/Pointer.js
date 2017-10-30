@@ -1,4 +1,4 @@
-import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET } from '../../const';
+import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_POINTER } from '../../const';
 import ChannelManager from '../ChannelManager';
 import Vector from '../../math/Vector';
 import Size from '../../math/Size';
@@ -37,7 +37,7 @@ export default class Pointer extends ChannelManager {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(event, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET.POINTER, INPUT_CHANNELS_HANDLER);
+        super(channelBuffer, INPUT_OFFSET_POINTER, INPUT_CHANNELS_HANDLER);
 
         const bounds = event.target.getBoundingClientRect();
 

@@ -124,17 +124,34 @@ export const
     /**
      * @public
      * @constant
-     * @name INPUT_DEVICE
-     * @type {Object<String, Number>}
-     * @property {Number} KEYBOARD
-     * @property {Number} POINTER
-     * @property {Number} GAMEPAD
+     * @name INPUT_DEVICE_KEYBOARD
+     * @type {Number}
      */
-    INPUT_DEVICE = {
-        KEYBOARD: 0,
-        POINTER: 1,
-        GAMEPAD: 2,
-    },
+    INPUT_DEVICE_KEYBOARD = 0,
+
+    /**
+     * @public
+     * @constant
+     * @name INPUT_DEVICE_POINTER
+     * @type {Number}
+     */
+    INPUT_DEVICE_POINTER = 1,
+
+    /**
+     * @public
+     * @constant
+     * @name INPUT_DEVICE_GAMEPAD
+     * @type {Number}
+     */
+    INPUT_DEVICE_GAMEPAD = 2,
+
+    /**
+     * @public
+     * @constant
+     * @name INPUT_DEVICE_COUNT
+     * @type {Number}
+     */
+    INPUT_DEVICE_COUNT = 3,
 
     /**
      * @public
@@ -158,22 +175,31 @@ export const
      * @name INPUT_CHANNELS_GLOBAL
      * @type {Number}
      */
-    INPUT_CHANNELS_GLOBAL = (Object.keys(INPUT_DEVICE).length * INPUT_CHANNELS_DEVICE),
+    INPUT_CHANNELS_GLOBAL = (INPUT_CHANNELS_DEVICE * INPUT_DEVICE_COUNT),
 
     /**
      * @public
      * @constant
-     * @name INPUT_DEVICE
-     * @type {Object<String, Number>}
-     * @property {Number} KEYBOARD
-     * @property {Number} POINTER
-     * @property {Number} GAMEPAD
+     * @name INPUT_OFFSET_KEYBOARD
+     * @type {Number}
      */
-    INPUT_OFFSET = (Object.keys(INPUT_DEVICE).reduce((result, property) => {
-        result[property] = INPUT_DEVICE[property] * INPUT_CHANNELS_DEVICE;
+    INPUT_OFFSET_KEYBOARD = (INPUT_DEVICE_KEYBOARD * INPUT_CHANNELS_DEVICE),
 
-        return result;
-    }, {})),
+    /**
+     * @public
+     * @constant
+     * @name INPUT_OFFSET_POINTER
+     * @type {Number}
+     */
+    INPUT_OFFSET_POINTER = (INPUT_DEVICE_POINTER * INPUT_CHANNELS_DEVICE),
+
+    /**
+     * @public
+     * @constant
+     * @name INPUT_OFFSET_GAMEPAD
+     * @type {Number}
+     */
+    INPUT_OFFSET_GAMEPAD = (INPUT_DEVICE_GAMEPAD * INPUT_CHANNELS_DEVICE),
 
     /**
      * @public
@@ -281,105 +307,105 @@ export const
      * @property {Number} Quotes
      */
     KEYBOARD = {
-        Backspace: INPUT_OFFSET.KEYBOARD + 8,
-        Tab: INPUT_OFFSET.KEYBOARD + 9,
-        Clear: INPUT_OFFSET.KEYBOARD + 12,
-        Enter: INPUT_OFFSET.KEYBOARD + 13,
-        Shift: INPUT_OFFSET.KEYBOARD + 16,
-        Control: INPUT_OFFSET.KEYBOARD + 17,
-        Alt: INPUT_OFFSET.KEYBOARD + 18,
-        Pause: INPUT_OFFSET.KEYBOARD + 19,
-        CapsLock: INPUT_OFFSET.KEYBOARD + 20,
-        Escape: INPUT_OFFSET.KEYBOARD + 27,
-        Space: INPUT_OFFSET.KEYBOARD + 32,
-        PageUp: INPUT_OFFSET.KEYBOARD + 33,
-        PageDown: INPUT_OFFSET.KEYBOARD + 34,
-        End: INPUT_OFFSET.KEYBOARD + 35,
-        Home: INPUT_OFFSET.KEYBOARD + 36,
-        Left: INPUT_OFFSET.KEYBOARD + 37,
-        Up: INPUT_OFFSET.KEYBOARD + 38,
-        Right: INPUT_OFFSET.KEYBOARD + 39,
-        Down: INPUT_OFFSET.KEYBOARD + 40,
-        Insert: INPUT_OFFSET.KEYBOARD + 45,
-        Delete: INPUT_OFFSET.KEYBOARD + 46,
-        Help: INPUT_OFFSET.KEYBOARD + 47,
-        Zero: INPUT_OFFSET.KEYBOARD + 48,
-        One: INPUT_OFFSET.KEYBOARD + 49,
-        Two: INPUT_OFFSET.KEYBOARD + 50,
-        Three: INPUT_OFFSET.KEYBOARD + 51,
-        Four: INPUT_OFFSET.KEYBOARD + 52,
-        Five: INPUT_OFFSET.KEYBOARD + 53,
-        Six: INPUT_OFFSET.KEYBOARD + 54,
-        Seven: INPUT_OFFSET.KEYBOARD + 55,
-        Eight: INPUT_OFFSET.KEYBOARD + 56,
-        Nine: INPUT_OFFSET.KEYBOARD + 57,
-        A: INPUT_OFFSET.KEYBOARD + 65,
-        B: INPUT_OFFSET.KEYBOARD + 66,
-        C: INPUT_OFFSET.KEYBOARD + 67,
-        D: INPUT_OFFSET.KEYBOARD + 68,
-        E: INPUT_OFFSET.KEYBOARD + 69,
-        F: INPUT_OFFSET.KEYBOARD + 70,
-        G: INPUT_OFFSET.KEYBOARD + 71,
-        H: INPUT_OFFSET.KEYBOARD + 72,
-        I: INPUT_OFFSET.KEYBOARD + 73,
-        J: INPUT_OFFSET.KEYBOARD + 74,
-        K: INPUT_OFFSET.KEYBOARD + 75,
-        L: INPUT_OFFSET.KEYBOARD + 76,
-        M: INPUT_OFFSET.KEYBOARD + 77,
-        N: INPUT_OFFSET.KEYBOARD + 78,
-        O: INPUT_OFFSET.KEYBOARD + 79,
-        P: INPUT_OFFSET.KEYBOARD + 80,
-        Q: INPUT_OFFSET.KEYBOARD + 81,
-        R: INPUT_OFFSET.KEYBOARD + 82,
-        S: INPUT_OFFSET.KEYBOARD + 83,
-        T: INPUT_OFFSET.KEYBOARD + 84,
-        U: INPUT_OFFSET.KEYBOARD + 85,
-        V: INPUT_OFFSET.KEYBOARD + 86,
-        W: INPUT_OFFSET.KEYBOARD + 87,
-        X: INPUT_OFFSET.KEYBOARD + 88,
-        Y: INPUT_OFFSET.KEYBOARD + 89,
-        Z: INPUT_OFFSET.KEYBOARD + 90,
-        NumPad0: INPUT_OFFSET.KEYBOARD + 96,
-        NumPad1: INPUT_OFFSET.KEYBOARD + 97,
-        NumPad2: INPUT_OFFSET.KEYBOARD + 98,
-        NumPad3: INPUT_OFFSET.KEYBOARD + 99,
-        NumPad4: INPUT_OFFSET.KEYBOARD + 100,
-        NumPad5: INPUT_OFFSET.KEYBOARD + 101,
-        NumPad6: INPUT_OFFSET.KEYBOARD + 102,
-        NumPad7: INPUT_OFFSET.KEYBOARD + 103,
-        NumPad8: INPUT_OFFSET.KEYBOARD + 104,
-        NumPad9: INPUT_OFFSET.KEYBOARD + 105,
-        NumPadMultiply: INPUT_OFFSET.KEYBOARD + 106,
-        NumPadAdd: INPUT_OFFSET.KEYBOARD + 107,
-        NumPadEnter: INPUT_OFFSET.KEYBOARD + 108,
-        NumPadSubtract: INPUT_OFFSET.KEYBOARD + 109,
-        NumPadDecimal: INPUT_OFFSET.KEYBOARD + 110,
-        NumPadDivide: INPUT_OFFSET.KEYBOARD + 111,
-        F1: INPUT_OFFSET.KEYBOARD + 112,
-        F2: INPUT_OFFSET.KEYBOARD + 113,
-        F3: INPUT_OFFSET.KEYBOARD + 114,
-        F4: INPUT_OFFSET.KEYBOARD + 115,
-        F5: INPUT_OFFSET.KEYBOARD + 116,
-        F6: INPUT_OFFSET.KEYBOARD + 117,
-        F7: INPUT_OFFSET.KEYBOARD + 118,
-        F8: INPUT_OFFSET.KEYBOARD + 119,
-        F9: INPUT_OFFSET.KEYBOARD + 120,
-        F10: INPUT_OFFSET.KEYBOARD + 121,
-        F11: INPUT_OFFSET.KEYBOARD + 122,
-        F12: INPUT_OFFSET.KEYBOARD + 123,
-        NumLock: INPUT_OFFSET.KEYBOARD + 144,
-        ScrollLock: INPUT_OFFSET.KEYBOARD + 145,
-        Colon: INPUT_OFFSET.KEYBOARD + 186,
-        Equals: INPUT_OFFSET.KEYBOARD + 187,
-        Comma: INPUT_OFFSET.KEYBOARD + 188,
-        Dash: INPUT_OFFSET.KEYBOARD + 189,
-        Period: INPUT_OFFSET.KEYBOARD + 190,
-        QuestionMark: INPUT_OFFSET.KEYBOARD + 191,
-        Tilde: INPUT_OFFSET.KEYBOARD + 192,
-        OpenBracket: INPUT_OFFSET.KEYBOARD + 219,
-        BackwardSlash: INPUT_OFFSET.KEYBOARD + 220,
-        ClosedBracket: INPUT_OFFSET.KEYBOARD + 221,
-        Quotes: INPUT_OFFSET.KEYBOARD + 222,
+        Backspace: INPUT_OFFSET_KEYBOARD + 8,
+        Tab: INPUT_OFFSET_KEYBOARD + 9,
+        Clear: INPUT_OFFSET_KEYBOARD + 12,
+        Enter: INPUT_OFFSET_KEYBOARD + 13,
+        Shift: INPUT_OFFSET_KEYBOARD + 16,
+        Control: INPUT_OFFSET_KEYBOARD + 17,
+        Alt: INPUT_OFFSET_KEYBOARD + 18,
+        Pause: INPUT_OFFSET_KEYBOARD + 19,
+        CapsLock: INPUT_OFFSET_KEYBOARD + 20,
+        Escape: INPUT_OFFSET_KEYBOARD + 27,
+        Space: INPUT_OFFSET_KEYBOARD + 32,
+        PageUp: INPUT_OFFSET_KEYBOARD + 33,
+        PageDown: INPUT_OFFSET_KEYBOARD + 34,
+        End: INPUT_OFFSET_KEYBOARD + 35,
+        Home: INPUT_OFFSET_KEYBOARD + 36,
+        Left: INPUT_OFFSET_KEYBOARD + 37,
+        Up: INPUT_OFFSET_KEYBOARD + 38,
+        Right: INPUT_OFFSET_KEYBOARD + 39,
+        Down: INPUT_OFFSET_KEYBOARD + 40,
+        Insert: INPUT_OFFSET_KEYBOARD + 45,
+        Delete: INPUT_OFFSET_KEYBOARD + 46,
+        Help: INPUT_OFFSET_KEYBOARD + 47,
+        Zero: INPUT_OFFSET_KEYBOARD + 48,
+        One: INPUT_OFFSET_KEYBOARD + 49,
+        Two: INPUT_OFFSET_KEYBOARD + 50,
+        Three: INPUT_OFFSET_KEYBOARD + 51,
+        Four: INPUT_OFFSET_KEYBOARD + 52,
+        Five: INPUT_OFFSET_KEYBOARD + 53,
+        Six: INPUT_OFFSET_KEYBOARD + 54,
+        Seven: INPUT_OFFSET_KEYBOARD + 55,
+        Eight: INPUT_OFFSET_KEYBOARD + 56,
+        Nine: INPUT_OFFSET_KEYBOARD + 57,
+        A: INPUT_OFFSET_KEYBOARD + 65,
+        B: INPUT_OFFSET_KEYBOARD + 66,
+        C: INPUT_OFFSET_KEYBOARD + 67,
+        D: INPUT_OFFSET_KEYBOARD + 68,
+        E: INPUT_OFFSET_KEYBOARD + 69,
+        F: INPUT_OFFSET_KEYBOARD + 70,
+        G: INPUT_OFFSET_KEYBOARD + 71,
+        H: INPUT_OFFSET_KEYBOARD + 72,
+        I: INPUT_OFFSET_KEYBOARD + 73,
+        J: INPUT_OFFSET_KEYBOARD + 74,
+        K: INPUT_OFFSET_KEYBOARD + 75,
+        L: INPUT_OFFSET_KEYBOARD + 76,
+        M: INPUT_OFFSET_KEYBOARD + 77,
+        N: INPUT_OFFSET_KEYBOARD + 78,
+        O: INPUT_OFFSET_KEYBOARD + 79,
+        P: INPUT_OFFSET_KEYBOARD + 80,
+        Q: INPUT_OFFSET_KEYBOARD + 81,
+        R: INPUT_OFFSET_KEYBOARD + 82,
+        S: INPUT_OFFSET_KEYBOARD + 83,
+        T: INPUT_OFFSET_KEYBOARD + 84,
+        U: INPUT_OFFSET_KEYBOARD + 85,
+        V: INPUT_OFFSET_KEYBOARD + 86,
+        W: INPUT_OFFSET_KEYBOARD + 87,
+        X: INPUT_OFFSET_KEYBOARD + 88,
+        Y: INPUT_OFFSET_KEYBOARD + 89,
+        Z: INPUT_OFFSET_KEYBOARD + 90,
+        NumPad0: INPUT_OFFSET_KEYBOARD + 96,
+        NumPad1: INPUT_OFFSET_KEYBOARD + 97,
+        NumPad2: INPUT_OFFSET_KEYBOARD + 98,
+        NumPad3: INPUT_OFFSET_KEYBOARD + 99,
+        NumPad4: INPUT_OFFSET_KEYBOARD + 100,
+        NumPad5: INPUT_OFFSET_KEYBOARD + 101,
+        NumPad6: INPUT_OFFSET_KEYBOARD + 102,
+        NumPad7: INPUT_OFFSET_KEYBOARD + 103,
+        NumPad8: INPUT_OFFSET_KEYBOARD + 104,
+        NumPad9: INPUT_OFFSET_KEYBOARD + 105,
+        NumPadMultiply: INPUT_OFFSET_KEYBOARD + 106,
+        NumPadAdd: INPUT_OFFSET_KEYBOARD + 107,
+        NumPadEnter: INPUT_OFFSET_KEYBOARD + 108,
+        NumPadSubtract: INPUT_OFFSET_KEYBOARD + 109,
+        NumPadDecimal: INPUT_OFFSET_KEYBOARD + 110,
+        NumPadDivide: INPUT_OFFSET_KEYBOARD + 111,
+        F1: INPUT_OFFSET_KEYBOARD + 112,
+        F2: INPUT_OFFSET_KEYBOARD + 113,
+        F3: INPUT_OFFSET_KEYBOARD + 114,
+        F4: INPUT_OFFSET_KEYBOARD + 115,
+        F5: INPUT_OFFSET_KEYBOARD + 116,
+        F6: INPUT_OFFSET_KEYBOARD + 117,
+        F7: INPUT_OFFSET_KEYBOARD + 118,
+        F8: INPUT_OFFSET_KEYBOARD + 119,
+        F9: INPUT_OFFSET_KEYBOARD + 120,
+        F10: INPUT_OFFSET_KEYBOARD + 121,
+        F11: INPUT_OFFSET_KEYBOARD + 122,
+        F12: INPUT_OFFSET_KEYBOARD + 123,
+        NumLock: INPUT_OFFSET_KEYBOARD + 144,
+        ScrollLock: INPUT_OFFSET_KEYBOARD + 145,
+        Colon: INPUT_OFFSET_KEYBOARD + 186,
+        Equals: INPUT_OFFSET_KEYBOARD + 187,
+        Comma: INPUT_OFFSET_KEYBOARD + 188,
+        Dash: INPUT_OFFSET_KEYBOARD + 189,
+        Period: INPUT_OFFSET_KEYBOARD + 190,
+        QuestionMark: INPUT_OFFSET_KEYBOARD + 191,
+        Tilde: INPUT_OFFSET_KEYBOARD + 192,
+        OpenBracket: INPUT_OFFSET_KEYBOARD + 219,
+        BackwardSlash: INPUT_OFFSET_KEYBOARD + 220,
+        ClosedBracket: INPUT_OFFSET_KEYBOARD + 221,
+        Quotes: INPUT_OFFSET_KEYBOARD + 222,
     },
 
     /**
@@ -401,16 +427,16 @@ export const
      * @property {Number}
      */
     POINTER = {
-        MouseLeft: INPUT_OFFSET.POINTER + 0,
-        MouseMiddle: INPUT_OFFSET.POINTER + 1,
-        MouseRight: INPUT_OFFSET.POINTER + 2,
-        MouseBack: INPUT_OFFSET.POINTER + 3,
-        MouseForward: INPUT_OFFSET.POINTER + 4,
-        MouseMove: INPUT_OFFSET.POINTER + 5,
-        MouseScroll: INPUT_OFFSET.POINTER + 6,
-        PenContact: INPUT_OFFSET.POINTER + 7,
-        PenBarrel: INPUT_OFFSET.POINTER + 8,
-        PenEraser: INPUT_OFFSET.POINTER + 9,
+        MouseLeft: INPUT_OFFSET_POINTER + 0,
+        MouseMiddle: INPUT_OFFSET_POINTER + 1,
+        MouseRight: INPUT_OFFSET_POINTER + 2,
+        MouseBack: INPUT_OFFSET_POINTER + 3,
+        MouseForward: INPUT_OFFSET_POINTER + 4,
+        MouseMove: INPUT_OFFSET_POINTER + 5,
+        MouseScroll: INPUT_OFFSET_POINTER + 6,
+        PenContact: INPUT_OFFSET_POINTER + 7,
+        PenBarrel: INPUT_OFFSET_POINTER + 8,
+        PenEraser: INPUT_OFFSET_POINTER + 9,
     },
 
     /**
@@ -422,10 +448,10 @@ export const
      * @property {Number} FaceLeft
      * @property {Number} FaceRight
      * @property {Number} FaceTop
-     * @property {Number} LeftTriggerBottom
-     * @property {Number} RightTriggerBottom
-     * @property {Number} LeftTriggerTop
-     * @property {Number} RightTriggerTop
+     * @property {Number} ShoulderLeftBottom
+     * @property {Number} ShoulderRightBottom
+     * @property {Number} ShoulderLeftTop
+     * @property {Number} ShoulderRightTop
      * @property {Number} Select
      * @property {Number} Start
      * @property {Number} LeftStick
@@ -434,7 +460,7 @@ export const
      * @property {Number} DPadDown
      * @property {Number} DPadLeft
      * @property {Number} DPadRight
-     * @property {Number} Special
+     * @property {Number} Home
      * @property {Number} LeftStickLeft
      * @property {Number} LeftStickRight
      * @property {Number} LeftStickUp
@@ -445,31 +471,31 @@ export const
      * @property {Number} RightStickDown
      */
     GAMEPAD = {
-        FaceBottom: INPUT_OFFSET.GAMEPAD + 0,
-        FaceLeft: INPUT_OFFSET.GAMEPAD + 1,
-        FaceRight: INPUT_OFFSET.GAMEPAD + 2,
-        FaceTop: INPUT_OFFSET.GAMEPAD + 3,
-        LeftTriggerBottom: INPUT_OFFSET.GAMEPAD + 4,
-        RightTriggerBottom: INPUT_OFFSET.GAMEPAD + 5,
-        LeftTriggerTop: INPUT_OFFSET.GAMEPAD + 6,
-        RightTriggerTop: INPUT_OFFSET.GAMEPAD + 7,
-        Select: INPUT_OFFSET.GAMEPAD + 8,
-        Start: INPUT_OFFSET.GAMEPAD + 9,
-        LeftStick: INPUT_OFFSET.GAMEPAD + 10,
-        RightStick: INPUT_OFFSET.GAMEPAD + 11,
-        DPadUp: INPUT_OFFSET.GAMEPAD + 12,
-        DPadDown: INPUT_OFFSET.GAMEPAD + 13,
-        DPadLeft: INPUT_OFFSET.GAMEPAD + 14,
-        DPadRight: INPUT_OFFSET.GAMEPAD + 15,
-        Special: INPUT_OFFSET.GAMEPAD + 16,
-        LeftStickLeft: INPUT_OFFSET.GAMEPAD + 17,
-        LeftStickRight: INPUT_OFFSET.GAMEPAD + 18,
-        LeftStickUp: INPUT_OFFSET.GAMEPAD + 19,
-        LeftStickDown: INPUT_OFFSET.GAMEPAD + 20,
-        RightStickLeft: INPUT_OFFSET.GAMEPAD + 21,
-        RightStickRight: INPUT_OFFSET.GAMEPAD + 22,
-        RightStickUp: INPUT_OFFSET.GAMEPAD + 23,
-        RightStickDown: INPUT_OFFSET.GAMEPAD + 24,
+        FaceBottom: INPUT_OFFSET_GAMEPAD + 0,
+        FaceLeft: INPUT_OFFSET_GAMEPAD + 1,
+        FaceRight: INPUT_OFFSET_GAMEPAD + 2,
+        FaceTop: INPUT_OFFSET_GAMEPAD + 3,
+        ShoulderLeftBottom: INPUT_OFFSET_GAMEPAD + 4,
+        ShoulderRightBottom: INPUT_OFFSET_GAMEPAD + 5,
+        ShoulderLeftTop: INPUT_OFFSET_GAMEPAD + 6,
+        ShoulderRightTop: INPUT_OFFSET_GAMEPAD + 7,
+        Select: INPUT_OFFSET_GAMEPAD + 8,
+        Start: INPUT_OFFSET_GAMEPAD + 9,
+        LeftStick: INPUT_OFFSET_GAMEPAD + 10,
+        RightStick: INPUT_OFFSET_GAMEPAD + 11,
+        DPadUp: INPUT_OFFSET_GAMEPAD + 12,
+        DPadDown: INPUT_OFFSET_GAMEPAD + 13,
+        DPadLeft: INPUT_OFFSET_GAMEPAD + 14,
+        DPadRight: INPUT_OFFSET_GAMEPAD + 15,
+        Home: INPUT_OFFSET_GAMEPAD + 16,
+        LeftStickLeft: INPUT_OFFSET_GAMEPAD + 17,
+        LeftStickRight: INPUT_OFFSET_GAMEPAD + 18,
+        LeftStickUp: INPUT_OFFSET_GAMEPAD + 19,
+        LeftStickDown: INPUT_OFFSET_GAMEPAD + 20,
+        RightStickLeft: INPUT_OFFSET_GAMEPAD + 21,
+        RightStickRight: INPUT_OFFSET_GAMEPAD + 22,
+        RightStickUp: INPUT_OFFSET_GAMEPAD + 23,
+        RightStickDown: INPUT_OFFSET_GAMEPAD + 24,
     },
 
     /**

@@ -1,4 +1,4 @@
-import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET } from '../const';
+import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET_KEYBOARD } from '../const';
 import ChannelManager from './ChannelManager';
 import { addFlag, hasFlag, removeFlag } from '../utils';
 
@@ -20,7 +20,7 @@ export default class Keyboard extends ChannelManager {
      * @param {ArrayBuffer} channelBuffer
      */
     constructor(app, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET.KEYBOARD, INPUT_CHANNELS_DEVICE);
+        super(channelBuffer, INPUT_OFFSET_KEYBOARD, INPUT_CHANNELS_DEVICE);
 
         /**
          * @private
@@ -141,6 +141,16 @@ export default class Keyboard extends ChannelManager {
      * @returns {Number}
      */
     static getChannelCode(key) {
-        return INPUT_OFFSET.KEYBOARD + (key % INPUT_CHANNELS_DEVICE);
+        return INPUT_OFFSET_KEYBOARD + (key % INPUT_CHANNELS_DEVICE);
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Number} channel
+     * @returns {Number}
+     */
+    static getKeyCode(channel) {
+        return (channel % INPUT_CHANNELS_DEVICE);
     }
 }

@@ -115,7 +115,7 @@ export default class GameScene extends Exo.Scene {
             }),
             new Exo.Input([
                 KEYBOARD.Shift,
-                GAMEPAD.RightTriggerTop,
+                GAMEPAD.ShoulderRightTop,
             ], {
                 context: this,
                 start() {

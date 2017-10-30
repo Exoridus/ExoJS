@@ -139,13 +139,53 @@ export default {
      * @type {Number}
      * @default 300
      */
-    INPUT_THRESHOLD: 300,
+    THRESHOLD_INPUT: 300,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 0.2
+     */
+    THRESHOLD_GAMEPAD: 0.2,
 
     /**
      * @public
      * @static
      * @type {GamepadMapping}
-     * @default {DefaultGamepadMapping}
+     * @default new DefaultGamepadMapping()
      */
     GAMEPAD_MAPPING: new DefaultGamepadMapping(),
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default false
+     */
+    INVERT_LEFT_AXIS_X: false,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default false
+     */
+    INVERT_LEFT_AXIS_Y: false,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default false
+     */
+    INVERT_RIGHT_AXIS_X: false,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default false
+     */
+    INVERT_RIGHT_AXIS_Y: false,
 };
