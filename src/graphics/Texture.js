@@ -1,7 +1,6 @@
-import Rectangle from '../math/Rectangle';
-import Vector from '../math/Vector';
 import settings from '../settings';
 import { addFlag, hasFlag, removeFlag } from '../utils';
+import Rectangle from '../math/Rectangle';
 
 const FLAGS = {
     NONE: 0,
@@ -97,12 +96,11 @@ export default class Texture {
      */
     get sourceFrame() {
         if (hasFlag(FLAGS.SOURCE_FRAME, this._flags)) {
-            if (this._source) {
-                this._sourceFrame.set(0, 0, (this._source.videoWidth || this._source.width), (this._source.videoHeight || this._source.height));
-            } else {
-                this._sourceFrame.set(0, 0, 0, 0);
-            }
+            const source = this._source,
+                width = source ? (source.videoWidth || source.width) : 0,
+                height = source ? (source.videoHeight || source.height) : 0;
 
+            this._sourceFrame.set(0, 0, width, height);
             this._flags = removeFlag(FLAGS.SOURCE_FRAME, this._flags);
         }
 

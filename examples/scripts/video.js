@@ -19,7 +19,8 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const app = this.app,
+            canvas = app.canvas;
 
         /**
          * @private
@@ -43,10 +44,17 @@ window.app.start(new Exo.Scene({
             },
         });
 
-        this.app
-            .trigger('input:add', this._input)
-            .trigger('media:play', this._video, { loop: true });
+        app.inputManager.add(this._input);
+        app.mediaManager.play(this._video, { loop: true });
+    },
 
-        this.addNode(this._video);
+    /**
+     * @param {Time} delta
+     */
+    update(delta) {
+        this.app.displayManager
+            .begin()
+            .render(this._video)
+            .end();
     },
 }));

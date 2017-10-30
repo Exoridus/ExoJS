@@ -209,17 +209,37 @@ ATTRIBUTE_TYPE = exports.ATTRIBUTE_TYPE = {
 /**
  * @public
  * @constant
- * @name INPUT_DEVICE
- * @type {Object<String, Number>}
- * @property {Number} KEYBOARD
- * @property {Number} POINTER
- * @property {Number} GAMEPAD
+ * @name INPUT_DEVICE_KEYBOARD
+ * @type {Number}
  */
-INPUT_DEVICE = exports.INPUT_DEVICE = {
-    KEYBOARD: 0,
-    POINTER: 1,
-    GAMEPAD: 2
-},
+INPUT_DEVICE_KEYBOARD = exports.INPUT_DEVICE_KEYBOARD = 0,
+
+
+/**
+ * @public
+ * @constant
+ * @name INPUT_DEVICE_POINTER
+ * @type {Number}
+ */
+INPUT_DEVICE_POINTER = exports.INPUT_DEVICE_POINTER = 1,
+
+
+/**
+ * @public
+ * @constant
+ * @name INPUT_DEVICE_GAMEPAD
+ * @type {Number}
+ */
+INPUT_DEVICE_GAMEPAD = exports.INPUT_DEVICE_GAMEPAD = 2,
+
+
+/**
+ * @public
+ * @constant
+ * @name INPUT_DEVICE_COUNT
+ * @type {Number}
+ */
+INPUT_DEVICE_COUNT = exports.INPUT_DEVICE_COUNT = 3,
 
 
 /**
@@ -246,23 +266,34 @@ INPUT_CHANNELS_DEVICE = exports.INPUT_CHANNELS_DEVICE = 256,
  * @name INPUT_CHANNELS_GLOBAL
  * @type {Number}
  */
-INPUT_CHANNELS_GLOBAL = exports.INPUT_CHANNELS_GLOBAL = Object.keys(INPUT_DEVICE).length * INPUT_CHANNELS_DEVICE,
+INPUT_CHANNELS_GLOBAL = exports.INPUT_CHANNELS_GLOBAL = INPUT_CHANNELS_DEVICE * INPUT_DEVICE_COUNT,
 
 
 /**
  * @public
  * @constant
- * @name INPUT_DEVICE
- * @type {Object<String, Number>}
- * @property {Number} KEYBOARD
- * @property {Number} POINTER
- * @property {Number} GAMEPAD
+ * @name INPUT_OFFSET_KEYBOARD
+ * @type {Number}
  */
-INPUT_OFFSET = exports.INPUT_OFFSET = Object.keys(INPUT_DEVICE).reduce(function (result, property) {
-    result[property] = INPUT_DEVICE[property] * INPUT_CHANNELS_DEVICE;
+INPUT_OFFSET_KEYBOARD = exports.INPUT_OFFSET_KEYBOARD = INPUT_DEVICE_KEYBOARD * INPUT_CHANNELS_DEVICE,
 
-    return result;
-}, {}),
+
+/**
+ * @public
+ * @constant
+ * @name INPUT_OFFSET_POINTER
+ * @type {Number}
+ */
+INPUT_OFFSET_POINTER = exports.INPUT_OFFSET_POINTER = INPUT_DEVICE_POINTER * INPUT_CHANNELS_DEVICE,
+
+
+/**
+ * @public
+ * @constant
+ * @name INPUT_OFFSET_GAMEPAD
+ * @type {Number}
+ */
+INPUT_OFFSET_GAMEPAD = exports.INPUT_OFFSET_GAMEPAD = INPUT_DEVICE_GAMEPAD * INPUT_CHANNELS_DEVICE,
 
 
 /**
@@ -371,105 +402,105 @@ INPUT_OFFSET = exports.INPUT_OFFSET = Object.keys(INPUT_DEVICE).reduce(function 
  * @property {Number} Quotes
  */
 KEYBOARD = exports.KEYBOARD = {
-    Backspace: INPUT_OFFSET.KEYBOARD + 8,
-    Tab: INPUT_OFFSET.KEYBOARD + 9,
-    Clear: INPUT_OFFSET.KEYBOARD + 12,
-    Enter: INPUT_OFFSET.KEYBOARD + 13,
-    Shift: INPUT_OFFSET.KEYBOARD + 16,
-    Control: INPUT_OFFSET.KEYBOARD + 17,
-    Alt: INPUT_OFFSET.KEYBOARD + 18,
-    Pause: INPUT_OFFSET.KEYBOARD + 19,
-    CapsLock: INPUT_OFFSET.KEYBOARD + 20,
-    Escape: INPUT_OFFSET.KEYBOARD + 27,
-    Space: INPUT_OFFSET.KEYBOARD + 32,
-    PageUp: INPUT_OFFSET.KEYBOARD + 33,
-    PageDown: INPUT_OFFSET.KEYBOARD + 34,
-    End: INPUT_OFFSET.KEYBOARD + 35,
-    Home: INPUT_OFFSET.KEYBOARD + 36,
-    Left: INPUT_OFFSET.KEYBOARD + 37,
-    Up: INPUT_OFFSET.KEYBOARD + 38,
-    Right: INPUT_OFFSET.KEYBOARD + 39,
-    Down: INPUT_OFFSET.KEYBOARD + 40,
-    Insert: INPUT_OFFSET.KEYBOARD + 45,
-    Delete: INPUT_OFFSET.KEYBOARD + 46,
-    Help: INPUT_OFFSET.KEYBOARD + 47,
-    Zero: INPUT_OFFSET.KEYBOARD + 48,
-    One: INPUT_OFFSET.KEYBOARD + 49,
-    Two: INPUT_OFFSET.KEYBOARD + 50,
-    Three: INPUT_OFFSET.KEYBOARD + 51,
-    Four: INPUT_OFFSET.KEYBOARD + 52,
-    Five: INPUT_OFFSET.KEYBOARD + 53,
-    Six: INPUT_OFFSET.KEYBOARD + 54,
-    Seven: INPUT_OFFSET.KEYBOARD + 55,
-    Eight: INPUT_OFFSET.KEYBOARD + 56,
-    Nine: INPUT_OFFSET.KEYBOARD + 57,
-    A: INPUT_OFFSET.KEYBOARD + 65,
-    B: INPUT_OFFSET.KEYBOARD + 66,
-    C: INPUT_OFFSET.KEYBOARD + 67,
-    D: INPUT_OFFSET.KEYBOARD + 68,
-    E: INPUT_OFFSET.KEYBOARD + 69,
-    F: INPUT_OFFSET.KEYBOARD + 70,
-    G: INPUT_OFFSET.KEYBOARD + 71,
-    H: INPUT_OFFSET.KEYBOARD + 72,
-    I: INPUT_OFFSET.KEYBOARD + 73,
-    J: INPUT_OFFSET.KEYBOARD + 74,
-    K: INPUT_OFFSET.KEYBOARD + 75,
-    L: INPUT_OFFSET.KEYBOARD + 76,
-    M: INPUT_OFFSET.KEYBOARD + 77,
-    N: INPUT_OFFSET.KEYBOARD + 78,
-    O: INPUT_OFFSET.KEYBOARD + 79,
-    P: INPUT_OFFSET.KEYBOARD + 80,
-    Q: INPUT_OFFSET.KEYBOARD + 81,
-    R: INPUT_OFFSET.KEYBOARD + 82,
-    S: INPUT_OFFSET.KEYBOARD + 83,
-    T: INPUT_OFFSET.KEYBOARD + 84,
-    U: INPUT_OFFSET.KEYBOARD + 85,
-    V: INPUT_OFFSET.KEYBOARD + 86,
-    W: INPUT_OFFSET.KEYBOARD + 87,
-    X: INPUT_OFFSET.KEYBOARD + 88,
-    Y: INPUT_OFFSET.KEYBOARD + 89,
-    Z: INPUT_OFFSET.KEYBOARD + 90,
-    NumPad0: INPUT_OFFSET.KEYBOARD + 96,
-    NumPad1: INPUT_OFFSET.KEYBOARD + 97,
-    NumPad2: INPUT_OFFSET.KEYBOARD + 98,
-    NumPad3: INPUT_OFFSET.KEYBOARD + 99,
-    NumPad4: INPUT_OFFSET.KEYBOARD + 100,
-    NumPad5: INPUT_OFFSET.KEYBOARD + 101,
-    NumPad6: INPUT_OFFSET.KEYBOARD + 102,
-    NumPad7: INPUT_OFFSET.KEYBOARD + 103,
-    NumPad8: INPUT_OFFSET.KEYBOARD + 104,
-    NumPad9: INPUT_OFFSET.KEYBOARD + 105,
-    NumPadMultiply: INPUT_OFFSET.KEYBOARD + 106,
-    NumPadAdd: INPUT_OFFSET.KEYBOARD + 107,
-    NumPadEnter: INPUT_OFFSET.KEYBOARD + 108,
-    NumPadSubtract: INPUT_OFFSET.KEYBOARD + 109,
-    NumPadDecimal: INPUT_OFFSET.KEYBOARD + 110,
-    NumPadDivide: INPUT_OFFSET.KEYBOARD + 111,
-    F1: INPUT_OFFSET.KEYBOARD + 112,
-    F2: INPUT_OFFSET.KEYBOARD + 113,
-    F3: INPUT_OFFSET.KEYBOARD + 114,
-    F4: INPUT_OFFSET.KEYBOARD + 115,
-    F5: INPUT_OFFSET.KEYBOARD + 116,
-    F6: INPUT_OFFSET.KEYBOARD + 117,
-    F7: INPUT_OFFSET.KEYBOARD + 118,
-    F8: INPUT_OFFSET.KEYBOARD + 119,
-    F9: INPUT_OFFSET.KEYBOARD + 120,
-    F10: INPUT_OFFSET.KEYBOARD + 121,
-    F11: INPUT_OFFSET.KEYBOARD + 122,
-    F12: INPUT_OFFSET.KEYBOARD + 123,
-    NumLock: INPUT_OFFSET.KEYBOARD + 144,
-    ScrollLock: INPUT_OFFSET.KEYBOARD + 145,
-    Colon: INPUT_OFFSET.KEYBOARD + 186,
-    Equals: INPUT_OFFSET.KEYBOARD + 187,
-    Comma: INPUT_OFFSET.KEYBOARD + 188,
-    Dash: INPUT_OFFSET.KEYBOARD + 189,
-    Period: INPUT_OFFSET.KEYBOARD + 190,
-    QuestionMark: INPUT_OFFSET.KEYBOARD + 191,
-    Tilde: INPUT_OFFSET.KEYBOARD + 192,
-    OpenBracket: INPUT_OFFSET.KEYBOARD + 219,
-    BackwardSlash: INPUT_OFFSET.KEYBOARD + 220,
-    ClosedBracket: INPUT_OFFSET.KEYBOARD + 221,
-    Quotes: INPUT_OFFSET.KEYBOARD + 222
+    Backspace: INPUT_OFFSET_KEYBOARD + 8,
+    Tab: INPUT_OFFSET_KEYBOARD + 9,
+    Clear: INPUT_OFFSET_KEYBOARD + 12,
+    Enter: INPUT_OFFSET_KEYBOARD + 13,
+    Shift: INPUT_OFFSET_KEYBOARD + 16,
+    Control: INPUT_OFFSET_KEYBOARD + 17,
+    Alt: INPUT_OFFSET_KEYBOARD + 18,
+    Pause: INPUT_OFFSET_KEYBOARD + 19,
+    CapsLock: INPUT_OFFSET_KEYBOARD + 20,
+    Escape: INPUT_OFFSET_KEYBOARD + 27,
+    Space: INPUT_OFFSET_KEYBOARD + 32,
+    PageUp: INPUT_OFFSET_KEYBOARD + 33,
+    PageDown: INPUT_OFFSET_KEYBOARD + 34,
+    End: INPUT_OFFSET_KEYBOARD + 35,
+    Home: INPUT_OFFSET_KEYBOARD + 36,
+    Left: INPUT_OFFSET_KEYBOARD + 37,
+    Up: INPUT_OFFSET_KEYBOARD + 38,
+    Right: INPUT_OFFSET_KEYBOARD + 39,
+    Down: INPUT_OFFSET_KEYBOARD + 40,
+    Insert: INPUT_OFFSET_KEYBOARD + 45,
+    Delete: INPUT_OFFSET_KEYBOARD + 46,
+    Help: INPUT_OFFSET_KEYBOARD + 47,
+    Zero: INPUT_OFFSET_KEYBOARD + 48,
+    One: INPUT_OFFSET_KEYBOARD + 49,
+    Two: INPUT_OFFSET_KEYBOARD + 50,
+    Three: INPUT_OFFSET_KEYBOARD + 51,
+    Four: INPUT_OFFSET_KEYBOARD + 52,
+    Five: INPUT_OFFSET_KEYBOARD + 53,
+    Six: INPUT_OFFSET_KEYBOARD + 54,
+    Seven: INPUT_OFFSET_KEYBOARD + 55,
+    Eight: INPUT_OFFSET_KEYBOARD + 56,
+    Nine: INPUT_OFFSET_KEYBOARD + 57,
+    A: INPUT_OFFSET_KEYBOARD + 65,
+    B: INPUT_OFFSET_KEYBOARD + 66,
+    C: INPUT_OFFSET_KEYBOARD + 67,
+    D: INPUT_OFFSET_KEYBOARD + 68,
+    E: INPUT_OFFSET_KEYBOARD + 69,
+    F: INPUT_OFFSET_KEYBOARD + 70,
+    G: INPUT_OFFSET_KEYBOARD + 71,
+    H: INPUT_OFFSET_KEYBOARD + 72,
+    I: INPUT_OFFSET_KEYBOARD + 73,
+    J: INPUT_OFFSET_KEYBOARD + 74,
+    K: INPUT_OFFSET_KEYBOARD + 75,
+    L: INPUT_OFFSET_KEYBOARD + 76,
+    M: INPUT_OFFSET_KEYBOARD + 77,
+    N: INPUT_OFFSET_KEYBOARD + 78,
+    O: INPUT_OFFSET_KEYBOARD + 79,
+    P: INPUT_OFFSET_KEYBOARD + 80,
+    Q: INPUT_OFFSET_KEYBOARD + 81,
+    R: INPUT_OFFSET_KEYBOARD + 82,
+    S: INPUT_OFFSET_KEYBOARD + 83,
+    T: INPUT_OFFSET_KEYBOARD + 84,
+    U: INPUT_OFFSET_KEYBOARD + 85,
+    V: INPUT_OFFSET_KEYBOARD + 86,
+    W: INPUT_OFFSET_KEYBOARD + 87,
+    X: INPUT_OFFSET_KEYBOARD + 88,
+    Y: INPUT_OFFSET_KEYBOARD + 89,
+    Z: INPUT_OFFSET_KEYBOARD + 90,
+    NumPad0: INPUT_OFFSET_KEYBOARD + 96,
+    NumPad1: INPUT_OFFSET_KEYBOARD + 97,
+    NumPad2: INPUT_OFFSET_KEYBOARD + 98,
+    NumPad3: INPUT_OFFSET_KEYBOARD + 99,
+    NumPad4: INPUT_OFFSET_KEYBOARD + 100,
+    NumPad5: INPUT_OFFSET_KEYBOARD + 101,
+    NumPad6: INPUT_OFFSET_KEYBOARD + 102,
+    NumPad7: INPUT_OFFSET_KEYBOARD + 103,
+    NumPad8: INPUT_OFFSET_KEYBOARD + 104,
+    NumPad9: INPUT_OFFSET_KEYBOARD + 105,
+    NumPadMultiply: INPUT_OFFSET_KEYBOARD + 106,
+    NumPadAdd: INPUT_OFFSET_KEYBOARD + 107,
+    NumPadEnter: INPUT_OFFSET_KEYBOARD + 108,
+    NumPadSubtract: INPUT_OFFSET_KEYBOARD + 109,
+    NumPadDecimal: INPUT_OFFSET_KEYBOARD + 110,
+    NumPadDivide: INPUT_OFFSET_KEYBOARD + 111,
+    F1: INPUT_OFFSET_KEYBOARD + 112,
+    F2: INPUT_OFFSET_KEYBOARD + 113,
+    F3: INPUT_OFFSET_KEYBOARD + 114,
+    F4: INPUT_OFFSET_KEYBOARD + 115,
+    F5: INPUT_OFFSET_KEYBOARD + 116,
+    F6: INPUT_OFFSET_KEYBOARD + 117,
+    F7: INPUT_OFFSET_KEYBOARD + 118,
+    F8: INPUT_OFFSET_KEYBOARD + 119,
+    F9: INPUT_OFFSET_KEYBOARD + 120,
+    F10: INPUT_OFFSET_KEYBOARD + 121,
+    F11: INPUT_OFFSET_KEYBOARD + 122,
+    F12: INPUT_OFFSET_KEYBOARD + 123,
+    NumLock: INPUT_OFFSET_KEYBOARD + 144,
+    ScrollLock: INPUT_OFFSET_KEYBOARD + 145,
+    Colon: INPUT_OFFSET_KEYBOARD + 186,
+    Equals: INPUT_OFFSET_KEYBOARD + 187,
+    Comma: INPUT_OFFSET_KEYBOARD + 188,
+    Dash: INPUT_OFFSET_KEYBOARD + 189,
+    Period: INPUT_OFFSET_KEYBOARD + 190,
+    QuestionMark: INPUT_OFFSET_KEYBOARD + 191,
+    Tilde: INPUT_OFFSET_KEYBOARD + 192,
+    OpenBracket: INPUT_OFFSET_KEYBOARD + 219,
+    BackwardSlash: INPUT_OFFSET_KEYBOARD + 220,
+    ClosedBracket: INPUT_OFFSET_KEYBOARD + 221,
+    Quotes: INPUT_OFFSET_KEYBOARD + 222
 },
 
 
@@ -492,16 +523,16 @@ KEYBOARD = exports.KEYBOARD = {
  * @property {Number}
  */
 POINTER = exports.POINTER = {
-    MouseLeft: INPUT_OFFSET.POINTER + 0,
-    MouseMiddle: INPUT_OFFSET.POINTER + 1,
-    MouseRight: INPUT_OFFSET.POINTER + 2,
-    MouseBack: INPUT_OFFSET.POINTER + 3,
-    MouseForward: INPUT_OFFSET.POINTER + 4,
-    MouseMove: INPUT_OFFSET.POINTER + 5,
-    MouseScroll: INPUT_OFFSET.POINTER + 6,
-    PenContact: INPUT_OFFSET.POINTER + 7,
-    PenBarrel: INPUT_OFFSET.POINTER + 8,
-    PenEraser: INPUT_OFFSET.POINTER + 9
+    MouseLeft: INPUT_OFFSET_POINTER + 0,
+    MouseMiddle: INPUT_OFFSET_POINTER + 1,
+    MouseRight: INPUT_OFFSET_POINTER + 2,
+    MouseBack: INPUT_OFFSET_POINTER + 3,
+    MouseForward: INPUT_OFFSET_POINTER + 4,
+    MouseMove: INPUT_OFFSET_POINTER + 5,
+    MouseScroll: INPUT_OFFSET_POINTER + 6,
+    PenContact: INPUT_OFFSET_POINTER + 7,
+    PenBarrel: INPUT_OFFSET_POINTER + 8,
+    PenEraser: INPUT_OFFSET_POINTER + 9
 },
 
 
@@ -514,10 +545,10 @@ POINTER = exports.POINTER = {
  * @property {Number} FaceLeft
  * @property {Number} FaceRight
  * @property {Number} FaceTop
- * @property {Number} LeftTriggerBottom
- * @property {Number} RightTriggerBottom
- * @property {Number} LeftTriggerTop
- * @property {Number} RightTriggerTop
+ * @property {Number} ShoulderLeftBottom
+ * @property {Number} ShoulderRightBottom
+ * @property {Number} ShoulderLeftTop
+ * @property {Number} ShoulderRightTop
  * @property {Number} Select
  * @property {Number} Start
  * @property {Number} LeftStick
@@ -526,7 +557,7 @@ POINTER = exports.POINTER = {
  * @property {Number} DPadDown
  * @property {Number} DPadLeft
  * @property {Number} DPadRight
- * @property {Number} Special
+ * @property {Number} Home
  * @property {Number} LeftStickLeft
  * @property {Number} LeftStickRight
  * @property {Number} LeftStickUp
@@ -537,31 +568,31 @@ POINTER = exports.POINTER = {
  * @property {Number} RightStickDown
  */
 GAMEPAD = exports.GAMEPAD = {
-    FaceBottom: INPUT_OFFSET.GAMEPAD + 0,
-    FaceLeft: INPUT_OFFSET.GAMEPAD + 1,
-    FaceRight: INPUT_OFFSET.GAMEPAD + 2,
-    FaceTop: INPUT_OFFSET.GAMEPAD + 3,
-    LeftTriggerBottom: INPUT_OFFSET.GAMEPAD + 4,
-    RightTriggerBottom: INPUT_OFFSET.GAMEPAD + 5,
-    LeftTriggerTop: INPUT_OFFSET.GAMEPAD + 6,
-    RightTriggerTop: INPUT_OFFSET.GAMEPAD + 7,
-    Select: INPUT_OFFSET.GAMEPAD + 8,
-    Start: INPUT_OFFSET.GAMEPAD + 9,
-    LeftStick: INPUT_OFFSET.GAMEPAD + 10,
-    RightStick: INPUT_OFFSET.GAMEPAD + 11,
-    DPadUp: INPUT_OFFSET.GAMEPAD + 12,
-    DPadDown: INPUT_OFFSET.GAMEPAD + 13,
-    DPadLeft: INPUT_OFFSET.GAMEPAD + 14,
-    DPadRight: INPUT_OFFSET.GAMEPAD + 15,
-    Special: INPUT_OFFSET.GAMEPAD + 16,
-    LeftStickLeft: INPUT_OFFSET.GAMEPAD + 17,
-    LeftStickRight: INPUT_OFFSET.GAMEPAD + 18,
-    LeftStickUp: INPUT_OFFSET.GAMEPAD + 19,
-    LeftStickDown: INPUT_OFFSET.GAMEPAD + 20,
-    RightStickLeft: INPUT_OFFSET.GAMEPAD + 21,
-    RightStickRight: INPUT_OFFSET.GAMEPAD + 22,
-    RightStickUp: INPUT_OFFSET.GAMEPAD + 23,
-    RightStickDown: INPUT_OFFSET.GAMEPAD + 24
+    FaceBottom: INPUT_OFFSET_GAMEPAD + 0,
+    FaceLeft: INPUT_OFFSET_GAMEPAD + 1,
+    FaceRight: INPUT_OFFSET_GAMEPAD + 2,
+    FaceTop: INPUT_OFFSET_GAMEPAD + 3,
+    ShoulderLeftBottom: INPUT_OFFSET_GAMEPAD + 4,
+    ShoulderRightBottom: INPUT_OFFSET_GAMEPAD + 5,
+    ShoulderLeftTop: INPUT_OFFSET_GAMEPAD + 6,
+    ShoulderRightTop: INPUT_OFFSET_GAMEPAD + 7,
+    Select: INPUT_OFFSET_GAMEPAD + 8,
+    Start: INPUT_OFFSET_GAMEPAD + 9,
+    LeftStick: INPUT_OFFSET_GAMEPAD + 10,
+    RightStick: INPUT_OFFSET_GAMEPAD + 11,
+    DPadUp: INPUT_OFFSET_GAMEPAD + 12,
+    DPadDown: INPUT_OFFSET_GAMEPAD + 13,
+    DPadLeft: INPUT_OFFSET_GAMEPAD + 14,
+    DPadRight: INPUT_OFFSET_GAMEPAD + 15,
+    Home: INPUT_OFFSET_GAMEPAD + 16,
+    LeftStickLeft: INPUT_OFFSET_GAMEPAD + 17,
+    LeftStickRight: INPUT_OFFSET_GAMEPAD + 18,
+    LeftStickUp: INPUT_OFFSET_GAMEPAD + 19,
+    LeftStickDown: INPUT_OFFSET_GAMEPAD + 20,
+    RightStickLeft: INPUT_OFFSET_GAMEPAD + 21,
+    RightStickRight: INPUT_OFFSET_GAMEPAD + 22,
+    RightStickUp: INPUT_OFFSET_GAMEPAD + 23,
+    RightStickDown: INPUT_OFFSET_GAMEPAD + 24
 },
 
 
@@ -637,16 +668,16 @@ BLEND_MODE = exports.BLEND_MODE = {
         dst: 0x0303
     },
     ADD: {
-        src: 0x0302,
+        src: 0x0001,
         dst: 0x0304
     },
     MULTIPLY: {
-        src: 0x0304,
+        src: 0x0306,
         dst: 0x0303
     },
     SCREEN: {
-        src: 0x0302,
-        dst: 0x0001
+        src: 0x0001,
+        dst: 0x0301
     }
 },
 
@@ -1556,11 +1587,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _const = __webpack_require__(0);
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _DefaultGamepadMapping = __webpack_require__(44);
+var _DefaultGamepadMapping = __webpack_require__(43);
 
 var _DefaultGamepadMapping2 = _interopRequireDefault(_DefaultGamepadMapping);
 
@@ -1642,7 +1673,7 @@ exports.default = {
      * @type {Object<String, Number>}
      * @default BLEND_MODE.NORMAL
      */
-    BLEND_MODE: _const.BLEND_MODE.MULTIPLY,
+    BLEND_MODE: _const.BLEND_MODE.NORMAL,
 
     /**
      * @public
@@ -1703,7 +1734,7 @@ exports.default = {
      * @type {Number}
      * @default 300
      */
-    INPUT_THRESHOLD: 300,
+    THRESHOLD_INPUT: 300,
 
     /**
      * @public
@@ -2462,370 +2493,6 @@ exports.default = EventEmitter;
 
 /***/ }),
 /* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _utils = __webpack_require__(1);
-
-var _Vector = __webpack_require__(2);
-
-var _Vector2 = _interopRequireDefault(_Vector);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * | a | b | x |
- * | c | d | y |
- * | e | f | z |
- *
- * @class Matrix
- */
-var Matrix = function () {
-
-    /**
-     * @constructor
-     * @param {Number} [a=1]
-     * @param {Number} [b=0]
-     * @param {Number} [x=0]
-     * @param {Number} [c=0]
-     * @param {Number} [d=1]
-     * @param {Number} [y=0]
-     * @param {Number} [e=0]
-     * @param {Number} [f=0]
-     * @param {Number} [z=1]
-     */
-    function Matrix() {
-        var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-        var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-        var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-        var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-        var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
-        var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
-        var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-        var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-        var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 1;
-
-        _classCallCheck(this, Matrix);
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.a = a;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.b = b;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.x = x;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.c = c;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.d = d;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.y = y;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.e = e;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.f = f;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.z = z;
-
-        /**
-         * @private
-         * @member {?Float32Array} _array
-         */
-        this._array = null;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-
-
-    _createClass(Matrix, [{
-        key: 'set',
-
-
-        /**
-         * | a | b | x |
-         * | c | d | y |
-         * | e | f | z |
-         *
-         * @public
-         * @chainable
-         * @param {Number} [a=this.a]
-         * @param {Number} [b=this.b]
-         * @param {Number} [x=this.x]
-         * @param {Number} [c=this.c]
-         * @param {Number} [d=this.d]
-         * @param {Number} [y=this.y]
-         * @param {Number} [e=this.e]
-         * @param {Number} [f=this.f]
-         * @param {Number} [z=this.z]
-         * @returns {Matrix}
-         */
-        value: function set() {
-            var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.a;
-            var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.b;
-            var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this.x;
-            var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : this.c;
-            var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : this.d;
-            var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : this.y;
-            var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : this.e;
-            var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : this.f;
-            var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : this.z;
-
-            this.a = a;this.b = b;this.x = x;
-            this.c = c;this.d = d;this.y = y;
-            this.e = e;this.f = f;this.z = z;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Matrix} matrix
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'copy',
-        value: function copy(matrix) {
-            this.a = matrix.a;this.b = matrix.b;this.x = matrix.x;
-            this.c = matrix.c;this.d = matrix.d;this.y = matrix.y;
-            this.e = matrix.e;this.f = matrix.f;this.z = matrix.z;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'clone',
-        value: function clone() {
-            return new Matrix(this.a, this.b, this.x, this.c, this.d, this.y, this.e, this.f, this.z);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Matrix} matrix
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'combine',
-        value: function combine(matrix) {
-            return this.set(this.a * matrix.a + this.c * matrix.b + this.e * matrix.x, this.b * matrix.a + this.d * matrix.b + this.f * matrix.x, this.x * matrix.a + this.y * matrix.b + this.z * matrix.x, this.a * matrix.c + this.c * matrix.d + this.e * matrix.y, this.b * matrix.c + this.d * matrix.d + this.f * matrix.y, this.x * matrix.c + this.y * matrix.d + this.z * matrix.y, this.a * matrix.e + this.c * matrix.f + this.e * matrix.z, this.b * matrix.e + this.d * matrix.f + this.f * matrix.z, this.x * matrix.e + this.y * matrix.f + this.z * matrix.z);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'inverse',
-        value: function inverse() {
-            var determinant = this.a * (this.z * this.d - this.y * this.f) - this.b * (this.z * this.c - this.y * this.e) + this.x * (this.f * this.c - this.d * this.e);
-
-            if (determinant !== 0) {
-                return this.set((this.z * this.d - this.y * this.f) / determinant, (this.z * this.c - this.y * this.e) / -determinant, (this.f * this.c - this.d * this.e) / determinant, (this.z * this.b - this.x * this.f) / -determinant, (this.z * this.a - this.x * this.e) / determinant, (this.f * this.a - this.b * this.e) / -determinant, (this.y * this.b - this.x * this.d) / determinant, (this.y * this.a - this.x * this.c) / -determinant, (this.d * this.a - this.b * this.c) / determinant);
-            }
-
-            return this.copy(Matrix.Identity);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} x
-         * @param {Number} [y=x]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'translate',
-        value: function translate(x) {
-            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
-
-            return this.combine(Matrix.Temp.set(1, 0, x, 0, 1, y, 0, 0, 1));
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} angle
-         * @param {Number} [centerX=0]
-         * @param {Number} [centerY=centerX]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'rotate',
-        value: function rotate(angle) {
-            var centerX = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-            var centerY = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : centerX;
-
-            var radian = (0, _utils.degreesToRadians)(angle),
-                cos = Math.cos(radian),
-                sin = Math.sin(radian);
-
-            return this.combine(Matrix.Temp.set(cos, -sin, centerX * (1 - cos) + centerY * sin, sin, cos, centerY * (1 - cos) - centerX * sin, 0, 0, 1));
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} scaleX
-         * @param {Number} [scaleY=scaleX]
-         * @param {Number} [centerX=0]
-         * @param {Number} [centerY=centerX]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'scale',
-        value: function scale(scaleX) {
-            var scaleY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : scaleX;
-            var centerX = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-            var centerY = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : centerX;
-
-            return this.combine(Matrix.Temp.set(scaleX, 0, centerX * (1 - scaleX), 0, scaleY, centerY * (1 - scaleY), 0, 0, 1));
-        }
-
-        /**
-         * @public
-         * @param {Boolean} [transpose=false]
-         * @returns {Float32Array}
-         */
-
-    }, {
-        key: 'toArray',
-        value: function toArray() {
-            var transpose = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-            return transpose ? this.transposedArray : this.array;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            if (this._array) {
-                this._array = null;
-            }
-
-            this.a = null;this.b = null;this.x = null;
-            this.c = null;this.d = null;this.y = null;
-            this.e = null;this.f = null;this.z = null;
-        }
-    }, {
-        key: 'array',
-        get: function get() {
-            var array = this._array || (this._array = new Float32Array(9));
-
-            array[0] = this.a;array[1] = this.c;array[2] = this.e;
-            array[3] = this.b;array[4] = this.d;array[5] = this.f;
-            array[6] = this.x;array[7] = this.y;array[8] = this.z;
-
-            return array;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Float32Array}
-         */
-
-    }, {
-        key: 'transposedArray',
-        get: function get() {
-            var array = this._array || (this._array = new Float32Array(9));
-
-            array[0] = this.a;array[1] = this.b;array[2] = this.x;
-            array[3] = this.c;array[4] = this.d;array[5] = this.y;
-            array[6] = this.e;array[7] = this.f;array[8] = this.z;
-
-            return array;
-        }
-    }]);
-
-    return Matrix;
-}();
-
-/**
- * @public
- * @static
- * @readonly
- * @member {Matrix}
- */
-
-
-exports.default = Matrix;
-Matrix.Identity = new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
-/**
- * @public
- * @static
- * @constant
- * @member {Matrix}
- */
-Matrix.Temp = new Matrix();
-
-/***/ }),
-/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4135,6 +3802,370 @@ Color.Yellow = new Color(255, 255, 0, 1);
 Color.YellowGreen = new Color(154, 205, 50, 1);
 
 /***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _utils = __webpack_require__(1);
+
+var _Vector = __webpack_require__(2);
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * | a | b | x |
+ * | c | d | y |
+ * | e | f | z |
+ *
+ * @class Matrix
+ */
+var Matrix = function () {
+
+    /**
+     * @constructor
+     * @param {Number} [a=1]
+     * @param {Number} [b=0]
+     * @param {Number} [x=0]
+     * @param {Number} [c=0]
+     * @param {Number} [d=1]
+     * @param {Number} [y=0]
+     * @param {Number} [e=0]
+     * @param {Number} [f=0]
+     * @param {Number} [z=1]
+     */
+    function Matrix() {
+        var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+        var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+        var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+        var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+        var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
+        var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
+        var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
+        var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
+        var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 1;
+
+        _classCallCheck(this, Matrix);
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.a = a;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.b = b;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.x = x;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.c = c;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.d = d;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.y = y;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.e = e;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.f = f;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.z = z;
+
+        /**
+         * @private
+         * @member {?Float32Array} _array
+         */
+        this._array = null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+
+
+    _createClass(Matrix, [{
+        key: 'set',
+
+
+        /**
+         * | a | b | x |
+         * | c | d | y |
+         * | e | f | z |
+         *
+         * @public
+         * @chainable
+         * @param {Number} [a=this.a]
+         * @param {Number} [b=this.b]
+         * @param {Number} [x=this.x]
+         * @param {Number} [c=this.c]
+         * @param {Number} [d=this.d]
+         * @param {Number} [y=this.y]
+         * @param {Number} [e=this.e]
+         * @param {Number} [f=this.f]
+         * @param {Number} [z=this.z]
+         * @returns {Matrix}
+         */
+        value: function set() {
+            var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.a;
+            var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.b;
+            var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this.x;
+            var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : this.c;
+            var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : this.d;
+            var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : this.y;
+            var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : this.e;
+            var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : this.f;
+            var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : this.z;
+
+            this.a = a;this.b = b;this.x = x;
+            this.c = c;this.d = d;this.y = y;
+            this.e = e;this.f = f;this.z = z;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Matrix} matrix
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'copy',
+        value: function copy(matrix) {
+            this.a = matrix.a;this.b = matrix.b;this.x = matrix.x;
+            this.c = matrix.c;this.d = matrix.d;this.y = matrix.y;
+            this.e = matrix.e;this.f = matrix.f;this.z = matrix.z;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'clone',
+        value: function clone() {
+            return new Matrix(this.a, this.b, this.x, this.c, this.d, this.y, this.e, this.f, this.z);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Matrix} matrix
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'combine',
+        value: function combine(matrix) {
+            return this.set(this.a * matrix.a + this.c * matrix.b + this.e * matrix.x, this.b * matrix.a + this.d * matrix.b + this.f * matrix.x, this.x * matrix.a + this.y * matrix.b + this.z * matrix.x, this.a * matrix.c + this.c * matrix.d + this.e * matrix.y, this.b * matrix.c + this.d * matrix.d + this.f * matrix.y, this.x * matrix.c + this.y * matrix.d + this.z * matrix.y, this.a * matrix.e + this.c * matrix.f + this.e * matrix.z, this.b * matrix.e + this.d * matrix.f + this.f * matrix.z, this.x * matrix.e + this.y * matrix.f + this.z * matrix.z);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'inverse',
+        value: function inverse() {
+            var determinant = this.a * (this.z * this.d - this.y * this.f) - this.b * (this.z * this.c - this.y * this.e) + this.x * (this.f * this.c - this.d * this.e);
+
+            if (determinant !== 0) {
+                return this.set((this.z * this.d - this.y * this.f) / determinant, (this.z * this.c - this.y * this.e) / -determinant, (this.f * this.c - this.d * this.e) / determinant, (this.z * this.b - this.x * this.f) / -determinant, (this.z * this.a - this.x * this.e) / determinant, (this.f * this.a - this.b * this.e) / -determinant, (this.y * this.b - this.x * this.d) / determinant, (this.y * this.a - this.x * this.c) / -determinant, (this.d * this.a - this.b * this.c) / determinant);
+            }
+
+            return this.copy(Matrix.Identity);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} x
+         * @param {Number} [y=x]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'translate',
+        value: function translate(x) {
+            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
+
+            return this.combine(Matrix.Temp.set(1, 0, x, 0, 1, y, 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} angle
+         * @param {Number} [centerX=0]
+         * @param {Number} [centerY=centerX]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'rotate',
+        value: function rotate(angle) {
+            var centerX = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+            var centerY = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : centerX;
+
+            var radian = (0, _utils.degreesToRadians)(angle),
+                cos = Math.cos(radian),
+                sin = Math.sin(radian);
+
+            return this.combine(Matrix.Temp.set(cos, -sin, centerX * (1 - cos) + centerY * sin, sin, cos, centerY * (1 - cos) - centerX * sin, 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} scaleX
+         * @param {Number} [scaleY=scaleX]
+         * @param {Number} [centerX=0]
+         * @param {Number} [centerY=centerX]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'scale',
+        value: function scale(scaleX) {
+            var scaleY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : scaleX;
+            var centerX = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+            var centerY = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : centerX;
+
+            return this.combine(Matrix.Temp.set(scaleX, 0, centerX * (1 - scaleX), 0, scaleY, centerY * (1 - scaleY), 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @param {Boolean} [transpose=false]
+         * @returns {Float32Array}
+         */
+
+    }, {
+        key: 'toArray',
+        value: function toArray() {
+            var transpose = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+            return transpose ? this.transposedArray : this.array;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            if (this._array) {
+                this._array = null;
+            }
+
+            this.a = null;this.b = null;this.x = null;
+            this.c = null;this.d = null;this.y = null;
+            this.e = null;this.f = null;this.z = null;
+        }
+    }, {
+        key: 'array',
+        get: function get() {
+            var array = this._array || (this._array = new Float32Array(9));
+
+            array[0] = this.a;array[1] = this.c;array[2] = this.e;
+            array[3] = this.b;array[4] = this.d;array[5] = this.f;
+            array[6] = this.x;array[7] = this.y;array[8] = this.z;
+
+            return array;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Float32Array}
+         */
+
+    }, {
+        key: 'transposedArray',
+        get: function get() {
+            var array = this._array || (this._array = new Float32Array(9));
+
+            array[0] = this.a;array[1] = this.b;array[2] = this.x;
+            array[3] = this.c;array[4] = this.d;array[5] = this.y;
+            array[6] = this.e;array[7] = this.f;array[8] = this.z;
+
+            return array;
+        }
+    }]);
+
+    return Matrix;
+}();
+
+/**
+ * @public
+ * @static
+ * @readonly
+ * @member {Matrix}
+ */
+
+
+exports.default = Matrix;
+Matrix.Identity = new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Matrix}
+ */
+Matrix.Temp = new Matrix();
+
+/***/ }),
 /* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -5442,19 +5473,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Rectangle = __webpack_require__(4);
-
-var _Rectangle2 = _interopRequireDefault(_Rectangle);
-
-var _Vector = __webpack_require__(2);
-
-var _Vector2 = _interopRequireDefault(_Vector);
-
 var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
 
 var _utils = __webpack_require__(1);
+
+var _Rectangle = __webpack_require__(4);
+
+var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -5733,12 +5760,11 @@ var Texture = function () {
         key: 'sourceFrame',
         get: function get() {
             if ((0, _utils.hasFlag)(FLAGS.SOURCE_FRAME, this._flags)) {
-                if (this._source) {
-                    this._sourceFrame.set(0, 0, this._source.videoWidth || this._source.width, this._source.videoHeight || this._source.height);
-                } else {
-                    this._sourceFrame.set(0, 0, 0, 0);
-                }
+                var source = this._source,
+                    width = source ? source.videoWidth || source.width : 0,
+                    height = source ? source.videoHeight || source.height : 0;
 
+                this._sourceFrame.set(0, 0, width, height);
                 this._flags = (0, _utils.removeFlag)(FLAGS.SOURCE_FRAME, this._flags);
             }
 
@@ -6080,7 +6106,7 @@ var _Interval = __webpack_require__(25);
 
 var _Interval2 = _interopRequireDefault(_Interval);
 
-var _Polygon = __webpack_require__(43);
+var _Polygon = __webpack_require__(46);
 
 var _Polygon2 = _interopRequireDefault(_Polygon);
 
@@ -6482,7 +6508,7 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -6723,7 +6749,7 @@ var _SceneNode2 = __webpack_require__(27);
 
 var _SceneNode3 = _interopRequireDefault(_SceneNode2);
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -6780,7 +6806,6 @@ var Renderable = function (_SceneNode) {
 
         /**
          * @public
-         * @virtual
          * @chainable
          * @param {DisplayManager} displayManager
          * @returns {Renderable}
@@ -7677,7 +7702,7 @@ var _Transformable2 = __webpack_require__(49);
 
 var _Transformable3 = _interopRequireDefault(_Transformable2);
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -9101,8 +9126,11 @@ var Sprite = function (_Container) {
     }, {
         key: 'render',
         value: function render(displayManager) {
-            if (this.active) {
-                displayManager.render(this, 'sprite');
+            if (this.active && displayManager.isVisible(this)) {
+                var renderState = displayManager.renderState;
+
+                renderState.renderer = displayManager.getRenderer('sprite');
+                renderState.renderer.render(this);
 
                 var _iteratorNormalCompletion = true;
                 var _didIteratorError = false;
@@ -9112,7 +9140,7 @@ var Sprite = function (_Container) {
                     for (var _iterator = this.children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                         var child = _step.value;
 
-                        child.render(displayManager);
+                        displayManager.render(child);
                     }
                 } catch (err) {
                     _didIteratorError = true;
@@ -10976,6 +11004,418 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _const = __webpack_require__(0);
+
+var _GamepadMapping2 = __webpack_require__(44);
+
+var _GamepadMapping3 = _interopRequireDefault(_GamepadMapping2);
+
+var _GamepadControl = __webpack_require__(45);
+
+var _GamepadControl2 = _interopRequireDefault(_GamepadControl);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class DefaultGamepadMapping
+ * @extends {GamepadMapping}
+ */
+var DefaultGamepadMapping = function (_GamepadMapping) {
+    _inherits(DefaultGamepadMapping, _GamepadMapping);
+
+    /**
+     * @constructor
+     */
+    function DefaultGamepadMapping() {
+        _classCallCheck(this, DefaultGamepadMapping);
+
+        var invert = { invert: true };
+
+        return _possibleConstructorReturn(this, (DefaultGamepadMapping.__proto__ || Object.getPrototypeOf(DefaultGamepadMapping)).call(this, [new _GamepadControl2.default(0, _const.GAMEPAD.FaceBottom), new _GamepadControl2.default(1, _const.GAMEPAD.FaceLeft), new _GamepadControl2.default(2, _const.GAMEPAD.FaceRight), new _GamepadControl2.default(3, _const.GAMEPAD.FaceTop), new _GamepadControl2.default(4, _const.GAMEPAD.ShoulderLeftBottom), new _GamepadControl2.default(5, _const.GAMEPAD.ShoulderRightBottom), new _GamepadControl2.default(6, _const.GAMEPAD.ShoulderLeftTop), new _GamepadControl2.default(7, _const.GAMEPAD.ShoulderRightTop), new _GamepadControl2.default(8, _const.GAMEPAD.Select), new _GamepadControl2.default(9, _const.GAMEPAD.Start), new _GamepadControl2.default(10, _const.GAMEPAD.LeftStick), new _GamepadControl2.default(11, _const.GAMEPAD.RightStick), new _GamepadControl2.default(12, _const.GAMEPAD.DPadUp), new _GamepadControl2.default(13, _const.GAMEPAD.DPadDown), new _GamepadControl2.default(14, _const.GAMEPAD.DPadLeft), new _GamepadControl2.default(15, _const.GAMEPAD.DPadRight), new _GamepadControl2.default(16, _const.GAMEPAD.Home)], [new _GamepadControl2.default(0, _const.GAMEPAD.LeftStickLeft, invert), new _GamepadControl2.default(0, _const.GAMEPAD.LeftStickRight), new _GamepadControl2.default(1, _const.GAMEPAD.LeftStickUp, invert), new _GamepadControl2.default(1, _const.GAMEPAD.LeftStickDown), new _GamepadControl2.default(2, _const.GAMEPAD.RightStickLeft, invert), new _GamepadControl2.default(2, _const.GAMEPAD.RightStickRight), new _GamepadControl2.default(3, _const.GAMEPAD.RightStickUp, invert), new _GamepadControl2.default(3, _const.GAMEPAD.RightStickDown)]));
+    }
+
+    return DefaultGamepadMapping;
+}(_GamepadMapping3.default);
+
+exports.default = DefaultGamepadMapping;
+
+/***/ }),
+/* 44 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class GamepadMapping
+ */
+var GamepadMapping = function () {
+
+    /**
+     * @constructor
+     * @param {GamepadControl[]} [buttons]
+     * @param {GamepadControl[]} [axes]
+     */
+    function GamepadMapping(buttons, axes) {
+        _classCallCheck(this, GamepadMapping);
+
+        /**
+         * @private
+         * @member {Set<GamepadControl>}
+         */
+        this._buttons = new Set(buttons);
+
+        /**
+         * @private
+         * @member {Set<GamepadControl>}
+         */
+        this._axes = new Set(axes);
+    }
+
+    /**
+     * @public
+     * @member {Set<GamepadControl>}
+     */
+
+
+    _createClass(GamepadMapping, [{
+        key: "setButtons",
+
+
+        /**
+         * @public
+         * @param {GamepadControl[]} buttons
+         */
+        value: function setButtons(buttons) {
+            this._buttons.clear();
+
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = buttons[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var button = _step.value;
+
+                    this._buttons.add(button);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+        }
+
+        /**
+         * @public
+         * @param {GamepadControl[]} axes
+         */
+
+    }, {
+        key: "setAxes",
+        value: function setAxes(axes) {
+            this._axes.clear();
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = axes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var axis = _step2.value;
+
+                    this._axes.add(axis);
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: "destroy",
+        value: function destroy() {
+            this._buttons.clear();
+            this._buttons = null;
+
+            this._axes.clear();
+            this._axes = null;
+        }
+    }, {
+        key: "buttons",
+        get: function get() {
+            return this._buttons;
+        },
+        set: function set(buttons) {
+            this.setButtons(buttons);
+        }
+
+        /**
+         * @public
+         * @member {Set<GamepadControl>}
+         */
+
+    }, {
+        key: "axes",
+        get: function get() {
+            return this._axes;
+        },
+        set: function set(axes) {
+            this.setAxes(axes);
+        }
+    }]);
+
+    return GamepadMapping;
+}();
+
+exports.default = GamepadMapping;
+
+/***/ }),
+/* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _const = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class GamepadControl
+ */
+var GamepadControl = function () {
+
+    /**
+     * @constructor
+     * @param {Number} index
+     * @param {Number} channel
+     * @param {Object} [options={}]
+     * @param {Boolean} [options.invert=false]
+     * @param {Boolean} [options.normalize=false]
+     * @param {Number} [options.threshold=0.2]
+     */
+    function GamepadControl(index, channel) {
+        var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+            _ref$invert = _ref.invert,
+            invert = _ref$invert === undefined ? false : _ref$invert,
+            _ref$normalize = _ref.normalize,
+            normalize = _ref$normalize === undefined ? false : _ref$normalize,
+            _ref$threshold = _ref.threshold,
+            threshold = _ref$threshold === undefined ? 0.2 : _ref$threshold;
+
+        _classCallCheck(this, GamepadControl);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._index = index;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._channel = channel;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._key = channel % _const.INPUT_CHANNELS_HANDLER;
+
+        /**
+         * Transform value range from {-1..1} to {1..-1}.
+         *
+         * @private
+         * @member {Boolean}
+         */
+        this._invert = invert;
+
+        /**
+         * Transform value range from {-1..1} to {0..1}.
+         *
+         * @private
+         * @member {Boolean}
+         */
+        this._normalize = normalize;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._threshold = threshold;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+
+
+    _createClass(GamepadControl, [{
+        key: 'transformValue',
+
+
+        /**
+         * @public
+         * @param {Number} value
+         * @returns {Number}
+         */
+        value: function transformValue(value) {
+            var result = value;
+
+            if (this._invert) {
+                result *= -1;
+            }
+
+            if (this._normalize) {
+                result = (result + 1) / 2;
+            }
+
+            return result > this._threshold ? result : 0;
+        }
+    }, {
+        key: 'index',
+        get: function get() {
+            return this._index;
+        },
+        set: function set(index) {
+            this._index = index;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'channel',
+        get: function get() {
+            return this._channel;
+        },
+        set: function set(channel) {
+            this._channel = channel;
+            this._key = this._channel % _const.INPUT_CHANNELS_HANDLER;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'key',
+        get: function get() {
+            return this._key;
+        },
+        set: function set(key) {
+            this._key = key % _const.INPUT_CHANNELS_HANDLER;
+            this._channel = _const.INPUT_OFFSET_GAMEPAD + this._key;
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'invert',
+        get: function get() {
+            return this._invert;
+        },
+        set: function set(invert) {
+            this._invert = invert;
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'normalize',
+        get: function get() {
+            return this._normalize;
+        },
+        set: function set(normalize) {
+            this._normalize = normalize;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'threshold',
+        get: function get() {
+            return this._threshold;
+        },
+        set: function set(threshold) {
+            this._threshold = threshold;
+        }
+    }]);
+
+    return GamepadControl;
+}();
+
+exports.default = GamepadControl;
+
+/***/ }),
+/* 46 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -11368,416 +11808,6 @@ Polygon.Empty = new Polygon(0, 0, []);
 Polygon.Temp = new Polygon();
 
 /***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _const = __webpack_require__(0);
-
-var _GamepadMapping2 = __webpack_require__(45);
-
-var _GamepadMapping3 = _interopRequireDefault(_GamepadMapping2);
-
-var _GamepadControl = __webpack_require__(46);
-
-var _GamepadControl2 = _interopRequireDefault(_GamepadControl);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class DefaultGamepadMapping
- * @extends {GamepadMapping}
- */
-var DefaultGamepadMapping = function (_GamepadMapping) {
-    _inherits(DefaultGamepadMapping, _GamepadMapping);
-
-    /**
-     * @constructor
-     */
-    function DefaultGamepadMapping() {
-        _classCallCheck(this, DefaultGamepadMapping);
-
-        return _possibleConstructorReturn(this, (DefaultGamepadMapping.__proto__ || Object.getPrototypeOf(DefaultGamepadMapping)).call(this, [new _GamepadControl2.default(0, _const.GAMEPAD.FaceBottom), new _GamepadControl2.default(1, _const.GAMEPAD.FaceLeft), new _GamepadControl2.default(2, _const.GAMEPAD.FaceRight), new _GamepadControl2.default(3, _const.GAMEPAD.FaceTop), new _GamepadControl2.default(4, _const.GAMEPAD.LeftTriggerBottom), new _GamepadControl2.default(5, _const.GAMEPAD.RightTriggerBottom), new _GamepadControl2.default(6, _const.GAMEPAD.LeftTriggerTop), new _GamepadControl2.default(7, _const.GAMEPAD.RightTriggerTop), new _GamepadControl2.default(8, _const.GAMEPAD.Select), new _GamepadControl2.default(9, _const.GAMEPAD.Start), new _GamepadControl2.default(10, _const.GAMEPAD.LeftStick), new _GamepadControl2.default(11, _const.GAMEPAD.RightStick), new _GamepadControl2.default(12, _const.GAMEPAD.DPadUp), new _GamepadControl2.default(13, _const.GAMEPAD.DPadDown), new _GamepadControl2.default(14, _const.GAMEPAD.DPadLeft), new _GamepadControl2.default(15, _const.GAMEPAD.DPadRight), new _GamepadControl2.default(16, _const.GAMEPAD.Special)], [new _GamepadControl2.default(0, _const.GAMEPAD.LeftStickLeft, { negate: true }), new _GamepadControl2.default(0, _const.GAMEPAD.LeftStickRight), new _GamepadControl2.default(1, _const.GAMEPAD.LeftStickUp, { negate: true }), new _GamepadControl2.default(1, _const.GAMEPAD.LeftStickDown), new _GamepadControl2.default(2, _const.GAMEPAD.RightStickLeft, { negate: true }), new _GamepadControl2.default(2, _const.GAMEPAD.RightStickRight), new _GamepadControl2.default(3, _const.GAMEPAD.RightStickUp, { negate: true }), new _GamepadControl2.default(3, _const.GAMEPAD.RightStickDown)]));
-    }
-
-    return DefaultGamepadMapping;
-}(_GamepadMapping3.default);
-
-exports.default = DefaultGamepadMapping;
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class GamepadMapping
- */
-var GamepadMapping = function () {
-
-    /**
-     * @constructor
-     * @param {GamepadControl[]} [buttons]
-     * @param {GamepadControl[]} [axes]
-     */
-    function GamepadMapping(buttons, axes) {
-        _classCallCheck(this, GamepadMapping);
-
-        /**
-         * @private
-         * @member {Set<GamepadControl>}
-         */
-        this._buttons = new Set(buttons);
-
-        /**
-         * @private
-         * @member {Set<GamepadControl>}
-         */
-        this._axes = new Set(axes);
-    }
-
-    /**
-     * @public
-     * @member {Set<GamepadControl>}
-     */
-
-
-    _createClass(GamepadMapping, [{
-        key: "setButtons",
-
-
-        /**
-         * @public
-         * @param {GamepadControl[]} buttons
-         */
-        value: function setButtons(buttons) {
-            this._buttons.clear();
-
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = buttons[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var button = _step.value;
-
-                    this._buttons.add(button);
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-        }
-
-        /**
-         * @public
-         * @param {GamepadControl[]} axes
-         */
-
-    }, {
-        key: "setAxes",
-        value: function setAxes(axes) {
-            this._axes.clear();
-
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
-
-            try {
-                for (var _iterator2 = axes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var axis = _step2.value;
-
-                    this._axes.add(axis);
-                }
-            } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
-                    }
-                } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
-                    }
-                }
-            }
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: "destroy",
-        value: function destroy() {
-            this._buttons.clear();
-            this._buttons = null;
-
-            this._axes.clear();
-            this._axes = null;
-        }
-    }, {
-        key: "buttons",
-        get: function get() {
-            return this._buttons;
-        },
-        set: function set(buttons) {
-            this.setButtons(buttons);
-        }
-
-        /**
-         * @public
-         * @member {Set<GamepadControl>}
-         */
-
-    }, {
-        key: "axes",
-        get: function get() {
-            return this._axes;
-        },
-        set: function set(axes) {
-            this.setAxes(axes);
-        }
-    }]);
-
-    return GamepadMapping;
-}();
-
-exports.default = GamepadMapping;
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _const = __webpack_require__(0);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class GamepadControl
- */
-var GamepadControl = function () {
-
-    /**
-     * @constructor
-     * @param {Number} index
-     * @param {Number} channel
-     * @param {Object} [options]
-     * @param {Number} [options.threshold=0.2]
-     * @param {Boolean} [options.negate=false]
-     * @param {Boolean} [options.normalize=false]
-     */
-    function GamepadControl(index, channel) {
-        var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
-            _ref$threshold = _ref.threshold,
-            threshold = _ref$threshold === undefined ? 0.2 : _ref$threshold,
-            _ref$negate = _ref.negate,
-            negate = _ref$negate === undefined ? false : _ref$negate,
-            _ref$normalize = _ref.normalize,
-            normalize = _ref$normalize === undefined ? false : _ref$normalize;
-
-        _classCallCheck(this, GamepadControl);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._index = index;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._channel = channel;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._key = channel % _const.INPUT_CHANNELS_HANDLER;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._threshold = threshold;
-
-        /**
-         * Transform value range from [-1, 1] to [1, -1].
-         *
-         * @private
-         * @member {Boolean}
-         */
-        this._negate = negate;
-
-        /**
-         * Transform value range from [-1, 1] to [0, 1].
-         *
-         * @private
-         * @member {Boolean}
-         */
-        this._normalize = normalize;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-
-
-    _createClass(GamepadControl, [{
-        key: 'transformValue',
-
-
-        /**
-         * @public
-         * @param {Number} value
-         * @returns {Number}
-         */
-        value: function transformValue(value) {
-            var result = value;
-
-            if (this._negate) {
-                result *= -1;
-            }
-
-            if (this._normalize) {
-                result = (result + 1) / 2;
-            }
-
-            return result > this._threshold ? result : 0;
-        }
-    }, {
-        key: 'index',
-        get: function get() {
-            return this._index;
-        },
-        set: function set(index) {
-            this._index = index;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'channel',
-        get: function get() {
-            return this._channel;
-        },
-        set: function set(channel) {
-            this._channel = channel;
-            this._key = this._channel % _const.INPUT_CHANNELS_HANDLER;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'key',
-        get: function get() {
-            return this._key;
-        },
-        set: function set(key) {
-            this._key = key % _const.INPUT_CHANNELS_HANDLER;
-            this._channel = _const.INPUT_OFFSET.GAMEPAD + this._key;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'threshold',
-        get: function get() {
-            return this._threshold;
-        },
-        set: function set(threshold) {
-            this._threshold = threshold;
-        }
-
-        /**
-         * @public
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'negate',
-        get: function get() {
-            return this._negate;
-        },
-        set: function set(negate) {
-            this._negate = negate;
-        }
-
-        /**
-         * @public
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'normalize',
-        get: function get() {
-            return this._normalize;
-        },
-        set: function set(normalize) {
-            this._normalize = normalize;
-        }
-    }]);
-
-    return GamepadControl;
-}();
-
-exports.default = GamepadControl;
-
-/***/ }),
 /* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -11998,40 +12028,7 @@ var SceneManager = function () {
                 return;
             }
 
-            var displayManager = this._app.displayManager;
-
             this._currentScene.update(delta);
-
-            displayManager.begin();
-
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = this._currentScene.nodes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var node = _step.value;
-
-                    if (node instanceof _Renderable2.default) {
-                        node.render(displayManager);
-                    }
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            displayManager.end();
         }
 
         /**
@@ -12131,7 +12128,7 @@ var _ObservableVector = __webpack_require__(28);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -12529,7 +12526,7 @@ var _ParticleRenderer = __webpack_require__(57);
 
 var _ParticleRenderer2 = _interopRequireDefault(_ParticleRenderer);
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -12616,11 +12613,9 @@ var DisplayManager = function () {
          */
         this._contextLost = this._context.isContextLost();
 
-        if (this._contextLost && this._context.getExtension('WEBGL_lose_context')) {
-            this._context.getExtension('WEBGL_lose_context').restoreContext();
-        }
-
-        this._setupGL();
+        // if (this._contextLost && this._context.getExtension('WEBGL_lose_context')) {
+        //     this._context.getExtension('WEBGL_lose_context').restoreContext();
+        // }
 
         /**
          * @private
@@ -12657,12 +12652,13 @@ var DisplayManager = function () {
          * @member {RenderState}
          */
         this._renderState = new _RenderState2.default(this._context);
-        this._renderState.blendMode = _settings2.default.BLEND_MODE;
         this._renderState.clearColor = clearColor;
 
         this._renderTarget.bind(this._renderState);
 
         this.addRenderer('sprite', new _SpriteRenderer2.default()).addRenderer('particle', new _ParticleRenderer2.default()).resize(width, height);
+
+        this._addEvents();
     }
 
     /**
@@ -12733,28 +12729,6 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
-         * @param {Number} width
-         * @param {Number} height
-         * @returns {DisplayManager}
-         */
-
-    }, {
-        key: 'resize',
-        value: function resize(width, height) {
-            this._canvas.width = width;
-            this._canvas.height = height;
-
-            this._renderTarget.width = width;
-            this._renderTarget.height = height;
-
-            this.updateViewport();
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
          * @param {View} view
          * @returns {DisplayManager}
          */
@@ -12788,21 +12762,21 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
+         * @param {Number} width
+         * @param {Number} height
          * @returns {DisplayManager}
          */
 
     }, {
-        key: 'begin',
-        value: function begin() {
-            if (this._isRendering || this._contextLost) {
-                return this;
-            }
+        key: 'resize',
+        value: function resize(width, height) {
+            this._canvas.width = width;
+            this._canvas.height = height;
 
-            if (this._clearBeforeRender) {
-                this._renderState.clear();
-            }
+            this._renderTarget.width = width;
+            this._renderTarget.height = height;
 
-            this._isRendering = true;
+            this.updateViewport();
 
             return this;
         }
@@ -12810,21 +12784,35 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
-         * @param {Renderable} renderable
-         * @param {String} renderer
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'begin',
+        value: function begin() {
+            if (!this._isRendering && !this._contextLost) {
+                if (this._clearBeforeRender) {
+                    this._renderState.clear();
+                }
+
+                this._isRendering = true;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Renderable|*} renderable
          * @returns {DisplayManager}
          */
 
     }, {
         key: 'render',
-        value: function render(renderable, renderer) {
-            if (!this._isRendering || this._contextLost) {
-                return this;
-            }
-
-            if (renderable.active && this.isVisible(renderable)) {
-                this._renderState.renderer = this.getRenderer(renderer);
-                this._renderState.renderer.render(renderable);
+        value: function render(renderable) {
+            if (this._isRendering && !this._contextLost) {
+                renderable.render(this);
             }
 
             return this;
@@ -12839,22 +12827,20 @@ var DisplayManager = function () {
     }, {
         key: 'end',
         value: function end() {
-            if (!this._isRendering || this._contextLost) {
-                return this;
-            }
+            if (this._isRendering && !this._contextLost) {
+                if (this._renderState.renderer) {
+                    this._renderState.renderer.flush();
+                }
 
-            if (this._renderState.renderer) {
-                this._renderState.renderer.flush();
+                this._isRendering = false;
             }
-
-            this._isRendering = false;
 
             return this;
         }
 
         /**
          * @public
-         * @param {Renderable} renderable
+         * @param {Renderable|*} renderable
          * @returns {Boolean}
          */
 
@@ -12960,21 +12946,6 @@ var DisplayManager = function () {
          */
 
     }, {
-        key: '_setupGL',
-        value: function _setupGL() {
-            var gl = this._context;
-
-            gl.colorMask(true, true, true, false);
-            gl.disable(gl.DEPTH_TEST);
-            gl.disable(gl.CULL_FACE);
-            gl.enable(gl.BLEND);
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
         key: '_onContextLost',
         value: function _onContextLost() {
             this._contextLost = true;
@@ -13020,11 +12991,11 @@ var _RenderTarget = __webpack_require__(29);
 
 var _RenderTarget2 = _interopRequireDefault(_RenderTarget);
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -13035,6 +13006,10 @@ var _Rectangle2 = _interopRequireDefault(_Rectangle);
 var _GLTexture = __webpack_require__(76);
 
 var _GLTexture2 = _interopRequireDefault(_GLTexture);
+
+var _settings = __webpack_require__(3);
+
+var _settings2 = _interopRequireDefault(_settings);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -13049,10 +13024,10 @@ var RenderState = function () {
      * @constructor
      * @param {WebGLRenderingContext} context
      */
-    function RenderState(context) {
+    function RenderState(gl) {
         _classCallCheck(this, RenderState);
 
-        if (!context) {
+        if (!gl) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
@@ -13060,7 +13035,7 @@ var RenderState = function () {
          * @private
          * @member {WebGLRenderingContext}
          */
-        this._context = context;
+        this._context = gl;
 
         /**
          * @private
@@ -13076,9 +13051,15 @@ var RenderState = function () {
 
         /**
          * @private
-         * @member {?Object}
+         * @member {Object}
          */
-        this._blendMode = null;
+        this._blendMode = _settings2.default.BLEND_MODE;
+
+        /**
+         * @private
+         * @member {Color}
+         */
+        this._clearColor = new _Color2.default();
 
         /**
          * @private
@@ -13112,12 +13093,6 @@ var RenderState = function () {
 
         /**
          * @private
-         * @member {Color}
-         */
-        this._clearColor = new _Color2.default();
-
-        /**
-         * @private
          * @member {Rectangle}
          */
         this._viewport = new _Rectangle2.default();
@@ -13127,6 +13102,13 @@ var RenderState = function () {
          * @member {Matrix}
          */
         this._projection = new _Matrix2.default();
+
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+
+        gl.colorMask(true, true, true, false);
+        gl.blendFunc(this._blendMode.src, this._blendMode.dst);
     }
 
     /**
@@ -13159,29 +13141,16 @@ var RenderState = function () {
 
         /**
          * @public
-         * @returns {WebGLBuffer}
-         */
-
-    }, {
-        key: 'createBuffer',
-        value: function createBuffer() {
-            return this._context.createBuffer();
-        }
-
-        /**
-         * @public
          * @param {RenderTarget} renderTarget
-         * @returns {?WebGLFramebuffer}
+         * @param {Number} [unit}
          */
 
     }, {
-        key: 'getGLFramebuffer',
-        value: function getGLFramebuffer(renderTarget) {
-            if (!this._glFramebuffers.has(renderTarget)) {
-                this._glFramebuffers.set(renderTarget, renderTarget.isRoot ? null : this._context.createFramebuffer());
-            }
+        key: 'bindRenderTarget',
+        value: function bindRenderTarget(renderTarget) {
+            this.glFramebuffer = this.getGLFramebuffer(renderTarget);
 
-            return this._glFramebuffers.get(renderTarget);
+            return this;
         }
 
         /**
@@ -13206,20 +13175,6 @@ var RenderState = function () {
 
                 this._glFramebuffers.delete(renderTarget);
             }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @param {RenderTarget} renderTarget
-         * @param {Number} [unit}
-         */
-
-    }, {
-        key: 'bindRenderTarget',
-        value: function bindRenderTarget(renderTarget) {
-            this.glFramebuffer = this.getGLFramebuffer(renderTarget);
 
             return this;
         }
@@ -13329,6 +13284,33 @@ var RenderState = function () {
         key: 'setTextureImage',
         value: function setTextureImage(texture, source) {
             return this.bindTexture(texture).getGLTexture(texture).setTextureImage(source);
+        }
+
+        /**
+         * @public
+         * @param {RenderTarget} renderTarget
+         * @returns {?WebGLFramebuffer}
+         */
+
+    }, {
+        key: 'getGLFramebuffer',
+        value: function getGLFramebuffer(renderTarget) {
+            if (!this._glFramebuffers.has(renderTarget)) {
+                this._glFramebuffers.set(renderTarget, renderTarget.isRoot ? null : this._context.createFramebuffer());
+            }
+
+            return this._glFramebuffers.get(renderTarget);
+        }
+
+        /**
+         * @public
+         * @returns {WebGLBuffer}
+         */
+
+    }, {
+        key: 'createBuffer',
+        value: function createBuffer() {
+            return this._context.createBuffer();
         }
 
         /**
@@ -13690,7 +13672,6 @@ var RenderState = function () {
         set: function set(blendMode) {
             if (blendMode && blendMode !== this._blendMode) {
                 this._context.blendFunc(blendMode.src, blendMode.dst);
-
                 this._blendMode = blendMode;
             }
         }
@@ -13791,7 +13772,6 @@ var RenderState = function () {
                 var gl = this._context;
 
                 gl.activeTexture(gl.TEXTURE0 + textureUnit);
-
                 this._textureUnit = textureUnit;
             }
         }
@@ -13809,7 +13789,6 @@ var RenderState = function () {
         set: function set(color) {
             if (color && !this._clearColor.equals(color, true)) {
                 this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-
                 this._clearColor.copy(color);
             }
         }
@@ -13827,7 +13806,6 @@ var RenderState = function () {
         set: function set(viewport) {
             if (viewport && !viewport.equals(this._viewport)) {
                 this._context.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
                 this._viewport.copy(viewport);
             }
         }
@@ -14351,6 +14329,8 @@ var ShaderAttribute = function () {
 
         /**
          * @public
+         * @param {RenderState} renderState
+         * @param {WebGLProgram} program
          * @param {Number} stride
          * @param {Number} offset
          */
@@ -14525,7 +14505,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -15185,7 +15165,7 @@ var ParticleRenderer = function (_Renderer) {
                 flush = textureChanged || batchLimitReached,
                 floatView = this._floatView,
                 uintView = this._uintView,
-                particles = emitter.particles,
+                particles = emitter.activeParticles,
                 textureFrame = emitter.textureFrame,
                 textureCoords = emitter.textureCoords;
 
@@ -15219,24 +15199,22 @@ var ParticleRenderer = function (_Renderer) {
                         color = particle.color;
 
 
-                    floatView[index] = floatView[index + 11] = textureFrame.x;
+                    floatView[index + 0] = floatView[index + 11] = textureFrame.x;
                     floatView[index + 1] = floatView[index + 20] = textureFrame.y;
-
-                    floatView[index + 10] = floatView[index + 30] = textureFrame.width;
-                    floatView[index + 21] = floatView[index + 31] = textureFrame.height;
 
                     floatView[index + 2] = floatView[index + 22] = textureCoords.x;
                     floatView[index + 3] = floatView[index + 13] = textureCoords.y;
+
+                    floatView[index + 10] = floatView[index + 30] = textureFrame.width;
+                    floatView[index + 21] = floatView[index + 31] = textureFrame.height;
 
                     floatView[index + 12] = floatView[index + 32] = textureCoords.width;
                     floatView[index + 23] = floatView[index + 33] = textureCoords.height;
 
                     floatView[index + 4] = floatView[index + 14] = floatView[index + 24] = floatView[index + 34] = position.x;
-
                     floatView[index + 5] = floatView[index + 15] = floatView[index + 25] = floatView[index + 35] = position.y;
 
                     floatView[index + 6] = floatView[index + 16] = floatView[index + 26] = floatView[index + 36] = scale.x;
-
                     floatView[index + 7] = floatView[index + 17] = floatView[index + 27] = floatView[index + 37] = scale.y;
 
                     floatView[index + 8] = floatView[index + 18] = floatView[index + 28] = floatView[index + 38] = (0, _utils.degreesToRadians)(rotation);
@@ -15448,7 +15426,7 @@ var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -16015,7 +15993,7 @@ var MediaManager = function () {
     this.setMusicVolume(musicVolume);
     this.setVideoVolume(videoVolume);
 
-    app.on('media:play', this.play, this).on('media:volume:master', this.setMasterVolume, this).on('media:volume:sound', this.setSoundVolume, this).on('media:volume:music', this.setMusicVolume, this).on('media:volume:video', this.setVideoVolume, this);
+    this._app.on('media:volume:master', this.setMasterVolume, this).on('media:volume:sound', this.setSoundVolume, this).on('media:volume:music', this.setMusicVolume, this).on('media:volume:video', this.setVideoVolume, this);
   }
 
   /**
@@ -16110,7 +16088,7 @@ var MediaManager = function () {
   }, {
     key: 'destroy',
     value: function destroy() {
-      this._app.off('media:play', this.play, this).off('media:volume:master', this.setMasterVolume, this).off('media:volume:sound', this.setSoundVolume, this).off('media:volume:music', this.setMusicVolume, this);
+      this._app.off('media:volume:master', this.setMasterVolume, this).off('media:volume:sound', this.setSoundVolume, this).off('media:volume:music', this.setMusicVolume, this).off('media:volume:video', this.setVideoVolume, this);
 
       this._soundGain.disconnect();
       this._soundGain = null;
@@ -16346,8 +16324,6 @@ var InputManager = function (_ChannelManager) {
          * @member {GamepadManager}
          */
         _this._gamepadManager = new _GamepadManager2.default(app, _this.channelBuffer);
-
-        app.on('input:add', _this.add, _this).on('input:remove', _this.remove, _this).on('input:clear', _this.clear, _this);
         return _this;
     }
 
@@ -16521,8 +16497,6 @@ var InputManager = function (_ChannelManager) {
         value: function destroy() {
             _get(InputManager.prototype.__proto__ || Object.getPrototypeOf(InputManager.prototype), 'destroy', this).call(this);
 
-            this._app.off('input:add', this.add, this).off('input:remove', this.remove, this).off('input:clear', this.clear, this);
-
             this._inputs.clear();
             this._inputs = null;
 
@@ -16561,11 +16535,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
+var _utils = __webpack_require__(1);
+
 var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
-
-var _utils = __webpack_require__(1);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -16601,7 +16575,7 @@ var Keyboard = function (_ChannelManager) {
      * @private
      * @member {Application}
      */
-    var _this = _possibleConstructorReturn(this, (Keyboard.__proto__ || Object.getPrototypeOf(Keyboard)).call(this, channelBuffer, _const.INPUT_OFFSET.KEYBOARD, _const.INPUT_CHANNELS_DEVICE));
+    var _this = _possibleConstructorReturn(this, (Keyboard.__proto__ || Object.getPrototypeOf(Keyboard)).call(this, channelBuffer, _const.INPUT_OFFSET_KEYBOARD, _const.INPUT_CHANNELS_DEVICE));
 
     _this._app = app;
 
@@ -16741,7 +16715,20 @@ var Keyboard = function (_ChannelManager) {
   }], [{
     key: 'getChannelCode',
     value: function getChannelCode(key) {
-      return _const.INPUT_OFFSET.KEYBOARD + key % _const.INPUT_CHANNELS_DEVICE;
+      return _const.INPUT_OFFSET_KEYBOARD + key % _const.INPUT_CHANNELS_DEVICE;
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Number} channel
+     * @returns {Number}
+     */
+
+  }, {
+    key: 'getKeyCode',
+    value: function getKeyCode(channel) {
+      return channel % _const.INPUT_CHANNELS_DEVICE;
     }
   }]);
 
@@ -16805,7 +16792,7 @@ var GamepadManager = function (_ChannelManager) {
          * @private
          * @member {Application}
          */
-        var _this = _possibleConstructorReturn(this, (GamepadManager.__proto__ || Object.getPrototypeOf(GamepadManager)).call(this, channelBuffer, _const.INPUT_OFFSET.GAMEPAD, _const.INPUT_CHANNELS_DEVICE));
+        var _this = _possibleConstructorReturn(this, (GamepadManager.__proto__ || Object.getPrototypeOf(GamepadManager)).call(this, channelBuffer, _const.INPUT_OFFSET_GAMEPAD, _const.INPUT_CHANNELS_DEVICE));
 
         _this._app = app;
 
@@ -16987,9 +16974,9 @@ var Gamepad = function (_ChannelManager) {
          * @private
          * @member {Gamepad}
          */
-        var _this = _possibleConstructorReturn(this, (Gamepad.__proto__ || Object.getPrototypeOf(Gamepad)).call(this, channelBuffer, _const.INPUT_OFFSET.GAMEPAD + gamepad.index * _const.INPUT_CHANNELS_HANDLER, _const.INPUT_CHANNELS_HANDLER));
+        var _this = _possibleConstructorReturn(this, (Gamepad.__proto__ || Object.getPrototypeOf(Gamepad)).call(this, channelBuffer, _const.INPUT_OFFSET_GAMEPAD + gamepad.index * _const.INPUT_CHANNELS_HANDLER, _const.INPUT_CHANNELS_HANDLER));
 
-        _this._gamepad = gamepad;
+        _this._gamepadIndex = gamepad;
 
         /**
          * @private
@@ -17017,8 +17004,8 @@ var Gamepad = function (_ChannelManager) {
             var channels = this.channels,
                 buttonMapping = this._mapping.buttons,
                 axesMapping = this._mapping.axes,
-                gamepdaButtons = this._gamepad.buttons,
-                gamepadAxes = this._gamepad.axes;
+                gamepdaButtons = this._gamepadIndex.buttons,
+                gamepadAxes = this._gamepadIndex.axes;
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
@@ -17087,21 +17074,12 @@ var Gamepad = function (_ChannelManager) {
             this._mapping.destroy();
             this._mapping = null;
 
-            this._gamepad = null;
+            this._gamepadIndex = null;
         }
-
-        /**
-         * @public
-         * @static
-         * @param {Number} key
-         * @param {Number} [index=0]
-         * @returns {Number}
-         */
-
     }, {
         key: 'gamepad',
         get: function get() {
-            return this._gamepad;
+            return this._gamepadIndex;
         }
 
         /**
@@ -17127,7 +17105,7 @@ var Gamepad = function (_ChannelManager) {
     }, {
         key: 'id',
         get: function get() {
-            return this._gamepad.id;
+            return this._gamepadIndex.id;
         }
 
         /**
@@ -17139,7 +17117,7 @@ var Gamepad = function (_ChannelManager) {
     }, {
         key: 'index',
         get: function get() {
-            return this._gamepad.index;
+            return this._gamepadIndex.index;
         }
 
         /**
@@ -17151,14 +17129,7 @@ var Gamepad = function (_ChannelManager) {
     }, {
         key: 'connected',
         get: function get() {
-            return this._gamepad.connected;
-        }
-    }], [{
-        key: 'getChannelCode',
-        value: function getChannelCode(key) {
-            var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-            return _const.INPUT_OFFSET.GAMEPAD + index * _const.INPUT_CHANNELS_HANDLER + key % _const.INPUT_CHANNELS_HANDLER;
+            return this._gamepadIndex.connected;
         }
     }]);
 
@@ -17263,7 +17234,7 @@ var PointerManager = function (_ChannelManager) {
          * @private
          * @member {Application}
          */
-        var _this = _possibleConstructorReturn(this, (PointerManager.__proto__ || Object.getPrototypeOf(PointerManager)).call(this, channelBuffer, _const.INPUT_OFFSET.POINTER, _const.INPUT_CHANNELS_DEVICE));
+        var _this = _possibleConstructorReturn(this, (PointerManager.__proto__ || Object.getPrototypeOf(PointerManager)).call(this, channelBuffer, _const.INPUT_OFFSET_POINTER, _const.INPUT_CHANNELS_DEVICE));
 
         _this._app = app;
 
@@ -17340,107 +17311,105 @@ var PointerManager = function (_ChannelManager) {
          * @override
          */
         value: function update() {
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
+            if (this._flags) {
+                if ((0, _utils.hasFlag)(FLAGS.ENTER, this._flags)) {
+                    this._app.trigger('pointer:enter', this._pointersEntered, this._pointers);
+                    this._pointersEntered.clear();
+
+                    this._flags = (0, _utils.removeFlag)(FLAGS.ENTER, this._flags);
+                }
+
+                if ((0, _utils.hasFlag)(FLAGS.LEAVE, this._flags)) {
+                    this._app.trigger('pointer:leave', this._pointersLeft, this._pointers);
+
+                    var _iteratorNormalCompletion = true;
+                    var _didIteratorError = false;
+                    var _iteratorError = undefined;
+
+                    try {
+                        for (var _iterator = this._pointersLeft[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                            var pointer = _step.value;
+
+                            pointer.destroy();
+                        }
+                    } catch (err) {
+                        _didIteratorError = true;
+                        _iteratorError = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion && _iterator.return) {
+                                _iterator.return();
+                            }
+                        } finally {
+                            if (_didIteratorError) {
+                                throw _iteratorError;
+                            }
+                        }
+                    }
+
+                    this._pointersLeft.clear();
+                    this._flags = (0, _utils.removeFlag)(FLAGS.LEAVE, this._flags);
+                }
+
+                if ((0, _utils.hasFlag)(FLAGS.MOVE, this._flags)) {
+                    this._app.trigger('pointer:move', this._pointersMoved, this._pointers);
+                    this._pointersMoved.clear();
+
+                    this._flags = (0, _utils.removeFlag)(FLAGS.MOVE, this._flags);
+                }
+
+                if ((0, _utils.hasFlag)(FLAGS.DOWN, this._flags)) {
+                    this._app.trigger('pointer:down', this._pointersDown, this._pointers);
+                    this._pointersDown.clear();
+
+                    this._flags = (0, _utils.removeFlag)(FLAGS.DOWN, this._flags);
+                }
+
+                if ((0, _utils.hasFlag)(FLAGS.UP, this._flags)) {
+                    this._app.trigger('pointer:up', this._pointersUp, this._pointers);
+                    this._pointersUp.clear();
+
+                    this._flags = (0, _utils.removeFlag)(FLAGS.UP, this._flags);
+                }
+
+                if ((0, _utils.hasFlag)(FLAGS.CANCEL, this._flags)) {
+                    this._app.trigger('pointer:cancel', this._pointersCancelled, this._pointers);
+                    this._pointersCancelled.clear();
+
+                    this._flags = (0, _utils.removeFlag)(FLAGS.CANCEL, this._flags);
+                }
+
+                if ((0, _utils.hasFlag)(FLAGS.SCROLL, this._flags)) {
+                    this._app.trigger('pointer:scroll', this._scrollDelta, this._pointers);
+                    this._scrollDelta.set(0, 0);
+
+                    this._flags = (0, _utils.removeFlag)(FLAGS.SCROLL, this._flags);
+                }
+            }
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
             try {
-                for (var _iterator = this._pointers.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var pointer = _step.value;
+                for (var _iterator2 = this._pointers.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _pointer = _step2.value;
 
-                    pointer.update();
+                    _pointer.update();
                 }
             } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
                     }
                 } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
                     }
                 }
-            }
-
-            if (!this._flags) {
-                return;
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.ENTER, this._flags)) {
-                this._app.trigger('pointer:enter', this._pointersEntered, this._pointers);
-                this._pointersEntered.clear();
-
-                this._flags = (0, _utils.removeFlag)(FLAGS.ENTER, this._flags);
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.LEAVE, this._flags)) {
-                this._app.trigger('pointer:leave', this._pointersLeft, this._pointers);
-
-                var _iteratorNormalCompletion2 = true;
-                var _didIteratorError2 = false;
-                var _iteratorError2 = undefined;
-
-                try {
-                    for (var _iterator2 = this._pointersLeft[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                        var _pointer = _step2.value;
-
-                        _pointer.destroy();
-                    }
-                } catch (err) {
-                    _didIteratorError2 = true;
-                    _iteratorError2 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                            _iterator2.return();
-                        }
-                    } finally {
-                        if (_didIteratorError2) {
-                            throw _iteratorError2;
-                        }
-                    }
-                }
-
-                this._pointersLeft.clear();
-                this._flags = (0, _utils.removeFlag)(FLAGS.LEAVE, this._flags);
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.MOVE, this._flags)) {
-                this._app.trigger('pointer:move', this._pointersMoved, this._pointers);
-                this._pointersMoved.clear();
-
-                this._flags = (0, _utils.removeFlag)(FLAGS.MOVE, this._flags);
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.DOWN, this._flags)) {
-                this._app.trigger('pointer:down', this._pointersDown, this._pointers);
-                this._pointersDown.clear();
-
-                this._flags = (0, _utils.removeFlag)(FLAGS.DOWN, this._flags);
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.UP, this._flags)) {
-                this._app.trigger('pointer:up', this._pointersUp, this._pointers);
-                this._pointersUp.clear();
-
-                this._flags = (0, _utils.removeFlag)(FLAGS.UP, this._flags);
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.CANCEL, this._flags)) {
-                this._app.trigger('pointer:cancel', this._pointersCancelled, this._pointers);
-                this._pointersCancelled.clear();
-
-                this._flags = (0, _utils.removeFlag)(FLAGS.CANCEL, this._flags);
-            }
-
-            if ((0, _utils.hasFlag)(FLAGS.SCROLL, this._flags)) {
-                this._app.trigger('pointer:scroll', this._scrollDelta, this._pointers);
-                this._scrollDelta.set(0, 0);
-
-                this._flags = (0, _utils.removeFlag)(FLAGS.SCROLL, this._flags);
             }
         }
 
@@ -17790,7 +17759,7 @@ var Pointer = function (_ChannelManager) {
     function Pointer(event, channelBuffer) {
         _classCallCheck(this, Pointer);
 
-        var _this = _possibleConstructorReturn(this, (Pointer.__proto__ || Object.getPrototypeOf(Pointer)).call(this, channelBuffer, _const.INPUT_OFFSET.POINTER, _const.INPUT_CHANNELS_HANDLER));
+        var _this = _possibleConstructorReturn(this, (Pointer.__proto__ || Object.getPrototypeOf(Pointer)).call(this, channelBuffer, _const.INPUT_OFFSET_POINTER, _const.INPUT_CHANNELS_HANDLER));
 
         var bounds = event.target.getBoundingClientRect();
 
@@ -18385,7 +18354,7 @@ var Container = function (_Renderable) {
                     for (var _iterator = this._children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                         var child = _step.value;
 
-                        child.render(displayManager);
+                        displayManager.render(child);
                     }
                 } catch (err) {
                     _didIteratorError = true;
@@ -18562,13 +18531,15 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
 var _Time = __webpack_require__(10);
 
 var _Time2 = _interopRequireDefault(_Time);
+
+var _const = __webpack_require__(0);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18581,7 +18552,7 @@ var Particle = function () {
 
     /**
      * @constructor
-     * @param {ParticleOptions} options
+     * @param {ParticleOptions|Particle} options
      */
     function Particle(options) {
         _classCallCheck(this, Particle);
@@ -18590,13 +18561,13 @@ var Particle = function () {
          * @private
          * @member {Time}
          */
-        this._totalLifetime = options.totalLifetime.clone();
+        this._elapsedLifetime = options.elapsedLifetime.clone();
 
         /**
          * @private
          * @member {Time}
          */
-        this._elapsedLifetime = new _Time2.default();
+        this._totalLifetime = options.totalLifetime.clone();
 
         /**
          * @private
@@ -18647,7 +18618,9 @@ var Particle = function () {
 
         /**
          * @public
+         * @chainable
          * @param {Time} delta
+         * @returns {Particle}
          */
         value: function update(delta) {
             var seconds = delta.seconds;
@@ -18655,6 +18628,63 @@ var Particle = function () {
             this._elapsedLifetime.add(delta);
             this._position.add(seconds * this._velocity.x, seconds * this._velocity.y);
             this._rotation += seconds * this._rotationSpeed;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {ParticleOptions} options
+         * @returns {Particle}
+         */
+
+    }, {
+        key: 'reset',
+        value: function reset(options) {
+            this._elapsedLifetime.set(0, _const.TIME.SECONDS);
+            this._totalLifetime.copy(options.totalLifetime);
+            this._position.copy(options.position);
+            this._velocity.copy(options.velocity);
+            this._scale.copy(options.scale);
+            this._color.copy(options.color);
+            this._rotation = options.rotation;
+            this._rotationSpeed = options.rotationSpeed;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Particle} particle
+         * @returns {Particle}
+         */
+
+    }, {
+        key: 'copy',
+        value: function copy(particle) {
+            this._elapsedLifetime.copy(particle.elapsedLifetime);
+            this._totalLifetime.copy(particle.totalLifetime);
+            this._position.copy(particle.position);
+            this._velocity.copy(particle.velocity);
+            this._scale.copy(particle.scale);
+            this._color.copy(particle.color);
+            this._rotation = particle.rotation;
+            this._rotationSpeed = particle.rotationSpeed;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @returns {Particle}
+         */
+
+    }, {
+        key: 'clone',
+        value: function clone() {
+            return new Particle(this);
         }
 
         /**
@@ -18718,8 +18748,10 @@ var Particle = function () {
         get: function get() {
             return this._rotation;
         },
-        set: function set(rotation) {
-            this._rotation = rotation;
+        set: function set(degrees) {
+            var rotation = degrees % 360;
+
+            this._rotation = rotation < 0 ? rotation + 360 : rotation;
         }
 
         /**
@@ -18801,7 +18833,7 @@ var Particle = function () {
     }, {
         key: 'remainingLifetime',
         get: function get() {
-            return _Time2.default.Temp.set(this.totalLifetime.milliseconds - this.elapsedLifetime.milliseconds);
+            return _Time2.default.Temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
         }
 
         /**
@@ -18813,7 +18845,7 @@ var Particle = function () {
     }, {
         key: 'elapsedRatio',
         get: function get() {
-            return this.elapsedLifetime.milliseconds / this.totalLifetime.milliseconds;
+            return this._elapsedLifetime.milliseconds / this._totalLifetime.milliseconds;
         }
 
         /**
@@ -18825,7 +18857,19 @@ var Particle = function () {
     }, {
         key: 'remainingRatio',
         get: function get() {
-            return this.remainingLifetime.milliseconds / this.totalLifetime.milliseconds;
+            return this.remainingLifetime.milliseconds / this._totalLifetime.milliseconds;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'isExpired',
+        get: function get() {
+            return this._elapsedLifetime.greaterThan(this._totalLifetime);
         }
     }]);
 
@@ -18855,7 +18899,7 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -18875,6 +18919,7 @@ var ParticleOptions = function () {
     /**
      * @constructor
      * @param {Object} [options]
+     * @param {Time} [options.elapsedLifetime]
      * @param {Time} [options.totalLifetime]
      * @param {Vector} [options.position]
      * @param {Vector} [options.scale]
@@ -18885,6 +18930,7 @@ var ParticleOptions = function () {
      */
     function ParticleOptions() {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            elapsedLifetime = _ref.elapsedLifetime,
             totalLifetime = _ref.totalLifetime,
             position = _ref.position,
             scale = _ref.scale,
@@ -18894,6 +18940,12 @@ var ParticleOptions = function () {
             rotationSpeed = _ref.rotationSpeed;
 
         _classCallCheck(this, ParticleOptions);
+
+        /**
+         * @private
+         * @member {Time}
+         */
+        this._elapsedLifetime = elapsedLifetime && elapsedLifetime.clone() || new _Time2.default(0, _const.TIME.SECONDS);
 
         /**
          * @private
@@ -19047,8 +19099,10 @@ var ParticleOptions = function () {
         get: function get() {
             return this._rotation;
         },
-        set: function set(rotation) {
-            this._rotation = rotation % 360;
+        set: function set(degrees) {
+            var rotation = degrees % 360;
+
+            this._rotation = rotation < 0 ? rotation + 360 : rotation;
         }
 
         /**
@@ -19966,7 +20020,7 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
-var _Color = __webpack_require__(8);
+var _Color = __webpack_require__(7);
 
 Object.defineProperty(exports, 'Color', {
   enumerable: true,
@@ -22852,7 +22906,13 @@ var _ParticleOptions = __webpack_require__(69);
 
 var _ParticleOptions2 = _interopRequireDefault(_ParticleOptions);
 
+var _settings = __webpack_require__(3);
+
+var _settings2 = _interopRequireDefault(_settings);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -22877,11 +22937,35 @@ var ParticleEmitter = function (_Renderable) {
 
         /**
          * @private
-         * @member {Texture}
+         * @member {Boolean}
          */
         var _this = _possibleConstructorReturn(this, (ParticleEmitter.__proto__ || Object.getPrototypeOf(ParticleEmitter)).call(this));
 
-        _this._texture = texture;
+        _this._updateTexCoords = true;
+
+        /**
+         * @private
+         * @member {Set<Particle>}
+         */
+        _this._activeParticles = new Set();
+
+        /**
+         * @private
+         * @member {Particle[]}
+         */
+        _this._unusedParticles = [];
+
+        /**
+         * @private
+         * @member {ParticleOptions}
+         */
+        _this._particleOptions = new _ParticleOptions2.default(particleOptions);
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        _this._texture = null;
 
         /**
          * @private
@@ -22894,12 +22978,6 @@ var ParticleEmitter = function (_Renderable) {
          * @member {Rectangle}
          */
         _this._textureCoords = new _Rectangle2.default();
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        _this._updateTexCoords = true;
 
         /**
          * @private
@@ -22919,18 +22997,6 @@ var ParticleEmitter = function (_Renderable) {
          */
         _this._modifiers = [];
 
-        /**
-         * @private
-         * @member {Set<Particle>}
-         */
-        _this._particles = new Set();
-
-        /**
-         * @private
-         * @member {ParticleOptions}
-         */
-        _this._particleOptions = new _ParticleOptions2.default(particleOptions);
-
         if (texture) {
             _this.setTexture(texture);
         }
@@ -22939,7 +23005,7 @@ var ParticleEmitter = function (_Renderable) {
 
     /**
      * @public
-     * @member {Texture}
+     * @member {Set<Particle>}
      */
 
 
@@ -23027,62 +23093,32 @@ var ParticleEmitter = function (_Renderable) {
 
         /**
          * @public
+         * @chainable
          * @param {Time} delta
+         * @returns {ParticleEmitter}
          */
 
     }, {
         key: 'update',
         value: function update(delta) {
-            var options = this._particleOptions,
-                particles = this._particles,
+            var particleCount = this.computeParticleCount(delta),
+                particleOptions = this._particleOptions,
+                activeParticles = this._activeParticles,
+                unusedParticles = this._unusedParticles,
                 modifiers = this._modifiers,
-                particleCount = this.computeParticleCount(delta);
-
-            for (var i = 0; i < particleCount; i++) {
-                particles.add(new _Particle2.default(options));
-            }
+                unusedCount = unusedParticles.length,
+                difference = unusedCount - particleCount,
+                freeParticles = unusedParticles.splice(Math.max(0, difference), Math.min(unusedCount, particleCount));
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
             var _iteratorError = undefined;
 
             try {
-                for (var _iterator = particles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                for (var _iterator = freeParticles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                     var particle = _step.value;
 
-                    particle.update(delta);
-
-                    if (particle.elapsedLifetime.greaterThan(particle.totalLifetime)) {
-                        particle.destroy();
-                        particles.delete(particle);
-
-                        continue;
-                    }
-
-                    var _iteratorNormalCompletion2 = true;
-                    var _didIteratorError2 = false;
-                    var _iteratorError2 = undefined;
-
-                    try {
-                        for (var _iterator2 = modifiers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                            var modifier = _step2.value;
-
-                            modifier.apply(particle, delta);
-                        }
-                    } catch (err) {
-                        _didIteratorError2 = true;
-                        _iteratorError2 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                _iterator2.return();
-                            }
-                        } finally {
-                            if (_didIteratorError2) {
-                                throw _iteratorError2;
-                            }
-                        }
-                    }
+                    activeParticles.add(particle.reset(particleOptions));
                 }
             } catch (err) {
                 _didIteratorError = true;
@@ -23098,21 +23134,104 @@ var ParticleEmitter = function (_Renderable) {
                     }
                 }
             }
+
+            for (var i = Math.min(0, difference); i < 0; i++) {
+                activeParticles.add(new _Particle2.default(particleOptions));
+            }
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = activeParticles[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _particle = _step2.value;
+
+                    _particle.update(delta);
+
+                    if (_particle.isExpired) {
+                        unusedParticles.push(_particle);
+                        activeParticles.delete(_particle);
+
+                        continue;
+                    }
+
+                    var _iteratorNormalCompletion3 = true;
+                    var _didIteratorError3 = false;
+                    var _iteratorError3 = undefined;
+
+                    try {
+                        for (var _iterator3 = modifiers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                            var modifier = _step3.value;
+
+                            modifier.apply(_particle, delta);
+                        }
+                    } catch (err) {
+                        _didIteratorError3 = true;
+                        _iteratorError3 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                _iterator3.return();
+                            }
+                        } finally {
+                            if (_didIteratorError3) {
+                                throw _iteratorError3;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            return this;
         }
 
         /**
-         * @public
-         * @chainable
-         * @param {DisplayManager} displayManager
-         * @returns {ParticleEmitter}
+         * @override
          */
 
     }, {
         key: 'render',
         value: function render(displayManager) {
-            if (this.active) {
-                displayManager.render(this, 'particle');
+            if (this.active && displayManager.isVisible(this)) {
+                var renderState = displayManager.renderState;
+
+                renderState.renderer = displayManager.getRenderer('particle');
+                renderState.renderer.render(this);
             }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {ParticleEmitter} emitter
+         * @returns {ParticleEmitter}
+         */
+
+    }, {
+        key: 'copy',
+        value: function copy(emitter) {
+            this.activeParticles = emitter.activeParticles;
+            this.particleOptions = emitter.particleOptions;
+            this.texture = emitter.texture;
+            this.textureFrame = emitter.textureFrame;
+            this.emissionRate = emitter.emissionRate;
+            this.modifiers = emitter.modifiers;
 
             return this;
         }
@@ -23126,7 +23245,64 @@ var ParticleEmitter = function (_Renderable) {
         value: function destroy() {
             _get(ParticleEmitter.prototype.__proto__ || Object.getPrototypeOf(ParticleEmitter.prototype), 'destroy', this).call(this);
 
-            this._texture = null;
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+                for (var _iterator4 = this._activeParticles[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var particle = _step4.value;
+
+                    particle.destroy();
+                }
+            } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
+                    }
+                } finally {
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
+                    }
+                }
+            }
+
+            var _iteratorNormalCompletion5 = true;
+            var _didIteratorError5 = false;
+            var _iteratorError5 = undefined;
+
+            try {
+                for (var _iterator5 = this._unusedParticles[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                    var _particle2 = _step5.value;
+
+                    _particle2.destroy();
+                }
+            } catch (err) {
+                _didIteratorError5 = true;
+                _iteratorError5 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                        _iterator5.return();
+                    }
+                } finally {
+                    if (_didIteratorError5) {
+                        throw _iteratorError5;
+                    }
+                }
+            }
+
+            this._activeParticles.clear();
+            this._activeParticles = null;
+
+            this._unusedParticles.length = 0;
+            this._unusedParticles = null;
+
+            this._particleOptions.destroy();
+            this._particleOptions = null;
 
             this._textureFrame.destroy();
             this._textureFrame = null;
@@ -23137,16 +23313,64 @@ var ParticleEmitter = function (_Renderable) {
             this._modifiers.length = 0;
             this._modifiers = null;
 
-            this._particles.clear();
-            this._particles = null;
-
-            this._particleOptions.destroy();
-            this._particleOptions = null;
-
+            this._texture = null;
             this._emissionRate = null;
             this._emissionDelta = null;
             this._updateTexCoords = null;
         }
+    }, {
+        key: 'activeParticles',
+        get: function get() {
+            return this._activeParticles;
+        },
+        set: function set(newParticles) {
+            var activeParticles = this._activeParticles,
+                unusedParticles = this._unusedParticles,
+                activeArray = [].concat(_toConsumableArray(activeParticles)),
+                newArray = [].concat(_toConsumableArray(newParticles)),
+                activeLength = activeArray.length,
+                newLength = newArray.length,
+                diff = activeLength - newLength;
+
+            for (var i = 0, len = activeLength; i < len; i++) {
+                activeArray[i].copy(newArray[i]);
+            }
+
+            if (diff > 0) {
+                for (var _i = 0; _i < diff; _i++) {
+                    var particle = activeArray[_i];
+
+                    unusedParticles.push(particle);
+                    activeParticles.delete(particle);
+                }
+            } else if (diff < 0) {
+                for (var _i2 = activeLength, _len = newLength; _i2 < _len; _i2++) {
+                    var _particle3 = unusedParticles.pop();
+
+                    activeParticles.add(_particle3 ? _particle3.copy(newArray[_i2]) : newArray[_i2].clone());
+                }
+            }
+        }
+
+        /**
+         * @public
+         * @member {ParticleOptions}
+         */
+
+    }, {
+        key: 'particleOptions',
+        get: function get() {
+            return this._particleOptions;
+        },
+        set: function set(options) {
+            this._particleOptions = options;
+        }
+
+        /**
+         * @public
+         * @member {Texture}
+         */
+
     }, {
         key: 'texture',
         get: function get() {
@@ -23179,17 +23403,11 @@ var ParticleEmitter = function (_Renderable) {
         key: 'textureCoords',
         get: function get() {
             if (this._updateTexCoords) {
-                var _textureFrame = this._textureFrame,
-                    left = _textureFrame.left,
-                    top = _textureFrame.top,
-                    right = _textureFrame.right,
-                    bottom = _textureFrame.bottom,
-                    _texture = this._texture,
-                    width = _texture.width,
-                    height = _texture.height;
+                var frame = this._textureFrame,
+                    texture = this._texture;
 
+                this._textureCoords.set(frame.left / texture.width, frame.top / texture.height, frame.right / texture.width, frame.bottom / texture.height);
 
-                this._textureCoords.set(left / width, top / height, right / width, bottom / height);
                 this._updateTexCoords = false;
             }
 
@@ -23197,6 +23415,7 @@ var ParticleEmitter = function (_Renderable) {
         },
         set: function set(textureCoords) {
             this._textureCoords.copy(textureCoords);
+            this._updateTexCoords = false;
         }
 
         /**
@@ -23215,21 +23434,6 @@ var ParticleEmitter = function (_Renderable) {
 
         /**
          * @public
-         * @member {ParticleOptions}
-         */
-
-    }, {
-        key: 'particleOptions',
-        get: function get() {
-            return this._particleOptions;
-        },
-        set: function set(options) {
-            this._particleOptions = options;
-        }
-
-        /**
-         * @public
-         * @readonly
          * @member {ParticleModifier[]}
          */
 
@@ -23237,18 +23441,34 @@ var ParticleEmitter = function (_Renderable) {
         key: 'modifiers',
         get: function get() {
             return this._modifiers;
-        }
+        },
+        set: function set(modifiers) {
+            this._modifiers.length = 0;
 
-        /**
-         * @public
-         * @readonly
-         * @member {Set<Particle>}
-         */
+            var _iteratorNormalCompletion6 = true;
+            var _didIteratorError6 = false;
+            var _iteratorError6 = undefined;
 
-    }, {
-        key: 'particles',
-        get: function get() {
-            return this._particles;
+            try {
+                for (var _iterator6 = modifiers[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                    var modifier = _step6.value;
+
+                    this._modifiers.push(modifier);
+                }
+            } catch (err) {
+                _didIteratorError6 = true;
+                _iteratorError6 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                        _iterator6.return();
+                    }
+                } finally {
+                    if (_didIteratorError6) {
+                        throw _iteratorError6;
+                    }
+                }
+            }
         }
     }]);
 
@@ -23297,9 +23517,7 @@ var ForceModifier = function (_ParticleModifier) {
      * @constructor
      * @param {Vector} acceleration
      */
-    function ForceModifier() {
-        var acceleration = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _Vector2.default.Empty;
-
+    function ForceModifier(acceleration) {
         _classCallCheck(this, ForceModifier);
 
         /**
@@ -23308,7 +23526,7 @@ var ForceModifier = function (_ParticleModifier) {
          */
         var _this = _possibleConstructorReturn(this, (ForceModifier.__proto__ || Object.getPrototypeOf(ForceModifier)).call(this));
 
-        _this._acceleration = acceleration.clone();
+        _this._acceleration = acceleration && acceleration.clone() || new _Vector2.default();
         return _this;
     }
 
@@ -23496,7 +23714,7 @@ var TorqueModifier = function (_ParticleModifier) {
      * @override
      */
     value: function apply(particle, delta) {
-      particle.rotationSpeed += delta.seconds * this._angularAcceleration;
+      particle.rotationSpeed = particle.rotationSpeed + delta.seconds * this._angularAcceleration;
     }
   }, {
     key: 'angularAcceleration',
@@ -23560,7 +23778,7 @@ Object.defineProperty(exports, 'Keyboard', {
   }
 });
 
-var _GamepadControl = __webpack_require__(46);
+var _GamepadControl = __webpack_require__(45);
 
 Object.defineProperty(exports, 'GamepadControl', {
   enumerable: true,
@@ -23569,7 +23787,7 @@ Object.defineProperty(exports, 'GamepadControl', {
   }
 });
 
-var _GamepadMapping = __webpack_require__(45);
+var _GamepadMapping = __webpack_require__(44);
 
 Object.defineProperty(exports, 'GamepadMapping', {
   enumerable: true,
@@ -23578,7 +23796,7 @@ Object.defineProperty(exports, 'GamepadMapping', {
   }
 });
 
-var _DefaultGamepadMapping = __webpack_require__(44);
+var _DefaultGamepadMapping = __webpack_require__(43);
 
 Object.defineProperty(exports, 'DefaultGamepadMapping', {
   enumerable: true,
@@ -23640,13 +23858,15 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _EventEmitter2 = __webpack_require__(6);
-
-var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
+var _const = __webpack_require__(0);
 
 var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
+
+var _EventEmitter2 = __webpack_require__(6);
+
+var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -23665,24 +23885,30 @@ var Input = function (_EventEmitter) {
 
     /**
      * @constructor
-     * @param {Number[]} channels
+     * @param {Set<Number>|Number[]} channels
      * @param {Object} [options={}]
-     * @param {Number} [options.triggerThreshold=settings.INPUT_THRESHOLD]
      * @param {Function} [options.start]
      * @param {Function} [options.stop]
      * @param {Function} [options.active]
      * @param {Function} [options.trigger]
      * @param {*} [options.context]
+     * @param {Number} [options.gamepadIndex=0]
+     * @param {Number} [options.pointerIndex=0]
+     * @param {Number} [options.threshold=settings.THRESHOLD_INPUT]
      */
     function Input(channels) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-            _ref$triggerThreshold = _ref.triggerThreshold,
-            triggerThreshold = _ref$triggerThreshold === undefined ? _settings2.default.INPUT_THRESHOLD : _ref$triggerThreshold,
             start = _ref.start,
             stop = _ref.stop,
             active = _ref.active,
             trigger = _ref.trigger,
-            context = _ref.context;
+            context = _ref.context,
+            _ref$gamepadIndex = _ref.gamepadIndex,
+            gamepadIndex = _ref$gamepadIndex === undefined ? 0 : _ref$gamepadIndex,
+            _ref$pointerIndex = _ref.pointerIndex,
+            pointerIndex = _ref$pointerIndex === undefined ? 0 : _ref$pointerIndex,
+            _ref$threshold = _ref.threshold,
+            threshold = _ref$threshold === undefined ? _settings2.default.THRESHOLD_INPUT : _ref$threshold;
 
         _classCallCheck(this, Input);
 
@@ -23698,19 +23924,43 @@ var Input = function (_EventEmitter) {
          * @private
          * @member {Number}
          */
+        _this._threshold = threshold;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._pointerIndex = pointerIndex;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._pointerOffset = pointerIndex * _const.INPUT_CHANNELS_HANDLER;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._gamepadIndex = gamepadIndex;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._gamepadOffset = gamepadIndex * _const.INPUT_CHANNELS_HANDLER;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._triggered = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
         _this._value = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._triggerStart = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._triggerThreshold = triggerThreshold;
 
         if (start) {
             _this.on('start', start, context);
@@ -23732,7 +23982,6 @@ var Input = function (_EventEmitter) {
 
     /**
      * @public
-     * @readonly
      * @member {Set<Number>}
      */
 
@@ -23743,9 +23992,9 @@ var Input = function (_EventEmitter) {
 
         /**
          * @public
-         * @param {Float32Array} activeChannels
+         * @param {Float32Array} channels
          */
-        value: function update(activeChannels) {
+        value: function update(channels) {
             this._value = 0;
 
             var _iteratorNormalCompletion = true;
@@ -23756,7 +24005,9 @@ var Input = function (_EventEmitter) {
                 for (var _iterator = this._channels[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                     var channel = _step.value;
 
-                    this._value = Math.max(activeChannels[channel], this._value);
+                    var offset = channel >= _const.INPUT_OFFSET_GAMEPAD ? this._gamepadOffset : channel >= _const.INPUT_OFFSET_POINTER && this._pointerOffset || 0;
+
+                    this._value = Math.max(channels[channel + offset], this._value);
                 }
             } catch (err) {
                 _didIteratorError = true;
@@ -23774,8 +24025,8 @@ var Input = function (_EventEmitter) {
             }
 
             if (this._value) {
-                if (!this._triggerStart) {
-                    this._triggerStart = Date.now();
+                if (!this._triggered) {
+                    this._triggered = Date.now();
                     this.trigger('start', this._value);
                 }
 
@@ -23783,8 +24034,8 @@ var Input = function (_EventEmitter) {
             } else {
                 this.trigger('stop', this._value);
 
-                if (this._triggerStart && Date.now() - this._triggerStart < this._triggerThreshold) {
-                    this._triggerStart = 0;
+                if (this._triggered && Date.now() - this._triggered < this._threshold) {
+                    this._triggered = 0;
                     this.trigger('trigger', this._value);
                 }
             }
@@ -23802,14 +24053,114 @@ var Input = function (_EventEmitter) {
             this._channels.clear();
             this._channels = null;
 
+            this._threshold = null;
+            this._pointerIndex = null;
+            this._pointerOffset = null;
+            this._gamepadIndex = null;
+            this._gamepadOffset = null;
+            this._triggered = null;
             this._value = null;
-            this._triggerStart = null;
-            this._triggerThreshold = null;
         }
     }, {
         key: 'channels',
         get: function get() {
             return this._channels;
+        },
+        set: function set(channels) {
+            this._channels.clear();
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = channels[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var channel = _step2.value;
+
+                    this._channels.add(channel);
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'threshold',
+        get: function get() {
+            return this._threshold;
+        },
+        set: function set(threshold) {
+            this._threshold = threshold;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'pointerIndex',
+        get: function get() {
+            return this._pointerIndex;
+        },
+        set: function set(index) {
+            this._pointerIndex = index;
+            this._pointerOffset = index * _const.INPUT_CHANNELS_HANDLER;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'gamepadIndex',
+        get: function get() {
+            return this._gamepadIndex;
+        },
+        set: function set(index) {
+            this._gamepadIndex = index;
+            this._gamepadOffset = index * _const.INPUT_CHANNELS_HANDLER;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'pointerOffset',
+        get: function get() {
+            return this._pointerOffset;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'gamepadOffset',
+        get: function get() {
+            return this._gamepadOffset;
         }
 
         /**
@@ -23822,20 +24173,6 @@ var Input = function (_EventEmitter) {
         key: 'value',
         get: function get() {
             return this._value;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'triggerThreshold',
-        get: function get() {
-            return this._triggerThreshold;
-        },
-        set: function set(threshold) {
-            this._triggerThreshold = threshold;
         }
     }]);
 
@@ -23873,7 +24210,7 @@ Object.defineProperty(exports, 'ObservableVector', {
   }
 });
 
-var _Matrix = __webpack_require__(7);
+var _Matrix = __webpack_require__(8);
 
 Object.defineProperty(exports, 'Matrix', {
   enumerable: true,
@@ -23954,7 +24291,7 @@ Object.defineProperty(exports, 'Circle', {
   }
 });
 
-var _Polygon = __webpack_require__(43);
+var _Polygon = __webpack_require__(46);
 
 Object.defineProperty(exports, 'Polygon', {
   enumerable: true,
@@ -24154,7 +24491,7 @@ var Random = function () {
                 crypto.getRandomValues(seed);
             } else {
                 for (var i = 0; i < 256; i++) {
-                    seed[i] = Math._random() * 256 & 255;
+                    seed[i] = Math.random() * 256 & 255;
                 }
             }
 

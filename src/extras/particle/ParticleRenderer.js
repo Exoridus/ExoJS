@@ -137,7 +137,7 @@ export default class ParticleRenderer extends Renderer {
             flush = (textureChanged || batchLimitReached),
             floatView = this._floatView,
             uintView = this._uintView,
-            particles = emitter.particles,
+            particles = emitter.activeParticles,
             textureFrame = emitter.textureFrame,
             textureCoords = emitter.textureCoords;
 
@@ -160,55 +160,45 @@ export default class ParticleRenderer extends Renderer {
             const index = this._batchSize * this._attributeCount,
                 { position, scale, rotation, color } = particle;
 
-            floatView[index] =
-                floatView[index + 11] = textureFrame.x;
-            floatView[index + 1] =
-                floatView[index + 20] = textureFrame.y;
+            floatView[index + 0] = floatView[index + 11] = textureFrame.x;
+            floatView[index + 1] = floatView[index + 20] = textureFrame.y;
 
-            floatView[index + 10] =
-                floatView[index + 30] = textureFrame.width;
-            floatView[index + 21] =
-                floatView[index + 31] = textureFrame.height;
+            floatView[index + 2] = floatView[index + 22] = textureCoords.x;
+            floatView[index + 3] = floatView[index + 13] = textureCoords.y;
 
-            floatView[index + 2] =
-                floatView[index + 22] = textureCoords.x;
-            floatView[index + 3] =
-                floatView[index + 13] = textureCoords.y;
+            floatView[index + 10] = floatView[index + 30] = textureFrame.width;
+            floatView[index + 21] = floatView[index + 31] = textureFrame.height;
 
-            floatView[index + 12] =
-                floatView[index + 32] = textureCoords.width;
-            floatView[index + 23] =
-                floatView[index + 33] = textureCoords.height;
+            floatView[index + 12] = floatView[index + 32] = textureCoords.width;
+            floatView[index + 23] = floatView[index + 33] = textureCoords.height;
 
-            floatView[index + 4] =
-                floatView[index + 14] =
-                    floatView[index + 24] =
-                        floatView[index + 34] = position.x;
+            floatView[index + 4]
+                = floatView[index + 14]
+                = floatView[index + 24]
+                = floatView[index + 34] = position.x;
+            floatView[index + 5]
+                = floatView[index + 15]
+                = floatView[index + 25]
+                = floatView[index + 35] = position.y;
 
-            floatView[index + 5] =
-                floatView[index + 15] =
-                    floatView[index + 25] =
-                        floatView[index + 35] = position.y;
+            floatView[index + 6]
+                = floatView[index + 16]
+                = floatView[index + 26]
+                = floatView[index + 36] = scale.x;
+            floatView[index + 7]
+                = floatView[index + 17]
+                = floatView[index + 27]
+                = floatView[index + 37] = scale.y;
 
-            floatView[index + 6] =
-                floatView[index + 16] =
-                    floatView[index + 26] =
-                        floatView[index + 36] = scale.x;
+            floatView[index + 8]
+                = floatView[index + 18]
+                = floatView[index + 28]
+                = floatView[index + 38] = degreesToRadians(rotation);
 
-            floatView[index + 7] =
-                floatView[index + 17] =
-                    floatView[index + 27] =
-                        floatView[index + 37] = scale.y;
-
-            floatView[index + 8] =
-                floatView[index + 18] =
-                    floatView[index + 28] =
-                        floatView[index + 38] = degreesToRadians(rotation);
-
-            uintView[index + 9] =
-                uintView[index + 19] =
-                    uintView[index + 29] =
-                        uintView[index + 39] = color.getRGBA();
+            uintView[index + 9]
+                = uintView[index + 19]
+                = uintView[index + 29]
+                = uintView[index + 39] = color.getRGBA();
 
             this._batchSize++;
         }

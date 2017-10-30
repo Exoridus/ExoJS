@@ -96,14 +96,14 @@ export default class LauncherScene extends Exo.Scene {
         this._$indicatorText.html('PLAY');
         this._$indicatorText.on('click', this._openTitleHandler);
 
-        this.app.trigger('input:add', this._playInput);
+        this.app.inputManager.add(this._playInput);
     }
 
     /**
      * @override
      */
     unload() {
-        this.app.trigger('input:remove', this._playInput);
+        this.app.inputManager.remove(this._playInput);
         this._$indicatorText.off('click', this._openTitleHandler);
 
         this._playInput.destroy();

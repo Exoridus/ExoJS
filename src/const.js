@@ -569,16 +569,16 @@ export const
             dst: 0x0303,
         },
         ADD: {
-            src: 0x0302,
+            src: 0x0001,
             dst: 0x0304,
         },
         MULTIPLY: {
-            src: 0x0304,
+            src: 0x0306,
             dst: 0x0303,
         },
         SCREEN: {
-            src: 0x0302,
-            dst: 0x0001,
+            src: 0x0001,
+            dst: 0x0301,
         },
     },
 

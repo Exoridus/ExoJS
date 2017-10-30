@@ -118,7 +118,7 @@ export default class Random {
             crypto.getRandomValues(seed);
         } else {
             for (let i = 0; i < 256; i++) {
-                seed[i] = (Math._random() * 256) & 255;
+                seed[i] = (Math.random() * 256) & 255;
             }
         }
 

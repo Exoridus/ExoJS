@@ -16,7 +16,8 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     init(resources) {
-        const app = this.app;
+        const app = this.app,
+            canvas = app.canvas;
 
         /**
          * @private
@@ -35,7 +36,7 @@ export default class GameScene extends Exo.Scene {
          * @private
          * @member {View}
          */
-        this._camera = new Exo.View(new Exo.Rectangle(0, 0, app.canvas.width, app.canvas.height));
+        this._camera = new Exo.View(new Exo.Rectangle(0, 0, canvas.width, canvas.height));
 
         /**
          * @private
@@ -127,10 +128,8 @@ export default class GameScene extends Exo.Scene {
             }),
         ];
 
-        app.trigger('media:play', this._backgroundMusic, { loop: true })
-            .trigger('input:add', this._inputs);
-
-        this.addNode(this._player);
+        app.inputManager.add(this._inputs);
+        app.mediaManager.play(this._backgroundMusic, { loop: true });
 
         this._updateCamera();
     }
@@ -139,14 +138,20 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     update(delta) {
-        this._worldMap.render(this.app, this._camera);
+        const displayManager = this.app.displayManager;
+
+        this._worldMap.render(displayManager, this._camera);
+
+        displayManager.begin();
+        displayManager.render(this._player);
+        displayManager.end();
     }
 
     /**
      * @override
      */
     unload() {
-        this.app.trigger('input:remove', this._inputs, true);
+        this.app.inputManager.remove(this._inputs);
 
         this._worldMap.destroy();
         this._worldMap = null;

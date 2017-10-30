@@ -4,6 +4,7 @@ import Color from '../core/Color';
 import Matrix from '../math/Matrix';
 import Rectangle from '../math/Rectangle';
 import GLTexture from './GLTexture';
+import settings from '../settings';
 
 /**
  * @class RenderState
@@ -14,8 +15,8 @@ export default class RenderState {
      * @constructor
      * @param {WebGLRenderingContext} context
      */
-    constructor(context) {
-        if (!context) {
+    constructor(gl) {
+        if (!gl) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
@@ -23,7 +24,7 @@ export default class RenderState {
          * @private
          * @member {WebGLRenderingContext}
          */
-        this._context = context;
+        this._context = gl;
 
         /**
          * @private
@@ -39,9 +40,15 @@ export default class RenderState {
 
         /**
          * @private
-         * @member {?Object}
+         * @member {Object}
          */
-        this._blendMode = null;
+        this._blendMode = settings.BLEND_MODE;
+
+        /**
+         * @private
+         * @member {Color}
+         */
+        this._clearColor = new Color();
 
         /**
          * @private
@@ -75,12 +82,6 @@ export default class RenderState {
 
         /**
          * @private
-         * @member {Color}
-         */
-        this._clearColor = new Color();
-
-        /**
-         * @private
          * @member {Rectangle}
          */
         this._viewport = new Rectangle();
@@ -90,6 +91,13 @@ export default class RenderState {
          * @member {Matrix}
          */
         this._projection = new Matrix();
+
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+
+        gl.colorMask(true, true, true, false);
+        gl.blendFunc(this._blendMode.src, this._blendMode.dst);
     }
 
     /**
@@ -103,7 +111,6 @@ export default class RenderState {
     set blendMode(blendMode) {
         if (blendMode && blendMode !== this._blendMode) {
             this._context.blendFunc(blendMode.src, blendMode.dst);
-
             this._blendMode = blendMode;
         }
     }
@@ -194,7 +201,6 @@ export default class RenderState {
             const gl = this._context;
 
             gl.activeTexture(gl.TEXTURE0 + textureUnit);
-
             this._textureUnit = textureUnit;
         }
     }
@@ -210,7 +216,6 @@ export default class RenderState {
     set clearColor(color) {
         if (color && !this._clearColor.equals(color, true)) {
             this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-
             this._clearColor.copy(color);
         }
     }
@@ -226,7 +231,6 @@ export default class RenderState {
     set viewport(viewport) {
         if (viewport && !viewport.equals(this._viewport)) {
             this._context.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
             this._viewport.copy(viewport);
         }
     }
@@ -267,23 +271,13 @@ export default class RenderState {
 
     /**
      * @public
-     * @returns {WebGLBuffer}
-     */
-    createBuffer() {
-        return this._context.createBuffer();
-    }
-
-    /**
-     * @public
      * @param {RenderTarget} renderTarget
-     * @returns {?WebGLFramebuffer}
+     * @param {Number} [unit}
      */
-    getGLFramebuffer(renderTarget) {
-        if (!this._glFramebuffers.has(renderTarget)) {
-            this._glFramebuffers.set(renderTarget, renderTarget.isRoot ? null : this._context.createFramebuffer());
-        }
+    bindRenderTarget(renderTarget) {
+        this.glFramebuffer = this.getGLFramebuffer(renderTarget);
 
-        return this._glFramebuffers.get(renderTarget);
+        return this;
     }
 
     /**
@@ -305,17 +299,6 @@ export default class RenderState {
 
             this._glFramebuffers.delete(renderTarget);
         }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {RenderTarget} renderTarget
-     * @param {Number} [unit}
-     */
-    bindRenderTarget(renderTarget) {
-        this.glFramebuffer = this.getGLFramebuffer(renderTarget);
 
         return this;
     }
@@ -412,6 +395,27 @@ export default class RenderState {
         return this.bindTexture(texture)
             .getGLTexture(texture)
             .setTextureImage(source);
+    }
+
+    /**
+     * @public
+     * @param {RenderTarget} renderTarget
+     * @returns {?WebGLFramebuffer}
+     */
+    getGLFramebuffer(renderTarget) {
+        if (!this._glFramebuffers.has(renderTarget)) {
+            this._glFramebuffers.set(renderTarget, renderTarget.isRoot ? null : this._context.createFramebuffer());
+        }
+
+        return this._glFramebuffers.get(renderTarget);
+    }
+
+    /**
+     * @public
+     * @returns {WebGLBuffer}
+     */
+    createBuffer() {
+        return this._context.createBuffer();
     }
 
     /**

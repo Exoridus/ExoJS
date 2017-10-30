@@ -53,7 +53,6 @@ export default class Renderable extends SceneNode {
 
     /**
      * @public
-     * @virtual
      * @chainable
      * @param {DisplayManager} displayManager
      * @returns {Renderable}

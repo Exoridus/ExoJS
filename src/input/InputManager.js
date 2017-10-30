@@ -46,10 +46,6 @@ export default class InputManager extends ChannelManager {
          * @member {GamepadManager}
          */
         this._gamepadManager = new GamepadManager(app, this.channelBuffer);
-
-        app.on('input:add', this.add, this)
-            .on('input:remove', this.remove, this)
-            .on('input:clear', this.clear, this);
     }
 
     /**
@@ -119,11 +115,6 @@ export default class InputManager extends ChannelManager {
      */
     destroy() {
         super.destroy();
-
-        this._app
-            .off('input:add', this.add, this)
-            .off('input:remove', this.remove, this)
-            .off('input:clear', this.clear, this);
 
         this._inputs.clear();
         this._inputs = null;

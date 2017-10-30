@@ -1,5 +1,4 @@
 import { GAMEPAD } from '../../const';
-import settings from '../../settings';
 import GamepadMapping from './GamepadMapping';
 import GamepadControl from './GamepadControl';
 
@@ -13,6 +12,8 @@ export default class DefaultGamepadMapping extends GamepadMapping {
      * @constructor
      */
     constructor() {
+        const invert = { invert: true };
+
         super([
             new GamepadControl(0, GAMEPAD.FaceBottom),
             new GamepadControl(1, GAMEPAD.FaceLeft),
@@ -32,30 +33,14 @@ export default class DefaultGamepadMapping extends GamepadMapping {
             new GamepadControl(15, GAMEPAD.DPadRight),
             new GamepadControl(16, GAMEPAD.Home),
         ], [
-            new GamepadControl(0, GAMEPAD.LeftStickLeft, {
-                invert: !settings.INVERT_LEFT_AXIS_X
-            }),
-            new GamepadControl(0, GAMEPAD.LeftStickRight, {
-                invert: settings.INVERT_LEFT_AXIS_X
-            }),
-            new GamepadControl(1, GAMEPAD.LeftStickUp, {
-                invert: !settings.INVERT_LEFT_AXIS_Y
-            }),
-            new GamepadControl(1, GAMEPAD.LeftStickDown, {
-                invert: settings.INVERT_LEFT_AXIS_Y
-            }),
-            new GamepadControl(2, GAMEPAD.RightStickLeft, {
-                invert: !settings.INVERT_RIGHT_AXIS_X
-            }),
-            new GamepadControl(2, GAMEPAD.RightStickRight, {
-                invert: settings.INVERT_RIGHT_AXIS_X
-            }),
-            new GamepadControl(3, GAMEPAD.RightStickUp, {
-                invert: !settings.INVERT_RIGHT_AXIS_Y
-            }),
-            new GamepadControl(3, GAMEPAD.RightStickDown, {
-                invert: settings.INVERT_RIGHT_AXIS_Y
-            }),
+            new GamepadControl(0, GAMEPAD.LeftStickLeft, invert),
+            new GamepadControl(0, GAMEPAD.LeftStickRight),
+            new GamepadControl(1, GAMEPAD.LeftStickUp, invert),
+            new GamepadControl(1, GAMEPAD.LeftStickDown),
+            new GamepadControl(2, GAMEPAD.RightStickLeft, invert),
+            new GamepadControl(2, GAMEPAD.RightStickRight),
+            new GamepadControl(3, GAMEPAD.RightStickUp, invert),
+            new GamepadControl(3, GAMEPAD.RightStickDown),
         ]);
     }
 }

@@ -63,11 +63,9 @@ export default class DisplayManager {
          */
         this._contextLost = this._context.isContextLost();
 
-        if (this._contextLost && this._context.getExtension('WEBGL_lose_context')) {
-            this._context.getExtension('WEBGL_lose_context').restoreContext();
-        }
-
-        this._setupGL();
+        // if (this._contextLost && this._context.getExtension('WEBGL_lose_context')) {
+        //     this._context.getExtension('WEBGL_lose_context').restoreContext();
+        // }
 
         /**
          * @private
@@ -104,7 +102,6 @@ export default class DisplayManager {
          * @member {RenderState}
          */
         this._renderState = new RenderState(this._context);
-        this._renderState.blendMode = settings.BLEND_MODE;
         this._renderState.clearColor = clearColor;
 
         this._renderTarget.bind(this._renderState);
@@ -112,6 +109,8 @@ export default class DisplayManager {
         this.addRenderer('sprite', new SpriteRenderer())
             .addRenderer('particle', new ParticleRenderer())
             .resize(width, height);
+
+        this._addEvents();
     }
 
     /**
@@ -179,25 +178,6 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {Number} width
-     * @param {Number} height
-     * @returns {DisplayManager}
-     */
-    resize(width, height) {
-        this._canvas.width = width;
-        this._canvas.height = height;
-
-        this._renderTarget.width = width;
-        this._renderTarget.height = height;
-
-        this.updateViewport();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {View} view
      * @returns {DisplayManager}
      */
@@ -225,18 +205,18 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
+     * @param {Number} width
+     * @param {Number} height
      * @returns {DisplayManager}
      */
-    begin() {
-        if (this._isRendering || this._contextLost) {
-            return this;
-        }
+    resize(width, height) {
+        this._canvas.width = width;
+        this._canvas.height = height;
 
-        if (this._clearBeforeRender) {
-            this._renderState.clear();
-        }
+        this._renderTarget.width = width;
+        this._renderTarget.height = height;
 
-        this._isRendering = true;
+        this.updateViewport();
 
         return this;
     }
@@ -244,18 +224,29 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {Renderable} renderable
-     * @param {String} renderer
      * @returns {DisplayManager}
      */
-    render(renderable, renderer) {
-        if (!this._isRendering || this._contextLost) {
-            return this;
+    begin() {
+        if (!this._isRendering && !this._contextLost) {
+            if (this._clearBeforeRender) {
+                this._renderState.clear();
+            }
+
+            this._isRendering = true;
         }
 
-        if (renderable.active && this.isVisible(renderable)) {
-            this._renderState.renderer = this.getRenderer(renderer);
-            this._renderState.renderer.render(renderable);
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Renderable|*} renderable
+     * @returns {DisplayManager}
+     */
+    render(renderable) {
+        if (this._isRendering && !this._contextLost) {
+            renderable.render(this);
         }
 
         return this;
@@ -267,22 +258,20 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     end() {
-        if (!this._isRendering || this._contextLost) {
-            return this;
-        }
+        if (this._isRendering && !this._contextLost) {
+            if (this._renderState.renderer) {
+                this._renderState.renderer.flush();
+            }
 
-        if (this._renderState.renderer) {
-            this._renderState.renderer.flush();
+            this._isRendering = false;
         }
-
-        this._isRendering = false;
 
         return this;
     }
 
     /**
      * @public
-     * @param {Renderable} renderable
+     * @param {Renderable|*} renderable
      * @returns {Boolean}
      */
     isVisible(renderable) {
@@ -345,18 +334,6 @@ export default class DisplayManager {
 
         this._onContextLostHandler = null;
         this._onContextRestoredHandler = null;
-    }
-
-    /**
-     * @private
-     */
-    _setupGL() {
-        const gl = this._context;
-
-        gl.colorMask(true, true, true, false);
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
-        gl.enable(gl.BLEND);
     }
 
     /**

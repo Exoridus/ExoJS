@@ -1,6 +1,6 @@
 import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET_KEYBOARD } from '../const';
-import ChannelManager from './ChannelManager';
 import { addFlag, hasFlag, removeFlag } from '../utils';
+import ChannelManager from './ChannelManager';
 
 const FLAGS = {
     NONE: 0,

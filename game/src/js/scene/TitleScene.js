@@ -10,6 +10,7 @@ export default class TitleScene extends Exo.Scene {
      * @param {ResourceContainer} resources
      */
     init(resources) {
+        const mediaManager = this.app.mediaManager;
 
         /**
          * @private
@@ -30,17 +31,21 @@ export default class TitleScene extends Exo.Scene {
          */
         this._titleMusic = resources.get('music', 'title/background');
 
-        this.app.trigger('media:play', this._titleMusic, { loop: true });
-
-        this.addNode(this._titleBackground)
-            .addNode(this._menuManager);
+        mediaManager.play(this._titleMusic, { loop: true });
     }
 
     /**
      * @override
      */
     update(delta) {
+        const displayManager = this.app.displayManager;
+
         this._menuManager.update(delta);
+
+        displayManager.begin();
+        displayManager.render(this._titleBackground);
+        displayManager.render(this._menuManager);
+        displayManager.end();
     }
 
     /**

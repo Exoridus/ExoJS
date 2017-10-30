@@ -160,6 +160,8 @@ export default class ShaderAttribute {
 
     /**
      * @public
+     * @param {RenderState} renderState
+     * @param {WebGLProgram} program
      * @param {Number} stride
      * @param {Number} offset
      */

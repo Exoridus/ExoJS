@@ -20,9 +20,7 @@ window.app.start(new Exo.Scene({
      */
     init(resources) {
         const app = this.app,
-            canvas = app.canvas,
-            width = canvas.width,
-            height = canvas.height;
+            canvas = app.canvas;
 
         /**
          * @private
@@ -44,8 +42,8 @@ window.app.start(new Exo.Scene({
         this._canvas.style.position = 'absolute';
         this._canvas.style.top = '12.5%';
         this._canvas.style.left = 0;
-        this._canvas.width = width;
-        this._canvas.height = height * 0.75 | 0;
+        this._canvas.width = canvas.width;
+        this._canvas.height = canvas.height * 0.75 | 0;
 
         /**
          * @private
@@ -96,8 +94,8 @@ window.app.start(new Exo.Scene({
 
         canvas.parentNode.appendChild(this._canvas);
 
-        app.trigger('input:add', this._input)
-            .trigger('media:play', this._music, { loop: true });
+        app.inputManager.add(this._input);
+        app.mediaManager.play(this._music, { loop: true });
     },
 
     /**
@@ -110,7 +108,8 @@ window.app.start(new Exo.Scene({
 
         this._time.add(delta);
 
-        const canvas = this._canvas,
+        const renderState = this.app.displayManager.renderState,
+            canvas = this._canvas,
             context = this._context,
             freqData = this._analyser.frequencyData,
             timeDomain = this._analyser.timeDomainData,
@@ -138,7 +137,7 @@ window.app.start(new Exo.Scene({
             }
         }
 
-        this.app.displayManager.renderState.clear(this._color.set(r / length, g / length, b / length));
+        renderState.clear(this._color.set(r / length, g / length, b / length));
 
         context.clearRect(0, 0, width, height);
         context.beginPath();

@@ -666,7 +666,7 @@ var LauncherScene = function (_Exo$Scene) {
 
   }, {
     key: 'init',
-    value: function init() {
+    value: function init(resources) {
 
       /**
        * @private
@@ -678,7 +678,7 @@ var LauncherScene = function (_Exo$Scene) {
        * @private
        * @member {Input}
        */
-      this._playInput = new Exo.Input([Exo.KEYS.Enter, Exo.GAMEPAD.Start, Exo.GAMEPAD.FaceButtonBottom]);
+      this._playInput = new Exo.Input([Exo.KEYBOARD.Enter, Exo.GAMEPAD.Start, Exo.GAMEPAD.FaceBottom]);
 
       this._playInput.on('trigger', this._openTitleHandler);
 
@@ -686,7 +686,7 @@ var LauncherScene = function (_Exo$Scene) {
       this._$indicatorText.html('PLAY');
       this._$indicatorText.on('click', this._openTitleHandler);
 
-      this.app.trigger('input:add', this._playInput);
+      this.app.inputManager.add(this._playInput);
     }
 
     /**
@@ -696,7 +696,7 @@ var LauncherScene = function (_Exo$Scene) {
   }, {
     key: 'unload',
     value: function unload() {
-      this.app.trigger('input:remove', this._playInput);
+      this.app.inputManager.remove(this._playInput);
       this._$indicatorText.off('click', this._openTitleHandler);
 
       this._playInput.destroy();
@@ -775,7 +775,7 @@ exports.default = LauncherScene;
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+        value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -797,77 +797,82 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {Scene}
  */
 var TitleScene = function (_Exo$Scene) {
-  _inherits(TitleScene, _Exo$Scene);
+        _inherits(TitleScene, _Exo$Scene);
 
-  function TitleScene() {
-    _classCallCheck(this, TitleScene);
+        function TitleScene() {
+                _classCallCheck(this, TitleScene);
 
-    return _possibleConstructorReturn(this, (TitleScene.__proto__ || Object.getPrototypeOf(TitleScene)).apply(this, arguments));
-  }
+                return _possibleConstructorReturn(this, (TitleScene.__proto__ || Object.getPrototypeOf(TitleScene)).apply(this, arguments));
+        }
 
-  _createClass(TitleScene, [{
-    key: 'init',
+        _createClass(TitleScene, [{
+                key: 'init',
 
 
-    /**
-     * @override
-     */
-    value: function init() {
-      var resources = this.app.loader.resources;
+                /**
+                 * @param {ResourceContainer} resources
+                 */
+                value: function init(resources) {
+                        var mediaManager = this.app.mediaManager;
 
-      /**
-       * @private
-       * @member {TitleMenuManager}
-       */
-      this._menuManager = new _TitleMenuManager2.default(this.app);
-      this._menuManager.enable('main');
+                        /**
+                         * @private
+                         * @member {TitleMenuManager}
+                         */
+                        this._menuManager = new _TitleMenuManager2.default(this.app);
+                        this._menuManager.enable('main');
 
-      /**
-       * @private
-       * @member {Sprite}
-       */
-      this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
+                        /**
+                         * @private
+                         * @member {Sprite}
+                         */
+                        this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
 
-      /**
-       * @private
-       * @member {Music}
-       */
-      this._titleMusic = resources.get('music', 'title/background');
+                        /**
+                         * @private
+                         * @member {Music}
+                         */
+                        this._titleMusic = resources.get('music', 'title/background');
 
-      this.app.trigger('media:play', this._titleMusic, { loop: true });
+                        mediaManager.play(this._titleMusic, { loop: true });
+                }
 
-      this.addNode(this._titleBackground).addNode(this._menuManager);
-    }
+                /**
+                 * @override
+                 */
 
-    /**
-     * @override
-     */
+        }, {
+                key: 'update',
+                value: function update(delta) {
+                        var displayManager = this.app.displayManager;
 
-  }, {
-    key: 'update',
-    value: function update(delta) {
-      this._menuManager.update(delta);
-    }
+                        displayManager.begin();
 
-    /**
-     * @override
-     */
+                        this._titleBackground.render(displayManager);
+                        this._menuManager.update(delta).render(displayManager);
 
-  }, {
-    key: 'unload',
-    value: function unload() {
-      this._menuManager.destroy();
-      this._menuManager = null;
+                        displayManager.end();
+                }
 
-      this._titleBackground.destroy();
-      this._titleBackground = null;
+                /**
+                 * @override
+                 */
 
-      this._titleMusic.destroy();
-      this._titleMusic = null;
-    }
-  }]);
+        }, {
+                key: 'unload',
+                value: function unload() {
+                        this._menuManager.destroy();
+                        this._menuManager = null;
 
-  return TitleScene;
+                        this._titleBackground.destroy();
+                        this._titleBackground = null;
+
+                        this._titleMusic.destroy();
+                        this._titleMusic = null;
+                }
+        }]);
+
+        return TitleScene;
 }(Exo.Scene);
 
 exports.default = TitleScene;
@@ -996,42 +1001,42 @@ var MenuManager = function () {
          * @private
          * @member {Input[]}
          */
-        this._inputs = [new Exo.Input([Exo.KEYS.Up, Exo.GAMEPAD.DPadUp, Exo.GAMEPAD.LeftStickUp], {
+        this._inputs = [new Exo.Input([Exo.KEYBOARD.Up, Exo.GAMEPAD.DPadUp, Exo.GAMEPAD.LeftStickUp], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputUp();
                 }
             }
-        }), new Exo.Input([Exo.KEYS.Down, Exo.GAMEPAD.LeftStickDown, Exo.GAMEPAD.DPadDown], {
+        }), new Exo.Input([Exo.KEYBOARD.Down, Exo.GAMEPAD.LeftStickDown, Exo.GAMEPAD.DPadDown], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
-        }), new Exo.Input([Exo.KEYS.Left, Exo.GAMEPAD.LeftStickLeft, Exo.GAMEPAD.DPadLeft], {
+        }), new Exo.Input([Exo.KEYBOARD.Left, Exo.GAMEPAD.LeftStickLeft, Exo.GAMEPAD.DPadLeft], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
-        }), new Exo.Input([Exo.KEYS.Right, Exo.GAMEPAD.LeftStickRight, Exo.GAMEPAD.DPadRight], {
+        }), new Exo.Input([Exo.KEYBOARD.Right, Exo.GAMEPAD.LeftStickRight, Exo.GAMEPAD.DPadRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
-        }), new Exo.Input([Exo.KEYS.Enter, Exo.GAMEPAD.FaceButtonBottom], {
+        }), new Exo.Input([Exo.KEYBOARD.Enter, Exo.GAMEPAD.FaceBottom], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
-        }), new Exo.Input([Exo.KEYS.Backspace, Exo.GAMEPAD.FaceButtonRight], {
+        }), new Exo.Input([Exo.KEYBOARD.Backspace, Exo.GAMEPAD.FaceRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
@@ -1061,7 +1066,7 @@ var MenuManager = function () {
             }
 
             this._active = true;
-            this._app.trigger('input:add', this._inputs);
+            this._app.inputManager.add(this._inputs);
 
             this.openMenu(startMenu);
         }
@@ -1078,8 +1083,7 @@ var MenuManager = function () {
             }
 
             this._active = false;
-
-            this._app.trigger('input:remove', this._inputs);
+            this._app.inputManager.remove(this._inputs);
 
             if (this._currentMenu) {
                 this._currentMenu.reset();
@@ -1831,7 +1835,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var KEYS = Exo.KEYS,
+var KEYBOARD = Exo.KEYBOARD,
     GAMEPAD = Exo.GAMEPAD,
     clamp = Exo.utils.clamp;
 
@@ -1856,9 +1860,9 @@ var GameScene = function (_Exo$Scene) {
         /**
          * @override
          */
-        value: function init() {
+        value: function init(resources) {
             var app = this.app,
-                resources = app.loader.resources;
+                canvas = app.canvas;
 
             /**
              * @private
@@ -1877,7 +1881,7 @@ var GameScene = function (_Exo$Scene) {
              * @private
              * @member {View}
              */
-            this._camera = new Exo.View(new Exo.Rectangle(0, 0, app.canvas.width, app.canvas.height));
+            this._camera = new Exo.View(new Exo.Rectangle(0, 0, canvas.width, canvas.height));
 
             /**
              * @private
@@ -1895,7 +1899,7 @@ var GameScene = function (_Exo$Scene) {
              * @private
              * @member {Input[]}
              */
-            this._inputs = [new Exo.Input([KEYS.Escape, GAMEPAD.Start], {
+            this._inputs = [new Exo.Input([KEYBOARD.Escape, GAMEPAD.Start], {
                 context: this,
                 trigger: function trigger() {
                     this._isPaused = !this._isPaused;
@@ -1906,27 +1910,27 @@ var GameScene = function (_Exo$Scene) {
                             // hide pause menu
                         }
                 }
-            }), new Exo.Input([KEYS.Up, KEYS.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
+            }), new Exo.Input([KEYBOARD.Up, KEYBOARD.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(0, value * -1);
                 }
-            }), new Exo.Input([KEYS.Down, KEYS.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
+            }), new Exo.Input([KEYBOARD.Down, KEYBOARD.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(0, value);
                 }
-            }), new Exo.Input([KEYS.Left, KEYS.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
+            }), new Exo.Input([KEYBOARD.Left, KEYBOARD.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(value * -1, 0);
                 }
-            }), new Exo.Input([KEYS.Right, KEYS.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
+            }), new Exo.Input([KEYBOARD.Right, KEYBOARD.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
                 context: this,
                 active: function active(value) {
                     this._movePlayer(value, 0);
                 }
-            }), new Exo.Input([KEYS.Shift, GAMEPAD.RightTriggerTop], {
+            }), new Exo.Input([KEYBOARD.Shift, GAMEPAD.ShoulderRightTop], {
                 context: this,
                 start: function start() {
                     this._player.running = true;
@@ -1936,9 +1940,8 @@ var GameScene = function (_Exo$Scene) {
                 }
             })];
 
-            app.trigger('media:play', this._backgroundMusic, { loop: true }).trigger('input:add', this._inputs);
-
-            this.addNode(this._player);
+            app.inputManager.add(this._inputs);
+            app.mediaManager.play(this._backgroundMusic, { loop: true });
 
             this._updateCamera();
         }
@@ -1950,7 +1953,12 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'update',
         value: function update(delta) {
-            this._worldMap.render(this.app, this._camera);
+            var displayManager = this.app.displayManager.begin();
+
+            this._worldMap.render(displayManager, this._camera);
+            this._player.render(displayManager);
+
+            displayManager.end();
         }
 
         /**
@@ -1960,7 +1968,7 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'unload',
         value: function unload() {
-            this.app.trigger('input:remove', this._inputs, true);
+            this.app.inputManager.remove(this._inputs);
 
             this._worldMap.destroy();
             this._worldMap = null;
@@ -2010,7 +2018,7 @@ var GameScene = function (_Exo$Scene) {
                 offsetWidth = camera.width / 2,
                 offsetHeight = camera.height / 2;
 
-            camera.setCenter(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight));
+            camera.center.set(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight));
 
             this.app.displayManager.setView(camera);
         }
@@ -2115,25 +2123,22 @@ var WorldMap = function () {
 
     /**
      * @public
-     * @param {Application} app
+     * @param {DisplayManager} displayManager
      * @param {View} camera
      */
-    value: function render(app, camera) {
-      var displayManager = app.displayManager,
+    value: function render(displayManager, camera) {
+      var mapData = this._mapData,
           width = this._width,
           height = this._height,
-          mapData = this._mapData,
+          tile = this._tile,
           tileset = this._tileset,
           tileSize = this._tileSize,
-          tile = this._tile,
           tilesHorizontal = camera.width / tileSize + 2 | 0,
           tilesVertical = camera.height / tileSize + 2 | 0,
           startTileX = clamp(camera.left / tileSize, 0, width - tilesHorizontal) | 0,
           startTileY = clamp(camera.top / tileSize, 0, height - tilesVertical) | 0,
           startTileIndex = startTileY * width + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
-
-      displayManager.begin();
 
       for (var i = 0; i < tilesTotal; i++) {
         var x = i % tilesHorizontal | 0,
@@ -2147,8 +2152,6 @@ var WorldMap = function () {
 
         tile.render(displayManager);
       }
-
-      displayManager.end();
     }
   }, {
     key: 'pixelWidth',

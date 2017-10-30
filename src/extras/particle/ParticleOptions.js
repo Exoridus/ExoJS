@@ -11,6 +11,7 @@ export default class ParticleOptions {
     /**
      * @constructor
      * @param {Object} [options]
+     * @param {Time} [options.elapsedLifetime]
      * @param {Time} [options.totalLifetime]
      * @param {Vector} [options.position]
      * @param {Vector} [options.scale]
@@ -19,7 +20,13 @@ export default class ParticleOptions {
      * @param {Number} [options.rotation]
      * @param {Number} [options.rotationSpeed]
      */
-    constructor({ totalLifetime, position, scale, color, velocity, rotation, rotationSpeed } = {}) {
+    constructor({ elapsedLifetime, totalLifetime, position, scale, color, velocity, rotation, rotationSpeed } = {}) {
+
+        /**
+         * @private
+         * @member {Time}
+         */
+        this._elapsedLifetime = (elapsedLifetime && elapsedLifetime.clone()) || new Time(0, TIME.SECONDS);
 
         /**
          * @private
@@ -132,8 +139,10 @@ export default class ParticleOptions {
         return this._rotation;
     }
 
-    set rotation(rotation) {
-        this._rotation = rotation % 360;
+    set rotation(degrees) {
+        const rotation = degrees % 360;
+
+        this._rotation = rotation < 0 ? rotation + 360 : rotation;
     }
 
     /**

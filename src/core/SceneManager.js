@@ -44,19 +44,7 @@ export default class SceneManager {
             return;
         }
 
-        const displayManager = this._app.displayManager;
-
         this._currentScene.update(delta);
-
-        displayManager.begin();
-
-        for (const node of this._currentScene.nodes) {
-            if (node instanceof Renderable) {
-                node.render(displayManager);
-            }
-        }
-
-        displayManager.end();
     }
 
     /**

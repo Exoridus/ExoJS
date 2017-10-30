@@ -36,6 +36,6 @@ export default class TorqueModifier extends ParticleModifier {
      * @override
      */
     apply(particle, delta) {
-        particle.rotationSpeed += (delta.seconds * this._angularAcceleration);
+        particle.rotationSpeed = particle.rotationSpeed + (delta.seconds * this._angularAcceleration);
     }
 }

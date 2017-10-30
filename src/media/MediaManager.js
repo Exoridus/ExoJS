@@ -98,7 +98,7 @@ export default class MediaManager {
         this.setMusicVolume(musicVolume);
         this.setVideoVolume(videoVolume);
 
-        app.on('media:play', this.play, this)
+        this._app
             .on('media:volume:master', this.setMasterVolume, this)
             .on('media:volume:sound', this.setSoundVolume, this)
             .on('media:volume:music', this.setMusicVolume, this)
@@ -269,10 +269,10 @@ export default class MediaManager {
      */
     destroy() {
         this._app
-            .off('media:play', this.play, this)
             .off('media:volume:master', this.setMasterVolume, this)
             .off('media:volume:sound', this.setSoundVolume, this)
-            .off('media:volume:music', this.setMusicVolume, this);
+            .off('media:volume:music', this.setMusicVolume, this)
+            .off('media:volume:video', this.setVideoVolume, this);
 
         this._soundGain.disconnect();
         this._soundGain = null;

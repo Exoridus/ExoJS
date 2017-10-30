@@ -46,7 +46,7 @@ export default class PerlinNoiseGenerator {
         }
 
         for (let i = 0; i < length; i++) {
-            this._noise[i] = Math._random();
+            this._noise[i] = Math.random();
         }
 
         for (let i = 0; i < length; i++) {

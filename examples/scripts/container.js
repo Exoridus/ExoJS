@@ -33,44 +33,48 @@ window.app.start(new Exo.Scene({
         /**
          * @type {Texture}
          */
-        this.rainbowTexture = resources.get('texture', 'rainbow');
+        this._rainbowTexture = resources.get('texture', 'rainbow');
 
         /**
          * @type {Sprite}
          */
-        this.rainbow = new Exo.Sprite(this.rainbowTexture);
+        this._rainbow = new Exo.Sprite(this._rainbowTexture);
 
         /**
          * @type {Container}
          */
-        this.bunnies = new Exo.Container();
-        this.bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
+        this._bunnies = new Exo.Container();
+        this._bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
 
         for (let i = 0; i < 25; i++) {
             const bunny = new Exo.Sprite(this._bunnyTexture);
 
             bunny.setPosition((i % 5) * (bunny.width + 10), (i / 5 | 0) * (bunny.height + 10));
 
-            this.bunnies.addChild(bunny);
+            this._bunnies.addChild(bunny);
         }
 
-        this.bunnies.setOrigin(0.5);
-
-        this.addNode(this.rainbow)
-            .addNode(this.bunnies);
+        this._bunnies.setOrigin(0.5);
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        const bounds = this.bunnies.getBounds();
+        const displayManager = this.app.displayManager,
+            bounds = this._bunnies.getBounds();
 
-        this.bunnies.rotate(delta.seconds * 36);
+        this._rainbow.x = bounds.x;
+        this._rainbow.y = bounds.y;
+        this._rainbow.width = bounds.width;
+        this._rainbow.height = bounds.height;
 
-        this.rainbow.x = bounds.x;
-        this.rainbow.y = bounds.y;
-        this.rainbow.width = bounds.width;
-        this.rainbow.height = bounds.height;
+        this._bunnies.rotate(delta.seconds * 36);
+
+        displayManager.begin();
+        displayManager.render(this._rainbow);
+        displayManager.render(this._bunnies);
+        displayManager.end();
+
     },
 }));

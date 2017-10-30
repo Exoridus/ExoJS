@@ -1,6 +1,6 @@
-import EventEmitter from '../core/EventEmitter';
-import settings from '../settings';
 import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_POINTER, INPUT_OFFSET_GAMEPAD } from '../const';
+import settings from '../settings';
+import EventEmitter from '../core/EventEmitter';
 
 /**
  * @class Input

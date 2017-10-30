@@ -133,7 +133,7 @@ export default class MenuManager {
         }
 
         this._active = true;
-        this._app.trigger('input:add', this._inputs);
+        this._app.inputManager.add(this._inputs);
 
         this.openMenu(startMenu);
     }
@@ -147,8 +147,7 @@ export default class MenuManager {
         }
 
         this._active = false;
-
-        this._app.trigger('input:remove', this._inputs);
+        this._app.inputManager.remove(this._inputs);
 
         if (this._currentMenu) {
             this._currentMenu.reset();
@@ -216,7 +215,7 @@ export default class MenuManager {
      */
     render(displayManager) {
         if (this._currentMenu) {
-            this._currentMenu.render(displayManager);
+            displayManager.render(this._currentMenu);
         }
     }
 

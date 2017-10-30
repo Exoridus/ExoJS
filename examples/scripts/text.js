@@ -40,10 +40,9 @@ window.app.start(new Exo.Scene({
             fontSize: 25,
             fontFamily: 'AndyBold',
         });
+
         this._text.setPosition(canvas.width / 2, canvas.height / 2);
         this._text.setOrigin(0.5, 0.5);
-
-        this.addNode(this._text);
     },
 
     /**
@@ -53,5 +52,10 @@ window.app.start(new Exo.Scene({
         this._text
             .setText(`Hello World! ${this._ticker.add(delta).seconds | 0}`)
             .rotate(delta.seconds * 36);
+
+        this.app.displayManager
+            .begin()
+            .render(this._text)
+            .end();
     }
 }));

@@ -78,17 +78,16 @@ export default class WorldMap {
 
     /**
      * @public
-     * @param {Application} app
+     * @param {DisplayManager} displayManager
      * @param {View} camera
      */
-    render(app, camera) {
-        const displayManager = app.displayManager,
+    render(displayManager, camera) {
+        const mapData = this._mapData,
             width = this._width,
             height = this._height,
-            mapData = this._mapData,
+            tile = this._tile,
             tileset = this._tileset,
             tileSize = this._tileSize,
-            tile = this._tile,
             tilesHorizontal = ((camera.width / tileSize) + 2) | 0,
             tilesVertical = ((camera.height / tileSize) + 2) | 0,
             startTileX = clamp(camera.left / tileSize, 0, width - tilesHorizontal) | 0,
@@ -108,7 +107,7 @@ export default class WorldMap {
             tile.x = (startTileX + x) * tileSize;
             tile.y = (startTileY + y) * tileSize;
 
-            tile.render(displayManager);
+            displayManager.render(tile);
         }
 
         displayManager.end();

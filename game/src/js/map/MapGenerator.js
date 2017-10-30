@@ -178,7 +178,7 @@ export default class MapGenerator {
      * @returns {Number}
      */
     static getRandomInt(min, max) {
-        return (Math._random() * (max - min + 1) | 0) + min;
+        return (Math.random() * (max - min + 1) | 0) + min;
     }
 
     /**
@@ -188,6 +188,6 @@ export default class MapGenerator {
      * @returns {Object}
      */
     static getRandomChoice(choices) {
-        return choices[(Math._random() * choices.length) | 0];
+        return choices[(Math.random() * choices.length) | 0];
     }
 }

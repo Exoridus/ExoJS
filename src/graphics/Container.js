@@ -242,7 +242,7 @@ export default class Container extends Renderable {
     render(displayManager) {
         if (this.active) {
             for (const child of this._children) {
-                child.render(displayManager);
+                displayManager.render(child);
             }
         }
 

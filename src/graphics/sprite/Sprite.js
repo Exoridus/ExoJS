@@ -144,11 +144,14 @@ export default class Sprite extends Container {
      * @override
      */
     render(displayManager) {
-        if (this.active) {
-            displayManager.render(this, 'sprite');
+        if (this.active && displayManager.isVisible(this)) {
+            const renderState = displayManager.renderState;
+
+            renderState.renderer = displayManager.getRenderer('sprite');
+            renderState.renderer.render(this);
 
             for (const child of this.children) {
-                child.render(displayManager);
+                displayManager.render(child);
             }
         }
 

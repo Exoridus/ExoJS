@@ -1,6 +1,7 @@
 import Vector from '../../math/Vector';
 import Color from '../../core/Color';
 import Time from '../../core/Time';
+import { TIME } from '../../const';
 
 /**
  * @class Particle
@@ -9,7 +10,7 @@ export default class Particle {
 
     /**
      * @constructor
-     * @param {ParticleOptions} options
+     * @param {ParticleOptions|Particle} options
      */
     constructor(options) {
 
@@ -17,13 +18,13 @@ export default class Particle {
          * @private
          * @member {Time}
          */
-        this._totalLifetime = options.totalLifetime.clone();
+        this._elapsedLifetime = options.elapsedLifetime.clone();
 
         /**
          * @private
          * @member {Time}
          */
-        this._elapsedLifetime = new Time();
+        this._totalLifetime = options.totalLifetime.clone();
 
         /**
          * @private
@@ -94,8 +95,10 @@ export default class Particle {
         return this._rotation;
     }
 
-    set rotation(rotation) {
-        this._rotation = rotation;
+    set rotation(degrees) {
+        const rotation = degrees % 360;
+
+        this._rotation = rotation < 0 ? rotation + 360 : rotation;
     }
 
     /**
@@ -164,7 +167,7 @@ export default class Particle {
      * @member {Time}
      */
     get remainingLifetime() {
-        return Time.Temp.set(this.totalLifetime.milliseconds - this.elapsedLifetime.milliseconds);
+        return Time.Temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
     }
 
     /**
@@ -173,7 +176,7 @@ export default class Particle {
      * @member {Time}
      */
     get elapsedRatio() {
-        return this.elapsedLifetime.milliseconds / this.totalLifetime.milliseconds;
+        return this._elapsedLifetime.milliseconds / this._totalLifetime.milliseconds;
     }
 
     /**
@@ -182,19 +185,78 @@ export default class Particle {
      * @member {Time}
      */
     get remainingRatio() {
-        return this.remainingLifetime.milliseconds / this.totalLifetime.milliseconds;
+        return this.remainingLifetime.milliseconds / this._totalLifetime.milliseconds;
     }
 
     /**
      * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get isExpired() {
+        return this._elapsedLifetime.greaterThan(this._totalLifetime);
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Time} delta
+     * @returns {Particle}
      */
     update(delta) {
         const seconds = delta.seconds;
 
         this._elapsedLifetime.add(delta);
         this._position.add(seconds * this._velocity.x, seconds * this._velocity.y);
-        this._rotation += seconds * this._rotationSpeed;
+        this._rotation += (seconds * this._rotationSpeed);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {ParticleOptions} options
+     * @returns {Particle}
+     */
+    reset(options) {
+        this._elapsedLifetime.set(0, TIME.SECONDS);
+        this._totalLifetime.copy(options.totalLifetime);
+        this._position.copy(options.position);
+        this._velocity.copy(options.velocity);
+        this._scale.copy(options.scale);
+        this._color.copy(options.color);
+        this._rotation = options.rotation;
+        this._rotationSpeed = options.rotationSpeed;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Particle} particle
+     * @returns {Particle}
+     */
+    copy(particle) {
+        this._elapsedLifetime.copy(particle.elapsedLifetime);
+        this._totalLifetime.copy(particle.totalLifetime);
+        this._position.copy(particle.position);
+        this._velocity.copy(particle.velocity);
+        this._scale.copy(particle.scale);
+        this._color.copy(particle.color);
+        this._rotation = particle.rotation;
+        this._rotationSpeed = particle.rotationSpeed;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @returns {Particle}
+     */
+    clone() {
+        return new Particle(this);
     }
 
     /**

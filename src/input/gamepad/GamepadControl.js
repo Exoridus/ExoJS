@@ -1,5 +1,4 @@
 import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_GAMEPAD } from '../../const';
-import settings from '../../settings';
 
 /**
  * @class GamepadControl
@@ -13,12 +12,12 @@ export default class GamepadControl {
      * @param {Object} [options={}]
      * @param {Boolean} [options.invert=false]
      * @param {Boolean} [options.normalize=false]
-     * @param {Number} [options.threshold=settings.THRESHOLD_GAMEPAD]
+     * @param {Number} [options.threshold=0.2]
      */
     constructor(index, channel, {
         invert = false,
         normalize = false,
-        threshold = settings.THRESHOLD_GAMEPAD,
+        threshold = 0.2,
     } = {}) {
 
         /**

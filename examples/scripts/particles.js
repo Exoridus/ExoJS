@@ -37,11 +37,10 @@ window.app.start(new Exo.Scene({
             totalLifetime: new Exo.Time(5, Exo.TIME.SECONDS),
             position: new Exo.Vector((canvas.width / 2) - center.x, (canvas.height / 2) - center.y)
         });
+
         this._emitter.addModifier(new Exo.TorqueModifier(100));
         this._emitter.addModifier(new Exo.ForceModifier(new Exo.Vector(0, 100)));
         this._emitter.setEmissionRate(30);
-
-        this.addNode(this._emitter);
 
         this.app.on('mouse:move', (delta, mouse) => {
             this._emitter.particleOptions.position.set(mouse.x - center.x, mouse.y - center.y);
@@ -52,12 +51,17 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const random = this._random,
-            { color, velocity } = this._emitter.particleOptions;
+        const displayManager = this.app.displayManager,
+            options = this._emitter.particleOptions,
+            random = this._random;
 
-        color.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
-        velocity.set(random.next(-100, 100), random.next(-100, 0));
+        options.color.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
+        options.velocity.set(random.next(-100, 100), random.next(-100, 0));
 
         this._emitter.update(delta);
+
+        displayManager.begin();
+        displayManager.render(this._emitter);
+        displayManager.end();
     },
 }));
