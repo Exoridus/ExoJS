@@ -101,7 +101,7 @@ export default class ParticleEmitter extends Renderable {
             newLength = newArray.length,
             diff = (activeLength - newLength);
 
-        for (let i = 0, len = activeLength; i < len; i++) {
+        for (let i = 0; i < activeLength; i++) {
             activeArray[i].copy(newArray[i]);
         }
 
@@ -113,7 +113,7 @@ export default class ParticleEmitter extends Renderable {
                 activeParticles.delete(particle);
             }
         } else if (diff < 0) {
-            for (let i = activeLength, len = newLength; i < len; i++) {
+            for (let i = activeLength; i < newLength; i++) {
                 const particle = unusedParticles.pop();
 
                 activeParticles.add(particle ? particle.copy(newArray[i]) : newArray[i].clone());
@@ -204,11 +204,15 @@ export default class ParticleEmitter extends Renderable {
         return this._modifiers;
     }
 
-    set modifiers(modifiers) {
+    set modifiers(newModifiers) {
+        for (const modifier of this._modifiers) {
+            modifier.destroy();
+        }
+
         this._modifiers.length = 0;
 
-        for (const modifier of modifiers) {
-            this._modifiers.push(modifier);
+        for (const modifier of newModifiers) {
+            this._modifiers.push(modifier.clone());
         }
     }
 
@@ -349,6 +353,16 @@ export default class ParticleEmitter extends Renderable {
         this.modifiers = emitter.modifiers;
 
         return this;
+    }
+
+    /**
+     * @public
+     * @returns {ParticleEmitter}
+     */
+    clone() {
+        const emitter = new ParticleEmitter(this._texture, this._particleOptions);
+
+        return emitter.copy(this);
     }
 
     /**

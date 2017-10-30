@@ -42,4 +42,28 @@ export default class ScaleModifier extends ParticleModifier {
 
         particle.scale.add(seconds * scaleFactor.x, seconds * scaleFactor.y);
     }
+
+    /**
+     * @override
+     */
+    copy(modifier) {
+        this.scaleFactor = modifier.scaleFactor;
+
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    clone() {
+        return new ScaleModifier(this._scaleFactor);
+    }
+
+    /**
+     * @override
+     */
+    destroy() {
+        this._scaleFactor.destroy();
+        this._scaleFactor = null;
+    }
 }
