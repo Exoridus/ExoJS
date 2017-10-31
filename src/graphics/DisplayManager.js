@@ -14,7 +14,7 @@ import support from '../support';
 export default class DisplayManager {
 
     /**
-     * @constructor
+     * @constructs DisplayManager
      * @param {Application} app
      * @param {Object} [config]
      * @param {Number} [config.width=800]

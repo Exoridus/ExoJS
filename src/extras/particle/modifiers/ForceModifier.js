@@ -8,7 +8,7 @@ import Vector from '../../../math/Vector';
 export default class ForceModifier extends ParticleModifier {
 
     /**
-     * @constructor
+     * @constructs ForceModifier
      * @param {Vector} acceleration
      */
     constructor(acceleration) {

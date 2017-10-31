@@ -8,7 +8,7 @@ import Vector from '../../../math/Vector';
 export default class ScaleModifier extends ParticleModifier {
 
     /**
-     * @constructor
+     * @constructs ScaleModifier
      * @param {Vector} scaleFactor
      */
     constructor(scaleFactor) {

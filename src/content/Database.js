@@ -14,7 +14,7 @@ import support from '../support';
 export default class Database {
 
     /**
-     * @constructor
+     * @constructs Database
      * @param {String} name
      * @param {Number} version
      */

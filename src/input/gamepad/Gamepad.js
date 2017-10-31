@@ -9,7 +9,7 @@ import ChannelManager from '../ChannelManager';
 export default class Gamepad extends ChannelManager {
 
     /**
-     * @constructor
+     * @constructs Gamepad
      * @param {Gamepad} gamepad
      * @param {ArrayBuffer} channelBuffer
      */

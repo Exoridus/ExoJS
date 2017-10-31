@@ -17,7 +17,7 @@ import EventEmitter from '../core/EventEmitter';
 export default class Media extends EventEmitter {
 
     /**
-     * @constructor
+     * @constructs Media
      * @param {MediaSource} mediaSource
      */
     constructor(mediaSource) {

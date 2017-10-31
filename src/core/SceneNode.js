@@ -5,12 +5,12 @@ import Bounds from './Bounds';
 
 /**
  * @class SceneNode
- * @extends {Transformable}
+ * @extends Transformable
  */
 export default class SceneNode extends Transformable {
 
     /**
-     * @constructor
+     * @constructs SceneNode
      */
     constructor() {
         super();

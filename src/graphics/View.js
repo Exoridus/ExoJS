@@ -11,7 +11,7 @@ import Vector from '../math/Vector';
 export default class View {
 
     /**
-     * @constructor
+     * @constructs View
      * @param {Rectangle} viewRectangle
      */
     constructor(viewRectangle = new Rectangle(0, 0, 100, 100)) {

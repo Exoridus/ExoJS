@@ -9,7 +9,7 @@ import Time from '../../core/Time';
 export default class ParticleOptions {
 
     /**
-     * @constructor
+     * @constructs ParticleOptions
      * @param {Object} [options]
      * @param {Time} [options.elapsedLifetime]
      * @param {Time} [options.totalLifetime]

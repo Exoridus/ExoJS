@@ -8,7 +8,7 @@ import Vector from './Vector';
 export default class Shape {
 
     /**
-     * @constructor
+     * @constructs Shape
      */
     constructor(x = 0, y = 0) {
 

@@ -6,7 +6,7 @@ import RC4 from './RC4';
 export default class Random {
 
     /**
-     * @constructor
+     * @constructs Random
      * @param {String} [seed=Random.generateSeed()]
      */
     constructor(seed = Random.generateSeed()) {

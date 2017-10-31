@@ -7,7 +7,7 @@ import Vector from './Vector';
 export default class ObservableVector extends Vector {
 
     /**
-     * @constructor
+     * @constructs ObservableVector
      * @param {Function} callback
      * @param {*} scope
      * @param {Number} [x=0]

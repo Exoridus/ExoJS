@@ -4,7 +4,7 @@
 export default class Renderer {
 
     /**
-     * @constructor
+     * @constructs Renderer
      */
     constructor() {
 

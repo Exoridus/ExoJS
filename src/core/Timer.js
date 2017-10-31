@@ -9,7 +9,7 @@ import Time from './Time';
 export default class Timer extends Clock {
 
     /**
-     * @constructor
+     * @constructs Timer
      * @param {Boolean} autoStart
      * @param {Number} timeLimit
      * @param {Number} factor

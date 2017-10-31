@@ -6,7 +6,7 @@ import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_GAMEPAD } from '../../const';
 export default class GamepadControl {
 
     /**
-     * @constructor
+     * @constructs GamepadControl
      * @param {Number} index
      * @param {Number} channel
      * @param {Object} [options={}]

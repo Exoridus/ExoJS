@@ -12,7 +12,7 @@ import settings from '../../settings';
 export default class ParticleEmitter extends Renderable {
 
     /**
-     * @constructor
+     * @constructs ParticleEmitter
      * @param {Texture} texture
      * @param {ParticleOptions|Object} [particleOptions]
      */

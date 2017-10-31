@@ -9,7 +9,7 @@ import Vector from '../../math/Vector';
 export default class Sprite extends Container {
 
     /**
-     * @constructor
+     * @constructs Sprite
      * @param {?Texture} texture
      */
     constructor(texture) {

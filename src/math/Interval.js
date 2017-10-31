@@ -4,7 +4,7 @@
 export default class Interval {
 
     /**
-     * @constructor
+     * @constructs Interval
      * @param {Number} [min=0]
      * @param {Number} [max=min]
      */

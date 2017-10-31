@@ -17,7 +17,7 @@ const FLAGS = {
 export default class Texture {
 
     /**
-     * @constructor
+     * @constructs Texture
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
      * @param {Object} [options={}]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]

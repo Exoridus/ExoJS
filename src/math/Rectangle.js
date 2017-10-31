@@ -12,7 +12,7 @@ import Size from './Size';
 export default class Rectangle extends Shape {
 
     /**
-     * @constructor
+     * @constructs Rectangle
      * @param {Number} [x=0]
      * @param {Number} [y=x]
      * @param {Number} [width=0]

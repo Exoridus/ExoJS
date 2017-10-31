@@ -9,7 +9,7 @@ import EventEmitter from '../core/EventEmitter';
 export default class Input extends EventEmitter {
 
     /**
-     * @constructor
+     * @constructs Input
      * @param {Set<Number>|Number[]} channels
      * @param {Object} [options={}]
      * @param {Function} [options.start]

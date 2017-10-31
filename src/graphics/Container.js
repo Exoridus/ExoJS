@@ -8,7 +8,7 @@ import { removeItems } from '../utils';
 export default class Container extends Renderable {
 
     /**
-     * @constructor
+     * @constructs Container
      */
     constructor() {
         super();

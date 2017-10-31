@@ -11,7 +11,7 @@ import Vector from './Vector';
 export default class Matrix {
 
     /**
-     * @constructor
+     * @constructs Matrix
      * @param {Number} [a=1]
      * @param {Number} [b=0]
      * @param {Number} [x=0]

@@ -11,7 +11,7 @@ const navigator = window.navigator;
 export default class GamepadManager extends ChannelManager {
 
     /**
-     * @constructor
+     * @constructs GamepadManager
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */

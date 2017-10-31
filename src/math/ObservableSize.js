@@ -7,7 +7,7 @@ import Size from './Size';
 export default class ObservableSize extends Size {
 
     /**
-     * @constructor
+     * @constructs ObservableSize
      * @param {Function} callback
      * @param {*} scope
      * @param {Number} [width=0]

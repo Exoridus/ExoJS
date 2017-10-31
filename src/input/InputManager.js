@@ -11,7 +11,7 @@ import PointerManager from './pointer/PointerManager';
 export default class InputManager extends ChannelManager {
 
     /**
-     * @constructor
+     * @constructs InputManager
      * @param {Application} app
      */
     constructor(app) {

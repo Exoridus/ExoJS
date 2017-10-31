@@ -6,7 +6,7 @@ import { clamp, rgbToHex } from '../utils';
 export default class Color {
 
     /**
-     * @constructor
+     * @constructs Color
      * @param {Number} [r=0]
      * @param {Number} [g=0]
      * @param {Number} [b=0]

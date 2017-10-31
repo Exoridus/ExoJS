@@ -10,7 +10,7 @@ import ParticleOptions from './ParticleOptions';
 export default class Particle {
 
     /**
-     * @constructor
+     * @constructs Particle
      * @param {ParticleOptions|Particle} options
      */
     constructor(options) {

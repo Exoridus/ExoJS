@@ -4,7 +4,7 @@
 export default class RC4 {
 
     /**
-     * @constructor
+     * @constructs RC4
      * @param {Number[]} keys
      */
     constructor(keys) {

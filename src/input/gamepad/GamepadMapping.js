@@ -4,7 +4,7 @@
 export default class GamepadMapping {
 
     /**
-     * @constructor
+     * @constructs GamepadMapping
      * @param {GamepadControl[]} [buttons]
      * @param {GamepadControl[]} [axes]
      */

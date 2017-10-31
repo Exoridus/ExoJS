@@ -12,7 +12,7 @@ const heightCache = new Map();
 export default class Text extends Sprite {
 
     /**
-     * @constructor
+     * @constructs Text
      * @param {String} text
      * @param {TextStyle|Object} [style=new TextStyle()]
      * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]

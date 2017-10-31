@@ -10,7 +10,7 @@ import support from '../support';
 export default class Video extends Sprite {
 
     /**
-     * @constructor
+     * @constructs Video
      * @param {MediaSource} mediaSource
      */
     constructor(mediaSource) {

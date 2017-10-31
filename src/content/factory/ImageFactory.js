@@ -8,7 +8,7 @@ import { determineMimeType } from '../../utils';
 export default class ImageFactory extends BlobFactory {
 
     /**
-     * @constructor
+     * @constructs ImageFactory
      */
     constructor() {
         super();

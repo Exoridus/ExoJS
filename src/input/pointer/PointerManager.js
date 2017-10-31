@@ -45,7 +45,7 @@ const FLAGS = {
 export default class PointerManager extends ChannelManager {
 
     /**
-     * @constructor
+     * @constructs PointerManager
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */

@@ -4,7 +4,7 @@
 export default class Vector {
 
     /**
-     * @constructor
+     * @constructs Vector
      * @param {Number} [x=0]
      * @param {Number} [y=0]
      */

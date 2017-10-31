@@ -4,7 +4,7 @@
 export default class Size {
 
     /**
-     * @constructor
+     * @constructs Size
      * @param {Number} [width=0]
      * @param {Number} [height=0]
      */

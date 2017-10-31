@@ -6,7 +6,7 @@ import { ATTRIBUTE_TYPE } from '../../const';
 export default class ShaderAttribute {
 
     /**
-     * @constructor
+     * @constructs ShaderAttribute
      * @param {Object} options
      * @param {String} options.name
      * @param {Number} [options.type]

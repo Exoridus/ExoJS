@@ -4,7 +4,7 @@
 export default class ResourceContainer {
 
     /**
-     * @constructor
+     * @constructs ResourceContainer
      */
     constructor() {
 

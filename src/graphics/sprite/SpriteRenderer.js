@@ -9,7 +9,7 @@ import settings from '../../settings';
 export default class SpriteRenderer extends Renderer {
 
     /**
-     * @constructor
+     * @constructs SpriteRenderer
      */
     constructor() {
         super();

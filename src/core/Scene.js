@@ -10,7 +10,7 @@ import Rectangle from '../math/Rectangle';
 export default class Scene extends EventEmitter {
 
     /**
-     * @constructor
+     * @constructs Scene
      * @param {Object} [prototype]
      * @param {Function} [prototype.load]
      * @param {Function} [prototype.init]

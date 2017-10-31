@@ -15,7 +15,7 @@ const FLAGS = {
 export default class Keyboard extends ChannelManager {
 
     /**
-     * @constructor
+     * @constructs Keyboard
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */

@@ -12,7 +12,7 @@ import settings from '../settings';
 export default class RenderState {
 
     /**
-     * @constructor
+     * @constructs RenderState
      * @param {WebGLRenderingContext} context
      */
     constructor(gl) {

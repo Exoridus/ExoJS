@@ -10,7 +10,7 @@ import settings from '../../settings';
 export default class ParticleRenderer extends Renderer {
 
     /**
-     * @constructor
+     * @constructs ParticleRenderer
      */
     constructor() {
         super();

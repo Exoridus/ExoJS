@@ -10,7 +10,7 @@ import { join } from 'path';
 export default class ParticleShader extends Shader {
 
     /**
-     * @constructor
+     * @constructs ParticleShader
      */
     constructor() {
         super();

@@ -1,12 +1,10 @@
-import Renderable from '../graphics/Renderable';
-
 /**
  * @class SceneManager
  */
 export default class SceneManager {
 
     /**
-     * @constructor
+     * @constructs SceneManager
      * @param {Application} app
      */
     constructor(app) {

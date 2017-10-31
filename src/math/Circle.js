@@ -11,7 +11,7 @@ import Vector from './Vector';
 export default class Circle extends Shape {
 
     /**
-     * @constructor
+     * @constructs Circle
      * @param {Number} [x=0]
      * @param {Number} [y=0]
      * @param {Number} [radius=0]

@@ -7,7 +7,7 @@ import ShaderUniform from './ShaderUniform';
 export default class Shader {
 
     /**
-     * @constructor
+     * @constructs Shader
      * @param {String|String[]} [vertexSource]
      * @param {String|String[]} [fragmentSource]
      */

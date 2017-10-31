@@ -10,7 +10,7 @@ import { join } from 'path';
 export default class SpriteShader extends Shader {
 
     /**
-     * @constructor
+     * @constructs SpriteShader
      */
     constructor() {
         super();

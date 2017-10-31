@@ -9,7 +9,7 @@ import settings from '../settings';
 export default class Renderable extends SceneNode {
 
     /**
-     * @constructor
+     * @constructs Renderable
      */
     constructor() {
         super();
