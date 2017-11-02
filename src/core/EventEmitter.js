@@ -6,7 +6,7 @@ import { removeItems } from '../utils';
 export default class EventEmitter {
 
     /**
-     * @constructs EventEmitter
+     * @constructor
      */
     constructor() {
 

@@ -1,16 +1,16 @@
-import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../../const';
-import Shader from '../../graphics/shader/Shader';
+import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../const';
+import Shader from '../graphics/shader/Shader';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /**
  * @class ParticleShader
- * @extends {Shader}
+ * @extends Shader
  */
 export default class ParticleShader extends Shader {
 
     /**
-     * @constructs ParticleShader
+     * @constructor
      */
     constructor() {
         super();

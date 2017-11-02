@@ -3,7 +3,7 @@ import MediaSource from '../../media/MediaSource';
 
 /**
  * @class MediaSourceFactory
- * @extends {ArrayBufferFactory}
+ * @extends ArrayBufferFactory
  */
 export default class MediaSourceFactory extends ArrayBufferFactory {
 

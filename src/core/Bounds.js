@@ -8,7 +8,7 @@ import Matrix from '../math/Matrix';
 export default class Bounds {
 
     /**
-     * @constructs Bounds
+     * @constructor
      */
     constructor() {
 

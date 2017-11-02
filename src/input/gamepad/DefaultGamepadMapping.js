@@ -4,12 +4,12 @@ import GamepadControl from './GamepadControl';
 
 /**
  * @class DefaultGamepadMapping
- * @extends {GamepadMapping}
+ * @extends GamepadMapping
  */
 export default class DefaultGamepadMapping extends GamepadMapping {
 
     /**
-     * @constructs DefaultGamepadMapping
+     * @constructor
      */
     constructor() {
         const invert = { invert: true };

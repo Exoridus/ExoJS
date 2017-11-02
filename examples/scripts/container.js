@@ -62,7 +62,7 @@ window.app.start(new Exo.Scene({
      */
     update(delta) {
         const displayManager = this.app.displayManager,
-            bounds = this._bunnies.getBounds();
+            bounds = this._bunnies.getGlobalBounds();
 
         this._rainbow.x = bounds.x;
         this._rainbow.y = bounds.y;

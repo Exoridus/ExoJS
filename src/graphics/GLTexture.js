@@ -7,7 +7,7 @@ import Size from '../math/Size';
 export default class GLTexture {
 
     /**
-     * @constructs GLTexture
+     * @constructor
      * @param {WebGLRenderingContext} context
      */
     constructor(context) {

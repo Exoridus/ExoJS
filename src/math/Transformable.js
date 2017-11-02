@@ -5,12 +5,12 @@ import { degreesToRadians } from '../utils';
 
 /**
  * @class Transformable
- * @extends {EventEmitter}
+ * @extends EventEmitter
  */
 export default class Transformable extends EventEmitter {
 
     /**
-     * @constructs Transformable
+     * @constructor
      */
     constructor() {
         super();

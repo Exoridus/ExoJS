@@ -4,12 +4,12 @@ import ChannelManager from '../ChannelManager';
 
 /**
  * @class Gamepad
- * @extends {ChannelManager}
+ * @extends ChannelManager
  */
 export default class Gamepad extends ChannelManager {
 
     /**
-     * @constructs Gamepad
+     * @constructor
      * @param {Gamepad} gamepad
      * @param {ArrayBuffer} channelBuffer
      */
@@ -20,7 +20,7 @@ export default class Gamepad extends ChannelManager {
          * @private
          * @member {Gamepad}
          */
-        this._gamepadIndex = gamepad;
+        this._gamepad = gamepad;
 
         /**
          * @private
@@ -35,7 +35,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Gamepad}
      */
     get gamepad() {
-        return this._gamepadIndex;
+        return this._gamepad;
     }
 
     /**
@@ -56,7 +56,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Number}
      */
     get id() {
-        return this._gamepadIndex.id;
+        return this._gamepad.id;
     }
 
     /**
@@ -65,7 +65,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Number}
      */
     get index() {
-        return this._gamepadIndex.index;
+        return this._gamepad.index;
     }
 
     /**
@@ -74,7 +74,7 @@ export default class Gamepad extends ChannelManager {
      * @member {Boolean}
      */
     get connected() {
-        return this._gamepadIndex.connected;
+        return this._gamepad.connected;
     }
 
     /**
@@ -84,8 +84,8 @@ export default class Gamepad extends ChannelManager {
         const channels = this.channels,
             buttonMapping = this._mapping.buttons,
             axesMapping = this._mapping.axes,
-            gamepdaButtons = this._gamepadIndex.buttons,
-            gamepadAxes = this._gamepadIndex.axes;
+            gamepdaButtons = this._gamepad.buttons,
+            gamepadAxes = this._gamepad.axes;
 
         for (const button of buttonMapping) {
             if (button.index in gamepdaButtons) {
@@ -109,6 +109,6 @@ export default class Gamepad extends ChannelManager {
         this._mapping.destroy();
         this._mapping = null;
 
-        this._gamepadIndex = null;
+        this._gamepad = null;
     }
 }

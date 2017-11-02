@@ -6,7 +6,7 @@ import RC4 from './RC4';
 export default class Random {
 
     /**
-     * @constructs Random
+     * @constructor
      * @param {String} [seed=Random.generateSeed()]
      */
     constructor(seed = Random.generateSeed()) {
@@ -21,7 +21,7 @@ export default class Random {
          * @private
          * @member {RC4}
          */
-        this._rc4 = new RC4(this.getMixedKeys(this.flatten(seed)));
+        this._rc4 = new RC4(Random.getMixedKeys(this.flatten(seed)));
     }
 
     /**
@@ -34,7 +34,7 @@ export default class Random {
 
     set seed(seed) {
         this._seed = seed;
-        this._rc4.setKeys(this.getMixedKeys(this.flatten(seed)));
+        this._rc4.setKeys(Random.getMixedKeys(this.flatten(seed)));
     }
 
     /**
@@ -57,24 +57,6 @@ export default class Random {
         }
 
         return (typeof object === 'string') ? object : `${object}\0`;
-    }
-
-    /**
-     * @private
-     * @param {String} seed
-     * @param {Number[]} [keys=[]]
-     * @returns {Number[]}
-     */
-    getMixedKeys(seed, keys = []) {
-        const result = [],
-            seedString = `${seed}`,
-            len = seedString.length;
-
-        for (let i = 0, smear = 0; i < len; i++) {
-            result[255 & i] = 255 & ((smear ^= keys[255 & i] * 19) + seedString.charCodeAt(i));
-        }
-
-        return result;
     }
 
     /**
@@ -105,6 +87,25 @@ export default class Random {
         }
 
         return (((n + x) / denom) * (max - min)) + min;
+    }
+
+    /**
+     * @private
+     * @static
+     * @param {String} seed
+     * @param {Number[]} [keys=[]]
+     * @returns {Number[]}
+     */
+    static getMixedKeys(seed, keys = []) {
+        const result = [],
+            seedString = `${seed}`,
+            len = seedString.length;
+
+        for (let i = 0, smear = 0; i < len; i++) {
+            result[255 & i] = 255 & ((smear ^= keys[255 & i] * 19) + seedString.charCodeAt(i));
+        }
+
+        return result;
     }
 
     /**

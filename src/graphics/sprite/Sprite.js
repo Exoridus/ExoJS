@@ -4,12 +4,12 @@ import Vector from '../../math/Vector';
 
 /**
  * @class Sprite
- * @extends {Container}
+ * @extends Container
  */
 export default class Sprite extends Container {
 
     /**
-     * @constructs Sprite
+     * @constructor
      * @param {?Texture} texture
      */
     constructor(texture) {
@@ -236,7 +236,7 @@ export default class Sprite extends Container {
     updateTexture() {
         if (this._texture) {
             this._texture.updateSource();
-            this._localBounds.set(0, 0, this._texture.width, this._texture.height);
+            this.localBounds.set(0, 0, this._texture.width, this._texture.height);
             this.setTextureFrame(this._texture.sourceFrame);
             this.scale.set(1, 1);
         }

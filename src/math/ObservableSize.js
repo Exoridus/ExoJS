@@ -2,12 +2,12 @@ import Size from './Size';
 
 /**
  * @class ObservableSize
- * @extends {Size]
+ * @extends Size
  */
 export default class ObservableSize extends Size {
 
     /**
-     * @constructs ObservableSize
+     * @constructor
      * @param {Function} callback
      * @param {*} scope
      * @param {Number} [width=0]

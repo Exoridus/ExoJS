@@ -10,7 +10,7 @@ import support from '../support';
 export default class Video extends Sprite {
 
     /**
-     * @constructs Video
+     * @constructor
      * @param {MediaSource} mediaSource
      */
     constructor(mediaSource) {
@@ -307,7 +307,7 @@ export default class Video extends Sprite {
      */
     render(displayManager) {
         if (this.active) {
-            this._texture.updateSource();
+            this.texture.updateSource();
 
             super.render(displayManager);
         }

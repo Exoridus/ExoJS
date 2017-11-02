@@ -3,7 +3,7 @@ import support from '../../support';
 import ChannelManager from '../ChannelManager';
 import Pointer from './Pointer';
 import Vector from '../../math/Vector';
-import { addFlag, hasFlag, removeFlag } from '../../utils';
+import { addFlag, hasFlag, removeFlag, stopEvent } from '../../utils';
 
 const FLAGS = {
         NONE: 0,
@@ -40,12 +40,12 @@ const FLAGS = {
 
 /**
  * @class PointerManager
- * @extends {ChannelManager}
+ * @extends ChannelManager
  */
 export default class PointerManager extends ChannelManager {
 
     /**
-     * @constructs PointerManager
+     * @constructor
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */
@@ -247,7 +247,6 @@ export default class PointerManager extends ChannelManager {
         this._onUpHandler = this._onUp.bind(this);
         this._onCancelHandler = this._onCancel.bind(this);
         this._onScrollHandler = this._onScroll.bind(this);
-        this._stopEventHandler = this._stopEvent.bind(this);
 
         canvas.addEventListener('pointerover', this._onEnterHandler, passive);
         canvas.addEventListener('pointerleave', this._onLeaveHandler, passive);
@@ -256,8 +255,8 @@ export default class PointerManager extends ChannelManager {
         canvas.addEventListener('pointerdown', this._onDownHandler, active);
         canvas.addEventListener('pointerup', this._onUpHandler, active);
         canvas.addEventListener('wheel', this._onScrollHandler, active);
-        canvas.addEventListener('contextmenu', this._stopEventHandler, active);
-        canvas.addEventListener('selectstart', this._stopEventHandler, active);
+        canvas.addEventListener('contextmenu', stopEvent, active);
+        canvas.addEventListener('selectstart', stopEvent, active);
     }
 
     /**
@@ -273,8 +272,8 @@ export default class PointerManager extends ChannelManager {
         canvas.removeEventListener('pointerdown', this._onDownHandler, active);
         canvas.removeEventListener('pointerup', this._onUpHandler, active);
         canvas.removeEventListener('wheel', this._onScrollHandler, active);
-        canvas.removeEventListener('contextmenu', this._stopEventHandler, active);
-        canvas.removeEventListener('selectstart', this._stopEventHandler, active);
+        canvas.removeEventListener('contextmenu', stopEvent, active);
+        canvas.removeEventListener('selectstart', stopEvent, active);
 
         this._onEnterHandler = null;
         this._onLeaveHandler = null;
@@ -282,13 +281,11 @@ export default class PointerManager extends ChannelManager {
         this._onDownHandler = null;
         this._onUpHandler = null;
         this._onCancelHandler = null;
-        this._stopEventHandler = null;
     }
 
     /**
      * @private
      * @param {PointerEvent} event
-     * @fires Pointer#enter
      */
     _onEnter(event) {
         const pointer = new Pointer(event, this.channelBuffer);
@@ -301,7 +298,6 @@ export default class PointerManager extends ChannelManager {
     /**
      * @private
      * @param {PointerEvent} event
-     * @fires Pointer#leave
      */
     _onLeave(event) {
         const pointer = this._updatePointer(event);
@@ -314,7 +310,6 @@ export default class PointerManager extends ChannelManager {
     /**
      * @private
      * @param {PointerEvent} event
-     * @fires Pointer#down
      */
     _onDown(event) {
         this._pointersDown.add(this._updatePointer(event));
@@ -326,7 +321,6 @@ export default class PointerManager extends ChannelManager {
     /**
      * @private
      * @param {PointerEvent} event
-     * @fires Pointer#up
      */
     _onUp(event) {
         this._pointersUp.add(this._updatePointer(event));
@@ -338,7 +332,6 @@ export default class PointerManager extends ChannelManager {
     /**
      * @private
      * @param {PointerEvent} event
-     * @fires Pointer#cancel
      */
     _onCancel(event) {
         this._pointersCancelled.add(this._updatePointer(event));
@@ -348,7 +341,6 @@ export default class PointerManager extends ChannelManager {
     /**
      * @private
      * @param {PointerEvent} event
-     * @fires Pointer#move
      */
     _onMove(event) {
         this._pointersMoved.add(this._updatePointer(event));
@@ -358,20 +350,10 @@ export default class PointerManager extends ChannelManager {
     /**
      * @private
      * @param {WheelEvent} event
-     * @fires Pointer#scroll
      */
     _onScroll(event) {
         this._scrollDelta.add(event.deltaX, event.deltaY);
         this._flags = addFlag(FLAGS.SCROLL, this._flags);
-    }
-
-    /**
-     * @private
-     * @param {PointerEvent} event
-     */
-    _stopEvent(event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
     }
 
     /**

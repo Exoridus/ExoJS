@@ -7,12 +7,12 @@ import Vector from './Vector';
 
 /**
  * @class Polygon
- * @extends {Shape}
+ * @extends Shape
  */
 export default class Polygon extends Shape {
 
     /**
-     * @constructs Polygon
+     * @constructor
      * @param {Number} [x=0]
      * @param {Number} [y=0]
      * @param {Vector[]} [points=[]]

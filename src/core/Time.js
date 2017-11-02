@@ -6,7 +6,7 @@ import { TIME } from '../const';
 export default class Time {
 
     /**
-     * @constructs Time
+     * @constructor
      * @param {Number} [time=0]
      * @param {Number} [factor=TIME.MILLISECONDS]
      */

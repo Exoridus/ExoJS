@@ -2,7 +2,7 @@ import ResourceFactory from '../ResourceFactory';
 
 /**
  * @class StringFactory
- * @extends {ResourceFactory}
+ * @extends ResourceFactory
  */
 export default class StringFactory extends ResourceFactory {
 

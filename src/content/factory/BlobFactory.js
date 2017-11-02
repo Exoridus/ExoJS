@@ -2,7 +2,7 @@ import ArrayBufferFactory from './ArrayBufferFactory';
 
 /**
  * @class BlobFactory
- * @extends {ArrayBufferFactory}
+ * @extends ArrayBufferFactory
  */
 export default class BlobFactory extends ArrayBufferFactory {
 

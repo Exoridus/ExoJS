@@ -1,12 +1,10 @@
 /**
- * @abstract
  * @class ParticleModifier
  */
 export default class ParticleModifier {
 
     /**
      * @public
-     * @abstract
      * @chainable
      * @param {Particle} particle
      * @param {Time} delta
@@ -18,9 +16,8 @@ export default class ParticleModifier {
 
     /**
      * @public
-     * @abstract
      * @chainable
-     * @param {ParticleModifier|ForceModifier|ScaleModifier|TorqueModifier} modifier
+     * @param {ParticleModifier} modifier
      * @returns {ParticleModifier}
      */
     copy(modifier) { // eslint-disable-line
@@ -29,8 +26,7 @@ export default class ParticleModifier {
 
     /**
      * @public
-     * @abstract
-     * @returns {ParticleModifier|ForceModifier|ScaleModifier|TorqueModifier}
+     * @returns {ParticleModifier}
      */
     clone() {
         throw new Error('Method not implemented!');
@@ -38,7 +34,6 @@ export default class ParticleModifier {
 
     /**
      * @public
-     * @abstract
      */
     destroy() {
         throw new Error('Method not implemented!');

@@ -2,7 +2,7 @@ import ArrayBufferFactory from './ArrayBufferFactory';
 
 /**
  * @class FontFactory
- * @extends {ArrayBufferFactory}
+ * @extends ArrayBufferFactory
  */
 export default class FontFactory extends ArrayBufferFactory {
 

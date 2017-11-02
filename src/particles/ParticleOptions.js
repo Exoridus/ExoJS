@@ -1,7 +1,7 @@
-import { TIME } from '../../const';
-import Vector from '../../math/Vector';
-import Color from '../../core/Color';
-import Time from '../../core/Time';
+import { TIME } from '../const';
+import Vector from '../math/Vector';
+import Color from '../core/Color';
+import Time from '../core/Time';
 
 /**
  * @class ParticleOptions
@@ -9,7 +9,7 @@ import Time from '../../core/Time';
 export default class ParticleOptions {
 
     /**
-     * @constructs ParticleOptions
+     * @constructor
      * @param {Object} [options]
      * @param {Time} [options.elapsedLifetime]
      * @param {Time} [options.totalLifetime]

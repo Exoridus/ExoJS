@@ -2,7 +2,7 @@ import ResourceFactory from '../ResourceFactory';
 
 /**
  * @class ArrayBufferFactory
- * @extends {ResourceFactory}
+ * @extends ResourceFactory
  */
 export default class ArrayBufferFactory extends ResourceFactory {
 

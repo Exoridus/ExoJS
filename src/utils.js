@@ -4,14 +4,14 @@ import support from './support';
 const
 
     /**
-     * @private
+     * @inner
      * @constant
-     * @type {HTMLAudioElement}
+     * @type {Audio}
      */
-    audio = document.createElement('audio'),
+    audio = new Audio(),
 
     /**
-     * @private
+     * @inner
      * @constant
      * @type {AudioContext}
      */
@@ -160,7 +160,7 @@ const
     },
 
     /**
-     * @private
+     * @inner
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
@@ -179,7 +179,7 @@ const
     },
 
     /**
-     * @private
+     * @inner
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
@@ -257,7 +257,18 @@ const
      * @param {Number} flags
      * @returns {Number}
      */
-    removeFlag = (flag, flags) => (flags &= ~flag);
+    removeFlag = (flag, flags) => (flags &= ~flag),
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {Event} event
+     */
+    stopEvent = (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    };
 
 export {
     supportsCodec,
@@ -274,4 +285,5 @@ export {
     hasFlag,
     addFlag,
     removeFlag,
+    stopEvent,
 };

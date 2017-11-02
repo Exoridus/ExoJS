@@ -6,12 +6,12 @@ const navigator = window.navigator;
 
 /**
  * @class GamepadManager
- * @extends {ChannelManager}
+ * @extends ChannelManager
  */
 export default class GamepadManager extends ChannelManager {
 
     /**
-     * @constructs GamepadManager
+     * @constructor
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */

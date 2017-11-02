@@ -4,7 +4,7 @@
 export default class SceneManager {
 
     /**
-     * @constructs SceneManager
+     * @constructor
      * @param {Application} app
      */
     constructor(app) {

@@ -2,13 +2,12 @@ import { SHAPE } from '../const';
 import Vector from './Vector';
 
 /**
- * @abstract
  * @class Shape
  */
 export default class Shape {
 
     /**
-     * @constructs Shape
+     * @constructor
      */
     constructor(x = 0, y = 0) {
 
@@ -20,14 +19,13 @@ export default class Shape {
 
         /**
          * @private
-         * @member {?Rectangle|?Bounds} _bounds
+         * @member {?Rectangle} _bounds
          */
         this._bounds = null;
     }
 
     /**
      * @public
-     * @abstract
      * @readonly
      * @member {Number}
      */
@@ -83,7 +81,7 @@ export default class Shape {
     /**
      * @public
      * @chainable
-     * @abstract
+     * @returns {Rectangle|Circle|Polygon}
      */
     set() {
         throw new Error('Method not implemented!');
@@ -91,8 +89,9 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
-     * @param {Shape|Rectangle|Circle|Polygon} shape
+     * @chainable
+     * @param {Rectangle|Circle|Polygon} shape
+     * @returns {Rectangle|Circle|Polygon}
      */
     copy(shape) {
         throw new Error('Method not implemented!');
@@ -100,8 +99,7 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
-     * @returns {Shape|Rectangle|Circle|Polygon}
+     * @returns {Rectangle|Circle|Polygon}
      */
     clone() {
         throw new Error('Method not implemented!');
@@ -109,8 +107,8 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
-     * @param {Shape|Rectangle|Circle|Polygon} shape
+     * @param {Rectangle|Circle|Polygon} shape
+     * @returns {Boolean}
      */
     equals(shape) {
         throw new Error('Method not implemented!');
@@ -118,7 +116,6 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
      * @returns {Rectangle}
      */
     getBounds() {
@@ -127,7 +124,6 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
      * @param {Number} x
      * @param {Number} y
      * @param {Matrix} [transform]
@@ -139,8 +135,7 @@ export default class Shape {
 
     /**
      * @public
-     * @abstract
-     * @param {Shape|Rectangle|Circle|Polygon} shape
+     * @param {Rectangle|Circle|Polygon} shape
      * @returns {?Collision}
      */
     getCollision(shape) {

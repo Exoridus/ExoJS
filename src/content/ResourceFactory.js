@@ -1,12 +1,10 @@
 /**
- * @abstract
  * @class ResourceFactory
  */
 export default class ResourceFactory {
 
     /**
      * @public
-     * @abstract
      * @readonly
      * @member {String}
      */
@@ -16,7 +14,6 @@ export default class ResourceFactory {
 
     /**
      * @public
-     * @abstract
      * @param {String} path
      * @param {Object} [options]
      * @param {String} [options.method='GET']
@@ -34,7 +31,6 @@ export default class ResourceFactory {
 
     /**
      * @public
-     * @abstract
      * @param {Response} response
      * @returns {Promise<*>}
      */
@@ -44,7 +40,6 @@ export default class ResourceFactory {
 
     /**
      * @public
-     * @abstract
      * @param {Response} source
      * @param {Object} [options]
      * @returns {Promise<*>}
@@ -55,7 +50,6 @@ export default class ResourceFactory {
 
     /**
      * @public
-     * @abstract
      * @param {String} path
      * @param {Object} [request]
      * @param {Object} [options]
@@ -70,7 +64,6 @@ export default class ResourceFactory {
 
     /**
      * @public
-     * @abstract
      */
     destroy() {
         // do nothing

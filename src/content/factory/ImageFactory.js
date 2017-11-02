@@ -3,12 +3,12 @@ import { determineMimeType } from '../../utils';
 
 /**
  * @class ImageFactory
- * @extends {BlobFactory}
+ * @extends BlobFactory
  */
 export default class ImageFactory extends BlobFactory {
 
     /**
-     * @constructs ImageFactory
+     * @constructor
      */
     constructor() {
         super();

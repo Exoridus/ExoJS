@@ -4,7 +4,7 @@
 export default class TextStyle {
 
     /**
-     * @constructs TextStyle
+     * @constructor
      * @param {TextStyle|Object} [style = {}]
      * @param {String} [style.align='left']
      * @param {String} [style.fill='black']

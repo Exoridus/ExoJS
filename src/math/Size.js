@@ -4,7 +4,7 @@
 export default class Size {
 
     /**
-     * @constructs Size
+     * @constructor
      * @param {Number} [width=0]
      * @param {Number} [height=0]
      */
@@ -120,7 +120,7 @@ export default class Size {
     /**
      * @public
      * @chainable
-     * @param {Size} Size
+     * @param {Size} size
      * @returns {Size}
      */
     copy(size) {

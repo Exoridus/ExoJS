@@ -7,17 +7,17 @@ const heightCache = new Map();
 
 /**
  * @class Text
- * @extends {Sprite}
+ * @extends Sprite
  */
 export default class Text extends Sprite {
 
     /**
-     * @constructs Text
+     * @constructor
      * @param {String} text
-     * @param {TextStyle|Object} [style=new TextStyle()]
-     * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]
+     * @param {TextStyle|Object} [style]
+     * @param {HTMLCanvasElement} [canvas]
      */
-    constructor(text, style = new TextStyle(), canvas = document.createElement('canvas')) {
+    constructor(text, style, canvas) {
         super(new Texture(canvas));
 
         /**
@@ -36,13 +36,13 @@ export default class Text extends Sprite {
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = canvas;
+        this._canvas = canvas || document.createElement('canvas');
 
         /**
          * @private
          * @member {CanvasRenderingContext2D}
          */
-        this._context = canvas.getContext('2d');
+        this._context = this._canvas.getContext('2d');
 
         /**
          * @private
@@ -113,7 +113,7 @@ export default class Text extends Sprite {
      * @returns {Text}
      */
     setStyle(style) {
-        this._style = (style instanceof TextStyle) ? style : new TextStyle(style || {});
+        this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
         this._dirty = true;
 
         return this;
@@ -131,7 +131,7 @@ export default class Text extends Sprite {
             this._context = canvas.getContext('2d');
             this._dirty = true;
 
-            this._updateCanvas();
+            this._updateBounds();
         }
 
         return this;
@@ -145,8 +145,8 @@ export default class Text extends Sprite {
             const canvas = this._canvas,
                 context = this._context,
                 style = this._style.apply(context),
-                text = style.wordWrap ? this._getWordWrappedText(style.wordWrapWidth) : this._text,
-                lineHeight = this._determineFontHeight(context.font) + style.strokeThickness,
+                text = style.wordWrap ? this.getWordWrappedText() : this._text,
+                lineHeight = Text.determineFontHeight(context.font) + style.strokeThickness,
                 lines = text.split(NEWLINE),
                 lineMetrics = lines.map((line) => context.measureText(line)),
                 maxLineWidth = lineMetrics.reduce((max, measure) => Math.max(max, measure.width), 0),
@@ -157,7 +157,7 @@ export default class Text extends Sprite {
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
-                this._updateCanvas();
+                this._updateBounds();
             } else {
                 context.clearRect(0, 0, canvasWidth, canvasHeight);
             }
@@ -191,6 +191,48 @@ export default class Text extends Sprite {
     }
 
     /**
+     * @public
+     * @returns {String}
+     */
+    getWordWrappedText() {
+        const context = this._context,
+            wrapWidth = this._style.wordWrapWidth,
+            lines = this._text.split('\n'),
+            spaceWidth = context.measureText(' ').width;
+
+        let spaceLeft = wrapWidth,
+            result = '';
+
+        for (let y = 0; y < lines.length; y++) {
+            const words = lines[y].split(' ');
+
+            if (y > 0) {
+                result += '\n';
+            }
+
+            for (let x = 0; x < words.length; x++) {
+                const word = words[x],
+                    wordWidth = context.measureText(word).width,
+                    pairWidth = wordWidth + spaceWidth;
+
+                if (pairWidth > spaceLeft) {
+                    if (x > 0) {
+                        result += '\n';
+                    }
+
+                    spaceLeft = wrapWidth;
+                } else {
+                    spaceLeft -= pairWidth;
+                }
+
+                result += `${word} `;
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * @override
      */
     render(displayManager) {
@@ -221,7 +263,7 @@ export default class Text extends Sprite {
      * @chainable
      * @returns {Text}
      */
-    _updateCanvas() {
+    _updateBounds() {
         const canvas = this._canvas;
 
         this.localBounds.set(0, 0, canvas.width, canvas.height);
@@ -233,51 +275,11 @@ export default class Text extends Sprite {
 
     /**
      * @private
-     * @returns {String}
-     */
-    _getWordWrappedText(wordWrapWidth) {
-        const context = this._context,
-            spaceWidth = context.measureText(' ').width,
-            lines = this._text.split('\n');
-
-        let spaceLeft = wordWrapWidth,
-            result = '';
-
-        for (let y = 0; y < lines.length; y++) {
-            const words = lines[y].split(' ');
-
-            if (y > 0) {
-                result += '\n';
-            }
-
-            for (let x = 0; x < words.length; x++) {
-                const word = words[x],
-                    wordWidth = context.measureText(word).width,
-                    pairWidth = wordWidth + spaceWidth;
-
-                if (pairWidth > spaceLeft) {
-                    if (x > 0) {
-                        result += '\n';
-                    }
-
-                    spaceLeft -= wordWidth;
-                } else {
-                    spaceLeft -= pairWidth;
-                }
-
-                result += `${word} `;
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * @private
+     * @static
      * @param {String} font
      * @returns {Number}
      */
-    _determineFontHeight(font) {
+    static determineFontHeight(font) {
         if (!heightCache.has(font)) {
             const body = document.body,
                 dummy = document.createElement('div');

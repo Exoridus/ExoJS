@@ -7,7 +7,7 @@ import settings from '../settings';
 export default class Quadtree {
 
     /**
-     * @constructs Quadtree
+     * @constructor
      * @param {Rectangle} bounds
      * @param {Number} [level=0]
      */

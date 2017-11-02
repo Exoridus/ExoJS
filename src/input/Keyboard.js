@@ -10,12 +10,12 @@ const FLAGS = {
 
 /**
  * @class Keyboard
- * @extends {ChannelManager}
+ * @extends ChannelManager
  */
 export default class Keyboard extends ChannelManager {
 
     /**
-     * @constructs Keyboard
+     * @constructor
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
      */

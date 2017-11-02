@@ -1,7 +1,7 @@
-import Vector from '../../math/Vector';
-import Color from '../../core/Color';
-import Time from '../../core/Time';
-import { TIME } from '../../const';
+import Vector from '../math/Vector';
+import Color from '../core/Color';
+import Time from '../core/Time';
+import { TIME } from '../const';
 import ParticleOptions from './ParticleOptions';
 
 /**
@@ -10,7 +10,7 @@ import ParticleOptions from './ParticleOptions';
 export default class Particle {
 
     /**
-     * @constructs Particle
+     * @constructor
      * @param {ParticleOptions|Particle} options
      */
     constructor(options) {

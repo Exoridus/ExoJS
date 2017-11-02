@@ -10,7 +10,7 @@ import Bounds from './Bounds';
 export default class SceneNode extends Transformable {
 
     /**
-     * @constructs SceneNode
+     * @constructor
      */
     constructor() {
         super();

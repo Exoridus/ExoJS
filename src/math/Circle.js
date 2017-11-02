@@ -6,12 +6,12 @@ import Vector from './Vector';
 
 /**
  * @class Circle
- * @extends {Shape}
+ * @extends Shape
  */
 export default class Circle extends Shape {
 
     /**
-     * @constructs Circle
+     * @constructor
      * @param {Number} [x=0]
      * @param {Number} [y=0]
      * @param {Number} [radius=0]

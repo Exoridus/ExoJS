@@ -2,7 +2,7 @@ import MediaSourceFactory from './MediaSourceFactory';
 
 /**
  * @class AudioSourceFactory
- * @extends {MediaSourceFactory}
+ * @extends MediaSourceFactory
  */
 export default class AudioSourceFactory extends MediaSourceFactory {
 

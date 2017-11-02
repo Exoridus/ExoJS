@@ -4,7 +4,7 @@ import settings from '../../settings';
 
 /**
  * @class TextureFactory
- * @extends {ImageFactory}
+ * @extends ImageFactory
  */
 export default class TextureFactory extends ImageFactory {
 

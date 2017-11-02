@@ -12,8 +12,8 @@ import settings from '../settings';
 export default class RenderState {
 
     /**
-     * @constructs RenderState
-     * @param {WebGLRenderingContext} context
+     * @constructor
+     * @param {WebGLRenderingContext} gl
      */
     constructor(gl) {
         if (!gl) {
@@ -271,8 +271,9 @@ export default class RenderState {
 
     /**
      * @public
+     * @chainable
      * @param {RenderTarget} renderTarget
-     * @param {Number} [unit}
+     * @returns {RenderState}
      */
     bindRenderTarget(renderTarget) {
         this.glFramebuffer = this.getGLFramebuffer(renderTarget);
@@ -282,6 +283,7 @@ export default class RenderState {
 
     /**
      * @public
+     * @chainable
      * @param {RenderTarget} renderTarget
      * @returns {RenderState}
      */
@@ -318,6 +320,7 @@ export default class RenderState {
 
     /**
      * @public
+     * @chainable
      * @param {Texture} texture
      * @returns {RenderState}
      */
@@ -340,8 +343,10 @@ export default class RenderState {
 
     /**
      * @public
+     * @chainable
      * @param {Texture} texture
      * @param {Number} [unit}
+     * @returns {RenderState}
      */
     bindTexture(texture, unit) {
         if (unit !== undefined) {
@@ -355,46 +360,62 @@ export default class RenderState {
 
     /**
      * @public
+     * @chainable
      * @param {Texture} texture
      * @param {Number} scaleMode
+     * @returns {RenderState}
      */
     setScaleMode(texture, scaleMode) {
-        return this.bindTexture(texture)
+        this.bindTexture(texture)
             .getGLTexture(texture)
             .setScaleMode(scaleMode);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Texture} texture
      * @param {Number} wrapMode
+     * @returns {RenderState}
      */
     setWrapMode(texture, wrapMode) {
-        return this.bindTexture(texture)
+        this.bindTexture(texture)
             .getGLTexture(texture)
             .setWrapMode(wrapMode);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Texture} texture
      * @param {Boolean} premultiplyAlpha
+     * @returns {RenderState}
      */
     setPremultiplyAlpha(texture, premultiplyAlpha) {
-        return this.bindTexture(texture)
+        this.bindTexture(texture)
             .getGLTexture(texture)
             .setPremultiplyAlpha(premultiplyAlpha);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Texture} texture
      * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
+     * @returns {RenderState}
      */
     setTextureImage(texture, source) {
-        return this.bindTexture(texture)
+        this.bindTexture(texture)
             .getGLTexture(texture)
             .setTextureImage(source);
+
+        return this;
     }
 
     /**
@@ -452,7 +473,8 @@ export default class RenderState {
     /**
      * @public
      * @chainable
-     * @param {Color} [color]
+     * @param {WebGLBuffer} buffer
+     * @param {ArrayBuffer|ArrayBufferView} data
      * @returns {RenderState}
      */
     bindVertexBuffer(buffer, data) {
@@ -467,7 +489,8 @@ export default class RenderState {
     /**
      * @public
      * @chainable
-     * @param {Color} [color]
+     * @param {WebGLBuffer} buffer
+     * @param {ArrayBuffer|ArrayBufferView} data
      * @returns {RenderState}
      */
     bindIndexBuffer(buffer, data) {
@@ -481,33 +504,30 @@ export default class RenderState {
 
     /**
      * @public
-     * @param {Float32Array} data
-     * @param {Number} [offset=0]
-     */
-    setVertexSubData(data, offset = 0) {
-        const gl = this._context;
-
-        // todo - bind buffer
-
-        gl.bufferSubData(gl.ARRAY_BUFFER, offset, data);
-    }
-
-    /**
-     * @public
+     * @chainable
      * @param {WebGLBuffer} buffer
+     * @returns {RenderState}
      */
     deleteBuffer(buffer) {
         this._context.deleteBuffer(buffer);
+
+        return this;
     }
 
     /**
      * @public
-     * @param {WebGLBuffer} buffer
+     * @chainable
+     * @param {Number} count
+     * @param {ArrayBufferView} data
+     * @returns {RenderState}
      */
-    drawElements(count) {
+    drawElements(count, data) {
         const gl = this._context;
 
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
         gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+
+        return this;
     }
 
     /**
@@ -596,7 +616,7 @@ export default class RenderState {
      * @public
      * @chainable
      * @param {WebGLUniformLocation} location
-     * @param {Number|Array|Texture} value
+     * @param {Number|Number[]|ArrayBufferView|Texture} value
      * @param {Number} type
      * @param {Number} [unit]
      * @returns {RenderState}
@@ -605,73 +625,28 @@ export default class RenderState {
         const gl = this._context;
 
         switch (type) {
-            case UNIFORM_TYPE.INT:
-                gl.uniform1i(location, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT:
-                gl.uniform1f(location, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT_VEC2:
-                gl.uniform2fv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT_VEC3:
-                gl.uniform3fv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT_VEC4:
-                gl.uniform4fv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.INT_VEC2:
-                gl.uniform2iv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.INT_VEC3:
-                gl.uniform3iv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.INT_VEC4:
-                gl.uniform4iv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.BOOL:
-                gl.uniform1i(location, value);
-
-                return this;
-            case UNIFORM_TYPE.BOOL_VEC2:
-                gl.uniform2iv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.BOOL_VEC3:
-                gl.uniform3iv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.BOOL_VEC4:
-                gl.uniform4iv(location, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT_MAT2:
-                gl.uniformMatrix2fv(location, false, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT_MAT3:
-                gl.uniformMatrix3fv(location, false, value);
-
-                return this;
-            case UNIFORM_TYPE.FLOAT_MAT4:
-                gl.uniformMatrix4fv(location, false, value);
-
-                return this;
+            case UNIFORM_TYPE.INT: gl.uniform1i(location, value); break;
+            case UNIFORM_TYPE.FLOAT: gl.uniform1f(location, value); break;
+            case UNIFORM_TYPE.FLOAT_VEC2: gl.uniform2fv(location, value); break;
+            case UNIFORM_TYPE.FLOAT_VEC3: gl.uniform3fv(location, value); break;
+            case UNIFORM_TYPE.FLOAT_VEC4: gl.uniform4fv(location, value); break;
+            case UNIFORM_TYPE.INT_VEC2: gl.uniform2iv(location, value); break;
+            case UNIFORM_TYPE.INT_VEC3: gl.uniform3iv(location, value); break;
+            case UNIFORM_TYPE.INT_VEC4: gl.uniform4iv(location, value); break;
+            case UNIFORM_TYPE.BOOL: gl.uniform1i(location, value); break;
+            case UNIFORM_TYPE.BOOL_VEC2: gl.uniform2iv(location, value); break;
+            case UNIFORM_TYPE.BOOL_VEC3: gl.uniform3iv(location, value); break;
+            case UNIFORM_TYPE.BOOL_VEC4: gl.uniform4iv(location, value); break;
+            case UNIFORM_TYPE.FLOAT_MAT2: gl.uniformMatrix2fv(location, false, value); break;
+            case UNIFORM_TYPE.FLOAT_MAT3: gl.uniformMatrix3fv(location, false, value); break;
+            case UNIFORM_TYPE.FLOAT_MAT4: gl.uniformMatrix4fv(location, false, value); break;
             case UNIFORM_TYPE.SAMPLER_2D:
                 value.bind(this, unit)
                     .update();
 
                 gl.uniform1i(location, unit);
 
-                return this;
+                break;
             default:
                 throw new Error(`Unknown uniform type ${this._type}`);
         }
@@ -679,24 +654,60 @@ export default class RenderState {
         return this;
     }
 
+    /**
+     * @public
+     * @param {WebGLProgram} program
+     * @param {String} name
+     * @returns {WebGLUniformLocation}
+     */
     getUniformLocation(program, name) {
         return this._context.getUniformLocation(program, name);
     }
 
+    /**
+     * @public
+     * @param {WebGLProgram} program
+     * @param {String} name
+     * @returns {Number}
+     */
     getAttributeLocation(program, name) {
         return this._context.getAttribLocation(program, name);
     }
 
+    /**
+     * @public
+     * @chainable
+     * @param {Number} location
+     * @param {Number} size
+     * @param {Number} type
+     * @param {boolean} normalized
+     * @param {Number} stride
+     * @param {Number} offset
+     * @returns {RenderState}
+     */
     setVertexPointer(location, size, type, normalized, stride, offset) {
         this._context.vertexAttribPointer(location, size, type, normalized, stride, offset);
+
+        return this;
     }
 
+    /**
+     * @public
+     * @chainable
+     * @param {Number} location
+     * @param {Boolean} enabled
+     * @returns {RenderState}
+     */
     toggleVertexArray(location, enabled) {
+        const gl = this._context;
+
         if (enabled) {
-            this._context.enableVertexAttribArray(location);
+            gl.enableVertexAttribArray(location);
         } else {
-            this._context.disableVertexAttribArray(location);
+            gl.disableVertexAttribArray(location);
         }
+
+        return this;
     }
 
     /**

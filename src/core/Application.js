@@ -9,12 +9,12 @@ import settings from '../settings';
 
 /**
  * @class Application
- * @extends {EventEmitter}
+ * @extends EventEmitter
  */
 export default class Application extends EventEmitter {
 
     /**
-     * @constructs Application
+     * @constructor
      * @param {Object} [options]
      * @param {String} [options.basePath='']
      * @param {Number} [options.width=800]

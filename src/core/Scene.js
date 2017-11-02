@@ -5,12 +5,12 @@ import Rectangle from '../math/Rectangle';
 
 /**
  * @class Scene
- * @extends {EventEmitter}
+ * @extends EventEmitter
  */
 export default class Scene extends EventEmitter {
 
     /**
-     * @constructs Scene
+     * @constructor
      * @param {Object} [prototype]
      * @param {Function} [prototype.load]
      * @param {Function} [prototype.init]
@@ -149,7 +149,6 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      * @param {ResourceLoader} loader
      */
     load(loader) { // eslint-disable-line
@@ -158,7 +157,6 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      * @param {ResourceContainer} resources
      */
     init(resources) { // eslint-disable-line
@@ -167,7 +165,6 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      * @param {Time} delta
      */
     update(delta) { // eslint-disable-line
@@ -176,7 +173,6 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      */
     unload() {
         // do nothing
@@ -184,7 +180,6 @@ export default class Scene extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      */
     destroy() {
         super.destroy();

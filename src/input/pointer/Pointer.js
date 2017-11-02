@@ -27,12 +27,12 @@ const FLAGS = {
 
 /**
  * @class Pointer
- * @extends {ChannelManager}
+ * @extends ChannelManager
  */
 export default class Pointer extends ChannelManager {
 
     /**
-     * @constructs Pointer
+     * @constructor
      * @param {PointerEvent} event
      * @param {ArrayBuffer} channelBuffer
      */

@@ -7,7 +7,7 @@ import Time from './Time';
 export default class Clock {
 
     /**
-     * @constructs Clock
+     * @constructor
      * @param {Boolean} [autoStart=false]
      */
     constructor(autoStart = false) {

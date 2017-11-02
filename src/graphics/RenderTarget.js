@@ -7,7 +7,7 @@ import Size from '../math/Size';
 export default class RenderTarget {
 
     /**
-     * @constructs RenderTarget
+     * @constructor
      * @param {Number} width
      * @param {Number} height
      * @param {Boolean} [isRoot = false]

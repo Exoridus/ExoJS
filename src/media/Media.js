@@ -10,14 +10,13 @@ import EventEmitter from '../core/EventEmitter';
  */
 
 /**
- * @abstract
  * @class Media
- * @extends {EventEmitter}
+ * @extends EventEmitter
  */
 export default class Media extends EventEmitter {
 
     /**
-     * @constructs Media
+     * @constructor
      * @param {MediaSource} mediaSource
      */
     constructor(mediaSource) {
@@ -191,7 +190,6 @@ export default class Media extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      * @readonly
      * @member {?AudioNode}
      */
@@ -288,7 +286,6 @@ export default class Media extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      * @chainable
      * @param {MediaManager} mediaManager
      * @returns {Media}
@@ -299,7 +296,6 @@ export default class Media extends EventEmitter {
 
     /**
      * @public
-     * @abstract
      * @chainable
      * @returns {Media}
      */

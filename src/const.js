@@ -427,7 +427,7 @@ export const
      * @property {Number}
      */
     POINTER = {
-        MouseLeft: INPUT_OFFSET_POINTER + 0,
+        MouseLeft: INPUT_OFFSET_POINTER,
         MouseMiddle: INPUT_OFFSET_POINTER + 1,
         MouseRight: INPUT_OFFSET_POINTER + 2,
         MouseBack: INPUT_OFFSET_POINTER + 3,
@@ -471,7 +471,7 @@ export const
      * @property {Number} RightStickDown
      */
     GAMEPAD = {
-        FaceBottom: INPUT_OFFSET_GAMEPAD + 0,
+        FaceBottom: INPUT_OFFSET_GAMEPAD,
         FaceLeft: INPUT_OFFSET_GAMEPAD + 1,
         FaceRight: INPUT_OFFSET_GAMEPAD + 2,
         FaceTop: INPUT_OFFSET_GAMEPAD + 3,

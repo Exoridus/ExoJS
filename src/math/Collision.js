@@ -8,7 +8,7 @@ import Polygon from './Polygon';
 export default class Collision {
 
     /**
-     * @constructs Collision
+     * @constructor
      * @param {Object} options
      * @param {*} options.shapeA
      * @param {*} options.shapeB

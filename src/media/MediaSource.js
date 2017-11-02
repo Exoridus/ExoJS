@@ -6,7 +6,7 @@ import { decodeAudioBuffer, determineMimeType } from '../utils';
 export default class MediaSource {
 
     /**
-     * @constructs MediaSource
+     * @constructor
      * @param {String} type
      * @param {ArrayBuffer} arrayBuffer
      * @param {Object} [options={}]

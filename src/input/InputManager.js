@@ -6,12 +6,12 @@ import PointerManager from './pointer/PointerManager';
 
 /**
  * @class InputManager
- * @extends {ChannelManager}
+ * @extends ChannelManager
  */
 export default class InputManager extends ChannelManager {
 
     /**
-     * @constructs InputManager
+     * @constructor
      * @param {Application} app
      */
     constructor(app) {

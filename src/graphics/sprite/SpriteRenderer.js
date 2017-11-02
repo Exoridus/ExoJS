@@ -4,12 +4,12 @@ import settings from '../../settings';
 
 /**
  * @class SpriteRenderer
- * @extends {Renderer}
+ * @extends Renderer
  */
 export default class SpriteRenderer extends Renderer {
 
     /**
-     * @constructs SpriteRenderer
+     * @constructor
      */
     constructor() {
         super();
@@ -186,9 +186,7 @@ export default class SpriteRenderer extends Renderer {
      */
     flush() {
         if (this._batchSize) {
-            this._renderState.setVertexSubData(this._floatView.subarray(0, this._batchSize * this._attributeCount));
-            this._renderState.drawElements(this._batchSize * 6);
-
+            this._renderState.drawElements(this._batchSize * 6, this._floatView.subarray(0, this._batchSize * this._attributeCount));
             this._batchSize = 0;
         }
 

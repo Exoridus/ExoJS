@@ -7,7 +7,7 @@ import support from '../support';
 export default class MediaManager {
 
     /**
-     * @constructs MediaManager
+     * @constructor
      * @param {Application} app
      * @param {Object} [options={}]
      * @param {Number} [options.masterVolume=1]

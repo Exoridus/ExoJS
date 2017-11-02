@@ -4,12 +4,12 @@ import Media from './Media';
 
 /**
  * @class Music
- * @extends {Media}
+ * @extends Media
  */
 export default class Music extends Media {
 
     /**
-     * @constructs Music
+     * @constructor
      * @param {MediaSource} mediaSource
      */
     constructor(mediaSource) {

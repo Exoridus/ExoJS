@@ -2,12 +2,12 @@ import EventEmitter from '../core/EventEmitter';
 
 /**
  * @class ChannelManager
- * @extends {EventEmitter}
+ * @extends EventEmitter
  */
 export default class ChannelManager extends EventEmitter {
 
     /**
-     * @constructs ChannelManager
+     * @constructor
      * @param {ArrayBuffer} channelBuffer
      * @param {Number} offset
      * @param {Number} length

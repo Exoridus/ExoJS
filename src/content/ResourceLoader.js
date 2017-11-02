@@ -15,12 +15,12 @@ import AudioSourceFactory from './factory/AudioSourceFactory';
 
 /**
  * @class ResourceLoader
- * @extends {EventEmitter}
+ * @extends EventEmitter
  */
 export default class ResourceLoader extends EventEmitter {
 
     /**
-     * @constructs ResourceLoader
+     * @constructor
      * @param {Object} [options={}]
      * @param {String} [options.basePath='']
      */

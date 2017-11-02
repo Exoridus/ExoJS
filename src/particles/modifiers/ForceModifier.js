@@ -1,14 +1,14 @@
 import ParticleModifier from '../ParticleModifier';
-import Vector from '../../../math/Vector';
+import Vector from '../../math/Vector';
 
 /**
  * @class ForceModifier
- * @extends {ParticleModifier}
+ * @extends ParticleModifier
  */
 export default class ForceModifier extends ParticleModifier {
 
     /**
-     * @constructs ForceModifier
+     * @constructor
      * @param {Vector} acceleration
      */
     constructor(acceleration) {

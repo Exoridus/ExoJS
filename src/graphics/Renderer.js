@@ -4,7 +4,7 @@
 export default class Renderer {
 
     /**
-     * @constructs Renderer
+     * @constructor
      */
     constructor() {
 
@@ -46,7 +46,6 @@ export default class Renderer {
     }
 
     /**
-     * @abstract
      * @public
      * @param {RenderState} renderState
      */
@@ -55,7 +54,6 @@ export default class Renderer {
     }
 
     /**
-     * @abstract
      * @public
      * @chainable
      * @returns {Renderer}
@@ -65,7 +63,6 @@ export default class Renderer {
     }
 
     /**
-     * @abstract
      * @public
      * @chainable
      * @param {*} renderable
@@ -76,7 +73,6 @@ export default class Renderer {
     }
 
     /**
-     * @abstract
      * @public
      * @chainable
      * @returns {Renderer}

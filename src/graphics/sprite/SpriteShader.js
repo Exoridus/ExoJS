@@ -5,12 +5,12 @@ import { join } from 'path';
 
 /**
  * @class SpriteShader
- * @extends {Shader}
+ * @extends Shader
  */
 export default class SpriteShader extends Shader {
 
     /**
-     * @constructs SpriteShader
+     * @constructor
      */
     constructor() {
         super();

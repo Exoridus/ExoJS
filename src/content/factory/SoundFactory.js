@@ -3,7 +3,7 @@ import Sound from '../../media/Sound';
 
 /**
  * @class SoundFactory
- * @extends {AudioSourceFactory}
+ * @extends AudioSourceFactory
  */
 export default class SoundFactory extends AudioSourceFactory {
 

@@ -4,12 +4,12 @@ import Time from './Time';
 
 /**
  * @class Timer
- * @extends {Clock}
+ * @extends Clock
  */
 export default class Timer extends Clock {
 
     /**
-     * @constructs Timer
+     * @constructor
      * @param {Boolean} autoStart
      * @param {Number} timeLimit
      * @param {Number} factor
@@ -69,9 +69,10 @@ export default class Timer extends Clock {
      * @returns {Timer}
      */
     restart(timeLimit, factor = TIME.MILLISECONDS) {
-        return this
-            .reset(timeLimit, factor)
-            .start();
+        this.reset(timeLimit, factor);
+        this.start();
+
+        return this;
     }
 
     /**

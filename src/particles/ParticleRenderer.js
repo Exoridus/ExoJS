@@ -1,16 +1,16 @@
-import Renderer from '../../graphics/Renderer';
+import Renderer from '../graphics/Renderer';
 import ParticleShader from './ParticleShader';
-import { degreesToRadians } from '../../utils';
-import settings from '../../settings';
+import { degreesToRadians } from '../utils';
+import settings from '../settings';
 
 /**
  * @class ParticleRenderer
- * @extends {Renderer}
+ * @extends Renderer
  */
 export default class ParticleRenderer extends Renderer {
 
     /**
-     * @constructs ParticleRenderer
+     * @constructor
      */
     constructor() {
         super();
@@ -160,7 +160,7 @@ export default class ParticleRenderer extends Renderer {
             const index = this._batchSize * this._attributeCount,
                 { position, scale, rotation, color } = particle;
 
-            floatView[index + 0] = floatView[index + 11] = textureFrame.x;
+            floatView[index] = floatView[index + 11] = textureFrame.x;
             floatView[index + 1] = floatView[index + 20] = textureFrame.y;
 
             floatView[index + 2] = floatView[index + 22] = textureCoords.x;
@@ -211,9 +211,7 @@ export default class ParticleRenderer extends Renderer {
      */
     flush() {
         if (this._batchSize) {
-            this._renderState.setVertexSubData(this._floatView.subarray(0, this._batchSize * this._attributeCount));
-            this._renderState.drawElements(this._batchSize * 6);
-
+            this._renderState.drawElements(this._batchSize * 6, this._floatView.subarray(0, this._batchSize * this._attributeCount));
             this._batchSize = 0;
         }
 

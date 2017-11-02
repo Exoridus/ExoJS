@@ -1,7 +1,7 @@
 import RenderState from './RenderState';
 import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
-import ParticleRenderer from '../extras/particle/ParticleRenderer';
+import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
 import View from './View';
 import Rectangle from '../math/Rectangle';
@@ -14,7 +14,7 @@ import support from '../support';
 export default class DisplayManager {
 
     /**
-     * @constructs DisplayManager
+     * @constructor
      * @param {Application} app
      * @param {Object} [config]
      * @param {Number} [config.width=800]

@@ -2,12 +2,12 @@ import Vector from './Vector';
 
 /**
  * @class ObservableVector
- * @extends {Vector}
+ * @extends Vector
  */
 export default class ObservableVector extends Vector {
 
     /**
-     * @constructs ObservableVector
+     * @constructor
      * @param {Function} callback
      * @param {*} scope
      * @param {Number} [x=0]

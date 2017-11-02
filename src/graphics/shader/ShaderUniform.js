@@ -6,7 +6,7 @@ import Matrix from '../../math/Matrix';
 export default class ShaderUniform {
 
     /**
-     * @constructs ShaderUniform
+     * @constructor
      * @param {Object} options
      * @param {String} options.name
      * @param {Number} options.type

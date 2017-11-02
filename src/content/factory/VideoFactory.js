@@ -3,7 +3,7 @@ import VideoSourceFactory from './VideoSourceFactory';
 
 /**
  * @class VideoFactory
- * @extends {VideoSourceFactory}
+ * @extends VideoSourceFactory
  */
 export default class VideoFactory extends VideoSourceFactory {
 

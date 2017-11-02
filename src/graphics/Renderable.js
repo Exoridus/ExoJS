@@ -4,12 +4,12 @@ import settings from '../settings';
 
 /**
  * @class Renderable
- * @extends {SceneNode}
+ * @extends SceneNode
  */
 export default class Renderable extends SceneNode {
 
     /**
-     * @constructs Renderable
+     * @constructor
      */
     constructor() {
         super();

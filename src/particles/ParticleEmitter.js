@@ -1,18 +1,17 @@
-import Renderable from '../../graphics/Renderable';
+import Renderable from '../graphics/Renderable';
 import Particle from './Particle';
-import Rectangle from '../../math/Rectangle';
-import Time from '../../core/Time';
+import Rectangle from '../math/Rectangle';
+import Time from '../core/Time';
 import ParticleOptions from './ParticleOptions';
-import settings from '../../settings';
 
 /**
  * @class ParticleEmitter
- * @extends {Renderable}
+ * @extends Renderable
  */
 export default class ParticleEmitter extends Renderable {
 
     /**
-     * @constructs ParticleEmitter
+     * @constructor
      * @param {Texture} texture
      * @param {ParticleOptions|Object} [particleOptions]
      */

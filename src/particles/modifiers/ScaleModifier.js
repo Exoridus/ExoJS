@@ -1,14 +1,14 @@
 import ParticleModifier from '../ParticleModifier';
-import Vector from '../../../math/Vector';
+import Vector from '../../math/Vector';
 
 /**
  * @class ScaleModifier
- * @extends {ParticleModifier}
+ * @extends ParticleModifier
  */
 export default class ScaleModifier extends ParticleModifier {
 
     /**
-     * @constructs ScaleModifier
+     * @constructor
      * @param {Vector} scaleFactor
      */
     constructor(scaleFactor) {

@@ -3,12 +3,12 @@ import { removeItems } from '../utils';
 
 /**
  * @class Container
- * @extends {Renderable}
+ * @extends Renderable
  */
 export default class Container extends Renderable {
 
     /**
-     * @constructs Container
+     * @constructor
      */
     constructor() {
         super();

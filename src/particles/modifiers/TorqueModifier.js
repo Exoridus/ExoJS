@@ -2,12 +2,12 @@ import ParticleModifier from '../ParticleModifier';
 
 /**
  * @class TorqueModifier
- * @extends {ParticleModifier}
+ * @extends ParticleModifier
  */
 export default class TorqueModifier extends ParticleModifier {
 
     /**
-     * @constructs TorqueModifier
+     * @constructor
      * @param {Number} angularAcceleration
      */
     constructor(angularAcceleration) {

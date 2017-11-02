@@ -7,12 +7,12 @@ import Size from './Size';
 
 /**
  * @class Rectangle
- * @extends {Shape}
+ * @extends Shape
  */
 export default class Rectangle extends Shape {
 
     /**
-     * @constructs Rectangle
+     * @constructor
      * @param {Number} [x=0]
      * @param {Number} [y=x]
      * @param {Number} [width=0]
@@ -169,6 +169,7 @@ export default class Rectangle extends Shape {
 
     /**
      * @override
+     * @param {Rectangle}
      */
     copy(rectangle) {
         this.position.copy(rectangle.position);

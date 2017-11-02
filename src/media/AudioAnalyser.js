@@ -6,7 +6,7 @@ import support from '../support';
 export default class AudioAnalyser {
 
     /**
-     * @constructs AudioAnalyser
+     * @constructor
      * @param {Media|Sound|Music|Video|MediaManager} media
      * @param {Object} [options={}]
      * @param {Number} [options.fftSize=2048]
