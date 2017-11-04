@@ -1,4 +1,4 @@
-import { clamp } from '../utils';
+import { audioContext, clamp } from '../utils';
 import support from '../support';
 import Media from './Media';
 
@@ -15,11 +15,21 @@ export default class Sound extends Media {
     constructor(mediaSource) {
         super(mediaSource);
 
+        if (!this.audioBuffer) {
+            throw new Error('AudioBuffer is missing in MediaSource');
+        }
+
         /**
          * @private
-         * @member {?AudioBuffer}
+         * @member {?HTMLMediaElement}
          */
         this._audioBuffer = mediaSource.audioBuffer;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._duration = this._audioBuffer.duration;
 
         /**
          * @private
@@ -38,12 +48,6 @@ export default class Sound extends Media {
          * @member {Number}
          */
         this._currentTime = 0;
-
-        /**
-         * @private
-         * @member {?AudioContext}
-         */
-        this._audioContext = null;
 
         /**
          * @private
@@ -111,11 +115,11 @@ export default class Sound extends Media {
      * @override
      */
     get currentTime() {
-        if (!this._startTime || !this._audioContext) {
+        if (!this._startTime || !audioContext) {
             return 0;
         }
 
-        return (this._currentTime + this._audioContext.currentTime - this._startTime);
+        return (this._currentTime + audioContext.currentTime - this._startTime);
     }
 
     set currentTime(currentTime) {
@@ -145,13 +149,6 @@ export default class Sound extends Media {
     /**
      * @override
      */
-    get audioContext() {
-        return this._audioContext || null;
-    }
-
-    /**
-     * @override
-     */
     get analyserTarget() {
         return this._gainNode || null;
     }
@@ -164,7 +161,7 @@ export default class Sound extends Media {
             this.applyOptions(options);
 
             this._sourceNode = this.createSourceNode();
-            this._startTime = this._audioContext.currentTime;
+            this._startTime = audioContext.currentTime;
             this._paused = false;
 
             this.trigger('start');
@@ -178,7 +175,7 @@ export default class Sound extends Media {
      * @returns {AudioBufferSourceNode}
      */
     createSourceNode() {
-        const sourceNode = this._audioContext.createBufferSource();
+        const sourceNode = audioContext.createBufferSource();
 
         sourceNode.buffer = this.mediaSource.audioBuffer;
         sourceNode.loop = this.loop;
@@ -218,10 +215,8 @@ export default class Sound extends Media {
      * @override
      */
     connect(mediaManager) {
-        if (support.webAudio && !this._audioContext) {
-            this._audioContext = mediaManager.audioContext;
-
-            this._gainNode = this._audioContext.createGain();
+        if (support.webAudio && !this._gainNode) {
+            this._gainNode = audioContext.createGain();
             this._gainNode.gain.value = this.volume;
             this._gainNode.connect(mediaManager.soundGain);
         }
@@ -233,14 +228,12 @@ export default class Sound extends Media {
      * @override
      */
     disconnect() {
-        if (this._audioContext) {
-            this._audioContext = null;
+        if (this._sourceNode) {
+            this._sourceNode.disconnect();
+            this._sourceNode = null;
+        }
 
-            if (this._sourceNode) {
-                this._sourceNode.disconnect();
-                this._sourceNode = null;
-            }
-
+        if (this._gainNode) {
             this._gainNode.disconnect();
             this._gainNode = null;
         }

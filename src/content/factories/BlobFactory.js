@@ -1,4 +1,5 @@
 import ArrayBufferFactory from './ArrayBufferFactory';
+import { determineMimeType } from '../../utils';
 
 /**
  * @class BlobFactory
@@ -16,7 +17,7 @@ export default class BlobFactory extends ArrayBufferFactory {
     /**
      * @override
      */
-    create(source, { mimeType = 'text/plain' } = {}) {
+    create(source, { mimeType = determineMimeType(source) } = {}) {
         return super
             .create(source, null)
             .then((arrayBuffer) => new Blob([arrayBuffer], { type: mimeType }));

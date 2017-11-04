@@ -26,7 +26,7 @@ window.app.start(new Exo.Scene({
          * @private
          * @member {Video}
          */
-        this._video = new Exo.Video(resources.get('video', 'example'));
+        this._video = resources.get('video', 'example');
         this._video.width = canvas.width;
         this._video.height = canvas.height;
 

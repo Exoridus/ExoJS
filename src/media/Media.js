@@ -38,25 +38,25 @@ export default class Media extends EventEmitter {
          * @private
          * @member {Number}
          */
-        this._duration = this._mediaElement.duration || 0;
+        this._duration = 0;
 
         /**
          * @private
          * @member {Number}
          */
-        this._volume = this._mediaElement.volume || 1;
+        this._volume = 1;
 
         /**
          * @private
          * @member {Number}
          */
-        this._speed = this._mediaElement.playbackRate || 1;
+        this._speed = 1;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._loop = this._mediaElement.loop || false;
+        this._loop = false;
     }
 
     /**
@@ -176,16 +176,6 @@ export default class Media extends EventEmitter {
         } else {
             this.pause();
         }
-    }
-
-    /**
-     * @public
-     * @abstract
-     * @readonly
-     * @member {?AudioContext}
-     */
-    get audioContext() {
-        return null;
     }
 
     /**

@@ -271,6 +271,7 @@ const
     };
 
 export {
+    audioContext,
     supportsCodec,
     decodeAudioBuffer,
     degreesToRadians,

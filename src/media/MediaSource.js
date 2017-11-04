@@ -1,4 +1,5 @@
 import { decodeAudioBuffer, determineMimeType } from '../utils';
+import support from '../support';
 
 /**
  * @class MediaSource
@@ -13,10 +14,7 @@ export default class MediaSource {
      * @param {String} [options.mimeType=determineMimeType(arrayBuffer)]
      * @param {String} [options.loadEvent='canplaythrough']
      */
-    constructor(type, arrayBuffer, {
-        mimeType = determineMimeType(arrayBuffer),
-        loadEvent = 'canplaythrough',
-    } = {}) {
+    constructor(type, arrayBuffer, { mimeType = determineMimeType(arrayBuffer), loadEvent = 'canplaythrough' } = {}) {
 
         /**
          * @private
@@ -141,7 +139,7 @@ export default class MediaSource {
 
     /**
      * @public
-     * @returns {Promise<?HTMLMediaElement>}
+     * @returns {Promise<HTMLMediaElement>}
      */
     createMediaElement() {
         if (!this._mediaElement) {
@@ -161,12 +159,14 @@ export default class MediaSource {
 
     /**
      * @public
-     * @returns {Promise<AudioBuffer>}
+     * @returns {Promise<?AudioBuffer>}
      */
     decodeAudioBuffer() {
-        if (!this._audioBuffer) {
+        if (!this._audioBuffer && support.webAudio) {
             return decodeAudioBuffer(this._arrayBuffer)
-                .then((audioBuffer) => Promise.resolve((this._audioBuffer = audioBuffer)));
+                .then((audioBuffer) => {
+                    this._audioBuffer = audioBuffer;
+                });
         }
 
         return Promise.resolve(this._audioBuffer);

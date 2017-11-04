@@ -11,19 +11,19 @@ export default class MediaSourceFactory extends ArrayBufferFactory {
      * @override
      */
     get storageType() {
-        return 'media';
+        return 'mediaSource';
     }
 
     /**
      * @override
      */
-    create(source, { type = null, createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent } = {}) {
+    create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent } = {}) {
         return super
             .create(source, null)
             .then((arrayBuffer) => new MediaSource(type, arrayBuffer, { mimeType, loadEvent }))
             .then((mediaSource) => createMediaElement ? mediaSource.createMediaElement()
                 .then((mediaElement) => mediaSource) : mediaSource)
             .then((mediaSource) => decodeAudioBuffer ? mediaSource.decodeAudioBuffer()
-                .then((mediaSource) => mediaSource) : mediaSource);
+                .then((audioBuffer) => mediaSource) : mediaSource);
     }
 }

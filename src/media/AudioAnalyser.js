@@ -1,4 +1,5 @@
 import support from '../support';
+import { audioContext } from '../utils';
 
 /**
  * @class AudioAnalyser
@@ -28,7 +29,11 @@ export default class AudioAnalyser {
          * @private
          * @member {?AnalyserNode}
          */
-        this._analyser = null;
+        this._analyser = audioContext.createAnalyser();
+        this._analyser.fftSize = fftSize;
+        this._analyser.minDecibels = minDecibels;
+        this._analyser.maxDecibels = maxDecibels;
+        this._analyser.smoothingTimeConstant = smoothingTimeConstant;
 
         /**
          * @private
@@ -41,30 +46,6 @@ export default class AudioAnalyser {
          * @member {Media|Sound|Music|Video|MediaManager}
          */
         this._media = media;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._fftSize = fftSize;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._minDecibels = minDecibels;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._maxDecibels = maxDecibels;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._smoothingTimeConstant = smoothingTimeConstant;
 
         /**
          * @private
@@ -97,43 +78,13 @@ export default class AudioAnalyser {
      * @returns {AudioAnalyser}
      */
     connect() {
-        if (support.webAudio && !this._analyser) {
-            const audioContext = this._media.audioContext,
-                analyserTarget = this._media.analyserTarget;
-
-            if (!audioContext) {
-                throw new Error('Could not get AudioContext of the target.');
-            }
-
-            if (!analyserTarget) {
+        if (support.webAudio && !this._analyserTarget) {
+            if (!this._media.analyserTarget) {
                 throw new Error('No AudioNode on property analyserTarget.');
             }
 
-            this._analyser = audioContext.createAnalyser();
-            this._analyser.fftSize = this._fftSize;
-            this._analyser.minDecibels = this._minDecibels;
-            this._analyser.maxDecibels = this._maxDecibels;
-            this._analyser.smoothingTimeConstant = this._smoothingTimeConstant;
-
-            this._analyserTarget = analyserTarget;
+            this._analyserTarget = this._media.analyserTarget;
             this._analyserTarget.connect(this._analyser);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {AudioAnalyser}
-     */
-    disconnect() {
-        if (this._analyser) {
-            this._analyser.disconnect();
-            this._analyser = null;
-
-            this._analyserTarget.disconnect();
-            this._analyserTarget = null;
         }
 
         return this;
@@ -211,13 +162,15 @@ export default class AudioAnalyser {
      * @public
      */
     destroy() {
-        this.disconnect();
+        if (this._analyserTarget) {
+            this._analyserTarget.disconnect();
+            this._analyserTarget = null;
+        }
+
+        this._analyser.disconnect();
+        this._analyser = null;
 
         this._media = null;
-        this._fftSize = null;
-        this._minDecibels = null;
-        this._maxDecibels = null;
-        this._smoothingTimeConstant = null;
         this._timeDomainData = null;
         this._frequencyData = null;
         this._preciseTimeDomainData = null;

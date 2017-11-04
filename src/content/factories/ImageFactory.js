@@ -1,5 +1,4 @@
 import BlobFactory from './BlobFactory';
-import { determineMimeType } from '../../utils';
 
 /**
  * @class ImageFactory
@@ -39,7 +38,7 @@ export default class ImageFactory extends BlobFactory {
     /**
      * @override
      */
-    create(source, { mimeType = determineMimeType(source) } = {}) {
+    create(source, { mimeType } = {}) {
         return super
             .create(source, { mimeType })
             .then((blob) => new Promise((resolve, reject) => {

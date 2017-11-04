@@ -1,10 +1,11 @@
+import Video from '../../media/Video';
 import MediaSourceFactory from './MediaSourceFactory';
 
 /**
- * @class VideoSourceFactory
+ * @class VideoFactory
  * @extends MediaSourceFactory
  */
-export default class VideoSourceFactory extends MediaSourceFactory {
+export default class VideoFactory extends MediaSourceFactory {
 
     /**
      * @override
@@ -17,6 +18,8 @@ export default class VideoSourceFactory extends MediaSourceFactory {
      * @override
      */
     create(source, { type = 'video', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent } = {}) {
-        return super.create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent });
+        return super
+            .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
+            .then((audioSource) => new Video(audioSource));
     }
 }

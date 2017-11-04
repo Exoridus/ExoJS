@@ -1,4 +1,4 @@
-import { clamp } from '../utils';
+import { audioContext, clamp } from '../utils';
 import Sprite from '../graphics/sprite/Sprite';
 import Texture from '../graphics/Texture';
 import support from '../support';
@@ -51,12 +51,6 @@ export default class Video extends Sprite {
          * @member {Boolean}
          */
         this._loop = this._mediaElement.loop || false;
-
-        /**
-         * @private
-         * @member {?AudioContext}
-         */
-        this._audioContext = null;
 
         /**
          * @private
@@ -199,7 +193,7 @@ export default class Video extends Sprite {
      * @member {?AudioContext}
      */
     get audioContext() {
-        return this._audioContext || null;
+        return audioContext;
     }
 
     /**
@@ -314,14 +308,12 @@ export default class Video extends Sprite {
      * @returns {Video}
      */
     connect(mediaManager) {
-        if (support.webAudio && !this._audioContext) {
-            this._audioContext = mediaManager.audioContext;
-
-            this._gainNode = this._audioContext.createGain();
+        if (support.webAudio && !this._gainNode) {
+            this._gainNode = audioContext.createGain();
             this._gainNode.gain.value = this.volume;
             this._gainNode.connect(mediaManager.videoGain);
 
-            this._sourceNode = this._audioContext.createMediaElementSource(this._mediaElement);
+            this._sourceNode = audioContext.createMediaElementSource(this._mediaElement);
             this._sourceNode.connect(this._gainNode);
         }
 
@@ -334,12 +326,12 @@ export default class Video extends Sprite {
      * @returns {Video}
      */
     disconnect() {
-        if (this._audioContext) {
-            this._audioContext = null;
-
+        if (this._sourceNode) {
             this._sourceNode.disconnect();
             this._sourceNode = null;
+        }
 
+        if (this._gainNode) {
             this._gainNode.disconnect();
             this._gainNode = null;
         }

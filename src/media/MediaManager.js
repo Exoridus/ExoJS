@@ -1,4 +1,4 @@
-import { clamp } from '../utils';
+import { audioContext, clamp } from '../utils';
 import support from '../support';
 
 /**
@@ -51,22 +51,16 @@ export default class MediaManager {
 
             /**
              * @private
-             * @member {AudioContext}
-             */
-            this._audioContext = new AudioContext();
-
-            /**
-             * @private
              * @member {DynamicsCompressorNode}
              */
-            this._compressor = this._audioContext.createDynamicsCompressor();
-            this._compressor.connect(this._audioContext.destination);
+            this._compressor = audioContext.createDynamicsCompressor();
+            this._compressor.connect(audioContext.destination);
 
             /**
              * @private
              * @member {GainNode}
              */
-            this._masterGain = this._audioContext.createGain();
+            this._masterGain = audioContext.createGain();
             this._masterGain.gain.value = this._masterVolume;
             this._masterGain.connect(this._compressor);
 
@@ -74,7 +68,7 @@ export default class MediaManager {
              * @private
              * @member {GainNode}
              */
-            this._musicGain = this._audioContext.createGain();
+            this._musicGain = audioContext.createGain();
             this._musicGain.gain.value = this._musicVolume;
             this._musicGain.connect(this._masterGain);
 
@@ -82,7 +76,7 @@ export default class MediaManager {
              * @private
              * @member {GainNode}
              */
-            this._soundGain = this._audioContext.createGain();
+            this._soundGain = audioContext.createGain();
             this._soundGain.gain.value = this._soundVolume;
             this._soundGain.connect(this._masterGain);
 
@@ -90,7 +84,7 @@ export default class MediaManager {
              * @private
              * @member {GainNode}
              */
-            this._videoGain = this._audioContext.createGain();
+            this._videoGain = audioContext.createGain();
             this._videoGain.gain.value = this._videoVolume;
             this._videoGain.connect(this._masterGain);
         }
@@ -142,15 +136,6 @@ export default class MediaManager {
 
     set videoVolume(volume) {
         this.setVideoVolume(volume);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {?AudioContext}
-     */
-    get audioContext() {
-        return this._audioContext || null;
     }
 
     /**
@@ -320,9 +305,6 @@ export default class MediaManager {
 
             this._compressor.disconnect();
             this._compressor = null;
-
-            this._audioContext.close();
-            this._audioContext = null;
         }
 
         this._app = null;

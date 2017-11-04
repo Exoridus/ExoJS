@@ -1,17 +1,16 @@
 import EventEmitter from '../core/EventEmitter';
 import ResourceContainer from './ResourceContainer';
-import ArrayBufferFactory from './factory/ArrayBufferFactory';
-import BlobFactory from './factory/BlobFactory';
-import FontFactory from './factory/FontFactory';
-import ImageFactory from './factory/ImageFactory';
-import JSONFactory from './factory/JSONFactory';
-import MusicFactory from './factory/MusicFactory';
-import SoundFactory from './factory/SoundFactory';
-import StringFactory from './factory/StringFactory';
-import TextureFactory from './factory/TextureFactory';
-import MediaSourceFactory from './factory/MediaSourceFactory';
-import VideoSourceFactory from './factory/VideoSourceFactory';
-import AudioSourceFactory from './factory/AudioSourceFactory';
+import ArrayBufferFactory from './factories/ArrayBufferFactory';
+import BlobFactory from './factories/BlobFactory';
+import FontFactory from './factories/FontFactory';
+import ImageFactory from './factories/ImageFactory';
+import JSONFactory from './factories/JSONFactory';
+import MusicFactory from './factories/MusicFactory';
+import SoundFactory from './factories/SoundFactory';
+import StringFactory from './factories/StringFactory';
+import TextureFactory from './factories/TextureFactory';
+import MediaSourceFactory from './factories/MediaSourceFactory';
+import VideoFactory from './factories/VideoFactory';
 
 /**
  * @class ResourceLoader
@@ -68,13 +67,12 @@ export default class ResourceLoader extends EventEmitter {
         this._database = null;
 
         this.addFactory('arrayBuffer', new ArrayBufferFactory())
+            .addFactory('mediaSource', new MediaSourceFactory())
             .addFactory('blob', new BlobFactory())
             .addFactory('font', new FontFactory())
-            .addFactory('media', new MediaSourceFactory())
-            .addFactory('audio', new AudioSourceFactory())
-            .addFactory('video', new VideoSourceFactory())
             .addFactory('music', new MusicFactory())
             .addFactory('sound', new SoundFactory())
+            .addFactory('video', new VideoFactory())
             .addFactory('image', new ImageFactory())
             .addFactory('texture', new TextureFactory())
             .addFactory('string', new StringFactory())
