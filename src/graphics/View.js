@@ -99,6 +99,24 @@ export default class View {
 
     /**
      * @public
+     * @readonly
+     * @member {Number}
+     */
+    get width() {
+        return this._size.width;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get height() {
+        return this._size.height;
+    }
+
+    /**
+     * @public
      * @member {Number}
      */
     get rotation() {
@@ -149,24 +167,6 @@ export default class View {
      */
     get offsetCenter() {
         return this._offsetCenter;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get width() {
-        return this._size.width;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get height() {
-        return this._size.height;
     }
 
     /**

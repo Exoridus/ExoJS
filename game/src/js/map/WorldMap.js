@@ -17,19 +17,19 @@ export default class WorldMap {
          * @private
          * @member {Number}
          */
-        this._width = 256;
+        this._tilesX = 256;
 
         /**
          * @private
          * @member {Number}
          */
-        this._height = 256;
+        this._tilesY = 256;
 
         /**
          * @private
-         * @member {Number}
+         * @member {Size}
          */
-        this._tileSize = 64;
+        this._tileSize = new Exo.Size(64, 64);
 
         /**
          * @private
@@ -47,15 +47,15 @@ export default class WorldMap {
          * @private
          * @member {Number[]}
          */
-        this._mapData = this._mapGenerator.generate(this._width, this._height);
+        this._mapData = this._mapGenerator.generate(this._tilesX, this._tilesY);
 
         /**
          * @private
          * @member {Sprite}
          */
         this._tile = new Exo.Sprite(tileset.texture);
-        this._tile.width = this._tileSize;
-        this._tile.height = this._tileSize;
+        this._tile.width = this._tileSize.width;
+        this._tile.height = this._tileSize.height;
     }
 
     /**
@@ -64,7 +64,7 @@ export default class WorldMap {
      * @member {Number}
      */
     get pixelWidth() {
-        return this._width * this._tileSize;
+        return this._tilesX * this._tileSize.width;
     }
 
     /**
@@ -73,7 +73,7 @@ export default class WorldMap {
      * @member {Number}
      */
     get pixelHeight() {
-        return this._height * this._tileSize;
+        return this._tilesY * this._tileSize.height;
     }
 
     /**
@@ -82,34 +82,31 @@ export default class WorldMap {
      */
     render(displayManager) {
         const mapData = this._mapData,
-            width = this._width,
-            height = this._height,
+            tilesX = this._tilesX,
+            tilesY = this._tilesY,
             tile = this._tile,
             tileset = this._tileset,
-            tileSize = this._tileSize,
+            tileWidth = this._tileSize.width,
+            tileHeight = this._tileSize.height,
             camera = displayManager.view,
-            tilesHorizontal = ((camera.width / tileSize) + 2) | 0,
-            tilesVertical = ((camera.height / tileSize) + 2) | 0,
-            startTileX = clamp(camera.left / tileSize, 0, width - tilesHorizontal) | 0,
-            startTileY = clamp(camera.top / tileSize, 0, height - tilesVertical) | 0,
-            startTileIndex = (startTileY * width) + startTileX,
+            tilesHorizontal = ((camera.width / tileWidth) + 2) | 0,
+            tilesVertical = ((camera.height / tileHeight) + 2) | 0,
+            startTileX = clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+            startTileY = clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+            startTileIndex = (startTileY * tilesX) + startTileX,
             tilesTotal = tilesHorizontal * tilesVertical;
-
-        displayManager.begin();
 
         for (let i = 0; i < tilesTotal; i++) {
             const x = (i % tilesHorizontal) | 0,
                 y = (i / tilesHorizontal) | 0,
-                index = startTileIndex + ((y * width) + x);
+                index = startTileIndex + ((y * tilesX) + x);
 
             tileset.setBlock(tile, mapData[index]);
 
-            tile.x = (startTileX + x) * tileSize;
-            tile.y = (startTileY + y) * tileSize;
+            tile.x = (startTileX + x) * tileWidth;
+            tile.y = (startTileY + y) * tileHeight;
 
-            displayManager.render(tile);
+            tile.render(displayManager);
         }
-
-        displayManager.end();
     }
 }

@@ -43,8 +43,20 @@ export default class Player extends Exo.Sprite {
          */
         this._frame = new Exo.Rectangle(0, 0, playerSize.width, playerSize.height);
 
-        this.setOrigin(0.5, 1);
         this._setFaceDirection(FACE_DIRECTION.DOWN);
+        this.setOrigin(0.5, 1);
+    }
+
+    /**
+     * @public
+     * @member {Boolean}
+     */
+    get running() {
+        return running;
+    }
+
+    set running(running) {
+        this._running = running;
     }
 
     /**

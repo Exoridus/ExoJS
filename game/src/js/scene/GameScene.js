@@ -30,8 +30,7 @@ export default class GameScene extends Exo.Scene {
          * @member {Player}
          */
         this._player = new Player(resources.get('texture', 'game/player'));
-        // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
-        // this._player.setPosition(0, 0);
+        this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
 
         /**
          * @private
@@ -55,7 +54,7 @@ export default class GameScene extends Exo.Scene {
         this._backgroundMusic.play({ loop: true });
 
         this._addInputs();
-        // this._updateCamera();
+        this._updateCamera();
     }
 
     /**
@@ -64,7 +63,7 @@ export default class GameScene extends Exo.Scene {
     update(delta) {
         this.app.displayManager
             .begin()
-            // .render(this._worldMap)
+            .render(this._worldMap)
             .render(this._player)
             .end();
     }
@@ -106,7 +105,7 @@ export default class GameScene extends Exo.Scene {
             clamp(player.y, 0, worldMap.pixelHeight),
         );
 
-        // this._updateCamera();
+        this._updateCamera();
     }
 
     /**
@@ -180,7 +179,7 @@ export default class GameScene extends Exo.Scene {
 
         this._toggleRunInput = new Exo.Input([
             KEYBOARD.Shift,
-            GAMEPAD.ShoulderRightTop,
+            GAMEPAD.FaceLeft,
         ], {
             context: this,
             start() {

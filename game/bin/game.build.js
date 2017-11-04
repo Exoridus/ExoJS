@@ -844,7 +844,6 @@ var TitleScene = function (_Exo$Scene) {
      * @param {ResourceContainer} resources
      */
     value: function init(resources) {
-      var mediaManager = this.app.mediaManager;
 
       /**
        * @private
@@ -864,8 +863,8 @@ var TitleScene = function (_Exo$Scene) {
        * @member {Music}
        */
       this._titleMusic = resources.get('music', 'title/background');
-
-      mediaManager.play(this._titleMusic, { loop: true });
+      this._titleMusic.connect(this.app.mediaManager);
+      this._titleMusic.play({ loop: true });
     }
 
     /**
@@ -1881,8 +1880,7 @@ var GameScene = function (_Exo$Scene) {
              * @member {Player}
              */
             this._player = new _Player2.default(resources.get('texture', 'game/player'));
-            // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
-            // this._player.setPosition(0, 0);
+            this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
 
             /**
              * @private
@@ -1895,6 +1893,7 @@ var GameScene = function (_Exo$Scene) {
              * @member {Music}
              */
             this._backgroundMusic = resources.get('music', 'game/background');
+            this._backgroundMusic.connect(app.mediaManager);
 
             /**
              * @private
@@ -1902,10 +1901,10 @@ var GameScene = function (_Exo$Scene) {
              */
             this._isPaused = false;
 
-            app.mediaManager.play(this._backgroundMusic, { loop: true });
+            this._backgroundMusic.play({ loop: true });
 
             this._addInputs();
-            // this._updateCamera();
+            this._updateCamera();
         }
 
         /**
@@ -1915,9 +1914,7 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'update',
         value: function update(delta) {
-            this.app.displayManager.begin()
-            // .render(this._worldMap)
-            .render(this._player).end();
+            this.app.displayManager.begin().render(this._worldMap).render(this._player).end();
         }
 
         /**
@@ -1960,7 +1957,7 @@ var GameScene = function (_Exo$Scene) {
             player.move(x, y);
             player.setPosition(clamp(player.x, 0, worldMap.pixelWidth), clamp(player.y, 0, worldMap.pixelHeight));
 
-            // this._updateCamera();
+            this._updateCamera();
         }
 
         /**
@@ -2117,19 +2114,19 @@ var WorldMap = function () {
      * @private
      * @member {Number}
      */
-    this._width = 256;
+    this._tilesX = 256;
 
     /**
      * @private
      * @member {Number}
      */
-    this._height = 256;
+    this._tilesY = 256;
 
     /**
      * @private
-     * @member {Number}
+     * @member {Size}
      */
-    this._tileSize = 64;
+    this._tileSize = new Exo.Size(64, 64);
 
     /**
      * @private
@@ -2147,15 +2144,15 @@ var WorldMap = function () {
      * @private
      * @member {Number[]}
      */
-    this._mapData = this._mapGenerator.generate(this._width, this._height);
+    this._mapData = this._mapGenerator.generate(this._tilesX, this._tilesY);
 
     /**
      * @private
      * @member {Sprite}
      */
     this._tile = new Exo.Sprite(tileset.texture);
-    this._tile.width = this._tileSize;
-    this._tile.height = this._tileSize;
+    this._tile.width = this._tileSize.width;
+    this._tile.height = this._tileSize.height;
   }
 
   /**
@@ -2175,40 +2172,37 @@ var WorldMap = function () {
      */
     value: function render(displayManager) {
       var mapData = this._mapData,
-          width = this._width,
-          height = this._height,
+          tilesX = this._tilesX,
+          tilesY = this._tilesY,
           tile = this._tile,
           tileset = this._tileset,
-          tileSize = this._tileSize,
+          tileWidth = this._tileSize.width,
+          tileHeight = this._tileSize.height,
           camera = displayManager.view,
-          tilesHorizontal = camera.width / tileSize + 2 | 0,
-          tilesVertical = camera.height / tileSize + 2 | 0,
-          startTileX = clamp(camera.left / tileSize, 0, width - tilesHorizontal) | 0,
-          startTileY = clamp(camera.top / tileSize, 0, height - tilesVertical) | 0,
-          startTileIndex = startTileY * width + startTileX,
+          tilesHorizontal = camera.width / tileWidth + 2 | 0,
+          tilesVertical = camera.height / tileHeight + 2 | 0,
+          startTileX = clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+          startTileY = clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+          startTileIndex = startTileY * tilesX + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
-
-      displayManager.begin();
 
       for (var i = 0; i < tilesTotal; i++) {
         var x = i % tilesHorizontal | 0,
             y = i / tilesHorizontal | 0,
-            index = startTileIndex + (y * width + x);
+            index = startTileIndex + (y * tilesX + x);
 
         tileset.setBlock(tile, mapData[index]);
 
-        tile.x = (startTileX + x) * tileSize;
-        tile.y = (startTileY + y) * tileSize;
+        tile.x = (startTileX + x) * tileWidth;
+        tile.y = (startTileY + y) * tileHeight;
 
-        displayManager.render(tile);
+        tile.render(displayManager);
       }
-
-      displayManager.end();
     }
   }, {
     key: 'pixelWidth',
     get: function get() {
-      return this._width * this._tileSize;
+      return this._tilesX * this._tileSize.width;
     }
 
     /**
@@ -2220,7 +2214,7 @@ var WorldMap = function () {
   }, {
     key: 'pixelHeight',
     get: function get() {
-      return this._height * this._tileSize;
+      return this._tilesY * this._tileSize.height;
     }
   }]);
 
@@ -2617,14 +2611,13 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var FACE_DIRECTION = {
+var playerSize = new Exo.Size(96, 96),
+    FACE_DIRECTION = {
     UP: 0,
     RIGHT: 1,
     DOWN: 2,
     LEFT: 3
-},
-    playerWidth = 96,
-    playerHeight = 96;
+};
 
 /**
  * @class Player
@@ -2665,20 +2658,26 @@ var Player = function (_Exo$Sprite) {
          * @private
          * @member {Rectangle}
          */
-        _this._frame = new Exo.Rectangle(0, 0, playerWidth, playerHeight);
+        _this._frame = new Exo.Rectangle(0, 0, playerSize.width, playerSize.height);
 
-        _this.setOrigin(0.5, 1);
         _this._setFaceDirection(FACE_DIRECTION.DOWN);
+        _this.setOrigin(0.5, 1);
         return _this;
     }
 
     /**
-     * @override
+     * @public
+     * @member {Boolean}
      */
 
 
     _createClass(Player, [{
         key: "move",
+
+
+        /**
+         * @override
+         */
         value: function move(x, y) {
             var speed = this._running ? this._runningSpeed : this._speed,
                 mag = Math.sqrt(x * x + y * y),
@@ -2708,7 +2707,15 @@ var Player = function (_Exo$Sprite) {
     }, {
         key: "_setFaceDirection",
         value: function _setFaceDirection(direction) {
-            this.setTextureFrame(this._frame.set(direction * playerWidth, 0, playerWidth, playerHeight));
+            this.setTextureFrame(this._frame.setPosition(direction * playerSize.width, 0));
+        }
+    }, {
+        key: "running",
+        get: function get() {
+            return running;
+        },
+        set: function set(running) {
+            this._running = running;
         }
     }]);
 
@@ -2850,7 +2857,7 @@ var Tileset = function () {
             tile.tint.set(tint, tint, tint);
 
             if (block in this._tiles) {
-                tile.setTextureFrame(this._tiles[block].tileRect);
+                tile.setTextureFrame(this._tiles[block].tileRect, true);
             }
         }
     }, {

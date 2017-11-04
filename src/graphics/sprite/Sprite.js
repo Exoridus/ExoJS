@@ -94,11 +94,11 @@ export default class Sprite extends Container {
      * @member {Number}
      */
     get width() {
-        return Math.abs(this.scale.x) * this._texture.width;
+        return Math.abs(this.scale.x) * this._textureFrame.width;
     }
 
     set width(value) {
-        this.scale.x = value / this._texture.width;
+        this.scale.x = value / this._textureFrame.width;
     }
 
     /**
@@ -106,11 +106,11 @@ export default class Sprite extends Container {
      * @member {Number}
      */
     get height() {
-        return Math.abs(this.scale.y) * this._texture.height;
+        return Math.abs(this.scale.y) * this._textureFrame.height;
     }
 
     set height(value) {
-        this.scale.y = value / this._texture.height;
+        this.scale.y = value / this._textureFrame.height;
     }
 
     /**
@@ -130,14 +130,23 @@ export default class Sprite extends Container {
      * @public
      * @chainable
      * @param {Rectangle} frame
+     * @param {Boolean} [keepSize=false]
      * @returns {Sprite}
      */
-    setTextureFrame(frame) {
+    setTextureFrame(frame, keepSize = false) {
+        const width = this.width,
+            height = this.height;
+
         this._textureFrame.copy(frame);
+        this._updateTexCoords = true;
+
         this.localBounds.set(0, 0, frame.width, frame.height);
         this.scale.set(1, 1);
 
-        this._updateTexCoords = true;
+        if (keepSize) {
+            this.width = width;
+            this.height = height;
+        }
 
         return this;
     }
@@ -153,7 +162,7 @@ export default class Sprite extends Container {
             renderState.renderer.render(this);
 
             for (const child of this.children) {
-                displayManager.render(child);
+                child.render(displayManager);
             }
         }
 

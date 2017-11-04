@@ -2,7 +2,6 @@ import { SHAPE } from '../const';
 import { inRange } from '../utils';
 import Vector from './Vector';
 import Shape from './Shape';
-import Collision from './Collision';
 import Size from './Size';
 
 /**

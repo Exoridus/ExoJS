@@ -127,7 +127,7 @@ export default class DisplayManager {
      * @member {View}
      */
     get view() {
-        return this._renderState;
+        return this._view;
     }
 
     set view(view) {
@@ -213,12 +213,14 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     begin() {
-        if (!this._isRendering && !this._contextLost) {
-            if (this._clearBeforeRender) {
-                this._renderState.clear();
-            }
+        if (this._isRendering) {
+            throw new Error('DisplayManager is already rendering!')
+        }
 
-            this._isRendering = true;
+        this._isRendering = true;
+
+        if (!this._contextLost && this._clearBeforeRender) {
+            this._renderState.clear();
         }
 
         return this;
@@ -231,7 +233,11 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     render(renderable) {
-        if (this._isRendering && !this._contextLost) {
+        if (!this._isRendering) {
+            throw new Error('DisplayManager has to begin first!')
+        }
+
+        if (!this._contextLost) {
             renderable.render(this);
         }
 
@@ -244,12 +250,14 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     end() {
-        if (this._isRendering && !this._contextLost) {
-            if (this._renderState.renderer) {
-                this._renderState.renderer.flush();
-            }
+        if (!this._isRendering) {
+            throw new Error('DisplayManager has to begin first!')
+        }
 
-            this._isRendering = false;
+        this._isRendering = false;
+
+        if (!this._contextLost && this._renderState.renderer) {
+            this._renderState.renderer.flush();
         }
 
         return this;
