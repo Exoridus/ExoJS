@@ -163,15 +163,21 @@ var Menu = function (_Exo$Container) {
 
         /**
          * @public
+         * @chainable
          * @param {MenuItem} child
+         * @returns {Menu}
          */
         value: function setStartChild(child) {
             this._startChild = child;
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {MenuItem} child
+         * @returns {Menu}
          */
 
     }, {
@@ -183,14 +189,18 @@ var Menu = function (_Exo$Container) {
 
             this._activeChild = child;
             child.activate();
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {MenuItem} fromChild
          * @param {MenuItem} toChild
          * @param {String} fromToDirection
          * @param {String} [toFromDirection]
+         * @returns {Menu}
          */
 
     }, {
@@ -201,34 +211,44 @@ var Menu = function (_Exo$Container) {
             if (toFromDirection) {
                 this._paths.push(new _MenuPath2.default(toChild, fromChild, toFromDirection));
             }
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {MenuItem} child
          * @param {Function} action
          * @param {String} [input=select]
+         * @returns {Menu}
          */
 
     }, {
         key: 'addAction',
         value: function addAction(child, action, input) {
             this._actions.push(new _MenuAction2.default(child, action, input || 'select'));
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
+         * @returns {Menu}
          */
 
     }, {
         key: 'activate',
         value: function activate() {
-            this.setActiveChild(this._startChild);
+            return this.setActiveChild(this._startChild);
         }
 
         /**
          * @public
+         * @chainable
          * @param {Time} delta
+         * @returns {Menu}
          */
 
     }, {
@@ -237,10 +257,14 @@ var Menu = function (_Exo$Container) {
             if (this._activeChild) {
                 this._activeChild.update(delta);
             }
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
+         * @returns {Menu}
          */
 
     }, {
@@ -250,39 +274,43 @@ var Menu = function (_Exo$Container) {
                 this._activeChild.reset();
                 this._activeChild = null;
             }
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {String} input
+         * @returns {Menu}
          */
 
     }, {
         key: 'updateInput',
         value: function updateInput(input) {
-            if (!this._activeChild) {
-                return;
-            }
+            if (this._activeChild) {
+                for (var i = 0, len = this._paths.length; i < len; i++) {
+                    var path = this._paths[i];
 
-            for (var i = 0, len = this._paths.length; i < len; i++) {
-                var path = this._paths[i];
+                    if (path.fromItem === this._activeChild && path.input === input) {
+                        this.setActiveChild(path.toItem);
 
-                if (path.fromItem === this._activeChild && path.input === input) {
-                    this.setActiveChild(path.toItem);
+                        break;
+                    }
+                }
 
-                    break;
+                for (var _i = 0, _len = this._actions.length; _i < _len; _i++) {
+                    var action = this._actions[_i];
+
+                    if (action.item === this._activeChild && action.input === input) {
+                        action.action(action);
+
+                        break;
+                    }
                 }
             }
 
-            for (var _i = 0, _len = this._actions.length; _i < _len; _i++) {
-                var action = this._actions[_i];
-
-                if (action.item === this._activeChild && action.input === input) {
-                    action.action(action);
-
-                    break;
-                }
-            }
+            return this;
         }
 
         /**
@@ -368,13 +396,12 @@ var Menu = function (_Exo$Container) {
 
         /**
          * @public
-         * @param {Boolean} [destroyChildren=true]
          */
 
     }, {
         key: 'destroy',
-        value: function destroy(destroyChildren) {
-            _get(Menu.prototype.__proto__ || Object.getPrototypeOf(Menu.prototype), 'destroy', this).call(this, destroyChildren !== false);
+        value: function destroy() {
+            _get(Menu.prototype.__proto__ || Object.getPrototypeOf(Menu.prototype), 'destroy', this).call(this);
 
             this._paths.forEach(function (path) {
                 path.destroy();
@@ -439,22 +466,28 @@ var MenuItem = function (_Exo$Text) {
   /**
    * @constructor
    * @param {String} text
-   * @param {MenuItem} [previousItem]
+   * @param {Object} [style]
    */
-  function MenuItem(text, previousItem) {
+  function MenuItem(text) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$fill = _ref.fill,
+        fill = _ref$fill === undefined ? 'white' : _ref$fill,
+        _ref$fontSize = _ref.fontSize,
+        fontSize = _ref$fontSize === undefined ? 45 : _ref$fontSize,
+        _ref$fontFamily = _ref.fontFamily,
+        fontFamily = _ref$fontFamily === undefined ? 'AndyBold' : _ref$fontFamily,
+        _ref$stroke = _ref.stroke,
+        stroke = _ref$stroke === undefined ? 'black' : _ref$stroke,
+        _ref$strokeThickness = _ref.strokeThickness,
+        strokeThickness = _ref$strokeThickness === undefined ? 5 : _ref$strokeThickness;
+
     _classCallCheck(this, MenuItem);
 
     /**
      * @private
      * @member {Number}
      */
-    var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, {
-      fill: 'white',
-      fontSize: 45,
-      fontFamily: 'AndyBold',
-      stroke: 'black',
-      strokeThickness: 5
-    }));
+    var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, { fill: fill, fontSize: fontSize, fontFamily: fontFamily, stroke: stroke, strokeThickness: strokeThickness }));
 
     _this._ticker = 0;
 
@@ -471,10 +504,6 @@ var MenuItem = function (_Exo$Text) {
     _this._scalingSpeed = 2;
 
     _this.setOrigin(0.5, 0.5);
-
-    if (previousItem) {
-      _this.setPosition(previousItem.x, previousItem.bottom + _this.height * _this._scalingFactor / 2);
-    }
     return _this;
   }
 
@@ -544,13 +573,15 @@ window.addEventListener('load', function () {
         height: 720,
         soundVolume: 0.5,
         musicVolume: 0.5,
-        canvas: '#game-canvas'
+        canvas: document.querySelector('#game-canvas')
     });
 
     app.loader.request.cache = 'no-cache';
     app.loader.database = new Exo.Database('game', 3);
 
     app.start(new _LauncherScene2.default());
+
+    window.app = app;
 }, false);
 
 /***/ }),
@@ -775,7 +806,7 @@ exports.default = LauncherScene;
 
 
 Object.defineProperty(exports, "__esModule", {
-        value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -797,82 +828,77 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {Scene}
  */
 var TitleScene = function (_Exo$Scene) {
-        _inherits(TitleScene, _Exo$Scene);
+  _inherits(TitleScene, _Exo$Scene);
 
-        function TitleScene() {
-                _classCallCheck(this, TitleScene);
+  function TitleScene() {
+    _classCallCheck(this, TitleScene);
 
-                return _possibleConstructorReturn(this, (TitleScene.__proto__ || Object.getPrototypeOf(TitleScene)).apply(this, arguments));
-        }
+    return _possibleConstructorReturn(this, (TitleScene.__proto__ || Object.getPrototypeOf(TitleScene)).apply(this, arguments));
+  }
 
-        _createClass(TitleScene, [{
-                key: 'init',
+  _createClass(TitleScene, [{
+    key: 'init',
 
 
-                /**
-                 * @param {ResourceContainer} resources
-                 */
-                value: function init(resources) {
-                        var mediaManager = this.app.mediaManager;
+    /**
+     * @param {ResourceContainer} resources
+     */
+    value: function init(resources) {
+      var mediaManager = this.app.mediaManager;
 
-                        /**
-                         * @private
-                         * @member {TitleMenuManager}
-                         */
-                        this._menuManager = new _TitleMenuManager2.default(this.app);
-                        this._menuManager.enable('main');
+      /**
+       * @private
+       * @member {TitleMenuManager}
+       */
+      this._menuManager = new _TitleMenuManager2.default(this.app);
+      this._menuManager.enable('main');
 
-                        /**
-                         * @private
-                         * @member {Sprite}
-                         */
-                        this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
+      /**
+       * @private
+       * @member {Sprite}
+       */
+      this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
 
-                        /**
-                         * @private
-                         * @member {Music}
-                         */
-                        this._titleMusic = resources.get('music', 'title/background');
+      /**
+       * @private
+       * @member {Music}
+       */
+      this._titleMusic = resources.get('music', 'title/background');
 
-                        mediaManager.play(this._titleMusic, { loop: true });
-                }
+      mediaManager.play(this._titleMusic, { loop: true });
+    }
 
-                /**
-                 * @override
-                 */
+    /**
+     * @override
+     */
 
-        }, {
-                key: 'update',
-                value: function update(delta) {
-                        var displayManager = this.app.displayManager;
+  }, {
+    key: 'update',
+    value: function update(delta) {
+      this._menuManager.update(delta);
 
-                        displayManager.begin();
+      this.app.displayManager.begin().render(this._titleBackground).render(this._menuManager).end();
+    }
 
-                        this._titleBackground.render(displayManager);
-                        this._menuManager.update(delta).render(displayManager);
+    /**
+     * @override
+     */
 
-                        displayManager.end();
-                }
+  }, {
+    key: 'unload',
+    value: function unload() {
+      this._menuManager.destroy();
+      this._menuManager = null;
 
-                /**
-                 * @override
-                 */
+      this._titleBackground.destroy();
+      this._titleBackground = null;
 
-        }, {
-                key: 'unload',
-                value: function unload() {
-                        this._menuManager.destroy();
-                        this._menuManager = null;
+      this._titleMusic.destroy();
+      this._titleMusic = null;
+    }
+  }]);
 
-                        this._titleBackground.destroy();
-                        this._titleBackground = null;
-
-                        this._titleMusic.destroy();
-                        this._titleMusic = null;
-                }
-        }]);
-
-        return TitleScene;
+  return TitleScene;
 }(Exo.Scene);
 
 exports.default = TitleScene;
@@ -885,7 +911,7 @@ exports.default = TitleScene;
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _MenuManager2 = __webpack_require__(6);
@@ -896,15 +922,15 @@ var _MainMenu = __webpack_require__(7);
 
 var _MainMenu2 = _interopRequireDefault(_MainMenu);
 
-var _NewGameMenu = __webpack_require__(11);
+var _NewGameMenu = __webpack_require__(10);
 
 var _NewGameMenu2 = _interopRequireDefault(_NewGameMenu);
 
-var _LoadGameMenu = __webpack_require__(19);
+var _LoadGameMenu = __webpack_require__(18);
 
 var _LoadGameMenu2 = _interopRequireDefault(_LoadGameMenu);
 
-var _SettingsMenu = __webpack_require__(20);
+var _SettingsMenu = __webpack_require__(19);
 
 var _SettingsMenu2 = _interopRequireDefault(_SettingsMenu);
 
@@ -921,27 +947,22 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {MenuManager}
  */
 var TitleMenuManager = function (_MenuManager) {
-    _inherits(TitleMenuManager, _MenuManager);
+  _inherits(TitleMenuManager, _MenuManager);
 
-    /**
-     * @constructor
-     * @param {Application} app
-     */
-    function TitleMenuManager(app) {
-        _classCallCheck(this, TitleMenuManager);
+  /**
+   * @constructor
+   * @param {Application} app
+   */
+  function TitleMenuManager(app) {
+    _classCallCheck(this, TitleMenuManager);
 
-        var _this = _possibleConstructorReturn(this, (TitleMenuManager.__proto__ || Object.getPrototypeOf(TitleMenuManager)).call(this, app));
+    var _this = _possibleConstructorReturn(this, (TitleMenuManager.__proto__ || Object.getPrototypeOf(TitleMenuManager)).call(this, app));
 
-        _this.addMenu('main', new _MainMenu2.default(app));
-        _this.addMenu('newGame', new _NewGameMenu2.default(app, 'main'));
-        _this.addMenu('loadGame', new _LoadGameMenu2.default(app, 'main'));
-        _this.addMenu('settings', new _SettingsMenu2.default(app, 'main'));
+    _this.addMenu('main', new _MainMenu2.default(app)).addMenu('newGame', new _NewGameMenu2.default(app, 'main')).addMenu('loadGame', new _LoadGameMenu2.default(app, 'main')).addMenu('settings', new _SettingsMenu2.default(app, 'main')).openMenu('main');
+    return _this;
+  }
 
-        _this.openMenu('main');
-        return _this;
-    }
-
-    return TitleMenuManager;
+  return TitleMenuManager;
 }(_MenuManager3.default);
 
 exports.default = TitleMenuManager;
@@ -1058,44 +1079,50 @@ var MenuManager = function () {
 
         /**
          * @public
+         * @chainable
          * @param {String} startMenu
+         * @returns {MenuManager}
          */
         value: function enable(startMenu) {
-            if (this._active) {
-                return;
+            if (!this._active) {
+                this._active = true;
+                this._app.inputManager.add(this._inputs);
+
+                this.openMenu(startMenu);
             }
 
-            this._active = true;
-            this._app.inputManager.add(this._inputs);
-
-            this.openMenu(startMenu);
+            return this;
         }
 
         /**
          * @public
+         * @chainable
+         * @returns {MenuManager}
          */
 
     }, {
         key: 'disable',
         value: function disable() {
-            if (!this._active) {
-                return;
+            if (this._active) {
+                this._active = false;
+                this._app.inputManager.remove(this._inputs);
+
+                if (this._currentMenu) {
+                    this._currentMenu.reset();
+                    this._currentMenu = null;
+                }
             }
 
-            this._active = false;
-            this._app.inputManager.remove(this._inputs);
-
-            if (this._currentMenu) {
-                this._currentMenu.reset();
-                this._currentMenu = null;
-            }
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {String} name
          * @param {Menu} menu
          * @param {String} [previousMenu=null]
+         * @returns {MenuManager}
          */
 
     }, {
@@ -1109,11 +1136,15 @@ var MenuManager = function () {
 
             menu.on('openMenu', this.openMenu, this);
             menu.on('openPreviousMenu', this.openPreviousMenu, this);
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {String} name
+         * @returns {MenuManager}
          */
 
     }, {
@@ -1128,10 +1159,14 @@ var MenuManager = function () {
             if (this._currentMenu) {
                 this._currentMenu.activate();
             }
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
+         * @returns {MenuManager}
          */
 
     }, {
@@ -1142,11 +1177,15 @@ var MenuManager = function () {
             if (currentMenu && currentMenu.previousMenu) {
                 this.openMenu(currentMenu.previousMenu);
             }
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {Time} delta
+         * @returns {MenuManager}
          */
 
     }, {
@@ -1155,24 +1194,29 @@ var MenuManager = function () {
             if (this._currentMenu) {
                 this._currentMenu.update(delta);
             }
+
+            return this;
         }
 
         /**
          * @public
+         * @chainable
          * @param {DisplayManager} displayManager
+         * @returns {MenuManager}
          */
 
     }, {
         key: 'render',
         value: function render(displayManager) {
             if (this._currentMenu) {
-                this._currentMenu.render(displayManager);
+                displayManager.render(this._currentMenu);
             }
+
+            return this;
         }
 
         /**
          * @public
-         * @param {Boolean} [destroyChildren=false]
          */
 
     }, {
@@ -1230,10 +1274,6 @@ var _MenuItem = __webpack_require__(1);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
-var _VersionText = __webpack_require__(10);
-
-var _VersionText2 = _interopRequireDefault(_VersionText);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1262,40 +1302,46 @@ var MainMenu = function (_Menu) {
         var _this = _possibleConstructorReturn(this, (MainMenu.__proto__ || Object.getPrototypeOf(MainMenu)).call(this, app, parentMenu));
 
         var canvas = app.canvas,
-            resources = app.loader.resources;
+            resources = app.loader.resources,
+            centerX = canvas.width / 2,
+            offsetY = 50;
 
         /**
          * @private
          * @member {Sprite}
          */
         _this._gameLogo = new Exo.Sprite(resources.get('texture', 'title/logo'));
-        _this._gameLogo.setOrigin(_this._gameLogo.width / 2, _this._gameLogo.height * 0.8);
-        _this._gameLogo.setPosition(canvas.width / 2, 50 + _this._gameLogo.height * 0.8);
+        _this._gameLogo.setOrigin(0.5, 0.8);
+        _this._gameLogo.setPosition(centerX, 50 + _this._gameLogo.height * 0.8);
 
         /**
          * @private
          * @member {MenuItem}
          */
         _this._newGameButton = new _MenuItem2.default('New Game');
-        _this._newGameButton.setPosition(canvas.width / 2, canvas.height / 2);
+        _this._newGameButton.setPosition(centerX, _this._gameLogo.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._loadGameButton = new _MenuItem2.default('Load Game', _this._newGameButton);
+        _this._loadGameButton = new _MenuItem2.default('Load Game');
+        _this._loadGameButton.setPosition(centerX, _this._newGameButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._settingsButton = new _MenuItem2.default('Settings', _this._loadGameButton);
+        _this._settingsButton = new _MenuItem2.default('Settings');
+        _this._settingsButton.setPosition(centerX, _this._loadGameButton.bottom + offsetY);
 
         /**
          * @private
          * @member {VersionText}
          */
-        _this._versionText = new _VersionText2.default('Ver. 0.0.1', canvas.width, canvas.height);
+        _this._versionText = new _MenuItem2.default('Ver. 0.0.1', { fontSize: 25, strokeThickness: 3 });
+        _this._versionText.setPosition(canvas.width - 10, canvas.height);
+        _this._versionText.setOrigin(1, 1);
 
         /**
          * @private
@@ -1324,7 +1370,7 @@ var MainMenu = function (_Menu) {
             }
 
             this._ticker += delta.seconds;
-            this._gameLogo.rotation = Math.sin(this._ticker * Math.PI / 2) * -10;
+            this._gameLogo.rotation = Math.sin(this._ticker * Math.PI / 2) * -5;
         }
 
         /**
@@ -1341,29 +1387,6 @@ var MainMenu = function (_Menu) {
             this._ticker = 0;
             this._gameLogo.rotation = 0;
         }
-    }, {
-        key: '_addItems',
-        value: function _addItems() {
-            this.addChild(this._gameLogo);
-            this.addChild(this._versionText);
-            this.addChild(this._newGameButton);
-            this.addChild(this._loadGameButton);
-            this.addChild(this._settingsButton);
-        }
-    }, {
-        key: '_addPaths',
-        value: function _addPaths() {
-            this.addPath(this._newGameButton, this._loadGameButton, 'down', 'up');
-            this.addPath(this._loadGameButton, this._settingsButton, 'down', 'up');
-            this.addPath(this._settingsButton, this._newGameButton, 'down', 'up');
-        }
-    }, {
-        key: '_addActions',
-        value: function _addActions() {
-            this.addAction(this._newGameButton, this.openMenu.bind(this, 'newGame'), 'select');
-            this.addAction(this._loadGameButton, this.openMenu.bind(this, 'loadGame'), 'select');
-            this.addAction(this._settingsButton, this.openMenu.bind(this, 'settings'), 'select');
-        }
 
         /**
          * @override
@@ -1379,6 +1402,37 @@ var MainMenu = function (_Menu) {
             this._newGameButton = null;
             this._loadGameButton = null;
             this._settingsButton = null;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addItems',
+        value: function _addItems() {
+            return this.addChild(this._gameLogo).addChild(this._newGameButton).addChild(this._loadGameButton).addChild(this._settingsButton).addChild(this._versionText);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addPaths',
+        value: function _addPaths() {
+            return this.addPath(this._newGameButton, this._loadGameButton, 'down', 'up').addPath(this._loadGameButton, this._settingsButton, 'down', 'up').addPath(this._settingsButton, this._newGameButton, 'down', 'up');
+        }
+
+        /**
+         * @private
+         * @chaibale
+         */
+
+    }, {
+        key: '_addActions',
+        value: function _addActions() {
+            return this.addAction(this._newGameButton, this.openMenu.bind(this, 'newGame'), 'select').addAction(this._loadGameButton, this.openMenu.bind(this, 'loadGame'), 'select').addAction(this._settingsButton, this.openMenu.bind(this, 'settings'), 'select');
         }
     }]);
 
@@ -1626,57 +1680,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class VersionText
- * @extends {ext}
- */
-var VersionText = function (_Exo$Text) {
-    _inherits(VersionText, _Exo$Text);
-
-    /**
-     * @constructor
-     * @param {String} text
-     * @param {Number} viewportWidth
-     * @param {Number} viewportHeight
-     */
-    function VersionText(text, viewportWidth, viewportHeight) {
-        _classCallCheck(this, VersionText);
-
-        var _this = _possibleConstructorReturn(this, (VersionText.__proto__ || Object.getPrototypeOf(VersionText)).call(this, text, {
-            fill: 'white',
-            fontSie: 25,
-            fontFamily: 'AndyBold',
-            stroke: 'black',
-            strokeThickness: 3
-        }));
-
-        _this.setOrigin(1, 1);
-        _this.setPosition(viewportWidth - 10, viewportHeight);
-        return _this;
-    }
-
-    return VersionText;
-}(Exo.Text);
-
-exports.default = VersionText;
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -1689,7 +1692,7 @@ var _MenuItem = __webpack_require__(1);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
-var _GameScene = __webpack_require__(12);
+var _GameScene = __webpack_require__(11);
 
 var _GameScene2 = _interopRequireDefault(_GameScene);
 
@@ -1718,32 +1721,37 @@ var NewGameMenu = function (_Menu) {
 
         var _this = _possibleConstructorReturn(this, (NewGameMenu.__proto__ || Object.getPrototypeOf(NewGameMenu)).call(this, app, parentMenu));
 
-        var canvas = app.canvas;
+        var canvas = app.canvas,
+            centerX = canvas.width / 2,
+            offsetY = 50;
 
         /**
          * @private
          * @member {MenuItem}
          */
         _this._newGameTitle = new _MenuItem2.default('New Game:');
-        _this._newGameTitle.setPosition(canvas.width / 2, canvas.height / 3);
+        _this._newGameTitle.setPosition(centerX, canvas.height / 3);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._createWorldButton = new _MenuItem2.default('Create World', _this._newGameTitle);
+        _this._createWorldButton = new _MenuItem2.default('Create World');
+        _this._createWorldButton.setPosition(centerX, _this._newGameTitle.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._createCharacterButton = new _MenuItem2.default('Create Character', _this._createWorldButton);
+        _this._createCharacterButton = new _MenuItem2.default('Create Character');
+        _this._createCharacterButton.setPosition(centerX, _this._createWorldButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._backButton = new _MenuItem2.default('Back', _this._createCharacterButton);
+        _this._backButton = new _MenuItem2.default('Back');
+        _this._backButton.setPosition(centerX, _this._createCharacterButton.bottom + offsetY);
 
         _this._addItems();
         _this._addPaths();
@@ -1753,27 +1761,35 @@ var NewGameMenu = function (_Menu) {
         return _this;
     }
 
+    /**
+     * @override
+     */
+
+
     _createClass(NewGameMenu, [{
+        key: 'destroy',
+        value: function destroy() {
+            _get(NewGameMenu.prototype.__proto__ || Object.getPrototypeOf(NewGameMenu.prototype), 'destroy', this).call(this);
+
+            this._newGameTitle = null;
+            this._createWorldButton = null;
+            this._createCharacterButton = null;
+            this._backButton = null;
+        }
+    }, {
         key: '_addItems',
         value: function _addItems() {
-            this.addChild(this._newGameTitle);
-            this.addChild(this._createWorldButton);
-            this.addChild(this._createCharacterButton);
-            this.addChild(this._backButton);
+            this.addChild(this._newGameTitle).addChild(this._createWorldButton).addChild(this._createCharacterButton).addChild(this._backButton);
         }
     }, {
         key: '_addPaths',
         value: function _addPaths() {
-            this.addPath(this._createWorldButton, this._createCharacterButton, 'down', 'up');
-            this.addPath(this._createCharacterButton, this._backButton, 'down', 'up');
-            this.addPath(this._backButton, this._createWorldButton, 'down', 'up');
+            this.addPath(this._createWorldButton, this._createCharacterButton, 'down', 'up').addPath(this._createCharacterButton, this._backButton, 'down', 'up').addPath(this._backButton, this._createWorldButton, 'down', 'up');
         }
     }, {
         key: '_addActions',
         value: function _addActions() {
-            this.addAction(this._createWorldButton, this._onSelectCreateWorld.bind(this), 'select');
-            this.addAction(this._createCharacterButton, this._onSelectCreateCharacter.bind(this), 'select');
-            this.addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
+            this.addAction(this._createWorldButton, this._onSelectCreateWorld.bind(this), 'select').addAction(this._createCharacterButton, this._onSelectCreateCharacter.bind(this), 'select').addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
         }
     }, {
         key: '_onSelectCreateWorld',
@@ -1785,16 +1801,6 @@ var NewGameMenu = function (_Menu) {
         value: function _onSelectCreateCharacter() {
             this._app.trigger('scene:change', new _GameScene2.default());
         }
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            _get(NewGameMenu.prototype.__proto__ || Object.getPrototypeOf(NewGameMenu.prototype), 'destroy', this).call(this);
-
-            this._newGameTitle = null;
-            this._createWorldButton = null;
-            this._createCharacterButton = null;
-            this._backButton = null;
-        }
     }]);
 
     return NewGameMenu;
@@ -1803,7 +1809,7 @@ var NewGameMenu = function (_Menu) {
 exports.default = NewGameMenu;
 
 /***/ }),
-/* 12 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1815,15 +1821,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _WorldMap = __webpack_require__(13);
+var _WorldMap = __webpack_require__(12);
 
 var _WorldMap2 = _interopRequireDefault(_WorldMap);
 
-var _Player = __webpack_require__(16);
+var _Player = __webpack_require__(15);
 
 var _Player2 = _interopRequireDefault(_Player);
 
-var _Tileset = __webpack_require__(17);
+var _Tileset = __webpack_require__(16);
 
 var _Tileset2 = _interopRequireDefault(_Tileset);
 
@@ -1875,7 +1881,8 @@ var GameScene = function (_Exo$Scene) {
              * @member {Player}
              */
             this._player = new _Player2.default(resources.get('texture', 'game/player'));
-            this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+            // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+            // this._player.setPosition(0, 0);
 
             /**
              * @private
@@ -1895,55 +1902,10 @@ var GameScene = function (_Exo$Scene) {
              */
             this._isPaused = false;
 
-            /**
-             * @private
-             * @member {Input[]}
-             */
-            this._inputs = [new Exo.Input([KEYBOARD.Escape, GAMEPAD.Start], {
-                context: this,
-                trigger: function trigger() {
-                    this._isPaused = !this._isPaused;
-
-                    if (this._isPaused) {
-                        // show pause menu
-                    } else {
-                            // hide pause menu
-                        }
-                }
-            }), new Exo.Input([KEYBOARD.Up, KEYBOARD.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(0, value * -1);
-                }
-            }), new Exo.Input([KEYBOARD.Down, KEYBOARD.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(0, value);
-                }
-            }), new Exo.Input([KEYBOARD.Left, KEYBOARD.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(value * -1, 0);
-                }
-            }), new Exo.Input([KEYBOARD.Right, KEYBOARD.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(value, 0);
-                }
-            }), new Exo.Input([KEYBOARD.Shift, GAMEPAD.ShoulderRightTop], {
-                context: this,
-                start: function start() {
-                    this._player.running = true;
-                },
-                stop: function stop() {
-                    this._player.running = false;
-                }
-            })];
-
-            app.inputManager.add(this._inputs);
             app.mediaManager.play(this._backgroundMusic, { loop: true });
 
-            this._updateCamera();
+            this._addInputs();
+            // this._updateCamera();
         }
 
         /**
@@ -1953,12 +1915,9 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'update',
         value: function update(delta) {
-            var displayManager = this.app.displayManager.begin();
-
-            this._worldMap.render(displayManager, this._camera);
-            this._player.render(displayManager);
-
-            displayManager.end();
+            this.app.displayManager.begin()
+            // .render(this._worldMap)
+            .render(this._player).end();
         }
 
         /**
@@ -1968,7 +1927,7 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'unload',
         value: function unload() {
-            this.app.inputManager.remove(this._inputs);
+            this._removeInputs();
 
             this._worldMap.destroy();
             this._worldMap = null;
@@ -1999,10 +1958,99 @@ var GameScene = function (_Exo$Scene) {
                 worldMap = this._worldMap;
 
             player.move(x, y);
-
             player.setPosition(clamp(player.x, 0, worldMap.pixelWidth), clamp(player.y, 0, worldMap.pixelHeight));
 
-            this._updateCamera();
+            // this._updateCamera();
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addInputs',
+        value: function _addInputs() {
+
+            this._toggleMenuInput = new Exo.Input([KEYBOARD.Escape, GAMEPAD.Start], {
+                context: this,
+                trigger: function trigger() {
+                    this._isPaused = !this._isPaused;
+
+                    if (this._isPaused) {
+                        // show pause menu
+                    } else {
+                            // hide pause menu
+                        }
+                }
+            });
+
+            this._moveUpInput = new Exo.Input([KEYBOARD.Up, KEYBOARD.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
+                context: this,
+                active: function active(value) {
+                    this._movePlayer(0, value * -1);
+                }
+            });
+
+            this._moveDownInput = new Exo.Input([KEYBOARD.Down, KEYBOARD.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
+                context: this,
+                active: function active(value) {
+                    this._movePlayer(0, value);
+                }
+            });
+
+            this._moveLeftInput = new Exo.Input([KEYBOARD.Left, KEYBOARD.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
+                context: this,
+                active: function active(value) {
+                    this._movePlayer(value * -1, 0);
+                }
+            });
+
+            this._moveRightInput = new Exo.Input([KEYBOARD.Right, KEYBOARD.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
+                context: this,
+                active: function active(value) {
+                    this._movePlayer(value, 0);
+                }
+            });
+
+            this._toggleRunInput = new Exo.Input([KEYBOARD.Shift, GAMEPAD.ShoulderRightTop], {
+                context: this,
+                start: function start() {
+                    this._player.running = true;
+                },
+                stop: function stop() {
+                    this._player.running = false;
+                }
+            });
+
+            this.app.inputManager.add([this._toggleMenuInput, this._moveUpInput, this._moveDownInput, this._moveLeftInput, this._moveRightInput, this._toggleRunInput]);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_removeInputs',
+        value: function _removeInputs() {
+            this.app.inputManager.remove([this._toggleMenuInput, this._moveUpInput, this._moveDownInput, this._moveLeftInput, this._moveRightInput, this._toggleRunInput]);
+
+            this._toggleMenuInput.destroy();
+            this._toggleMenuInput = null;
+
+            this._moveUpInput.destroy();
+            this._moveUpInput = null;
+
+            this._moveDownInput.destroy();
+            this._moveDownInput = null;
+
+            this._moveLeftInput.destroy();
+            this._moveLeftInput = null;
+
+            this._moveRightInput.destroy();
+            this._moveRightInput = null;
+
+            this._toggleRunInput.destroy();
+            this._toggleRunInput = null;
         }
 
         /**
@@ -2020,7 +2068,7 @@ var GameScene = function (_Exo$Scene) {
 
             camera.center.set(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight));
 
-            this.app.displayManager.setView(camera);
+            this.app.displayManager.view = camera;
         }
     }]);
 
@@ -2030,7 +2078,7 @@ var GameScene = function (_Exo$Scene) {
 exports.default = GameScene;
 
 /***/ }),
-/* 13 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2042,7 +2090,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _MapGenerator = __webpack_require__(14);
+var _MapGenerator = __webpack_require__(13);
 
 var _MapGenerator2 = _interopRequireDefault(_MapGenerator);
 
@@ -2124,21 +2172,23 @@ var WorldMap = function () {
     /**
      * @public
      * @param {DisplayManager} displayManager
-     * @param {View} camera
      */
-    value: function render(displayManager, camera) {
+    value: function render(displayManager) {
       var mapData = this._mapData,
           width = this._width,
           height = this._height,
           tile = this._tile,
           tileset = this._tileset,
           tileSize = this._tileSize,
+          camera = displayManager.view,
           tilesHorizontal = camera.width / tileSize + 2 | 0,
           tilesVertical = camera.height / tileSize + 2 | 0,
           startTileX = clamp(camera.left / tileSize, 0, width - tilesHorizontal) | 0,
           startTileY = clamp(camera.top / tileSize, 0, height - tilesVertical) | 0,
           startTileIndex = startTileY * width + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
+
+      displayManager.begin();
 
       for (var i = 0; i < tilesTotal; i++) {
         var x = i % tilesHorizontal | 0,
@@ -2150,8 +2200,10 @@ var WorldMap = function () {
         tile.x = (startTileX + x) * tileSize;
         tile.y = (startTileY + y) * tileSize;
 
-        tile.render(displayManager);
+        displayManager.render(tile);
       }
+
+      displayManager.end();
     }
   }, {
     key: 'pixelWidth',
@@ -2178,7 +2230,7 @@ var WorldMap = function () {
 exports.default = WorldMap;
 
 /***/ }),
-/* 14 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2190,7 +2242,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _PerlinNoiseGenerator = __webpack_require__(15);
+var _PerlinNoiseGenerator = __webpack_require__(14);
 
 var _PerlinNoiseGenerator2 = _interopRequireDefault(_PerlinNoiseGenerator);
 
@@ -2410,7 +2462,7 @@ var MapGenerator = function () {
 exports.default = MapGenerator;
 
 /***/ }),
-/* 15 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2547,7 +2599,7 @@ var PerlinNoiseGenerator = function () {
 exports.default = PerlinNoiseGenerator;
 
 /***/ }),
-/* 16 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2616,7 +2668,6 @@ var Player = function (_Exo$Sprite) {
         _this._frame = new Exo.Rectangle(0, 0, playerWidth, playerHeight);
 
         _this.setOrigin(0.5, 1);
-        _this.setPosition(640, 320);
         _this._setFaceDirection(FACE_DIRECTION.DOWN);
         return _this;
     }
@@ -2657,7 +2708,7 @@ var Player = function (_Exo$Sprite) {
     }, {
         key: "_setFaceDirection",
         value: function _setFaceDirection(direction) {
-            this.setTextureFrame(this._frame.position.set(direction * playerWidth, 0));
+            this.setTextureFrame(this._frame.set(direction * playerWidth, 0, playerWidth, playerHeight));
         }
     }]);
 
@@ -2667,7 +2718,7 @@ var Player = function (_Exo$Sprite) {
 exports.default = Player;
 
 /***/ }),
-/* 17 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2679,7 +2730,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _AutoTile = __webpack_require__(18);
+var _AutoTile = __webpack_require__(17);
 
 var _AutoTile2 = _interopRequireDefault(_AutoTile);
 
@@ -2797,8 +2848,9 @@ var Tileset = function () {
 
             tint = tint | 0;
             tile.tint.set(tint, tint, tint);
+
             if (block in this._tiles) {
-                tile.setTextureRect(this._tiles[block].tileRect, true);
+                tile.setTextureFrame(this._tiles[block].tileRect);
             }
         }
     }, {
@@ -2814,7 +2866,7 @@ var Tileset = function () {
 exports.default = Tileset;
 
 /***/ }),
-/* 18 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2951,7 +3003,7 @@ var AutoTile = function () {
 exports.default = AutoTile;
 
 /***/ }),
-/* 19 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2998,26 +3050,30 @@ var LoadGameMenu = function (_Menu) {
 
         var _this = _possibleConstructorReturn(this, (LoadGameMenu.__proto__ || Object.getPrototypeOf(LoadGameMenu)).call(this, app, parentMenu));
 
-        var canvas = app.canvas;
+        var canvas = app.canvas,
+            centerX = canvas.width / 2,
+            offsetY = 50;
 
         /**
          * @private
          * @member {MenuItem}
          */
         _this._LoadGameTitle = new _MenuItem2.default('Load Game:');
-        _this._LoadGameTitle.setPosition(canvas.width / 2, canvas.height / 3);
+        _this._LoadGameTitle.setPosition(centerX, canvas.height / 3);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._loadWorldButton = new _MenuItem2.default('Load World', _this._LoadGameTitle);
+        _this._loadWorldButton = new _MenuItem2.default('Load World');
+        _this._loadWorldButton.setPosition(centerX, _this._LoadGameTitle.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._backButton = new _MenuItem2.default('Back', _this._loadWorldButton);
+        _this._backButton = new _MenuItem2.default('Back');
+        _this._backButton.setPosition(centerX, _this._loadWorldButton.bottom + offsetY);
 
         _this._addItems();
         _this._addPaths();
@@ -3068,7 +3124,7 @@ var LoadGameMenu = function (_Menu) {
 exports.default = LoadGameMenu;
 
 /***/ }),
-/* 20 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3116,38 +3172,44 @@ var SettingsMenu = function (_Menu) {
         var _this = _possibleConstructorReturn(this, (SettingsMenu.__proto__ || Object.getPrototypeOf(SettingsMenu)).call(this, app, previousMenu));
 
         var canvas = app.canvas,
-            mediaManager = app.mediaManager;
+            mediaManager = app.mediaManager,
+            centerX = canvas.width / 2,
+            offsetY = 50;
 
         /**
          * @private
          * @member {MenuItem}
          */
         _this._settingsTitle = new _MenuItem2.default('Settings:');
-        _this._settingsTitle.setPosition(canvas.width / 2, canvas.height / 3);
+        _this._settingsTitle.setPosition(centerX, canvas.height / 3);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._masterVolumeButton = new _MenuItem2.default('Master Volume: ' + (mediaManager.masterVolume * 100 | 0) + '%', _this._settingsTitle);
+        _this._masterVolumeButton = new _MenuItem2.default('Master Volume: ' + (mediaManager.masterVolume * 100 | 0) + '%');
+        _this._masterVolumeButton.setPosition(centerX, _this._settingsTitle.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._musicVolumeButton = new _MenuItem2.default('Music Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%', _this._masterVolumeButton);
+        _this._musicVolumeButton = new _MenuItem2.default('Music Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%');
+        _this._musicVolumeButton.setPosition(centerX, _this._masterVolumeButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._soundsVolumeButton = new _MenuItem2.default('', _this._musicVolumeButton);new _MenuItem2.default('Sound Volume: ' + (mediaManager.soundVolume * 100 | 0) + '%', _this._musicVolumeButton);
+        _this._soundsVolumeButton = new _MenuItem2.default('Sound Volume: ' + (mediaManager.soundVolume * 100 | 0) + '%');
+        _this._soundsVolumeButton.setPosition(centerX, _this._musicVolumeButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        _this._backButton = new _MenuItem2.default('Back', _this._soundsVolumeButton);
+        _this._backButton = new _MenuItem2.default('Back');
+        _this._backButton.setPosition(centerX, _this._soundsVolumeButton.bottom + offsetY);
 
         /**
          * @private
@@ -3202,11 +3264,7 @@ var SettingsMenu = function (_Menu) {
     }, {
         key: '_addItems',
         value: function _addItems() {
-            this.addChild(this._settingsTitle);
-            this.addChild(this._masterVolumeButton);
-            this.addChild(this._musicVolumeButton);
-            this.addChild(this._soundsVolumeButton);
-            this.addChild(this._backButton);
+            return this.addChild(this._settingsTitle).addChild(this._masterVolumeButton).addChild(this._musicVolumeButton).addChild(this._soundsVolumeButton).addChild(this._backButton);
         }
 
         /**
@@ -3216,10 +3274,7 @@ var SettingsMenu = function (_Menu) {
     }, {
         key: '_addPaths',
         value: function _addPaths() {
-            this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up');
-            this.addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up');
-            this.addPath(this._soundsVolumeButton, this._backButton, 'down', 'up');
-            this.addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
+            return this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up').addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up').addPath(this._soundsVolumeButton, this._backButton, 'down', 'up').addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
         }
 
         /**
@@ -3229,13 +3284,7 @@ var SettingsMenu = function (_Menu) {
     }, {
         key: '_addActions',
         value: function _addActions() {
-            this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left');
-            this.addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right');
-            this.addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left');
-            this.addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right');
-            this.addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left');
-            this.addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right');
-            this.addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
+            return this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right').addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right').addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right').addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
         }
 
         /**

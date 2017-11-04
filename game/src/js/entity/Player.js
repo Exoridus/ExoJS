@@ -1,11 +1,10 @@
-const FACE_DIRECTION = {
+const playerSize = new Exo.Size(96, 96),
+    FACE_DIRECTION = {
         UP: 0,
         RIGHT: 1,
         DOWN: 2,
         LEFT: 3,
-    },
-    playerWidth = 96,
-    playerHeight = 96;
+    };
 
 /**
  * @class Player
@@ -42,10 +41,9 @@ export default class Player extends Exo.Sprite {
          * @private
          * @member {Rectangle}
          */
-        this._frame = new Exo.Rectangle(0, 0, playerWidth, playerHeight);
+        this._frame = new Exo.Rectangle(0, 0, playerSize.width, playerSize.height);
 
         this.setOrigin(0.5, 1);
-        this.setPosition(640, 320);
         this._setFaceDirection(FACE_DIRECTION.DOWN);
     }
 
@@ -78,6 +76,6 @@ export default class Player extends Exo.Sprite {
      * @param {Number} direction
      */
     _setFaceDirection(direction) {
-        this.setTextureFrame(this._frame.position.set(direction * playerWidth, 0));
+        this.setTextureFrame(this._frame.setPosition(direction * playerSize.width, 0));
     }
 }

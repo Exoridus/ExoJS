@@ -17,11 +17,10 @@ export default class TitleMenuManager extends MenuManager {
     constructor(app) {
         super(app);
 
-        this.addMenu('main', new MainMenu(app));
-        this.addMenu('newGame', new NewGameMenu(app, 'main'));
-        this.addMenu('loadGame', new LoadGameMenu(app, 'main'));
-        this.addMenu('settings', new SettingsMenu(app, 'main'));
-
-        this.openMenu('main');
+        this.addMenu('main', new MainMenu(app))
+            .addMenu('newGame', new NewGameMenu(app, 'main'))
+            .addMenu('loadGame', new LoadGameMenu(app, 'main'))
+            .addMenu('settings', new SettingsMenu(app, 'main'))
+            .openMenu('main');
     }
 }

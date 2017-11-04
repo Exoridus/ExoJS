@@ -16,47 +16,44 @@ export default class SettingsMenu extends Menu {
         super(app, previousMenu);
 
         const canvas = app.canvas,
-            mediaManager = app.mediaManager;
+            mediaManager = app.mediaManager,
+            centerX = canvas.width / 2,
+            offsetY = 50;
 
         /**
          * @private
          * @member {MenuItem}
          */
         this._settingsTitle = new MenuItem('Settings:');
-        this._settingsTitle.setPosition(canvas.width / 2, canvas.height / 3);
+        this._settingsTitle.setPosition(centerX, canvas.height / 3);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._masterVolumeButton = new MenuItem(
-            `Master Volume: ${(mediaManager.masterVolume * 100 | 0)}%`,
-            this._settingsTitle
-        );
+        this._masterVolumeButton = new MenuItem(`Master Volume: ${(mediaManager.masterVolume * 100 | 0)}%`);
+        this._masterVolumeButton.setPosition(centerX, this._settingsTitle.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._musicVolumeButton = new MenuItem(
-            `Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`,
-            this._masterVolumeButton
-        );
+        this._musicVolumeButton = new MenuItem(`Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`);
+        this._musicVolumeButton.setPosition(centerX, this._masterVolumeButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._soundsVolumeButton = new MenuItem('', this._musicVolumeButton);new MenuItem(
-            `Sound Volume: ${(mediaManager.soundVolume * 100 | 0)}%`,
-            this._musicVolumeButton,
-        );
+        this._soundsVolumeButton = new MenuItem(`Sound Volume: ${(mediaManager.soundVolume * 100 | 0)}%`);
+        this._soundsVolumeButton.setPosition(centerX, this._musicVolumeButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._backButton = new MenuItem('Back', this._soundsVolumeButton);
+        this._backButton = new MenuItem('Back');
+        this._backButton.setPosition(centerX, this._soundsVolumeButton.bottom + offsetY);
 
         /**
          * @private
@@ -103,34 +100,37 @@ export default class SettingsMenu extends Menu {
      * @private
      */
     _addItems() {
-        this.addChild(this._settingsTitle);
-        this.addChild(this._masterVolumeButton);
-        this.addChild(this._musicVolumeButton);
-        this.addChild(this._soundsVolumeButton);
-        this.addChild(this._backButton);
+        return this
+            .addChild(this._settingsTitle)
+            .addChild(this._masterVolumeButton)
+            .addChild(this._musicVolumeButton)
+            .addChild(this._soundsVolumeButton)
+            .addChild(this._backButton);
     }
 
     /**
      * @private
      */
     _addPaths() {
-        this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up');
-        this.addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up');
-        this.addPath(this._soundsVolumeButton, this._backButton, 'down', 'up');
-        this.addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
+        return this
+            .addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up')
+            .addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up')
+            .addPath(this._soundsVolumeButton, this._backButton, 'down', 'up')
+            .addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
     }
 
     /**
      * @private
      */
     _addActions() {
-        this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left');
-        this.addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right');
-        this.addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left');
-        this.addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right');
-        this.addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left');
-        this.addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right');
-        this.addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
+        return this
+            .addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left')
+            .addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right')
+            .addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left')
+            .addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right')
+            .addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left')
+            .addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right')
+            .addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
     }
 
     /**

@@ -66,15 +66,21 @@ export default class Menu extends Exo.Container {
 
     /**
      * @public
+     * @chainable
      * @param {MenuItem} child
+     * @returns {Menu}
      */
     setStartChild(child) {
         this._startChild = child;
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {MenuItem} child
+     * @returns {Menu}
      */
     setActiveChild(child) {
         if (this._activeChild) {
@@ -83,14 +89,18 @@ export default class Menu extends Exo.Container {
 
         this._activeChild = child;
         child.activate();
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {MenuItem} fromChild
      * @param {MenuItem} toChild
      * @param {String} fromToDirection
      * @param {String} [toFromDirection]
+     * @returns {Menu}
      */
     addPath(fromChild, toChild, fromToDirection, toFromDirection) {
         this._paths.push(new MenuPath(fromChild, toChild, fromToDirection));
@@ -98,73 +108,91 @@ export default class Menu extends Exo.Container {
         if (toFromDirection) {
             this._paths.push(new MenuPath(toChild, fromChild, toFromDirection));
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {MenuItem} child
      * @param {Function} action
      * @param {String} [input=select]
+     * @returns {Menu}
      */
     addAction(child, action, input) {
         this._actions.push(new MenuAction(child, action, input || 'select'));
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Menu}
      */
     activate() {
-        this.setActiveChild(this._startChild);
+        return this.setActiveChild(this._startChild);
     }
 
     /**
      * @public
+     * @chainable
      * @param {Time} delta
+     * @returns {Menu}
      */
     update(delta) {
         if (this._activeChild) {
             this._activeChild.update(delta);
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {Menu}
      */
     reset() {
         if (this._activeChild) {
             this._activeChild.reset();
             this._activeChild = null;
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {String} input
+     * @returns {Menu}
      */
     updateInput(input) {
-        if (!this._activeChild) {
-            return;
-        }
+        if (this._activeChild) {
+            for (let i = 0, len = this._paths.length; i < len; i++) {
+                const path = this._paths[i];
 
-        for (let i = 0, len = this._paths.length; i < len; i++) {
-            const path = this._paths[i];
+                if (path.fromItem === this._activeChild && path.input === input) {
+                    this.setActiveChild(path.toItem);
 
-            if (path.fromItem === this._activeChild && path.input === input) {
-                this.setActiveChild(path.toItem);
+                    break;
+                }
+            }
 
-                break;
+            for (let i = 0, len = this._actions.length; i < len; i++) {
+                const action = this._actions[i];
+
+                if (action.item === this._activeChild && action.input === input) {
+                    action.action(action);
+
+                    break;
+                }
             }
         }
 
-        for (let i = 0, len = this._actions.length; i < len; i++) {
-            const action = this._actions[i];
-
-            if (action.item === this._activeChild && action.input === input) {
-                action.action(action);
-
-                break;
-            }
-        }
+        return this;
     }
 
     /**
@@ -226,10 +254,9 @@ export default class Menu extends Exo.Container {
 
     /**
      * @public
-     * @param {Boolean} [destroyChildren=true]
      */
-    destroy(destroyChildren) {
-        super.destroy(destroyChildren !== false);
+    destroy() {
+        super.destroy();
 
         this._paths.forEach((path) => {
             path.destroy();

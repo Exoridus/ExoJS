@@ -124,6 +124,19 @@ export default class DisplayManager {
 
     /**
      * @public
+     * @member {View}
+     */
+    get view() {
+        return this._renderState;
+    }
+
+    set view(view) {
+        this._view.copy(view);
+        this.updateViewport();
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {String} name
      * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
@@ -171,33 +184,6 @@ export default class DisplayManager {
         );
 
         this._renderState.projection = this._view.getTransform();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {View} view
-     * @returns {DisplayManager}
-     */
-    setView(view) {
-        this._view.copy(view);
-
-        this.updateViewport();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {DisplayManager}
-     */
-    resetView() {
-        this._view.reset(Rectangle.Temp.set(0, 0, this._renderTarget.width, this._renderTarget.height));
-
-        this.updateViewport();
 
         return this;
     }

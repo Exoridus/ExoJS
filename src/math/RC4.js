@@ -11,6 +11,12 @@ export default class RC4 {
 
         /**
          * @private
+         * @member {Number[]}
+         */
+        this._keys = [];
+
+        /**
+         * @private
          * @member {Number}
          */
         this._i = 0;
@@ -20,12 +26,6 @@ export default class RC4 {
          * @member {Number}
          */
         this._j = 0;
-
-        /**
-         * @private
-         * @member {Number[]}
-         */
-        this._keys = [];
 
         this.setKeys(keys);
     }
@@ -91,5 +91,16 @@ export default class RC4 {
         this._j = j;
 
         return result;
+    }
+
+    /**
+     * @public
+     */
+    destroy() {
+        this._keys.length = 0;
+        this._keys = null;
+
+        this._i = null;
+        this._j = null;
     }
 }

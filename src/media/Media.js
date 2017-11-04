@@ -258,10 +258,6 @@ export default class Media extends EventEmitter {
      * @public
      * @chainable
      * @param {MediaOptions} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.speed]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
      * @returns {Media}
      */
     applyOptions({ loop, speed, volume, time } = {}) {

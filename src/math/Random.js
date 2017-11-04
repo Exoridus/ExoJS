@@ -90,6 +90,16 @@ export default class Random {
     }
 
     /**
+     * @public
+     */
+    destroy() {
+        this._seed = null;
+
+        this._rc4.destroy();
+        this._rc4 = null;
+    }
+
+    /**
      * @private
      * @static
      * @param {String} seed

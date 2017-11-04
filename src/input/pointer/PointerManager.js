@@ -139,53 +139,46 @@ export default class PointerManager extends ChannelManager {
     update() {
         if (this._flags) {
             if (hasFlag(FLAGS.ENTER, this._flags)) {
-                this._app.trigger('pointer:enter', this._pointersEntered, this._pointers);
+                this._triggerPointerEvents('enter', this._pointersEntered);
                 this._pointersEntered.clear();
-
                 this._flags = removeFlag(FLAGS.ENTER, this._flags);
             }
 
             if (hasFlag(FLAGS.LEAVE, this._flags)) {
-                this._app.trigger('pointer:leave', this._pointersLeft, this._pointers);
-
-                for (const pointer of this._pointersLeft) {
-                    pointer.destroy();
-                }
-
+                this._triggerPointerEvents('leave', this._pointersLeft);
                 this._pointersLeft.clear();
                 this._flags = removeFlag(FLAGS.LEAVE, this._flags);
             }
 
             if (hasFlag(FLAGS.MOVE, this._flags)) {
-                this._app.trigger('pointer:move', this._pointersMoved, this._pointers);
+                this._triggerPointerEvents('move', this._pointersMoved);
                 this._pointersMoved.clear();
-
                 this._flags = removeFlag(FLAGS.MOVE, this._flags);
             }
 
             if (hasFlag(FLAGS.DOWN, this._flags)) {
-                this._app.trigger('pointer:down', this._pointersDown, this._pointers);
+                this._triggerPointerEvents('down', this._pointersDown);
                 this._pointersDown.clear();
 
                 this._flags = removeFlag(FLAGS.DOWN, this._flags);
             }
 
             if (hasFlag(FLAGS.UP, this._flags)) {
-                this._app.trigger('pointer:up', this._pointersUp, this._pointers);
+                this._triggerPointerEvents('up', this._pointersUp);
                 this._pointersUp.clear();
 
                 this._flags = removeFlag(FLAGS.UP, this._flags);
             }
 
             if (hasFlag(FLAGS.CANCEL, this._flags)) {
-                this._app.trigger('pointer:cancel', this._pointersCancelled, this._pointers);
+                this._triggerPointerEvents('cancel', this._pointersCancelled);
                 this._pointersCancelled.clear();
 
                 this._flags = removeFlag(FLAGS.CANCEL, this._flags);
             }
 
             if (hasFlag(FLAGS.SCROLL, this._flags)) {
-                this._app.trigger('pointer:scroll', this._scrollDelta, this._pointers);
+                this._app.trigger('mouse:scroll', this._scrollDelta, this._pointers);
                 this._scrollDelta.set(0, 0);
 
                 this._flags = removeFlag(FLAGS.SCROLL, this._flags);
@@ -369,5 +362,24 @@ export default class PointerManager extends ChannelManager {
         return this._pointers
             .get(event.pointerId)
             .setEventData(event);
+    }
+
+    /**
+     * @private
+     * @param {String} event
+     * @param {Set<Pointer>} pointers
+     */
+    _triggerPointerEvents(event, pointers) {
+        for (const pointer of pointers) {
+            this._app.trigger(`pointer:${event}`, pointer, this._pointers);
+
+            if (pointer.type === 'mouse') {
+                this._app.trigger(`mouse:${event}`, pointer, this._pointers);
+            } else if (pointer.type === 'touch') {
+                this._app.trigger(`touch:${event}`, pointer, this._pointers);
+            } else if (pointer.type === 'pen') {
+                this._app.trigger(`pen:${event}`, pointer, this._pointers);
+            }
+        }
     }
 }

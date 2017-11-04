@@ -111,23 +111,6 @@ export default class Circle extends Shape {
     /**
      * @override
      */
-    getCollision(shape) {
-        switch (shape.type) {
-            case SHAPE.RECTANGLE:
-                return Collision.checkCircleRectangle(this, shape);
-            case SHAPE.CIRCLE:
-                return Collision.checkCircleCircle(this, shape);
-            case SHAPE.POLYGON:
-                return Collision.checkPolygonCircle(shape, this);
-            case SHAPE.NONE:
-            default:
-                throw new Error(`Invalid Shape Type "${shape.type}".`);
-        }
-    }
-
-    /**
-     * @override
-     */
     destroy() {
         super.destroy();
 

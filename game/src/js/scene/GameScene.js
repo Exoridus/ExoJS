@@ -30,7 +30,8 @@ export default class GameScene extends Exo.Scene {
          * @member {Player}
          */
         this._player = new Player(resources.get('texture', 'game/player'));
-        this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+        // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+        // this._player.setPosition(0, 0);
 
         /**
          * @private
@@ -50,108 +51,28 @@ export default class GameScene extends Exo.Scene {
          */
         this._isPaused = false;
 
-        /**
-         * @private
-         * @member {Input[]}
-         */
-        this._inputs = [
-            new Exo.Input([
-                KEYBOARD.Escape,
-                GAMEPAD.Start,
-            ], {
-                context: this,
-                trigger() {
-                    this._isPaused = !this._isPaused;
-
-                    if (this._isPaused) {
-                        // show pause menu
-                    } else {
-                        // hide pause menu
-                    }
-                },
-            }),
-            new Exo.Input([
-                KEYBOARD.Up,
-                KEYBOARD.W,
-                GAMEPAD.LeftStickUp,
-                GAMEPAD.DPadUp,
-            ], {
-                context: this,
-                active(value) {
-                    this._movePlayer(0, value * -1);
-                },
-            }),
-            new Exo.Input([
-                KEYBOARD.Down,
-                KEYBOARD.S,
-                GAMEPAD.LeftStickDown,
-                GAMEPAD.DPadDown,
-            ], {
-                context: this,
-                active(value) {
-                    this._movePlayer(0, value);
-                },
-            }),
-            new Exo.Input([
-                KEYBOARD.Left,
-                KEYBOARD.A,
-                GAMEPAD.LeftStickLeft,
-                GAMEPAD.DPadLeft,
-            ], {
-                context: this,
-                active(value) {
-                    this._movePlayer(value * -1, 0);
-                },
-            }),
-            new Exo.Input([
-                KEYBOARD.Right,
-                KEYBOARD.D,
-                GAMEPAD.LeftStickRight,
-                GAMEPAD.DPadRight,
-            ], {
-                context: this,
-                active(value) {
-                    this._movePlayer(value, 0);
-                },
-            }),
-            new Exo.Input([
-                KEYBOARD.Shift,
-                GAMEPAD.ShoulderRightTop,
-            ], {
-                context: this,
-                start() {
-                    this._player.running = true;
-                },
-                stop() {
-                    this._player.running = false;
-                },
-            }),
-        ];
-
-        app.inputManager.add(this._inputs);
         app.mediaManager.play(this._backgroundMusic, { loop: true });
 
-        this._updateCamera();
+        this._addInputs();
+        // this._updateCamera();
     }
 
     /**
      * @override
      */
     update(delta) {
-        const displayManager = this.app.displayManager;
-
-        this._worldMap.render(displayManager, this._camera);
-
-        displayManager.begin();
-        displayManager.render(this._player);
-        displayManager.end();
+        this.app.displayManager
+            .begin()
+            // .render(this._worldMap)
+            .render(this._player)
+            .end();
     }
 
     /**
      * @override
      */
     unload() {
-        this.app.inputManager.remove(this._inputs);
+        this._removeInputs();
 
         this._worldMap.destroy();
         this._worldMap = null;
@@ -179,13 +100,136 @@ export default class GameScene extends Exo.Scene {
             worldMap = this._worldMap;
 
         player.move(x, y);
-
         player.setPosition(
             clamp(player.x, 0, worldMap.pixelWidth),
             clamp(player.y, 0, worldMap.pixelHeight),
         );
 
-        this._updateCamera();
+        // this._updateCamera();
+    }
+
+    /**
+     * @private
+     */
+    _addInputs() {
+
+        this._toggleMenuInput = new Exo.Input([
+            KEYBOARD.Escape,
+            GAMEPAD.Start,
+        ], {
+            context: this,
+            trigger() {
+                this._isPaused = !this._isPaused;
+
+                if (this._isPaused) {
+                    // show pause menu
+                } else {
+                    // hide pause menu
+                }
+            },
+        });
+
+        this._moveUpInput = new Exo.Input([
+            KEYBOARD.Up,
+            KEYBOARD.W,
+            GAMEPAD.LeftStickUp,
+            GAMEPAD.DPadUp,
+        ], {
+            context: this,
+            active(value) {
+                this._movePlayer(0, value * -1);
+            },
+        });
+
+        this._moveDownInput = new Exo.Input([
+            KEYBOARD.Down,
+            KEYBOARD.S,
+            GAMEPAD.LeftStickDown,
+            GAMEPAD.DPadDown,
+        ], {
+            context: this,
+            active(value) {
+                this._movePlayer(0, value);
+            },
+        });
+
+        this._moveLeftInput = new Exo.Input([
+            KEYBOARD.Left,
+            KEYBOARD.A,
+            GAMEPAD.LeftStickLeft,
+            GAMEPAD.DPadLeft,
+        ], {
+            context: this,
+            active(value) {
+                this._movePlayer(value * -1, 0);
+            },
+        });
+
+        this._moveRightInput = new Exo.Input([
+            KEYBOARD.Right,
+            KEYBOARD.D,
+            GAMEPAD.LeftStickRight,
+            GAMEPAD.DPadRight,
+        ], {
+            context: this,
+            active(value) {
+                this._movePlayer(value, 0);
+            },
+        });
+
+        this._toggleRunInput = new Exo.Input([
+            KEYBOARD.Shift,
+            GAMEPAD.ShoulderRightTop,
+        ], {
+            context: this,
+            start() {
+                this._player.running = true;
+            },
+            stop() {
+                this._player.running = false;
+            },
+        });
+
+        this.app.inputManager.add([
+            this._toggleMenuInput,
+            this._moveUpInput,
+            this._moveDownInput,
+            this._moveLeftInput,
+            this._moveRightInput,
+            this._toggleRunInput,
+        ]);
+    }
+
+    /**
+     * @private
+     */
+    _removeInputs() {
+        this.app.inputManager.remove([
+            this._toggleMenuInput,
+            this._moveUpInput,
+            this._moveDownInput,
+            this._moveLeftInput,
+            this._moveRightInput,
+            this._toggleRunInput,
+        ]);
+
+        this._toggleMenuInput.destroy();
+        this._toggleMenuInput = null;
+
+        this._moveUpInput.destroy();
+        this._moveUpInput = null;
+
+        this._moveDownInput.destroy();
+        this._moveDownInput = null;
+
+        this._moveLeftInput.destroy();
+        this._moveLeftInput = null;
+
+        this._moveRightInput.destroy();
+        this._moveRightInput = null;
+
+        this._toggleRunInput.destroy();
+        this._toggleRunInput = null;
     }
 
     /**
@@ -203,6 +247,6 @@ export default class GameScene extends Exo.Scene {
             clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight),
         );
 
-        this.app.displayManager.setView(camera);
+        this.app.displayManager.view = camera;
     }
 }

@@ -57,4 +57,17 @@ window.app.start(new Exo.Scene({
             .render(this._video)
             .end();
     },
+
+    /**
+     * @override
+     */
+    destroy() {
+        this.app.inputManager.remove(this._input);
+
+        this._video.destroy();
+        this._video = null;
+
+        this._input.destroy();
+        this._input = null;
+    },
 }));

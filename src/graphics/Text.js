@@ -2,6 +2,7 @@ import { NEWLINE } from '../const';
 import Sprite from './sprite/Sprite';
 import Texture from './Texture';
 import TextStyle from './TextStyle';
+import Rectangle from '../math/Rectangle';
 
 const heightCache = new Map();
 
@@ -15,9 +16,9 @@ export default class Text extends Sprite {
      * @constructor
      * @param {String} text
      * @param {TextStyle|Object} [style]
-     * @param {HTMLCanvasElement} [canvas]
+     * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]
      */
-    constructor(text, style, canvas) {
+    constructor(text, style, canvas = document.createElement('canvas')) {
         super(new Texture(canvas));
 
         /**
@@ -36,7 +37,7 @@ export default class Text extends Sprite {
          * @private
          * @member {HTMLCanvasElement}
          */
-        this._canvas = canvas || document.createElement('canvas');
+        this._canvas = canvas;
 
         /**
          * @private
@@ -131,7 +132,7 @@ export default class Text extends Sprite {
             this._context = canvas.getContext('2d');
             this._dirty = true;
 
-            this._updateBounds();
+            this.setTextureFrame(Rectangle.Temp.set(0, 0, canvas.width, canvas.height));
         }
 
         return this;
@@ -141,7 +142,7 @@ export default class Text extends Sprite {
      * @override
      */
     updateTexture() {
-        if (this._dirty || this._style.dirty) {
+        if (this._style && (this._dirty || this._style.dirty)) {
             const canvas = this._canvas,
                 context = this._context,
                 style = this._style.apply(context),
@@ -157,7 +158,7 @@ export default class Text extends Sprite {
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
-                this._updateBounds();
+                this.setTextureFrame(Rectangle.Temp.set(0, 0, canvasWidth, canvasHeight));
             } else {
                 context.clearRect(0, 0, canvasWidth, canvasHeight);
             }
@@ -256,21 +257,6 @@ export default class Text extends Sprite {
         this._canvas = null;
         this._context = null;
         this._dirty = null;
-    }
-
-    /**
-     * @private
-     * @chainable
-     * @returns {Text}
-     */
-    _updateBounds() {
-        const canvas = this._canvas;
-
-        this.localBounds.set(0, 0, canvas.width, canvas.height);
-        this.setTextureFrame(this.localBounds);
-        this.scale.set(1, 1);
-
-        return this;
     }
 
     /**

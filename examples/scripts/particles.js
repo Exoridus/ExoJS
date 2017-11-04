@@ -19,9 +19,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas,
-            texture = resources.get('texture', 'particle'),
-            center = new Exo.Vector(texture.width / 2, texture.height / 2);
+        const canvas = this.app.canvas;
 
         /**
          * @private
@@ -31,28 +29,45 @@ window.app.start(new Exo.Scene({
 
         /**
          * @private
+         * @member {Texture}
+         */
+        this._texture = resources.get('texture', 'particle');
+
+        /**
+         * @private
          * @member {ParticleEmitter}
          */
-        this._emitter = new Exo.ParticleEmitter(texture, {
-            totalLifetime: new Exo.Time(5, Exo.TIME.SECONDS),
-            position: new Exo.Vector((canvas.width / 2) - center.x, (canvas.height / 2) - center.y)
+        this._emitter = new Exo.ParticleEmitter(this._texture, {
+            totalLifetime: new Exo.Time(5, Exo.TIME.SECONDS)
         });
 
         this._emitter.addModifier(new Exo.TorqueModifier(100));
         this._emitter.addModifier(new Exo.ForceModifier(new Exo.Vector(0, 100)));
         this._emitter.setEmissionRate(30);
 
-        this.app.on('mouse:move', (delta, mouse) => {
-            this._emitter.particleOptions.position.set(mouse.x - center.x, mouse.y - center.y);
+        this.app.on('mouse:move', (mouse) => {
+            this.setParticleCenter(mouse.x, mouse.y);
         });
+
+        this.setParticleCenter(canvas.width / 2, canvas.height / 2);
+    },
+
+    /**
+     * @private
+     * @param {Number} x
+     * @param {Number} y
+     */
+    setParticleCenter(x, y) {
+        const options = this._emitter.particleOptions;
+
+        options.position.set(x - (this._texture.width / 2), y - (this._texture.height / 2));
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        const displayManager = this.app.displayManager,
-            options = this._emitter.particleOptions,
+        const options = this._emitter.particleOptions,
             random = this._random;
 
         options.color.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
@@ -60,8 +75,23 @@ window.app.start(new Exo.Scene({
 
         this._emitter.update(delta);
 
-        displayManager.begin();
-        displayManager.render(this._emitter);
-        displayManager.end();
+        this.app.displayManager
+            .begin()
+            .render(this._emitter)
+            .end();
+    },
+
+    /**
+     * @override
+     */
+    destroy() {
+        this._random.destroy();
+        this._random = null;
+
+        this._texture.destroy();
+        this._texture = null;
+
+        this._emitter.destroy();
+        this._emitter = null;
     },
 }));

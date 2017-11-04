@@ -214,11 +214,7 @@ export default class Video extends Sprite {
     /**
      * @public
      * @chainable
-     * @param {Object} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.speed]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
+     * @param {MediaOptions} [options]
      * @returns {Video}
      */
     play(options) {
@@ -275,11 +271,7 @@ export default class Video extends Sprite {
     /**
      * @public
      * @chainable
-     * @param {Object} [options]
-     * @param {Boolean} [options.loop]
-     * @param {Number} [options.speed]
-     * @param {Number} [options.volume]
-     * @param {Number} [options.time]
+     * @param {MediaOptions} [options]
      * @returns {Video}
      */
     applyOptions({ loop, speed, volume, time } = {}) {

@@ -15,26 +15,30 @@ export default class LoadGameMenu extends Menu {
     constructor(app, parentMenu) {
         super(app, parentMenu);
 
-        const canvas = app.canvas;
+        const canvas = app.canvas,
+            centerX = canvas.width / 2,
+            offsetY = 50;
 
         /**
          * @private
          * @member {MenuItem}
          */
         this._LoadGameTitle = new MenuItem('Load Game:');
-        this._LoadGameTitle.setPosition(canvas.width / 2, canvas.height / 3);
+        this._LoadGameTitle.setPosition(centerX, canvas.height / 3);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._loadWorldButton = new MenuItem('Load World', this._LoadGameTitle);
+        this._loadWorldButton = new MenuItem('Load World');
+        this._loadWorldButton.setPosition(centerX, this._LoadGameTitle.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._backButton = new MenuItem('Back', this._loadWorldButton);
+        this._backButton = new MenuItem('Back');
+        this._backButton.setPosition(centerX, this._loadWorldButton.bottom + offsetY);
 
         this._addItems();
         this._addPaths();

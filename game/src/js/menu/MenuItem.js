@@ -7,16 +7,16 @@ export default class MenuItem extends Exo.Text {
     /**
      * @constructor
      * @param {String} text
-     * @param {MenuItem} [previousItem]
+     * @param {Object} [style]
      */
-    constructor(text, previousItem) {
-        super(text, {
-            fill: 'white',
-            fontSize: 45,
-            fontFamily: 'AndyBold',
-            stroke: 'black',
-            strokeThickness: 5,
-        });
+    constructor(text, {
+        fill = 'white',
+        fontSize = 45,
+        fontFamily = 'AndyBold',
+        stroke = 'black',
+        strokeThickness = 5,
+    } = {}) {
+        super(text, { fill, fontSize, fontFamily, stroke, strokeThickness });
 
         /**
          * @private
@@ -37,10 +37,6 @@ export default class MenuItem extends Exo.Text {
         this._scalingSpeed = 2;
 
         this.setOrigin(0.5, 0.5);
-
-        if (previousItem) {
-            this.setPosition(previousItem.x, previousItem.bottom + (this.height * this._scalingFactor / 2));
-        }
     }
 
     /**

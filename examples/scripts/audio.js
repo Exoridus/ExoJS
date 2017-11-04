@@ -153,4 +153,30 @@ window.app.start(new Exo.Scene({
 
         context.stroke();
     },
+
+    /**
+     * @override
+     */
+    destroy() {
+        this.app.inputManager.remove(this._input);
+
+        this._music.destroy();
+        this._music = null;
+
+        this._analyser.destroy();
+        this._analyser = null;
+
+        this._color.destroy();
+        this._color = null;
+
+        this._time.destroy();
+        this._time = null;
+
+        this._input.destroy();
+        this._input = null;
+
+        this._gradient = null;
+        this._context = null;
+        this._canvas = null;
+    },
 }));

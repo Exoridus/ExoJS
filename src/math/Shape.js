@@ -135,15 +135,6 @@ export default class Shape {
 
     /**
      * @public
-     * @param {Rectangle|Circle|Polygon} shape
-     * @returns {?Collision}
-     */
-    getCollision(shape) {
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
      * @abstract
      */
     destroy() {

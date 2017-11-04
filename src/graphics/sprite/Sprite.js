@@ -1,6 +1,5 @@
 import Container from '../Container';
 import Rectangle from '../../math/Rectangle';
-import Vector from '../../math/Vector';
 
 /**
  * @class Sprite
@@ -135,6 +134,9 @@ export default class Sprite extends Container {
      */
     setTextureFrame(frame) {
         this._textureFrame.copy(frame);
+        this.localBounds.set(0, 0, frame.width, frame.height);
+        this.scale.set(1, 1);
+
         this._updateTexCoords = true;
 
         return this;
@@ -236,9 +238,7 @@ export default class Sprite extends Container {
     updateTexture() {
         if (this._texture) {
             this._texture.updateSource();
-            this.localBounds.set(0, 0, this._texture.width, this._texture.height);
             this.setTextureFrame(this._texture.sourceFrame);
-            this.scale.set(1, 1);
         }
 
         return this;

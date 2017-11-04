@@ -12,9 +12,9 @@ export default class Timer extends Clock {
      * @constructor
      * @param {Boolean} autoStart
      * @param {Number} timeLimit
-     * @param {Number} factor
+     * @param {Number} [factor=TIME.MILLISECONDS]
      */
-    constructor(autoStart, timeLimit, factor) {
+    constructor(autoStart, timeLimit, factor = TIME.MILLISECONDS) {
         super(false);
 
         /**
@@ -29,9 +29,7 @@ export default class Timer extends Clock {
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Boolean}
+     * @override
      */
     get isRunning() {
         return this._isRunning && !this.isExpired;
@@ -43,7 +41,43 @@ export default class Timer extends Clock {
      * @member {Boolean}
      */
     get isExpired() {
-        return this.getElapsedMilliseconds() >= this._limit;
+        return this.elapsedMilliseconds >= this._limit;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get remainingMilliseconds() {
+        return Math.max(0, this._limit - this.elapsedMilliseconds);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get remainingSeconds() {
+        return this.remainingMilliseconds / TIME.SECONDS;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get remainingMinutes() {
+        return this.remainingMilliseconds / TIME.MINUTES;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get remainingHours() {
+        return this.remainingMilliseconds / TIME.HOURS;
     }
 
     /**
@@ -73,37 +107,5 @@ export default class Timer extends Clock {
         this.start();
 
         return this;
-    }
-
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getRemainingMilliseconds() {
-        return Math.max(0, this._limit - this.getElapsedMilliseconds());
-    }
-
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getRemainingSeconds() {
-        return this.getRemainingMilliseconds() / TIME.SECONDS;
-    }
-
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getRemainingMinutes() {
-        return this.getRemainingMilliseconds() / TIME.MINUTES;
-    }
-
-    /**
-     * @public
-     * @returns {Time}
-     */
-    getRemainingTime() {
-        return this.time.setMilliseconds(this.getRemainingMilliseconds());
     }
 }

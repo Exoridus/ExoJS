@@ -177,23 +177,6 @@ export default class Polygon extends Shape {
     /**
      * @override
      */
-    getCollision(shape) {
-        switch (shape.type) {
-            case SHAPE.RECTANGLE:
-                return Collision.checkPolygonRectangle(this, shape);
-            case SHAPE.CIRCLE:
-                return Collision.checkPolygonCircle(this, shape);
-            case SHAPE.POLYGON:
-                return Collision.checkPolygonPolygon(this, shape);
-            case SHAPE.NONE:
-            default:
-                throw new Error(`Invalid Shape Type "${shape.type}".`);
-        }
-    }
-
-    /**
-     * @override
-     */
     destroy() {
         super.destroy();
 

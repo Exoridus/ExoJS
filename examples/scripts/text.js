@@ -12,7 +12,6 @@ window.app.start(new Exo.Scene({
      */
     load(loader) {
         loader.addItem('font', 'example', 'font/AndyBold/AndyBold.woff2', { family: 'AndyBold' })
-            .addItem('texture', 'rainbow', 'image/rainbow.png')
             .load(() => this.app.trigger('scene:start'));
     },
 
@@ -57,5 +56,16 @@ window.app.start(new Exo.Scene({
             .begin()
             .render(this._text)
             .end();
-    }
+    },
+
+    /**
+     * @override
+     */
+    destroy() {
+        this._ticker.destroy();
+        this._ticker = null;
+
+        this._text.destroy();
+        this._text = null;
+    },
 }));

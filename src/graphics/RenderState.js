@@ -13,10 +13,10 @@ export default class RenderState {
 
     /**
      * @constructor
-     * @param {WebGLRenderingContext} gl
+     * @param {WebGLRenderingContext} context
      */
-    constructor(gl) {
-        if (!gl) {
+    constructor(context) {
+        if (!context) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
@@ -24,7 +24,7 @@ export default class RenderState {
          * @private
          * @member {WebGLRenderingContext}
          */
-        this._context = gl;
+        this._context = context;
 
         /**
          * @private
@@ -40,21 +40,15 @@ export default class RenderState {
 
         /**
          * @private
-         * @member {Object}
-         */
-        this._blendMode = settings.BLEND_MODE;
-
-        /**
-         * @private
          * @member {Color}
          */
         this._clearColor = new Color();
 
         /**
          * @private
-         * @member {?WebGLFramebuffer}
+         * @member {Object}
          */
-        this._glFramebuffer = null;
+        this._blendMode = settings.BLEND_MODE;
 
         /**
          * @private
@@ -64,9 +58,15 @@ export default class RenderState {
 
         /**
          * @private
-         * @member {Number}
+         * @member {WeakMap<Texture, GLTexture>}
          */
-        this._textureUnit = -1;
+        this._glTextures = new WeakMap();
+
+        /**
+         * @private
+         * @member {?WebGLFramebuffer}
+         */
+        this._glFramebuffer = null;
 
         /**
          * @private
@@ -76,9 +76,9 @@ export default class RenderState {
 
         /**
          * @private
-         * @member {WeakMap<Texture, GLTexture>}
+         * @member {Number}
          */
-        this._glTextures = new WeakMap();
+        this._textureUnit = -1;
 
         /**
          * @private
@@ -92,12 +92,7 @@ export default class RenderState {
          */
         this._projection = new Matrix();
 
-        gl.enable(gl.BLEND);
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
-
-        gl.colorMask(true, true, true, false);
-        gl.blendFunc(this._blendMode.src, this._blendMode.dst);
+        this._setupContext(context);
     }
 
     /**
@@ -110,7 +105,7 @@ export default class RenderState {
 
     set blendMode(blendMode) {
         if (blendMode && blendMode !== this._blendMode) {
-            this._context.blendFunc(blendMode.src, blendMode.dst);
+            this._context.blendFunc(blendMode.sFactor, blendMode.dFactor);
             this._blendMode = blendMode;
         }
     }
@@ -735,5 +730,20 @@ export default class RenderState {
         this._blendMode = null;
         this._shader = null;
         this._renderer = null;
+    }
+
+    /**
+     * @public
+     * @param {WebGLRenderingContext}
+     */
+    _setupContext(gl) {
+        const blendMode = this._blendMode;
+
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+
+        gl.colorMask(true, true, true, false);
+        gl.blendFunc(blendMode.sFactor, blendMode.dFactor);
     }
 }

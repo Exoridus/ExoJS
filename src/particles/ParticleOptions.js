@@ -173,8 +173,6 @@ export default class ParticleOptions {
      * @override
      */
     destroy() {
-        super.destroy();
-
         this._elapsedLifetime.destroy();
         this._elapsedLifetime = null;
 

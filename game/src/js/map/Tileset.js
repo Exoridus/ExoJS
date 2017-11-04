@@ -107,8 +107,9 @@ export default class Tileset {
 
         tint = tint | 0;
         tile.tint.set(tint, tint, tint);
+
         if (block in this._tiles) {
-            tile.setTextureRect(this._tiles[block].tileRect, true);
+            tile.setTextureFrame(this._tiles[block].tileRect);
         }
     }
 }

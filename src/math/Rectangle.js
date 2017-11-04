@@ -169,7 +169,6 @@ export default class Rectangle extends Shape {
 
     /**
      * @override
-     * @param {Rectangle}
      */
     copy(rectangle) {
         this.position.copy(rectangle.position);
@@ -232,20 +231,29 @@ export default class Rectangle extends Shape {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {Rectangle}
      */
-    getCollision(shape) {
-        switch (shape.type) {
-            case SHAPE.RECTANGLE:
-                return Collision.checkRectangleRectangle(this, shape);
-            case SHAPE.CIRCLE:
-                return Collision.checkCircleRectangle(shape, this);
-            case SHAPE.POLYGON:
-                return Collision.checkPolygonRectangle(shape, this);
-            case SHAPE.NONE:
-            default:
-                throw new Error(`Invalid Shape Type "${shape.type}".`);
-        }
+    setPosition(x, y) {
+        this.position.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {Rectangle}
+     */
+    setSize(width, height) {
+        this._size.set(width, height);
+
+        return this;
     }
 
     /**

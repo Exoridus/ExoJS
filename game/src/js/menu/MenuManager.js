@@ -125,41 +125,47 @@ export default class MenuManager {
 
     /**
      * @public
+     * @chainable
      * @param {String} startMenu
+     * @returns {MenuManager}
      */
     enable(startMenu) {
-        if (this._active) {
-            return;
+        if (!this._active) {
+            this._active = true;
+            this._app.inputManager.add(this._inputs);
+
+            this.openMenu(startMenu);
         }
 
-        this._active = true;
-        this._app.inputManager.add(this._inputs);
-
-        this.openMenu(startMenu);
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {MenuManager}
      */
     disable() {
-        if (!this._active) {
-            return;
+        if (this._active) {
+            this._active = false;
+            this._app.inputManager.remove(this._inputs);
+
+            if (this._currentMenu) {
+                this._currentMenu.reset();
+                this._currentMenu = null;
+            }
         }
 
-        this._active = false;
-        this._app.inputManager.remove(this._inputs);
-
-        if (this._currentMenu) {
-            this._currentMenu.reset();
-            this._currentMenu = null;
-        }
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {String} name
      * @param {Menu} menu
      * @param {String} [previousMenu=null]
+     * @returns {MenuManager}
      */
     addMenu(name, menu, previousMenu) {
         if (previousMenu) {
@@ -170,11 +176,15 @@ export default class MenuManager {
 
         menu.on('openMenu', this.openMenu, this);
         menu.on('openPreviousMenu', this.openPreviousMenu, this);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {String} name
+     * @returns {MenuManager}
      */
     openMenu(name) {
         if (this._currentMenu) {
@@ -186,10 +196,14 @@ export default class MenuManager {
         if (this._currentMenu) {
             this._currentMenu.activate();
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {MenuManager}
      */
     openPreviousMenu() {
         const currentMenu = this._currentMenu;
@@ -197,31 +211,40 @@ export default class MenuManager {
         if (currentMenu && currentMenu.previousMenu) {
             this.openMenu(currentMenu.previousMenu);
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Time} delta
+     * @returns {MenuManager}
      */
     update(delta) {
         if (this._currentMenu) {
             this._currentMenu.update(delta);
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {DisplayManager} displayManager
+     * @returns {MenuManager}
      */
     render(displayManager) {
         if (this._currentMenu) {
             displayManager.render(this._currentMenu);
         }
+
+        return this;
     }
 
     /**
      * @public
-     * @param {Boolean} [destroyChildren=false]
      */
     destroy() {
         if (this._active) {

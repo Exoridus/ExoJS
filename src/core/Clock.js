@@ -61,6 +61,55 @@ export default class Clock {
 
     /**
      * @public
+     * @readonly
+     * @member {Number}
+     */
+    get elapsedTime() {
+        return this._time.setMilliseconds(this.elapsedMilliseconds);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get elapsedMilliseconds() {
+        if (!this._isRunning) {
+            return this._timeBuffer;
+        }
+
+        return this._timeBuffer + (Date.now() - this._startTime);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get elapsedSeconds() {
+        return this.elapsedMilliseconds / TIME.SECONDS;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get elapsedMinutes() {
+        return this.elapsedMilliseconds / TIME.MINUTES;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get elapsedHours() {
+        return this.elapsedMilliseconds / TIME.HOURS;
+    }
+
+    /**
+     * @public
      * @chainable
      * @returns {Clock}
      */
@@ -105,44 +154,10 @@ export default class Clock {
      * @returns {Clock}
      */
     restart() {
-        return this.reset()
-            .start();
-    }
+        this.reset();
+        this.start();
 
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getElapsedMilliseconds() {
-        if (!this._isRunning) {
-            return this._timeBuffer;
-        }
-
-        return this._timeBuffer + (Date.now() - this._startTime);
-    }
-
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getElapsedSeconds() {
-        return this.getElapsedMilliseconds() / TIME.SECONDS;
-    }
-
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getElapsedMinutes() {
-        return this.getElapsedMilliseconds() / TIME.MINUTES;
-    }
-
-    /**
-     * @public
-     * @returns {Time}
-     */
-    getElapsedTime() {
-        return this._time.setMilliseconds(this.getElapsedMilliseconds());
+        return this;
     }
 
     /**

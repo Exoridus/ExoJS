@@ -41,4 +41,12 @@ window.app.start(new Exo.Scene({
             .render(this._bunny)
             .end();
     },
+
+    /**
+     * @override
+     */
+    destroy() {
+        this._bunny.destroy();
+        this._bunny = null;
+    },
 }));

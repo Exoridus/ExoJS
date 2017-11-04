@@ -61,8 +61,7 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const displayManager = this.app.displayManager,
-            bounds = this._bunnies.getGlobalBounds();
+        const bounds = this._bunnies.getBounds();
 
         this._rainbow.x = bounds.x;
         this._rainbow.y = bounds.y;
@@ -71,10 +70,31 @@ window.app.start(new Exo.Scene({
 
         this._bunnies.rotate(delta.seconds * 36);
 
-        displayManager.begin();
-        displayManager.render(this._rainbow);
-        displayManager.render(this._bunnies);
-        displayManager.end();
+        this.app.displayManager
+            .begin()
+            .render(this._rainbow)
+            .render(this._bunnies)
+            .end();
+    },
 
+    /**
+     * @override
+     */
+    destroy() {
+        for (const bunny of this._bunnies.children) {
+            bunny.destroy();
+        }
+
+        this._bunnyTexture.destroy();
+        this._bunnyTexture = null;
+
+        this._rainbowTexture.destroy();
+        this._rainbowTexture = null;
+
+        this._rainbow.destroy();
+        this._rainbow = null;
+
+        this._bunnies.destroy();
+        this._bunnies = null;
     },
 }));

@@ -38,14 +38,13 @@ export default class TitleScene extends Exo.Scene {
      * @override
      */
     update(delta) {
-        const displayManager = this.app.displayManager;
-
         this._menuManager.update(delta);
 
-        displayManager.begin();
-        displayManager.render(this._titleBackground);
-        displayManager.render(this._menuManager);
-        displayManager.end();
+        this.app.displayManager
+            .begin()
+            .render(this._titleBackground)
+            .render(this._menuManager)
+            .end();
     }
 
     /**
