@@ -27,6 +27,7 @@ window.app.start(new Exo.Scene({
          * @member {Video}
          */
         this._video = resources.get('video', 'example');
+        this._video.connect(app.mediaManager);
         this._video.width = canvas.width;
         this._video.height = canvas.height;
 
@@ -45,7 +46,8 @@ window.app.start(new Exo.Scene({
         });
 
         app.inputManager.add(this._input);
-        app.mediaManager.play(this._video, { loop: true });
+
+        this._video.play({ loop: true });
     },
 
     /**

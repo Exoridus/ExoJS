@@ -208,7 +208,11 @@ export default class Video extends Sprite {
     /**
      * @public
      * @chainable
-     * @param {MediaOptions} [options]
+     * @param {Object} [options]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.volume]
+     * @property {Number} [options.time]
      * @returns {Video}
      */
     play(options) {

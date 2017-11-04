@@ -2,14 +2,6 @@ import { clamp } from '../utils';
 import EventEmitter from '../core/EventEmitter';
 
 /**
- * @typedef {Object} MediaOptions
- * @property {Boolean} loop
- * @property {Number} speed
- * @property {Number} volume
- * @property {Number} time
- */
-
-/**
  * @class Media
  * @extends EventEmitter
  */
@@ -190,7 +182,11 @@ export default class Media extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @param {MediaOptions} [options]
+     * @param {Object} [options]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.volume]
+     * @property {Number} [options.time]
      * @returns {Media}
      */
     play(options) {
@@ -247,7 +243,11 @@ export default class Media extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @param {MediaOptions} [options]
+     * @param {Object} [options]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.volume]
+     * @property {Number} [options.time]
      * @returns {Media}
      */
     applyOptions({ loop, speed, volume, time } = {}) {

@@ -195,20 +195,6 @@ export default class MediaManager {
     /**
      * @public
      * @chainable
-     * @param {Media|Music|Sound|Video} media
-     * @param {MediaOptions} [options]
-     * @returns {MediaManager}
-     */
-    play(media, options) {
-        media.connect(this);
-        media.play(options);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {Number} volume
      * @returns {MediaManager}
      */

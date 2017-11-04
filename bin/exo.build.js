@@ -6699,14 +6699,6 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @typedef {Object} MediaOptions
- * @property {Boolean} loop
- * @property {Number} speed
- * @property {Number} volume
- * @property {Number} time
- */
-
-/**
  * @class Media
  * @extends EventEmitter
  */
@@ -6774,7 +6766,11 @@ var Media = function (_EventEmitter) {
         /**
          * @public
          * @chainable
-         * @param {MediaOptions} [options]
+         * @param {Object} [options]
+         * @property {Boolean} [options.loop]
+         * @property {Number} [options.speed]
+         * @property {Number} [options.volume]
+         * @property {Number} [options.time]
          * @returns {Media}
          */
         value: function play(options) {
@@ -6840,7 +6836,11 @@ var Media = function (_EventEmitter) {
         /**
          * @public
          * @chainable
-         * @param {MediaOptions} [options]
+         * @param {Object} [options]
+         * @property {Boolean} [options.loop]
+         * @property {Number} [options.speed]
+         * @property {Number} [options.volume]
+         * @property {Number} [options.time]
          * @returns {Media}
          */
 
@@ -12475,7 +12475,11 @@ var Video = function (_Sprite) {
         /**
          * @public
          * @chainable
-         * @param {MediaOptions} [options]
+         * @param {Object} [options]
+         * @property {Boolean} [options.loop]
+         * @property {Number} [options.speed]
+         * @property {Number} [options.volume]
+         * @property {Number} [options.time]
          * @returns {Video}
          */
         value: function play(options) {
@@ -17282,22 +17286,8 @@ var MediaManager = function () {
 
 
     _createClass(MediaManager, [{
-        key: 'play',
+        key: 'setMasterVolume',
 
-
-        /**
-         * @public
-         * @chainable
-         * @param {Media|Music|Sound|Video} media
-         * @param {MediaOptions} [options]
-         * @returns {MediaManager}
-         */
-        value: function play(media, options) {
-            media.connect(this);
-            media.play(options);
-
-            return this;
-        }
 
         /**
          * @public
@@ -17305,9 +17295,6 @@ var MediaManager = function () {
          * @param {Number} volume
          * @returns {MediaManager}
          */
-
-    }, {
-        key: 'setMasterVolume',
         value: function setMasterVolume(volume) {
             var value = (0, _utils.clamp)(volume, 0, 1);
 

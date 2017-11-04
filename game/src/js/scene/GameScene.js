@@ -44,6 +44,7 @@ export default class GameScene extends Exo.Scene {
          * @member {Music}
          */
         this._backgroundMusic = resources.get('music', 'game/background');
+        this._backgroundMusic.connect(app.mediaManager);
 
         /**
          * @private
@@ -51,7 +52,7 @@ export default class GameScene extends Exo.Scene {
          */
         this._isPaused = false;
 
-        app.mediaManager.play(this._backgroundMusic, { loop: true });
+        this._backgroundMusic.play({ loop: true });
 
         this._addInputs();
         // this._updateCamera();

@@ -27,6 +27,7 @@ window.app.start(new Exo.Scene({
          * @member {Music}
          */
         this._music = resources.get('music', 'example');
+        this._music.connect(app.mediaManager);
 
         /**
          * @private
@@ -95,7 +96,8 @@ window.app.start(new Exo.Scene({
         canvas.parentNode.appendChild(this._canvas);
 
         app.inputManager.add(this._input);
-        app.mediaManager.play(this._music, { loop: true });
+
+        this._music.play({ loop: true });
     },
 
     /**
