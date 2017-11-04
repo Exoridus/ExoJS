@@ -103,7 +103,7 @@ TAU = exports.TAU = Math.PI * 2,
  * @constant
  * @type {Number}
  */
-DEG_TO_RAD = exports.DEG_TO_RAD = Math.PI / 180,
+RAD_PER_DEG = exports.RAD_PER_DEG = Math.PI / 180,
 
 
 /**
@@ -113,7 +113,7 @@ DEG_TO_RAD = exports.DEG_TO_RAD = Math.PI / 180,
  * @constant
  * @type {Number}
  */
-RAD_TO_DEG = exports.RAD_TO_DEG = 180 / Math.PI,
+DEG_PER_RAD = exports.DEG_PER_RAD = 180 / Math.PI,
 
 
 /**
@@ -794,7 +794,7 @@ FILE_TYPES = exports.FILE_TYPES = [{
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.stopEvent = exports.removeFlag = exports.addFlag = exports.hasFlag = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.inRange = exports.isPowerOfTwo = exports.sign = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = exports.audioContext = undefined;
+exports.stopEvent = exports.removeFlag = exports.addFlag = exports.hasFlag = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.inRange = exports.isPowerOfTwo = exports.sign = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = exports.audioContext = exports.audio = undefined;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -895,7 +895,7 @@ decodeAudioBuffer = function decodeAudioBuffer(arrayBuffer) {
  * @returns {Number}
  */
 degreesToRadians = function degreesToRadians(degree) {
-    return degree * _const.DEG_TO_RAD;
+    return degree * _const.RAD_PER_DEG;
 },
 
 
@@ -907,7 +907,7 @@ degreesToRadians = function degreesToRadians(degree) {
  * @returns {Number}
  */
 radiansToDegrees = function radiansToDegrees(radian) {
-    return radian * _const.RAD_TO_DEG;
+    return radian * _const.DEG_PER_RAD;
 },
 
 
@@ -921,7 +921,7 @@ radiansToDegrees = function radiansToDegrees(radian) {
  * @returns {Number}
  */
 clamp = function clamp(value, min, max) {
-    return Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max));
+    return Math.min(max, Math.max(min, value));
 },
 
 
@@ -1171,6 +1171,7 @@ stopEvent = function stopEvent(event) {
     event.stopImmediatePropagation();
 };
 
+exports.audio = audio;
 exports.audioContext = audioContext;
 exports.supportsCodec = supportsCodec;
 exports.decodeAudioBuffer = decodeAudioBuffer;
@@ -24900,13 +24901,14 @@ var Input = function (_EventEmitter) {
                 }
 
                 this.trigger('active', this._value);
-            } else {
+            } else if (this._triggered) {
                 this.trigger('stop', this._value);
 
-                if (this._triggered && Date.now() - this._triggered < this._threshold) {
-                    this._triggered = 0;
+                if (Date.now() - this._triggered < this._threshold) {
                     this.trigger('trigger', this._value);
                 }
+
+                this._triggered = 0;
             }
         }
 

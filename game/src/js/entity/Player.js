@@ -1,11 +1,3 @@
-const playerSize = new Exo.Size(96, 96),
-    FACE_DIRECTION = {
-        UP: 0,
-        RIGHT: 1,
-        DOWN: 2,
-        LEFT: 3,
-    };
-
 /**
  * @class Player
  * @extends {Sprite}
@@ -18,6 +10,9 @@ export default class Player extends Exo.Sprite {
      */
     constructor(texture) {
         super(texture);
+
+        const width = 96,
+            height = 96;
 
         /**
          * @private
@@ -39,11 +34,16 @@ export default class Player extends Exo.Sprite {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @member {Object<String, Rectangle>}
          */
-        this._frame = new Exo.Rectangle(0, 0, playerSize.width, playerSize.height);
+        this._frames = {
+            FACE_UP: new Exo.Rectangle(0, 0, width, height),
+            FACE_RIGHT: new Exo.Rectangle(width, 0, width, height),
+            FACE_DOWN: new Exo.Rectangle(width * 2, 0, width, height),
+            FACE_LEFT: new Exo.Rectangle(width * 3, 0, width, height),
+        };
 
-        this._setFaceDirection(FACE_DIRECTION.DOWN);
+        this.setTextureFrame(this._frames.FACE_DOWN);
         this.setOrigin(0.5, 1);
     }
 
@@ -60,7 +60,9 @@ export default class Player extends Exo.Sprite {
     }
 
     /**
-     * @override
+     * @public
+     * @param {Number} x
+     * @param {Number} y
      */
     move(x, y) {
         const speed = this._running ? this._runningSpeed : this._speed,
@@ -71,23 +73,15 @@ export default class Player extends Exo.Sprite {
         this.translate(offsetX * speed, offsetY * speed);
 
         if (x > 0) {
-            this._setFaceDirection(FACE_DIRECTION.RIGHT);
+            this.setTextureFrame(this._frames.FACE_RIGHT);
         } else if (x < 0) {
-            this._setFaceDirection(FACE_DIRECTION.LEFT);
+            this.setTextureFrame(this._frames.FACE_LEFT);
         }
 
         if (y > 0.5) {
-            this._setFaceDirection(FACE_DIRECTION.DOWN);
+            this.setTextureFrame(this._frames.FACE_DOWN);
         } else if (y < -0.5) {
-            this._setFaceDirection(FACE_DIRECTION.UP);
+            this.setTextureFrame(this._frames.FACE_UP);
         }
-    }
-
-    /**
-     * @private
-     * @param {Number} direction
-     */
-    _setFaceDirection(direction) {
-        this.setTextureFrame(this._frame.setPosition(direction * playerSize.width, 0));
     }
 }

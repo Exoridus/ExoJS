@@ -199,13 +199,14 @@ export default class Input extends EventEmitter {
             }
 
             this.trigger('active', this._value);
-        } else {
+        } else if (this._triggered) {
             this.trigger('stop', this._value);
 
-            if (this._triggered && (Date.now() - this._triggered) < this._threshold) {
-                this._triggered = 0;
+            if ((Date.now() - this._triggered) < this._threshold) {
                 this.trigger('trigger', this._value);
             }
+
+            this._triggered = 0;
         }
     }
 

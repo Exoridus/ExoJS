@@ -30,7 +30,8 @@ export default class GameScene extends Exo.Scene {
          * @member {Player}
          */
         this._player = new Player(resources.get('texture', 'game/player'));
-        this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+        // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+        this._player.setPosition(canvas.width / 2, canvas.height / 2);
 
         /**
          * @private
@@ -106,6 +107,24 @@ export default class GameScene extends Exo.Scene {
         );
 
         this._updateCamera();
+    }
+
+    /**
+     * @private
+     */
+    _updateCamera() {
+        const player = this._player,
+            worldMap = this._worldMap,
+            camera = this._camera,
+            offsetWidth = camera.width / 2,
+            offsetHeight = camera.height / 2;
+
+        camera.center.set(
+            clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth),
+            clamp(player.y - (player.height / 2), offsetHeight, worldMap.pixelHeight - offsetHeight),
+        );
+
+        this.app.displayManager.view = camera;
     }
 
     /**
@@ -187,7 +206,7 @@ export default class GameScene extends Exo.Scene {
             },
             stop() {
                 this._player.running = false;
-            },
+            }
         });
 
         this.app.inputManager.add([
@@ -230,23 +249,5 @@ export default class GameScene extends Exo.Scene {
 
         this._toggleRunInput.destroy();
         this._toggleRunInput = null;
-    }
-
-    /**
-     * @private
-     */
-    _updateCamera() {
-        const player = this._player,
-            worldMap = this._worldMap,
-            camera = this._camera,
-            offsetWidth = camera.width / 2,
-            offsetHeight = camera.height / 2;
-
-        camera.center.set(
-            clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth),
-            clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight),
-        );
-
-        this.app.displayManager.view = camera;
     }
 }

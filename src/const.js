@@ -25,7 +25,7 @@ export const
      * @constant
      * @type {Number}
      */
-    DEG_TO_RAD = Math.PI / 180,
+    RAD_PER_DEG = Math.PI / 180,
 
     /**
      * @public
@@ -34,7 +34,7 @@ export const
      * @constant
      * @type {Number}
      */
-    RAD_TO_DEG = 180 / Math.PI,
+    DEG_PER_RAD = 180 / Math.PI,
 
     /**
      * @public

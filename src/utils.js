@@ -1,4 +1,4 @@
-import { DEG_TO_RAD, RAD_TO_DEG, CODEC_NOT_SUPPORTED, FILE_TYPES } from './const';
+import { CODEC_NOT_SUPPORTED, FILE_TYPES, RAD_PER_DEG, DEG_PER_RAD } from './const';
 import support from './support';
 
 const
@@ -58,7 +58,7 @@ const
      * @param {Number} degree
      * @returns {Number}
      */
-    degreesToRadians = (degree) => degree * DEG_TO_RAD,
+    degreesToRadians = (degree) => degree * RAD_PER_DEG,
 
     /**
      * @public
@@ -67,7 +67,7 @@ const
      * @param {Number} radian
      * @returns {Number}
      */
-    radiansToDegrees = (radian) => radian * RAD_TO_DEG,
+    radiansToDegrees = (radian) => radian * DEG_PER_RAD,
 
     /**
      * @public
@@ -78,9 +78,7 @@ const
      * @param {Number} max
      * @returns {Number}
      */
-    clamp = (value, min, max) => (
-        Math.min(Math.max(value, Math.min(max, value)), Math.max(min, max))
-    ),
+    clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
 
     /**
      * @public
@@ -271,6 +269,7 @@ const
     };
 
 export {
+    audio,
     audioContext,
     supportsCodec,
     decodeAudioBuffer,

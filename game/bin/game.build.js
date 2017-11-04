@@ -1880,7 +1880,8 @@ var GameScene = function (_Exo$Scene) {
              * @member {Player}
              */
             this._player = new _Player2.default(resources.get('texture', 'game/player'));
-            this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+            // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+            this._player.setPosition(canvas.width / 2, canvas.height / 2);
 
             /**
              * @private
@@ -1965,6 +1966,24 @@ var GameScene = function (_Exo$Scene) {
          */
 
     }, {
+        key: '_updateCamera',
+        value: function _updateCamera() {
+            var player = this._player,
+                worldMap = this._worldMap,
+                camera = this._camera,
+                offsetWidth = camera.width / 2,
+                offsetHeight = camera.height / 2;
+
+            camera.center.set(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y - player.height / 2, offsetHeight, worldMap.pixelHeight - offsetHeight));
+
+            this.app.displayManager.view = camera;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
         key: '_addInputs',
         value: function _addInputs() {
 
@@ -2009,13 +2028,20 @@ var GameScene = function (_Exo$Scene) {
                 }
             });
 
-            this._toggleRunInput = new Exo.Input([KEYBOARD.Shift, GAMEPAD.ShoulderRightTop], {
+            this._toggleRunInput = new Exo.Input([KEYBOARD.Shift, GAMEPAD.FaceLeft], {
                 context: this,
                 start: function start() {
                     this._player.running = true;
+
+                    console.log('start');
                 },
                 stop: function stop() {
                     this._player.running = false;
+
+                    console.log('stop');
+                },
+                active: function active() {
+                    console.log('active');
                 }
             });
 
@@ -2048,24 +2074,6 @@ var GameScene = function (_Exo$Scene) {
 
             this._toggleRunInput.destroy();
             this._toggleRunInput = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_updateCamera',
-        value: function _updateCamera() {
-            var player = this._player,
-                worldMap = this._worldMap,
-                camera = this._camera,
-                offsetWidth = camera.width / 2,
-                offsetHeight = camera.height / 2;
-
-            camera.center.set(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y, offsetHeight, worldMap.pixelHeight - offsetHeight));
-
-            this.app.displayManager.view = camera;
         }
     }]);
 
@@ -2611,19 +2619,10 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var playerSize = new Exo.Size(96, 96),
-    FACE_DIRECTION = {
-    UP: 0,
-    RIGHT: 1,
-    DOWN: 2,
-    LEFT: 3
-};
-
 /**
  * @class Player
  * @extends {Sprite}
  */
-
 var Player = function (_Exo$Sprite) {
     _inherits(Player, _Exo$Sprite);
 
@@ -2634,12 +2633,15 @@ var Player = function (_Exo$Sprite) {
     function Player(texture) {
         _classCallCheck(this, Player);
 
+        var _this = _possibleConstructorReturn(this, (Player.__proto__ || Object.getPrototypeOf(Player)).call(this, texture));
+
+        var width = 96,
+            height = 96;
+
         /**
          * @private
          * @member {Number}
          */
-        var _this = _possibleConstructorReturn(this, (Player.__proto__ || Object.getPrototypeOf(Player)).call(this, texture));
-
         _this._speed = 2;
 
         /**
@@ -2656,11 +2658,16 @@ var Player = function (_Exo$Sprite) {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @member {Object<String, Rectangle>}
          */
-        _this._frame = new Exo.Rectangle(0, 0, playerSize.width, playerSize.height);
+        _this._frames = {
+            FACE_UP: new Exo.Rectangle(0, 0, width, height),
+            FACE_RIGHT: new Exo.Rectangle(width, 0, width, height),
+            FACE_DOWN: new Exo.Rectangle(width * 2, 0, width, height),
+            FACE_LEFT: new Exo.Rectangle(width * 3, 0, width, height)
+        };
 
-        _this._setFaceDirection(FACE_DIRECTION.DOWN);
+        _this.setTextureFrame(_this._frames.FACE_DOWN);
         _this.setOrigin(0.5, 1);
         return _this;
     }
@@ -2676,7 +2683,9 @@ var Player = function (_Exo$Sprite) {
 
 
         /**
-         * @override
+         * @public
+         * @param {Number} x
+         * @param {Number} y
          */
         value: function move(x, y) {
             var speed = this._running ? this._runningSpeed : this._speed,
@@ -2687,27 +2696,16 @@ var Player = function (_Exo$Sprite) {
             this.translate(offsetX * speed, offsetY * speed);
 
             if (x > 0) {
-                this._setFaceDirection(FACE_DIRECTION.RIGHT);
+                this.setTextureFrame(this._frames.FACE_RIGHT);
             } else if (x < 0) {
-                this._setFaceDirection(FACE_DIRECTION.LEFT);
+                this.setTextureFrame(this._frames.FACE_LEFT);
             }
 
             if (y > 0.5) {
-                this._setFaceDirection(FACE_DIRECTION.DOWN);
+                this.setTextureFrame(this._frames.FACE_DOWN);
             } else if (y < -0.5) {
-                this._setFaceDirection(FACE_DIRECTION.UP);
+                this.setTextureFrame(this._frames.FACE_UP);
             }
-        }
-
-        /**
-         * @private
-         * @param {Number} direction
-         */
-
-    }, {
-        key: "_setFaceDirection",
-        value: function _setFaceDirection(direction) {
-            this.setTextureFrame(this._frame.setPosition(direction * playerSize.width, 0));
         }
     }, {
         key: "running",
