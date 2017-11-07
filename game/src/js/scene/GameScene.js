@@ -30,8 +30,7 @@ export default class GameScene extends Exo.Scene {
          * @member {Player}
          */
         this._player = new Player(resources.get('texture', 'game/player'));
-        // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
-        this._player.setPosition(canvas.width / 2, canvas.height / 2);
+        this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
 
         /**
          * @private
@@ -113,18 +112,17 @@ export default class GameScene extends Exo.Scene {
      * @private
      */
     _updateCamera() {
-        const player = this._player,
+        const renderState = this.app.displayManager.renderState,
             worldMap = this._worldMap,
+            player = this._player,
             camera = this._camera,
             offsetWidth = camera.width / 2,
             offsetHeight = camera.height / 2;
 
-        camera.center.set(
+        renderState.view = camera.setCenter(
             clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth),
             clamp(player.y - (player.height / 2), offsetHeight, worldMap.pixelHeight - offsetHeight),
         );
-
-        this.app.displayManager.view = camera;
     }
 
     /**

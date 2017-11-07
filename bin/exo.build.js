@@ -6886,9 +6886,11 @@ var Sprite = function (_Container) {
             this.localBounds.set(0, 0, frame.width, frame.height);
 
             if (resetSize) {
-                this.scale.set(1, 1);
+                this.width = frame.width;
+                this.height = frame.height;
             } else {
-                this.scale.set(width / frame.width, height / frame.height);
+                this.width = width;
+                this.height = height;
             }
 
             return this;
@@ -8093,7 +8095,7 @@ var View = function () {
 
 
     _createClass(View, [{
-        key: 'move',
+        key: 'setCenter',
 
 
         /**
@@ -8103,6 +8105,22 @@ var View = function () {
          * @param {Number} y
          * @returns {View}
          */
+        value: function setCenter(x, y) {
+            this._center.set(x, y);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} x
+         * @param {Number} y
+         * @returns {View}
+         */
+
+    }, {
+        key: 'move',
         value: function move(x, y) {
             this._center.add(x, y);
 

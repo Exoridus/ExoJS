@@ -209,9 +209,11 @@ export default class Sprite extends Container {
         this.localBounds.set(0, 0, frame.width, frame.height);
 
         if (resetSize) {
-            this.scale.set(1, 1);
+            this.width = frame.width;
+            this.height = frame.height;
         } else {
-            this.scale.set(width / frame.width, height / frame.height);
+            this.width = width;
+            this.height = height;
         }
 
         return this;

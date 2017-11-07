@@ -1880,8 +1880,7 @@ var GameScene = function (_Exo$Scene) {
              * @member {Player}
              */
             this._player = new _Player2.default(resources.get('texture', 'game/player'));
-            // this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
-            this._player.setPosition(canvas.width / 2, canvas.height / 2);
+            this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
 
             /**
              * @private
@@ -1968,15 +1967,14 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: '_updateCamera',
         value: function _updateCamera() {
-            var player = this._player,
+            var renderState = this.app.displayManager.renderState,
                 worldMap = this._worldMap,
+                player = this._player,
                 camera = this._camera,
                 offsetWidth = camera.width / 2,
                 offsetHeight = camera.height / 2;
 
-            camera.center.set(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y - player.height / 2, offsetHeight, worldMap.pixelHeight - offsetHeight));
-
-            this.app.displayManager.view = camera;
+            renderState.view = camera.setCenter(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y - player.height / 2, offsetHeight, worldMap.pixelHeight - offsetHeight));
         }
 
         /**
@@ -2032,16 +2030,9 @@ var GameScene = function (_Exo$Scene) {
                 context: this,
                 start: function start() {
                     this._player.running = true;
-
-                    console.log('start');
                 },
                 stop: function stop() {
                     this._player.running = false;
-
-                    console.log('stop');
-                },
-                active: function active() {
-                    console.log('active');
                 }
             });
 
@@ -2186,7 +2177,7 @@ var WorldMap = function () {
           tileset = this._tileset,
           tileWidth = this._tileSize.width,
           tileHeight = this._tileSize.height,
-          camera = displayManager.view,
+          camera = displayManager.renderState.view,
           tilesHorizontal = camera.width / tileWidth + 2 | 0,
           tilesVertical = camera.height / tileHeight + 2 | 0,
           startTileX = clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
@@ -2855,7 +2846,7 @@ var Tileset = function () {
             tile.tint.set(tint, tint, tint);
 
             if (block in this._tiles) {
-                tile.setTextureFrame(this._tiles[block].tileRect, true);
+                tile.setTextureFrame(this._tiles[block].tileRect, false);
             }
         }
     }, {

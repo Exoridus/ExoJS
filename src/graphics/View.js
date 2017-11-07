@@ -227,6 +227,19 @@ export default class View {
      * @param {Number} y
      * @returns {View}
      */
+    setCenter(x, y) {
+        this._center.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {View}
+     */
     move(x, y) {
         this._center.add(x, y);
 
