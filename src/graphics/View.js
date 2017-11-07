@@ -70,6 +70,12 @@ export default class View {
          */
         this._dirtyTransform = true;
 
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._updateId = 0;
+
         this.reset(viewRectangle);
     }
 
@@ -145,7 +151,7 @@ export default class View {
 
     set viewport(viewport) {
         this._viewport.copy(viewport);
-        this._dirtyTransform = true;
+        this._setDirty();
     }
 
     /**
@@ -158,6 +164,15 @@ export default class View {
 
     set transform(transform) {
         this._transform.copy(transform);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get updateId() {
+        return this._updateId;
     }
 
     /**
@@ -343,6 +358,7 @@ export default class View {
         this._sin = null;
 
         this._dirtyTransform = null;
+        this._updateId = null;
     }
 
     /**
@@ -350,6 +366,7 @@ export default class View {
      */
     _setDirty() {
         this._dirtyTransform = true;
+        this._updateId++;
     }
 
     /**

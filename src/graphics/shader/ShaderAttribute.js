@@ -48,15 +48,9 @@ export default class ShaderAttribute {
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?GLProgram}
          */
-        this._renderState = null;
-
-        /**
-         * @private
-         * @member {?Number}
-         */
-        this._location = null;
+        this._glProgram = null;
 
         /**
          * @private
@@ -151,33 +145,24 @@ export default class ShaderAttribute {
     setEnabled(enabled) {
         if (this._enabled !== enabled) {
             this._enabled = enabled;
-
-            if (this._bound) {
-                this.upload();
-            }
+            this.upload();
         }
     }
 
     /**
      * @public
-     * @param {RenderState} renderState
-     * @param {WebGLProgram} program
+     * @param {GLProgram} glProgram
      * @param {Number} stride
      * @param {Number} offset
      */
-    bind(renderState, program, stride, offset) {
-        if (!this._renderState) {
-            this._renderState = renderState;
-            this._location = renderState.getAttributeLocation(program, this._name);
-
-            if (this._location === -1) {
-                throw new Error(`Attribute location for attribute "${this._name}" is not available.`);
-            }
+    bind(glProgram, stride, offset) {
+        if (!this._glProgram) {
+            this._glProgram = glProgram;
         }
 
         if (!this._bound) {
             this._bound = true;
-            this._renderState.setVertexPointer(this._location, this._size, this._type, this._normalized, stride, offset);
+            this._glProgram.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
             this.upload();
         }
     }
@@ -186,30 +171,28 @@ export default class ShaderAttribute {
      * @public
      */
     unbind() {
-        if (this._bound) {
-            this._bound = false;
-        }
+        this._bound = false;
     }
 
     /**
      * @public
      */
     upload() {
-        this._renderState.toggleVertexArray(this._location, this._enabled);
+        if (this._bound) {
+            this._glProgram.toggleVertexArray(this._name, this._enabled);
+        }
     }
 
     /**
      * @public
      */
     destroy() {
-        if (this._bound) {
-            this.unbind();
-        }
-
-        this._renderState = null;
         this._name = null;
+        this._type = null;
+        this._size = null;
+        this._normalized = null;
         this._enabled = null;
-        this._location = null;
+        this._glProgram = null;
         this._bound = null;
     }
 }

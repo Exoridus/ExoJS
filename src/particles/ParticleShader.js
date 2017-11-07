@@ -56,25 +56,15 @@ export default class ParticleShader extends Shader {
         }, {
             name: 'uSampler',
             type: UNIFORM_TYPE.SAMPLER_2D,
-            unit: 0,
+            value: 0,
         }]);
     }
 
     /**
-     * @public
-     * @param {Matrix} projection
+     * @override
      */
     setProjection(projection) {
         this.getUniform('projectionMatrix')
-            .setMatrix(projection);
-    }
-
-    /**
-     * @public
-     * @param {Texture} texture
-     */
-    setParticleTexture(texture) {
-        this.getUniform('uSampler')
-            .setTexture(texture, 0);
+            .setValue(projection);
     }
 }

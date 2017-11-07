@@ -50,27 +50,37 @@ export default class Texture {
 
         /**
          * @private
-         * @member {Number}
+         * @member {?GLTexture}
          */
-        this._scaleMode = scaleMode;
+        this._glTexture = null;
 
         /**
          * @private
          * @member {Number}
          */
-        this._wrapMode = wrapMode;
+        this._scaleMode = null;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._wrapMode = null;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._premultiplyAlpha = premultiplyAlpha;
+        this._premultiplyAlpha = null;
 
         /**
          * @private
          * @member {Number}
          */
-        this._flags = (FLAGS.SCALE_MODE | FLAGS.WRAP_MODE | FLAGS.PREMULTIPLY_ALPHA);
+        this._flags = FLAGS.NONE;
+
+        this.setScaleMode(scaleMode);
+        this.setWrapMode(wrapMode);
+        this.setPremultiplyAlpha(premultiplyAlpha);
 
         if (source) {
             this.setSource(source);
@@ -247,27 +257,29 @@ export default class Texture {
      * @returns {Texture}
      */
     update() {
-        if (this._flags && this._renderState) {
+        if (this._flags && this._glTexture) {
+            this._renderState.glTexture = this._glTexture;
+
             if (hasFlag(FLAGS.SCALE_MODE, this._flags)) {
-                this._renderState.setScaleMode(this, this._scaleMode);
+                this._glTexture.setScaleMode(this._scaleMode);
 
                 this._flags = removeFlag(FLAGS.SCALE_MODE, this._flags);
             }
 
             if (hasFlag(FLAGS.WRAP_MODE, this._flags)) {
-                this._renderState.setWrapMode(this, this._wrapMode);
+                this._glTexture.setWrapMode(this._wrapMode);
 
                 this._flags = removeFlag(FLAGS.WRAP_MODE, this._flags);
             }
 
             if (hasFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
-                this._renderState.setPremultiplyAlpha(this, this._premultiplyAlpha);
+                this._glTexture.setPremultiplyAlpha(this._premultiplyAlpha);
 
                 this._flags = removeFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
             }
 
             if (hasFlag(FLAGS.SOURCE, this._flags) && this._source) {
-                this._renderState.setTextureImage(this, this._source);
+                this._glTexture.setTextureSource(this._source);
 
                 this._flags = removeFlag(FLAGS.SOURCE, this._flags);
             }
@@ -286,9 +298,29 @@ export default class Texture {
     bind(renderState, unit) {
         if (!this._renderState) {
             this._renderState = renderState;
+            this._glTexture = renderState.createGLTexture();
         }
 
-        this._renderState.bindTexture(this, unit);
+        if (unit !== undefined) {
+            this._renderState.textureUnit = unit;
+        }
+
+        this._renderState.glTexture = this._glTexture;
+
+        this.update();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Texture}
+     */
+    unbind() {
+        if (this._renderState && this._renderState.glTexture === this._glTexture) {
+            this._renderState.glTexture = null;
+        }
 
         return this;
     }
@@ -298,7 +330,11 @@ export default class Texture {
      */
     destroy() {
         if (this._renderState) {
-            this._renderState.removeTexture(this);
+            this.unbind();
+
+            this._glTexture.destroy();
+            this._glTexture = null;
+
             this._renderState = null;
         }
 

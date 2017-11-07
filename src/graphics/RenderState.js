@@ -1,10 +1,10 @@
-import { UNIFORM_TYPE } from '../const';
-import RenderTarget from './RenderTarget';
 import Color from '../core/Color';
-import Matrix from '../math/Matrix';
-import Rectangle from '../math/Rectangle';
-import GLTexture from './GLTexture';
+import GLTexture from './webgl/GLTexture';
 import settings from '../settings';
+import GLBuffer from './webgl/GLBuffer';
+import GLFramebuffer from './webgl/GLFramebuffer';
+import GLProgram from './webgl/GLProgram';
+import View from './View';
 
 /**
  * @class RenderState
@@ -34,39 +34,39 @@ export default class RenderState {
 
         /**
          * @private
+         * @member {?RenderTarget}
+         */
+        this._renderTarget = null;
+
+        /**
+         * @private
+         * @member {?View}
+         */
+        this._view = null;
+
+        /**
+         * @private
          * @member {?Shader}
          */
         this._shader = null;
 
         /**
          * @private
-         * @member {Color}
-         */
-        this._clearColor = new Color();
-
-        /**
-         * @private
-         * @member {Object}
-         */
-        this._blendMode = settings.BLEND_MODE;
-
-        /**
-         * @private
-         * @member {WeakMap<RenderTarget, WebGLFramebuffer>}
-         */
-        this._glFramebuffers = new WeakMap();
-
-        /**
-         * @private
-         * @member {WeakMap<Texture, GLTexture>}
-         */
-        this._glTextures = new WeakMap();
-
-        /**
-         * @private
-         * @member {?WebGLFramebuffer}
+         * @member {?GLFramebuffer}
          */
         this._glFramebuffer = null;
+
+        /**
+         * @private
+         * @member {?GLProgram}
+         */
+        this._glProgram = null;
+
+        /**
+         * @private
+         * @member {?GLBuffer}
+         */
+        this._glBuffer = null;
 
         /**
          * @private
@@ -82,17 +82,160 @@ export default class RenderState {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @member {Object}
          */
-        this._viewport = new Rectangle();
+        this._blendMode = settings.BLEND_MODE;
 
         /**
          * @private
-         * @member {Matrix}
+         * @member {Color}
          */
-        this._projection = new Matrix();
+        this._clearColor = new Color();
 
         this._setupContext(context);
+    }
+
+    /**
+     * @public
+     * @member {?Renderer}
+     */
+    get renderer() {
+        return this._renderer;
+    }
+
+    set renderer(renderer) {
+        if (this._renderer !== renderer) {
+            if (this._renderer) {
+                this._renderer.unbind();
+            }
+
+            this._renderer = renderer ? renderer.bind(this) : null;
+        }
+    }
+
+    /**
+     * @public
+     * @member {?RenderTarget}
+     */
+    get renderTarget() {
+        return this._renderTarget;
+    }
+
+    set renderTarget(renderTarget) {
+        if (this._renderTarget !== renderTarget) {
+            if (this._renderTarget) {
+                this._renderTarget.unbind();
+            }
+
+            this._renderTarget = renderTarget ? renderTarget.bind(this) : null;
+            this.updateViewport();
+        }
+    }
+
+    /**
+     * @public
+     * @member {?View}
+     */
+    get view() {
+        return this._view;
+    }
+
+    set view(view) {
+        this._view = view;
+        this.updateViewport();
+    }
+
+    /**
+     * @public
+     * @member {?Shader}
+     */
+    get shader() {
+        return this._shader;
+    }
+
+    set shader(shader) {
+        if (this._shader !== shader) {
+            if (this._shader) {
+                this._shader.unbind();
+            }
+
+            this._shader = shader ? shader.bind(this) : null;
+        }
+    }
+
+    /**
+     * @public
+     * @member {?GLFramebuffer}
+     */
+    get glFramebuffer() {
+        return this._glFramebuffer;
+    }
+
+    set glFramebuffer(glFramebuffer) {
+        if (this._glFramebuffer !== glFramebuffer) {
+            if (glFramebuffer) {
+                this._glFramebuffer = glFramebuffer.bind();
+            } else if (this._glFramebuffer) {
+                this._glFramebuffer.unbind();
+                this._glFramebuffer = null;
+            }
+        }
+    }
+
+    /**
+     * @public
+     * @member {?GLProgram}
+     */
+    get glProgram() {
+        return this._glProgram;
+    }
+
+    set glProgram(glProgram) {
+        if (this._glProgram !== glProgram) {
+            if (this._glProgram) {
+                this._glProgram.unbind();
+            }
+
+            this._glProgram = glProgram ? glProgram.bind(this) : null;
+        }
+    }
+
+    /**
+     * @public
+     * @member {?GLBuffer}
+     */
+    get glBuffer() {
+        return this._glBuffer;
+    }
+
+    set glBuffer(glBuffer) {
+        if (this._glBuffer !== glBuffer) {
+            if (glBuffer) {
+                this._glBuffer = glBuffer.bind();
+            } else if (this._glBuffer) {
+                this._glBuffer.unbind();
+                this._glBuffer = null;
+            }
+        }
+    }
+
+    /**
+     * @public
+     * @member {?GLTexture}
+     */
+    get glTexture() {
+        return this._glTexture;
+    }
+
+    set glTexture(glTexture) {
+        if (this._glTexture !== glTexture) {
+            if (glTexture) {
+                this._glTexture = glTexture.bind();
+            } else if (this._glTexture) {
+                this._glTexture.unbind();
+                this._glTexture = null;
+            }
+        }
     }
 
     /**
@@ -107,77 +250,6 @@ export default class RenderState {
         if (blendMode && blendMode !== this._blendMode) {
             this._context.blendFunc(blendMode.sFactor, blendMode.dFactor);
             this._blendMode = blendMode;
-        }
-    }
-
-    /**
-     * @public
-     * @member {?Shader}
-     */
-    get shader() {
-        return this._shader;
-    }
-
-    set shader(shader) {
-        if (shader && shader !== this._shader) {
-            if (this._shader) {
-                this._shader.unbind();
-            }
-
-            this._shader = shader;
-            this._shader.bind(this);
-        }
-    }
-
-    /**
-     * @public
-     * @member {?Renderer}
-     */
-    get renderer() {
-        return this._renderer;
-    }
-
-    set renderer(renderer) {
-        if (renderer && renderer !== this._renderer) {
-            if (this._renderer) {
-                this._renderer.unbind();
-            }
-
-            this._renderer = renderer;
-            this._renderer.bind(this);
-            this._renderer.setProjection(this._projection);
-        }
-    }
-
-    /**
-     * @public
-     * @member {?WebGLFramebuffer}
-     */
-    get glFramebuffer() {
-        return this._glFramebuffer;
-    }
-
-    set glFramebuffer(value) {
-        const gl = this._context,
-            glFramebuffer = value || null;
-
-        if (glFramebuffer !== this._glFramebuffer) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, glFramebuffer);
-            this._glFramebuffer = glFramebuffer;
-        }
-    }
-
-    /**
-     * @public
-     * @member {?GLTexture}
-     */
-    get glTexture() {
-        return this._glTexture;
-    }
-
-    set glTexture(glTexture) {
-        if (glTexture && glTexture !== this._glTexture) {
-            this._glTexture = glTexture.bind();
         }
     }
 
@@ -217,33 +289,39 @@ export default class RenderState {
 
     /**
      * @public
-     * @member {Rectangle}
+     * @param {String} vertexSource
+     * @param {String} fragmentSource
+     * @returns {GLProgram}
      */
-    get viewport() {
-        return this._viewport;
-    }
-
-    set viewport(viewport) {
-        if (viewport && !viewport.equals(this._viewport)) {
-            this._context.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-            this._viewport.copy(viewport);
-        }
+    createGLProgram(vertexSource, fragmentSource) {
+        return new GLProgram(this._context, vertexSource, fragmentSource);
     }
 
     /**
      * @public
-     * @member {Matrix}
+     * @param {Number} size
+     * @param {Number} attributeCount
+     * @returns {GLBuffer}
      */
-    get projection() {
-        return this._projection;
+    createGLBuffer(size, attributeCount) {
+        return new GLBuffer(this._context, size, attributeCount);
     }
 
-    set projection(projection) {
-        this._projection.copy(projection);
+    /**
+     * @public
+     * @returns {GLTexture}
+     */
+    createGLTexture() {
+        return new GLTexture(this._context);
+    }
 
-        if (this._renderer) {
-            this._renderer.setProjection(projection);
-        }
+    /**
+     * @public
+     * @param {Boolean} isRoot
+     * @returns {?GLFramebuffer}
+     */
+    createGLFramebuffer(isRoot) {
+        return new GLFramebuffer(this._context, isRoot);
     }
 
     /**
@@ -267,244 +345,21 @@ export default class RenderState {
     /**
      * @public
      * @chainable
-     * @param {RenderTarget} renderTarget
      * @returns {RenderState}
      */
-    bindRenderTarget(renderTarget) {
-        this.glFramebuffer = this.getGLFramebuffer(renderTarget);
+    updateViewport() {
+        if (this._view && this._renderTarget) {
+            const width = this._renderTarget.width,
+                height = this._renderTarget.height,
+                viewport = this._view.viewport;
 
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {RenderTarget} renderTarget
-     * @returns {RenderState}
-     */
-    removeRenderTarget(renderTarget) {
-        if (this._glFramebuffers.has(renderTarget)) {
-            const gl = this._context,
-                glFramebuffer = this._glFramebuffers.get(renderTarget);
-
-            if (this._glFramebuffer === glFramebuffer) {
-                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-                this._glFramebuffer = null;
-            }
-
-            gl.deleteFramebuffer(glFramebuffer);
-
-            this._glFramebuffers.delete(renderTarget);
+            this._context.viewport(
+                Math.round(width * viewport.x),
+                Math.round(height * viewport.y),
+                Math.round(width * viewport.width),
+                Math.round(height * viewport.height)
+            );
         }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {Texture} texture
-     * @returns {GLTexture}
-     */
-    getGLTexture(texture) {
-        if (!this._glTextures.has(texture)) {
-            this._glTextures.set(texture, new GLTexture(this._context));
-        }
-
-        return this._glTextures.get(texture);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Texture} texture
-     * @returns {RenderState}
-     */
-    removeTexture(texture) {
-        if (this._glTextures.has(texture)) {
-            const glTexture = this._glTextures.get(texture);
-
-            if (this._glTexture === glTexture) {
-                this._glTexture.unbind();
-                this._glTexture = null;
-            }
-
-            glTexture.destroy();
-
-            this._glTextures.delete(texture);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Texture} texture
-     * @param {Number} [unit}
-     * @returns {RenderState}
-     */
-    bindTexture(texture, unit) {
-        if (unit !== undefined) {
-            this.textureUnit = unit;
-        }
-
-        this.glTexture = this.getGLTexture(texture);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Texture} texture
-     * @param {Number} scaleMode
-     * @returns {RenderState}
-     */
-    setScaleMode(texture, scaleMode) {
-        this.bindTexture(texture)
-            .getGLTexture(texture)
-            .setScaleMode(scaleMode);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Texture} texture
-     * @param {Number} wrapMode
-     * @returns {RenderState}
-     */
-    setWrapMode(texture, wrapMode) {
-        this.bindTexture(texture)
-            .getGLTexture(texture)
-            .setWrapMode(wrapMode);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Texture} texture
-     * @param {Boolean} premultiplyAlpha
-     * @returns {RenderState}
-     */
-    setPremultiplyAlpha(texture, premultiplyAlpha) {
-        this.bindTexture(texture)
-            .getGLTexture(texture)
-            .setPremultiplyAlpha(premultiplyAlpha);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Texture} texture
-     * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
-     * @returns {RenderState}
-     */
-    setTextureImage(texture, source) {
-        this.bindTexture(texture)
-            .getGLTexture(texture)
-            .setTextureImage(source);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {RenderTarget} renderTarget
-     * @returns {?WebGLFramebuffer}
-     */
-    getGLFramebuffer(renderTarget) {
-        if (!this._glFramebuffers.has(renderTarget)) {
-            this._glFramebuffers.set(renderTarget, renderTarget.isRoot ? null : this._context.createFramebuffer());
-        }
-
-        return this._glFramebuffers.get(renderTarget);
-    }
-
-    /**
-     * @public
-     * @returns {WebGLBuffer}
-     */
-    createBuffer() {
-        return this._context.createBuffer();
-    }
-
-    /**
-     * @public
-     * @param {Number} size
-     * @param {Number} attributeCount
-     * @returns {ArrayBuffer}
-     */
-    createVertexBuffer(size, attributeCount) {
-        return new ArrayBuffer(size * attributeCount * 4);
-    }
-
-    /**
-     * @public
-     * @param {Number} size
-     * @returns {Uint16Array}
-     */
-    createIndexBuffer(size) {
-        const buffer = new Uint16Array(size * 6),
-            len = buffer.length;
-
-        for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
-            buffer[i] = offset;
-            buffer[i + 1] = offset + 1;
-            buffer[i + 2] = offset + 3;
-            buffer[i + 3] = offset;
-            buffer[i + 4] = offset + 2;
-            buffer[i + 5] = offset + 3;
-        }
-
-        return buffer;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLBuffer} buffer
-     * @param {ArrayBuffer|ArrayBufferView} data
-     * @returns {RenderState}
-     */
-    bindVertexBuffer(buffer, data) {
-        const gl = this._context;
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLBuffer} buffer
-     * @param {ArrayBuffer|ArrayBufferView} data
-     * @returns {RenderState}
-     */
-    bindIndexBuffer(buffer, data) {
-        const gl = this._context;
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLBuffer} buffer
-     * @returns {RenderState}
-     */
-    deleteBuffer(buffer) {
-        this._context.deleteBuffer(buffer);
 
         return this;
     }
@@ -527,209 +382,23 @@ export default class RenderState {
 
     /**
      * @public
-     * @param {Number} type
-     * @param {String} source
-     * @returns {WebGLShader}
-     */
-    compileShader(type, source) {
-        const gl = this._context,
-            shader = gl.createShader(type);
-
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
-
-            return null;
-        }
-
-        return shader;
-    }
-
-    /**
-     * @public
-     * @param {String} vertexSource
-     * @param {String} fragmentSource
-     * @returns {?WebGLProgram}
-     */
-    compileProgram(vertexSource, fragmentSource) {
-        const gl = this._context,
-            vertexShader = this.compileShader(gl.VERTEX_SHADER, vertexSource),
-            fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, fragmentSource),
-            program = gl.createProgram();
-
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-
-        gl.linkProgram(program);
-
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            gl.deleteProgram(program);
-
-            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
-            console.error('gl.getError()', gl.getError()); // eslint-disable-line
-
-            if (gl.getProgramInfoLog(program)) {
-                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
-            }
-
-            return null;
-        }
-
-        return program;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLProgram} program
-     * @returns {RenderState}
-     */
-    deleteProgram(program) {
-        this._context.deleteProgram(program);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLProgram} program
-     * @returns {RenderState}
-     */
-    useProgram(program) {
-        this._context.useProgram(program);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLUniformLocation} location
-     * @param {Number|Number[]|ArrayBufferView|Texture} value
-     * @param {Number} type
-     * @param {Number} [unit]
-     * @returns {RenderState}
-     */
-    setUniformValue(location, value, type, unit) {
-        const gl = this._context;
-
-        switch (type) {
-            case UNIFORM_TYPE.INT: gl.uniform1i(location, value); break;
-            case UNIFORM_TYPE.FLOAT: gl.uniform1f(location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC2: gl.uniform2fv(location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC3: gl.uniform3fv(location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC4: gl.uniform4fv(location, value); break;
-            case UNIFORM_TYPE.INT_VEC2: gl.uniform2iv(location, value); break;
-            case UNIFORM_TYPE.INT_VEC3: gl.uniform3iv(location, value); break;
-            case UNIFORM_TYPE.INT_VEC4: gl.uniform4iv(location, value); break;
-            case UNIFORM_TYPE.BOOL: gl.uniform1i(location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC2: gl.uniform2iv(location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC3: gl.uniform3iv(location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC4: gl.uniform4iv(location, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT2: gl.uniformMatrix2fv(location, false, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT3: gl.uniformMatrix3fv(location, false, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT4: gl.uniformMatrix4fv(location, false, value); break;
-            case UNIFORM_TYPE.SAMPLER_2D:
-                value.bind(this, unit)
-                    .update();
-
-                gl.uniform1i(location, unit);
-
-                break;
-            default:
-                throw new Error(`Unknown uniform type ${this._type}`);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {WebGLProgram} program
-     * @param {String} name
-     * @returns {WebGLUniformLocation}
-     */
-    getUniformLocation(program, name) {
-        return this._context.getUniformLocation(program, name);
-    }
-
-    /**
-     * @public
-     * @param {WebGLProgram} program
-     * @param {String} name
-     * @returns {Number}
-     */
-    getAttributeLocation(program, name) {
-        return this._context.getAttribLocation(program, name);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} location
-     * @param {Number} size
-     * @param {Number} type
-     * @param {boolean} normalized
-     * @param {Number} stride
-     * @param {Number} offset
-     * @returns {RenderState}
-     */
-    setVertexPointer(location, size, type, normalized, stride, offset) {
-        this._context.vertexAttribPointer(location, size, type, normalized, stride, offset);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} location
-     * @param {Boolean} enabled
-     * @returns {RenderState}
-     */
-    toggleVertexArray(location, enabled) {
-        const gl = this._context;
-
-        if (enabled) {
-            gl.enableVertexAttribArray(location);
-        } else {
-            gl.disableVertexAttribArray(location);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
+        this.renderer = null;
+        this.renderTarget = null;
+        this.view = null;
+        this.shader = null;
+        this.glFramebuffer = null;
+        this.glProgram = null;
+        this.glBuffer = null;
+        this.glTexture = null;
+
         this._clearColor.destroy();
         this._clearColor = null;
 
-        this._viewport.destroy();
-        this._viewport = null;
-
-        this._projection.destroy();
-        this._projection = null;
-
-        this._context = null;
-
-        this._glFramebuffer = null;
-        this._glFramebuffers = null;
-
         this._textureUnit = null;
-        this._glTexture = null;
-        this._glTextures = null;
-
         this._blendMode = null;
-        this._shader = null;
-        this._renderer = null;
+        this._context = null;
     }
 
     /**

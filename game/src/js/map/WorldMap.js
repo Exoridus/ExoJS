@@ -88,7 +88,7 @@ export default class WorldMap {
             tileset = this._tileset,
             tileWidth = this._tileSize.width,
             tileHeight = this._tileSize.height,
-            camera = displayManager.view,
+            camera = displayManager.renderState.view,
             tilesHorizontal = ((camera.width / tileWidth) + 2) | 0,
             tilesVertical = ((camera.height / tileHeight) + 2) | 0,
             startTileX = clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,

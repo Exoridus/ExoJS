@@ -91,6 +91,56 @@ export default class Sprite extends Container {
 
     /**
      * @public
+     * @readonly
+     * @member {Float32Array}
+     */
+    get positionData() {
+        const positionData = this._positionData,
+            { left, top, right, bottom } = this.getLocalBounds(),
+            { a, b, c, d, x, y } = this.getGlobalTransform();
+
+        positionData[0] = (left * a) + (top * b) + x;
+        positionData[1] = (left * c) + (top * d) + y;
+
+        positionData[2] = (right * a) + (top * b) + x;
+        positionData[3] = (right * c) + (top * d) + y;
+
+        positionData[4] = (left * a) + (bottom * b) + x;
+        positionData[5] = (left * c) + (bottom * d) + y;
+
+        positionData[6] = (right * a) + (bottom * b) + x;
+        positionData[7] = (right * c) + (bottom * d) + y;
+
+        return positionData;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Uint32Array}
+     */
+    get texCoordData() {
+        if (this._updateTexCoords) {
+            const { left, top, right, bottom } = this._textureFrame,
+                { width, height } = this._texture,
+                minX = ((left / width) * 65535 & 65535),
+                minY = ((top / height) * 65535 & 65535) << 16,
+                maxX = ((right / width) * 65535 & 65535),
+                maxY = ((bottom / height) * 65535 & 65535) << 16;
+
+            this._texCoordData[0] = (minY | minX);
+            this._texCoordData[1] = (minY | maxX);
+            this._texCoordData[2] = (maxY | minX);
+            this._texCoordData[3] = (maxY | maxX);
+
+            this._updateTexCoords = false;
+        }
+
+        return this._texCoordData;
+    }
+
+    /**
+     * @public
      * @member {Number}
      */
     get width() {
@@ -120,8 +170,24 @@ export default class Sprite extends Container {
      * @returns {Sprite}
      */
     setTexture(texture) {
-        this._texture = texture;
-        this.updateTexture();
+        if (this._texture !== texture) {
+            this._texture = texture;
+            this.updateTexture();
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Sprite}
+     */
+    updateTexture() {
+        if (this._texture) {
+            this._texture.updateSource();
+            this.setTextureFrame(this._texture.sourceFrame);
+        }
 
         return this;
     }
@@ -130,10 +196,10 @@ export default class Sprite extends Container {
      * @public
      * @chainable
      * @param {Rectangle} frame
-     * @param {Boolean} [keepSize=false]
+     * @param {Boolean} [resetSize=true]
      * @returns {Sprite}
      */
-    setTextureFrame(frame, keepSize = false) {
+    setTextureFrame(frame, resetSize = true) {
         const width = this.width,
             height = this.height;
 
@@ -141,11 +207,11 @@ export default class Sprite extends Container {
         this._updateTexCoords = true;
 
         this.localBounds.set(0, 0, frame.width, frame.height);
-        this.scale.set(1, 1);
 
-        if (keepSize) {
-            this.width = width;
-            this.height = height;
+        if (resetSize) {
+            this.scale.set(1, 1);
+        } else {
+            this.scale.set(width / frame.width, height / frame.height);
         }
 
         return this;
@@ -164,90 +230,6 @@ export default class Sprite extends Container {
             for (const child of this.children) {
                 child.render(displayManager);
             }
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @returns {Float32Array}
-     */
-    getPositionData() {
-        this.updatePositionData();
-
-        return this._positionData;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Sprite}
-     */
-    updatePositionData() {
-        const positionData = this._positionData,
-            { left, top, right, bottom } = this.getLocalBounds(),
-            { a, b, c, d, x, y } = this.getGlobalTransform();
-
-        positionData[0] = (left * a) + (top * b) + x;
-        positionData[1] = (left * c) + (top * d) + y;
-
-        positionData[2] = (right * a) + (top * b) + x;
-        positionData[3] = (right * c) + (top * d) + y;
-
-        positionData[4] = (left * a) + (bottom * b) + x;
-        positionData[5] = (left * c) + (bottom * d) + y;
-
-        positionData[6] = (right * a) + (bottom * b) + x;
-        positionData[7] = (right * c) + (bottom * d) + y;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @returns {Uint32Array}
-     */
-    getTexCoordData() {
-        if (this._updateTexCoords) {
-            this.updateTexCoordData();
-            this._updateTexCoords = false;
-        }
-
-        return this._texCoordData;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Sprite}
-     */
-    updateTexCoordData() {
-        const texCoordData = this._texCoordData,
-            { left, top, right, bottom } = this._textureFrame,
-            { width, height } = this._texture,
-            minX = ((left / width) * 65535 & 65535),
-            minY = ((top / height) * 65535 & 65535) << 16,
-            maxX = ((right / width) * 65535 & 65535),
-            maxY = ((bottom / height) * 65535 & 65535) << 16;
-
-        texCoordData[0] = (minY | minX);
-        texCoordData[1] = (minY | maxX);
-        texCoordData[2] = (maxY | minX);
-        texCoordData[3] = (maxY | maxX);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Sprite}
-     */
-    updateTexture() {
-        if (this._texture) {
-            this._texture.updateSource();
-            this.setTextureFrame(this._texture.sourceFrame);
         }
 
         return this;

@@ -10,10 +10,10 @@ export default class ShaderUniform {
      * @param {Object} options
      * @param {String} options.name
      * @param {Number} options.type
-     * @param {Number} [options.unit=-1]
+     * @param {Number} [options.value]
      * @param {Boolean} [options.transpose=false]
      */
-    constructor({ name, type, unit = -1, transpose = false } = {}) {
+    constructor({ name, type, value, transpose = false } = {}) {
 
         /**
          * @private
@@ -35,27 +35,15 @@ export default class ShaderUniform {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._unit = unit;
-
-        /**
-         * @private
          * @member {Boolean}
          */
         this._transpose = transpose;
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?GLProgram}
          */
-        this._renderState = null;
-
-        /**
-         * @private
-         * @member {?WebGLUniformLocation}
-         */
-        this._location = null;
+        this._glProgram = null;
 
         /**
          * @private
@@ -68,6 +56,10 @@ export default class ShaderUniform {
          * @member {Boolean}
          */
         this._dirty = false;
+
+        if (value !== undefined) {
+            this.setValue(value);
+        }
     }
 
     /**
@@ -105,39 +97,19 @@ export default class ShaderUniform {
      * @param {*} value
      */
     setValue(value) {
-        this._value = value;
+        this._value = (value instanceof Matrix) ? value.toArray(this._transpose) : value;
         this._dirty = true;
 
         this.upload();
     }
 
     /**
-     * @param {Matrix} matrix
-     * @param {Boolean} [transpose=this._transpose]
-     */
-    setMatrix(matrix, transpose = this._transpose) {
-        this._transpose = transpose;
-
-        this.setValue((matrix instanceof Matrix) ? matrix.toArray(transpose) : matrix);
-    }
-
-    /**
-     * @param {Texture} texture
-     * @param {Number} unit
-     */
-    setTexture(texture, unit = this._unit) {
-        this._unit = unit;
-
-        this.setValue(texture);
-    }
-
-    /**
      * @public
+     * @param {GLProgram} glProgram
      */
-    bind(renderState, program) {
-        if (!this._renderState) {
-            this._renderState = renderState;
-            this._location = renderState.getUniformLocation(program, this._name);
+    bind(glProgram) {
+        if (!this._glProgram) {
+            this._glProgram = glProgram;
         }
 
         if (!this._bound) {
@@ -161,7 +133,7 @@ export default class ShaderUniform {
      */
     upload() {
         if (this._bound && this._dirty) {
-            this._renderState.setUniformValue(this._location, this._value, this._type, this._unit);
+            this._glProgram.setUniformValue(this._name, this._value, this._type);
 
             this._dirty = false;
         }
@@ -171,18 +143,12 @@ export default class ShaderUniform {
      * @public
      */
     destroy() {
-        if (this._bound) {
-            this.unbind();
-        }
-
         this._name = null;
         this._type = null;
         this._value = null;
-        this._renderState = null;
-        this._location = null;
-        this._bound = null;
-        this._unit = null;
         this._transpose = null;
+        this._glProgram = null;
+        this._bound = null;
         this._dirty = null;
     }
 }

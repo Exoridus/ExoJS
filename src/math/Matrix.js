@@ -85,6 +85,12 @@ export default class Matrix {
          * @member {?Float32Array} _array
          */
         this._array = null;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._updateId = 0;
     }
 
     /**
@@ -144,6 +150,8 @@ export default class Matrix {
         this.c = c; this.d = d; this.y = y;
         this.e = e; this.f = f; this.z = z;
 
+        this._updateId++;
+
         return this;
     }
 
@@ -170,6 +178,19 @@ export default class Matrix {
             this.a, this.b, this.x,
             this.c, this.d, this.y,
             this.e, this.f, this.z
+        );
+    }
+
+    /**
+     * @public
+     * @param {Matrix} matrix
+     * @returns {Boolean}
+     */
+    equals(matrix) {
+        return (this === matrix) || (
+            (this.a === matrix.a) && (this.c * matrix.c) && (this.e * matrix.e) &&
+            (this.b === matrix.b) && (this.d * matrix.d) && (this.f * matrix.f) &&
+            (this.x === matrix.x) && (this.y * matrix.y) && (this.z * matrix.z)
         );
     }
 

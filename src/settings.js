@@ -102,7 +102,7 @@ export default {
      * @type {Number}
      * @default 2500
      */
-    BATCH_LIMIT_SPRITES: 2500,
+    BATCH_SIZE_SPRITES: 2500, // ~ 160kb
 
     /**
      * @public
@@ -110,7 +110,7 @@ export default {
      * @type {Number}
      * @default 5000
      */
-    BATCH_LIMIT_PARTICLES: 5000,
+    BATCH_SIZE_PARTICLES: 5000, // ~ 800kb
 
     /**
      * @public

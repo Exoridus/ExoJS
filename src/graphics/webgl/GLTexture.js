@@ -1,5 +1,4 @@
-import settings from '../settings';
-import Size from '../math/Size';
+import Size from '../../math/Size';
 
 /**
  * @class GLTexture
@@ -12,7 +11,7 @@ export default class GLTexture {
      */
     constructor(context) {
         if (!context) {
-            throw new Error('This browser or hardware does not support WebGL.');
+            throw new Error('No Rendering Context was provided.');
         }
 
         /**
@@ -110,7 +109,7 @@ export default class GLTexture {
      * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
      * @returns {GLTexture}
      */
-    setTextureImage(source) {
+    setTextureSource(source) {
         const gl = this._context,
             width = (source.videoWidth || source.width),
             height = (source.videoHeight || source.height);

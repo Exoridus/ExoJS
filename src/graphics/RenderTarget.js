@@ -1,5 +1,4 @@
-import Vector from '../math/Vector';
-import Size from '../math/Size';
+import ObservableSize from '../math/ObservableSize';
 
 /**
  * @class RenderTarget
@@ -16,9 +15,21 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {Size}
+         * @member {ObservableSize}
          */
-        this._size = new Size(width, height);
+        this._size = new ObservableSize(this.updateSize, this, width, height);
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._isRoot = isRoot;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._bound = false;
 
         /**
          * @private
@@ -28,26 +39,14 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {?GLFramebuffer}
          */
-        this._isRoot = isRoot;
+        this._glFramebuffer = null;
     }
 
     /**
      * @public
-     * @member {Boolean}
-     */
-    get isRoot() {
-        return this._isRoot;
-    }
-
-    set isRoot(isRoot) {
-        this._isRoot = isRoot;
-    }
-
-    /**
-     * @public
-     * @member {Size}
+     * @member {ObservableSize}
      */
     get size() {
         return this._size;
@@ -66,7 +65,7 @@ export default class RenderTarget {
     }
 
     set width(width) {
-        this._size.width = width | 0;
+        this._size.width = width;
     }
 
     /**
@@ -78,19 +77,52 @@ export default class RenderTarget {
     }
 
     set height(height) {
-        this._size.height = height | 0;
+        this._size.height = height;
     }
 
     /**
      * @public
+     * @chainable
      * @param {RenderState} renderState
+     * @returns {RenderTarget}
      */
     bind(renderState) {
         if (!this._renderState) {
             this._renderState = renderState;
+            this._glFramebuffer = renderState.createGLFramebuffer(this._isRoot);
         }
 
-        this._renderState.bindRenderTarget(this);
+        if (!this._bound) {
+            this._renderState.glFramebuffer = this._glFramebuffer;
+            this._bound = true;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {RenderTarget}
+     */
+    unbind() {
+        if (this._bound) {
+            this._renderState.glFramebuffer = null;
+            this._bound = false;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {RenderTarget}
+     */
+    updateSize() {
+        if (this._glFramebuffer) {
+            this._glFramebuffer.size.copy(this._size);
+        }
 
         return this;
     }
@@ -99,14 +131,18 @@ export default class RenderTarget {
      * @public
      */
     destroy() {
-        if (this._renderState) {
-            this._renderState.removeRenderTarget(this);
-            this._renderState = null;
+        this.unbind();
+
+        if (this._glFramebuffer) {
+            this._glFramebuffer.destroy();
+            this._glFramebuffer = null;
         }
 
         this._size.destroy();
         this._size = null;
 
+        this._renderState = null;
         this._isRoot = null;
+        this._bound = null;
     }
 }

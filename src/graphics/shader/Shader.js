@@ -15,12 +15,6 @@ export default class Shader {
 
         /**
          * @private
-         * @member {?RenderState}
-         */
-        this._renderState = null;
-
-        /**
-         * @private
          * @member {?String}
          */
         this._vertexSource = null;
@@ -45,9 +39,15 @@ export default class Shader {
 
         /**
          * @private
-         * @member {?WebGLProgram}
+         * @member {?RenderState}
          */
-        this._program = null;
+        this._renderState = null;
+
+        /**
+         * @private
+         * @member {?GLProgram}
+         */
+        this._glProgram = null;
 
         /**
          * @private
@@ -97,25 +97,22 @@ export default class Shader {
     bind(renderState) {
         if (!this._renderState) {
             this._renderState = renderState;
-            this._program = renderState.compileProgram(this._vertexSource, this._fragmentSource);
+            this._glProgram = renderState.createGLProgram(this._vertexSource, this._fragmentSource);
         }
 
         if (!this._bound) {
-            const renderState = this._renderState,
-                program = this._program;
-
-            renderState.useProgram(program);
-
             let offset = 0;
 
+            this._renderState.glProgram = this._glProgram;
+
             for (const attribute of this._attributes.values()) {
-                attribute.bind(renderState, program, this._stride, offset);
+                attribute.bind(this._glProgram, this._stride, offset);
 
                 offset += attribute.byteSize;
             }
 
             for (const uniform of this._uniforms.values()) {
-                uniform.bind(renderState, program);
+                uniform.bind(this._glProgram);
             }
 
             this._bound = true;
@@ -129,6 +126,8 @@ export default class Shader {
      */
     unbind() {
         if (this._bound) {
+            this._renderState.glProgram = null;
+
             for (const attribute of this._attributes.values()) {
                 attribute.unbind();
             }
@@ -212,8 +211,11 @@ export default class Shader {
      * @public
      */
     destroy() {
-        if (this._bound) {
-            this.unbind();
+        this.unbind();
+
+        if (this._glProgram) {
+            this._glProgram.destroy();
+            this._glProgram = null;
         }
 
         for (const attribute of this._attributes.values()) {
@@ -222,12 +224,6 @@ export default class Shader {
 
         for (const uniform of this._uniforms.values()) {
             uniform.destroy();
-        }
-
-        if (this._renderState) {
-            this._renderState.deleteProgram(this._program);
-            this._renderState = null;
-            this._program = null;
         }
 
         this._attributes.clear();
@@ -239,5 +235,7 @@ export default class Shader {
         this._vertexSource = null;
         this._fragmentSource = null;
         this._bound = null;
+        this._stride = null;
+        this._renderState = null;
     }
 }

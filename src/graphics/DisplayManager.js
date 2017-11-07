@@ -63,9 +63,9 @@ export default class DisplayManager {
          */
         this._contextLost = this._context.isContextLost();
 
-        // if (this._contextLost && this._context.getExtension('WEBGL_lose_context')) {
-        //     this._context.getExtension('WEBGL_lose_context').restoreContext();
-        // }
+        if (this._contextLost) {
+            this._restoreContext();
+        }
 
         /**
          * @private
@@ -102,9 +102,9 @@ export default class DisplayManager {
          * @member {RenderState}
          */
         this._renderState = new RenderState(this._context);
+        this._renderState.renderTarget = this._renderTarget;
+        this._renderState.view = this._view;
         this._renderState.clearColor = clearColor;
-
-        this._renderTarget.bind(this._renderState);
 
         this.addRenderer('sprite', new SpriteRenderer())
             .addRenderer('particle', new ParticleRenderer())
@@ -120,19 +120,6 @@ export default class DisplayManager {
      */
     get renderState() {
         return this._renderState;
-    }
-
-    /**
-     * @public
-     * @member {View}
-     */
-    get view() {
-        return this._view;
-    }
-
-    set view(view) {
-        this._view.copy(view);
-        this.updateViewport();
     }
 
     /**
@@ -169,28 +156,6 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @returns {DisplayManager}
-     */
-    updateViewport() {
-        const width = this._renderTarget.width,
-            height = this._renderTarget.height,
-            ratio = this._view.viewport;
-
-        this._renderState.viewport = Rectangle.Temp.set(
-            Math.round(width * ratio.x),
-            Math.round(height * ratio.y),
-            Math.round(width * ratio.width),
-            Math.round(height * ratio.height)
-        );
-
-        this._renderState.projection = this._view.getTransform();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {Number} width
      * @param {Number} height
      * @returns {DisplayManager}
@@ -202,7 +167,9 @@ export default class DisplayManager {
         this._renderTarget.width = width;
         this._renderTarget.height = height;
 
-        this.updateViewport();
+        if (this._renderState.renderTarget === this._renderTarget) {
+            this._renderState.updateViewport();
+        }
 
         return this;
     }
@@ -288,6 +255,10 @@ export default class DisplayManager {
         this._renderState.destroy();
         this._renderState = null;
 
+        this._renderTarget.destroy();
+        this._renderTarget = null;
+
+        this._view.destroy();
         this._view = null;
 
         this._clearBeforeRender = null;
@@ -305,6 +276,15 @@ export default class DisplayManager {
             return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
         } catch (e) {
             return null;
+        }
+    }
+
+    /**
+     * @private
+     */
+    _restoreContext() {
+        if (this._context.getExtension('WEBGL_lose_context')) {
+            this._context.getExtension('WEBGL_lose_context').restoreContext();
         }
     }
 
@@ -335,6 +315,8 @@ export default class DisplayManager {
      */
     _onContextLost() {
         this._contextLost = true;
+
+        this._restoreContext();
     }
 
     /**
