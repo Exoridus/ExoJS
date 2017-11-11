@@ -213,17 +213,17 @@ export default class Shader {
     destroy() {
         this.unbind();
 
-        if (this._glProgram) {
-            this._glProgram.destroy();
-            this._glProgram = null;
-        }
-
         for (const attribute of this._attributes.values()) {
             attribute.destroy();
         }
 
         for (const uniform of this._uniforms.values()) {
             uniform.destroy();
+        }
+
+        if (this._glProgram) {
+            this._glProgram.destroy();
+            this._glProgram = null;
         }
 
         this._attributes.clear();

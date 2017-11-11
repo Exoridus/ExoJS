@@ -61,7 +61,7 @@ var Exo =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 74);
+/******/ 	return __webpack_require__(__webpack_require__.s = 73);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -9142,11 +9142,6 @@ var Shader = function () {
         value: function destroy() {
             this.unbind();
 
-            if (this._glProgram) {
-                this._glProgram.destroy();
-                this._glProgram = null;
-            }
-
             var _iteratorNormalCompletion7 = true;
             var _didIteratorError7 = false;
             var _iteratorError7 = undefined;
@@ -9195,6 +9190,11 @@ var Shader = function () {
                         throw _iteratorError8;
                     }
                 }
+            }
+
+            if (this._glProgram) {
+                this._glProgram.destroy();
+                this._glProgram = null;
             }
 
             this._attributes.clear();
@@ -14384,7 +14384,7 @@ var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _GLTexture = __webpack_require__(79);
+var _GLTexture = __webpack_require__(78);
 
 var _GLTexture2 = _interopRequireDefault(_GLTexture);
 
@@ -14392,15 +14392,15 @@ var _settings = __webpack_require__(4);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _GLBuffer = __webpack_require__(80);
+var _GLBuffer = __webpack_require__(79);
 
 var _GLBuffer2 = _interopRequireDefault(_GLBuffer);
 
-var _GLFramebuffer = __webpack_require__(81);
+var _GLFramebuffer = __webpack_require__(80);
 
 var _GLFramebuffer2 = _interopRequireDefault(_GLFramebuffer);
 
-var _GLProgram = __webpack_require__(82);
+var _GLProgram = __webpack_require__(81);
 
 var _GLProgram2 = _interopRequireDefault(_GLProgram);
 
@@ -16140,7 +16140,7 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(83)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(82)))
 
 /***/ }),
 /* 61 */
@@ -20042,144 +20042,6 @@ Polygon.Temp = new Polygon();
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class RC4
- */
-var RC4 = function () {
-
-    /**
-     * @constructor
-     * @param {Number[]} keys
-     */
-    function RC4(keys) {
-        _classCallCheck(this, RC4);
-
-        /**
-         * @private
-         * @member {Number[]}
-         */
-        this._keys = [];
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._i = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._j = 0;
-
-        this.setKeys(keys);
-    }
-
-    /**
-     * @public
-     * @param {Number[]} keys
-     */
-
-
-    _createClass(RC4, [{
-        key: "setKeys",
-        value: function setKeys(keys) {
-            var oldKeys = this._keys,
-                newKeys = keys && keys.length || [1],
-                len = newKeys.length,
-                width = 256,
-                mask = 255;
-
-            this._i = 0;
-            this._j = 0;
-
-            oldKeys.length = 0;
-
-            for (var i = 0; i < width; i++) {
-                oldKeys[i] = i;
-            }
-
-            for (var _i = 0, j = 0; _i < width; _i++) {
-                var t = oldKeys[_i];
-
-                j = mask & j + newKeys[_i % len] + t;
-
-                oldKeys[_i] = oldKeys[j];
-                oldKeys[j] = t;
-            }
-
-            this.next(width);
-        }
-
-        /**
-         * @public
-         * @param {Number} count
-         * @returns {Number}
-         */
-
-    }, {
-        key: "next",
-        value: function next(count) {
-            var keys = this._keys;
-
-            var c = count,
-                result = 0,
-                i = this._i,
-                j = this._j,
-                t = void 0;
-
-            while (c--) {
-                i = 255 & i + 1;
-                t = keys[i];
-                j = 255 & j + t;
-
-                keys[i] = keys[j];
-                keys[j] = t;
-
-                result = result * 256 + keys[255 & keys[i] + keys[j]];
-            }
-
-            this._i = i;
-            this._j = j;
-
-            return result;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: "destroy",
-        value: function destroy() {
-            this._keys.length = 0;
-            this._keys = null;
-
-            this._i = null;
-            this._j = null;
-        }
-    }]);
-
-    return RC4;
-}();
-
-exports.default = RC4;
-
-/***/ }),
-/* 74 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
 exports.settings = exports.utils = exports.support = undefined;
 
 var _const = __webpack_require__(0);
@@ -20194,7 +20056,7 @@ Object.keys(_const).forEach(function (key) {
     });
 });
 
-var _content = __webpack_require__(75);
+var _content = __webpack_require__(74);
 
 Object.keys(_content).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20206,7 +20068,7 @@ Object.keys(_content).forEach(function (key) {
     });
 });
 
-var _core = __webpack_require__(77);
+var _core = __webpack_require__(76);
 
 Object.keys(_core).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20266,7 +20128,7 @@ Object.keys(_math).forEach(function (key) {
     });
 });
 
-var _media = __webpack_require__(99);
+var _media = __webpack_require__(98);
 
 Object.keys(_media).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20299,7 +20161,7 @@ exports.settings = settings; /**
                               */
 
 /***/ }),
-/* 75 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20309,7 +20171,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(76);
+var _Database = __webpack_require__(75);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -20447,7 +20309,7 @@ Object.defineProperty(exports, 'StringFactory', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 76 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20868,7 +20730,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 77 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20887,7 +20749,7 @@ Object.defineProperty(exports, 'EventEmitter', {
   }
 });
 
-var _Application = __webpack_require__(78);
+var _Application = __webpack_require__(77);
 
 Object.defineProperty(exports, 'Application', {
   enumerable: true,
@@ -20896,7 +20758,7 @@ Object.defineProperty(exports, 'Application', {
   }
 });
 
-var _Quadtree = __webpack_require__(84);
+var _Quadtree = __webpack_require__(83);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -20905,7 +20767,7 @@ Object.defineProperty(exports, 'Quadtree', {
   }
 });
 
-var _Scene = __webpack_require__(85);
+var _Scene = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -20959,7 +20821,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(86);
+var _Timer = __webpack_require__(85);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -20977,10 +20839,19 @@ Object.defineProperty(exports, 'Bounds', {
   }
 });
 
+var _Random = __webpack_require__(86);
+
+Object.defineProperty(exports, 'Random', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_Random).default;
+  }
+});
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 78 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21349,7 +21220,7 @@ var Application = function (_EventEmitter) {
 exports.default = Application;
 
 /***/ }),
-/* 79 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21538,7 +21409,7 @@ var GLTexture = function () {
 exports.default = GLTexture;
 
 /***/ }),
-/* 80 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21738,7 +21609,7 @@ var GLBuffer = function () {
 exports.default = GLBuffer;
 
 /***/ }),
-/* 81 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21837,7 +21708,7 @@ var GLFramebuffer = function () {
 exports.default = GLFramebuffer;
 
 /***/ }),
-/* 82 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22168,7 +22039,7 @@ var GLProgram = function () {
 exports.default = GLProgram;
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -22358,7 +22229,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22677,7 +22548,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 85 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22998,7 +22869,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23175,6 +23046,196 @@ var Timer = function (_Clock) {
 }(_Clock3.default);
 
 exports.default = Timer;
+
+/***/ }),
+/* 86 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var limit = Math.pow(2, 32) - 1;
+
+/**
+ * @class Random
+ */
+
+var Random = function () {
+
+    /**
+     * @constructor
+     * @param {Number} [seed]
+     */
+    function Random(seed) {
+        _classCallCheck(this, Random);
+
+        /**
+         * @private
+         * @type {Number[]}
+         */
+        this._state = new Uint32Array(624);
+
+        /**
+         * @private
+         * @type {Number}
+         */
+        this._iteration = 0;
+
+        /**
+         * @private
+         * @type {?Number}
+         */
+        this._seed = null;
+
+        /**
+         * @private
+         * @type {?Number}
+         */
+        this._value = null;
+
+        this.seed = seed;
+
+        this._twist();
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?Number}
+     */
+
+
+    _createClass(Random, [{
+        key: "reset",
+
+
+        /**
+         * @public
+         * @returns {Random}
+         */
+        value: function reset() {
+            this._state[0] = this._seed;
+
+            for (var i = 1; i < 624; i++) {
+                var s = this._state[i - 1] ^ this._state[i - 1] >>> 30;
+
+                this._state[i] = (((s & 0xffff0000) >>> 16) * 1812433253 << 16) + (s & 0x0000ffff) * 1812433253 + i;
+                this._state[i] |= 0;
+            }
+
+            this._iteration = 0;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @param {Number} [min=0]
+         * @param {Number} [max=1]
+         * @returns {Number}
+         */
+
+    }, {
+        key: "next",
+        value: function next() {
+            var min = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+            var max = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+
+            if (this._iteration >= 624) {
+                this._twist();
+            }
+
+            this._value = this._state[this._iteration++];
+            this._value ^= this._value >>> 11;
+            this._value ^= this._value << 7 & 0x9d2c5680;
+            this._value ^= this._value << 15 & 0xefc60000;
+            this._value ^= this._value >>> 18;
+            this._value = (this._value >>> 0) / limit * (max - min) + min;
+
+            return this._value;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: "_twist",
+        value: function _twist() {
+            var state = this._state;
+
+            // first 624-397=227 words
+            for (var i = 0; i < 227; i++) {
+                var bits = state[i] & 0x80000000 | state[i + 1] & 0x7fffffff;
+
+                state[i] = state[i + 397] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
+            }
+
+            // remaining words (except the very last one)
+            for (var _i = 227; _i < 623; _i++) {
+                var bits = state[_i] & 0x80000000 | state[_i + 1] & 0x7fffffff;
+
+                state[_i] = state[_i - 227] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
+            }
+
+            // last word is computed pretty much the same way, but i + 1 must wrap around to 0
+            var bits = state[623] & 0x80000000 | state[0] & 0x7fffffff;
+
+            state[623] = state[396] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
+
+            // word used for next random number
+            this._iteration = 0;
+            this._value = null;
+        }
+    }, {
+        key: "seed",
+        get: function get() {
+            return this._value;
+        },
+        set: function set(seed) {
+            this._seed = seed;
+            this.reset();
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {?Number}
+         */
+
+    }, {
+        key: "value",
+        get: function get() {
+            return this._value;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: "iteration",
+        get: function get() {
+            return this._iteration;
+        }
+    }]);
+
+    return Random;
+}();
+
+exports.default = Random;
 
 /***/ }),
 /* 87 */
@@ -25301,24 +25362,6 @@ Object.defineProperty(exports, 'Collision', {
   }
 });
 
-var _RC = __webpack_require__(73);
-
-Object.defineProperty(exports, 'RC4', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_RC).default;
-  }
-});
-
-var _Random = __webpack_require__(97);
-
-Object.defineProperty(exports, 'Random', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_Random).default;
-  }
-});
-
 var _Shape = __webpack_require__(16);
 
 Object.defineProperty(exports, 'Shape', {
@@ -25337,7 +25380,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(98);
+var _Circle = __webpack_require__(97);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -25377,222 +25420,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /***/ }),
 /* 97 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _RC = __webpack_require__(73);
-
-var _RC2 = _interopRequireDefault(_RC);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class Random
- */
-var Random = function () {
-
-    /**
-     * @constructor
-     * @param {String} [seed=Random.generateSeed()]
-     */
-    function Random() {
-        var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Random.generateSeed();
-
-        _classCallCheck(this, Random);
-
-        /**
-         * @private
-         * @member {String}
-         */
-        this._seed = seed;
-
-        /**
-         * @private
-         * @member {RC4}
-         */
-        this._rc4 = new _RC2.default(Random.getMixedKeys(this.flatten(seed)));
-    }
-
-    /**
-     * @public
-     * @member {String}
-     */
-
-
-    _createClass(Random, [{
-        key: 'flatten',
-
-
-        /**
-         * @private
-         * @param {*} object
-         * @param {Number} [depth=3]
-         * @returns {String}
-         */
-        value: function flatten(object) {
-            var depth = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 3;
-
-            var result = [];
-
-            if (depth >= 0 && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object') {
-                var _iteratorNormalCompletion = true;
-                var _didIteratorError = false;
-                var _iteratorError = undefined;
-
-                try {
-                    for (var _iterator = Object.values(object)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                        var value = _step.value;
-
-                        result.push(this.flatten(value, depth - 1));
-                    }
-                } catch (err) {
-                    _didIteratorError = true;
-                    _iteratorError = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion && _iterator.return) {
-                            _iterator.return();
-                        }
-                    } finally {
-                        if (_didIteratorError) {
-                            throw _iteratorError;
-                        }
-                    }
-                }
-            }
-
-            if (result.length) {
-                return String.fromCharCode.apply(String, result);
-            }
-
-            return typeof object === 'string' ? object : object + '\0';
-        }
-
-        /**
-         * @public
-         * @param {Number} [min=0]
-         * @param {Number} [max=1]
-         * @returns {Number}
-         */
-
-    }, {
-        key: 'next',
-        value: function next() {
-            var min = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-            var max = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-
-            var rc4 = this._rc4,
-                significance = Math.pow(2, 52),
-                overflow = significance * 2;
-
-            var n = rc4.next(6),
-                denom = Math.pow(256, 6),
-                x = 0;
-
-            while (n < significance) {
-                n = (n + x) * 256;
-                denom *= 256;
-                x = rc4.next(1);
-            }
-
-            while (n >= overflow) {
-                n /= 2;
-                denom /= 2;
-                x >>>= 1;
-            }
-
-            return (n + x) / denom * (max - min) + min;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._seed = null;
-
-            this._rc4.destroy();
-            this._rc4 = null;
-        }
-
-        /**
-         * @private
-         * @static
-         * @param {String} seed
-         * @param {Number[]} [keys=[]]
-         * @returns {Number[]}
-         */
-
-    }, {
-        key: 'seed',
-        get: function get() {
-            return this._seed;
-        },
-        set: function set(seed) {
-            this._seed = seed;
-            this._rc4.setKeys(Random.getMixedKeys(this.flatten(seed)));
-        }
-    }], [{
-        key: 'getMixedKeys',
-        value: function getMixedKeys(seed) {
-            var keys = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-
-            var result = [],
-                seedString = '' + seed,
-                len = seedString.length;
-
-            for (var i = 0, smear = 0; i < len; i++) {
-                result[255 & i] = 255 & (smear ^= keys[255 & i] * 19) + seedString.charCodeAt(i);
-            }
-
-            return result;
-        }
-
-        /**
-         * @private
-         * @returns {String}
-         */
-
-    }, {
-        key: 'generateSeed',
-        value: function generateSeed() {
-            var seed = new Uint8Array(256);
-
-            if (crypto) {
-                crypto.getRandomValues(seed);
-            } else {
-                for (var i = 0; i < 256; i++) {
-                    seed[i] = Math.random() * 256 & 255;
-                }
-            }
-
-            return String.fromCharCode.apply(String, _toConsumableArray(seed));
-        }
-    }]);
-
-    return Random;
-}();
-
-exports.default = Random;
-
-/***/ }),
-/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25799,7 +25626,7 @@ Circle.Empty = new Circle(0, 0, 0);
 Circle.Temp = new Circle();
 
 /***/ }),
-/* 99 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25863,7 +25690,7 @@ Object.defineProperty(exports, 'MediaManager', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(100);
+var _AudioAnalyser = __webpack_require__(99);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -25875,7 +25702,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 100 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

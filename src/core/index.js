@@ -12,3 +12,4 @@ export { default as Time } from './Time';
 export { default as Clock } from './Clock';
 export { default as Timer } from './Timer';
 export { default as Bounds } from './Bounds';
+export { default as Random } from './Random';
