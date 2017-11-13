@@ -11,17 +11,17 @@ export default class Timer extends Clock {
     /**
      * @constructor
      * @param {Boolean} autoStart
-     * @param {Number} timeLimit
+     * @param {Number} [timeLimit=0]
      * @param {Number} [factor=TIME.MILLISECONDS]
      */
-    constructor(autoStart, timeLimit, factor = TIME.MILLISECONDS) {
+    constructor(autoStart, timeLimit = 0, factor = TIME.MILLISECONDS) {
         super(false);
 
         /**
          * @private
          * @member {Number}
          */
-        this._limit = 0;
+        this._limit = timeLimit;
 
         if (autoStart) {
             this.restart(timeLimit, factor);
@@ -83,12 +83,12 @@ export default class Timer extends Clock {
     /**
      * @public
      * @chainable
-     * @param {Number} timeLimit
+     * @param {Number} [timeLimit=this._limit]
      * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Timer}
      */
-    reset(timeLimit, factor = TIME.MILLISECONDS) {
-        this._limit = timeLimit * factor;
+    reset(timeLimit = this._limit, factor = TIME.MILLISECONDS) {
+        this._limit = (timeLimit * factor);
         this._timeBuffer = 0;
         this._isRunning = false;
 
@@ -98,11 +98,11 @@ export default class Timer extends Clock {
     /**
      * @public
      * @chainable
-     * @param {Number} timeLimit
+     * @param {Number} [timeLimit=this._limit]
      * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Timer}
      */
-    restart(timeLimit, factor = TIME.MILLISECONDS) {
+    restart(timeLimit = this._limit, factor = TIME.MILLISECONDS) {
         this.reset(timeLimit, factor);
         this.start();
 

@@ -115,6 +115,16 @@ export default class Random {
     }
 
     /**
+     * @public
+     */
+    destroy() {
+        this._state = null;
+        this._iteration = null;
+        this._seed = null;
+        this._value = null;
+    }
+
+    /**
      * @private
      */
     _twist() {

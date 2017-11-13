@@ -1,6 +1,6 @@
 import MapGenerator from './MapGenerator';
 
-const clamp = Exo.utils.clamp;
+const utils = Exo.utils;
 
 /**
  * @class WorldMap
@@ -56,6 +56,12 @@ export default class WorldMap {
         this._tile = new Exo.Sprite(tileset.texture);
         this._tile.width = this._tileSize.width;
         this._tile.height = this._tileSize.height;
+
+        /**
+         * @private
+         * @member {Rectangle}
+         */
+        this._bounds = new Exo.Rectangle(0, 0, (this._tilesX * this._tileSize.width), (this._tilesY * this._tileSize.height));
     }
 
     /**
@@ -63,8 +69,8 @@ export default class WorldMap {
      * @readonly
      * @member {Number}
      */
-    get pixelWidth() {
-        return this._tilesX * this._tileSize.width;
+    get bounds() {
+        return this._bounds;
     }
 
     /**
@@ -72,8 +78,25 @@ export default class WorldMap {
      * @readonly
      * @member {Number}
      */
-    get pixelHeight() {
-        return this._tilesY * this._tileSize.height;
+    get width() {
+        return this._bounds.width;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get height() {
+        return this._bounds.height;
+    }
+
+    /**
+     * @public
+     * @param {Time} delta
+     */
+    update(delta) {
+
     }
 
     /**
@@ -81,18 +104,18 @@ export default class WorldMap {
      * @param {DisplayManager} displayManager
      */
     render(displayManager) {
-        const mapData = this._mapData,
+        const camera = displayManager.renderState.view,
+            mapData = this._mapData,
             tilesX = this._tilesX,
             tilesY = this._tilesY,
             tile = this._tile,
             tileset = this._tileset,
             tileWidth = this._tileSize.width,
             tileHeight = this._tileSize.height,
-            camera = displayManager.renderState.view,
             tilesHorizontal = ((camera.width / tileWidth) + 2) | 0,
             tilesVertical = ((camera.height / tileHeight) + 2) | 0,
-            startTileX = clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-            startTileY = clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+            startTileX = utils.clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+            startTileY = utils.clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
             startTileIndex = (startTileY * tilesX) + startTileX,
             tilesTotal = tilesHorizontal * tilesVertical;
 

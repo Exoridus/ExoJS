@@ -472,8 +472,8 @@ export const
      */
     GAMEPAD = {
         FaceBottom: INPUT_OFFSET_GAMEPAD,
-        FaceLeft: INPUT_OFFSET_GAMEPAD + 1,
-        FaceRight: INPUT_OFFSET_GAMEPAD + 2,
+        FaceRight: INPUT_OFFSET_GAMEPAD + 1,
+        FaceLeft: INPUT_OFFSET_GAMEPAD + 2,
         FaceTop: INPUT_OFFSET_GAMEPAD + 3,
         ShoulderLeftBottom: INPUT_OFFSET_GAMEPAD + 4,
         ShoulderRightBottom: INPUT_OFFSET_GAMEPAD + 5,

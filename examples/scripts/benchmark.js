@@ -119,7 +119,7 @@ window.app.start(new Exo.Scene({
                 bunny.y = 0;
             }
 
-            displayManager.render(bunny);
+            displayManager.draw(bunny);
         }
 
         displayManager.end();

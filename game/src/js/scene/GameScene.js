@@ -4,7 +4,7 @@ import Tileset from '../map/Tileset';
 
 const KEYBOARD = Exo.KEYBOARD,
     GAMEPAD = Exo.GAMEPAD,
-    clamp = Exo.utils.clamp;
+    utils = Exo.utils;
 
 /**
  * @class GameScene
@@ -29,14 +29,23 @@ export default class GameScene extends Exo.Scene {
          * @private
          * @member {Player}
          */
-        this._player = new Player(resources.get('texture', 'game/player'));
-        this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+        this._player = new Player(app, {
+            spawnPoint: new Exo.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
+            worldBounds: this._worldMap.bounds,
+        });
 
         /**
          * @private
          * @member {View}
          */
         this._camera = new Exo.View(new Exo.Rectangle(0, 0, canvas.width, canvas.height));
+        app.displayManager.setView(this._camera);
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._paused = false;
 
         /**
          * @private
@@ -44,15 +53,9 @@ export default class GameScene extends Exo.Scene {
          */
         this._backgroundMusic = resources.get('music', 'game/background');
         this._backgroundMusic.connect(app.mediaManager);
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._isPaused = false;
-
         this._backgroundMusic.play({ loop: true });
 
+        this._addEvents();
         this._addInputs();
         this._updateCamera();
     }
@@ -61,10 +64,15 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     update(delta) {
+        if (!this._paused) {
+            this._player.update(delta);
+            this._worldMap.update(delta);
+        }
+
         this.app.displayManager
             .begin()
-            .render(this._worldMap)
-            .render(this._player)
+            .draw(this._worldMap)
+            .draw(this._player)
             .end();
     }
 
@@ -72,6 +80,7 @@ export default class GameScene extends Exo.Scene {
      * @override
      */
     unload() {
+        this._removeEvents();
         this._removeInputs();
 
         this._worldMap.destroy();
@@ -86,43 +95,79 @@ export default class GameScene extends Exo.Scene {
         this._backgroundMusic.destroy();
         this._backgroundMusic = null;
 
-        this._inputs.length = 0;
-        this._inputs = null;
-    }
-
-    /**
-     * @private
-     * @param {Number} x
-     * @param {Number} y
-     */
-    _movePlayer(x, y) {
-        const player = this._player,
-            worldMap = this._worldMap;
-
-        player.move(x, y);
-        player.setPosition(
-            clamp(player.x, 0, worldMap.pixelWidth),
-            clamp(player.y, 0, worldMap.pixelHeight),
-        );
-
-        this._updateCamera();
+        this._paused = null;
     }
 
     /**
      * @private
      */
     _updateCamera() {
-        const renderState = this.app.displayManager.renderState,
-            worldMap = this._worldMap,
-            player = this._player,
-            camera = this._camera,
-            offsetWidth = camera.width / 2,
-            offsetHeight = camera.height / 2;
+        const displayManager = this.app.displayManager,
+            x = this._player.x,
+            y = this._player.y - (this._player.height / 2),
+            maxX = this._worldMap.width,
+            maxY = this._worldMap.height,
+            centerX = this._camera.offsetCenter.x,
+            centerY = this._camera.offsetCenter.y;
 
-        renderState.view = camera.setCenter(
-            clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth),
-            clamp(player.y - (player.height / 2), offsetHeight, worldMap.pixelHeight - offsetHeight),
-        );
+        displayManager.setView(this._camera.setCenter(
+            utils.clamp(x, centerX, maxX - centerX),
+            utils.clamp(y, centerY, maxY - centerY)
+        ));
+    }
+
+    /**
+     * @private
+     */
+    _pauseGame() {
+        if (!this._paused) {
+            this._paused = true;
+            this._backgroundMusic.pause();
+            this._openMenu();
+        }
+
+        return this;
+    }
+
+    /**
+     * @private
+     */
+    _resumeGame() {
+        if (this._paused) {
+            this._paused = false;
+            this._backgroundMusic.play();
+            this._closeMenu();
+        }
+
+        return this;
+    }
+
+    /**
+     * @private
+     */
+    _openMenu() {
+
+    }
+
+    /**
+     * @private
+     */
+    _closeMenu() {
+
+    }
+
+    /**
+     * @private
+     */
+    _addEvents() {
+        this._player.on('move', this._updateCamera, this);
+    }
+
+    /**
+     * @private
+     */
+    _removeEvents() {
+        this._player.off('move', this._updateCamera, this);
     }
 
     /**
@@ -130,122 +175,34 @@ export default class GameScene extends Exo.Scene {
      */
     _addInputs() {
 
+        /**
+         * @private
+         * @member {Input}
+         */
         this._toggleMenuInput = new Exo.Input([
             KEYBOARD.Escape,
             GAMEPAD.Start,
         ], {
             context: this,
             trigger() {
-                this._isPaused = !this._isPaused;
-
-                if (this._isPaused) {
-                    // show pause menu
+                if (this._paused) {
+                    this._resumeGame();
                 } else {
-                    // hide pause menu
+                    this._pauseGame();
                 }
             },
         });
 
-        this._moveUpInput = new Exo.Input([
-            KEYBOARD.Up,
-            KEYBOARD.W,
-            GAMEPAD.LeftStickUp,
-            GAMEPAD.DPadUp,
-        ], {
-            context: this,
-            active(value) {
-                this._movePlayer(0, value * -1);
-            },
-        });
-
-        this._moveDownInput = new Exo.Input([
-            KEYBOARD.Down,
-            KEYBOARD.S,
-            GAMEPAD.LeftStickDown,
-            GAMEPAD.DPadDown,
-        ], {
-            context: this,
-            active(value) {
-                this._movePlayer(0, value);
-            },
-        });
-
-        this._moveLeftInput = new Exo.Input([
-            KEYBOARD.Left,
-            KEYBOARD.A,
-            GAMEPAD.LeftStickLeft,
-            GAMEPAD.DPadLeft,
-        ], {
-            context: this,
-            active(value) {
-                this._movePlayer(value * -1, 0);
-            },
-        });
-
-        this._moveRightInput = new Exo.Input([
-            KEYBOARD.Right,
-            KEYBOARD.D,
-            GAMEPAD.LeftStickRight,
-            GAMEPAD.DPadRight,
-        ], {
-            context: this,
-            active(value) {
-                this._movePlayer(value, 0);
-            },
-        });
-
-        this._toggleRunInput = new Exo.Input([
-            KEYBOARD.Shift,
-            GAMEPAD.FaceLeft,
-        ], {
-            context: this,
-            start() {
-                this._player.running = true;
-            },
-            stop() {
-                this._player.running = false;
-            }
-        });
-
-        this.app.inputManager.add([
-            this._toggleMenuInput,
-            this._moveUpInput,
-            this._moveDownInput,
-            this._moveLeftInput,
-            this._moveRightInput,
-            this._toggleRunInput,
-        ]);
+        this.app.inputManager.add(this._toggleMenuInput);
     }
 
     /**
      * @private
      */
     _removeInputs() {
-        this.app.inputManager.remove([
-            this._toggleMenuInput,
-            this._moveUpInput,
-            this._moveDownInput,
-            this._moveLeftInput,
-            this._moveRightInput,
-            this._toggleRunInput,
-        ]);
+        this.app.inputManager.remove(this._toggleMenuInput);
 
         this._toggleMenuInput.destroy();
         this._toggleMenuInput = null;
-
-        this._moveUpInput.destroy();
-        this._moveUpInput = null;
-
-        this._moveDownInput.destroy();
-        this._moveDownInput = null;
-
-        this._moveLeftInput.destroy();
-        this._moveLeftInput = null;
-
-        this._moveRightInput.destroy();
-        this._moveRightInput = null;
-
-        this._toggleRunInput.destroy();
-        this._toggleRunInput = null;
     }
 }

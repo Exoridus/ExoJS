@@ -102,12 +102,12 @@ export default class DisplayManager {
          * @member {RenderState}
          */
         this._renderState = new RenderState(this._context);
-        this._renderState.renderTarget = this._renderTarget;
-        this._renderState.view = this._view;
-        this._renderState.clearColor = clearColor;
 
         this.addRenderer('sprite', new SpriteRenderer())
             .addRenderer('particle', new ParticleRenderer())
+            .setRenderTarget(this._renderTarget)
+            .setView(this._view)
+            .setClearColor(clearColor)
             .resize(width, height);
 
         this._addEvents();
@@ -120,6 +120,42 @@ export default class DisplayManager {
      */
     get renderState() {
         return this._renderState;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {View} view
+     * @returns {DisplayManager}
+     */
+    setView(view) {
+        this._renderState.view = view;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {RenderTarget} renderTarget
+     * @returns {DisplayManager}
+     */
+    setRenderTarget(renderTarget) {
+        this._renderState.renderTarget = renderTarget;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Color} clearColor
+     * @returns {DisplayManager}
+     */
+    setClearColor(clearColor) {
+        this._renderState.clearColor = clearColor;
+
+        return this;
     }
 
     /**
@@ -151,6 +187,18 @@ export default class DisplayManager {
         }
 
         return this._renderers.get(name);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} name
+     * @returns {DisplayManager}
+     */
+    setRenderer(renderer) {
+        this._renderState.renderer = this.getRenderer(renderer);
+
+        return this;
     }
 
     /**
@@ -199,7 +247,7 @@ export default class DisplayManager {
      * @param {Renderable|*} renderable
      * @returns {DisplayManager}
      */
-    render(renderable) {
+    draw(renderable) {
         if (!this._isRendering) {
             throw new Error('DisplayManager has to begin first!')
         }
@@ -226,6 +274,18 @@ export default class DisplayManager {
         if (!this._contextLost && this._renderState.renderer) {
             this._renderState.renderer.flush();
         }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Renderable|*} renderable
+     * @returns {DisplayManager}
+     */
+    render(renderable) {
+        this._renderState.renderer.render(renderable);
 
         return this;
     }

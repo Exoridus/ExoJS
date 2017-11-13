@@ -876,7 +876,7 @@ var TitleScene = function (_Exo$Scene) {
     value: function update(delta) {
       this._menuManager.update(delta);
 
-      this.app.displayManager.begin().render(this._titleBackground).render(this._menuManager).end();
+      this.app.displayManager.begin().draw(this._titleBackground).draw(this._menuManager).end();
     }
 
     /**
@@ -1208,7 +1208,7 @@ var MenuManager = function () {
         key: 'render',
         value: function render(displayManager) {
             if (this._currentMenu) {
-                displayManager.render(this._currentMenu);
+                displayManager.draw(this._currentMenu);
             }
 
             return this;
@@ -1842,7 +1842,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var KEYBOARD = Exo.KEYBOARD,
     GAMEPAD = Exo.GAMEPAD,
-    clamp = Exo.utils.clamp;
+    utils = Exo.utils;
 
 /**
  * @class GameScene
@@ -1879,14 +1879,23 @@ var GameScene = function (_Exo$Scene) {
              * @private
              * @member {Player}
              */
-            this._player = new _Player2.default(resources.get('texture', 'game/player'));
-            this._player.setPosition(this._worldMap.pixelWidth / 2, this._worldMap.pixelHeight / 2);
+            this._player = new _Player2.default(app, {
+                spawnPoint: new Exo.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
+                worldBounds: this._worldMap.bounds
+            });
 
             /**
              * @private
              * @member {View}
              */
             this._camera = new Exo.View(new Exo.Rectangle(0, 0, canvas.width, canvas.height));
+            app.displayManager.setView(this._camera);
+
+            /**
+             * @private
+             * @member {Boolean}
+             */
+            this._paused = false;
 
             /**
              * @private
@@ -1894,15 +1903,9 @@ var GameScene = function (_Exo$Scene) {
              */
             this._backgroundMusic = resources.get('music', 'game/background');
             this._backgroundMusic.connect(app.mediaManager);
-
-            /**
-             * @private
-             * @member {Boolean}
-             */
-            this._isPaused = false;
-
             this._backgroundMusic.play({ loop: true });
 
+            this._addEvents();
             this._addInputs();
             this._updateCamera();
         }
@@ -1914,7 +1917,12 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'update',
         value: function update(delta) {
-            this.app.displayManager.begin().render(this._worldMap).render(this._player).end();
+            if (!this._paused) {
+                this._player.update(delta);
+                this._worldMap.update(delta);
+            }
+
+            this.app.displayManager.begin().draw(this._worldMap).draw(this._player).end();
         }
 
         /**
@@ -1924,6 +1932,7 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: 'unload',
         value: function unload() {
+            this._removeEvents();
             this._removeInputs();
 
             this._worldMap.destroy();
@@ -1938,26 +1947,7 @@ var GameScene = function (_Exo$Scene) {
             this._backgroundMusic.destroy();
             this._backgroundMusic = null;
 
-            this._inputs.length = 0;
-            this._inputs = null;
-        }
-
-        /**
-         * @private
-         * @param {Number} x
-         * @param {Number} y
-         */
-
-    }, {
-        key: '_movePlayer',
-        value: function _movePlayer(x, y) {
-            var player = this._player,
-                worldMap = this._worldMap;
-
-            player.move(x, y);
-            player.setPosition(clamp(player.x, 0, worldMap.pixelWidth), clamp(player.y, 0, worldMap.pixelHeight));
-
-            this._updateCamera();
+            this._paused = null;
         }
 
         /**
@@ -1967,14 +1957,83 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: '_updateCamera',
         value: function _updateCamera() {
-            var renderState = this.app.displayManager.renderState,
-                worldMap = this._worldMap,
-                player = this._player,
-                camera = this._camera,
-                offsetWidth = camera.width / 2,
-                offsetHeight = camera.height / 2;
+            var displayManager = this.app.displayManager,
+                x = this._player.x,
+                y = this._player.y - this._player.height / 2,
+                maxX = this._worldMap.width,
+                maxY = this._worldMap.height,
+                centerX = this._camera.offsetCenter.x,
+                centerY = this._camera.offsetCenter.y;
 
-            renderState.view = camera.setCenter(clamp(player.x, offsetWidth, worldMap.pixelWidth - offsetWidth), clamp(player.y - player.height / 2, offsetHeight, worldMap.pixelHeight - offsetHeight));
+            displayManager.setView(this._camera.setCenter(utils.clamp(x, centerX, maxX - centerX), utils.clamp(y, centerY, maxY - centerY)));
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_pauseGame',
+        value: function _pauseGame() {
+            if (!this._paused) {
+                this._paused = true;
+                this._backgroundMusic.pause();
+                this._openMenu();
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_resumeGame',
+        value: function _resumeGame() {
+            if (this._paused) {
+                this._paused = false;
+                this._backgroundMusic.play();
+                this._closeMenu();
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_openMenu',
+        value: function _openMenu() {}
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_closeMenu',
+        value: function _closeMenu() {}
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addEvents',
+        value: function _addEvents() {
+            this._player.on('move', this._updateCamera, this);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_removeEvents',
+        value: function _removeEvents() {
+            this._player.off('move', this._updateCamera, this);
         }
 
         /**
@@ -1985,58 +2044,22 @@ var GameScene = function (_Exo$Scene) {
         key: '_addInputs',
         value: function _addInputs() {
 
+            /**
+             * @private
+             * @member {Input}
+             */
             this._toggleMenuInput = new Exo.Input([KEYBOARD.Escape, GAMEPAD.Start], {
                 context: this,
                 trigger: function trigger() {
-                    this._isPaused = !this._isPaused;
-
-                    if (this._isPaused) {
-                        // show pause menu
+                    if (this._paused) {
+                        this._resumeGame();
                     } else {
-                            // hide pause menu
-                        }
+                        this._pauseGame();
+                    }
                 }
             });
 
-            this._moveUpInput = new Exo.Input([KEYBOARD.Up, KEYBOARD.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(0, value * -1);
-                }
-            });
-
-            this._moveDownInput = new Exo.Input([KEYBOARD.Down, KEYBOARD.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(0, value);
-                }
-            });
-
-            this._moveLeftInput = new Exo.Input([KEYBOARD.Left, KEYBOARD.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(value * -1, 0);
-                }
-            });
-
-            this._moveRightInput = new Exo.Input([KEYBOARD.Right, KEYBOARD.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
-                context: this,
-                active: function active(value) {
-                    this._movePlayer(value, 0);
-                }
-            });
-
-            this._toggleRunInput = new Exo.Input([KEYBOARD.Shift, GAMEPAD.FaceLeft], {
-                context: this,
-                start: function start() {
-                    this._player.running = true;
-                },
-                stop: function stop() {
-                    this._player.running = false;
-                }
-            });
-
-            this.app.inputManager.add([this._toggleMenuInput, this._moveUpInput, this._moveDownInput, this._moveLeftInput, this._moveRightInput, this._toggleRunInput]);
+            this.app.inputManager.add(this._toggleMenuInput);
         }
 
         /**
@@ -2046,25 +2069,10 @@ var GameScene = function (_Exo$Scene) {
     }, {
         key: '_removeInputs',
         value: function _removeInputs() {
-            this.app.inputManager.remove([this._toggleMenuInput, this._moveUpInput, this._moveDownInput, this._moveLeftInput, this._moveRightInput, this._toggleRunInput]);
+            this.app.inputManager.remove(this._toggleMenuInput);
 
             this._toggleMenuInput.destroy();
             this._toggleMenuInput = null;
-
-            this._moveUpInput.destroy();
-            this._moveUpInput = null;
-
-            this._moveDownInput.destroy();
-            this._moveDownInput = null;
-
-            this._moveLeftInput.destroy();
-            this._moveLeftInput = null;
-
-            this._moveRightInput.destroy();
-            this._moveRightInput = null;
-
-            this._toggleRunInput.destroy();
-            this._toggleRunInput = null;
         }
     }]);
 
@@ -2094,7 +2102,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var clamp = Exo.utils.clamp;
+var utils = Exo.utils;
 
 /**
  * @class WorldMap
@@ -2152,6 +2160,12 @@ var WorldMap = function () {
     this._tile = new Exo.Sprite(tileset.texture);
     this._tile.width = this._tileSize.width;
     this._tile.height = this._tileSize.height;
+
+    /**
+     * @private
+     * @member {Rectangle}
+     */
+    this._bounds = new Exo.Rectangle(0, 0, this._tilesX * this._tileSize.width, this._tilesY * this._tileSize.height);
   }
 
   /**
@@ -2162,26 +2176,35 @@ var WorldMap = function () {
 
 
   _createClass(WorldMap, [{
-    key: 'render',
+    key: 'update',
 
+
+    /**
+     * @public
+     * @param {Time} delta
+     */
+    value: function update(delta) {}
 
     /**
      * @public
      * @param {DisplayManager} displayManager
      */
+
+  }, {
+    key: 'render',
     value: function render(displayManager) {
-      var mapData = this._mapData,
+      var camera = displayManager.renderState.view,
+          mapData = this._mapData,
           tilesX = this._tilesX,
           tilesY = this._tilesY,
           tile = this._tile,
           tileset = this._tileset,
           tileWidth = this._tileSize.width,
           tileHeight = this._tileSize.height,
-          camera = displayManager.renderState.view,
           tilesHorizontal = camera.width / tileWidth + 2 | 0,
           tilesVertical = camera.height / tileHeight + 2 | 0,
-          startTileX = clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-          startTileY = clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+          startTileX = utils.clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+          startTileY = utils.clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
           startTileIndex = startTileY * tilesX + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
 
@@ -2199,9 +2222,9 @@ var WorldMap = function () {
       }
     }
   }, {
-    key: 'pixelWidth',
+    key: 'bounds',
     get: function get() {
-      return this._tilesX * this._tileSize.width;
+      return this._bounds;
     }
 
     /**
@@ -2211,9 +2234,21 @@ var WorldMap = function () {
      */
 
   }, {
-    key: 'pixelHeight',
+    key: 'width',
     get: function get() {
-      return this._tilesY * this._tileSize.height;
+      return this._bounds.width;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+
+  }, {
+    key: 'height',
+    get: function get() {
+      return this._bounds.height;
     }
   }]);
 
@@ -2604,107 +2639,427 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+var KEYBOARD = Exo.KEYBOARD,
+    GAMEPAD = Exo.GAMEPAD,
+    utils = Exo.utils,
+
+
+/**
+ * @inner
+ * @member {Object<String, Number>}
+ */
+DIRECTION = {
+    UP: 0,
+    RIGHT: 1,
+    DOWN: 2,
+    LEFT: 3
+},
+
+
+/**
+ * @inner
+ * @member {Object<String, Number>}
+ */
+FLAGS = {
+    NONE: 0,
+    DIRTY_FRAME: 1 << 0
+};
+
 /**
  * @class Player
  * @extends {Sprite}
  */
+
 var Player = function (_Exo$Sprite) {
     _inherits(Player, _Exo$Sprite);
 
     /**
      * @constructor
-     * @param {Texture} texture
+     * @param {Application} app
+     * @param {Object} options
+     * @param {Vector} options.spawnPoint
+     * @param {Rectangle} options.worldBounds
      */
-    function Player(texture) {
+    function Player(app, _ref) {
+        var _ref$spawnPoint = _ref.spawnPoint,
+            spawnPoint = _ref$spawnPoint === undefined ? new Exo.Vector() : _ref$spawnPoint,
+            _ref$worldBounds = _ref.worldBounds,
+            worldBounds = _ref$worldBounds === undefined ? new Exo.Rectangle() : _ref$worldBounds;
+
         _classCallCheck(this, Player);
 
-        var _this = _possibleConstructorReturn(this, (Player.__proto__ || Object.getPrototypeOf(Player)).call(this, texture));
+        /**
+         * @private
+         * @member {Application}
+         */
+        var _this = _possibleConstructorReturn(this, (Player.__proto__ || Object.getPrototypeOf(Player)).call(this, app.loader.resources.get('texture', 'game/player')));
 
-        var width = 96,
-            height = 96;
+        _this._app = app;
 
         /**
          * @private
-         * @member {Number}
+         * @member {Rectangle}
          */
-        _this._speed = 2;
+        _this._worldBounds = worldBounds.clone();
 
         /**
          * @private
-         * @member {Number}
+         * @member {Vector}
          */
-        _this._runningSpeed = 5;
+        _this._spawnPoint = spawnPoint.clone();
 
         /**
          * @private
          * @member {Boolean}
          */
-        _this._running = false;
+        _this._moving = false;
 
         /**
          * @private
-         * @member {Object<String, Rectangle>}
+         * @member {Number}
          */
-        _this._frames = {
-            FACE_UP: new Exo.Rectangle(0, 0, width, height),
-            FACE_RIGHT: new Exo.Rectangle(width, 0, width, height),
-            FACE_DOWN: new Exo.Rectangle(width * 2, 0, width, height),
-            FACE_LEFT: new Exo.Rectangle(width * 3, 0, width, height)
-        };
+        _this._direction = DIRECTION.DOWN;
 
-        _this.setTextureFrame(_this._frames.FACE_DOWN);
+        /**
+         * @private
+         * @member {Vector}
+         */
+        _this._velocity = new Exo.Vector();
+
+        /**
+         * @private
+         * @member {Size}
+         */
+        _this._frameSize = new Exo.Size(96, 96);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._frameIndex = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._frameCount = 8;
+
+        /**
+         * @private
+         * @member {Timer}
+         */
+        _this._frameTimer = new Exo.Timer(false, 100);
+
+        /**
+         * @private
+         * @member {Rectangle}
+         */
+        _this._frame = new Exo.Rectangle(_this._direction * _this._frameSize.width, _this._frameIndex * _this._frameSize.height, _this._frameSize.width, _this._frameSize.height);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._walkingSpeed = 192;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._runningSpeed = 256;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._speed = _this._walkingSpeed;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._flags = FLAGS.NONE;
+
+        _this._addInputs();
+        _this._updateFrame();
         _this.setOrigin(0.5, 1);
+        _this.setPosition(_this._spawnPoint.x, _this._spawnPoint.y);
         return _this;
     }
 
     /**
      * @public
-     * @member {Boolean}
+     * @param {Time} delta
      */
 
 
     _createClass(Player, [{
-        key: "move",
+        key: 'update',
+        value: function update(delta) {
+            this._updatePosition(delta);
 
+            if (utils.hasFlag(FLAGS.DIRTY_FRAME, this._flags)) {
+                this._updateFrame();
+
+                this._flags = utils.removeFlag(FLAGS.DIRTY_FRAME, this._flags);
+            }
+
+            return this;
+        }
 
         /**
-         * @public
-         * @param {Number} x
-         * @param {Number} y
+         * @override
          */
-        value: function move(x, y) {
-            var speed = this._running ? this._runningSpeed : this._speed,
-                mag = Math.sqrt(x * x + y * y),
-                offsetX = mag > 1 ? x / mag : x,
-                offsetY = mag > 1 ? y / mag : y;
 
-            this.translate(offsetX * speed, offsetY * speed);
+    }, {
+        key: 'setPosition',
+        value: function setPosition(x, y) {
+            this.position.set(utils.clamp(x, this._worldBounds.left, this._worldBounds.right), utils.clamp(y, this._worldBounds.top, this._worldBounds.bottom));
+
+            return this;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            _get(Player.prototype.__proto__ || Object.getPrototypeOf(Player.prototype), 'destroy', this).call(this);
+
+            this._removeInputs();
+
+            this._worldBounds.destroy();
+            this._worldBounds = null;
+
+            this._spawnPoint.destroy();
+            this._spawnPoint = null;
+
+            this._frameSize.destroy();
+            this._frameSize = null;
+
+            this._frame.destroy();
+            this._frame = null;
+
+            this._frameTimer.destroy();
+            this._frameTimer = null;
+
+            this._frameIndex = null;
+            this._frameCount = null;
+            this._direction = null;
+            this._moving = null;
+            this._speed = null;
+            this._app = null;
+        }
+
+        /**
+         * @private
+         * @param {Number} direction
+         */
+
+    }, {
+        key: '_setDirection',
+        value: function _setDirection(direction) {
+            if (this._direction !== direction) {
+                this._direction = direction;
+                this._flags = utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_updateDirection',
+        value: function _updateDirection() {
+            var _velocity = this._velocity,
+                x = _velocity.x,
+                y = _velocity.y;
+
 
             if (x > 0) {
-                this.setTextureFrame(this._frames.FACE_RIGHT);
+                this._setDirection(DIRECTION.RIGHT);
             } else if (x < 0) {
-                this.setTextureFrame(this._frames.FACE_LEFT);
+                this._setDirection(DIRECTION.LEFT);
             }
 
             if (y > 0.5) {
-                this.setTextureFrame(this._frames.FACE_DOWN);
+                this._setDirection(DIRECTION.DOWN);
             } else if (y < -0.5) {
-                this.setTextureFrame(this._frames.FACE_UP);
+                this._setDirection(DIRECTION.UP);
             }
+
+            return this;
         }
+
+        /**
+         * @private
+         */
+
     }, {
-        key: "running",
-        get: function get() {
-            return running;
-        },
-        set: function set(running) {
-            this._running = running;
+        key: '_updateFrameIndex',
+        value: function _updateFrameIndex() {
+            if (this._moving && this._frameTimer.isExpired) {
+                this._frameTimer.restart();
+                this._setFrameIndex(this._frameIndex + 1);
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         * @param {Number} index
+         */
+
+    }, {
+        key: '_setFrameIndex',
+        value: function _setFrameIndex(index) {
+            var frameIndex = index % this._frameCount;
+
+            if (this._frameIndex !== frameIndex) {
+                this._frameIndex = frameIndex;
+                this._flags = utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         * @param {Time} delta
+         */
+
+    }, {
+        key: '_updatePosition',
+        value: function _updatePosition(delta) {
+            var mag = this._velocity.magnitude;
+
+            if (mag > 0) {
+                var distance = this._speed * delta.seconds,
+                    velX = this._velocity.x,
+                    velY = this._velocity.y,
+                    offsetX = (mag > 1 ? velX / mag : velX) * distance,
+                    offsetY = (mag > 1 ? velY / mag : velY) * distance;
+
+                this.translate(offsetX, offsetY);
+                this._updateDirection();
+
+                if (!this._moving) {
+                    this._moving = true;
+                    this._frameTimer.restart();
+                    this._setFrameIndex(1);
+                }
+
+                this.trigger('move', this.x, this.y, this);
+            } else if (this._moving) {
+                this._moving = false;
+                this._frameTimer.stop();
+                this._setFrameIndex(0);
+            }
+
+            this._updateFrameIndex();
+
+            this._velocity.set(0, 0);
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_updateFrame',
+        value: function _updateFrame() {
+            this.setTextureFrame(this._frame.setPosition(this._direction * this._frameSize.width, this._frameIndex * this._frameSize.height));
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addInputs',
+        value: function _addInputs() {
+            this._moveUpInput = new Exo.Input([KEYBOARD.Up, KEYBOARD.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
+                context: this,
+                active: function active(value) {
+                    this._velocity.add(0, value * -1);
+                }
+            });
+
+            this._moveDownInput = new Exo.Input([KEYBOARD.Down, KEYBOARD.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
+                context: this,
+                active: function active(value) {
+                    this._velocity.add(0, value);
+                }
+            });
+
+            this._moveLeftInput = new Exo.Input([KEYBOARD.Left, KEYBOARD.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
+                context: this,
+                active: function active(value) {
+                    this._velocity.add(value * -1, 0);
+                }
+            });
+
+            this._moveRightInput = new Exo.Input([KEYBOARD.Right, KEYBOARD.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
+                context: this,
+                active: function active(value) {
+                    this._velocity.add(value, 0);
+                }
+            });
+
+            this._toggleRunInput = new Exo.Input([KEYBOARD.Shift, GAMEPAD.FaceLeft], {
+                context: this,
+                start: function start() {
+                    this._speed = this._runningSpeed;
+                },
+                stop: function stop() {
+                    this._speed = this._walkingSpeed;
+                }
+            });
+
+            this._app.inputManager.add([this._moveUpInput, this._moveDownInput, this._moveLeftInput, this._moveRightInput, this._toggleRunInput]);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_removeInputs',
+        value: function _removeInputs() {
+            this.app.inputManager.remove([this._moveUpInput, this._moveDownInput, this._moveLeftInput, this._moveRightInput, this._toggleRunInput]);
+
+            this._moveUpInput.destroy();
+            this._moveUpInput = null;
+
+            this._moveDownInput.destroy();
+            this._moveDownInput = null;
+
+            this._moveLeftInput.destroy();
+            this._moveLeftInput = null;
+
+            this._moveRightInput.destroy();
+            this._moveRightInput = null;
+
+            this._toggleRunInput.destroy();
+            this._toggleRunInput = null;
         }
     }]);
 

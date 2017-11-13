@@ -77,7 +77,7 @@ window.app.start(new Exo.Scene({
 
         this.app.displayManager
             .begin()
-            .render(this._emitter)
+            .draw(this._emitter)
             .end();
     },
 

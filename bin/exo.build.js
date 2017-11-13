@@ -569,8 +569,8 @@ POINTER = exports.POINTER = {
  */
 GAMEPAD = exports.GAMEPAD = {
     FaceBottom: INPUT_OFFSET_GAMEPAD,
-    FaceLeft: INPUT_OFFSET_GAMEPAD + 1,
-    FaceRight: INPUT_OFFSET_GAMEPAD + 2,
+    FaceRight: INPUT_OFFSET_GAMEPAD + 1,
+    FaceLeft: INPUT_OFFSET_GAMEPAD + 2,
     FaceTop: INPUT_OFFSET_GAMEPAD + 3,
     ShoulderLeftBottom: INPUT_OFFSET_GAMEPAD + 4,
     ShoulderRightBottom: INPUT_OFFSET_GAMEPAD + 5,
@@ -6904,10 +6904,7 @@ var Sprite = function (_Container) {
         key: 'render',
         value: function render(displayManager) {
             if (this.active && displayManager.isVisible(this)) {
-                var renderState = displayManager.renderState;
-
-                renderState.renderer = displayManager.getRenderer('sprite');
-                renderState.renderer.render(this);
+                displayManager.setRenderer('sprite').render(this);
 
                 var _iteratorNormalCompletion = true;
                 var _didIteratorError = false;
@@ -14072,11 +14069,8 @@ var DisplayManager = function () {
          * @member {RenderState}
          */
         this._renderState = new _RenderState2.default(this._context);
-        this._renderState.renderTarget = this._renderTarget;
-        this._renderState.view = this._view;
-        this._renderState.clearColor = clearColor;
 
-        this.addRenderer('sprite', new _SpriteRenderer2.default()).addRenderer('particle', new _ParticleRenderer2.default()).resize(width, height);
+        this.addRenderer('sprite', new _SpriteRenderer2.default()).addRenderer('particle', new _ParticleRenderer2.default()).setRenderTarget(this._renderTarget).setView(this._view).setClearColor(clearColor).resize(width, height);
 
         this._addEvents();
     }
@@ -14089,8 +14083,50 @@ var DisplayManager = function () {
 
 
     _createClass(DisplayManager, [{
-        key: 'addRenderer',
+        key: 'setView',
 
+
+        /**
+         * @public
+         * @chainable
+         * @param {View} view
+         * @returns {DisplayManager}
+         */
+        value: function setView(view) {
+            this._renderState.view = view;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {RenderTarget} renderTarget
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setRenderTarget',
+        value: function setRenderTarget(renderTarget) {
+            this._renderState.renderTarget = renderTarget;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Color} clearColor
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setClearColor',
+        value: function setClearColor(clearColor) {
+            this._renderState.clearColor = clearColor;
+
+            return this;
+        }
 
         /**
          * @public
@@ -14099,6 +14135,9 @@ var DisplayManager = function () {
          * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
          * @returns {DisplayManager}
          */
+
+    }, {
+        key: 'addRenderer',
         value: function addRenderer(name, renderer) {
             if (this._renderers.has(name)) {
                 throw new Error('Renderer "' + name + '" was already added.');
@@ -14124,6 +14163,21 @@ var DisplayManager = function () {
             }
 
             return this._renderers.get(name);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} name
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setRenderer',
+        value: function setRenderer(renderer) {
+            this._renderState.renderer = this.getRenderer(renderer);
+
+            return this;
         }
 
         /**
@@ -14180,8 +14234,8 @@ var DisplayManager = function () {
          */
 
     }, {
-        key: 'render',
-        value: function render(renderable) {
+        key: 'draw',
+        value: function draw(renderable) {
             if (!this._isRendering) {
                 throw new Error('DisplayManager has to begin first!');
             }
@@ -14211,6 +14265,21 @@ var DisplayManager = function () {
             if (!this._contextLost && this._renderState.renderer) {
                 this._renderState.renderer.flush();
             }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Renderable|*} renderable
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'render',
+        value: function render(renderable) {
+            this._renderState.renderer.render(renderable);
 
             return this;
         }
@@ -22909,10 +22978,11 @@ var Timer = function (_Clock) {
   /**
    * @constructor
    * @param {Boolean} autoStart
-   * @param {Number} timeLimit
+   * @param {Number} [timeLimit=0]
    * @param {Number} [factor=TIME.MILLISECONDS]
    */
-  function Timer(autoStart, timeLimit) {
+  function Timer(autoStart) {
+    var timeLimit = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
     var factor = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _const.TIME.MILLISECONDS;
 
     _classCallCheck(this, Timer);
@@ -22923,7 +22993,7 @@ var Timer = function (_Clock) {
      */
     var _this = _possibleConstructorReturn(this, (Timer.__proto__ || Object.getPrototypeOf(Timer)).call(this, false));
 
-    _this._limit = 0;
+    _this._limit = timeLimit;
 
     if (autoStart) {
       _this.restart(timeLimit, factor);
@@ -22943,11 +23013,12 @@ var Timer = function (_Clock) {
     /**
      * @public
      * @chainable
-     * @param {Number} timeLimit
+     * @param {Number} [timeLimit=this._limit]
      * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Timer}
      */
-    value: function reset(timeLimit) {
+    value: function reset() {
+      var timeLimit = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this._limit;
       var factor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _const.TIME.MILLISECONDS;
 
       this._limit = timeLimit * factor;
@@ -22960,14 +23031,15 @@ var Timer = function (_Clock) {
     /**
      * @public
      * @chainable
-     * @param {Number} timeLimit
+     * @param {Number} [timeLimit=this._limit]
      * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Timer}
      */
 
   }, {
     key: 'restart',
-    value: function restart(timeLimit) {
+    value: function restart() {
+      var timeLimit = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this._limit;
       var factor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _const.TIME.MILLISECONDS;
 
       this.reset(timeLimit, factor);
@@ -23161,6 +23233,19 @@ var Random = function () {
             this._value = (this._value >>> 0) / limit * (max - min) + min;
 
             return this._value;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: "destroy",
+        value: function destroy() {
+            this._state = null;
+            this._iteration = null;
+            this._seed = null;
+            this._value = null;
         }
 
         /**
@@ -24184,10 +24269,7 @@ var ParticleEmitter = function (_Renderable) {
         key: 'render',
         value: function render(displayManager) {
             if (this.active && displayManager.isVisible(this)) {
-                var renderState = displayManager.renderState;
-
-                renderState.renderer = displayManager.getRenderer('particle');
-                renderState.renderer.render(this);
+                displayManager.setRenderer('particle').render(this);
             }
 
             return this;

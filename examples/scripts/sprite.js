@@ -38,7 +38,7 @@ window.app.start(new Exo.Scene({
 
         this.app.displayManager
             .begin()
-            .render(this._bunny)
+            .draw(this._bunny)
             .end();
     },
 

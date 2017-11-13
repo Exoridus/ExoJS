@@ -41,8 +41,8 @@ export default class TitleScene extends Exo.Scene {
 
         this.app.displayManager
             .begin()
-            .render(this._titleBackground)
-            .render(this._menuManager)
+            .draw(this._titleBackground)
+            .draw(this._menuManager)
             .end();
     }
 

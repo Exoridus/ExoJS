@@ -54,7 +54,7 @@ window.app.start(new Exo.Scene({
 
         this.app.displayManager
             .begin()
-            .render(this._text)
+            .draw(this._text)
             .end();
     },
 

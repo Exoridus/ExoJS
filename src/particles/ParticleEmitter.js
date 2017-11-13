@@ -328,10 +328,9 @@ export default class ParticleEmitter extends Renderable {
      */
     render(displayManager) {
         if (this.active && displayManager.isVisible(this)) {
-            const renderState = displayManager.renderState;
-
-            renderState.renderer = displayManager.getRenderer('particle');
-            renderState.renderer.render(this);
+            displayManager
+                .setRenderer('particle')
+                .render(this);
         }
 
         return this;
