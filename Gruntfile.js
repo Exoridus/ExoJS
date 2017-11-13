@@ -64,6 +64,9 @@ module.exports = (grunt) => {
                     filename: 'examples.build.js',
                     sourceMapFilename: 'examples.build.js.map',
                 },
+                externals: {
+                    exojs: 'Exo',
+                },
             },
             game: {
                 entry: '<%= dirs.game %>/src/js/index.js',
@@ -71,6 +74,9 @@ module.exports = (grunt) => {
                     path: __dirname + '/game/bin',
                     filename: 'game.build.js',
                     sourceMapFilename: 'game.build.js.map',
+                },
+                externals: {
+                    exojs: 'Exo',
                 },
             },
         },

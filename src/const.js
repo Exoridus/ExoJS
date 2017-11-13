@@ -471,7 +471,7 @@ export const
      * @property {Number} RightStickDown
      */
     GAMEPAD = {
-        FaceBottom: INPUT_OFFSET_GAMEPAD,
+        FaceBottom: INPUT_OFFSET_GAMEPAD + 0,
         FaceRight: INPUT_OFFSET_GAMEPAD + 1,
         FaceLeft: INPUT_OFFSET_GAMEPAD + 2,
         FaceTop: INPUT_OFFSET_GAMEPAD + 3,

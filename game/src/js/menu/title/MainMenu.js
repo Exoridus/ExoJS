@@ -1,3 +1,4 @@
+import { Sprite } from 'exojs';
 import Menu from '../Menu';
 import MenuItem from '../MenuItem';
 
@@ -24,7 +25,7 @@ export default class MainMenu extends Menu {
          * @private
          * @member {Sprite}
          */
-        this._gameLogo = new Exo.Sprite(resources.get('texture', 'title/logo'));
+        this._gameLogo = new Sprite(resources.get('texture', 'title/logo'));
         this._gameLogo.setOrigin(0.5, 0.8);
         this._gameLogo.setPosition(centerX, 50 + (this._gameLogo.height * 0.8));
 

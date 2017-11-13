@@ -60,11 +60,17 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 2);
+/******/ 	return __webpack_require__(__webpack_require__.s = 3);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
+/***/ (function(module, exports) {
+
+module.exports = Exo;
+
+/***/ }),
+/* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -78,11 +84,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _MenuPath = __webpack_require__(8);
+var _exojs = __webpack_require__(0);
+
+var _MenuPath = __webpack_require__(9);
 
 var _MenuPath2 = _interopRequireDefault(_MenuPath);
 
-var _MenuAction = __webpack_require__(9);
+var _MenuAction = __webpack_require__(10);
 
 var _MenuAction2 = _interopRequireDefault(_MenuAction);
 
@@ -98,8 +106,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @class Menu
  * @extends {Container}
  */
-var Menu = function (_Exo$Container) {
-    _inherits(Menu, _Exo$Container);
+var Menu = function (_Container) {
+    _inherits(Menu, _Container);
 
     /**
      * @constructor
@@ -433,12 +441,12 @@ var Menu = function (_Exo$Container) {
     }]);
 
     return Menu;
-}(Exo.Container);
+}(_exojs.Container);
 
 exports.default = Menu;
 
 /***/ }),
-/* 1 */
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -450,6 +458,8 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _exojs = __webpack_require__(0);
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -460,8 +470,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @class MenuItem
  * @extends {Text}
  */
-var MenuItem = function (_Exo$Text) {
-  _inherits(MenuItem, _Exo$Text);
+var MenuItem = function (_Text) {
+  _inherits(MenuItem, _Text);
 
   /**
    * @constructor
@@ -515,7 +525,7 @@ var MenuItem = function (_Exo$Text) {
   _createClass(MenuItem, [{
     key: 'activate',
     value: function activate() {
-      this.tint = Exo.Color.Yellow;
+      this.tint = _exojs.Color.Yellow;
       this._ticker = 0;
     }
 
@@ -542,32 +552,34 @@ var MenuItem = function (_Exo$Text) {
   }, {
     key: 'reset',
     value: function reset() {
-      this.tint = Exo.Color.White;
+      this.tint = _exojs.Color.White;
       this.setScale(1, 1);
       this._ticker = 0;
     }
   }]);
 
   return MenuItem;
-}(Exo.Text);
+}(_exojs.Text);
 
 exports.default = MenuItem;
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var _LauncherScene = __webpack_require__(3);
+var _exojs = __webpack_require__(0);
+
+var _LauncherScene = __webpack_require__(4);
 
 var _LauncherScene2 = _interopRequireDefault(_LauncherScene);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 window.addEventListener('load', function () {
-    var app = new Exo.Application({
+    var app = new _exojs.Application({
         basePath: 'assets/',
         width: 1280,
         height: 720,
@@ -577,7 +589,7 @@ window.addEventListener('load', function () {
     });
 
     app.loader.request.cache = 'no-cache';
-    app.loader.database = new Exo.Database('game', 3);
+    app.loader.database = new _exojs.Database('game', 3);
 
     app.start(new _LauncherScene2.default());
 
@@ -585,7 +597,7 @@ window.addEventListener('load', function () {
 }, false);
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -599,7 +611,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _TitleScene = __webpack_require__(4);
+var _exojs = __webpack_require__(0);
+
+var _TitleScene = __webpack_require__(5);
 
 var _TitleScene2 = _interopRequireDefault(_TitleScene);
 
@@ -615,8 +629,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @class LauncherScene
  * @extends {Scene}
  */
-var LauncherScene = function (_Exo$Scene) {
-  _inherits(LauncherScene, _Exo$Scene);
+var LauncherScene = function (_Scene) {
+  _inherits(LauncherScene, _Scene);
 
   function LauncherScene() {
     _classCallCheck(this, LauncherScene);
@@ -709,7 +723,7 @@ var LauncherScene = function (_Exo$Scene) {
        * @private
        * @member {Input}
        */
-      this._playInput = new Exo.Input([Exo.KEYBOARD.Enter, Exo.GAMEPAD.Start, Exo.GAMEPAD.FaceBottom]);
+      this._playInput = new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.Start, _exojs.GAMEPAD.FaceBottom]);
 
       this._playInput.on('trigger', this._openTitleHandler);
 
@@ -777,7 +791,7 @@ var LauncherScene = function (_Exo$Scene) {
       context.drawImage(this._indicatorProgress, 0, 0, width, height);
       context.beginPath();
       context.moveTo(centerX, centerY);
-      context.arc(centerX, centerY, radius, Exo.utils.degreesToRadians(offsetAngle), Exo.utils.degreesToRadians(percentage * 3.6 + offsetAngle), true);
+      context.arc(centerX, centerY, radius, _exojs.utils.degreesToRadians(offsetAngle), _exojs.utils.degreesToRadians(percentage * 3.6 + offsetAngle), true);
       context.clip();
       context.clearRect(0, 0, width, height);
     }
@@ -794,12 +808,12 @@ var LauncherScene = function (_Exo$Scene) {
   }]);
 
   return LauncherScene;
-}(Exo.Scene);
+}(_exojs.Scene);
 
 exports.default = LauncherScene;
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -811,7 +825,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _TitleMenuManager = __webpack_require__(5);
+var _exojs = __webpack_require__(0);
+
+var _TitleMenuManager = __webpack_require__(6);
 
 var _TitleMenuManager2 = _interopRequireDefault(_TitleMenuManager);
 
@@ -827,8 +843,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @class TitleScene
  * @extends {Scene}
  */
-var TitleScene = function (_Exo$Scene) {
-  _inherits(TitleScene, _Exo$Scene);
+var TitleScene = function (_Scene) {
+  _inherits(TitleScene, _Scene);
 
   function TitleScene() {
     _classCallCheck(this, TitleScene);
@@ -856,7 +872,7 @@ var TitleScene = function (_Exo$Scene) {
        * @private
        * @member {Sprite}
        */
-      this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
+      this._titleBackground = new _exojs.Sprite(resources.get('texture', 'title/background'));
 
       /**
        * @private
@@ -898,12 +914,12 @@ var TitleScene = function (_Exo$Scene) {
   }]);
 
   return TitleScene;
-}(Exo.Scene);
+}(_exojs.Scene);
 
 exports.default = TitleScene;
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -913,23 +929,23 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _MenuManager2 = __webpack_require__(6);
+var _MenuManager2 = __webpack_require__(7);
 
 var _MenuManager3 = _interopRequireDefault(_MenuManager2);
 
-var _MainMenu = __webpack_require__(7);
+var _MainMenu = __webpack_require__(8);
 
 var _MainMenu2 = _interopRequireDefault(_MainMenu);
 
-var _NewGameMenu = __webpack_require__(10);
+var _NewGameMenu = __webpack_require__(11);
 
 var _NewGameMenu2 = _interopRequireDefault(_NewGameMenu);
 
-var _LoadGameMenu = __webpack_require__(18);
+var _LoadGameMenu = __webpack_require__(19);
 
 var _LoadGameMenu2 = _interopRequireDefault(_LoadGameMenu);
 
-var _SettingsMenu = __webpack_require__(19);
+var _SettingsMenu = __webpack_require__(20);
 
 var _SettingsMenu2 = _interopRequireDefault(_SettingsMenu);
 
@@ -967,7 +983,7 @@ var TitleMenuManager = function (_MenuManager) {
 exports.default = TitleMenuManager;
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -978,6 +994,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _exojs = __webpack_require__(0);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1021,42 +1039,42 @@ var MenuManager = function () {
          * @private
          * @member {Input[]}
          */
-        this._inputs = [new Exo.Input([Exo.KEYBOARD.Up, Exo.GAMEPAD.DPadUp, Exo.GAMEPAD.LeftStickUp], {
+        this._inputs = [new _exojs.Input([_exojs.KEYBOARD.Up, _exojs.GAMEPAD.DPadUp, _exojs.GAMEPAD.LeftStickUp], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputUp();
                 }
             }
-        }), new Exo.Input([Exo.KEYBOARD.Down, Exo.GAMEPAD.LeftStickDown, Exo.GAMEPAD.DPadDown], {
+        }), new _exojs.Input([_exojs.KEYBOARD.Down, _exojs.GAMEPAD.LeftStickDown, _exojs.GAMEPAD.DPadDown], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
-        }), new Exo.Input([Exo.KEYBOARD.Left, Exo.GAMEPAD.LeftStickLeft, Exo.GAMEPAD.DPadLeft], {
+        }), new _exojs.Input([_exojs.KEYBOARD.Left, _exojs.GAMEPAD.LeftStickLeft, _exojs.GAMEPAD.DPadLeft], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
-        }), new Exo.Input([Exo.KEYBOARD.Right, Exo.GAMEPAD.LeftStickRight, Exo.GAMEPAD.DPadRight], {
+        }), new _exojs.Input([_exojs.KEYBOARD.Right, _exojs.GAMEPAD.LeftStickRight, _exojs.GAMEPAD.DPadRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
-        }), new Exo.Input([Exo.KEYBOARD.Enter, Exo.GAMEPAD.FaceBottom], {
+        }), new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.FaceBottom], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
-        }), new Exo.Input([Exo.KEYBOARD.Backspace, Exo.GAMEPAD.FaceRight], {
+        }), new _exojs.Input([_exojs.KEYBOARD.Backspace, _exojs.GAMEPAD.FaceRight], {
             context: this,
             start: function start() {
                 if (this._currentMenu) {
@@ -1251,7 +1269,7 @@ var MenuManager = function () {
 exports.default = MenuManager;
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1265,11 +1283,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(0);
+var _exojs = __webpack_require__(0);
+
+var _Menu2 = __webpack_require__(1);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(1);
+var _MenuItem = __webpack_require__(2);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
@@ -1309,7 +1329,7 @@ var MainMenu = function (_Menu) {
          * @private
          * @member {Sprite}
          */
-        _this._gameLogo = new Exo.Sprite(resources.get('texture', 'title/logo'));
+        _this._gameLogo = new _exojs.Sprite(resources.get('texture', 'title/logo'));
         _this._gameLogo.setOrigin(0.5, 0.8);
         _this._gameLogo.setPosition(centerX, 50 + _this._gameLogo.height * 0.8);
 
@@ -1441,7 +1461,7 @@ var MainMenu = function (_Menu) {
 exports.default = MainMenu;
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1550,7 +1570,7 @@ var MenuPath = function () {
 exports.default = MenuPath;
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1669,7 +1689,7 @@ var MenuAction = function () {
 exports.default = MenuAction;
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1683,15 +1703,15 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(0);
+var _Menu2 = __webpack_require__(1);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(1);
+var _MenuItem = __webpack_require__(2);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
-var _GameScene = __webpack_require__(11);
+var _GameScene = __webpack_require__(12);
 
 var _GameScene2 = _interopRequireDefault(_GameScene);
 
@@ -1808,7 +1828,7 @@ var NewGameMenu = function (_Menu) {
 exports.default = NewGameMenu;
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1820,15 +1840,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _WorldMap = __webpack_require__(12);
+var _exojs = __webpack_require__(0);
+
+var _WorldMap = __webpack_require__(13);
 
 var _WorldMap2 = _interopRequireDefault(_WorldMap);
 
-var _Player = __webpack_require__(15);
+var _Player = __webpack_require__(16);
 
 var _Player2 = _interopRequireDefault(_Player);
 
-var _Tileset = __webpack_require__(16);
+var _Tileset = __webpack_require__(17);
 
 var _Tileset2 = _interopRequireDefault(_Tileset);
 
@@ -1840,17 +1862,12 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var KEYBOARD = Exo.KEYBOARD,
-    GAMEPAD = Exo.GAMEPAD,
-    utils = Exo.utils;
-
 /**
  * @class GameScene
  * @extends {Scene}
  */
-
-var GameScene = function (_Exo$Scene) {
-    _inherits(GameScene, _Exo$Scene);
+var GameScene = function (_Scene) {
+    _inherits(GameScene, _Scene);
 
     function GameScene() {
         _classCallCheck(this, GameScene);
@@ -1880,7 +1897,7 @@ var GameScene = function (_Exo$Scene) {
              * @member {Player}
              */
             this._player = new _Player2.default(app, {
-                spawnPoint: new Exo.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
+                spawnPoint: new _exojs.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
                 worldBounds: this._worldMap.bounds
             });
 
@@ -1888,7 +1905,7 @@ var GameScene = function (_Exo$Scene) {
              * @private
              * @member {View}
              */
-            this._camera = new Exo.View(new Exo.Rectangle(0, 0, canvas.width, canvas.height));
+            this._camera = new _exojs.View(new _exojs.Rectangle(0, 0, canvas.width, canvas.height));
             app.displayManager.setView(this._camera);
 
             /**
@@ -1965,7 +1982,7 @@ var GameScene = function (_Exo$Scene) {
                 centerX = this._camera.offsetCenter.x,
                 centerY = this._camera.offsetCenter.y;
 
-            displayManager.setView(this._camera.setCenter(utils.clamp(x, centerX, maxX - centerX), utils.clamp(y, centerY, maxY - centerY)));
+            displayManager.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
         }
 
         /**
@@ -2048,7 +2065,7 @@ var GameScene = function (_Exo$Scene) {
              * @private
              * @member {Input}
              */
-            this._toggleMenuInput = new Exo.Input([KEYBOARD.Escape, GAMEPAD.Start], {
+            this._toggleMenuInput = new _exojs.Input([_exojs.KEYBOARD.Escape, _exojs.GAMEPAD.Start], {
                 context: this,
                 trigger: function trigger() {
                     if (this._paused) {
@@ -2077,12 +2094,12 @@ var GameScene = function (_Exo$Scene) {
     }]);
 
     return GameScene;
-}(Exo.Scene);
+}(_exojs.Scene);
 
 exports.default = GameScene;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2094,7 +2111,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _MapGenerator = __webpack_require__(13);
+var _exojs = __webpack_require__(0);
+
+var _MapGenerator = __webpack_require__(14);
 
 var _MapGenerator2 = _interopRequireDefault(_MapGenerator);
 
@@ -2102,12 +2121,9 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var utils = Exo.utils;
-
 /**
  * @class WorldMap
  */
-
 var WorldMap = function () {
 
   /**
@@ -2133,7 +2149,7 @@ var WorldMap = function () {
      * @private
      * @member {Size}
      */
-    this._tileSize = new Exo.Size(64, 64);
+    this._tileSize = new _exojs.Size(64, 64);
 
     /**
      * @private
@@ -2157,7 +2173,7 @@ var WorldMap = function () {
      * @private
      * @member {Sprite}
      */
-    this._tile = new Exo.Sprite(tileset.texture);
+    this._tile = new _exojs.Sprite(tileset.texture);
     this._tile.width = this._tileSize.width;
     this._tile.height = this._tileSize.height;
 
@@ -2165,7 +2181,7 @@ var WorldMap = function () {
      * @private
      * @member {Rectangle}
      */
-    this._bounds = new Exo.Rectangle(0, 0, this._tilesX * this._tileSize.width, this._tilesY * this._tileSize.height);
+    this._bounds = new _exojs.Rectangle(0, 0, this._tilesX * this._tileSize.width, this._tilesY * this._tileSize.height);
   }
 
   /**
@@ -2203,8 +2219,8 @@ var WorldMap = function () {
           tileHeight = this._tileSize.height,
           tilesHorizontal = camera.width / tileWidth + 2 | 0,
           tilesVertical = camera.height / tileHeight + 2 | 0,
-          startTileX = utils.clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-          startTileY = utils.clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+          startTileX = _exojs.utils.clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+          startTileY = _exojs.utils.clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
           startTileIndex = startTileY * tilesX + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
 
@@ -2258,7 +2274,7 @@ var WorldMap = function () {
 exports.default = WorldMap;
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2270,7 +2286,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _PerlinNoiseGenerator = __webpack_require__(14);
+var _PerlinNoiseGenerator = __webpack_require__(15);
 
 var _PerlinNoiseGenerator2 = _interopRequireDefault(_PerlinNoiseGenerator);
 
@@ -2490,7 +2506,7 @@ var MapGenerator = function () {
 exports.default = MapGenerator;
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2627,7 +2643,7 @@ var PerlinNoiseGenerator = function () {
 exports.default = PerlinNoiseGenerator;
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2641,22 +2657,19 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
+var _exojs = __webpack_require__(0);
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var KEYBOARD = Exo.KEYBOARD,
-    GAMEPAD = Exo.GAMEPAD,
-    utils = Exo.utils,
-
-
 /**
  * @inner
  * @member {Object<String, Number>}
  */
-DIRECTION = {
+var DIRECTION = {
     UP: 0,
     RIGHT: 1,
     DOWN: 2,
@@ -2678,8 +2691,8 @@ FLAGS = {
  * @extends {Sprite}
  */
 
-var Player = function (_Exo$Sprite) {
-    _inherits(Player, _Exo$Sprite);
+var Player = function (_Sprite) {
+    _inherits(Player, _Sprite);
 
     /**
      * @constructor
@@ -2690,9 +2703,9 @@ var Player = function (_Exo$Sprite) {
      */
     function Player(app, _ref) {
         var _ref$spawnPoint = _ref.spawnPoint,
-            spawnPoint = _ref$spawnPoint === undefined ? new Exo.Vector() : _ref$spawnPoint,
+            spawnPoint = _ref$spawnPoint === undefined ? new _exojs.Vector() : _ref$spawnPoint,
             _ref$worldBounds = _ref.worldBounds,
-            worldBounds = _ref$worldBounds === undefined ? new Exo.Rectangle() : _ref$worldBounds;
+            worldBounds = _ref$worldBounds === undefined ? new _exojs.Rectangle() : _ref$worldBounds;
 
         _classCallCheck(this, Player);
 
@@ -2732,13 +2745,13 @@ var Player = function (_Exo$Sprite) {
          * @private
          * @member {Vector}
          */
-        _this._velocity = new Exo.Vector();
+        _this._velocity = new _exojs.Vector();
 
         /**
          * @private
          * @member {Size}
          */
-        _this._frameSize = new Exo.Size(96, 96);
+        _this._frameSize = new _exojs.Size(96, 96);
 
         /**
          * @private
@@ -2756,13 +2769,13 @@ var Player = function (_Exo$Sprite) {
          * @private
          * @member {Timer}
          */
-        _this._frameTimer = new Exo.Timer(false, 100);
+        _this._frameTimer = new _exojs.Timer(false, 100);
 
         /**
          * @private
          * @member {Rectangle}
          */
-        _this._frame = new Exo.Rectangle(_this._direction * _this._frameSize.width, _this._frameIndex * _this._frameSize.height, _this._frameSize.width, _this._frameSize.height);
+        _this._frame = new _exojs.Rectangle(_this._direction * _this._frameSize.width, _this._frameIndex * _this._frameSize.height, _this._frameSize.width, _this._frameSize.height);
 
         /**
          * @private
@@ -2806,10 +2819,10 @@ var Player = function (_Exo$Sprite) {
         value: function update(delta) {
             this._updatePosition(delta);
 
-            if (utils.hasFlag(FLAGS.DIRTY_FRAME, this._flags)) {
+            if (_exojs.utils.hasFlag(FLAGS.DIRTY_FRAME, this._flags)) {
                 this._updateFrame();
 
-                this._flags = utils.removeFlag(FLAGS.DIRTY_FRAME, this._flags);
+                this._flags = _exojs.utils.removeFlag(FLAGS.DIRTY_FRAME, this._flags);
             }
 
             return this;
@@ -2822,7 +2835,7 @@ var Player = function (_Exo$Sprite) {
     }, {
         key: 'setPosition',
         value: function setPosition(x, y) {
-            this.position.set(utils.clamp(x, this._worldBounds.left, this._worldBounds.right), utils.clamp(y, this._worldBounds.top, this._worldBounds.bottom));
+            this.position.set(_exojs.utils.clamp(x, this._worldBounds.left, this._worldBounds.right), _exojs.utils.clamp(y, this._worldBounds.top, this._worldBounds.bottom));
 
             return this;
         }
@@ -2871,7 +2884,7 @@ var Player = function (_Exo$Sprite) {
         value: function _setDirection(direction) {
             if (this._direction !== direction) {
                 this._direction = direction;
-                this._flags = utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+                this._flags = _exojs.utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
             }
 
             return this;
@@ -2931,7 +2944,7 @@ var Player = function (_Exo$Sprite) {
 
             if (this._frameIndex !== frameIndex) {
                 this._frameIndex = frameIndex;
-                this._flags = utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+                this._flags = _exojs.utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
             }
 
             return this;
@@ -2971,7 +2984,6 @@ var Player = function (_Exo$Sprite) {
             }
 
             this._updateFrameIndex();
-
             this._velocity.set(0, 0);
 
             return this;
@@ -2996,35 +3008,35 @@ var Player = function (_Exo$Sprite) {
     }, {
         key: '_addInputs',
         value: function _addInputs() {
-            this._moveUpInput = new Exo.Input([KEYBOARD.Up, KEYBOARD.W, GAMEPAD.LeftStickUp, GAMEPAD.DPadUp], {
+            this._moveUpInput = new _exojs.Input([_exojs.KEYBOARD.Up, _exojs.KEYBOARD.W, _exojs.GAMEPAD.LeftStickUp, _exojs.GAMEPAD.DPadUp], {
                 context: this,
                 active: function active(value) {
                     this._velocity.add(0, value * -1);
                 }
             });
 
-            this._moveDownInput = new Exo.Input([KEYBOARD.Down, KEYBOARD.S, GAMEPAD.LeftStickDown, GAMEPAD.DPadDown], {
+            this._moveDownInput = new _exojs.Input([_exojs.KEYBOARD.Down, _exojs.KEYBOARD.S, _exojs.GAMEPAD.LeftStickDown, _exojs.GAMEPAD.DPadDown], {
                 context: this,
                 active: function active(value) {
                     this._velocity.add(0, value);
                 }
             });
 
-            this._moveLeftInput = new Exo.Input([KEYBOARD.Left, KEYBOARD.A, GAMEPAD.LeftStickLeft, GAMEPAD.DPadLeft], {
+            this._moveLeftInput = new _exojs.Input([_exojs.KEYBOARD.Left, _exojs.KEYBOARD.A, _exojs.GAMEPAD.LeftStickLeft, _exojs.GAMEPAD.DPadLeft], {
                 context: this,
                 active: function active(value) {
                     this._velocity.add(value * -1, 0);
                 }
             });
 
-            this._moveRightInput = new Exo.Input([KEYBOARD.Right, KEYBOARD.D, GAMEPAD.LeftStickRight, GAMEPAD.DPadRight], {
+            this._moveRightInput = new _exojs.Input([_exojs.KEYBOARD.Right, _exojs.KEYBOARD.D, _exojs.GAMEPAD.LeftStickRight, _exojs.GAMEPAD.DPadRight], {
                 context: this,
                 active: function active(value) {
                     this._velocity.add(value, 0);
                 }
             });
 
-            this._toggleRunInput = new Exo.Input([KEYBOARD.Shift, GAMEPAD.FaceLeft], {
+            this._toggleRunInput = new _exojs.Input([_exojs.KEYBOARD.Shift, _exojs.GAMEPAD.FaceLeft], {
                 context: this,
                 start: function start() {
                     this._speed = this._runningSpeed;
@@ -3064,12 +3076,12 @@ var Player = function (_Exo$Sprite) {
     }]);
 
     return Player;
-}(Exo.Sprite);
+}(_exojs.Sprite);
 
 exports.default = Player;
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3081,7 +3093,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _AutoTile = __webpack_require__(17);
+var _AutoTile = __webpack_require__(18);
 
 var _AutoTile2 = _interopRequireDefault(_AutoTile);
 
@@ -3217,7 +3229,7 @@ var Tileset = function () {
 exports.default = Tileset;
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3228,6 +3240,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _exojs = __webpack_require__(0);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3267,13 +3281,13 @@ var AutoTile = function () {
          * @private
          * @member {Rectangle}
          */
-        this._fullRect = new Exo.Rectangle(x * this._width, y * this._height, this._width, this._height);
+        this._fullRect = new _exojs.Rectangle(x * this._width, y * this._height, this._width, this._height);
 
         /**
          * @private
          * @member {Rectangle}
          */
-        this._tileRect = new Exo.Rectangle(this._fullRect.x + tileSize * 0.5, this._fullRect.y + tileSize * 1.5, tileSize, tileSize);
+        this._tileRect = new _exojs.Rectangle(this._fullRect.x + tileSize * 0.5, this._fullRect.y + tileSize * 1.5, tileSize, tileSize);
     }
 
     /**
@@ -3283,7 +3297,7 @@ var AutoTile = function () {
 
 
     _createClass(AutoTile, [{
-        key: "width",
+        key: 'width',
         get: function get() {
             return this._width;
         },
@@ -3297,7 +3311,7 @@ var AutoTile = function () {
          */
 
     }, {
-        key: "height",
+        key: 'height',
         get: function get() {
             return this._height;
         },
@@ -3311,7 +3325,7 @@ var AutoTile = function () {
          */
 
     }, {
-        key: "tileSize",
+        key: 'tileSize',
         get: function get() {
             return this._tileSize;
         },
@@ -3325,7 +3339,7 @@ var AutoTile = function () {
          */
 
     }, {
-        key: "fullRect",
+        key: 'fullRect',
         get: function get() {
             return this._fullRect;
         },
@@ -3339,7 +3353,7 @@ var AutoTile = function () {
          */
 
     }, {
-        key: "tileRect",
+        key: 'tileRect',
         get: function get() {
             return this._tileRect;
         },
@@ -3354,7 +3368,7 @@ var AutoTile = function () {
 exports.default = AutoTile;
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3368,11 +3382,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(0);
+var _Menu2 = __webpack_require__(1);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(1);
+var _MenuItem = __webpack_require__(2);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
@@ -3475,7 +3489,7 @@ var LoadGameMenu = function (_Menu) {
 exports.default = LoadGameMenu;
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3489,11 +3503,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(0);
+var _Menu2 = __webpack_require__(1);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(1);
+var _MenuItem = __webpack_require__(2);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 

@@ -1,3 +1,5 @@
+import { Rectangle } from 'exojs';
+
 /**
  * @class AutoTile
  */
@@ -33,7 +35,7 @@ export default class AutoTile {
          * @private
          * @member {Rectangle}
          */
-        this._fullRect = new Exo.Rectangle(
+        this._fullRect = new Rectangle(
             x * this._width,
             y * this._height,
             this._width,
@@ -44,7 +46,7 @@ export default class AutoTile {
          * @private
          * @member {Rectangle}
          */
-        this._tileRect = new Exo.Rectangle(
+        this._tileRect = new Rectangle(
             this._fullRect.x + (tileSize * 0.5),
             this._fullRect.y + (tileSize * 1.5),
             tileSize,

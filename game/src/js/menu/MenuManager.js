@@ -1,3 +1,5 @@
+import { KEYBOARD, GAMEPAD, Input } from 'exojs';
+
 /**
  * @class MenuManager
  */
@@ -38,10 +40,10 @@ export default class MenuManager {
          * @member {Input[]}
          */
         this._inputs = [
-            new Exo.Input([
-                Exo.KEYBOARD.Up,
-                Exo.GAMEPAD.DPadUp,
-                Exo.GAMEPAD.LeftStickUp,
+            new Input([
+                KEYBOARD.Up,
+                GAMEPAD.DPadUp,
+                GAMEPAD.LeftStickUp,
             ], {
                 context: this,
                 start() {
@@ -50,10 +52,10 @@ export default class MenuManager {
                     }
                 },
             }),
-            new Exo.Input([
-                Exo.KEYBOARD.Down,
-                Exo.GAMEPAD.LeftStickDown,
-                Exo.GAMEPAD.DPadDown,
+            new Input([
+                KEYBOARD.Down,
+                GAMEPAD.LeftStickDown,
+                GAMEPAD.DPadDown,
             ], {
                 context: this,
                 start() {
@@ -62,10 +64,10 @@ export default class MenuManager {
                     }
                 },
             }),
-            new Exo.Input([
-                Exo.KEYBOARD.Left,
-                Exo.GAMEPAD.LeftStickLeft,
-                Exo.GAMEPAD.DPadLeft,
+            new Input([
+                KEYBOARD.Left,
+                GAMEPAD.LeftStickLeft,
+                GAMEPAD.DPadLeft,
             ], {
                 context: this,
                 start() {
@@ -74,10 +76,10 @@ export default class MenuManager {
                     }
                 },
             }),
-            new Exo.Input([
-                Exo.KEYBOARD.Right,
-                Exo.GAMEPAD.LeftStickRight,
-                Exo.GAMEPAD.DPadRight,
+            new Input([
+                KEYBOARD.Right,
+                GAMEPAD.LeftStickRight,
+                GAMEPAD.DPadRight,
             ], {
                 context: this,
                 start() {
@@ -86,9 +88,9 @@ export default class MenuManager {
                     }
                 },
             }),
-            new Exo.Input([
-                Exo.KEYBOARD.Enter,
-                Exo.GAMEPAD.FaceBottom,
+            new Input([
+                KEYBOARD.Enter,
+                GAMEPAD.FaceBottom,
             ], {
                 context: this,
                 start() {
@@ -97,9 +99,9 @@ export default class MenuManager {
                     }
                 },
             }),
-            new Exo.Input([
-                Exo.KEYBOARD.Backspace,
-                Exo.GAMEPAD.FaceRight,
+            new Input([
+                KEYBOARD.Backspace,
+                GAMEPAD.FaceRight,
             ], {
                 context: this,
                 start() {

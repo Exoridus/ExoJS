@@ -1,6 +1,5 @@
+import { utils, Size, Sprite, Rectangle } from 'exojs';
 import MapGenerator from './MapGenerator';
-
-const utils = Exo.utils;
 
 /**
  * @class WorldMap
@@ -29,7 +28,7 @@ export default class WorldMap {
          * @private
          * @member {Size}
          */
-        this._tileSize = new Exo.Size(64, 64);
+        this._tileSize = new Size(64, 64);
 
         /**
          * @private
@@ -53,7 +52,7 @@ export default class WorldMap {
          * @private
          * @member {Sprite}
          */
-        this._tile = new Exo.Sprite(tileset.texture);
+        this._tile = new Sprite(tileset.texture);
         this._tile.width = this._tileSize.width;
         this._tile.height = this._tileSize.height;
 
@@ -61,7 +60,7 @@ export default class WorldMap {
          * @private
          * @member {Rectangle}
          */
-        this._bounds = new Exo.Rectangle(0, 0, (this._tilesX * this._tileSize.width), (this._tilesY * this._tileSize.height));
+        this._bounds = new Rectangle(0, 0, (this._tilesX * this._tileSize.width), (this._tilesY * this._tileSize.height));
     }
 
     /**

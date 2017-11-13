@@ -1,16 +1,13 @@
+import { KEYBOARD, GAMEPAD, utils, Scene, View, Vector, Rectangle, Input } from 'exojs';
 import WorldMap from '../map/WorldMap';
 import Player from '../entity/Player';
 import Tileset from '../map/Tileset';
-
-const KEYBOARD = Exo.KEYBOARD,
-    GAMEPAD = Exo.GAMEPAD,
-    utils = Exo.utils;
 
 /**
  * @class GameScene
  * @extends {Scene}
  */
-export default class GameScene extends Exo.Scene {
+export default class GameScene extends Scene {
 
     /**
      * @override
@@ -30,7 +27,7 @@ export default class GameScene extends Exo.Scene {
          * @member {Player}
          */
         this._player = new Player(app, {
-            spawnPoint: new Exo.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
+            spawnPoint: new Vector(this._worldMap.width / 2, this._worldMap.height / 2),
             worldBounds: this._worldMap.bounds,
         });
 
@@ -38,7 +35,7 @@ export default class GameScene extends Exo.Scene {
          * @private
          * @member {View}
          */
-        this._camera = new Exo.View(new Exo.Rectangle(0, 0, canvas.width, canvas.height));
+        this._camera = new View(new Rectangle(0, 0, canvas.width, canvas.height));
         app.displayManager.setView(this._camera);
 
         /**
@@ -179,7 +176,7 @@ export default class GameScene extends Exo.Scene {
          * @private
          * @member {Input}
          */
-        this._toggleMenuInput = new Exo.Input([
+        this._toggleMenuInput = new Input([
             KEYBOARD.Escape,
             GAMEPAD.Start,
         ], {

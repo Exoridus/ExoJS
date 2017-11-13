@@ -1,3 +1,4 @@
+import { Container } from 'exojs';
 import MenuPath from './MenuPath';
 import MenuAction from './MenuAction';
 
@@ -5,7 +6,7 @@ import MenuAction from './MenuAction';
  * @class Menu
  * @extends {Container}
  */
-export default class Menu extends Exo.Container {
+export default class Menu extends Container {
 
     /**
      * @constructor

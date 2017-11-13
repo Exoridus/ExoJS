@@ -1,12 +1,10 @@
-const KEYBOARD = Exo.KEYBOARD,
-    GAMEPAD = Exo.GAMEPAD,
-    utils = Exo.utils,
+import { KEYBOARD, GAMEPAD, utils, Sprite, Vector, Rectangle, Size, Timer, Input } from 'exojs';
 
-    /**
-     * @inner
-     * @member {Object<String, Number>}
-     */
-    DIRECTION = {
+/**
+ * @inner
+ * @member {Object<String, Number>}
+ */
+const DIRECTION = {
         UP: 0,
         RIGHT: 1,
         DOWN: 2,
@@ -26,7 +24,7 @@ const KEYBOARD = Exo.KEYBOARD,
  * @class Player
  * @extends {Sprite}
  */
-export default class Player extends Exo.Sprite {
+export default class Player extends Sprite {
 
     /**
      * @constructor
@@ -36,8 +34,8 @@ export default class Player extends Exo.Sprite {
      * @param {Rectangle} options.worldBounds
      */
     constructor(app, {
-        spawnPoint = new Exo.Vector(),
-        worldBounds = new Exo.Rectangle(),
+        spawnPoint = new Vector(),
+        worldBounds = new Rectangle(),
     }) {
         super(app.loader.resources.get('texture', 'game/player'));
 
@@ -75,13 +73,13 @@ export default class Player extends Exo.Sprite {
          * @private
          * @member {Vector}
          */
-        this._velocity = new Exo.Vector();
+        this._velocity = new Vector();
 
         /**
          * @private
          * @member {Size}
          */
-        this._frameSize = new Exo.Size(96, 96);
+        this._frameSize = new Size(96, 96);
 
         /**
          * @private
@@ -99,13 +97,13 @@ export default class Player extends Exo.Sprite {
          * @private
          * @member {Timer}
          */
-        this._frameTimer = new Exo.Timer(false, 100);
+        this._frameTimer = new Timer(false, 100);
 
         /**
          * @private
          * @member {Rectangle}
          */
-        this._frame = new Exo.Rectangle(
+        this._frame = new Rectangle(
             this._direction * this._frameSize.width,
             this._frameIndex * this._frameSize.height,
             this._frameSize.width,
@@ -293,7 +291,6 @@ export default class Player extends Exo.Sprite {
         }
 
         this._updateFrameIndex();
-
         this._velocity.set(0, 0);
 
         return this;
@@ -315,7 +312,7 @@ export default class Player extends Exo.Sprite {
      * @private
      */
     _addInputs() {
-        this._moveUpInput = new Exo.Input([
+        this._moveUpInput = new Input([
             KEYBOARD.Up,
             KEYBOARD.W,
             GAMEPAD.LeftStickUp,
@@ -327,7 +324,7 @@ export default class Player extends Exo.Sprite {
             },
         });
 
-        this._moveDownInput = new Exo.Input([
+        this._moveDownInput = new Input([
             KEYBOARD.Down,
             KEYBOARD.S,
             GAMEPAD.LeftStickDown,
@@ -339,7 +336,7 @@ export default class Player extends Exo.Sprite {
             },
         });
 
-        this._moveLeftInput = new Exo.Input([
+        this._moveLeftInput = new Input([
             KEYBOARD.Left,
             KEYBOARD.A,
             GAMEPAD.LeftStickLeft,
@@ -351,7 +348,7 @@ export default class Player extends Exo.Sprite {
             },
         });
 
-        this._moveRightInput = new Exo.Input([
+        this._moveRightInput = new Input([
             KEYBOARD.Right,
             KEYBOARD.D,
             GAMEPAD.LeftStickRight,
@@ -363,7 +360,7 @@ export default class Player extends Exo.Sprite {
             },
         });
 
-        this._toggleRunInput = new Exo.Input([
+        this._toggleRunInput = new Input([
             KEYBOARD.Shift,
             GAMEPAD.FaceLeft,
         ], {

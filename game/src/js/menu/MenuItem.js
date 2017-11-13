@@ -1,8 +1,10 @@
+import { Text, Color } from 'exojs';
+
 /**
  * @class MenuItem
  * @extends {Text}
  */
-export default class MenuItem extends Exo.Text {
+export default class MenuItem extends Text {
 
     /**
      * @constructor
@@ -43,7 +45,7 @@ export default class MenuItem extends Exo.Text {
      * @public
      */
     activate() {
-        this.tint = Exo.Color.Yellow;
+        this.tint = Color.Yellow;
         this._ticker = 0;
     }
 
@@ -64,7 +66,7 @@ export default class MenuItem extends Exo.Text {
      * @public
      */
     reset() {
-        this.tint = Exo.Color.White;
+        this.tint = Color.White;
         this.setScale(1, 1);
         this._ticker = 0;
     }

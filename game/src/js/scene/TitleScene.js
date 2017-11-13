@@ -1,10 +1,11 @@
+import { Scene, Sprite } from 'exojs';
 import TitleMenuManager from '../menu/title/TitleMenuManager';
 
 /**
  * @class TitleScene
  * @extends {Scene}
  */
-export default class TitleScene extends Exo.Scene {
+export default class TitleScene extends Scene {
 
     /**
      * @param {ResourceContainer} resources
@@ -22,7 +23,7 @@ export default class TitleScene extends Exo.Scene {
          * @private
          * @member {Sprite}
          */
-        this._titleBackground = new Exo.Sprite(resources.get('texture', 'title/background'));
+        this._titleBackground = new Sprite(resources.get('texture', 'title/background'));
 
         /**
          * @private

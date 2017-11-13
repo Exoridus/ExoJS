@@ -1,7 +1,8 @@
+import { Application, Database } from 'exojs';
 import LauncherScene from './scene/LauncherScene';
 
 window.addEventListener('load', () => {
-    const app = new Exo.Application({
+    const app = new Application({
         basePath: 'assets/',
         width: 1280,
         height: 720,
@@ -11,7 +12,7 @@ window.addEventListener('load', () => {
     });
 
     app.loader.request.cache = 'no-cache';
-    app.loader.database = new Exo.Database('game', 3);
+    app.loader.database = new Database('game', 3);
 
     app.start(new LauncherScene());
 
