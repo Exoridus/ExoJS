@@ -249,13 +249,21 @@ export default class GLProgram {
      * @public
      */
     destroy() {
-        this._context.deleteShader(this._vertexShader);
-        this._context.deleteShader(this._fragmentShader);
-        this._context.deleteProgram(this._program);
+        const gl = this._context;
 
+        gl.deleteShader(this._vertexShader);
+        gl.deleteShader(this._fragmentShader);
+        gl.deleteProgram(this._program);
+
+        this._uniformLocations.clear();
+        this._uniformLocations = null;
+
+        this._attributeLocations.clear();
+        this._attributeLocations = null;
+
+        this._context = null;
         this._vertexShader = null;
         this._fragmentShader = null;
         this._program = null;
-        this._context = null;
     }
 }

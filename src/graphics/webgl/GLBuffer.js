@@ -141,8 +141,10 @@ export default class GLBuffer {
      * @public
      */
     destroy() {
-        this._context.deleteBuffer(this._vertexBuffer);
-        this._context.deleteBuffer(this._indexBuffer);
+        const gl = this._context;
+
+        gl.deleteBuffer(this._vertexBuffer);
+        gl.deleteBuffer(this._indexBuffer);
 
         this._context = null;
         this._vertexBuffer = null;

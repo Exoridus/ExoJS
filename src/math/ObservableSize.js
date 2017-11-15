@@ -75,29 +75,29 @@ export default class ObservableSize extends Size {
     /**
      * @override
      */
-    add(width, height = width) {
-        return this.set(this._width + width, this._height + height);
+    add(x, y = x) {
+        return this.set(this._width + x, this._height + y);
     }
 
     /**
      * @override
      */
-    subtract(width, height = width) {
-        return this.set(this._width - width, this._height - height);
+    subtract(x, y = x) {
+        return this.set(this._width - x, this._height - y);
     }
 
     /**
      * @override
      */
-    multiply(width, height = width) {
-        return this.set(this._width * width, this._height * height);
+    multiply(x, y = x) {
+        return this.set(this._width * x, this._height * y);
     }
 
     /**
      * @override
      */
-    divide(width, height = width) {
-        return this.set(this._width / width, this._height / height);
+    divide(x, y = x) {
+        return this.set(this._width / x, this._height / y);
     }
 
     /**

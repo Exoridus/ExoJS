@@ -694,8 +694,8 @@ var LauncherScene = function (_Scene) {
         'game/tileset': 'image/game/tileset.png',
         'game/player': 'image/game/player.png'
       }).addList('music', {
-        'title/background': 'audio/title/background.ogg',
-        'game/background': 'audio/game/background.ogg'
+        'title': 'audio/title.ogg',
+        'overworld': 'audio/overworld.ogg'
       }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
         family: 'AndyBold'
       }).load().then(function () {
@@ -872,13 +872,13 @@ var TitleScene = function (_Scene) {
        * @private
        * @member {Sprite}
        */
-      this._titleBackground = new _exojs.Sprite(resources.get('texture', 'title/background'));
+      this._background = new _exojs.Sprite(resources.get('texture', 'title/background'));
 
       /**
        * @private
        * @member {Music}
        */
-      this._titleMusic = resources.get('music', 'title/background');
+      this._titleMusic = resources.get('music', 'title');
       this._titleMusic.connect(this.app.mediaManager);
       this._titleMusic.play({ loop: true });
     }
@@ -892,7 +892,7 @@ var TitleScene = function (_Scene) {
     value: function update(delta) {
       this._menuManager.update(delta);
 
-      this.app.displayManager.begin().draw(this._titleBackground).draw(this._menuManager).end();
+      this.app.displayManager.begin().render(this._background).render(this._menuManager).end();
     }
 
     /**
@@ -905,8 +905,8 @@ var TitleScene = function (_Scene) {
       this._menuManager.destroy();
       this._menuManager = null;
 
-      this._titleBackground.destroy();
-      this._titleBackground = null;
+      this._background.destroy();
+      this._background = null;
 
       this._titleMusic.destroy();
       this._titleMusic = null;
@@ -1226,7 +1226,7 @@ var MenuManager = function () {
         key: 'render',
         value: function render(displayManager) {
             if (this._currentMenu) {
-                displayManager.draw(this._currentMenu);
+                displayManager.render(this._currentMenu);
             }
 
             return this;
@@ -1905,8 +1905,7 @@ var GameScene = function (_Scene) {
              * @private
              * @member {View}
              */
-            this._camera = new _exojs.View(new _exojs.Rectangle(0, 0, canvas.width, canvas.height));
-            app.displayManager.setView(this._camera);
+            this._camera = new _exojs.View(0, 0, canvas.width, canvas.height);
 
             /**
              * @private
@@ -1918,7 +1917,7 @@ var GameScene = function (_Scene) {
              * @private
              * @member {Music}
              */
-            this._backgroundMusic = resources.get('music', 'game/background');
+            this._backgroundMusic = resources.get('music', 'overworld');
             this._backgroundMusic.connect(app.mediaManager);
             this._backgroundMusic.play({ loop: true });
 
@@ -1937,9 +1936,11 @@ var GameScene = function (_Scene) {
             if (!this._paused) {
                 this._player.update(delta);
                 this._worldMap.update(delta);
+
+                this.app.displayManager.begin().render(this._worldMap).render(this._player).end();
             }
 
-            this.app.displayManager.begin().draw(this._worldMap).draw(this._player).end();
+            return this;
         }
 
         /**
@@ -1979,8 +1980,8 @@ var GameScene = function (_Scene) {
                 y = this._player.y - this._player.height / 2,
                 maxX = this._worldMap.width,
                 maxY = this._worldMap.height,
-                centerX = this._camera.offsetCenter.x,
-                centerY = this._camera.offsetCenter.y;
+                centerX = this._camera.width / 2,
+                centerY = this._camera.height / 2;
 
             displayManager.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
         }
@@ -2209,7 +2210,7 @@ var WorldMap = function () {
   }, {
     key: 'render',
     value: function render(displayManager) {
-      var camera = displayManager.renderState.view,
+      var camera = displayManager.view,
           mapData = this._mapData,
           tilesX = this._tilesX,
           tilesY = this._tilesY,
@@ -2665,25 +2666,17 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+var
+
 /**
  * @inner
  * @member {Object<String, Number>}
  */
-var DIRECTION = {
+DIRECTION = {
     UP: 0,
     RIGHT: 1,
     DOWN: 2,
     LEFT: 3
-},
-
-
-/**
- * @inner
- * @member {Object<String, Number>}
- */
-FLAGS = {
-    NONE: 0,
-    DIRTY_FRAME: 1 << 0
 };
 
 /**
@@ -2773,6 +2766,12 @@ var Player = function (_Sprite) {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        _this._frameChanged = false;
+
+        /**
+         * @private
          * @member {Rectangle}
          */
         _this._frame = new _exojs.Rectangle(_this._direction * _this._frameSize.width, _this._frameIndex * _this._frameSize.height, _this._frameSize.width, _this._frameSize.height);
@@ -2795,12 +2794,6 @@ var Player = function (_Sprite) {
          */
         _this._speed = _this._walkingSpeed;
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._flags = FLAGS.NONE;
-
         _this._addInputs();
         _this._updateFrame();
         _this.setOrigin(0.5, 1);
@@ -2819,10 +2812,9 @@ var Player = function (_Sprite) {
         value: function update(delta) {
             this._updatePosition(delta);
 
-            if (_exojs.utils.hasFlag(FLAGS.DIRTY_FRAME, this._flags)) {
+            if (this._frameChanged) {
                 this._updateFrame();
-
-                this._flags = _exojs.utils.removeFlag(FLAGS.DIRTY_FRAME, this._flags);
+                this._frameChanged = false;
             }
 
             return this;
@@ -2884,7 +2876,7 @@ var Player = function (_Sprite) {
         value: function _setDirection(direction) {
             if (this._direction !== direction) {
                 this._direction = direction;
-                this._flags = _exojs.utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+                this._frameChanged = true;
             }
 
             return this;
@@ -2944,7 +2936,7 @@ var Player = function (_Sprite) {
 
             if (this._frameIndex !== frameIndex) {
                 this._frameIndex = frameIndex;
-                this._flags = _exojs.utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+                this._frameChanged = true;
             }
 
             return this;

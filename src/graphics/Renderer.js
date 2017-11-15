@@ -12,9 +12,9 @@ export default class Renderer {
 
     /**
      * @public
-     * @param {RenderState} renderState
+     * @param {DisplayManager} displayManager
      */
-    bind(renderState) {
+    bind(displayManager) {
         // do nothing
     }
 

@@ -219,31 +219,32 @@ export default class Matrix {
     /**
      * @public
      * @chainable
+     * @param {Matrix} [result=this]
      * @returns {Matrix}
      */
-    inverse() {
+    getInverse(result = this) {
         const determinant =
             (this.a * (this.z * this.d - this.y * this.f)) -
             (this.b * (this.z * this.c - this.y * this.e)) +
             (this.x * (this.f * this.c - this.d * this.e));
 
-        if (determinant !== 0) {
-            return this.set(
-                ((this.z * this.d) - (this.y * this.f)) / determinant,
-                ((this.z * this.c) - (this.y * this.e)) / -determinant,
-                ((this.f * this.c) - (this.d * this.e)) / determinant,
-
-                ((this.z * this.b) - (this.x * this.f)) / -determinant,
-                ((this.z * this.a) - (this.x * this.e)) / determinant,
-                ((this.f * this.a) - (this.b * this.e)) / -determinant,
-
-                ((this.y * this.b) - (this.x * this.d)) / determinant,
-                ((this.y * this.a) - (this.x * this.c)) / -determinant,
-                ((this.d * this.a) - (this.b * this.c)) / determinant
-            );
+        if (determinant === 0) {
+            return result.copy(Matrix.Identity);
         }
 
-        return this.copy(Matrix.Identity);
+        return result.set(
+            ((this.z * this.d) - (this.y * this.f)) /  determinant,
+            ((this.z * this.c) - (this.y * this.e)) / -determinant,
+            ((this.f * this.c) - (this.d * this.e)) /  determinant,
+
+            ((this.z * this.b) - (this.x * this.f)) / -determinant,
+            ((this.z * this.a) - (this.x * this.e)) /  determinant,
+            ((this.f * this.a) - (this.b * this.e)) / -determinant,
+
+            ((this.y * this.b) - (this.x * this.d)) /  determinant,
+            ((this.y * this.a) - (this.x * this.c)) / -determinant,
+            ((this.d * this.a) - (this.b * this.c)) /  determinant
+        );
     }
 
     /**
@@ -296,6 +297,28 @@ export default class Matrix {
             0, scaleY, (centerY * (1 - scaleY)),
             0, 0, 1
         ));
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Vector} point
+     * @param {Vector} [result=point]
+     * @returns {Vector}
+     */
+    transformPoint(point, result = point) {
+        return point.transform(this, result);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Rectangle} rect
+     * @param {Rectangle} [result=rect]
+     * @returns {Rectangle}
+     */
+    transformRect(rect, result = rect) {
+        return rect.transform(this, result);
     }
 
     /**

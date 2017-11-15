@@ -186,7 +186,7 @@ export default class Sprite extends Container {
     updateTexture() {
         if (this._texture) {
             this._texture.updateSource();
-            this.setTextureFrame(this._texture.sourceFrame);
+            this.resetTextureFrame();
         }
 
         return this;
@@ -220,13 +220,23 @@ export default class Sprite extends Container {
     }
 
     /**
+     * @public
+     * @chainable
+     * @returns {Sprite}
+     */
+    resetTextureFrame() {
+        return this.setTextureFrame(Rectangle.Temp.set(0, 0, this._texture.width, this._texture.height));
+    }
+
+    /**
      * @override
      */
     render(displayManager) {
         if (this.active && displayManager.isVisible(this)) {
-            displayManager
-                .setRenderer('sprite')
-                .render(this);
+            const renderer = displayManager.getRenderer('sprite');
+
+            displayManager.setRenderer(renderer);
+            renderer.render(this);
 
             for (const child of this.children) {
                 child.render(displayManager);

@@ -1,4 +1,6 @@
-import ObservableSize from '../math/ObservableSize';
+import Size from '../math/Size';
+import Color from '../core/Color';
+import GLFramebuffer from './webgl/GLFramebuffer';
 
 /**
  * @class RenderTarget
@@ -9,51 +11,57 @@ export default class RenderTarget {
      * @constructor
      * @param {Number} width
      * @param {Number} height
-     * @param {Boolean} [isRoot = false]
+     * @param {Boolean} [root = false]
      */
-    constructor(width, height, isRoot = false) {
+    constructor(width, height, root = false) {
 
         /**
          * @private
-         * @member {ObservableSize}
+         * @member {Size}
          */
-        this._size = new ObservableSize(this.updateSize, this, width, height);
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._isRoot = isRoot;
+        this._size = new Size(width, height);
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._bound = false;
+        this._root = root;
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        this._renderState = null;
+        this._displayManager = null;
 
         /**
          * @private
          * @member {?GLFramebuffer}
          */
-        this._glFramebuffer = null;
+        this._framebuffer = null;
     }
 
     /**
      * @public
-     * @member {ObservableSize}
+     * @member {Boolean}
+     */
+    get root() {
+        return this._root;
+    }
+
+    set root(root) {
+        this._root = root;
+    }
+
+    /**
+     * @public
+     * @member {Size}
      */
     get size() {
         return this._size;
     }
 
     set size(size) {
-        this._size.copy(size);
+        this.resize(size.width, size.height);
     }
 
     /**
@@ -65,7 +73,7 @@ export default class RenderTarget {
     }
 
     set width(width) {
-        this._size.width = width;
+        this.resize(width, this.height);
     }
 
     /**
@@ -77,24 +85,47 @@ export default class RenderTarget {
     }
 
     set height(height) {
-        this._size.height = height;
+        this.resize(this.width, height);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get bound() {
+        return this._displayManager && (this._displayManager.renderTarget === this);
     }
 
     /**
      * @public
      * @chainable
-     * @param {RenderState} renderState
+     * @param {Number} width
+     * @param {Number} height
      * @returns {RenderTarget}
      */
-    bind(renderState) {
-        if (!this._renderState) {
-            this._renderState = renderState;
-            this._glFramebuffer = renderState.createGLFramebuffer(this._isRoot);
+    resize(width, height) {
+        if (this.width !== width || this.height !== height) {
+            this._size.set(width, height);
         }
 
-        if (!this._bound) {
-            this._renderState.glFramebuffer = this._glFramebuffer;
-            this._bound = true;
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {DisplayManager} displayManager
+     * @returns {RenderTarget}
+     */
+    bind(displayManager) {
+        if (!this._displayManager) {
+            this._displayManager = displayManager;
+            this._framebuffer = this._root ? null : new GLFramebuffer(displayManager.context);
+        }
+
+        if (this._framebuffer && !this.bound) {
+            this._framebuffer.bind();
         }
 
         return this;
@@ -106,22 +137,8 @@ export default class RenderTarget {
      * @returns {RenderTarget}
      */
     unbind() {
-        if (this._bound) {
-            this._renderState.glFramebuffer = null;
-            this._bound = false;
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {RenderTarget}
-     */
-    updateSize() {
-        if (this._glFramebuffer) {
-            this._glFramebuffer.size.copy(this._size);
+        if (this._framebuffer && this.bound) {
+            this._framebuffer.unbind();
         }
 
         return this;
@@ -133,16 +150,15 @@ export default class RenderTarget {
     destroy() {
         this.unbind();
 
-        if (this._glFramebuffer) {
-            this._glFramebuffer.destroy();
-            this._glFramebuffer = null;
+        if (this._framebuffer) {
+            this._framebuffer.destroy();
+            this._framebuffer = null;
         }
 
         this._size.destroy();
         this._size = null;
 
-        this._renderState = null;
-        this._isRoot = null;
-        this._bound = null;
+        this._root = null;
+        this._displayManager = null;
     }
 }

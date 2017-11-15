@@ -61,7 +61,7 @@ export default class Transformable extends EventEmitter {
          * @private
          * @member {Boolean}
          */
-        this._dirtyTransform = true;
+        this._updateTransform = true;
     }
 
     /**
@@ -154,9 +154,9 @@ export default class Transformable extends EventEmitter {
      * @returns {Matrix}
      */
     getTransform() {
-        if (this._dirtyTransform) {
+        if (this._updateTransform) {
             this.updateTransform();
-            this._dirtyTransform = false;
+            this._updateTransform = false;
         }
 
         return this._transform;
@@ -287,13 +287,13 @@ export default class Transformable extends EventEmitter {
         this._sin = null;
         this._cos = null;
 
-        this._dirtyTransform = null;
+        this._updateTransform = null;
     }
 
     /**
      * @private
      */
     _setDirty() {
-        this._dirtyTransform = true;
+        this._updateTransform = true;
     }
 }

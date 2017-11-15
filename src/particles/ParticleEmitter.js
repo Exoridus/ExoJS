@@ -224,7 +224,7 @@ export default class ParticleEmitter extends Renderable {
     setTexture(texture) {
         if (this._texture !== texture) {
             this._texture = texture;
-            this.setTextureFrame(texture.sourceFrame);
+            this.resetTextureFrame();
         }
 
         return this;
@@ -241,6 +241,15 @@ export default class ParticleEmitter extends Renderable {
         this._updateTexCoords = true;
 
         return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {ParticleEmitter}
+     */
+    resetTextureFrame() {
+        return this.setTextureFrame(Rectangle.Temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
     /**
@@ -328,9 +337,10 @@ export default class ParticleEmitter extends Renderable {
      */
     render(displayManager) {
         if (this.active && displayManager.isVisible(this)) {
-            displayManager
-                .setRenderer('particle')
-                .render(this);
+            const renderer = displayManager.getRenderer('particle');
+
+            displayManager.setRenderer(renderer);
+            renderer.render(this);
         }
 
         return this;

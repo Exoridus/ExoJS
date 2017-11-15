@@ -23,13 +23,13 @@ export default class TitleScene extends Scene {
          * @private
          * @member {Sprite}
          */
-        this._titleBackground = new Sprite(resources.get('texture', 'title/background'));
+        this._background = new Sprite(resources.get('texture', 'title/background'));
 
         /**
          * @private
          * @member {Music}
          */
-        this._titleMusic = resources.get('music', 'title/background');
+        this._titleMusic = resources.get('music', 'title');
         this._titleMusic.connect(this.app.mediaManager);
         this._titleMusic.play({ loop: true });
     }
@@ -42,8 +42,8 @@ export default class TitleScene extends Scene {
 
         this.app.displayManager
             .begin()
-            .draw(this._titleBackground)
-            .draw(this._menuManager)
+            .render(this._background)
+            .render(this._menuManager)
             .end();
     }
 
@@ -54,8 +54,8 @@ export default class TitleScene extends Scene {
         this._menuManager.destroy();
         this._menuManager = null;
 
-        this._titleBackground.destroy();
-        this._titleBackground = null;
+        this._background.destroy();
+        this._background = null;
 
         this._titleMusic.destroy();
         this._titleMusic = null;

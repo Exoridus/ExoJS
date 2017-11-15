@@ -110,7 +110,7 @@ window.app.start(new Exo.Scene({
 
         this._time.add(delta);
 
-        const renderState = this.app.displayManager.renderState,
+        const displayManager = this.app.displayManager,
             canvas = this._canvas,
             context = this._context,
             freqData = this._analyser.frequencyData,
@@ -139,7 +139,7 @@ window.app.start(new Exo.Scene({
             }
         }
 
-        renderState.clear(this._color.set(r / length, g / length, b / length));
+        displayManager.clear(this._color.set(r / length, g / length, b / length));
 
         context.clearRect(0, 0, width, height);
         context.beginPath();

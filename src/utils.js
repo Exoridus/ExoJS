@@ -1,5 +1,6 @@
 import { CODEC_NOT_SUPPORTED, FILE_TYPES, RAD_PER_DEG, DEG_PER_RAD } from './const';
 import support from './support';
+import Size from './math/Size';
 
 const
 
@@ -266,7 +267,34 @@ const
     stopEvent = (event) => {
         event.preventDefault();
         event.stopImmediatePropagation();
-    };
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+     * @returns {Number}
+     */
+    getMediaWidth = (element) => (element && (element.naturalWidth || element.videoWidth || element.width)) || 0,
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+     * @returns {Number}
+     */
+    getMediaHeight = (element) => (element && (element.naturalHeight || element.videoHeight || element.height)) || 0,
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+     * @returns {Size}
+     */
+    getMediaSize = (element) => new Size(getMediaWidth(element), getMediaHeight(element));
 
 export {
     audio,
@@ -286,4 +314,7 @@ export {
     addFlag,
     removeFlag,
     stopEvent,
+    getMediaWidth,
+    getMediaHeight,
+    getMediaSize,
 };

@@ -36,6 +36,7 @@ export default {
         videoVolume: 1,
         canvas: null,
         canvasParent: null,
+        blendMode: BLEND_MODE.NORMAL,
         clearColor: Color.Black,
         clearBeforeRender: true,
         contextOptions: {
@@ -71,14 +72,6 @@ export default {
      * @default true
      */
     PREMULTIPLY_ALPHA: true,
-
-    /**
-     * @public
-     * @static
-     * @type {Object<String, Number>}
-     * @default BLEND_MODE.NORMAL
-     */
-    BLEND_MODE: BLEND_MODE.NORMAL,
 
     /**
      * @public

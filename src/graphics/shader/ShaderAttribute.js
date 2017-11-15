@@ -50,7 +50,7 @@ export default class ShaderAttribute {
          * @private
          * @member {?GLProgram}
          */
-        this._glProgram = null;
+        this._program = null;
 
         /**
          * @private
@@ -156,13 +156,13 @@ export default class ShaderAttribute {
      * @param {Number} offset
      */
     bind(glProgram, stride, offset) {
-        if (!this._glProgram) {
-            this._glProgram = glProgram;
+        if (!this._program) {
+            this._program = glProgram;
         }
 
         if (!this._bound) {
             this._bound = true;
-            this._glProgram.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
+            this._program.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
             this.upload();
         }
     }
@@ -179,7 +179,7 @@ export default class ShaderAttribute {
      */
     upload() {
         if (this._bound) {
-            this._glProgram.toggleVertexArray(this._name, this._enabled);
+            this._program.toggleVertexArray(this._name, this._enabled);
         }
     }
 
@@ -192,7 +192,7 @@ export default class ShaderAttribute {
         this._size = null;
         this._normalized = null;
         this._enabled = null;
-        this._glProgram = null;
+        this._program = null;
         this._bound = null;
     }
 }

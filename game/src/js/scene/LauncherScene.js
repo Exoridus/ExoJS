@@ -58,8 +58,8 @@ export default class LauncherScene extends Scene {
                 'game/player': 'image/game/player.png',
             })
             .addList('music', {
-                'title/background': 'audio/title/background.ogg',
-                'game/background': 'audio/game/background.ogg',
+                'title': 'audio/title.ogg',
+                'overworld': 'audio/overworld.ogg',
             })
             .addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
                 family: 'AndyBold'

@@ -1,6 +1,7 @@
 import Renderer from '../Renderer';
 import SpriteShader from './SpriteShader';
 import settings from '../../settings';
+import GLBuffer from '../webgl/GLBuffer';
 
 /**
  * @class SpriteRenderer
@@ -22,15 +23,15 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        this._renderState = null;
+        this._displayManager = null;
 
         /**
          * @private
          * @member {?GLBuffer}
          */
-        this._glBuffer = null;
+        this._buffer = null;
 
         /**
          * @private
@@ -57,41 +58,32 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?Texture}
-         */
-        this._currentTexture = null;
-
-        /**
-         * @private
          * @member {Number}
          */
         this._viewId = -1;
+    }
 
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._bound = false;
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get bound() {
+        return this._displayManager && (this._displayManager.renderer === this);
     }
 
     /**
      * @override
      */
-    bind(renderState) {
-        if (!this._renderState) {
-            this._renderState = renderState;
-            this._glBuffer = renderState.createGLBuffer(this._batchSize, this._attributeCount);
+    bind(displayManager) {
+        if (!this._displayManager) {
+            this._displayManager = displayManager;
+            this._buffer = new GLBuffer(displayManager.context, this._batchSize, this._attributeCount);
         }
 
-        if (!this._bound) {
-            this._renderState.glBuffer = this._glBuffer;
-            this._renderState.shader = this._shader;
-
-            if (this._currentTexture) {
-                this._currentTexture.bind(this._renderState);
-            }
-
-            this._bound = true;
+        if (!this.bound) {
+            this._buffer.bind();
+            this._displayManager.setShader(this._shader);
         }
 
         return this;
@@ -101,18 +93,13 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     unbind() {
-        if (this._bound) {
+        if (this.bound) {
             this.flush();
 
-            this._renderState.glBuffer = null;
-            this._renderState.shader = null;
-
-            if (this._currentTexture) {
-                this._currentTexture.unbind();
-            }
+            this._buffer.unbind();
+            this._displayManager.setShader(null);
 
             this._viewId = -1;
-            this._bound = false;
         }
 
         return this;
@@ -122,13 +109,14 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     render(sprite) {
-        const floatView = this._glBuffer.floatView,
-            uintView = this._glBuffer.uintView,
-            texture = sprite.texture,
+        const boundTexture = this._displayManager.texture,
+            floatView = this._buffer.floatView,
+            uintView = this._buffer.uintView,
+            spriteTexture = sprite.texture,
             positionData = sprite.positionData,
             texCoordData = sprite.texCoordData,
             batchFull = (this._batchIndex >= this._batchSize),
-            textureChanged = (this._currentTexture !== texture),
+            textureChanged = (boundTexture !== spriteTexture),
             flush = (textureChanged || batchFull),
             index = flush ? 0 : (this._batchIndex * this._attributeCount);
 
@@ -136,11 +124,11 @@ export default class SpriteRenderer extends Renderer {
             this.flush();
 
             if (textureChanged) {
-                this._currentTexture = texture.bind(this._renderState);
+                this._displayManager.setTexture(spriteTexture);
             }
         }
 
-        this._currentTexture.update();
+        spriteTexture.update();
 
         // X / Y
         floatView[index] = positionData[0];
@@ -165,10 +153,11 @@ export default class SpriteRenderer extends Renderer {
         uintView[index + 14] = texCoordData[3];
 
         // Tint
-        uintView[index + 3] =
-            uintView[index + 7] =
-                uintView[index + 11] =
-                    uintView[index + 15] = sprite.tint.getRGBA();
+        uintView[index + 3]
+            = uintView[index + 7]
+            = uintView[index + 11]
+            = uintView[index + 15]
+            = sprite.tint.getRGBA();
 
         this._batchIndex++;
 
@@ -179,17 +168,17 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     flush() {
-        if (this._bound && this._batchIndex > 0) {
-            const renderState = this._renderState;
+        if (this.bound && this._batchIndex > 0) {
+            const view = this._displayManager.view;
 
-            if (this._viewId !== renderState.view.updateId) {
-                this._shader.setProjection(renderState.view.getTransform());
-                this._viewId = renderState.view.updateId;
+            if (this._viewId !== view.updateId) {
+                this._shader.setProjection(view.getTransform());
+                this._viewId = view.updateId;
             }
 
-            renderState.drawElements(
+            this._displayManager.drawElements(
                 this._batchIndex * 6,
-                this._glBuffer.floatView.subarray(0, this._batchIndex * this._attributeCount)
+                this._buffer.floatView.subarray(0, this._batchIndex * this._attributeCount)
             );
 
             this._batchIndex = 0;
@@ -204,20 +193,18 @@ export default class SpriteRenderer extends Renderer {
     destroy() {
         this.unbind();
 
-        if (this._glBuffer) {
-            this._glBuffer.destroy();
-            this._glBuffer = null;
+        if (this._buffer) {
+            this._buffer.destroy();
+            this._buffer = null;
         }
 
         this._shader.destroy();
         this._shader = null;
 
-        this._renderState = null;
+        this._displayManager = null;
         this._batchSize = null;
         this._batchIndex = null;
         this._attributeCount = null;
-        this._currentTexture = null;
         this._viewId = null;
-        this._bound = null;
     }
 }

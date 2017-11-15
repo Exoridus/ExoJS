@@ -1,4 +1,5 @@
 import Size from '../../math/Size';
+import { getMediaHeight, getMediaWidth } from '../../utils';
 
 /**
  * @class GLTexture
@@ -35,28 +36,11 @@ export default class GLTexture {
 
     /**
      * @public
-     * @chainable
-     * @returns {GLTexture}
+     * @readonly
+     * @member {WebGLTexture}
      */
-    bind() {
-        const gl = this._context;
-
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {GLTexture}
-     */
-    unbind() {
-        const gl = this._context;
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        return this;
+    get texture() {
+        return this._texture;
     }
 
     /**
@@ -107,12 +91,12 @@ export default class GLTexture {
      * @public
      * @chainable
      * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
+     * @param {Number} [width=getMediaWidth(source)]
+     * @param {Number} [height=getMediaHeight(source)]
      * @returns {GLTexture}
      */
-    setTextureSource(source) {
-        const gl = this._context,
-            width = (source.videoWidth || source.width),
-            height = (source.videoHeight || source.height);
+    setTextureSource(source, width = getMediaWidth(source), height = getMediaHeight(source)) {
+        const gl = this._context;
 
         if (this._size.width !== width || this._size.height !== height) {
             this._size.set(width, height);
@@ -127,14 +111,69 @@ export default class GLTexture {
 
     /**
      * @public
+     * @chainable
+     * @param {?DataView} source
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {GLTexture}
+     */
+    setDataSource(source, width, height) {
+        const gl = this._context;
+
+        if (this._size.width !== width || this._size.height !== height) {
+            this._size.set(width, height);
+
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        } else {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} [unit]
+     * @returns {GLTexture}
+     */
+    bind(unit) {
+        const gl = this._context;
+
+        if (unit !== undefined) {
+            gl.activeTexture(gl.TEXTURE0 + unit);
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {GLTexture}
+     */
+    unbind() {
+        const gl = this._context;
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return this;
+    }
+
+    /**
+     * @public
      */
     destroy() {
-        this._context.deleteTexture(this._texture);
+        const gl = this._context;
+
+        gl.deleteTexture(this._texture);
 
         this._size.destroy();
         this._size = null;
 
-        this._texture = null;
         this._context = null;
+        this._texture = null;
     }
 }

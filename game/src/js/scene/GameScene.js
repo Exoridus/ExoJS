@@ -35,8 +35,7 @@ export default class GameScene extends Scene {
          * @private
          * @member {View}
          */
-        this._camera = new View(new Rectangle(0, 0, canvas.width, canvas.height));
-        app.displayManager.setView(this._camera);
+        this._camera = new View(0, 0, canvas.width, canvas.height);
 
         /**
          * @private
@@ -48,7 +47,7 @@ export default class GameScene extends Scene {
          * @private
          * @member {Music}
          */
-        this._backgroundMusic = resources.get('music', 'game/background');
+        this._backgroundMusic = resources.get('music', 'overworld');
         this._backgroundMusic.connect(app.mediaManager);
         this._backgroundMusic.play({ loop: true });
 
@@ -64,13 +63,15 @@ export default class GameScene extends Scene {
         if (!this._paused) {
             this._player.update(delta);
             this._worldMap.update(delta);
+
+            this.app.displayManager
+                .begin()
+                .render(this._worldMap)
+                .render(this._player)
+                .end();
         }
 
-        this.app.displayManager
-            .begin()
-            .draw(this._worldMap)
-            .draw(this._player)
-            .end();
+        return this;
     }
 
     /**
@@ -104,8 +105,8 @@ export default class GameScene extends Scene {
             y = this._player.y - (this._player.height / 2),
             maxX = this._worldMap.width,
             maxY = this._worldMap.height,
-            centerX = this._camera.offsetCenter.x,
-            centerY = this._camera.offsetCenter.y;
+            centerX = this._camera.width / 2,
+            centerY = this._camera.height / 2;
 
         displayManager.setView(this._camera.setCenter(
             utils.clamp(x, centerX, maxX - centerX),

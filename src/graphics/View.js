@@ -12,27 +12,24 @@ export default class View {
 
     /**
      * @constructor
-     * @param {Rectangle} viewRectangle
+     * @param {Number} centerX
+     * @param {Number} centerY
+     * @param {Number} width
+     * @param {Number} height
      */
-    constructor(viewRectangle = new Rectangle(0, 0, 100, 100)) {
+    constructor(centerX, centerY, width, height) {
 
         /**
          * @private
          * @member {ObservableVector}
          */
-        this._center = new ObservableVector(this._setDirty, this);
+        this._center = new ObservableVector(this._setDirty, this, centerX, centerY);
 
         /**
          * @private
          * @member {ObservableSize}
          */
-        this._size = new ObservableSize(this._onChangeSize, this);
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._offsetCenter = new Vector();
+        this._size = new ObservableSize(this._setDirty, this, width, height);
 
         /**
          * @private
@@ -66,9 +63,21 @@ export default class View {
 
         /**
          * @private
+         * @member {Matrix}
+         */
+        this._inverseTransform = new Matrix();
+
+        /**
+         * @private
          * @member {Boolean}
          */
-        this._dirtyTransform = true;
+        this._updateTransform = true;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._updateInverseTransform = true;
 
         /**
          * @private
@@ -76,7 +85,7 @@ export default class View {
          */
         this._updateId = 0;
 
-        this.reset(viewRectangle);
+        this.reset(centerX, centerY, width, height);
     }
 
     /**
@@ -168,6 +177,18 @@ export default class View {
 
     /**
      * @public
+     * @member {Matrix}
+     */
+    get inverseTransform() {
+        return this.getInverseTransform();
+    }
+
+    set inverseTransform(inverseTransform) {
+        this._inverseTransform.copy(inverseTransform);
+    }
+
+    /**
+     * @public
      * @readonly
      * @member {Number}
      */
@@ -178,19 +199,10 @@ export default class View {
     /**
      * @public
      * @readonly
-     * @member {Vector}
-     */
-    get offsetCenter() {
-        return this._offsetCenter;
-    }
-
-    /**
-     * @public
-     * @readonly
      * @member {Number}
      */
     get left() {
-        return (this._center.x - this._offsetCenter.x);
+        return this._center.x - (this._size.width / 2);
     }
 
     /**
@@ -199,7 +211,7 @@ export default class View {
      * @member {Number}
      */
     get top() {
-        return (this._center.y - this._offsetCenter.y);
+        return this._center.y - (this._size.height / 2);
     }
 
     /**
@@ -208,7 +220,7 @@ export default class View {
      * @member {Number}
      */
     get right() {
-        return (this._center.x + this._offsetCenter.x);
+        return this._center.x + (this._size.width / 2);
     }
 
     /**
@@ -217,7 +229,7 @@ export default class View {
      * @member {Number}
      */
     get bottom() {
-        return (this._center.y + this._offsetCenter.y);
+        return this._center.y + (this._size.height / 2);
     }
 
     /**
@@ -273,15 +285,15 @@ export default class View {
     /**
      * @public
      * @chainable
-     * @param {Rectangle} rectangle
+     * @param {Number} centerX
+     * @param {Number} centerY
+     * @param {Number} width
+     * @param {Number} height
      * @returns {View}
      */
-    reset(rectangle) {
-        this._size.copy(rectangle.size);
-        this._center.set(
-            (rectangle.x + this._offsetCenter.x),
-            (rectangle.y + this._offsetCenter.y)
-        );
+    reset(centerX, centerY, width, height) {
+        this._size.set(width, height);
+        this._center.set(centerX + (width / 2), centerY + (height / 2));
         this._rotation = 0;
         this._cos = 1;
         this._sin = 0;
@@ -296,9 +308,9 @@ export default class View {
      * @returns {Matrix}
      */
     getTransform() {
-        if (this._dirtyTransform) {
+        if (this._updateTransform) {
             this.updateTransform();
-            this._dirtyTransform = false;
+            this._updateTransform = false;
         }
 
         return this._transform;
@@ -311,24 +323,41 @@ export default class View {
      */
     updateTransform() {
         const transform = this._transform,
-            center = this._center,
-            a = 2 / this._size.width,
+            centerX = this._center.x,
+            centerY = this._center.y,
+            sin = this._sin,
+            cos = this._cos,
+            a =  2 / this._size.width,
             b = -2 / this._size.height,
-            c = (center.x * -a),
-            d = (center.y * -b),
-            x = (center.x * -this._cos) - (center.y * this._sin) + center.x,
-            y = (center.x * this._sin) - (center.y * this._cos) + center.y;
+            c = -a * centerX,
+            d = -b * centerY,
+            x = (-centerX * cos) - (centerY * sin) + centerX,
+            y = (centerX * sin) - (centerY * cos) + centerY;
 
-        transform.a = (a * this._cos);
-        transform.b = (a * this._sin);
-
-        transform.c = (b * -this._sin);
-        transform.d = (b * this._cos);
-
+        transform.a = a * cos;
+        transform.b = a * sin;
         transform.x = (a * x) + c;
+
+        transform.c = -b * sin;
+        transform.d =  b * cos;
         transform.y = (b * y) + d;
 
         return this;
+    }
+
+    /**
+     * @public
+     * @returns {Matrix}
+     */
+    getInverseTransform() {
+        if (this._updateInverseTransform) {
+            this.getTransform()
+                .getInverse(this._inverseTransform);
+
+            this._updateInverseTransform = false;
+        }
+
+        return this._inverseTransform;
     }
 
     /**
@@ -342,6 +371,7 @@ export default class View {
         this.size = view.size;
         this.viewport = view.viewport;
         this.transform = view.transform;
+        this.inverseTransform = view.inverseTransform;
         this.rotation = view.rotation;
 
         return this;
@@ -354,9 +384,6 @@ export default class View {
         this._center.destroy();
         this._center = null;
 
-        this._offsetCenter.destroy();
-        this._offsetCenter = null;
-
         this._size.destroy();
         this._size = null;
 
@@ -366,11 +393,15 @@ export default class View {
         this._transform.destroy();
         this._transform = null;
 
+        this._inverseTransform.destroy();
+        this._inverseTransform = null;
+
         this._rotation = null;
         this._cos = null;
         this._sin = null;
 
-        this._dirtyTransform = null;
+        this._updateTransform = null;
+        this._updateInverseTransform = null;
         this._updateId = null;
     }
 
@@ -378,15 +409,8 @@ export default class View {
      * @private
      */
     _setDirty() {
-        this._dirtyTransform = true;
+        this._updateTransform = true;
+        this._updateInverseTransform = true;
         this._updateId++;
-    }
-
-    /**
-     * @private
-     */
-    _onChangeSize() {
-        this._offsetCenter.set(this._size.width / 2 | 0, this._size.height / 2 | 0);
-        this._setDirty();
     }
 }

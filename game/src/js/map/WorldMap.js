@@ -103,7 +103,7 @@ export default class WorldMap {
      * @param {DisplayManager} displayManager
      */
     render(displayManager) {
-        const camera = displayManager.renderState.view,
+        const camera = displayManager.view,
             mapData = this._mapData,
             tilesX = this._tilesX,
             tilesY = this._tilesY,

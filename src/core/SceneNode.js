@@ -156,9 +156,9 @@ export default class SceneNode extends Transformable {
             this._parent.updateParentTransforms();
         }
 
-        if (this._dirtyTransform) {
+        if (this._updateTransform) {
             this.updateTransform();
-            this._dirtyTransform = false;
+            this._updateTransform = false;
         }
 
         return this;

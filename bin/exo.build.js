@@ -61,7 +61,7 @@ var Exo =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 73);
+/******/ 	return __webpack_require__(__webpack_require__.s = 76);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -794,7 +794,7 @@ FILE_TYPES = exports.FILE_TYPES = [{
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.stopEvent = exports.removeFlag = exports.addFlag = exports.hasFlag = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.inRange = exports.isPowerOfTwo = exports.sign = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = exports.audioContext = exports.audio = undefined;
+exports.getMediaSize = exports.getMediaHeight = exports.getMediaWidth = exports.stopEvent = exports.removeFlag = exports.addFlag = exports.hasFlag = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.inRange = exports.isPowerOfTwo = exports.sign = exports.clamp = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = exports.audioContext = exports.audio = undefined;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -803,6 +803,10 @@ var _const = __webpack_require__(0);
 var _support = __webpack_require__(3);
 
 var _support2 = _interopRequireDefault(_support);
+
+var _Size = __webpack_require__(7);
+
+var _Size2 = _interopRequireDefault(_Size);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1169,6 +1173,42 @@ removeFlag = function removeFlag(flag, flags) {
 stopEvent = function stopEvent(event) {
     event.preventDefault();
     event.stopImmediatePropagation();
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+ * @returns {Number}
+ */
+getMediaWidth = function getMediaWidth(element) {
+    return element && (element.naturalWidth || element.videoWidth || element.width) || 0;
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+ * @returns {Number}
+ */
+getMediaHeight = function getMediaHeight(element) {
+    return element && (element.naturalHeight || element.videoHeight || element.height) || 0;
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+ * @returns {Size}
+ */
+getMediaSize = function getMediaSize(element) {
+    return new _Size2.default(getMediaWidth(element), getMediaHeight(element));
 };
 
 exports.audio = audio;
@@ -1188,6 +1228,9 @@ exports.hasFlag = hasFlag;
 exports.addFlag = addFlag;
 exports.removeFlag = removeFlag;
 exports.stopEvent = stopEvent;
+exports.getMediaWidth = getMediaWidth;
+exports.getMediaHeight = getMediaHeight;
+exports.getMediaSize = getMediaSize;
 
 /***/ }),
 /* 2 */
@@ -1676,156 +1719,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _const = __webpack_require__(0);
-
-var _Color = __webpack_require__(7);
-
-var _Color2 = _interopRequireDefault(_Color);
-
-var _DefaultGamepadMapping = __webpack_require__(45);
-
-var _DefaultGamepadMapping2 = _interopRequireDefault(_DefaultGamepadMapping);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = {
-
-    /**
-     * @static
-     * @type {Object}
-     * @property {String} basePath=''
-     * @property {Number} width=800
-     * @property {Number} height=600
-     * @property {Number} soundVolume=1
-     * @property {Number} musicVolume=1
-     * @property {Number} masterVolume=1
-     * @property {Number} videoVolume=1
-     * @property {?HTMLCanvasElement|?String} canvas=null
-     * @property {?HTMLCanvasElement|?String} canvasParent=null
-     * @property {Color} clearColor=Color.Black
-     * @property {Boolean} clearBeforeRender=true
-     * @property {Object} contextOptions
-     * @property {Boolean} contextOptions.alpha=false
-     * @property {Boolean} contextOptions.antialias=false
-     * @property {Boolean} contextOptions.premultipliedAlpha=false
-     * @property {Boolean} contextOptions.preserveDrawingBuffer=false
-     * @property {Boolean} contextOptions.stencil=false
-     * @property {Boolean} contextOptions.depth=false
-     */
-    GAME_CONFIG: {
-        basePath: '',
-        width: 800,
-        height: 600,
-        soundVolume: 1,
-        musicVolume: 1,
-        masterVolume: 1,
-        videoVolume: 1,
-        canvas: null,
-        canvasParent: null,
-        clearColor: _Color2.default.Black,
-        clearBeforeRender: true,
-        contextOptions: {
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: false,
-            depth: false
-        }
-    },
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default WRAP_MODE.CLAMP_TO_EDGE
-     */
-    WRAP_MODE: _const.WRAP_MODE.CLAMP_TO_EDGE,
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default SCALE_MODE.LINEAR
-     */
-    SCALE_MODE: _const.SCALE_MODE.LINEAR,
-
-    /**
-     * @public
-     * @static
-     * @type {Boolean}
-     * @default true
-     */
-    PREMULTIPLY_ALPHA: true,
-
-    /**
-     * @public
-     * @static
-     * @type {Object<String, Number>}
-     * @default BLEND_MODE.NORMAL
-     */
-    BLEND_MODE: _const.BLEND_MODE.NORMAL,
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default 5
-     */
-    QUAD_TREE_MAX_LEVEL: 5,
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default 20
-     */
-    QUAD_TREE_MAX_OBJECTS: 20,
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default 2500
-     */
-    BATCH_SIZE_SPRITES: 2500, // ~ 160kb
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default 5000
-     */
-    BATCH_SIZE_PARTICLES: 5000, // ~ 800kb
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default 300
-     */
-    THRESHOLD_INPUT: 300,
-
-    /**
-     * @public
-     * @static
-     * @type {GamepadMapping}
-     * @default {DefaultGamepadMapping}
-     */
-    GAMEPAD_MAPPING: new _DefaultGamepadMapping2.default()
-};
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -1842,7 +1735,7 @@ var _Shape2 = __webpack_require__(16);
 
 var _Shape3 = _interopRequireDefault(_Shape2);
 
-var _Size = __webpack_require__(13);
+var _Size = __webpack_require__(7);
 
 var _Size2 = _interopRequireDefault(_Size);
 
@@ -2195,6 +2088,149 @@ Rectangle.Empty = new Rectangle(0, 0, 0, 0);
 Rectangle.Temp = new Rectangle();
 
 /***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _const = __webpack_require__(0);
+
+var _Color = __webpack_require__(8);
+
+var _Color2 = _interopRequireDefault(_Color);
+
+var _DefaultGamepadMapping = __webpack_require__(44);
+
+var _DefaultGamepadMapping2 = _interopRequireDefault(_DefaultGamepadMapping);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = {
+
+    /**
+     * @static
+     * @type {Object}
+     * @property {String} basePath=''
+     * @property {Number} width=800
+     * @property {Number} height=600
+     * @property {Number} soundVolume=1
+     * @property {Number} musicVolume=1
+     * @property {Number} masterVolume=1
+     * @property {Number} videoVolume=1
+     * @property {?HTMLCanvasElement|?String} canvas=null
+     * @property {?HTMLCanvasElement|?String} canvasParent=null
+     * @property {Color} clearColor=Color.Black
+     * @property {Boolean} clearBeforeRender=true
+     * @property {Object} contextOptions
+     * @property {Boolean} contextOptions.alpha=false
+     * @property {Boolean} contextOptions.antialias=false
+     * @property {Boolean} contextOptions.premultipliedAlpha=false
+     * @property {Boolean} contextOptions.preserveDrawingBuffer=false
+     * @property {Boolean} contextOptions.stencil=false
+     * @property {Boolean} contextOptions.depth=false
+     */
+    GAME_CONFIG: {
+        basePath: '',
+        width: 800,
+        height: 600,
+        soundVolume: 1,
+        musicVolume: 1,
+        masterVolume: 1,
+        videoVolume: 1,
+        canvas: null,
+        canvasParent: null,
+        blendMode: _const.BLEND_MODE.NORMAL,
+        clearColor: _Color2.default.Black,
+        clearBeforeRender: true,
+        contextOptions: {
+            alpha: false,
+            antialias: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            stencil: false,
+            depth: false
+        }
+    },
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default WRAP_MODE.CLAMP_TO_EDGE
+     */
+    WRAP_MODE: _const.WRAP_MODE.CLAMP_TO_EDGE,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default SCALE_MODE.LINEAR
+     */
+    SCALE_MODE: _const.SCALE_MODE.LINEAR,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default true
+     */
+    PREMULTIPLY_ALPHA: true,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 5
+     */
+    QUAD_TREE_MAX_LEVEL: 5,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 20
+     */
+    QUAD_TREE_MAX_OBJECTS: 20,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 2500
+     */
+    BATCH_SIZE_SPRITES: 2500, // ~ 160kb
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 5000
+     */
+    BATCH_SIZE_PARTICLES: 5000, // ~ 800kb
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 300
+     */
+    THRESHOLD_INPUT: 300,
+
+    /**
+     * @public
+     * @static
+     * @type {GamepadMapping}
+     * @default {DefaultGamepadMapping}
+     */
+    GAMEPAD_MAPPING: new _DefaultGamepadMapping2.default()
+};
+
+/***/ }),
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2495,6 +2531,247 @@ exports.default = EventEmitter;
 
 /***/ }),
 /* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class Size
+ */
+var Size = function () {
+
+    /**
+     * @constructor
+     * @param {Number} [width=0]
+     * @param {Number} [height=0]
+     */
+    function Size() {
+        var width = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+        var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+        _classCallCheck(this, Size);
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this._width = width;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this._height = height;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+
+
+    _createClass(Size, [{
+        key: "set",
+
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} [height=width]
+         * @returns {Size}
+         */
+        value: function set(width) {
+            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
+
+            this._width = width;
+            this._height = height;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} [height=width]
+         * @returns {Size}
+         */
+
+    }, {
+        key: "add",
+        value: function add(width) {
+            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
+
+            this._width += width;
+            this._height += height;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} [height=width]
+         * @returns {Size}
+         */
+
+    }, {
+        key: "subtract",
+        value: function subtract(width) {
+            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
+
+            this._width -= width;
+            this._height -= height;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} [height=width]
+         * @returns {Size}
+         */
+
+    }, {
+        key: "multiply",
+        value: function multiply(width) {
+            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
+
+            this._width *= width;
+            this._height *= height;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} [height=width]
+         * @returns {Size}
+         */
+
+    }, {
+        key: "divide",
+        value: function divide(width) {
+            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
+
+            this._width /= width;
+            this._height /= height;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Size} size
+         * @returns {Size}
+         */
+
+    }, {
+        key: "copy",
+        value: function copy(size) {
+            this._width = size.width;
+            this._height = size.height;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @returns {Size}
+         */
+
+    }, {
+        key: "clone",
+        value: function clone() {
+            return new Size(this._width, this._height);
+        }
+
+        /**
+         * @public
+         * @param {Size} size
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: "equals",
+        value: function equals(size) {
+            return size === this || this._width === size.width && this._height === size.height;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: "destroy",
+        value: function destroy() {
+            this._width = null;
+            this._height = null;
+        }
+    }, {
+        key: "width",
+        get: function get() {
+            return this._width;
+        },
+        set: function set(width) {
+            this._width = width;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: "height",
+        get: function get() {
+            return this._height;
+        },
+        set: function set(height) {
+            this._height = height;
+        }
+    }]);
+
+    return Size;
+}();
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Size}
+ */
+
+
+exports.default = Size;
+Size.Empty = new Size(0, 0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Size}
+ */
+Size.Temp = new Size();
+
+/***/ }),
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3804,7 +4081,7 @@ Color.Yellow = new Color(255, 255, 0, 1);
 Color.YellowGreen = new Color(154, 205, 50, 1);
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3919,7 +4196,7 @@ var ChannelManager = function (_EventEmitter) {
 exports.default = ChannelManager;
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4147,19 +4424,22 @@ var Matrix = function () {
         /**
          * @public
          * @chainable
+         * @param {Matrix} [result=this]
          * @returns {Matrix}
          */
 
     }, {
-        key: 'inverse',
-        value: function inverse() {
+        key: 'getInverse',
+        value: function getInverse() {
+            var result = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this;
+
             var determinant = this.a * (this.z * this.d - this.y * this.f) - this.b * (this.z * this.c - this.y * this.e) + this.x * (this.f * this.c - this.d * this.e);
 
-            if (determinant !== 0) {
-                return this.set((this.z * this.d - this.y * this.f) / determinant, (this.z * this.c - this.y * this.e) / -determinant, (this.f * this.c - this.d * this.e) / determinant, (this.z * this.b - this.x * this.f) / -determinant, (this.z * this.a - this.x * this.e) / determinant, (this.f * this.a - this.b * this.e) / -determinant, (this.y * this.b - this.x * this.d) / determinant, (this.y * this.a - this.x * this.c) / -determinant, (this.d * this.a - this.b * this.c) / determinant);
+            if (determinant === 0) {
+                return result.copy(Matrix.Identity);
             }
 
-            return this.copy(Matrix.Identity);
+            return result.set((this.z * this.d - this.y * this.f) / determinant, (this.z * this.c - this.y * this.e) / -determinant, (this.f * this.c - this.d * this.e) / determinant, (this.z * this.b - this.x * this.f) / -determinant, (this.z * this.a - this.x * this.e) / determinant, (this.f * this.a - this.b * this.e) / -determinant, (this.y * this.b - this.x * this.d) / determinant, (this.y * this.a - this.x * this.c) / -determinant, (this.d * this.a - this.b * this.c) / determinant);
         }
 
         /**
@@ -4218,6 +4498,38 @@ var Matrix = function () {
             var centerY = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : centerX;
 
             return this.combine(Matrix.Temp.set(scaleX, 0, centerX * (1 - scaleX), 0, scaleY, centerY * (1 - scaleY), 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Vector} point
+         * @param {Vector} [result=point]
+         * @returns {Vector}
+         */
+
+    }, {
+        key: 'transformPoint',
+        value: function transformPoint(point) {
+            var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : point;
+
+            return point.transform(this, result);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Rectangle} rect
+         * @param {Rectangle} [result=rect]
+         * @returns {Rectangle}
+         */
+
+    }, {
+        key: 'transformRect',
+        value: function transformRect(rect) {
+            var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : rect;
+
+            return rect.transform(this, result);
         }
 
         /**
@@ -4303,7 +4615,7 @@ Matrix.Identity = new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
 Matrix.Temp = new Matrix();
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4604,7 +4916,7 @@ Time.Empty = new Time(0);
 Time.Temp = new Time();
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4680,7 +4992,7 @@ var ArrayBufferFactory = function (_ResourceFactory) {
 exports.default = ArrayBufferFactory;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4694,11 +5006,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferFactory2 = __webpack_require__(11);
+var _ArrayBufferFactory2 = __webpack_require__(12);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
-var _MediaSource = __webpack_require__(39);
+var _MediaSource = __webpack_require__(38);
 
 var _MediaSource2 = _interopRequireDefault(_MediaSource);
 
@@ -4766,247 +5078,6 @@ var MediaSourceFactory = function (_ArrayBufferFactory) {
 }(_ArrayBufferFactory3.default);
 
 exports.default = MediaSourceFactory;
-
-/***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class Size
- */
-var Size = function () {
-
-    /**
-     * @constructor
-     * @param {Number} [width=0]
-     * @param {Number} [height=0]
-     */
-    function Size() {
-        var width = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-        var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-        _classCallCheck(this, Size);
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this._width = width;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this._height = height;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-
-
-    _createClass(Size, [{
-        key: "set",
-
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} width
-         * @param {Number} [height=width]
-         * @returns {Size}
-         */
-        value: function set(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            this._width = width;
-            this._height = height;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} width
-         * @param {Number} [height=width]
-         * @returns {Size}
-         */
-
-    }, {
-        key: "add",
-        value: function add(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            this._width += width;
-            this._height += height;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} width
-         * @param {Number} [height=width]
-         * @returns {Size}
-         */
-
-    }, {
-        key: "subtract",
-        value: function subtract(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            this._width -= width;
-            this._height -= height;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} width
-         * @param {Number} [height=width]
-         * @returns {Size}
-         */
-
-    }, {
-        key: "multiply",
-        value: function multiply(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            this._width *= width;
-            this._height *= height;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} width
-         * @param {Number} [height=width]
-         * @returns {Size}
-         */
-
-    }, {
-        key: "divide",
-        value: function divide(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            this._width /= width;
-            this._height /= height;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Size} size
-         * @returns {Size}
-         */
-
-    }, {
-        key: "copy",
-        value: function copy(size) {
-            this._width = size.width;
-            this._height = size.height;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @returns {Size}
-         */
-
-    }, {
-        key: "clone",
-        value: function clone() {
-            return new Size(this._width, this._height);
-        }
-
-        /**
-         * @public
-         * @param {Size} size
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: "equals",
-        value: function equals(size) {
-            return size === this || this._width === size.width && this._height === size.height;
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: "destroy",
-        value: function destroy() {
-            this._width = null;
-            this._height = null;
-        }
-    }, {
-        key: "width",
-        get: function get() {
-            return this._width;
-        },
-        set: function set(width) {
-            this._width = width;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: "height",
-        get: function get() {
-            return this._height;
-        },
-        set: function set(height) {
-            this._height = height;
-        }
-    }]);
-
-    return Size;
-}();
-
-/**
- * @public
- * @static
- * @constant
- * @type {Size}
- */
-
-
-exports.default = Size;
-Size.Empty = new Size(0, 0);
-
-/**
- * @public
- * @static
- * @constant
- * @type {Size}
- */
-Size.Temp = new Size();
 
 /***/ }),
 /* 14 */
@@ -5142,15 +5213,19 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
 var _utils = __webpack_require__(1);
 
-var _Rectangle = __webpack_require__(5);
+var _Size = __webpack_require__(7);
 
-var _Rectangle2 = _interopRequireDefault(_Rectangle);
+var _Size2 = _interopRequireDefault(_Size);
+
+var _GLTexture = __webpack_require__(47);
+
+var _GLTexture2 = _interopRequireDefault(_GLTexture);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -5162,7 +5237,7 @@ var FLAGS = {
     WRAP_MODE: 1 << 1,
     PREMULTIPLY_ALPHA: 1 << 2,
     SOURCE: 1 << 3,
-    SOURCE_FRAME: 1 << 4
+    SIZE: 1 << 4
 };
 
 /**
@@ -5198,15 +5273,15 @@ var Texture = function () {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @member {Size}
          */
-        this._sourceFrame = new _Rectangle2.default();
+        this._size = new _Size2.default();
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        this._renderState = null;
+        this._displayManager = null;
 
         /**
          * @private
@@ -5335,7 +5410,22 @@ var Texture = function () {
     }, {
         key: 'updateSource',
         value: function updateSource() {
-            this._flags = (0, _utils.addFlag)(FLAGS.SOURCE | FLAGS.SOURCE_FRAME, this._flags);
+            this._flags = (0, _utils.addFlag)(FLAGS.SOURCE, this._flags);
+            this.updateSize();
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Texture}
+         */
+
+    }, {
+        key: 'updateSize',
+        value: function updateSize() {
+            this._flags = (0, _utils.addFlag)(FLAGS.SIZE, this._flags);
 
             return this;
         }
@@ -5350,29 +5440,24 @@ var Texture = function () {
         key: 'update',
         value: function update() {
             if (this._flags && this._glTexture) {
-                this._renderState.glTexture = this._glTexture;
 
                 if ((0, _utils.hasFlag)(FLAGS.SCALE_MODE, this._flags)) {
                     this._glTexture.setScaleMode(this._scaleMode);
-
                     this._flags = (0, _utils.removeFlag)(FLAGS.SCALE_MODE, this._flags);
                 }
 
                 if ((0, _utils.hasFlag)(FLAGS.WRAP_MODE, this._flags)) {
                     this._glTexture.setWrapMode(this._wrapMode);
-
                     this._flags = (0, _utils.removeFlag)(FLAGS.WRAP_MODE, this._flags);
                 }
 
                 if ((0, _utils.hasFlag)(FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
                     this._glTexture.setPremultiplyAlpha(this._premultiplyAlpha);
-
                     this._flags = (0, _utils.removeFlag)(FLAGS.PREMULTIPLY_ALPHA, this._flags);
                 }
 
                 if ((0, _utils.hasFlag)(FLAGS.SOURCE, this._flags) && this._source) {
                     this._glTexture.setTextureSource(this._source);
-
                     this._flags = (0, _utils.removeFlag)(FLAGS.SOURCE, this._flags);
                 }
             }
@@ -5383,26 +5468,23 @@ var Texture = function () {
         /**
          * @public
          * @chainable
-         * @param {RenderState} renderState
+         * @param {DisplayManager} displayManager
          * @param {Number}  [unit]
          * @returns {Texture}
          */
 
     }, {
         key: 'bind',
-        value: function bind(renderState, unit) {
-            if (!this._renderState) {
-                this._renderState = renderState;
-                this._glTexture = renderState.createGLTexture();
+        value: function bind(displayManager, unit) {
+            if (!this._displayManager) {
+                this._displayManager = displayManager;
+                this._glTexture = new _GLTexture2.default(displayManager.context);
             }
 
-            if (unit !== undefined) {
-                this._renderState.textureUnit = unit;
+            if (!this.bound) {
+                this._glTexture.bind(unit);
+                this.update();
             }
-
-            this._renderState.glTexture = this._glTexture;
-
-            this.update();
 
             return this;
         }
@@ -5416,8 +5498,8 @@ var Texture = function () {
     }, {
         key: 'unbind',
         value: function unbind() {
-            if (this._renderState && this._renderState.glTexture === this._glTexture) {
-                this._renderState.glTexture = null;
+            if (this.bound) {
+                this._glTexture.unbind();
             }
 
             return this;
@@ -5430,20 +5512,18 @@ var Texture = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            if (this._renderState) {
-                this.unbind();
+            this.unbind();
 
+            if (this._glTexture) {
                 this._glTexture.destroy();
                 this._glTexture = null;
-
-                this._renderState = null;
             }
 
+            this._size.destroy();
+            this._size = null;
+
             this._source = null;
-
-            this._sourceFrame.destroy();
-            this._sourceFrame = null;
-
+            this._displayManager = null;
             this._scaleMode = null;
             this._wrapMode = null;
             this._premultiplyAlpha = null;
@@ -5456,27 +5536,6 @@ var Texture = function () {
         },
         set: function set(source) {
             this.setSource(source);
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Rectangle}
-         */
-
-    }, {
-        key: 'sourceFrame',
-        get: function get() {
-            if ((0, _utils.hasFlag)(FLAGS.SOURCE_FRAME, this._flags)) {
-                var source = this._source,
-                    width = source ? source.videoWidth || source.width : 0,
-                    height = source ? source.videoHeight || source.height : 0;
-
-                this._sourceFrame.set(0, 0, width, height);
-                this._flags = (0, _utils.removeFlag)(FLAGS.SOURCE_FRAME, this._flags);
-            }
-
-            return this._sourceFrame;
         }
 
         /**
@@ -5523,38 +5582,65 @@ var Texture = function () {
 
         /**
          * @public
-         * @readonly
          * @member {Size}
          */
 
     }, {
         key: 'size',
         get: function get() {
-            return this.sourceFrame.size;
+            if ((0, _utils.hasFlag)(FLAGS.SIZE, this._flags)) {
+                var source = this._source;
+
+                this._size.set(source && (source.naturalWidth || source.videoWidth || source.width) || 0, source && (source.naturalHeight || source.videoHeight || source.height) || 0);
+
+                this._flags = (0, _utils.removeFlag)(FLAGS.SIZE, this._flags);
+            }
+
+            return this._size;
+        },
+        set: function set(size) {
+            this._size.copy(size);
+            this._flags = (0, _utils.removeFlag)(FLAGS.SIZE, this._flags);
         }
 
         /**
          * @public
-         * @readonly
          * @member {Number}
          */
 
     }, {
         key: 'width',
         get: function get() {
-            return this.sourceFrame.width;
+            return this.size.width;
+        },
+        set: function set(width) {
+            this._size.width = width;
         }
 
         /**
          * @public
-         * @readonly
          * @member {Number}
          */
 
     }, {
         key: 'height',
         get: function get() {
-            return this.sourceFrame.height;
+            return this.size.height;
+        },
+        set: function set(height) {
+            this._size.height = height;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'bound',
+        get: function get() {
+            return this._displayManager && this._displayManager.texture === this;
         }
     }]);
 
@@ -5789,7 +5875,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
@@ -5797,7 +5883,7 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Matrix = __webpack_require__(9);
+var _Matrix = __webpack_require__(10);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -6114,7 +6200,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferFactory2 = __webpack_require__(11);
+var _ArrayBufferFactory2 = __webpack_require__(12);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
@@ -6742,7 +6828,7 @@ var _Container2 = __webpack_require__(50);
 
 var _Container3 = _interopRequireDefault(_Container2);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
@@ -6858,7 +6944,7 @@ var Sprite = function (_Container) {
         value: function updateTexture() {
             if (this._texture) {
                 this._texture.updateSource();
-                this.setTextureFrame(this._texture.sourceFrame);
+                this.resetTextureFrame();
             }
 
             return this;
@@ -6897,6 +6983,18 @@ var Sprite = function (_Container) {
         }
 
         /**
+         * @public
+         * @chainable
+         * @returns {Sprite}
+         */
+
+    }, {
+        key: 'resetTextureFrame',
+        value: function resetTextureFrame() {
+            return this.setTextureFrame(_Rectangle2.default.Temp.set(0, 0, this._texture.width, this._texture.height));
+        }
+
+        /**
          * @override
          */
 
@@ -6904,7 +7002,10 @@ var Sprite = function (_Container) {
         key: 'render',
         value: function render(displayManager) {
             if (this.active && displayManager.isVisible(this)) {
-                displayManager.setRenderer('sprite').render(this);
+                var renderer = displayManager.getRenderer('sprite');
+
+                displayManager.setRenderer(renderer);
+                renderer.render(this);
 
                 var _iteratorNormalCompletion = true;
                 var _didIteratorError = false;
@@ -7104,11 +7205,11 @@ var _SceneNode2 = __webpack_require__(24);
 
 var _SceneNode3 = _interopRequireDefault(_SceneNode2);
 
-var _Color = __webpack_require__(7);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
@@ -7231,11 +7332,11 @@ var _Transformable2 = __webpack_require__(51);
 
 var _Transformable3 = _interopRequireDefault(_Transformable2);
 
-var _Matrix = __webpack_require__(9);
+var _Matrix = __webpack_require__(10);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
@@ -7363,9 +7464,9 @@ var SceneNode = function (_Transformable) {
                 this._parent.updateParentTransforms();
             }
 
-            if (this._dirtyTransform) {
+            if (this._updateTransform) {
                 this.updateTransform();
-                this._dirtyTransform = false;
+                this._updateTransform = false;
             }
 
             return this;
@@ -7744,7 +7845,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _const = __webpack_require__(0);
 
-var _Time = __webpack_require__(10);
+var _Time = __webpack_require__(11);
 
 var _Time2 = _interopRequireDefault(_Time);
 
@@ -7982,708 +8083,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ObservableVector = __webpack_require__(25);
-
-var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
-
-var _Rectangle = __webpack_require__(5);
-
-var _Rectangle2 = _interopRequireDefault(_Rectangle);
-
-var _Matrix = __webpack_require__(9);
-
-var _Matrix2 = _interopRequireDefault(_Matrix);
-
-var _utils = __webpack_require__(1);
-
-var _ObservableSize = __webpack_require__(28);
-
-var _ObservableSize2 = _interopRequireDefault(_ObservableSize);
-
-var _Vector = __webpack_require__(2);
-
-var _Vector2 = _interopRequireDefault(_Vector);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class View
- */
-var View = function () {
-
-    /**
-     * @constructor
-     * @param {Rectangle} viewRectangle
-     */
-    function View() {
-        var viewRectangle = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : new _Rectangle2.default(0, 0, 100, 100);
-
-        _classCallCheck(this, View);
-
-        /**
-         * @private
-         * @member {ObservableVector}
-         */
-        this._center = new _ObservableVector2.default(this._setDirty, this);
-
-        /**
-         * @private
-         * @member {ObservableSize}
-         */
-        this._size = new _ObservableSize2.default(this._onChangeSize, this);
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._offsetCenter = new _Vector2.default();
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._rotation = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._sin = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._cos = 1;
-
-        /**
-         * @private
-         * @member {Rectangle}
-         */
-        this._viewport = new _Rectangle2.default(0, 0, 1, 1);
-
-        /**
-         * @private
-         * @member {Matrix}
-         */
-        this._transform = new _Matrix2.default();
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._dirtyTransform = true;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._updateId = 0;
-
-        this.reset(viewRectangle);
-    }
-
-    /**
-     * @public
-     * @member {ObservableVector}
-     */
-
-
-    _createClass(View, [{
-        key: 'setCenter',
-
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} x
-         * @param {Number} y
-         * @returns {View}
-         */
-        value: function setCenter(x, y) {
-            this._center.set(x, y);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} x
-         * @param {Number} y
-         * @returns {View}
-         */
-
-    }, {
-        key: 'move',
-        value: function move(x, y) {
-            this._center.add(x, y);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} factor
-         * @returns {View}
-         */
-
-    }, {
-        key: 'zoom',
-        value: function zoom(factor) {
-            this._size.multiply(factor);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} degrees
-         * @returns {View}
-         */
-
-    }, {
-        key: 'rotate',
-        value: function rotate(degrees) {
-            this.rotation += degrees;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Rectangle} rectangle
-         * @returns {View}
-         */
-
-    }, {
-        key: 'reset',
-        value: function reset(rectangle) {
-            this._size.copy(rectangle.size);
-            this._center.set(rectangle.x + this._offsetCenter.x, rectangle.y + this._offsetCenter.y);
-            this._rotation = 0;
-            this._cos = 1;
-            this._sin = 0;
-
-            this._setDirty();
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'getTransform',
-        value: function getTransform() {
-            if (this._dirtyTransform) {
-                this.updateTransform();
-                this._dirtyTransform = false;
-            }
-
-            return this._transform;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {View}
-         */
-
-    }, {
-        key: 'updateTransform',
-        value: function updateTransform() {
-            var transform = this._transform,
-                center = this._center,
-                a = 2 / this._size.width,
-                b = -2 / this._size.height,
-                c = center.x * -a,
-                d = center.y * -b,
-                x = center.x * -this._cos - center.y * this._sin + center.x,
-                y = center.x * this._sin - center.y * this._cos + center.y;
-
-            transform.a = a * this._cos;
-            transform.b = a * this._sin;
-
-            transform.c = b * -this._sin;
-            transform.d = b * this._cos;
-
-            transform.x = a * x + c;
-            transform.y = b * y + d;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {View} view
-         * @returns {View}
-         */
-
-    }, {
-        key: 'copy',
-        value: function copy(view) {
-            this.center = view.center;
-            this.size = view.size;
-            this.viewport = view.viewport;
-            this.transform = view.transform;
-            this.rotation = view.rotation;
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._center.destroy();
-            this._center = null;
-
-            this._offsetCenter.destroy();
-            this._offsetCenter = null;
-
-            this._size.destroy();
-            this._size = null;
-
-            this._viewport.destroy();
-            this._viewport = null;
-
-            this._transform.destroy();
-            this._transform = null;
-
-            this._rotation = null;
-            this._cos = null;
-            this._sin = null;
-
-            this._dirtyTransform = null;
-            this._updateId = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_setDirty',
-        value: function _setDirty() {
-            this._dirtyTransform = true;
-            this._updateId++;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_onChangeSize',
-        value: function _onChangeSize() {
-            this._offsetCenter.set(this._size.width / 2 | 0, this._size.height / 2 | 0);
-            this._setDirty();
-        }
-    }, {
-        key: 'center',
-        get: function get() {
-            return this._center;
-        },
-        set: function set(center) {
-            this._center.copy(center);
-        }
-
-        /**
-         * @public
-         * @member {ObservableSize}
-         */
-
-    }, {
-        key: 'size',
-        get: function get() {
-            return this._size;
-        },
-        set: function set(size) {
-            this._size.copy(size);
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'width',
-        get: function get() {
-            return this._size.width;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'height',
-        get: function get() {
-            return this._size.height;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'rotation',
-        get: function get() {
-            return this._rotation;
-        },
-        set: function set(degrees) {
-            var trimmed = degrees % 360,
-                rotation = trimmed < 0 ? trimmed + 360 : trimmed,
-                radians = (0, _utils.degreesToRadians)(rotation);
-
-            this._rotation = rotation < 0 ? rotation + 360 : rotation;
-            this._cos = Math.cos(radians);
-            this._sin = Math.sin(radians);
-
-            this._setDirty();
-        }
-
-        /**
-         * @public
-         * @member {Rectangle}
-         */
-
-    }, {
-        key: 'viewport',
-        get: function get() {
-            return this._viewport;
-        },
-        set: function set(viewport) {
-            this._viewport.copy(viewport);
-            this._setDirty();
-        }
-
-        /**
-         * @public
-         * @member {Matrix}
-         */
-
-    }, {
-        key: 'transform',
-        get: function get() {
-            return this.getTransform();
-        },
-        set: function set(transform) {
-            this._transform.copy(transform);
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'updateId',
-        get: function get() {
-            return this._updateId;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Vector}
-         */
-
-    }, {
-        key: 'offsetCenter',
-        get: function get() {
-            return this._offsetCenter;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'left',
-        get: function get() {
-            return this._center.x - this._offsetCenter.x;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'top',
-        get: function get() {
-            return this._center.y - this._offsetCenter.y;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'right',
-        get: function get() {
-            return this._center.x + this._offsetCenter.x;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'bottom',
-        get: function get() {
-            return this._center.y + this._offsetCenter.y;
-        }
-    }]);
-
-    return View;
-}();
-
-exports.default = View;
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _Size2 = __webpack_require__(13);
-
-var _Size3 = _interopRequireDefault(_Size2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class ObservableSize
- * @extends Size
- */
-var ObservableSize = function (_Size) {
-    _inherits(ObservableSize, _Size);
-
-    /**
-     * @constructor
-     * @param {Function} callback
-     * @param {*} scope
-     * @param {Number} [width=0]
-     * @param {Number} [height=0]
-     */
-    function ObservableSize(callback, scope) {
-        var width = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-        var height = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-
-        _classCallCheck(this, ObservableSize);
-
-        /**
-         * @private
-         * @member {Function}
-         */
-        var _this = _possibleConstructorReturn(this, (ObservableSize.__proto__ || Object.getPrototypeOf(ObservableSize)).call(this, width, height));
-
-        _this._callback = callback;
-
-        /**
-         * @private
-         * @member {*}
-         */
-        _this._scope = scope || _this;
-        return _this;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-
-
-    _createClass(ObservableSize, [{
-        key: 'set',
-
-
-        /**
-         * @override
-         */
-        value: function set() {
-            var width = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this._width;
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this._height;
-
-            if (this._width !== width || this._height !== height) {
-                this._width = width;
-                this._height = height;
-                this._callback.call(this._scope);
-            }
-
-            return this;
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'add',
-        value: function add(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            return this.set(this._width + width, this._height + height);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'subtract',
-        value: function subtract(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            return this.set(this._width - width, this._height - height);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'multiply',
-        value: function multiply(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            return this.set(this._width * width, this._height * height);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'divide',
-        value: function divide(width) {
-            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
-
-            return this.set(this._width / width, this._height / height);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'copy',
-        value: function copy(size) {
-            return this.set(size.width, size.height);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'clone',
-        value: function clone() {
-            return new ObservableSize(this._callback, this._scope, this._width, this._height);
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            _get(ObservableSize.prototype.__proto__ || Object.getPrototypeOf(ObservableSize.prototype), 'destroy', this).call(this);
-
-            this._callback = null;
-            this._scope = null;
-        }
-    }, {
-        key: 'width',
-        get: function get() {
-            return this._width;
-        },
-        set: function set(width) {
-            if (this._width !== width) {
-                this._width = width;
-                this._callback.call(this._scope);
-            }
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'height',
-        get: function get() {
-            return this._height;
-        },
-        set: function set(height) {
-            if (this._height !== height) {
-                this._height = height;
-                this._callback.call(this._scope);
-            }
-        }
-    }]);
-
-    return ObservableSize;
-}(_Size3.default);
-
-exports.default = ObservableSize;
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
@@ -8700,13 +8099,13 @@ var Renderer = function () {
 
     /**
      * @public
-     * @param {RenderState} renderState
+     * @param {DisplayManager} displayManager
      */
 
 
     _createClass(Renderer, [{
         key: "bind",
-        value: function bind(renderState) {}
+        value: function bind(displayManager) {}
         // do nothing
 
 
@@ -8762,7 +8161,7 @@ var Renderer = function () {
 exports.default = Renderer;
 
 /***/ }),
-/* 30 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8781,6 +8180,10 @@ var _ShaderAttribute2 = _interopRequireDefault(_ShaderAttribute);
 var _ShaderUniform = __webpack_require__(59);
 
 var _ShaderUniform2 = _interopRequireDefault(_ShaderUniform);
+
+var _GLProgram = __webpack_require__(60);
+
+var _GLProgram2 = _interopRequireDefault(_GLProgram);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8825,21 +8228,15 @@ var Shader = function () {
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        this._renderState = null;
+        this._displayManager = null;
 
         /**
          * @private
          * @member {?GLProgram}
          */
-        this._glProgram = null;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._bound = false;
+        this._program = null;
 
         /**
          * @private
@@ -8864,157 +8261,13 @@ var Shader = function () {
 
 
     _createClass(Shader, [{
-        key: 'bind',
+        key: 'setVertexSource',
 
-
-        /**
-         * @public
-         * @chainable
-         * @param {RenderState} renderState
-         * @returns {Shader}
-         */
-        value: function bind(renderState) {
-            if (!this._renderState) {
-                this._renderState = renderState;
-                this._glProgram = renderState.createGLProgram(this._vertexSource, this._fragmentSource);
-            }
-
-            if (!this._bound) {
-                var offset = 0;
-
-                this._renderState.glProgram = this._glProgram;
-
-                var _iteratorNormalCompletion = true;
-                var _didIteratorError = false;
-                var _iteratorError = undefined;
-
-                try {
-                    for (var _iterator = this._attributes.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                        var attribute = _step.value;
-
-                        attribute.bind(this._glProgram, this._stride, offset);
-
-                        offset += attribute.byteSize;
-                    }
-                } catch (err) {
-                    _didIteratorError = true;
-                    _iteratorError = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion && _iterator.return) {
-                            _iterator.return();
-                        }
-                    } finally {
-                        if (_didIteratorError) {
-                            throw _iteratorError;
-                        }
-                    }
-                }
-
-                var _iteratorNormalCompletion2 = true;
-                var _didIteratorError2 = false;
-                var _iteratorError2 = undefined;
-
-                try {
-                    for (var _iterator2 = this._uniforms.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                        var uniform = _step2.value;
-
-                        uniform.bind(this._glProgram);
-                    }
-                } catch (err) {
-                    _didIteratorError2 = true;
-                    _iteratorError2 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                            _iterator2.return();
-                        }
-                    } finally {
-                        if (_didIteratorError2) {
-                            throw _iteratorError2;
-                        }
-                    }
-                }
-
-                this._bound = true;
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            if (this._bound) {
-                this._renderState.glProgram = null;
-
-                var _iteratorNormalCompletion3 = true;
-                var _didIteratorError3 = false;
-                var _iteratorError3 = undefined;
-
-                try {
-                    for (var _iterator3 = this._attributes.values()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                        var attribute = _step3.value;
-
-                        attribute.unbind();
-                    }
-                } catch (err) {
-                    _didIteratorError3 = true;
-                    _iteratorError3 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                            _iterator3.return();
-                        }
-                    } finally {
-                        if (_didIteratorError3) {
-                            throw _iteratorError3;
-                        }
-                    }
-                }
-
-                var _iteratorNormalCompletion4 = true;
-                var _didIteratorError4 = false;
-                var _iteratorError4 = undefined;
-
-                try {
-                    for (var _iterator4 = this._uniforms.values()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                        var uniform = _step4.value;
-
-                        uniform.unbind();
-                    }
-                } catch (err) {
-                    _didIteratorError4 = true;
-                    _iteratorError4 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                            _iterator4.return();
-                        }
-                    } finally {
-                        if (_didIteratorError4) {
-                            throw _iteratorError4;
-                        }
-                    }
-                }
-
-                this._bound = false;
-            }
-
-            return this;
-        }
 
         /**
          * @public
          * @param {String|String[]} source
          */
-
-    }, {
-        key: 'setVertexSource',
         value: function setVertexSource(source) {
             this._vertexSource = Array.isArray(source) ? source.join('\n') : source;
         }
@@ -9045,30 +8298,30 @@ var Shader = function () {
     }, {
         key: 'setAttributes',
         value: function setAttributes(attributes) {
-            var _iteratorNormalCompletion5 = true;
-            var _didIteratorError5 = false;
-            var _iteratorError5 = undefined;
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
 
             try {
-                for (var _iterator5 = attributes[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                    var item = _step5.value;
+                for (var _iterator = attributes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var item = _step.value;
 
-                    var attribute = item instanceof _ShaderAttribute2.default ? item : new _ShaderAttribute2.default(item);
+                    var attribute = new _ShaderAttribute2.default(item);
 
                     this._attributes.set(attribute.name, attribute);
                     this._stride += attribute.byteSize;
                 }
             } catch (err) {
-                _didIteratorError5 = true;
-                _iteratorError5 = err;
+                _didIteratorError = true;
+                _iteratorError = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                        _iterator5.return();
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
                     }
                 } finally {
-                    if (_didIteratorError5) {
-                        throw _iteratorError5;
+                    if (_didIteratorError) {
+                        throw _iteratorError;
                     }
                 }
             }
@@ -9086,29 +8339,29 @@ var Shader = function () {
     }, {
         key: 'setUniforms',
         value: function setUniforms(uniforms) {
-            var _iteratorNormalCompletion6 = true;
-            var _didIteratorError6 = false;
-            var _iteratorError6 = undefined;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
             try {
-                for (var _iterator6 = uniforms[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                    var item = _step6.value;
+                for (var _iterator2 = uniforms[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var item = _step2.value;
 
-                    var uniform = item instanceof _ShaderUniform2.default ? item : new _ShaderUniform2.default(item);
+                    var uniform = new _ShaderUniform2.default(item);
 
                     this._uniforms.set(uniform.name, uniform);
                 }
             } catch (err) {
-                _didIteratorError6 = true;
-                _iteratorError6 = err;
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                        _iterator6.return();
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
                     }
                 } finally {
-                    if (_didIteratorError6) {
-                        throw _iteratorError6;
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
                     }
                 }
             }
@@ -9128,6 +8381,146 @@ var Shader = function () {
             }
 
             return this._uniforms.get(name);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {DisplayManager} displayManager
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'bind',
+        value: function bind(displayManager) {
+            if (!this._displayManager) {
+                this._displayManager = displayManager;
+                this._program = new _GLProgram2.default(displayManager.context, this._vertexSource, this._fragmentSource);
+            }
+
+            if (!this.bound) {
+                this._program.bind();
+
+                var offset = 0;
+
+                var _iteratorNormalCompletion3 = true;
+                var _didIteratorError3 = false;
+                var _iteratorError3 = undefined;
+
+                try {
+                    for (var _iterator3 = this._attributes.values()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                        var attribute = _step3.value;
+
+                        attribute.bind(this._program, this._stride, offset);
+
+                        offset += attribute.byteSize;
+                    }
+                } catch (err) {
+                    _didIteratorError3 = true;
+                    _iteratorError3 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                            _iterator3.return();
+                        }
+                    } finally {
+                        if (_didIteratorError3) {
+                            throw _iteratorError3;
+                        }
+                    }
+                }
+
+                var _iteratorNormalCompletion4 = true;
+                var _didIteratorError4 = false;
+                var _iteratorError4 = undefined;
+
+                try {
+                    for (var _iterator4 = this._uniforms.values()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                        var uniform = _step4.value;
+
+                        uniform.bind(this._program);
+                    }
+                } catch (err) {
+                    _didIteratorError4 = true;
+                    _iteratorError4 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                            _iterator4.return();
+                        }
+                    } finally {
+                        if (_didIteratorError4) {
+                            throw _iteratorError4;
+                        }
+                    }
+                }
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'unbind',
+        value: function unbind() {
+            if (this.bound) {
+                this._program.unbind();
+
+                var _iteratorNormalCompletion5 = true;
+                var _didIteratorError5 = false;
+                var _iteratorError5 = undefined;
+
+                try {
+                    for (var _iterator5 = this._attributes.values()[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                        var attribute = _step5.value;
+
+                        attribute.unbind();
+                    }
+                } catch (err) {
+                    _didIteratorError5 = true;
+                    _iteratorError5 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                            _iterator5.return();
+                        }
+                    } finally {
+                        if (_didIteratorError5) {
+                            throw _iteratorError5;
+                        }
+                    }
+                }
+
+                var _iteratorNormalCompletion6 = true;
+                var _didIteratorError6 = false;
+                var _iteratorError6 = undefined;
+
+                try {
+                    for (var _iterator6 = this._uniforms.values()[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                        var uniform = _step6.value;
+
+                        uniform.unbind();
+                    }
+                } catch (err) {
+                    _didIteratorError6 = true;
+                    _iteratorError6 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                            _iterator6.return();
+                        }
+                    } finally {
+                        if (_didIteratorError6) {
+                            throw _iteratorError6;
+                        }
+                    }
+                }
+            }
+
+            return this;
         }
 
         /**
@@ -9189,9 +8582,9 @@ var Shader = function () {
                 }
             }
 
-            if (this._glProgram) {
-                this._glProgram.destroy();
-                this._glProgram = null;
+            if (this._program) {
+                this._program.destroy();
+                this._program = null;
             }
 
             this._attributes.clear();
@@ -9200,11 +8593,10 @@ var Shader = function () {
             this._uniforms.clear();
             this._uniforms = null;
 
+            this._stride = null;
             this._vertexSource = null;
             this._fragmentSource = null;
-            this._bound = null;
-            this._stride = null;
-            this._renderState = null;
+            this._displayManager = null;
         }
     }, {
         key: 'vertexSource',
@@ -9223,6 +8615,18 @@ var Shader = function () {
         get: function get() {
             return this._fragmentSource;
         }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'bound',
+        get: function get() {
+            return this._displayManager && this._displayManager.shader === this;
+        }
     }]);
 
     return Shader;
@@ -9231,7 +8635,209 @@ var Shader = function () {
 exports.default = Shader;
 
 /***/ }),
-/* 31 */
+/* 29 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class GLBuffer
+ */
+var GLBuffer = function () {
+
+    /**
+     * @constructor
+     * @param {WebGLRenderingContext} context
+     * @param {Number} size
+     * @param {Number} attributeCount
+     */
+    function GLBuffer(context, size, attributeCount) {
+        _classCallCheck(this, GLBuffer);
+
+        if (!context) {
+            throw new Error('No Rendering Context was provided.');
+        }
+
+        /**
+         * @private
+         * @member {WebGLRenderingContext}
+         */
+        this._context = context;
+
+        /**
+         * @private
+         * @member {WebGLBuffer}
+         */
+        this._vertexBuffer = context.createBuffer();
+
+        /**
+         * @private
+         * @member {WebGLBuffer}
+         */
+        this._indexBuffer = context.createBuffer();
+
+        /**
+         * @private
+         * @member {ArrayBuffer}
+         */
+        this._vertexData = this.createVertexBuffer(size, attributeCount);
+
+        /**
+         * @private
+         * @member {Uint16Array}
+         */
+        this._indexData = this.createIndexBuffer(size);
+
+        /**
+         * @private
+         * @member {Uint32Array}
+         */
+        this._uintView = new Uint32Array(this._vertexData);
+
+        /**
+         * @private
+         * @member {Float32Array}
+         */
+        this._floatView = new Float32Array(this._vertexData);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Uint32Array}
+     */
+
+
+    _createClass(GLBuffer, [{
+        key: 'createVertexBuffer',
+
+
+        /**
+         * @public
+         * @param {Number} size
+         * @param {Number} attributeCount
+         * @returns {ArrayBuffer}
+         */
+        value: function createVertexBuffer(size, attributeCount) {
+            return new ArrayBuffer(size * attributeCount * 4);
+        }
+
+        /**
+         * @public
+         * @param {Number} size
+         * @returns {Uint16Array}
+         */
+
+    }, {
+        key: 'createIndexBuffer',
+        value: function createIndexBuffer(size) {
+            var buffer = new Uint16Array(size * 6),
+                len = buffer.length;
+
+            for (var i = 0, offset = 0; i < len; i += 6, offset += 4) {
+                buffer[i] = offset;
+                buffer[i + 1] = offset + 1;
+                buffer[i + 2] = offset + 3;
+                buffer[i + 3] = offset;
+                buffer[i + 4] = offset + 2;
+                buffer[i + 5] = offset + 3;
+            }
+
+            return buffer;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLBuffer}
+         */
+
+    }, {
+        key: 'bind',
+        value: function bind() {
+            var gl = this._context;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLBuffer}
+         */
+
+    }, {
+        key: 'unbind',
+        value: function unbind() {
+            var gl = this._context;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            var gl = this._context;
+
+            gl.deleteBuffer(this._vertexBuffer);
+            gl.deleteBuffer(this._indexBuffer);
+
+            this._context = null;
+            this._vertexBuffer = null;
+            this._indexBuffer = null;
+            this._vertexData = null;
+            this._indexData = null;
+            this._uintView = null;
+            this._floatView = null;
+        }
+    }, {
+        key: 'uintView',
+        get: function get() {
+            return this._uintView;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Float32Array}
+         */
+
+    }, {
+        key: 'floatView',
+        get: function get() {
+            return this._floatView;
+        }
+    }]);
+
+    return GLBuffer;
+}();
+
+exports.default = GLBuffer;
+
+/***/ }),
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9249,11 +8855,11 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(7);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _Time = __webpack_require__(10);
+var _Time = __webpack_require__(11);
 
 var _Time2 = _interopRequireDefault(_Time);
 
@@ -9491,7 +9097,7 @@ var ParticleOptions = function () {
 exports.default = ParticleOptions;
 
 /***/ }),
-/* 32 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9674,7 +9280,7 @@ var Interval = function () {
 exports.default = Interval;
 
 /***/ }),
-/* 33 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9690,11 +9296,11 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Interval = __webpack_require__(32);
+var _Interval = __webpack_require__(31);
 
 var _Interval2 = _interopRequireDefault(_Interval);
 
-var _Polygon = __webpack_require__(72);
+var _Polygon = __webpack_require__(75);
 
 var _Polygon2 = _interopRequireDefault(_Polygon);
 
@@ -10076,7 +9682,7 @@ var Collision = function () {
 exports.default = Collision;
 
 /***/ }),
-/* 34 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10096,11 +9702,11 @@ var _EventEmitter2 = __webpack_require__(6);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ResourceContainer = __webpack_require__(35);
+var _ResourceContainer = __webpack_require__(34);
 
 var _ResourceContainer2 = _interopRequireDefault(_ResourceContainer);
 
-var _ArrayBufferFactory = __webpack_require__(11);
+var _ArrayBufferFactory = __webpack_require__(12);
 
 var _ArrayBufferFactory2 = _interopRequireDefault(_ArrayBufferFactory);
 
@@ -10108,7 +9714,7 @@ var _BlobFactory = __webpack_require__(19);
 
 var _BlobFactory2 = _interopRequireDefault(_BlobFactory);
 
-var _FontFactory = __webpack_require__(36);
+var _FontFactory = __webpack_require__(35);
 
 var _FontFactory2 = _interopRequireDefault(_FontFactory);
 
@@ -10116,27 +9722,27 @@ var _ImageFactory = __webpack_require__(20);
 
 var _ImageFactory2 = _interopRequireDefault(_ImageFactory);
 
-var _JSONFactory = __webpack_require__(37);
+var _JSONFactory = __webpack_require__(36);
 
 var _JSONFactory2 = _interopRequireDefault(_JSONFactory);
 
-var _MusicFactory = __webpack_require__(38);
+var _MusicFactory = __webpack_require__(37);
 
 var _MusicFactory2 = _interopRequireDefault(_MusicFactory);
 
-var _SoundFactory = __webpack_require__(41);
+var _SoundFactory = __webpack_require__(40);
 
 var _SoundFactory2 = _interopRequireDefault(_SoundFactory);
 
-var _StringFactory = __webpack_require__(43);
+var _StringFactory = __webpack_require__(42);
 
 var _StringFactory2 = _interopRequireDefault(_StringFactory);
 
-var _TextureFactory = __webpack_require__(44);
+var _TextureFactory = __webpack_require__(43);
 
 var _TextureFactory2 = _interopRequireDefault(_TextureFactory);
 
-var _MediaSourceFactory = __webpack_require__(12);
+var _MediaSourceFactory = __webpack_require__(13);
 
 var _MediaSourceFactory2 = _interopRequireDefault(_MediaSourceFactory);
 
@@ -10527,7 +10133,7 @@ var ResourceLoader = function (_EventEmitter) {
 exports.default = ResourceLoader;
 
 /***/ }),
-/* 35 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10749,7 +10355,7 @@ var ResourceContainer = function () {
 exports.default = ResourceContainer;
 
 /***/ }),
-/* 36 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10763,7 +10369,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ArrayBufferFactory2 = __webpack_require__(11);
+var _ArrayBufferFactory2 = __webpack_require__(12);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
@@ -10836,7 +10442,7 @@ var FontFactory = function (_ArrayBufferFactory) {
 exports.default = FontFactory;
 
 /***/ }),
-/* 37 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10912,7 +10518,7 @@ var JSONFactory = function (_ResourceFactory) {
 exports.default = JSONFactory;
 
 /***/ }),
-/* 38 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10926,11 +10532,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _MediaSourceFactory2 = __webpack_require__(12);
+var _MediaSourceFactory2 = __webpack_require__(13);
 
 var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
 
-var _Music = __webpack_require__(40);
+var _Music = __webpack_require__(39);
 
 var _Music2 = _interopRequireDefault(_Music);
 
@@ -10995,7 +10601,7 @@ var MusicFactory = function (_MediaSourceFactory) {
 exports.default = MusicFactory;
 
 /***/ }),
-/* 39 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11265,7 +10871,7 @@ var MediaSource = function () {
 exports.default = MediaSource;
 
 /***/ }),
-/* 40 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11431,7 +11037,7 @@ var Music = function (_Media) {
 exports.default = Music;
 
 /***/ }),
-/* 41 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11445,11 +11051,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _MediaSourceFactory2 = __webpack_require__(12);
+var _MediaSourceFactory2 = __webpack_require__(13);
 
 var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
 
-var _Sound = __webpack_require__(42);
+var _Sound = __webpack_require__(41);
 
 var _Sound2 = _interopRequireDefault(_Sound);
 
@@ -11518,7 +11124,7 @@ var SoundFactory = function (_MediaSourceFactory) {
 exports.default = SoundFactory;
 
 /***/ }),
-/* 42 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11850,7 +11456,7 @@ var Sound = function (_Media) {
 exports.default = Sound;
 
 /***/ }),
-/* 43 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11926,7 +11532,7 @@ var StringFactory = function (_ResourceFactory) {
 exports.default = StringFactory;
 
 /***/ }),
-/* 44 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11948,7 +11554,7 @@ var _Texture = __webpack_require__(15);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
@@ -12012,7 +11618,7 @@ var TextureFactory = function (_ImageFactory) {
 exports.default = TextureFactory;
 
 /***/ }),
-/* 45 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12024,11 +11630,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _const = __webpack_require__(0);
 
-var _GamepadMapping2 = __webpack_require__(46);
+var _GamepadMapping2 = __webpack_require__(45);
 
 var _GamepadMapping3 = _interopRequireDefault(_GamepadMapping2);
 
-var _GamepadControl = __webpack_require__(47);
+var _GamepadControl = __webpack_require__(46);
 
 var _GamepadControl2 = _interopRequireDefault(_GamepadControl);
 
@@ -12064,7 +11670,7 @@ var DefaultGamepadMapping = function (_GamepadMapping) {
 exports.default = DefaultGamepadMapping;
 
 /***/ }),
-/* 46 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12226,7 +11832,7 @@ var GamepadMapping = function () {
 exports.default = GamepadMapping;
 
 /***/ }),
-/* 47 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12424,6 +12030,244 @@ var GamepadControl = function () {
 exports.default = GamepadControl;
 
 /***/ }),
+/* 47 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Size = __webpack_require__(7);
+
+var _Size2 = _interopRequireDefault(_Size);
+
+var _utils = __webpack_require__(1);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class GLTexture
+ */
+var GLTexture = function () {
+
+    /**
+     * @constructor
+     * @param {WebGLRenderingContext} context
+     */
+    function GLTexture(context) {
+        _classCallCheck(this, GLTexture);
+
+        if (!context) {
+            throw new Error('No Rendering Context was provided.');
+        }
+
+        /**
+         * @private
+         * @member {WebGLRenderingContext}
+         */
+        this._context = context;
+
+        /**
+         * @private
+         * @member {WebGLTexture}
+         */
+        this._texture = context.createTexture();
+
+        /**
+         * @private
+         * @member {Size}
+         */
+        this._size = new _Size2.default(-1, -1);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {WebGLTexture}
+     */
+
+
+    _createClass(GLTexture, [{
+        key: 'setScaleMode',
+
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} scaleMode
+         * @returns {GLTexture}
+         */
+        value: function setScaleMode(scaleMode) {
+            var gl = this._context;
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} wrapMode
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'setWrapMode',
+        value: function setWrapMode(wrapMode) {
+            var gl = this._context;
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Boolean} premultiplyAlpha
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'setPremultiplyAlpha',
+        value: function setPremultiplyAlpha(premultiplyAlpha) {
+            var gl = this._context;
+
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiplyAlpha);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
+         * @param {Number} [width=getMediaWidth(source)]
+         * @param {Number} [height=getMediaHeight(source)]
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'setTextureSource',
+        value: function setTextureSource(source) {
+            var width = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : (0, _utils.getMediaWidth)(source);
+            var height = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : (0, _utils.getMediaHeight)(source);
+
+            var gl = this._context;
+
+            if (this._size.width !== width || this._size.height !== height) {
+                this._size.set(width, height);
+
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            } else {
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {?DataView} source
+         * @param {Number} width
+         * @param {Number} height
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'setDataSource',
+        value: function setDataSource(source, width, height) {
+            var gl = this._context;
+
+            if (this._size.width !== width || this._size.height !== height) {
+                this._size.set(width, height);
+
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            } else {
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} [unit]
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'bind',
+        value: function bind(unit) {
+            var gl = this._context;
+
+            if (unit !== undefined) {
+                gl.activeTexture(gl.TEXTURE0 + unit);
+            }
+
+            gl.bindTexture(gl.TEXTURE_2D, this._texture);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'unbind',
+        value: function unbind() {
+            var gl = this._context;
+
+            gl.bindTexture(gl.TEXTURE_2D, null);
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            var gl = this._context;
+
+            gl.deleteTexture(this._texture);
+
+            this._size.destroy();
+            this._size = null;
+
+            this._context = null;
+            this._texture = null;
+        }
+    }, {
+        key: 'texture',
+        get: function get() {
+            return this._texture;
+        }
+    }]);
+
+    return GLTexture;
+}();
+
+exports.default = GLTexture;
+
+/***/ }),
 /* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -12442,7 +12286,7 @@ var _Video = __webpack_require__(49);
 
 var _Video2 = _interopRequireDefault(_Video);
 
-var _MediaSourceFactory2 = __webpack_require__(12);
+var _MediaSourceFactory2 = __webpack_require__(13);
 
 var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
 
@@ -13407,7 +13251,7 @@ var _ObservableVector = __webpack_require__(25);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
-var _Matrix = __webpack_require__(9);
+var _Matrix = __webpack_require__(10);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -13482,7 +13326,7 @@ var Transformable = function (_EventEmitter) {
          * @private
          * @member {Boolean}
          */
-        _this._dirtyTransform = true;
+        _this._updateTransform = true;
         return _this;
     }
 
@@ -13502,9 +13346,9 @@ var Transformable = function (_EventEmitter) {
          * @returns {Matrix}
          */
         value: function getTransform() {
-            if (this._dirtyTransform) {
+            if (this._updateTransform) {
                 this.updateTransform();
-                this._dirtyTransform = false;
+                this._updateTransform = false;
             }
 
             return this._transform;
@@ -13665,7 +13509,7 @@ var Transformable = function (_EventEmitter) {
             this._sin = null;
             this._cos = null;
 
-            this._dirtyTransform = null;
+            this._updateTransform = null;
         }
 
         /**
@@ -13675,7 +13519,7 @@ var Transformable = function (_EventEmitter) {
     }, {
         key: '_setDirty',
         value: function _setDirty() {
-            this._dirtyTransform = true;
+            this._updateTransform = true;
         }
     }, {
         key: 'position',
@@ -13927,11 +13771,13 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _RenderState = __webpack_require__(54);
+var _const = __webpack_require__(0);
 
-var _RenderState2 = _interopRequireDefault(_RenderState);
+var _support = __webpack_require__(3);
 
-var _RenderTarget = __webpack_require__(55);
+var _support2 = _interopRequireDefault(_support);
+
+var _RenderTarget = __webpack_require__(54);
 
 var _RenderTarget2 = _interopRequireDefault(_RenderTarget);
 
@@ -13939,29 +13785,41 @@ var _SpriteRenderer = __webpack_require__(56);
 
 var _SpriteRenderer2 = _interopRequireDefault(_SpriteRenderer);
 
-var _ParticleRenderer = __webpack_require__(61);
+var _ParticleRenderer = __webpack_require__(62);
 
 var _ParticleRenderer2 = _interopRequireDefault(_ParticleRenderer);
 
-var _Color = __webpack_require__(7);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _View = __webpack_require__(27);
+var _View = __webpack_require__(64);
 
 var _View2 = _interopRequireDefault(_View);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _settings = __webpack_require__(4);
+var _Vector = __webpack_require__(2);
 
-var _settings2 = _interopRequireDefault(_settings);
+var _Vector2 = _interopRequireDefault(_Vector);
 
-var _support = __webpack_require__(3);
+var _GLProgram = __webpack_require__(60);
 
-var _support2 = _interopRequireDefault(_support);
+var _GLProgram2 = _interopRequireDefault(_GLProgram);
+
+var _GLBuffer = __webpack_require__(29);
+
+var _GLBuffer2 = _interopRequireDefault(_GLBuffer);
+
+var _GLTexture = __webpack_require__(47);
+
+var _GLTexture2 = _interopRequireDefault(_GLTexture);
+
+var _GLFramebuffer = __webpack_require__(55);
+
+var _GLFramebuffer2 = _interopRequireDefault(_GLFramebuffer);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -13978,6 +13836,7 @@ var DisplayManager = function () {
      * @param {Object} [config]
      * @param {Number} [config.width=800]
      * @param {Number} [config.height=600]
+     * @param {Color} [config.blendMode=settings.BLEND_MODE]
      * @param {Color} [config.clearColor=Color.Black]
      * @param {Boolean} [config.clearBeforeRender=true]
      * @param {Object} [config.contextOptions]
@@ -13988,8 +13847,10 @@ var DisplayManager = function () {
             width = _ref$width === undefined ? 800 : _ref$width,
             _ref$height = _ref.height,
             height = _ref$height === undefined ? 600 : _ref$height,
+            _ref$blendMode = _ref.blendMode,
+            blendMode = _ref$blendMode === undefined ? _const.BLEND_MODE.NORMAL : _ref$blendMode,
             _ref$clearColor = _ref.clearColor,
-            clearColor = _ref$clearColor === undefined ? _Color2.default.Black : _ref$clearColor,
+            clearColor = _ref$clearColor === undefined ? new _Color2.default() : _ref$clearColor,
             _ref$clearBeforeRende = _ref.clearBeforeRender,
             clearBeforeRender = _ref$clearBeforeRende === undefined ? true : _ref$clearBeforeRende,
             _ref$contextOptions = _ref.contextOptions,
@@ -14038,19 +13899,61 @@ var DisplayManager = function () {
          * @private
          * @member {Map<String, Renderer>}
          */
-        this._renderers = new Map();
+        this._renderers = new Map([['sprite', new _SpriteRenderer2.default()], ['particle', new _ParticleRenderer2.default()]]);
 
         /**
          * @private
-         * @member {RenderTarget}
+         * @member {?RenderTarget}
          */
-        this._renderTarget = new _RenderTarget2.default(width, height, true);
+        this._renderTarget = null;
 
         /**
          * @private
-         * @member {View}
+         * @member {?Renderer}
          */
-        this._view = new _View2.default(new _Rectangle2.default(0, 0, width, height));
+        this._renderer = null;
+
+        /**
+         * @private
+         * @member {?Shader}
+         */
+        this._shader = null;
+
+        /**
+         * @private
+         * @member {?BlendMode}
+         */
+        this._blendMode = null;
+
+        /**
+         * @private
+         * @member {?Texture}
+         */
+        this._texture = null;
+
+        /**
+         * @private
+         * @member {Map<Number, Texture>}
+         */
+        this._textures = new Map();
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._textureUnit = 0;
+
+        /**
+         * @private
+         * @member {?View}
+         */
+        this._view = null;
+
+        /**
+         * @private
+         * @member {Color}
+         */
+        this._clearColor = new _Color2.default();
 
         /**
          * @private
@@ -14066,25 +13969,172 @@ var DisplayManager = function () {
 
         /**
          * @private
-         * @member {RenderState}
+         * @member {RenderTarget}
          */
-        this._renderState = new _RenderState2.default(this._context);
+        this._defaultRenderTarget = new _RenderTarget2.default(width, height, true);
 
-        this.addRenderer('sprite', new _SpriteRenderer2.default()).addRenderer('particle', new _ParticleRenderer2.default()).setRenderTarget(this._renderTarget).setView(this._view).setClearColor(clearColor).resize(width, height);
+        /**
+         * @private
+         * @member {View}
+         */
+        this._defaultView = new _View2.default(0, 0, width, height);
 
+        this._setupContext();
         this._addEvents();
+
+        this.setRenderTarget(this._defaultRenderTarget);
+        this.setView(this._defaultView);
+        this.setBlendMode(blendMode);
+        this.setClearColor(clearColor);
+
+        this.resize(width, height);
     }
 
     /**
      * @public
-     * @readonly
-     * @member {RenderState}
+     * @member {WebGLRenderingContext}
      */
 
 
     _createClass(DisplayManager, [{
-        key: 'setView',
+        key: 'setRenderTarget',
 
+
+        /**
+         * @public
+         * @chainable
+         * @param {?RenderTarget} renderTarget
+         * @returns {DisplayManager}
+         */
+        value: function setRenderTarget(renderTarget) {
+            if (this._renderTarget !== renderTarget) {
+                if (this._renderTarget) {
+                    this._renderTarget.unbind();
+                }
+
+                this._renderTarget = renderTarget || null;
+
+                if (this._renderTarget) {
+                    this._renderTarget.bind(this);
+                    this._updateViewport();
+                }
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Renderer} renderer
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setRenderer',
+        value: function setRenderer(renderer) {
+            if (this._renderer !== renderer) {
+                if (this._renderer) {
+                    this._renderer.unbind();
+                }
+
+                this._renderer = renderer ? renderer.bind(this) : null;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Shader} shader
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setShader',
+        value: function setShader(shader) {
+            if (this._shader !== shader) {
+                if (this._shader) {
+                    this._shader.unbind();
+                }
+
+                this._shader = shader ? shader.bind(this) : null;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {BlendMode} blendMode
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setBlendMode',
+        value: function setBlendMode(blendMode) {
+            if (blendMode !== this._blendMode) {
+                var gl = this._context;
+
+                this._blendMode = blendMode;
+
+                gl.blendFunc(blendMode.sFactor, blendMode.dFactor);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {?Texture} texture
+         * @param {Number} [unit]
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setTexture',
+        value: function setTexture(texture, unit) {
+            var currentTexture = this.texture,
+                newTexture = texture || null;
+
+            if (currentTexture !== newTexture) {
+                if (newTexture) {
+                    newTexture.bind(this, unit);
+                    this._textures.set(this._textureUnit, newTexture);
+                } else if (currentTexture) {
+                    currentTexture.unbind();
+                    this._textures.delete(this._textureUnit);
+                }
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} unit
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: 'setTextureUnit',
+        value: function setTextureUnit(unit) {
+            var textureUnit = unit | 0;
+
+            if (this._textureUnit !== textureUnit) {
+                var gl = this._context;
+
+                this._textureUnit = textureUnit;
+
+                gl.activeTexture(gl.TEXTURE0 + textureUnit);
+            }
+
+            return this;
+        }
 
         /**
          * @public
@@ -14092,23 +14142,12 @@ var DisplayManager = function () {
          * @param {View} view
          * @returns {DisplayManager}
          */
-        value: function setView(view) {
-            this._renderState.view = view;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {RenderTarget} renderTarget
-         * @returns {DisplayManager}
-         */
 
     }, {
-        key: 'setRenderTarget',
-        value: function setRenderTarget(renderTarget) {
-            this._renderState.renderTarget = renderTarget;
+        key: 'setView',
+        value: function setView(view) {
+            this._view = view;
+            this._updateViewport();
 
             return this;
         }
@@ -14116,14 +14155,20 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
-         * @param {Color} clearColor
+         * @param {Color} color
          * @returns {DisplayManager}
          */
 
     }, {
         key: 'setClearColor',
-        value: function setClearColor(clearColor) {
-            this._renderState.clearColor = clearColor;
+        value: function setClearColor(color) {
+            if (!this._clearColor.equals(color, true)) {
+                var gl = this._context;
+
+                this._clearColor.copy(color);
+
+                gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+            }
 
             return this;
         }
@@ -14168,14 +14213,20 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
-         * @param {String} name
+         * @param {Color} [color]
          * @returns {DisplayManager}
          */
 
     }, {
-        key: 'setRenderer',
-        value: function setRenderer(renderer) {
-            this._renderState.renderer = this.getRenderer(renderer);
+        key: 'clear',
+        value: function clear(color) {
+            var gl = this._context;
+
+            if (color) {
+                this.setClearColor(color);
+            }
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
 
             return this;
         }
@@ -14194,11 +14245,10 @@ var DisplayManager = function () {
             this._canvas.width = width;
             this._canvas.height = height;
 
-            this._renderTarget.width = width;
-            this._renderTarget.height = height;
+            this._defaultRenderTarget.resize(width, height);
 
-            if (this._renderState.renderTarget === this._renderTarget) {
-                this._renderState.updateViewport();
+            if (this._renderTarget === this._defaultRenderTarget) {
+                this._updateViewport();
             }
 
             return this;
@@ -14220,7 +14270,7 @@ var DisplayManager = function () {
             this._isRendering = true;
 
             if (!this._contextLost && this._clearBeforeRender) {
-                this._renderState.clear();
+                this.clear();
             }
 
             return this;
@@ -14234,8 +14284,8 @@ var DisplayManager = function () {
          */
 
     }, {
-        key: 'draw',
-        value: function draw(renderable) {
+        key: 'render',
+        value: function render(renderable) {
             if (!this._isRendering) {
                 throw new Error('DisplayManager has to begin first!');
             }
@@ -14262,8 +14312,8 @@ var DisplayManager = function () {
 
             this._isRendering = false;
 
-            if (!this._contextLost && this._renderState.renderer) {
-                this._renderState.renderer.flush();
+            if (!this._contextLost && this._renderer) {
+                this._renderer.flush();
             }
 
             return this;
@@ -14272,14 +14322,18 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
-         * @param {Renderable|*} renderable
+         * @param {Number} count
+         * @param {ArrayBufferView} data
          * @returns {DisplayManager}
          */
 
     }, {
-        key: 'render',
-        value: function render(renderable) {
-            this._renderState.renderer.render(renderable);
+        key: 'drawElements',
+        value: function drawElements(count, data) {
+            var gl = this._context;
+
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
+            gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
 
             return this;
         }
@@ -14298,12 +14352,60 @@ var DisplayManager = function () {
 
         /**
          * @public
+         * @param {Vector} point
+         * @param {View} [view=this._view]
+         * @param {Vector} [result=new Vector()]
+         * @returns {Vector}
+         */
+
+    }, {
+        key: 'mapPixelToCoords',
+        value: function mapPixelToCoords(point) {
+            var view = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this._view;
+            var result = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : new _Vector2.default();
+
+            var viewport = view.viewport;
+
+            result.set(-1 + 2 * (point.x - viewport.left) / viewport.width, 1 - 2 * (point.y - viewport.top) / viewport.height);
+
+            return result.transform(view.getInverseTransform());
+        }
+
+        /**
+         * @public
+         * @param {Vector} point
+         * @param {View} [view=this._view]
+         * @param {Vector} [result=new Vector()]
+         * @returns {Vector}
+         */
+
+    }, {
+        key: 'mapCoordsToPixel',
+        value: function mapCoordsToPixel(point) {
+            var view = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this._view;
+            var result = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : new _Vector2.default();
+
+            var viewport = view.viewport;
+
+            point.transform(view.getTransform(), result);
+
+            return result.set((result.x + 1) / 2 * viewport.width + viewport.left | 0, (-result.y + 1) / 2 * viewport.height + viewport.top | 0);
+        }
+
+        /**
+         * @public
          */
 
     }, {
         key: 'destroy',
         value: function destroy() {
             this._removeEvents();
+
+            this.setRenderTarget(null);
+            this.setRenderer(null);
+            this.setShader(null);
+            this.setView(null);
+            this.setTexture(null);
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
@@ -14333,20 +14435,27 @@ var DisplayManager = function () {
             this._renderers.clear();
             this._renderers = null;
 
-            this._renderState.destroy();
-            this._renderState = null;
+            this._clearColor.destroy();
+            this._clearColor = null;
 
-            this._renderTarget.destroy();
+            this._defaultRenderTarget.destroy();
+            this._defaultRenderTarget = null;
+
+            this._defaultView.destroy();
+            this._defaultView = null;
+
+            this._canvas = null;
+            this._context = null;
+            this._contextLost = null;
             this._renderTarget = null;
-
-            this._view.destroy();
+            this._renderer = null;
+            this._shader = null;
+            this._blendMode = null;
+            this._texture = null;
+            this._textureUnit = null;
             this._view = null;
-
             this._clearBeforeRender = null;
             this._isRendering = null;
-            this._contextLost = null;
-            this._context = null;
-            this._canvas = null;
         }
 
         /**
@@ -14370,9 +14479,47 @@ var DisplayManager = function () {
     }, {
         key: '_restoreContext',
         value: function _restoreContext() {
-            if (this._context.getExtension('WEBGL_lose_context')) {
-                this._context.getExtension('WEBGL_lose_context').restoreContext();
+            var gl = this._context;
+
+            if (gl.getExtension('WEBGL_lose_context')) {
+                gl.getExtension('WEBGL_lose_context').restoreContext();
             }
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_setupContext',
+        value: function _setupContext() {
+            var gl = this._context;
+
+            gl.enable(gl.BLEND);
+            gl.disable(gl.DEPTH_TEST);
+            gl.disable(gl.CULL_FACE);
+
+            gl.colorMask(true, true, true, false);
+        }
+
+        /**
+         * @private
+         * @chainable
+         * @returns {DisplayManager}
+         */
+
+    }, {
+        key: '_updateViewport',
+        value: function _updateViewport() {
+            if (this._renderTarget && this._view) {
+                var gl = this._context,
+                    size = this._renderTarget.size,
+                    viewport = this._view.viewport;
+
+                gl.viewport(Math.round(size.width * viewport.x), Math.round(size.height * viewport.y), Math.round(size.width * viewport.width), Math.round(size.height * viewport.height));
+            }
+
+            return this;
         }
 
         /**
@@ -14425,9 +14572,135 @@ var DisplayManager = function () {
             this._contextLost = false;
         }
     }, {
-        key: 'renderState',
+        key: 'context',
         get: function get() {
-            return this._renderState;
+            return this._context;
+        }
+
+        /**
+         * @public
+         * @member {?RenderTarget}
+         */
+
+    }, {
+        key: 'renderTarget',
+        get: function get() {
+            return this._renderTarget;
+        },
+        set: function set(renderTarget) {
+            this.setRenderTarget(renderTarget);
+        }
+
+        /**
+         * @public
+         * @member {?Renderer}
+         */
+
+    }, {
+        key: 'renderer',
+        get: function get() {
+            return this._renderer;
+        },
+        set: function set(renderer) {
+            this.setRenderer(renderer);
+        }
+
+        /**
+         * @public
+         * @member {?Shader}
+         */
+
+    }, {
+        key: 'shader',
+        get: function get() {
+            return this._shader;
+        },
+        set: function set(shader) {
+            this.setShader(shader);
+        }
+
+        /**
+         * @public
+         * @member {BlendMode}
+         */
+
+    }, {
+        key: 'blendMode',
+        get: function get() {
+            return this._blendMode;
+        },
+        set: function set(blendMode) {
+            this.setBlendMode(blendMode);
+        }
+
+        /**
+         * @public
+         * @member {?Texture}
+         */
+
+    }, {
+        key: 'texture',
+        get: function get() {
+            return this._textures.get(this._textureUnit) || null;
+        },
+        set: function set(texture) {
+            this.setTexture(texture);
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'textureUnit',
+        get: function get() {
+            return this._textureUnit;
+        },
+        set: function set(textureUnit) {
+            this.setTextureUnit(textureUnit);
+        }
+
+        /**
+         * @public
+         * @member {View}
+         */
+
+    }, {
+        key: 'view',
+        get: function get() {
+            return this._view;
+        },
+        set: function set(view) {
+            this.setView(view);
+        }
+
+        /**
+         * @public
+         * @member {Color}
+         */
+
+    }, {
+        key: 'clearColor',
+        get: function get() {
+            return this._clearColor;
+        },
+        set: function set(color) {
+            this.setClearColor(color);
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'clearBeforeRender',
+        get: function get() {
+            return this._clearBeforeRender;
+        },
+        set: function set(clearBeforeRender) {
+            this._clearBeforeRender = clearBeforeRender;
         }
     }]);
 
@@ -14449,517 +14722,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Color = __webpack_require__(7);
+var _Size = __webpack_require__(7);
+
+var _Size2 = _interopRequireDefault(_Size);
+
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _GLTexture = __webpack_require__(78);
-
-var _GLTexture2 = _interopRequireDefault(_GLTexture);
-
-var _settings = __webpack_require__(4);
-
-var _settings2 = _interopRequireDefault(_settings);
-
-var _GLBuffer = __webpack_require__(79);
-
-var _GLBuffer2 = _interopRequireDefault(_GLBuffer);
-
-var _GLFramebuffer = __webpack_require__(80);
+var _GLFramebuffer = __webpack_require__(55);
 
 var _GLFramebuffer2 = _interopRequireDefault(_GLFramebuffer);
-
-var _GLProgram = __webpack_require__(81);
-
-var _GLProgram2 = _interopRequireDefault(_GLProgram);
-
-var _View = __webpack_require__(27);
-
-var _View2 = _interopRequireDefault(_View);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class RenderState
- */
-var RenderState = function () {
-
-    /**
-     * @constructor
-     * @param {WebGLRenderingContext} context
-     */
-    function RenderState(context) {
-        _classCallCheck(this, RenderState);
-
-        if (!context) {
-            throw new Error('This browser or hardware does not support WebGL.');
-        }
-
-        /**
-         * @private
-         * @member {WebGLRenderingContext}
-         */
-        this._context = context;
-
-        /**
-         * @private
-         * @member {?Renderer}
-         */
-        this._renderer = null;
-
-        /**
-         * @private
-         * @member {?RenderTarget}
-         */
-        this._renderTarget = null;
-
-        /**
-         * @private
-         * @member {?View}
-         */
-        this._view = null;
-
-        /**
-         * @private
-         * @member {?Shader}
-         */
-        this._shader = null;
-
-        /**
-         * @private
-         * @member {?GLFramebuffer}
-         */
-        this._glFramebuffer = null;
-
-        /**
-         * @private
-         * @member {?GLProgram}
-         */
-        this._glProgram = null;
-
-        /**
-         * @private
-         * @member {?GLBuffer}
-         */
-        this._glBuffer = null;
-
-        /**
-         * @private
-         * @member {?GLTexture}
-         */
-        this._glTexture = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._textureUnit = -1;
-
-        /**
-         * @private
-         * @member {Object}
-         */
-        this._blendMode = _settings2.default.BLEND_MODE;
-
-        /**
-         * @private
-         * @member {Color}
-         */
-        this._clearColor = new _Color2.default();
-
-        this._setupContext(context);
-    }
-
-    /**
-     * @public
-     * @member {?Renderer}
-     */
-
-
-    _createClass(RenderState, [{
-        key: 'createGLProgram',
-
-
-        /**
-         * @public
-         * @param {String} vertexSource
-         * @param {String} fragmentSource
-         * @returns {GLProgram}
-         */
-        value: function createGLProgram(vertexSource, fragmentSource) {
-            return new _GLProgram2.default(this._context, vertexSource, fragmentSource);
-        }
-
-        /**
-         * @public
-         * @param {Number} size
-         * @param {Number} attributeCount
-         * @returns {GLBuffer}
-         */
-
-    }, {
-        key: 'createGLBuffer',
-        value: function createGLBuffer(size, attributeCount) {
-            return new _GLBuffer2.default(this._context, size, attributeCount);
-        }
-
-        /**
-         * @public
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'createGLTexture',
-        value: function createGLTexture() {
-            return new _GLTexture2.default(this._context);
-        }
-
-        /**
-         * @public
-         * @param {Boolean} isRoot
-         * @returns {?GLFramebuffer}
-         */
-
-    }, {
-        key: 'createGLFramebuffer',
-        value: function createGLFramebuffer(isRoot) {
-            return new _GLFramebuffer2.default(this._context, isRoot);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Color} [color]
-         * @returns {RenderState}
-         */
-
-    }, {
-        key: 'clear',
-        value: function clear(color) {
-            var gl = this._context;
-
-            if (color !== undefined) {
-                this.clearColor = color;
-            }
-
-            gl.clear(gl.COLOR_BUFFER_BIT);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {RenderState}
-         */
-
-    }, {
-        key: 'updateViewport',
-        value: function updateViewport() {
-            if (this._view && this._renderTarget) {
-                var width = this._renderTarget.width,
-                    height = this._renderTarget.height,
-                    viewport = this._view.viewport;
-
-                this._context.viewport(Math.round(width * viewport.x), Math.round(height * viewport.y), Math.round(width * viewport.width), Math.round(height * viewport.height));
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} count
-         * @param {ArrayBufferView} data
-         * @returns {RenderState}
-         */
-
-    }, {
-        key: 'drawElements',
-        value: function drawElements(count, data) {
-            var gl = this._context;
-
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
-            gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this.renderer = null;
-            this.renderTarget = null;
-            this.view = null;
-            this.shader = null;
-            this.glFramebuffer = null;
-            this.glProgram = null;
-            this.glBuffer = null;
-            this.glTexture = null;
-
-            this._clearColor.destroy();
-            this._clearColor = null;
-
-            this._textureUnit = null;
-            this._blendMode = null;
-            this._context = null;
-        }
-
-        /**
-         * @public
-         * @param {WebGLRenderingContext}
-         */
-
-    }, {
-        key: '_setupContext',
-        value: function _setupContext(gl) {
-            var blendMode = this._blendMode;
-
-            gl.enable(gl.BLEND);
-            gl.disable(gl.DEPTH_TEST);
-            gl.disable(gl.CULL_FACE);
-
-            gl.colorMask(true, true, true, false);
-            gl.blendFunc(blendMode.sFactor, blendMode.dFactor);
-        }
-    }, {
-        key: 'renderer',
-        get: function get() {
-            return this._renderer;
-        },
-        set: function set(renderer) {
-            if (this._renderer !== renderer) {
-                if (this._renderer) {
-                    this._renderer.unbind();
-                }
-
-                this._renderer = renderer ? renderer.bind(this) : null;
-            }
-        }
-
-        /**
-         * @public
-         * @member {?RenderTarget}
-         */
-
-    }, {
-        key: 'renderTarget',
-        get: function get() {
-            return this._renderTarget;
-        },
-        set: function set(renderTarget) {
-            if (this._renderTarget !== renderTarget) {
-                if (this._renderTarget) {
-                    this._renderTarget.unbind();
-                }
-
-                this._renderTarget = renderTarget ? renderTarget.bind(this) : null;
-                this.updateViewport();
-            }
-        }
-
-        /**
-         * @public
-         * @member {?View}
-         */
-
-    }, {
-        key: 'view',
-        get: function get() {
-            return this._view;
-        },
-        set: function set(view) {
-            this._view = view;
-            this.updateViewport();
-        }
-
-        /**
-         * @public
-         * @member {?Shader}
-         */
-
-    }, {
-        key: 'shader',
-        get: function get() {
-            return this._shader;
-        },
-        set: function set(shader) {
-            if (this._shader !== shader) {
-                if (this._shader) {
-                    this._shader.unbind();
-                }
-
-                this._shader = shader ? shader.bind(this) : null;
-            }
-        }
-
-        /**
-         * @public
-         * @member {?GLFramebuffer}
-         */
-
-    }, {
-        key: 'glFramebuffer',
-        get: function get() {
-            return this._glFramebuffer;
-        },
-        set: function set(glFramebuffer) {
-            if (this._glFramebuffer !== glFramebuffer) {
-                if (glFramebuffer) {
-                    this._glFramebuffer = glFramebuffer.bind();
-                } else if (this._glFramebuffer) {
-                    this._glFramebuffer.unbind();
-                    this._glFramebuffer = null;
-                }
-            }
-        }
-
-        /**
-         * @public
-         * @member {?GLProgram}
-         */
-
-    }, {
-        key: 'glProgram',
-        get: function get() {
-            return this._glProgram;
-        },
-        set: function set(glProgram) {
-            if (this._glProgram !== glProgram) {
-                if (this._glProgram) {
-                    this._glProgram.unbind();
-                }
-
-                this._glProgram = glProgram ? glProgram.bind(this) : null;
-            }
-        }
-
-        /**
-         * @public
-         * @member {?GLBuffer}
-         */
-
-    }, {
-        key: 'glBuffer',
-        get: function get() {
-            return this._glBuffer;
-        },
-        set: function set(glBuffer) {
-            if (this._glBuffer !== glBuffer) {
-                if (glBuffer) {
-                    this._glBuffer = glBuffer.bind();
-                } else if (this._glBuffer) {
-                    this._glBuffer.unbind();
-                    this._glBuffer = null;
-                }
-            }
-        }
-
-        /**
-         * @public
-         * @member {?GLTexture}
-         */
-
-    }, {
-        key: 'glTexture',
-        get: function get() {
-            return this._glTexture;
-        },
-        set: function set(glTexture) {
-            if (this._glTexture !== glTexture) {
-                if (glTexture) {
-                    this._glTexture = glTexture.bind();
-                } else if (this._glTexture) {
-                    this._glTexture.unbind();
-                    this._glTexture = null;
-                }
-            }
-        }
-
-        /**
-         * @public
-         * @member {?BlendMode}
-         */
-
-    }, {
-        key: 'blendMode',
-        get: function get() {
-            return this._blendMode;
-        },
-        set: function set(blendMode) {
-            if (blendMode && blendMode !== this._blendMode) {
-                this._context.blendFunc(blendMode.sFactor, blendMode.dFactor);
-                this._blendMode = blendMode;
-            }
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'textureUnit',
-        get: function get() {
-            return this._textureUnit;
-        },
-        set: function set(value) {
-            var textureUnit = value | 0;
-
-            if (textureUnit !== this._textureUnit) {
-                var gl = this._context;
-
-                gl.activeTexture(gl.TEXTURE0 + textureUnit);
-                this._textureUnit = textureUnit;
-            }
-        }
-
-        /**
-         * @public
-         * @member {Color}
-         */
-
-    }, {
-        key: 'clearColor',
-        get: function get() {
-            return this._clearColor;
-        },
-        set: function set(color) {
-            if (color && !this._clearColor.equals(color, true)) {
-                this._context.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-                this._clearColor.copy(color);
-            }
-        }
-    }]);
-
-    return RenderState;
-}();
-
-exports.default = RenderState;
-
-/***/ }),
-/* 55 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _ObservableSize = __webpack_require__(28);
-
-var _ObservableSize2 = _interopRequireDefault(_ObservableSize);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -14974,69 +14747,80 @@ var RenderTarget = function () {
      * @constructor
      * @param {Number} width
      * @param {Number} height
-     * @param {Boolean} [isRoot = false]
+     * @param {Boolean} [root = false]
      */
     function RenderTarget(width, height) {
-        var isRoot = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+        var root = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
         _classCallCheck(this, RenderTarget);
 
         /**
          * @private
-         * @member {ObservableSize}
+         * @member {Size}
          */
-        this._size = new _ObservableSize2.default(this.updateSize, this, width, height);
+        this._size = new _Size2.default(width, height);
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._isRoot = isRoot;
+        this._root = root;
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {?DisplayManager}
          */
-        this._bound = false;
-
-        /**
-         * @private
-         * @member {?RenderState}
-         */
-        this._renderState = null;
+        this._displayManager = null;
 
         /**
          * @private
          * @member {?GLFramebuffer}
          */
-        this._glFramebuffer = null;
+        this._framebuffer = null;
     }
 
     /**
      * @public
-     * @member {ObservableSize}
+     * @member {Boolean}
      */
 
 
     _createClass(RenderTarget, [{
-        key: 'bind',
+        key: 'resize',
 
 
         /**
          * @public
          * @chainable
-         * @param {RenderState} renderState
+         * @param {Number} width
+         * @param {Number} height
          * @returns {RenderTarget}
          */
-        value: function bind(renderState) {
-            if (!this._renderState) {
-                this._renderState = renderState;
-                this._glFramebuffer = renderState.createGLFramebuffer(this._isRoot);
+        value: function resize(width, height) {
+            if (this.width !== width || this.height !== height) {
+                this._size.set(width, height);
             }
 
-            if (!this._bound) {
-                this._renderState.glFramebuffer = this._glFramebuffer;
-                this._bound = true;
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {DisplayManager} displayManager
+         * @returns {RenderTarget}
+         */
+
+    }, {
+        key: 'bind',
+        value: function bind(displayManager) {
+            if (!this._displayManager) {
+                this._displayManager = displayManager;
+                this._framebuffer = this._root ? null : new _GLFramebuffer2.default(displayManager.context);
+            }
+
+            if (this._framebuffer && !this.bound) {
+                this._framebuffer.bind();
             }
 
             return this;
@@ -15051,25 +14835,8 @@ var RenderTarget = function () {
     }, {
         key: 'unbind',
         value: function unbind() {
-            if (this._bound) {
-                this._renderState.glFramebuffer = null;
-                this._bound = false;
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {RenderTarget}
-         */
-
-    }, {
-        key: 'updateSize',
-        value: function updateSize() {
-            if (this._glFramebuffer) {
-                this._glFramebuffer.size.copy(this._size);
+            if (this._framebuffer && this.bound) {
+                this._framebuffer.unbind();
             }
 
             return this;
@@ -15084,25 +14851,38 @@ var RenderTarget = function () {
         value: function destroy() {
             this.unbind();
 
-            if (this._glFramebuffer) {
-                this._glFramebuffer.destroy();
-                this._glFramebuffer = null;
+            if (this._framebuffer) {
+                this._framebuffer.destroy();
+                this._framebuffer = null;
             }
 
             this._size.destroy();
             this._size = null;
 
-            this._renderState = null;
-            this._isRoot = null;
-            this._bound = null;
+            this._root = null;
+            this._displayManager = null;
         }
+    }, {
+        key: 'root',
+        get: function get() {
+            return this._root;
+        },
+        set: function set(root) {
+            this._root = root;
+        }
+
+        /**
+         * @public
+         * @member {Size}
+         */
+
     }, {
         key: 'size',
         get: function get() {
             return this._size;
         },
         set: function set(size) {
-            this._size.copy(size);
+            this.resize(size.width, size.height);
         }
 
         /**
@@ -15116,7 +14896,7 @@ var RenderTarget = function () {
             return this._size.width;
         },
         set: function set(width) {
-            this._size.width = width;
+            this.resize(width, this.height);
         }
 
         /**
@@ -15130,7 +14910,19 @@ var RenderTarget = function () {
             return this._size.height;
         },
         set: function set(height) {
-            this._size.height = height;
+            this.resize(this.width, height);
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'bound',
+        get: function get() {
+            return this._displayManager && this._displayManager.renderTarget === this;
         }
     }]);
 
@@ -15138,6 +14930,125 @@ var RenderTarget = function () {
 }();
 
 exports.default = RenderTarget;
+
+/***/ }),
+/* 55 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class GLFramebuffer
+ */
+var GLFramebuffer = function () {
+
+    /**
+     * @constructor
+     * @param {WebGLRenderingContext} context
+     */
+    function GLFramebuffer(context) {
+        _classCallCheck(this, GLFramebuffer);
+
+        if (!context) {
+            throw new Error('No Rendering Context was provided.');
+        }
+
+        /**
+         * @private
+         * @member {WebGLRenderingContext}
+         */
+        this._context = context;
+
+        /**
+         * @private
+         * @member {WebGLFramebuffer}
+         */
+        this._framebuffer = context.createFramebuffer();
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Color} [color]
+     * @returns {GLFramebuffer}
+     */
+
+
+    _createClass(GLFramebuffer, [{
+        key: 'clear',
+        value: function clear(color) {
+            var gl = this._context;
+
+            if (color) {
+                gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+            }
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLFramebuffer}
+         */
+
+    }, {
+        key: 'bind',
+        value: function bind() {
+            var gl = this._context;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLFramebuffer}
+         */
+
+    }, {
+        key: 'unbind',
+        value: function unbind() {
+            var gl = this._context;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            var gl = this._context;
+
+            gl.deleteFramebuffer(this._framebuffer);
+
+            this._context = null;
+            this._framebuffer = null;
+        }
+    }]);
+
+    return GLFramebuffer;
+}();
+
+exports.default = GLFramebuffer;
 
 /***/ }),
 /* 56 */
@@ -15152,7 +15063,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Renderer2 = __webpack_require__(29);
+var _Renderer2 = __webpack_require__(27);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -15160,9 +15071,13 @@ var _SpriteShader = __webpack_require__(57);
 
 var _SpriteShader2 = _interopRequireDefault(_SpriteShader);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
+
+var _GLBuffer = __webpack_require__(29);
+
+var _GLBuffer2 = _interopRequireDefault(_GLBuffer);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -15195,15 +15110,15 @@ var SpriteRenderer = function (_Renderer) {
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        _this._renderState = null;
+        _this._displayManager = null;
 
         /**
          * @private
          * @member {?GLBuffer}
          */
-        _this._glBuffer = null;
+        _this._buffer = null;
 
         /**
          * @private
@@ -15230,46 +15145,35 @@ var SpriteRenderer = function (_Renderer) {
 
         /**
          * @private
-         * @member {?Texture}
-         */
-        _this._currentTexture = null;
-
-        /**
-         * @private
          * @member {Number}
          */
         _this._viewId = -1;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        _this._bound = false;
         return _this;
     }
 
     /**
-     * @override
+     * @public
+     * @readonly
+     * @member {Boolean}
      */
 
 
     _createClass(SpriteRenderer, [{
         key: 'bind',
-        value: function bind(renderState) {
-            if (!this._renderState) {
-                this._renderState = renderState;
-                this._glBuffer = renderState.createGLBuffer(this._batchSize, this._attributeCount);
+
+
+        /**
+         * @override
+         */
+        value: function bind(displayManager) {
+            if (!this._displayManager) {
+                this._displayManager = displayManager;
+                this._buffer = new _GLBuffer2.default(displayManager.context, this._batchSize, this._attributeCount);
             }
 
-            if (!this._bound) {
-                this._renderState.glBuffer = this._glBuffer;
-                this._renderState.shader = this._shader;
-
-                if (this._currentTexture) {
-                    this._currentTexture.bind(this._renderState);
-                }
-
-                this._bound = true;
+            if (!this.bound) {
+                this._buffer.bind();
+                this._displayManager.setShader(this._shader);
             }
 
             return this;
@@ -15282,18 +15186,13 @@ var SpriteRenderer = function (_Renderer) {
     }, {
         key: 'unbind',
         value: function unbind() {
-            if (this._bound) {
+            if (this.bound) {
                 this.flush();
 
-                this._renderState.glBuffer = null;
-                this._renderState.shader = null;
-
-                if (this._currentTexture) {
-                    this._currentTexture.unbind();
-                }
+                this._buffer.unbind();
+                this._displayManager.setShader(null);
 
                 this._viewId = -1;
-                this._bound = false;
             }
 
             return this;
@@ -15306,13 +15205,14 @@ var SpriteRenderer = function (_Renderer) {
     }, {
         key: 'render',
         value: function render(sprite) {
-            var floatView = this._glBuffer.floatView,
-                uintView = this._glBuffer.uintView,
-                texture = sprite.texture,
+            var boundTexture = this._displayManager.texture,
+                floatView = this._buffer.floatView,
+                uintView = this._buffer.uintView,
+                spriteTexture = sprite.texture,
                 positionData = sprite.positionData,
                 texCoordData = sprite.texCoordData,
                 batchFull = this._batchIndex >= this._batchSize,
-                textureChanged = this._currentTexture !== texture,
+                textureChanged = boundTexture !== spriteTexture,
                 flush = textureChanged || batchFull,
                 index = flush ? 0 : this._batchIndex * this._attributeCount;
 
@@ -15320,11 +15220,11 @@ var SpriteRenderer = function (_Renderer) {
                 this.flush();
 
                 if (textureChanged) {
-                    this._currentTexture = texture.bind(this._renderState);
+                    this._displayManager.setTexture(spriteTexture);
                 }
             }
 
-            this._currentTexture.update();
+            spriteTexture.update();
 
             // X / Y
             floatView[index] = positionData[0];
@@ -15363,15 +15263,15 @@ var SpriteRenderer = function (_Renderer) {
     }, {
         key: 'flush',
         value: function flush() {
-            if (this._bound && this._batchIndex > 0) {
-                var renderState = this._renderState;
+            if (this.bound && this._batchIndex > 0) {
+                var view = this._displayManager.view;
 
-                if (this._viewId !== renderState.view.updateId) {
-                    this._shader.setProjection(renderState.view.getTransform());
-                    this._viewId = renderState.view.updateId;
+                if (this._viewId !== view.updateId) {
+                    this._shader.setProjection(view.getTransform());
+                    this._viewId = view.updateId;
                 }
 
-                renderState.drawElements(this._batchIndex * 6, this._glBuffer.floatView.subarray(0, this._batchIndex * this._attributeCount));
+                this._displayManager.drawElements(this._batchIndex * 6, this._buffer.floatView.subarray(0, this._batchIndex * this._attributeCount));
 
                 this._batchIndex = 0;
             }
@@ -15388,21 +15288,24 @@ var SpriteRenderer = function (_Renderer) {
         value: function destroy() {
             this.unbind();
 
-            if (this._glBuffer) {
-                this._glBuffer.destroy();
-                this._glBuffer = null;
+            if (this._buffer) {
+                this._buffer.destroy();
+                this._buffer = null;
             }
 
             this._shader.destroy();
             this._shader = null;
 
-            this._renderState = null;
+            this._displayManager = null;
             this._batchSize = null;
             this._batchIndex = null;
             this._attributeCount = null;
-            this._currentTexture = null;
             this._viewId = null;
-            this._bound = null;
+        }
+    }, {
+        key: 'bound',
+        get: function get() {
+            return this._displayManager && this._displayManager.renderer === this;
         }
     }]);
 
@@ -15426,11 +15329,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _const = __webpack_require__(0);
 
-var _Shader2 = __webpack_require__(30);
+var _Shader2 = __webpack_require__(28);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
-var _path = __webpack_require__(60);
+var _path = __webpack_require__(61);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -15581,7 +15484,7 @@ var ShaderAttribute = function () {
          * @private
          * @member {?GLProgram}
          */
-        this._glProgram = null;
+        this._program = null;
 
         /**
          * @private
@@ -15622,13 +15525,13 @@ var ShaderAttribute = function () {
     }, {
         key: 'bind',
         value: function bind(glProgram, stride, offset) {
-            if (!this._glProgram) {
-                this._glProgram = glProgram;
+            if (!this._program) {
+                this._program = glProgram;
             }
 
             if (!this._bound) {
                 this._bound = true;
-                this._glProgram.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
+                this._program.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
                 this.upload();
             }
         }
@@ -15651,7 +15554,7 @@ var ShaderAttribute = function () {
         key: 'upload',
         value: function upload() {
             if (this._bound) {
-                this._glProgram.toggleVertexArray(this._name, this._enabled);
+                this._program.toggleVertexArray(this._name, this._enabled);
             }
         }
 
@@ -15667,7 +15570,7 @@ var ShaderAttribute = function () {
             this._size = null;
             this._normalized = null;
             this._enabled = null;
-            this._glProgram = null;
+            this._program = null;
             this._bound = null;
         }
     }, {
@@ -15782,7 +15685,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Matrix = __webpack_require__(9);
+var _Matrix = __webpack_require__(10);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -15841,7 +15744,7 @@ var ShaderUniform = function () {
          * @private
          * @member {?GLProgram}
          */
-        this._glProgram = null;
+        this._program = null;
 
         /**
          * @private
@@ -15890,8 +15793,8 @@ var ShaderUniform = function () {
     }, {
         key: 'bind',
         value: function bind(glProgram) {
-            if (!this._glProgram) {
-                this._glProgram = glProgram;
+            if (!this._program) {
+                this._program = glProgram;
             }
 
             if (!this._bound) {
@@ -15921,8 +15824,7 @@ var ShaderUniform = function () {
         key: 'upload',
         value: function upload() {
             if (this._bound && this._dirty) {
-                this._glProgram.setUniformValue(this._name, this._value, this._type);
-
+                this._program.setUniformValue(this._name, this._value, this._type);
                 this._dirty = false;
             }
         }
@@ -15938,7 +15840,7 @@ var ShaderUniform = function () {
             this._type = null;
             this._value = null;
             this._transpose = null;
-            this._glProgram = null;
+            this._program = null;
             this._bound = null;
             this._dirty = null;
         }
@@ -15946,18 +15848,6 @@ var ShaderUniform = function () {
         key: 'name',
         get: function get() {
             return this._name;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'type',
-        get: function get() {
-            return this._type;
         }
 
         /**
@@ -15982,6 +15872,345 @@ exports.default = ShaderUniform;
 
 /***/ }),
 /* 60 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _const = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class GLProgram
+ */
+var GLProgram = function () {
+
+    /**
+     * @constructor
+     * @param {WebGLRenderingContext} context
+     * @param {String} vertexSource
+     * @param {String} fragmentSource
+     */
+    function GLProgram(context, vertexSource, fragmentSource) {
+        _classCallCheck(this, GLProgram);
+
+        if (!context) {
+            throw new Error('No Rendering Context was provided.');
+        }
+
+        /**
+         * @private
+         * @member {WebGLRenderingContext}
+         */
+        this._context = context;
+
+        /**
+         * @private
+         * @member {WebGLShader}
+         */
+        this._vertexShader = this.createShader(context.VERTEX_SHADER, vertexSource);
+
+        /**
+         * @private
+         * @member {WebGLShader}
+         */
+        this._fragmentShader = this.createShader(context.FRAGMENT_SHADER, fragmentSource);
+
+        /**
+         * @private
+         * @member {WebGLProgram}
+         */
+        this._program = this.createProgram(this._vertexShader, this._fragmentShader);
+
+        /**
+         * @private
+         * @member {Map<String, WebGLUniformLocation>}
+         */
+        this._uniformLocations = new Map();
+
+        /**
+         * @private
+         * @member {Map<String, Number>}
+         */
+        this._attributeLocations = new Map();
+    }
+
+    /**
+     * @public
+     * @param {Number} type
+     * @param {String} source
+     * @returns {WebGLShader}
+     */
+
+
+    _createClass(GLProgram, [{
+        key: 'createShader',
+        value: function createShader(type, source) {
+            var gl = this._context,
+                shader = gl.createShader(type);
+
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
+
+                return null;
+            }
+
+            return shader;
+        }
+
+        /**
+         * @public
+         * @param {WebGLShader} vertexShader
+         * @param {WebGLShader} fragmentShader
+         * @returns {?WebGLProgram}
+         */
+
+    }, {
+        key: 'createProgram',
+        value: function createProgram(vertexShader, fragmentShader) {
+            var gl = this._context,
+                program = gl.createProgram();
+
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                gl.detachShader(program, vertexShader);
+                gl.detachShader(program, fragmentShader);
+
+                gl.deleteProgram(program);
+
+                console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
+                console.error('gl.getError()', gl.getError()); // eslint-disable-line
+
+                if (gl.getProgramInfoLog(program)) {
+                    console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
+                }
+
+                return null;
+            }
+
+            return program;
+        }
+
+        /**
+         * @public
+         * @param {String} uniform
+         * @returns {WebGLUniformLocation}
+         */
+
+    }, {
+        key: 'getUniformLocation',
+        value: function getUniformLocation(uniform) {
+            if (!this._uniformLocations.has(uniform)) {
+                var location = this._context.getUniformLocation(this._program, uniform);
+
+                if (!location) {
+                    throw new Error('Uniform "' + this._name + '" is not available.');
+                }
+
+                this._uniformLocations.set(uniform, location);
+            }
+
+            return this._uniformLocations.get(uniform);
+        }
+
+        /**
+         * @public
+         * @param {String} attribute
+         * @returns {Number}
+         */
+
+    }, {
+        key: 'getAttributeLocation',
+        value: function getAttributeLocation(attribute) {
+            if (!this._attributeLocations.has(attribute)) {
+                var location = this._context.getAttribLocation(this._program, attribute);
+
+                if (location === -1) {
+                    throw new Error('Attribute "' + this._name + '" is not available.');
+                }
+
+                this._attributeLocations.set(attribute, location);
+            }
+
+            return this._attributeLocations.get(attribute);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} uniform
+         * @param {Number|Number[]|ArrayBufferView|Texture} value
+         * @param {Number} type
+         * @returns {GLProgram}
+         */
+
+    }, {
+        key: 'setUniformValue',
+        value: function setUniformValue(uniform, value, type) {
+            var gl = this._context,
+                location = this.getUniformLocation(uniform);
+
+            switch (type) {
+                case _const.UNIFORM_TYPE.INT:
+                    gl.uniform1i(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT:
+                    gl.uniform1f(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_VEC2:
+                    gl.uniform2fv(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_VEC3:
+                    gl.uniform3fv(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_VEC4:
+                    gl.uniform4fv(location, value);break;
+                case _const.UNIFORM_TYPE.INT_VEC2:
+                    gl.uniform2iv(location, value);break;
+                case _const.UNIFORM_TYPE.INT_VEC3:
+                    gl.uniform3iv(location, value);break;
+                case _const.UNIFORM_TYPE.INT_VEC4:
+                    gl.uniform4iv(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL:
+                    gl.uniform1i(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL_VEC2:
+                    gl.uniform2iv(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL_VEC3:
+                    gl.uniform3iv(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL_VEC4:
+                    gl.uniform4iv(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_MAT2:
+                    gl.uniformMatrix2fv(location, false, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_MAT3:
+                    gl.uniformMatrix3fv(location, false, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_MAT4:
+                    gl.uniformMatrix4fv(location, false, value);break;
+                case _const.UNIFORM_TYPE.SAMPLER_2D:
+                    gl.uniform1i(location, value);break;
+                default:
+                    throw new Error('Unknown uniform type "' + type + '".');
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} attribute
+         * @param {Number} size
+         * @param {Number} type
+         * @param {boolean} normalized
+         * @param {Number} stride
+         * @param {Number} offset
+         * @returns {GLProgram}
+         */
+
+    }, {
+        key: 'setVertexPointer',
+        value: function setVertexPointer(attribute, size, type, normalized, stride, offset) {
+            var gl = this._context,
+                location = this.getAttributeLocation(attribute);
+
+            gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} attribute
+         * @param {Boolean} enabled
+         * @returns {GLProgram}
+         */
+
+    }, {
+        key: 'toggleVertexArray',
+        value: function toggleVertexArray(attribute, enabled) {
+            var gl = this._context,
+                location = this.getAttributeLocation(attribute);
+
+            if (enabled) {
+                gl.enableVertexAttribArray(location);
+            } else {
+                gl.disableVertexAttribArray(location);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLProgram}
+         */
+
+    }, {
+        key: 'bind',
+        value: function bind() {
+            this._context.useProgram(this._program);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLProgram}
+         */
+
+    }, {
+        key: 'unbind',
+        value: function unbind() {
+            this._context.useProgram(null);
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            var gl = this._context;
+
+            gl.deleteShader(this._vertexShader);
+            gl.deleteShader(this._fragmentShader);
+            gl.deleteProgram(this._program);
+
+            this._uniformLocations.clear();
+            this._uniformLocations = null;
+
+            this._attributeLocations.clear();
+            this._attributeLocations = null;
+
+            this._context = null;
+            this._vertexShader = null;
+            this._fragmentShader = null;
+            this._program = null;
+        }
+    }]);
+
+    return GLProgram;
+}();
+
+exports.default = GLProgram;
+
+/***/ }),
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -16209,10 +16438,10 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(82)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(81)))
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16224,19 +16453,23 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Renderer2 = __webpack_require__(29);
+var _Renderer2 = __webpack_require__(27);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
-var _ParticleShader = __webpack_require__(62);
+var _ParticleShader = __webpack_require__(63);
 
 var _ParticleShader2 = _interopRequireDefault(_ParticleShader);
 
 var _utils = __webpack_require__(1);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
+
+var _GLBuffer = __webpack_require__(29);
+
+var _GLBuffer2 = _interopRequireDefault(_GLBuffer);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -16269,15 +16502,15 @@ var ParticleRenderer = function (_Renderer) {
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        _this._renderState = null;
+        _this._displayManager = null;
 
         /**
          * @private
          * @member {?GLBuffer}
          */
-        _this._glBuffer = null;
+        _this._buffer = null;
 
         /**
          * @private
@@ -16316,37 +16549,36 @@ var ParticleRenderer = function (_Renderer) {
          * @member {Number}
          */
         _this._viewId = -1;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        _this._bound = false;
         return _this;
     }
 
     /**
-     * @override
+     * @public
+     * @readonly
+     * @member {Boolean}
      */
 
 
     _createClass(ParticleRenderer, [{
         key: 'bind',
-        value: function bind(renderState) {
-            if (!this._renderState) {
-                this._renderState = renderState;
-                this._glBuffer = renderState.createGLBuffer(this._batchSize, this._attributeCount);
+
+
+        /**
+         * @override
+         */
+        value: function bind(displayManager) {
+            if (!this._displayManager) {
+                this._displayManager = displayManager;
+                this._buffer = new _GLBuffer2.default(displayManager.context, this._batchSize, this._attributeCount);
             }
 
-            if (!this._bound) {
-                this._renderState.glBuffer = this._glBuffer;
-                this._renderState.shader = this._shader;
+            if (!this.bound) {
+                this._buffer.bind();
+                this._displayManager.setShader(this._shader);
 
                 if (this._currentTexture) {
-                    this._currentTexture.bind(this._renderState);
+                    this._currentTexture.bind(this._displayManager);
                 }
-
-                this._bound = true;
             }
 
             return this;
@@ -16359,18 +16591,17 @@ var ParticleRenderer = function (_Renderer) {
     }, {
         key: 'unbind',
         value: function unbind() {
-            if (this._bound) {
+            if (this.bound) {
                 this.flush();
 
-                this._renderState.glBuffer = null;
-                this._renderState.shader = null;
+                this._buffer.unbind();
+                this._displayManager.setShader(null);
 
                 if (this._currentTexture) {
                     this._currentTexture.unbind();
                 }
 
                 this._viewId = -1;
-                this._bound = false;
             }
 
             return this;
@@ -16383,8 +16614,8 @@ var ParticleRenderer = function (_Renderer) {
     }, {
         key: 'render',
         value: function render(emitter) {
-            var floatView = this._glBuffer.floatView,
-                uintView = this._glBuffer.uintView,
+            var floatView = this._buffer.floatView,
+                uintView = this._buffer.uintView,
                 texture = emitter.texture,
                 particles = emitter.activeParticles,
                 textureFrame = emitter.textureFrame,
@@ -16393,7 +16624,7 @@ var ParticleRenderer = function (_Renderer) {
             if (this._currentTexture !== texture) {
                 this.flush();
 
-                this._currentTexture = texture.bind(this._renderState);
+                this._currentTexture = texture.bind(this._displayManager);
             }
 
             this._currentTexture.update();
@@ -16466,15 +16697,15 @@ var ParticleRenderer = function (_Renderer) {
     }, {
         key: 'flush',
         value: function flush() {
-            if (this._bound && this._batchIndex > 0) {
-                var renderState = this._renderState;
+            if (this.bound && this._batchIndex > 0) {
+                var view = this._displayManager.view;
 
-                if (this._viewId !== renderState.view.updateId) {
-                    this._shader.setProjection(renderState.view.getTransform());
-                    this._viewId = renderState.view.updateId;
+                if (this._viewId !== view.updateId) {
+                    this._shader.setProjection(view.getTransform());
+                    this._viewId = view.updateId;
                 }
 
-                renderState.drawElements(this._batchIndex * 6, this._glBuffer.floatView.subarray(0, this._batchIndex * this._attributeCount));
+                this._displayManager.drawElements(this._batchIndex * 6, this._buffer.floatView.subarray(0, this._batchIndex * this._attributeCount));
 
                 this._batchIndex = 0;
             }
@@ -16491,21 +16722,25 @@ var ParticleRenderer = function (_Renderer) {
         value: function destroy() {
             this.unbind();
 
-            if (this._glBuffer) {
-                this._glBuffer.destroy();
-                this._glBuffer = null;
+            if (this._buffer) {
+                this._buffer.destroy();
+                this._buffer = null;
             }
 
             this._shader.destroy();
             this._shader = null;
 
-            this._renderState = null;
+            this._displayManager = null;
             this._batchSize = null;
             this._batchIndex = null;
             this._attributeCount = null;
             this._currentTexture = null;
             this._viewId = null;
-            this._bound = null;
+        }
+    }, {
+        key: 'bound',
+        get: function get() {
+            return this._displayManager && this._displayManager.renderer === this;
         }
     }]);
 
@@ -16515,7 +16750,7 @@ var ParticleRenderer = function (_Renderer) {
 exports.default = ParticleRenderer;
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16529,11 +16764,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _const = __webpack_require__(0);
 
-var _Shader2 = __webpack_require__(30);
+var _Shader2 = __webpack_require__(28);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
-var _path = __webpack_require__(60);
+var _path = __webpack_require__(61);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -16622,7 +16857,732 @@ var ParticleShader = function (_Shader) {
 exports.default = ParticleShader;
 
 /***/ }),
-/* 63 */
+/* 64 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _ObservableVector = __webpack_require__(25);
+
+var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
+
+var _Rectangle = __webpack_require__(4);
+
+var _Rectangle2 = _interopRequireDefault(_Rectangle);
+
+var _Matrix = __webpack_require__(10);
+
+var _Matrix2 = _interopRequireDefault(_Matrix);
+
+var _utils = __webpack_require__(1);
+
+var _ObservableSize = __webpack_require__(65);
+
+var _ObservableSize2 = _interopRequireDefault(_ObservableSize);
+
+var _Vector = __webpack_require__(2);
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class View
+ */
+var View = function () {
+
+    /**
+     * @constructor
+     * @param {Number} centerX
+     * @param {Number} centerY
+     * @param {Number} width
+     * @param {Number} height
+     */
+    function View(centerX, centerY, width, height) {
+        _classCallCheck(this, View);
+
+        /**
+         * @private
+         * @member {ObservableVector}
+         */
+        this._center = new _ObservableVector2.default(this._setDirty, this, centerX, centerY);
+
+        /**
+         * @private
+         * @member {ObservableSize}
+         */
+        this._size = new _ObservableSize2.default(this._setDirty, this, width, height);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._rotation = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._sin = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._cos = 1;
+
+        /**
+         * @private
+         * @member {Rectangle}
+         */
+        this._viewport = new _Rectangle2.default(0, 0, 1, 1);
+
+        /**
+         * @private
+         * @member {Matrix}
+         */
+        this._transform = new _Matrix2.default();
+
+        /**
+         * @private
+         * @member {Matrix}
+         */
+        this._inverseTransform = new _Matrix2.default();
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._updateTransform = true;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._updateInverseTransform = true;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._updateId = 0;
+
+        this.reset(centerX, centerY, width, height);
+    }
+
+    /**
+     * @public
+     * @member {ObservableVector}
+     */
+
+
+    _createClass(View, [{
+        key: 'setCenter',
+
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} x
+         * @param {Number} y
+         * @returns {View}
+         */
+        value: function setCenter(x, y) {
+            this._center.set(x, y);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} x
+         * @param {Number} y
+         * @returns {View}
+         */
+
+    }, {
+        key: 'move',
+        value: function move(x, y) {
+            this._center.add(x, y);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} factor
+         * @returns {View}
+         */
+
+    }, {
+        key: 'zoom',
+        value: function zoom(factor) {
+            this._size.multiply(factor);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} degrees
+         * @returns {View}
+         */
+
+    }, {
+        key: 'rotate',
+        value: function rotate(degrees) {
+            this.rotation += degrees;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} centerX
+         * @param {Number} centerY
+         * @param {Number} width
+         * @param {Number} height
+         * @returns {View}
+         */
+
+    }, {
+        key: 'reset',
+        value: function reset(centerX, centerY, width, height) {
+            this._size.set(width, height);
+            this._center.set(centerX + width / 2, centerY + height / 2);
+            this._rotation = 0;
+            this._cos = 1;
+            this._sin = 0;
+
+            this._setDirty();
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'getTransform',
+        value: function getTransform() {
+            if (this._updateTransform) {
+                this.updateTransform();
+                this._updateTransform = false;
+            }
+
+            return this._transform;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {View}
+         */
+
+    }, {
+        key: 'updateTransform',
+        value: function updateTransform() {
+            var transform = this._transform,
+                centerX = this._center.x,
+                centerY = this._center.y,
+                sin = this._sin,
+                cos = this._cos,
+                a = 2 / this._size.width,
+                b = -2 / this._size.height,
+                c = -a * centerX,
+                d = -b * centerY,
+                x = -centerX * cos - centerY * sin + centerX,
+                y = centerX * sin - centerY * cos + centerY;
+
+            transform.a = a * cos;
+            transform.b = a * sin;
+            transform.x = a * x + c;
+
+            transform.c = -b * sin;
+            transform.d = b * cos;
+            transform.y = b * y + d;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'getInverseTransform',
+        value: function getInverseTransform() {
+            if (this._updateInverseTransform) {
+                this.getTransform().getInverse(this._inverseTransform);
+
+                this._updateInverseTransform = false;
+            }
+
+            return this._inverseTransform;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {View} view
+         * @returns {View}
+         */
+
+    }, {
+        key: 'copy',
+        value: function copy(view) {
+            this.center = view.center;
+            this.size = view.size;
+            this.viewport = view.viewport;
+            this.transform = view.transform;
+            this.inverseTransform = view.inverseTransform;
+            this.rotation = view.rotation;
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            this._center.destroy();
+            this._center = null;
+
+            this._size.destroy();
+            this._size = null;
+
+            this._viewport.destroy();
+            this._viewport = null;
+
+            this._transform.destroy();
+            this._transform = null;
+
+            this._inverseTransform.destroy();
+            this._inverseTransform = null;
+
+            this._rotation = null;
+            this._cos = null;
+            this._sin = null;
+
+            this._updateTransform = null;
+            this._updateInverseTransform = null;
+            this._updateId = null;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_setDirty',
+        value: function _setDirty() {
+            this._updateTransform = true;
+            this._updateInverseTransform = true;
+            this._updateId++;
+        }
+    }, {
+        key: 'center',
+        get: function get() {
+            return this._center;
+        },
+        set: function set(center) {
+            this._center.copy(center);
+        }
+
+        /**
+         * @public
+         * @member {ObservableSize}
+         */
+
+    }, {
+        key: 'size',
+        get: function get() {
+            return this._size;
+        },
+        set: function set(size) {
+            this._size.copy(size);
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'width',
+        get: function get() {
+            return this._size.width;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'height',
+        get: function get() {
+            return this._size.height;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'rotation',
+        get: function get() {
+            return this._rotation;
+        },
+        set: function set(degrees) {
+            var trimmed = degrees % 360,
+                rotation = trimmed < 0 ? trimmed + 360 : trimmed,
+                radians = (0, _utils.degreesToRadians)(rotation);
+
+            this._rotation = rotation < 0 ? rotation + 360 : rotation;
+            this._cos = Math.cos(radians);
+            this._sin = Math.sin(radians);
+
+            this._setDirty();
+        }
+
+        /**
+         * @public
+         * @member {Rectangle}
+         */
+
+    }, {
+        key: 'viewport',
+        get: function get() {
+            return this._viewport;
+        },
+        set: function set(viewport) {
+            this._viewport.copy(viewport);
+            this._setDirty();
+        }
+
+        /**
+         * @public
+         * @member {Matrix}
+         */
+
+    }, {
+        key: 'transform',
+        get: function get() {
+            return this.getTransform();
+        },
+        set: function set(transform) {
+            this._transform.copy(transform);
+        }
+
+        /**
+         * @public
+         * @member {Matrix}
+         */
+
+    }, {
+        key: 'inverseTransform',
+        get: function get() {
+            return this.getInverseTransform();
+        },
+        set: function set(inverseTransform) {
+            this._inverseTransform.copy(inverseTransform);
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'updateId',
+        get: function get() {
+            return this._updateId;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'left',
+        get: function get() {
+            return this._center.x - this._size.width / 2;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'top',
+        get: function get() {
+            return this._center.y - this._size.height / 2;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'right',
+        get: function get() {
+            return this._center.x + this._size.width / 2;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'bottom',
+        get: function get() {
+            return this._center.y + this._size.height / 2;
+        }
+    }]);
+
+    return View;
+}();
+
+exports.default = View;
+
+/***/ }),
+/* 65 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _Size2 = __webpack_require__(7);
+
+var _Size3 = _interopRequireDefault(_Size2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class ObservableSize
+ * @extends Size
+ */
+var ObservableSize = function (_Size) {
+    _inherits(ObservableSize, _Size);
+
+    /**
+     * @constructor
+     * @param {Function} callback
+     * @param {*} scope
+     * @param {Number} [width=0]
+     * @param {Number} [height=0]
+     */
+    function ObservableSize(callback, scope) {
+        var width = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+        var height = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+
+        _classCallCheck(this, ObservableSize);
+
+        /**
+         * @private
+         * @member {Function}
+         */
+        var _this = _possibleConstructorReturn(this, (ObservableSize.__proto__ || Object.getPrototypeOf(ObservableSize)).call(this, width, height));
+
+        _this._callback = callback;
+
+        /**
+         * @private
+         * @member {*}
+         */
+        _this._scope = scope || _this;
+        return _this;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+
+
+    _createClass(ObservableSize, [{
+        key: 'set',
+
+
+        /**
+         * @override
+         */
+        value: function set() {
+            var width = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this._width;
+            var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this._height;
+
+            if (this._width !== width || this._height !== height) {
+                this._width = width;
+                this._height = height;
+                this._callback.call(this._scope);
+            }
+
+            return this;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'add',
+        value: function add(x) {
+            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
+
+            return this.set(this._width + x, this._height + y);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'subtract',
+        value: function subtract(x) {
+            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
+
+            return this.set(this._width - x, this._height - y);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'multiply',
+        value: function multiply(x) {
+            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
+
+            return this.set(this._width * x, this._height * y);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'divide',
+        value: function divide(x) {
+            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
+
+            return this.set(this._width / x, this._height / y);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'copy',
+        value: function copy(size) {
+            return this.set(size.width, size.height);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'clone',
+        value: function clone() {
+            return new ObservableSize(this._callback, this._scope, this._width, this._height);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            _get(ObservableSize.prototype.__proto__ || Object.getPrototypeOf(ObservableSize.prototype), 'destroy', this).call(this);
+
+            this._callback = null;
+            this._scope = null;
+        }
+    }, {
+        key: 'width',
+        get: function get() {
+            return this._width;
+        },
+        set: function set(width) {
+            if (this._width !== width) {
+                this._width = width;
+                this._callback.call(this._scope);
+            }
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'height',
+        get: function get() {
+            return this._height;
+        },
+        set: function set(height) {
+            if (this._height !== height) {
+                this._height = height;
+                this._callback.call(this._scope);
+            }
+        }
+    }]);
+
+    return ObservableSize;
+}(_Size3.default);
+
+exports.default = ObservableSize;
+
+/***/ }),
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17003,7 +17963,7 @@ var MediaManager = function () {
 exports.default = MediaManager;
 
 /***/ }),
-/* 64 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17019,19 +17979,19 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _ChannelManager2 = __webpack_require__(8);
+var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
-var _Keyboard = __webpack_require__(65);
+var _Keyboard = __webpack_require__(68);
 
 var _Keyboard2 = _interopRequireDefault(_Keyboard);
 
-var _GamepadManager = __webpack_require__(66);
+var _GamepadManager = __webpack_require__(69);
 
 var _GamepadManager2 = _interopRequireDefault(_GamepadManager);
 
-var _PointerManager = __webpack_require__(68);
+var _PointerManager = __webpack_require__(71);
 
 var _PointerManager2 = _interopRequireDefault(_PointerManager);
 
@@ -17283,7 +18243,7 @@ var InputManager = function (_ChannelManager) {
 exports.default = InputManager;
 
 /***/ }),
-/* 65 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17301,7 +18261,7 @@ var _const = __webpack_require__(0);
 
 var _utils = __webpack_require__(1);
 
-var _ChannelManager2 = __webpack_require__(8);
+var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
@@ -17502,7 +18462,7 @@ var Keyboard = function (_ChannelManager) {
 exports.default = Keyboard;
 
 /***/ }),
-/* 66 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17518,11 +18478,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _Gamepad = __webpack_require__(67);
+var _Gamepad = __webpack_require__(70);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
-var _ChannelManager2 = __webpack_require__(8);
+var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
@@ -17687,7 +18647,7 @@ var GamepadManager = function (_ChannelManager) {
 exports.default = GamepadManager;
 
 /***/ }),
-/* 67 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17703,11 +18663,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _ChannelManager2 = __webpack_require__(8);
+var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
@@ -17903,7 +18863,7 @@ var Gamepad = function (_ChannelManager) {
 exports.default = Gamepad;
 
 /***/ }),
-/* 68 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17923,11 +18883,11 @@ var _support = __webpack_require__(3);
 
 var _support2 = _interopRequireDefault(_support);
 
-var _ChannelManager2 = __webpack_require__(8);
+var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
-var _Pointer = __webpack_require__(69);
+var _Pointer = __webpack_require__(72);
 
 var _Pointer2 = _interopRequireDefault(_Pointer);
 
@@ -18442,7 +19402,7 @@ var PointerManager = function (_ChannelManager) {
 exports.default = PointerManager;
 
 /***/ }),
-/* 69 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18458,7 +19418,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _ChannelManager2 = __webpack_require__(8);
+var _ChannelManager2 = __webpack_require__(9);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
@@ -18466,7 +19426,7 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Size = __webpack_require__(13);
+var _Size = __webpack_require__(7);
 
 var _Size2 = _interopRequireDefault(_Size);
 
@@ -18860,7 +19820,7 @@ var Pointer = function (_ChannelManager) {
 exports.default = Pointer;
 
 /***/ }),
-/* 70 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19352,7 +20312,7 @@ var TextStyle = function () {
 exports.default = TextStyle;
 
 /***/ }),
-/* 71 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19368,17 +20328,17 @@ var _Vector = __webpack_require__(2);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(7);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _Time = __webpack_require__(10);
+var _Time = __webpack_require__(11);
 
 var _Time2 = _interopRequireDefault(_Time);
 
 var _const = __webpack_require__(0);
 
-var _ParticleOptions = __webpack_require__(31);
+var _ParticleOptions = __webpack_require__(30);
 
 var _ParticleOptions2 = _interopRequireDefault(_ParticleOptions);
 
@@ -19720,7 +20680,7 @@ var Particle = function () {
 exports.default = Particle;
 
 /***/ }),
-/* 72 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19740,7 +20700,7 @@ var _Shape2 = __webpack_require__(16);
 
 var _Shape3 = _interopRequireDefault(_Shape2);
 
-var _Collision = __webpack_require__(33);
+var _Collision = __webpack_require__(32);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
@@ -19748,7 +20708,7 @@ var _Bounds = __webpack_require__(17);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
-var _Interval = __webpack_require__(32);
+var _Interval = __webpack_require__(31);
 
 var _Interval2 = _interopRequireDefault(_Interval);
 
@@ -20102,7 +21062,7 @@ Polygon.Empty = new Polygon(0, 0, []);
 Polygon.Temp = new Polygon();
 
 /***/ }),
-/* 73 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20125,7 +21085,7 @@ Object.keys(_const).forEach(function (key) {
     });
 });
 
-var _content = __webpack_require__(74);
+var _content = __webpack_require__(77);
 
 Object.keys(_content).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20137,7 +21097,7 @@ Object.keys(_content).forEach(function (key) {
     });
 });
 
-var _core = __webpack_require__(76);
+var _core = __webpack_require__(79);
 
 Object.keys(_core).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20149,7 +21109,7 @@ Object.keys(_core).forEach(function (key) {
     });
 });
 
-var _graphics = __webpack_require__(87);
+var _graphics = __webpack_require__(86);
 
 Object.keys(_graphics).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20161,7 +21121,7 @@ Object.keys(_graphics).forEach(function (key) {
     });
 });
 
-var _particles = __webpack_require__(89);
+var _particles = __webpack_require__(88);
 
 Object.keys(_particles).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20173,7 +21133,7 @@ Object.keys(_particles).forEach(function (key) {
     });
 });
 
-var _input = __webpack_require__(94);
+var _input = __webpack_require__(93);
 
 Object.keys(_input).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20185,7 +21145,7 @@ Object.keys(_input).forEach(function (key) {
     });
 });
 
-var _math = __webpack_require__(96);
+var _math = __webpack_require__(95);
 
 Object.keys(_math).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20197,7 +21157,7 @@ Object.keys(_math).forEach(function (key) {
     });
 });
 
-var _media = __webpack_require__(98);
+var _media = __webpack_require__(97);
 
 Object.keys(_media).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20217,7 +21177,7 @@ var _utils = __webpack_require__(1);
 
 var utils = _interopRequireWildcard(_utils);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var settings = _interopRequireWildcard(_settings);
 
@@ -20230,7 +21190,7 @@ exports.settings = settings; /**
                               */
 
 /***/ }),
-/* 74 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20240,7 +21200,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(75);
+var _Database = __webpack_require__(78);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -20249,7 +21209,7 @@ Object.defineProperty(exports, 'Database', {
   }
 });
 
-var _ResourceLoader = __webpack_require__(34);
+var _ResourceLoader = __webpack_require__(33);
 
 Object.defineProperty(exports, 'ResourceLoader', {
   enumerable: true,
@@ -20258,7 +21218,7 @@ Object.defineProperty(exports, 'ResourceLoader', {
   }
 });
 
-var _ResourceContainer = __webpack_require__(35);
+var _ResourceContainer = __webpack_require__(34);
 
 Object.defineProperty(exports, 'ResourceContainer', {
   enumerable: true,
@@ -20285,7 +21245,7 @@ Object.defineProperty(exports, 'BlobFactory', {
   }
 });
 
-var _FontFactory = __webpack_require__(36);
+var _FontFactory = __webpack_require__(35);
 
 Object.defineProperty(exports, 'FontFactory', {
   enumerable: true,
@@ -20294,7 +21254,7 @@ Object.defineProperty(exports, 'FontFactory', {
   }
 });
 
-var _ArrayBufferFactory = __webpack_require__(11);
+var _ArrayBufferFactory = __webpack_require__(12);
 
 Object.defineProperty(exports, 'ArrayBufferFactory', {
   enumerable: true,
@@ -20303,7 +21263,7 @@ Object.defineProperty(exports, 'ArrayBufferFactory', {
   }
 });
 
-var _MediaSourceFactory = __webpack_require__(12);
+var _MediaSourceFactory = __webpack_require__(13);
 
 Object.defineProperty(exports, 'MediaSourceFactory', {
   enumerable: true,
@@ -20312,7 +21272,7 @@ Object.defineProperty(exports, 'MediaSourceFactory', {
   }
 });
 
-var _MusicFactory = __webpack_require__(38);
+var _MusicFactory = __webpack_require__(37);
 
 Object.defineProperty(exports, 'MusicFactory', {
   enumerable: true,
@@ -20321,7 +21281,7 @@ Object.defineProperty(exports, 'MusicFactory', {
   }
 });
 
-var _SoundFactory = __webpack_require__(41);
+var _SoundFactory = __webpack_require__(40);
 
 Object.defineProperty(exports, 'SoundFactory', {
   enumerable: true,
@@ -20348,7 +21308,7 @@ Object.defineProperty(exports, 'ImageFactory', {
   }
 });
 
-var _TextureFactory = __webpack_require__(44);
+var _TextureFactory = __webpack_require__(43);
 
 Object.defineProperty(exports, 'TextureFactory', {
   enumerable: true,
@@ -20357,7 +21317,7 @@ Object.defineProperty(exports, 'TextureFactory', {
   }
 });
 
-var _JSONFactory = __webpack_require__(37);
+var _JSONFactory = __webpack_require__(36);
 
 Object.defineProperty(exports, 'JSONFactory', {
   enumerable: true,
@@ -20366,7 +21326,7 @@ Object.defineProperty(exports, 'JSONFactory', {
   }
 });
 
-var _StringFactory = __webpack_require__(43);
+var _StringFactory = __webpack_require__(42);
 
 Object.defineProperty(exports, 'StringFactory', {
   enumerable: true,
@@ -20378,7 +21338,7 @@ Object.defineProperty(exports, 'StringFactory', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 75 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20799,7 +21759,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 76 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20818,7 +21778,7 @@ Object.defineProperty(exports, 'EventEmitter', {
   }
 });
 
-var _Application = __webpack_require__(77);
+var _Application = __webpack_require__(80);
 
 Object.defineProperty(exports, 'Application', {
   enumerable: true,
@@ -20827,7 +21787,7 @@ Object.defineProperty(exports, 'Application', {
   }
 });
 
-var _Quadtree = __webpack_require__(83);
+var _Quadtree = __webpack_require__(82);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -20836,7 +21796,7 @@ Object.defineProperty(exports, 'Quadtree', {
   }
 });
 
-var _Scene = __webpack_require__(84);
+var _Scene = __webpack_require__(83);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -20863,7 +21823,7 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
-var _Color = __webpack_require__(7);
+var _Color = __webpack_require__(8);
 
 Object.defineProperty(exports, 'Color', {
   enumerable: true,
@@ -20872,7 +21832,7 @@ Object.defineProperty(exports, 'Color', {
   }
 });
 
-var _Time = __webpack_require__(10);
+var _Time = __webpack_require__(11);
 
 Object.defineProperty(exports, 'Time', {
   enumerable: true,
@@ -20890,7 +21850,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(85);
+var _Timer = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -20908,7 +21868,7 @@ Object.defineProperty(exports, 'Bounds', {
   }
 });
 
-var _Random = __webpack_require__(86);
+var _Random = __webpack_require__(85);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -20920,7 +21880,7 @@ Object.defineProperty(exports, 'Random', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 77 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20950,19 +21910,19 @@ var _DisplayManager = __webpack_require__(53);
 
 var _DisplayManager2 = _interopRequireDefault(_DisplayManager);
 
-var _MediaManager = __webpack_require__(63);
+var _MediaManager = __webpack_require__(66);
 
 var _MediaManager2 = _interopRequireDefault(_MediaManager);
 
-var _InputManager = __webpack_require__(64);
+var _InputManager = __webpack_require__(67);
 
 var _InputManager2 = _interopRequireDefault(_InputManager);
 
-var _ResourceLoader = __webpack_require__(34);
+var _ResourceLoader = __webpack_require__(33);
 
 var _ResourceLoader2 = _interopRequireDefault(_ResourceLoader);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
@@ -20992,6 +21952,7 @@ var Application = function (_EventEmitter) {
      * @param {Number} [options.masterVolume=1]
      * @param {?HTMLCanvasElement|?String} [options.canvas=null]
      * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
+     * @param {Color} [options.blendMode=BLEND_MODES.NORMAL]
      * @param {Color} [options.clearColor=Color.White]
      * @param {Boolean} [options.clearBeforeRender=true]
      * @param {Object} [options.contextOptions]
@@ -21289,826 +22250,7 @@ var Application = function (_EventEmitter) {
 exports.default = Application;
 
 /***/ }),
-/* 78 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _Size = __webpack_require__(13);
-
-var _Size2 = _interopRequireDefault(_Size);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class GLTexture
- */
-var GLTexture = function () {
-
-    /**
-     * @constructor
-     * @param {WebGLRenderingContext} context
-     */
-    function GLTexture(context) {
-        _classCallCheck(this, GLTexture);
-
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
-
-        /**
-         * @private
-         * @member {WebGLRenderingContext}
-         */
-        this._context = context;
-
-        /**
-         * @private
-         * @member {WebGLTexture}
-         */
-        this._texture = context.createTexture();
-
-        /**
-         * @private
-         * @member {Size}
-         */
-        this._size = new _Size2.default(-1, -1);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {GLTexture}
-     */
-
-
-    _createClass(GLTexture, [{
-        key: 'bind',
-        value: function bind() {
-            var gl = this._context;
-
-            gl.bindTexture(gl.TEXTURE_2D, this._texture);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            var gl = this._context;
-
-            gl.bindTexture(gl.TEXTURE_2D, null);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} scaleMode
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'setScaleMode',
-        value: function setScaleMode(scaleMode) {
-            var gl = this._context;
-
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} wrapMode
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'setWrapMode',
-        value: function setWrapMode(wrapMode) {
-            var gl = this._context;
-
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Boolean} premultiplyAlpha
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'setPremultiplyAlpha',
-        value: function setPremultiplyAlpha(premultiplyAlpha) {
-            var gl = this._context;
-
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiplyAlpha);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'setTextureSource',
-        value: function setTextureSource(source) {
-            var gl = this._context,
-                width = source.videoWidth || source.width,
-                height = source.videoHeight || source.height;
-
-            if (this._size.width !== width || this._size.height !== height) {
-                this._size.set(width, height);
-
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-            } else {
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._context.deleteTexture(this._texture);
-
-            this._size.destroy();
-            this._size = null;
-
-            this._texture = null;
-            this._context = null;
-        }
-    }]);
-
-    return GLTexture;
-}();
-
-exports.default = GLTexture;
-
-/***/ }),
-/* 79 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class GLBuffer
- */
-var GLBuffer = function () {
-
-    /**
-     * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {Number} size
-     * @param {Number} attributeCount
-     */
-    function GLBuffer(context, size, attributeCount) {
-        _classCallCheck(this, GLBuffer);
-
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
-
-        /**
-         * @private
-         * @member {WebGLRenderingContext}
-         */
-        this._context = context;
-
-        /**
-         * @private
-         * @member {WebGLBuffer}
-         */
-        this._vertexBuffer = context.createBuffer();
-
-        /**
-         * @private
-         * @member {WebGLBuffer}
-         */
-        this._indexBuffer = context.createBuffer();
-
-        /**
-         * @private
-         * @member {ArrayBuffer}
-         */
-        this._vertexData = this.createVertexBuffer(size, attributeCount);
-
-        /**
-         * @private
-         * @member {Uint16Array}
-         */
-        this._indexData = this.createIndexBuffer(size);
-
-        /**
-         * @private
-         * @member {Uint32Array}
-         */
-        this._uintView = new Uint32Array(this._vertexData);
-
-        /**
-         * @private
-         * @member {Float32Array}
-         */
-        this._floatView = new Float32Array(this._vertexData);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Uint32Array}
-     */
-
-
-    _createClass(GLBuffer, [{
-        key: 'createVertexBuffer',
-
-
-        /**
-         * @public
-         * @param {Number} size
-         * @param {Number} attributeCount
-         * @returns {ArrayBuffer}
-         */
-        value: function createVertexBuffer(size, attributeCount) {
-            return new ArrayBuffer(size * attributeCount * 4);
-        }
-
-        /**
-         * @public
-         * @param {Number} size
-         * @returns {Uint16Array}
-         */
-
-    }, {
-        key: 'createIndexBuffer',
-        value: function createIndexBuffer(size) {
-            var buffer = new Uint16Array(size * 6),
-                len = buffer.length;
-
-            for (var i = 0, offset = 0; i < len; i += 6, offset += 4) {
-                buffer[i] = offset;
-                buffer[i + 1] = offset + 1;
-                buffer[i + 2] = offset + 3;
-                buffer[i + 3] = offset;
-                buffer[i + 4] = offset + 2;
-                buffer[i + 5] = offset + 3;
-            }
-
-            return buffer;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLBuffer}
-         */
-
-    }, {
-        key: 'bind',
-        value: function bind() {
-            var gl = this._context;
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
-
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLBuffer}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            var gl = this._context;
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, null);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._context.deleteBuffer(this._vertexBuffer);
-            this._context.deleteBuffer(this._indexBuffer);
-
-            this._context = null;
-            this._vertexBuffer = null;
-            this._indexBuffer = null;
-            this._vertexData = null;
-            this._indexData = null;
-            this._uintView = null;
-            this._floatView = null;
-        }
-    }, {
-        key: 'uintView',
-        get: function get() {
-            return this._uintView;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Float32Array}
-         */
-
-    }, {
-        key: 'floatView',
-        get: function get() {
-            return this._floatView;
-        }
-    }]);
-
-    return GLBuffer;
-}();
-
-exports.default = GLBuffer;
-
-/***/ }),
-/* 80 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class GLFramebuffer
- */
-var GLFramebuffer = function () {
-
-    /**
-     * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {Boolean} isRoot
-     */
-    function GLFramebuffer(context, isRoot) {
-        _classCallCheck(this, GLFramebuffer);
-
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
-
-        /**
-         * @private
-         * @member {WebGLRenderingContext}
-         */
-        this._context = context;
-
-        /**
-         * @private
-         * @member {WebGLFramebuffer}
-         */
-        this._framebuffer = isRoot ? null : context.createFramebuffer();
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {GLFramebuffer}
-     */
-
-
-    _createClass(GLFramebuffer, [{
-        key: 'bind',
-        value: function bind() {
-            var gl = this._context;
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLFramebuffer}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            var gl = this._context;
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            if (this._framebuffer) {
-                this._context.deleteFramebuffer(this._framebuffer);
-            }
-
-            this._framebuffer = null;
-            this._context = null;
-        }
-    }]);
-
-    return GLFramebuffer;
-}();
-
-exports.default = GLFramebuffer;
-
-/***/ }),
 /* 81 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _const = __webpack_require__(0);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class GLProgram
- */
-var GLProgram = function () {
-
-    /**
-     * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {String} vertexSource
-     * @param {String} fragmentSource
-     */
-    function GLProgram(context, vertexSource, fragmentSource) {
-        _classCallCheck(this, GLProgram);
-
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
-
-        /**
-         * @private
-         * @member {WebGLRenderingContext}
-         */
-        this._context = context;
-
-        /**
-         * @private
-         * @member {WebGLShader}
-         */
-        this._vertexShader = this.createShader(context.VERTEX_SHADER, vertexSource);
-
-        /**
-         * @private
-         * @member {WebGLShader}
-         */
-        this._fragmentShader = this.createShader(context.FRAGMENT_SHADER, fragmentSource);
-
-        /**
-         * @private
-         * @member {WebGLProgram}
-         */
-        this._program = this.createProgram(this._vertexShader, this._fragmentShader);
-
-        /**
-         * @private
-         * @member {Map<String, WebGLUniformLocation>}
-         */
-        this._uniformLocations = new Map();
-
-        /**
-         * @private
-         * @member {Map<String, Number>}
-         */
-        this._attributeLocations = new Map();
-    }
-
-    /**
-     * @public
-     * @param {Number} type
-     * @param {String} source
-     * @returns {WebGLShader}
-     */
-
-
-    _createClass(GLProgram, [{
-        key: 'createShader',
-        value: function createShader(type, source) {
-            var gl = this._context,
-                shader = gl.createShader(type);
-
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
-
-                return null;
-            }
-
-            return shader;
-        }
-
-        /**
-         * @public
-         * @param {WebGLShader} vertexShader
-         * @param {WebGLShader} fragmentShader
-         * @returns {?WebGLProgram}
-         */
-
-    }, {
-        key: 'createProgram',
-        value: function createProgram(vertexShader, fragmentShader) {
-            var gl = this._context,
-                program = gl.createProgram();
-
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
-
-            gl.linkProgram(program);
-
-            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                gl.detachShader(program, vertexShader);
-                gl.detachShader(program, fragmentShader);
-
-                gl.deleteProgram(program);
-
-                console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
-                console.error('gl.getError()', gl.getError()); // eslint-disable-line
-
-                if (gl.getProgramInfoLog(program)) {
-                    console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
-                }
-
-                return null;
-            }
-
-            return program;
-        }
-
-        /**
-         * @public
-         * @param {String} uniform
-         * @returns {WebGLUniformLocation}
-         */
-
-    }, {
-        key: 'getUniformLocation',
-        value: function getUniformLocation(uniform) {
-            if (!this._uniformLocations.has(uniform)) {
-                var location = this._context.getUniformLocation(this._program, uniform);
-
-                if (!location) {
-                    throw new Error('Uniform "' + this._name + '" is not available.');
-                }
-
-                this._uniformLocations.set(uniform, location);
-            }
-
-            return this._uniformLocations.get(uniform);
-        }
-
-        /**
-         * @public
-         * @param {String} attribute
-         * @returns {Number}
-         */
-
-    }, {
-        key: 'getAttributeLocation',
-        value: function getAttributeLocation(attribute) {
-            if (!this._attributeLocations.has(attribute)) {
-                var location = this._context.getAttribLocation(this._program, attribute);
-
-                if (location === -1) {
-                    throw new Error('Attribute "' + this._name + '" is not available.');
-                }
-
-                this._attributeLocations.set(attribute, location);
-            }
-
-            return this._attributeLocations.get(attribute);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} uniform
-         * @param {Number|Number[]|ArrayBufferView|Texture} value
-         * @param {Number} type
-         * @returns {GLProgram}
-         */
-
-    }, {
-        key: 'setUniformValue',
-        value: function setUniformValue(uniform, value, type) {
-            var gl = this._context,
-                location = this.getUniformLocation(uniform);
-
-            switch (type) {
-                case _const.UNIFORM_TYPE.INT:
-                    gl.uniform1i(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT:
-                    gl.uniform1f(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_VEC2:
-                    gl.uniform2fv(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_VEC3:
-                    gl.uniform3fv(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_VEC4:
-                    gl.uniform4fv(location, value);break;
-                case _const.UNIFORM_TYPE.INT_VEC2:
-                    gl.uniform2iv(location, value);break;
-                case _const.UNIFORM_TYPE.INT_VEC3:
-                    gl.uniform3iv(location, value);break;
-                case _const.UNIFORM_TYPE.INT_VEC4:
-                    gl.uniform4iv(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL:
-                    gl.uniform1i(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL_VEC2:
-                    gl.uniform2iv(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL_VEC3:
-                    gl.uniform3iv(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL_VEC4:
-                    gl.uniform4iv(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_MAT2:
-                    gl.uniformMatrix2fv(location, false, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_MAT3:
-                    gl.uniformMatrix3fv(location, false, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_MAT4:
-                    gl.uniformMatrix4fv(location, false, value);break;
-                case _const.UNIFORM_TYPE.SAMPLER_2D:
-                    gl.uniform1i(location, value);break;
-                default:
-                    throw new Error('Unknown uniform type "' + type + '".');
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} attribute
-         * @param {Number} size
-         * @param {Number} type
-         * @param {boolean} normalized
-         * @param {Number} stride
-         * @param {Number} offset
-         * @returns {GLProgram}
-         */
-
-    }, {
-        key: 'setVertexPointer',
-        value: function setVertexPointer(attribute, size, type, normalized, stride, offset) {
-            var gl = this._context,
-                location = this.getAttributeLocation(attribute);
-
-            gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} attribute
-         * @param {Boolean} enabled
-         * @returns {GLProgram}
-         */
-
-    }, {
-        key: 'toggleVertexArray',
-        value: function toggleVertexArray(attribute, enabled) {
-            var gl = this._context,
-                location = this.getAttributeLocation(attribute);
-
-            if (enabled) {
-                gl.enableVertexAttribArray(location);
-            } else {
-                gl.disableVertexAttribArray(location);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLProgram}
-         */
-
-    }, {
-        key: 'bind',
-        value: function bind() {
-            this._context.useProgram(this._program);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLProgram}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            this._context.useProgram(null);
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._context.deleteShader(this._vertexShader);
-            this._context.deleteShader(this._fragmentShader);
-            this._context.deleteProgram(this._program);
-
-            this._vertexShader = null;
-            this._fragmentShader = null;
-            this._program = null;
-            this._context = null;
-        }
-    }]);
-
-    return GLProgram;
-}();
-
-exports.default = GLProgram;
-
-/***/ }),
-/* 82 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -22298,7 +22440,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22310,11 +22452,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
@@ -22617,7 +22759,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22643,7 +22785,7 @@ var _Bounds = __webpack_require__(17);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
@@ -22938,7 +23080,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 85 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22956,7 +23098,7 @@ var _Clock2 = __webpack_require__(26);
 
 var _Clock3 = _interopRequireDefault(_Clock2);
 
-var _Time = __webpack_require__(10);
+var _Time = __webpack_require__(11);
 
 var _Time2 = _interopRequireDefault(_Time);
 
@@ -23120,7 +23262,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23323,7 +23465,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 87 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23342,21 +23484,12 @@ Object.defineProperty(exports, 'DisplayManager', {
   }
 });
 
-var _RenderTarget = __webpack_require__(55);
+var _RenderTarget = __webpack_require__(54);
 
 Object.defineProperty(exports, 'RenderTarget', {
   enumerable: true,
   get: function get() {
     return _interopRequireDefault(_RenderTarget).default;
-  }
-});
-
-var _RenderState = __webpack_require__(54);
-
-Object.defineProperty(exports, 'RenderState', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_RenderState).default;
   }
 });
 
@@ -23369,7 +23502,7 @@ Object.defineProperty(exports, 'Texture', {
   }
 });
 
-var _View = __webpack_require__(27);
+var _View = __webpack_require__(64);
 
 Object.defineProperty(exports, 'View', {
   enumerable: true,
@@ -23378,7 +23511,7 @@ Object.defineProperty(exports, 'View', {
   }
 });
 
-var _Renderer = __webpack_require__(29);
+var _Renderer = __webpack_require__(27);
 
 Object.defineProperty(exports, 'Renderer', {
   enumerable: true,
@@ -23405,7 +23538,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Text = __webpack_require__(88);
+var _Text = __webpack_require__(87);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -23414,7 +23547,7 @@ Object.defineProperty(exports, 'Text', {
   }
 });
 
-var _TextStyle = __webpack_require__(70);
+var _TextStyle = __webpack_require__(73);
 
 Object.defineProperty(exports, 'TextStyle', {
   enumerable: true,
@@ -23423,7 +23556,7 @@ Object.defineProperty(exports, 'TextStyle', {
   }
 });
 
-var _Shader = __webpack_require__(30);
+var _Shader = __webpack_require__(28);
 
 Object.defineProperty(exports, 'Shader', {
   enumerable: true,
@@ -23480,7 +23613,7 @@ Object.defineProperty(exports, 'SpriteShader', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 88 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23504,11 +23637,11 @@ var _Texture = __webpack_require__(15);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
-var _TextStyle = __webpack_require__(70);
+var _TextStyle = __webpack_require__(73);
 
 var _TextStyle2 = _interopRequireDefault(_TextStyle);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
@@ -23844,7 +23977,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 89 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23854,7 +23987,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Particle = __webpack_require__(71);
+var _Particle = __webpack_require__(74);
 
 Object.defineProperty(exports, 'Particle', {
   enumerable: true,
@@ -23863,7 +23996,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(90);
+var _ParticleEmitter = __webpack_require__(89);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -23872,7 +24005,7 @@ Object.defineProperty(exports, 'ParticleEmitter', {
   }
 });
 
-var _ParticleOptions = __webpack_require__(31);
+var _ParticleOptions = __webpack_require__(30);
 
 Object.defineProperty(exports, 'ParticleOptions', {
   enumerable: true,
@@ -23881,7 +24014,7 @@ Object.defineProperty(exports, 'ParticleOptions', {
   }
 });
 
-var _ParticleShader = __webpack_require__(62);
+var _ParticleShader = __webpack_require__(63);
 
 Object.defineProperty(exports, 'ParticleShader', {
   enumerable: true,
@@ -23890,7 +24023,7 @@ Object.defineProperty(exports, 'ParticleShader', {
   }
 });
 
-var _ParticleRenderer = __webpack_require__(61);
+var _ParticleRenderer = __webpack_require__(62);
 
 Object.defineProperty(exports, 'ParticleRenderer', {
   enumerable: true,
@@ -23908,7 +24041,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(91);
+var _ForceModifier = __webpack_require__(90);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -23917,7 +24050,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(92);
+var _ScaleModifier = __webpack_require__(91);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -23926,7 +24059,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(93);
+var _TorqueModifier = __webpack_require__(92);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -23938,7 +24071,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 90 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23956,19 +24089,19 @@ var _Renderable2 = __webpack_require__(23);
 
 var _Renderable3 = _interopRequireDefault(_Renderable2);
 
-var _Particle = __webpack_require__(71);
+var _Particle = __webpack_require__(74);
 
 var _Particle2 = _interopRequireDefault(_Particle);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Time = __webpack_require__(10);
+var _Time = __webpack_require__(11);
 
 var _Time2 = _interopRequireDefault(_Time);
 
-var _ParticleOptions = __webpack_require__(31);
+var _ParticleOptions = __webpack_require__(30);
 
 var _ParticleOptions2 = _interopRequireDefault(_ParticleOptions);
 
@@ -24084,7 +24217,7 @@ var ParticleEmitter = function (_Renderable) {
         value: function setTexture(texture) {
             if (this._texture !== texture) {
                 this._texture = texture;
-                this.setTextureFrame(texture.sourceFrame);
+                this.resetTextureFrame();
             }
 
             return this;
@@ -24104,6 +24237,18 @@ var ParticleEmitter = function (_Renderable) {
             this._updateTexCoords = true;
 
             return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {ParticleEmitter}
+         */
+
+    }, {
+        key: 'resetTextureFrame',
+        value: function resetTextureFrame() {
+            return this.setTextureFrame(_Rectangle2.default.Temp.set(0, 0, this._texture.width, this._texture.height));
         }
 
         /**
@@ -24269,7 +24414,10 @@ var ParticleEmitter = function (_Renderable) {
         key: 'render',
         value: function render(displayManager) {
             if (this.active && displayManager.isVisible(this)) {
-                displayManager.setRenderer('particle').render(this);
+                var renderer = displayManager.getRenderer('particle');
+
+                displayManager.setRenderer(renderer);
+                renderer.render(this);
             }
 
             return this;
@@ -24575,7 +24723,7 @@ var ParticleEmitter = function (_Renderable) {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 91 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24697,7 +24845,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 92 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24817,7 +24965,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 93 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24929,7 +25077,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 94 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24939,7 +25087,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _ChannelManager = __webpack_require__(8);
+var _ChannelManager = __webpack_require__(9);
 
 Object.defineProperty(exports, 'ChannelManager', {
   enumerable: true,
@@ -24948,7 +25096,7 @@ Object.defineProperty(exports, 'ChannelManager', {
   }
 });
 
-var _Input = __webpack_require__(95);
+var _Input = __webpack_require__(94);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -24957,7 +25105,7 @@ Object.defineProperty(exports, 'Input', {
   }
 });
 
-var _InputManager = __webpack_require__(64);
+var _InputManager = __webpack_require__(67);
 
 Object.defineProperty(exports, 'InputManager', {
   enumerable: true,
@@ -24966,7 +25114,7 @@ Object.defineProperty(exports, 'InputManager', {
   }
 });
 
-var _Keyboard = __webpack_require__(65);
+var _Keyboard = __webpack_require__(68);
 
 Object.defineProperty(exports, 'Keyboard', {
   enumerable: true,
@@ -24975,7 +25123,7 @@ Object.defineProperty(exports, 'Keyboard', {
   }
 });
 
-var _GamepadControl = __webpack_require__(47);
+var _GamepadControl = __webpack_require__(46);
 
 Object.defineProperty(exports, 'GamepadControl', {
   enumerable: true,
@@ -24984,7 +25132,7 @@ Object.defineProperty(exports, 'GamepadControl', {
   }
 });
 
-var _GamepadMapping = __webpack_require__(46);
+var _GamepadMapping = __webpack_require__(45);
 
 Object.defineProperty(exports, 'GamepadMapping', {
   enumerable: true,
@@ -24993,7 +25141,7 @@ Object.defineProperty(exports, 'GamepadMapping', {
   }
 });
 
-var _DefaultGamepadMapping = __webpack_require__(45);
+var _DefaultGamepadMapping = __webpack_require__(44);
 
 Object.defineProperty(exports, 'DefaultGamepadMapping', {
   enumerable: true,
@@ -25002,7 +25150,7 @@ Object.defineProperty(exports, 'DefaultGamepadMapping', {
   }
 });
 
-var _Gamepad = __webpack_require__(67);
+var _Gamepad = __webpack_require__(70);
 
 Object.defineProperty(exports, 'Gamepad', {
   enumerable: true,
@@ -25011,7 +25159,7 @@ Object.defineProperty(exports, 'Gamepad', {
   }
 });
 
-var _GamepadManager = __webpack_require__(66);
+var _GamepadManager = __webpack_require__(69);
 
 Object.defineProperty(exports, 'GamepadManager', {
   enumerable: true,
@@ -25020,7 +25168,7 @@ Object.defineProperty(exports, 'GamepadManager', {
   }
 });
 
-var _Pointer = __webpack_require__(69);
+var _Pointer = __webpack_require__(72);
 
 Object.defineProperty(exports, 'Pointer', {
   enumerable: true,
@@ -25029,7 +25177,7 @@ Object.defineProperty(exports, 'Pointer', {
   }
 });
 
-var _PointerManager = __webpack_require__(68);
+var _PointerManager = __webpack_require__(71);
 
 Object.defineProperty(exports, 'PointerManager', {
   enumerable: true,
@@ -25041,7 +25189,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 95 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25057,7 +25205,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _settings = __webpack_require__(4);
+var _settings = __webpack_require__(5);
 
 var _settings2 = _interopRequireDefault(_settings);
 
@@ -25380,7 +25528,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 96 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25408,7 +25556,7 @@ Object.defineProperty(exports, 'ObservableVector', {
   }
 });
 
-var _Matrix = __webpack_require__(9);
+var _Matrix = __webpack_require__(10);
 
 Object.defineProperty(exports, 'Matrix', {
   enumerable: true,
@@ -25426,7 +25574,7 @@ Object.defineProperty(exports, 'Transformable', {
   }
 });
 
-var _Interval = __webpack_require__(32);
+var _Interval = __webpack_require__(31);
 
 Object.defineProperty(exports, 'Interval', {
   enumerable: true,
@@ -25435,7 +25583,7 @@ Object.defineProperty(exports, 'Interval', {
   }
 });
 
-var _Collision = __webpack_require__(33);
+var _Collision = __webpack_require__(32);
 
 Object.defineProperty(exports, 'Collision', {
   enumerable: true,
@@ -25453,7 +25601,7 @@ Object.defineProperty(exports, 'Shape', {
   }
 });
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 Object.defineProperty(exports, 'Rectangle', {
   enumerable: true,
@@ -25462,7 +25610,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(97);
+var _Circle = __webpack_require__(96);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -25471,7 +25619,7 @@ Object.defineProperty(exports, 'Circle', {
   }
 });
 
-var _Polygon = __webpack_require__(72);
+var _Polygon = __webpack_require__(75);
 
 Object.defineProperty(exports, 'Polygon', {
   enumerable: true,
@@ -25480,7 +25628,7 @@ Object.defineProperty(exports, 'Polygon', {
   }
 });
 
-var _Size = __webpack_require__(13);
+var _Size = __webpack_require__(7);
 
 Object.defineProperty(exports, 'Size', {
   enumerable: true,
@@ -25489,7 +25637,7 @@ Object.defineProperty(exports, 'Size', {
   }
 });
 
-var _ObservableSize = __webpack_require__(28);
+var _ObservableSize = __webpack_require__(65);
 
 Object.defineProperty(exports, 'ObservableSize', {
   enumerable: true,
@@ -25501,7 +25649,7 @@ Object.defineProperty(exports, 'ObservableSize', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 97 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25517,7 +25665,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _Rectangle = __webpack_require__(5);
+var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
@@ -25525,7 +25673,7 @@ var _Shape2 = __webpack_require__(16);
 
 var _Shape3 = _interopRequireDefault(_Shape2);
 
-var _Collision = __webpack_require__(33);
+var _Collision = __webpack_require__(32);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
@@ -25708,7 +25856,7 @@ Circle.Empty = new Circle(0, 0, 0);
 Circle.Temp = new Circle();
 
 /***/ }),
-/* 98 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25727,7 +25875,7 @@ Object.defineProperty(exports, 'Media', {
   }
 });
 
-var _Sound = __webpack_require__(42);
+var _Sound = __webpack_require__(41);
 
 Object.defineProperty(exports, 'Sound', {
   enumerable: true,
@@ -25736,7 +25884,7 @@ Object.defineProperty(exports, 'Sound', {
   }
 });
 
-var _Music = __webpack_require__(40);
+var _Music = __webpack_require__(39);
 
 Object.defineProperty(exports, 'Music', {
   enumerable: true,
@@ -25754,7 +25902,7 @@ Object.defineProperty(exports, 'Video', {
   }
 });
 
-var _MediaSource = __webpack_require__(39);
+var _MediaSource = __webpack_require__(38);
 
 Object.defineProperty(exports, 'MediaSource', {
   enumerable: true,
@@ -25763,7 +25911,7 @@ Object.defineProperty(exports, 'MediaSource', {
   }
 });
 
-var _MediaManager = __webpack_require__(63);
+var _MediaManager = __webpack_require__(66);
 
 Object.defineProperty(exports, 'MediaManager', {
   enumerable: true,
@@ -25772,7 +25920,7 @@ Object.defineProperty(exports, 'MediaManager', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(99);
+var _AudioAnalyser = __webpack_require__(98);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -25784,7 +25932,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 99 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

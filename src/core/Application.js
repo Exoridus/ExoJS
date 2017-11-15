@@ -24,6 +24,7 @@ export default class Application extends EventEmitter {
      * @param {Number} [options.masterVolume=1]
      * @param {?HTMLCanvasElement|?String} [options.canvas=null]
      * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
+     * @param {Color} [options.blendMode=BLEND_MODES.NORMAL]
      * @param {Color} [options.clearColor=Color.White]
      * @param {Boolean} [options.clearBeforeRender=true]
      * @param {Object} [options.contextOptions]

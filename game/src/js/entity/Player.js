@@ -1,23 +1,16 @@
 import { KEYBOARD, GAMEPAD, utils, Sprite, Vector, Rectangle, Size, Timer, Input } from 'exojs';
 
-/**
- * @inner
- * @member {Object<String, Number>}
- */
-const DIRECTION = {
-        UP: 0,
-        RIGHT: 1,
-        DOWN: 2,
-        LEFT: 3,
-    },
+const
 
     /**
      * @inner
      * @member {Object<String, Number>}
      */
-    FLAGS = {
-        NONE: 0,
-        DIRTY_FRAME: 1 << 0,
+    DIRECTION = {
+        UP: 0,
+        RIGHT: 1,
+        DOWN: 2,
+        LEFT: 3,
     };
 
 /**
@@ -101,6 +94,12 @@ export default class Player extends Sprite {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._frameChanged = false;
+
+        /**
+         * @private
          * @member {Rectangle}
          */
         this._frame = new Rectangle(
@@ -128,12 +127,6 @@ export default class Player extends Sprite {
          */
         this._speed = this._walkingSpeed;
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._flags = FLAGS.NONE;
-
         this._addInputs();
         this._updateFrame();
         this.setOrigin(0.5, 1);
@@ -147,10 +140,9 @@ export default class Player extends Sprite {
     update(delta) {
         this._updatePosition(delta);
 
-        if (utils.hasFlag(FLAGS.DIRTY_FRAME, this._flags)) {
+        if (this._frameChanged) {
             this._updateFrame();
-
-            this._flags = utils.removeFlag(FLAGS.DIRTY_FRAME, this._flags);
+            this._frameChanged = false;
         }
 
         return this;
@@ -206,7 +198,7 @@ export default class Player extends Sprite {
     _setDirection(direction) {
         if (this._direction !== direction) {
             this._direction = direction;
-            this._flags = utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+            this._frameChanged = true;
         }
 
         return this;
@@ -254,7 +246,7 @@ export default class Player extends Sprite {
 
         if (this._frameIndex !== frameIndex) {
             this._frameIndex = frameIndex;
-            this._flags = utils.addFlag(FLAGS.DIRTY_FRAME, this._flags);
+            this._frameChanged = true;
         }
 
         return this;

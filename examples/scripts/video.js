@@ -56,7 +56,7 @@ window.app.start(new Exo.Scene({
     update(delta) {
         this.app.displayManager
             .begin()
-            .draw(this._video)
+            .render(this._video)
             .end();
     },
 

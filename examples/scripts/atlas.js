@@ -67,7 +67,7 @@ window.app.start(new Exo.Scene({
 
         this.app.displayManager
             .begin()
-            .draw(this._atlas)
+            .render(this._atlas)
             .end();
     },
 

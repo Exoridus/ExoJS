@@ -72,8 +72,8 @@ window.app.start(new Exo.Scene({
 
         this.app.displayManager
             .begin()
-            .draw(this._rainbow)
-            .draw(this._bunnies)
+            .render(this._rainbow)
+            .render(this._bunnies)
             .end();
     },
 

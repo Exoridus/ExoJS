@@ -3,7 +3,6 @@
  */
 export { default as DisplayManager } from './DisplayManager';
 export { default as RenderTarget } from './RenderTarget';
-export { default as RenderState } from './RenderState';
 export { default as Texture } from './Texture';
 export { default as View } from './View';
 export { default as Renderer } from './Renderer';

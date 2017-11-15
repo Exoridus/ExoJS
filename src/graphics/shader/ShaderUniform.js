@@ -43,7 +43,7 @@ export default class ShaderUniform {
          * @private
          * @member {?GLProgram}
          */
-        this._glProgram = null;
+        this._program = null;
 
         /**
          * @private
@@ -69,15 +69,6 @@ export default class ShaderUniform {
      */
     get name() {
         return this._name;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get type() {
-        return this._type;
     }
 
     /**
@@ -108,8 +99,8 @@ export default class ShaderUniform {
      * @param {GLProgram} glProgram
      */
     bind(glProgram) {
-        if (!this._glProgram) {
-            this._glProgram = glProgram;
+        if (!this._program) {
+            this._program = glProgram;
         }
 
         if (!this._bound) {
@@ -133,8 +124,7 @@ export default class ShaderUniform {
      */
     upload() {
         if (this._bound && this._dirty) {
-            this._glProgram.setUniformValue(this._name, this._value, this._type);
-
+            this._program.setUniformValue(this._name, this._value, this._type);
             this._dirty = false;
         }
     }
@@ -147,7 +137,7 @@ export default class ShaderUniform {
         this._type = null;
         this._value = null;
         this._transpose = null;
-        this._glProgram = null;
+        this._program = null;
         this._bound = null;
         this._dirty = null;
     }

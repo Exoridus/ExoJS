@@ -1,6 +1,7 @@
 import settings from '../settings';
 import { addFlag, hasFlag, removeFlag } from '../utils';
-import Rectangle from '../math/Rectangle';
+import Size from '../math/Size';
+import GLTexture from './webgl/GLTexture';
 
 const FLAGS = {
     NONE: 0,
@@ -8,7 +9,7 @@ const FLAGS = {
     WRAP_MODE: 1 << 1,
     PREMULTIPLY_ALPHA: 1 << 2,
     SOURCE: 1 << 3,
-    SOURCE_FRAME: 1 << 4,
+    SIZE: 1 << 4,
 };
 
 /**
@@ -38,15 +39,15 @@ export default class Texture {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @member {Size}
          */
-        this._sourceFrame = new Rectangle();
+        this._size = new Size();
 
         /**
          * @private
-         * @member {?RenderState}
+         * @member {?DisplayManager}
          */
-        this._renderState = null;
+        this._displayManager = null;
 
         /**
          * @private
@@ -101,24 +102,6 @@ export default class Texture {
 
     /**
      * @public
-     * @readonly
-     * @member {Rectangle}
-     */
-    get sourceFrame() {
-        if (hasFlag(FLAGS.SOURCE_FRAME, this._flags)) {
-            const source = this._source,
-                width = source ? (source.videoWidth || source.width) : 0,
-                height = source ? (source.videoHeight || source.height) : 0;
-
-            this._sourceFrame.set(0, 0, width, height);
-            this._flags = removeFlag(FLAGS.SOURCE_FRAME, this._flags);
-        }
-
-        return this._sourceFrame;
-    }
-
-    /**
-     * @public
      * @member {Number}
      */
     get scaleMode() {
@@ -155,29 +138,59 @@ export default class Texture {
 
     /**
      * @public
-     * @readonly
      * @member {Size}
      */
     get size() {
-        return this.sourceFrame.size;
+        if (hasFlag(FLAGS.SIZE, this._flags)) {
+            const source = this._source;
+
+            this._size.set(
+                (source && (source.naturalWidth || source.videoWidth || source.width)) || 0,
+                (source && (source.naturalHeight || source.videoHeight || source.height)) || 0
+            );
+
+            this._flags = removeFlag(FLAGS.SIZE, this._flags);
+        }
+
+        return this._size;
+    }
+
+    set size(size) {
+        this._size.copy(size);
+        this._flags = removeFlag(FLAGS.SIZE, this._flags);
     }
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
     get width() {
-        return this.sourceFrame.width;
+        return this.size.width;
+    }
+
+    set width(width) {
+        this._size.width = width;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get height() {
+        return this.size.height;
+    }
+
+    set height(height) {
+        this._size.height = height;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Number}
+     * @member {Boolean}
      */
-    get height() {
-        return this.sourceFrame.height;
+    get bound() {
+        return this._displayManager && (this._displayManager.texture === this);
     }
 
     /**
@@ -246,7 +259,19 @@ export default class Texture {
      * @returns {Texture}
      */
     updateSource() {
-        this._flags = addFlag(FLAGS.SOURCE | FLAGS.SOURCE_FRAME, this._flags);
+        this._flags = addFlag(FLAGS.SOURCE, this._flags);
+        this.updateSize();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Texture}
+     */
+    updateSize() {
+        this._flags = addFlag(FLAGS.SIZE, this._flags);
 
         return this;
     }
@@ -258,29 +283,24 @@ export default class Texture {
      */
     update() {
         if (this._flags && this._glTexture) {
-            this._renderState.glTexture = this._glTexture;
 
             if (hasFlag(FLAGS.SCALE_MODE, this._flags)) {
                 this._glTexture.setScaleMode(this._scaleMode);
-
                 this._flags = removeFlag(FLAGS.SCALE_MODE, this._flags);
             }
 
             if (hasFlag(FLAGS.WRAP_MODE, this._flags)) {
                 this._glTexture.setWrapMode(this._wrapMode);
-
                 this._flags = removeFlag(FLAGS.WRAP_MODE, this._flags);
             }
 
             if (hasFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
                 this._glTexture.setPremultiplyAlpha(this._premultiplyAlpha);
-
                 this._flags = removeFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
             }
 
             if (hasFlag(FLAGS.SOURCE, this._flags) && this._source) {
                 this._glTexture.setTextureSource(this._source);
-
                 this._flags = removeFlag(FLAGS.SOURCE, this._flags);
             }
         }
@@ -291,23 +311,20 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {RenderState} renderState
+     * @param {DisplayManager} displayManager
      * @param {Number}  [unit]
      * @returns {Texture}
      */
-    bind(renderState, unit) {
-        if (!this._renderState) {
-            this._renderState = renderState;
-            this._glTexture = renderState.createGLTexture();
+    bind(displayManager, unit) {
+        if (!this._displayManager) {
+            this._displayManager = displayManager;
+            this._glTexture = new GLTexture(displayManager.context);
         }
 
-        if (unit !== undefined) {
-            this._renderState.textureUnit = unit;
+        if (!this.bound) {
+            this._glTexture.bind(unit);
+            this.update();
         }
-
-        this._renderState.glTexture = this._glTexture;
-
-        this.update();
 
         return this;
     }
@@ -318,8 +335,8 @@ export default class Texture {
      * @returns {Texture}
      */
     unbind() {
-        if (this._renderState && this._renderState.glTexture === this._glTexture) {
-            this._renderState.glTexture = null;
+        if (this.bound) {
+            this._glTexture.unbind();
         }
 
         return this;
@@ -329,20 +346,18 @@ export default class Texture {
      * @public
      */
     destroy() {
-        if (this._renderState) {
-            this.unbind();
+        this.unbind();
 
+        if (this._glTexture) {
             this._glTexture.destroy();
             this._glTexture = null;
-
-            this._renderState = null;
         }
 
+        this._size.destroy();
+        this._size = null;
+
         this._source = null;
-
-        this._sourceFrame.destroy();
-        this._sourceFrame = null;
-
+        this._displayManager = null;
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;

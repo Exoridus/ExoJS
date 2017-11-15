@@ -6,9 +6,8 @@ export default class GLFramebuffer {
     /**
      * @constructor
      * @param {WebGLRenderingContext} context
-     * @param {Boolean} isRoot
      */
-    constructor(context, isRoot) {
+    constructor(context) {
         if (!context) {
             throw new Error('No Rendering Context was provided.');
         }
@@ -23,7 +22,25 @@ export default class GLFramebuffer {
          * @private
          * @member {WebGLFramebuffer}
          */
-        this._framebuffer = isRoot ? null : context.createFramebuffer();
+        this._framebuffer = context.createFramebuffer();
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Color} [color]
+     * @returns {GLFramebuffer}
+     */
+    clear(color) {
+        const gl = this._context;
+
+        if (color) {
+            gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+        }
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        return this;
     }
 
     /**
@@ -56,11 +73,11 @@ export default class GLFramebuffer {
      * @public
      */
     destroy() {
-        if (this._framebuffer) {
-            this._context.deleteFramebuffer(this._framebuffer);
-        }
+        const gl = this._context;
 
-        this._framebuffer = null;
+        gl.deleteFramebuffer(this._framebuffer);
+
         this._context = null;
+        this._framebuffer = null;
     }
 }
