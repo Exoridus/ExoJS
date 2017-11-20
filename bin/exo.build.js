@@ -162,7 +162,6 @@ TIME = exports.TIME = {
  * @property {Number} WRAP_MODE
  * @property {Number} PREMULTIPLY_ALPHA
  * @property {Number} SOURCE
- * @property {Number} SIZE
  */
 TEXTURE_FLAGS = exports.TEXTURE_FLAGS = {
     NONE: 0,
@@ -2206,6 +2205,14 @@ exports.default = {
      * @default true
      */
     PREMULTIPLY_ALPHA: true,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default true
+     */
+    GENERATE_MIPMAP: true,
 
     /**
      * @public
@@ -5262,6 +5269,7 @@ var Texture = function () {
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
+     * @param {Boolean} [options.generateMipMap=settings.GENERATE_MIPMAP]
      */
     function Texture(source) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -5270,7 +5278,9 @@ var Texture = function () {
             _ref$wrapMode = _ref.wrapMode,
             wrapMode = _ref$wrapMode === undefined ? _settings2.default.WRAP_MODE : _ref$wrapMode,
             _ref$premultiplyAlpha = _ref.premultiplyAlpha,
-            premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha;
+            premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha,
+            _ref$generateMipMap = _ref.generateMipMap,
+            generateMipMap = _ref$generateMipMap === undefined ? _settings2.default.GENERATE_MIPMAP : _ref$generateMipMap;
 
         _classCallCheck(this, Texture);
 
@@ -5312,6 +5322,12 @@ var Texture = function () {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._generateMipMap = generateMipMap;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._flags = _const.TEXTURE_FLAGS.SCALE_MODE | _const.TEXTURE_FLAGS.WRAP_MODE | _const.TEXTURE_FLAGS.PREMULTIPLY_ALPHA;
@@ -5323,8 +5339,7 @@ var Texture = function () {
 
     /**
      * @public
-     * @readonly
-     * @member {?GLTexture}
+     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
      */
 
 
@@ -5386,6 +5401,24 @@ var Texture = function () {
         /**
          * @public
          * @chainable
+         * @param {Boolean} generateMipMap
+         * @returns {Texture}
+         */
+
+    }, {
+        key: 'setGenerateMipmap',
+        value: function setGenerateMipmap(generateMipMap) {
+            if (this._generateMipMap !== generateMipMap) {
+                this._generateMipMap = generateMipMap;
+                this.updateSource();
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
          * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
          * @returns {Texture}
          */
@@ -5412,7 +5445,23 @@ var Texture = function () {
         value: function updateSource() {
             this._flags = (0, _utils.addFlag)(_const.TEXTURE_FLAGS.SOURCE, this._flags);
 
-            this._size.set(this._source && this._source.naturalWidth || this._source.videoWidth || this._source.width || 0, this._source && this._source.naturalHeight || this._source.videoHeight || this._source.height || 0);
+            this.resize(this._source && this._source.naturalWidth || this._source.videoWidth || this._source.width || 0, this._source && this._source.naturalHeight || this._source.videoHeight || this._source.height || 0);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} height
+         * @returns {Texture}
+         */
+
+    }, {
+        key: 'resize',
+        value: function resize(width, height) {
+            this._size.set(width, height);
 
             return this;
         }
@@ -5445,6 +5494,11 @@ var Texture = function () {
 
                 if ((0, _utils.hasFlag)(_const.TEXTURE_FLAGS.SOURCE, this._flags) && this._source) {
                     this._texture.setTextureSource(this._source);
+
+                    if (this._generateMipMap && this.powerOfTwo) {
+                        this._texture.generateMipmap();
+                    }
+
                     this._flags = (0, _utils.removeFlag)(_const.TEXTURE_FLAGS.SOURCE, this._flags);
                 }
             }
@@ -5508,24 +5562,14 @@ var Texture = function () {
             this._size.destroy();
             this._size = null;
 
-            this._flags = null;
+            this._source = null;
             this._scaleMode = null;
             this._wrapMode = null;
             this._premultiplyAlpha = null;
-            this._source = null;
+            this._generateMipmap = null;
+            this._flags = null;
             this._displayManager = null;
         }
-    }, {
-        key: 'glTexture',
-        get: function get() {
-            return this._texture;
-        }
-
-        /**
-         * @public
-         * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
-         */
-
     }, {
         key: 'source',
         get: function get() {
@@ -5533,6 +5577,48 @@ var Texture = function () {
         },
         set: function set(source) {
             this.setSource(source);
+        }
+
+        /**
+         * @public
+         * @member {Size}
+         */
+
+    }, {
+        key: 'size',
+        get: function get() {
+            return this._size;
+        },
+        set: function set(size) {
+            this._size.copy(size);
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'width',
+        get: function get() {
+            return this._size.width;
+        },
+        set: function set(width) {
+            this._size.width = width;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'height',
+        get: function get() {
+            return this._size.height;
+        },
+        set: function set(height) {
+            this._size.height = height;
         }
 
         /**
@@ -5579,44 +5665,28 @@ var Texture = function () {
 
         /**
          * @public
-         * @member {Size}
+         * @member {Boolean}
          */
 
     }, {
-        key: 'size',
+        key: 'generateMipMap',
         get: function get() {
-            return this._size;
+            return this._generateMipMap;
         },
-        set: function set(size) {
-            this._size.copy(size);
+        set: function set(generateMipMap) {
+            this.setGenerateMipmap(generateMipMap);
         }
 
         /**
          * @public
-         * @member {Number}
+         * @readonly
+         * @member {Boolean}
          */
 
     }, {
-        key: 'width',
+        key: 'powerOfTwo',
         get: function get() {
-            return this._size.width;
-        },
-        set: function set(width) {
-            this._size.width = width;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'height',
-        get: function get() {
-            return this._size.height;
-        },
-        set: function set(height) {
-            this._size.height = height;
+            return (0, _utils.isPowerOfTwo)(this.width) && (0, _utils.isPowerOfTwo)(this.height);
         }
 
         /**
@@ -11339,15 +11409,13 @@ var TextureFactory = function (_ImageFactory) {
         value: function create(source) {
             var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
                 mimeType = _ref.mimeType,
-                _ref$scaleMode = _ref.scaleMode,
-                scaleMode = _ref$scaleMode === undefined ? _settings2.default.SCALE_MODE : _ref$scaleMode,
-                _ref$wrapMode = _ref.wrapMode,
-                wrapMode = _ref$wrapMode === undefined ? _settings2.default.WRAP_MODE : _ref$wrapMode,
-                _ref$premultiplyAlpha = _ref.premultiplyAlpha,
-                premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha;
+                scaleMode = _ref.scaleMode,
+                wrapMode = _ref.wrapMode,
+                premultiplyAlpha = _ref.premultiplyAlpha,
+                generateMipmap = _ref.generateMipmap;
 
             return _get(TextureFactory.prototype.__proto__ || Object.getPrototypeOf(TextureFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (image) {
-                return new _Texture2.default(image, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha });
+                return new _Texture2.default(image, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha, generateMipmap: generateMipmap });
             });
         }
     }, {
@@ -21036,8 +21104,23 @@ var GLTexture = function () {
     /**
      * @constructor
      * @param {WebGLRenderingContext} context
+     * @param {Object} [options]
+     * @param {Number} [options.format=context.RGBA]
+     * @param {Number} [options.type=context.UNSIGNED_BYTE]
+     * @param {Number} [options.width=-1]
+     * @param {Number} [options.height=-1]
      */
     function GLTexture(context) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            _ref$format = _ref.format,
+            format = _ref$format === undefined ? context.RGBA : _ref$format,
+            _ref$type = _ref.type,
+            type = _ref$type === undefined ? context.UNSIGNED_BYTE : _ref$type,
+            _ref$width = _ref.width,
+            width = _ref$width === undefined ? -1 : _ref$width,
+            _ref$height = _ref.height,
+            height = _ref$height === undefined ? -1 : _ref$height;
+
         _classCallCheck(this, GLTexture);
 
         if (!context) {
@@ -21060,19 +21143,58 @@ var GLTexture = function () {
          * @private
          * @member {Size}
          */
-        this._size = new _Size2.default(-1, -1);
+        this._format = format;
+
+        /**
+         * @private
+         * @member {Size}
+         */
+        this._type = type;
+
+        /**
+         * @private
+         * @member {Size}
+         */
+        this._size = new _Size2.default(width, height);
     }
 
     /**
      * @public
-     * @readonly
-     * @member {Boolean}
+     * @chainable
+     * @param {Number} [unit]
+     * @returns {GLTexture}
      */
 
 
     _createClass(GLTexture, [{
-        key: 'setScaleMode',
+        key: 'bind',
+        value: function bind(unit) {
+            var gl = this._context;
 
+            if (unit !== undefined) {
+                gl.activeTexture(gl.TEXTURE0 + unit);
+            }
+
+            gl.bindTexture(gl.TEXTURE_2D, this._texture);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'unbind',
+        value: function unbind() {
+            var gl = this._context;
+
+            gl.bindTexture(gl.TEXTURE_2D, null);
+
+            return this;
+        }
 
         /**
          * @public
@@ -21080,6 +21202,9 @@ var GLTexture = function () {
          * @param {Number} scaleMode
          * @returns {GLTexture}
          */
+
+    }, {
+        key: 'setScaleMode',
         value: function setScaleMode(scaleMode) {
             var gl = this._context;
 
@@ -21127,6 +21252,22 @@ var GLTexture = function () {
         /**
          * @public
          * @chainable
+         * @returns {GLTexture}
+         */
+
+    }, {
+        key: 'generateMipmap',
+        value: function generateMipmap() {
+            var gl = this._context;
+
+            gl.generateMipmap(gl.TEXTURE_2D);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
          * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
          * @param {Number} [width=getMediaWidth(source)]
          * @param {Number} [height=getMediaHeight(source)]
@@ -21141,12 +21282,12 @@ var GLTexture = function () {
 
             var gl = this._context;
 
-            if (this._size.width !== width || this._size.height !== height) {
+            if (!this._size.equals({ width: width, height: height })) {
                 this._size.set(width, height);
 
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+                gl.texImage2D(gl.TEXTURE_2D, 0, this._format, this._format, this._type, source);
             } else {
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this._format, this._type, source);
             }
 
             return this;
@@ -21166,50 +21307,13 @@ var GLTexture = function () {
         value: function setDataSource(source, width, height) {
             var gl = this._context;
 
-            if (this._size.width !== width || this._size.height !== height) {
+            if (!this._size.equals({ width: width, height: height })) {
                 this._size.set(width, height);
 
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+                gl.texImage2D(gl.TEXTURE_2D, 0, this._format, width, height, 0, this._format, this._type, source);
             } else {
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, source);
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, this._format, this._type, source);
             }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} [unit]
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'bind',
-        value: function bind(unit) {
-            var gl = this._context;
-
-            if (unit !== undefined) {
-                gl.activeTexture(gl.TEXTURE0 + unit);
-            }
-
-            gl.bindTexture(gl.TEXTURE_2D, this._texture);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {GLTexture}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            var gl = this._context;
-
-            gl.bindTexture(gl.TEXTURE_2D, null);
 
             return this;
         }
@@ -21230,25 +21334,8 @@ var GLTexture = function () {
 
             this._context = null;
             this._texture = null;
-        }
-    }, {
-        key: 'bound',
-        get: function get() {
-            var gl = this._context;
-
-            return this._texture === gl.getParameter(gl.TEXTURE_BINDING_2D);
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {WebGLTexture}
-         */
-
-    }, {
-        key: 'texture',
-        get: function get() {
-            return this._texture;
+            this._format = null;
+            this._type = null;
         }
     }]);
 
@@ -21840,7 +21927,7 @@ var Framebuffer = function () {
         /**
          * @public
          * @chainable
-         * @param {GLTexture} texture
+         * @param {WebGLTexture} texture
          * @returns {Framebuffer}
          */
 
@@ -21849,7 +21936,7 @@ var Framebuffer = function () {
         value: function attachTexture(texture) {
             var gl = this._context;
 
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
 
             return this;
         }

@@ -64,13 +64,13 @@ export default class Framebuffer {
     /**
      * @public
      * @chainable
-     * @param {GLTexture} texture
+     * @param {WebGLTexture} texture
      * @returns {Framebuffer}
      */
     attachTexture(texture) {
         const gl = this._context;
 
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture.texture, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
 
         return this;
     }

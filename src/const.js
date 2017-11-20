@@ -80,7 +80,6 @@ export const
      * @property {Number} WRAP_MODE
      * @property {Number} PREMULTIPLY_ALPHA
      * @property {Number} SOURCE
-     * @property {Number} SIZE
      */
     TEXTURE_FLAGS = {
         NONE: 0,

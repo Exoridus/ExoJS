@@ -16,7 +16,7 @@ window.app.start(new Exo.Scene({
                 background: 'image/uv.png',
                 bunny: 'image/bunny.png',
             }, {
-                scaleMode: Exo.SCALE_MODE.NEAREST
+                scaleMode: Exo.SCALE_MODE.NEAREST,
             })
             .load(() => this.app.trigger('scene:start'));
     },
@@ -25,8 +25,29 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const app = this.app,
-            canvas = app.canvas;
+        const canvas = this.app.canvas;
+
+        /**
+         * @private
+         * @member {Sprite}
+         */
+        this._background = new Exo.Sprite(resources.get('texture', 'background'));
+        this._background.setPosition(canvas.width / 2, canvas.height / 2);
+        this._background.setOrigin(0.5, 0.5);
+
+        /**
+         * @type {Sprite}
+         */
+        this._leftBunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+        this._leftBunny.setOrigin(0.5, 0.5);
+        this._leftBunny.setScale(5);
+
+        /**
+         * @type {Sprite}
+         */
+        this._rightBunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+        this._rightBunny.setOrigin(0.5, 0.5);
+        this._rightBunny.setScale(5);
 
         /**
          * @private
@@ -42,49 +63,42 @@ window.app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Number}
+         * @type {Number}
          */
-        this._blendModeIndex = 0;
+        this._ticker = 0;
 
-        /**
-         * @private
-         * @member {Sprite}
-         */
-        this._background = new Exo.Sprite(resources.get('texture', 'background'));
-        this._background.setOrigin(0.5, 0.5);
-        this._background.setPosition(canvas.width / 2, canvas.height / 2);
+        this.app.on('pointer:down', this.updateBlendMode, this);
 
-        /**
-         * @type {Sprite}
-         */
-        this._bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
-        this._bunny.setOrigin(0.5, 0.5);
-        this._bunny.setScale(5);
-        this._bunny.setPosition(canvas.width / 2, canvas.height / 2);
-        this._bunny.setBlendMode(this._blendModes[this._blendModeIndex]);
+        this.updateBlendMode();
+    },
 
-        this.app.on('pointer:move', (pointer) => {
-            this._bunny.setPosition(pointer.x, pointer.y);
-        });
+    /**
+     * @private
+     */
+    updateBlendMode() {
+        const blendModes = this._blendModes;
 
-        this.app.on('pointer:down', () => {
-            this._blendModeIndex += 1;
-            this._blendModeIndex %= this._blendModes.length;
-
-            this._bunny.setBlendMode(this._blendModes[this._blendModeIndex]);
-        });
+        this._leftBunny.setBlendMode(blendModes[(blendModes.indexOf(this._leftBunny.blendMode) + 1) % blendModes.length]);
+        this._rightBunny.setBlendMode(blendModes[(blendModes.indexOf(this._rightBunny.blendMode) + 1) % blendModes.length]);
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        this._bunny.rotate(delta.seconds * 100);
+        const canvas = this.app.canvas,
+            offset = (Math.cos(this._ticker * 3) * 0.5 + 0.5) * (canvas.width * 0.25);
+
+        this._leftBunny.setPosition((canvas.width / 2) - offset, canvas.height / 2);
+        this._rightBunny.setPosition((canvas.width / 2) + offset, canvas.height / 2);
+
+        this._ticker += delta.seconds;
 
         this.app.displayManager
             .clear()
             .draw(this._background)
-            .draw(this._bunny)
+            .draw(this._leftBunny)
+            .draw(this._rightBunny)
             .display();
     },
 
@@ -95,7 +109,15 @@ window.app.start(new Exo.Scene({
         this._background.destroy();
         this._background = null;
 
-        this._bunny.destroy();
-        this._bunny = null;
+        this._leftBunny.destroy();
+        this._leftBunny = null;
+
+        this._rightBunny.destroy();
+        this._rightBunny = null;
+
+        this._blendModes.length = 0;
+        this._blendModes = null;
+
+        this._ticker = null;
     },
 }));

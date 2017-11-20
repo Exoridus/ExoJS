@@ -2,32 +2,26 @@
 A lightweight, flexibile and powerful game engine.
 
 ### Features ###
-
-**Core Features**
-* WebGL rendering
-* Web Audio API for playback and analysis
-* Advanced input management including gamepads
+* Image, Video and Text rendering using WebGL
+* Audio playback and analysis using WebAudio API
+* Database to store data offline using IndexedDB
 * Powerful Resource Loader and Converter
-* IndexedDB to store assets and data offline
-* Customizable Gamepad Mapping
-* Text and Video rendering
-* Camera Handling
-* RenderTarget and RenderTexture
-* Font Loading
-* Blendmodes
-
-**Extras**
+* Pointer Events and Multi-Touch Support
+* Gamepad support with customizable Mappings
+* Camera Handling with multiple Views
+* Render to Texture
+* Blendmode Support
+* Seedable Random Number Generator
 * Dynamic Particle System
-* Random Number Generator with Seeds
 * Quadtree implementation
+* Collision Detection **(WIP)**
 
-### WIP / Planned ###
-* SAT Collision Detection/Response
-* Primitive rendering with Shapes
+### Coming soon ###
+* Primitive rendering
+* Touch Gestures
+* Input Sequence
+* Audio Sprites
+* Audio Effects
 * Filters
 * Masking
-* 9-Sclice integration
-* Pointer / Multi-Touch support
-* Premultiplied alpha support
 * Mesh rendering
-* Tilemap with Autotiles

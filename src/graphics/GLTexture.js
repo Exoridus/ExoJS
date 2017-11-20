@@ -9,8 +9,18 @@ export default class GLTexture {
     /**
      * @constructor
      * @param {WebGLRenderingContext} context
+     * @param {Object} [options]
+     * @param {Number} [options.format=context.RGBA]
+     * @param {Number} [options.type=context.UNSIGNED_BYTE]
+     * @param {Number} [options.width=-1]
+     * @param {Number} [options.height=-1]
      */
-    constructor(context) {
+    constructor(context, {
+        format = context.RGBA,
+        type = context.UNSIGNED_BYTE,
+        width = -1,
+        height = -1,
+    } = {}) {
         if (!context) {
             throw new Error('No Rendering Context was provided.');
         }
@@ -31,27 +41,50 @@ export default class GLTexture {
          * @private
          * @member {Size}
          */
-        this._size = new Size(-1, -1);
+        this._format = format;
+
+        /**
+         * @private
+         * @member {Size}
+         */
+        this._type = type;
+
+        /**
+         * @private
+         * @member {Size}
+         */
+        this._size = new Size(width, height);
     }
 
     /**
      * @public
-     * @readonly
-     * @member {Boolean}
+     * @chainable
+     * @param {Number} [unit]
+     * @returns {GLTexture}
      */
-    get bound() {
+    bind(unit) {
         const gl = this._context;
 
-        return (this._texture === gl.getParameter(gl.TEXTURE_BINDING_2D));
+        if (unit !== undefined) {
+            gl.activeTexture(gl.TEXTURE0 + unit);
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+
+        return this;
     }
 
     /**
      * @public
-     * @readonly
-     * @member {WebGLTexture}
+     * @chainable
+     * @returns {GLTexture}
      */
-    get texture() {
-        return this._texture;
+    unbind() {
+        const gl = this._context;
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return this;
     }
 
     /**
@@ -101,6 +134,19 @@ export default class GLTexture {
     /**
      * @public
      * @chainable
+     * @returns {GLTexture}
+     */
+    generateMipmap() {
+        const gl = this._context;
+
+        gl.generateMipmap(gl.TEXTURE_2D);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} source
      * @param {Number} [width=getMediaWidth(source)]
      * @param {Number} [height=getMediaHeight(source)]
@@ -109,12 +155,12 @@ export default class GLTexture {
     setTextureSource(source, width = getMediaWidth(source), height = getMediaHeight(source)) {
         const gl = this._context;
 
-        if (this._size.width !== width || this._size.height !== height) {
+        if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
 
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            gl.texImage2D(gl.TEXTURE_2D, 0, this._format, this._format, this._type, source);
         } else {
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this._format, this._type, source);
         }
 
         return this;
@@ -131,44 +177,13 @@ export default class GLTexture {
     setDataSource(source, width, height) {
         const gl = this._context;
 
-        if (this._size.width !== width || this._size.height !== height) {
+        if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
 
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            gl.texImage2D(gl.TEXTURE_2D, 0, this._format, width, height, 0, this._format, this._type, source);
         } else {
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, this._format, this._type, source);
         }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} [unit]
-     * @returns {GLTexture}
-     */
-    bind(unit) {
-        const gl = this._context;
-
-        if (unit !== undefined) {
-            gl.activeTexture(gl.TEXTURE0 + unit);
-        }
-
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {GLTexture}
-     */
-    unbind() {
-        const gl = this._context;
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
 
         return this;
     }
@@ -186,5 +201,7 @@ export default class GLTexture {
 
         this._context = null;
         this._texture = null;
+        this._format = null;
+        this._type = null;
     }
 }

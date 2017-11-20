@@ -1,5 +1,5 @@
 import settings from '../settings';
-import { addFlag, hasFlag, removeFlag } from '../utils';
+import { addFlag, hasFlag, isPowerOfTwo, removeFlag } from '../utils';
 import Size from '../math/Size';
 import GLTexture from './GLTexture';
 import { TEXTURE_FLAGS } from '../const';
@@ -16,11 +16,13 @@ export default class Texture {
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
+     * @param {Boolean} [options.generateMipMap=settings.GENERATE_MIPMAP]
      */
     constructor(source, {
         scaleMode = settings.SCALE_MODE,
         wrapMode = settings.WRAP_MODE,
         premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
+        generateMipMap = settings.GENERATE_MIPMAP,
     } = {}) {
 
         /**
@@ -61,6 +63,12 @@ export default class Texture {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._generateMipMap = generateMipMap;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._flags = (TEXTURE_FLAGS.SCALE_MODE | TEXTURE_FLAGS.WRAP_MODE | TEXTURE_FLAGS.PREMULTIPLY_ALPHA);
@@ -68,15 +76,6 @@ export default class Texture {
         if (source) {
             this.setSource(source);
         }
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {?GLTexture}
-     */
-    get glTexture() {
-        return this._texture;
     }
 
     /**
@@ -89,6 +88,42 @@ export default class Texture {
 
     set source(source) {
         this.setSource(source);
+    }
+
+    /**
+     * @public
+     * @member {Size}
+     */
+    get size() {
+        return this._size;
+    }
+
+    set size(size) {
+        this._size.copy(size);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get width() {
+        return this._size.width;
+    }
+
+    set width(width) {
+        this._size.width = width;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get height() {
+        return this._size.height;
+    }
+
+    set height(height) {
+        this._size.height = height;
     }
 
     /**
@@ -129,38 +164,24 @@ export default class Texture {
 
     /**
      * @public
-     * @member {Size}
+     * @member {Boolean}
      */
-    get size() {
-        return this._size;
+    get generateMipMap() {
+        return this._generateMipMap;
     }
 
-    set size(size) {
-        this._size.copy(size);
+    set generateMipMap(generateMipMap) {
+        this.setGenerateMipmap(generateMipMap);
     }
 
     /**
      * @public
-     * @member {Number}
+     * @readonly
+     * @member {Boolean}
      */
-    get width() {
-        return this._size.width;
-    }
-
-    set width(width) {
-        this._size.width = width;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get height() {
-        return this._size.height;
-    }
-
-    set height(height) {
-        this._size.height = height;
+    get powerOfTwo() {
+        return isPowerOfTwo(this.width)
+            && isPowerOfTwo(this.height);
     }
 
     /**
@@ -220,6 +241,21 @@ export default class Texture {
     /**
      * @public
      * @chainable
+     * @param {Boolean} generateMipMap
+     * @returns {Texture}
+     */
+    setGenerateMipmap(generateMipMap) {
+        if (this._generateMipMap !== generateMipMap) {
+            this._generateMipMap = generateMipMap;
+            this.updateSource();
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
      * @returns {Texture}
      */
@@ -240,10 +276,23 @@ export default class Texture {
     updateSource() {
         this._flags = addFlag(TEXTURE_FLAGS.SOURCE, this._flags);
 
-        this._size.set(
+        this.resize(
             (this._source && this._source.naturalWidth || this._source.videoWidth || this._source.width) || 0,
             (this._source && this._source.naturalHeight || this._source.videoHeight || this._source.height) || 0
         );
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {Texture}
+     */
+    resize(width, height) {
+        this._size.set(width, height);
 
         return this;
     }
@@ -273,6 +322,11 @@ export default class Texture {
 
             if (hasFlag(TEXTURE_FLAGS.SOURCE, this._flags) && this._source) {
                 this._texture.setTextureSource(this._source);
+
+                if (this._generateMipMap && this.powerOfTwo) {
+                    this._texture.generateMipmap();
+                }
+
                 this._flags = removeFlag(TEXTURE_FLAGS.SOURCE, this._flags);
             }
         }
@@ -327,11 +381,12 @@ export default class Texture {
         this._size.destroy();
         this._size = null;
 
-        this._flags = null;
+        this._source = null;
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
-        this._source = null;
+        this._generateMipmap = null;
+        this._flags = null;
         this._displayManager = null;
     }
 }
