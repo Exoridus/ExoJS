@@ -568,38 +568,22 @@ export const
     },
 
     /**
-     * @typedef {Object} BlendMode
-     * @property {Number} sFactor
-     * @property {Number} dFactor
-     */
-
-    /**
      * @public
      * @constant
      * @name BLEND_MODE
-     * @type {Object<String, BlendMode>}
-     * @property {BlendMode} NORMAL
-     * @property {BlendMode} ADD
-     * @property {BlendMode} MULTIPLY
-     * @property {BlendMode} SCREEN
+     * @type {Object<String, Number>}
+     * @property {Number} NORMAL
+     * @property {Number} ADD
+     * @property {Number} SUBTRACT
+     * @property {Number} MULTIPLY
+     * @property {Number} SCREEN
      */
     BLEND_MODE = {
-        NORMAL: {
-            sFactor: 0x0001,
-            dFactor: 0x0303,
-        },
-        ADD: {
-            sFactor: 0x0001,
-            dFactor: 0x0304,
-        },
-        MULTIPLY: {
-            sFactor: 0x0306,
-            dFactor: 0x0303,
-        },
-        SCREEN: {
-            sFactor: 0x0001,
-            dFactor: 0x0301,
-        },
+        NORMAL: 0,
+        ADD: 1,
+        SUBTRACT: 2,
+        MULTIPLY: 3,
+        SCREEN: 4,
     },
 
     /**

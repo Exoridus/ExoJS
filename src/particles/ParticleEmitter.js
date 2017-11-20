@@ -340,6 +340,7 @@ export default class ParticleEmitter extends Renderable {
             const renderer = displayManager.getRenderer('particle');
 
             displayManager.setRenderer(renderer);
+
             renderer.render(this);
         }
 

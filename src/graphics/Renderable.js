@@ -1,6 +1,7 @@
 import SceneNode from '../core/SceneNode';
 import Color from '../core/Color';
 import settings from '../settings';
+import { BLEND_MODE } from '../const';
 
 /**
  * @class Renderable
@@ -24,7 +25,7 @@ export default class Renderable extends SceneNode {
          * @private
          * @member {Number}
          */
-        this._blendMode = settings.BLEND_MODE;
+        this._blendMode = BLEND_MODE.NORMAL;
     }
 
     /**
@@ -36,19 +37,43 @@ export default class Renderable extends SceneNode {
     }
 
     set tint(tint) {
-        this._tint.copy(tint);
+        this.setTint(tint);
     }
 
     /**
      * @public
-     * @member {Object}
+     * @member {Number}
      */
     get blendMode() {
         return this._blendMode;
     }
 
     set blendMode(blendMode) {
+        this.setBlendMode(blendMode);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Color} color
+     * @returns {Renderable}
+     */
+    setTint(color) {
+        this._tint.copy(color);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} blendMode
+     * @returns {Renderable}
+     */
+    setBlendMode(blendMode) {
         this._blendMode = blendMode;
+
+        return this;
     }
 
     /**

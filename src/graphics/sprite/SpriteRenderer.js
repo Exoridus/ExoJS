@@ -94,6 +94,12 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
+         * @member {?Number}
+         */
+        this._currentBlendMode = null;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._viewId = -1;
@@ -161,6 +167,7 @@ export default class SpriteRenderer extends Renderer {
             this._displayManager.setShader(null);
 
             this._currentTexture = null;
+            this._currentBlendMode = null;
             this._viewId = -1;
         }
 
@@ -174,11 +181,13 @@ export default class SpriteRenderer extends Renderer {
         const float32View = this._float32View,
             uint32View = this._uint32View,
             texture = sprite.texture,
+            blendMode = sprite.blendMode,
             positionData = sprite.positionData,
             texCoordData = sprite.texCoordData,
             batchFull = (this._batchIndex >= this._batchSize),
             textureChanged = (texture !== this._currentTexture),
-            flush = (textureChanged || batchFull),
+            blendModeChanged = (blendMode !== this._currentBlendMode),
+            flush = (textureChanged || blendModeChanged || batchFull),
             index = flush ? 0 : (this._batchIndex * this._attributeCount);
 
         if (flush) {
@@ -187,6 +196,11 @@ export default class SpriteRenderer extends Renderer {
             if (textureChanged) {
                 this._currentTexture = texture;
                 this._displayManager.setTexture(texture);
+            }
+
+            if (blendModeChanged) {
+                this._currentBlendMode = blendMode;
+                this._displayManager.setBlendMode(blendMode);
             }
         }
 

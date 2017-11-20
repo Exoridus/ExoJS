@@ -89,10 +89,16 @@ window.app.start(new Exo.Scene({
         displayManager.clear();
 
         renderTarget.setView(this._camera);
-        displayManager.renderBatch(this._sprite);
+
+        displayManager
+            .draw(this._sprite)
+            .display();
 
         renderTarget.setView(null);
-        displayManager.renderBatch(this._info);
+
+        displayManager
+            .draw(this._info)
+            .display();
     },
 
     /**

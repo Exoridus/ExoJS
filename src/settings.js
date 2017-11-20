@@ -36,7 +36,6 @@ export default {
         videoVolume: 1,
         canvas: null,
         canvasParent: null,
-        blendMode: BLEND_MODE.NORMAL,
         clearColor: Color.Black,
         clearBeforeRender: true,
         contextOptions: {

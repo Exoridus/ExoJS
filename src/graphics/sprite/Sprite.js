@@ -236,6 +236,7 @@ export default class Sprite extends Container {
             const renderer = displayManager.getRenderer('sprite');
 
             displayManager.setRenderer(renderer);
+
             renderer.render(this);
 
             for (const child of this.children) {

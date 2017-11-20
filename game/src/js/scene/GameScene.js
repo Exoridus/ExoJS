@@ -64,10 +64,11 @@ export default class GameScene extends Scene {
             this._player.update(delta);
             this._worldMap.update(delta);
 
-            this.app.displayManager.renderBatch([
-                this._worldMap,
-                this._player
-            ]);
+            this.app.displayManager
+                .clear()
+                .draw(this._worldMap)
+                .draw(this._player)
+                .display();
         }
 
         return this;

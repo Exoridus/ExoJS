@@ -93,7 +93,9 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const displayManager = this.app.displayManager.begin();
+        const displayManager = this.app.displayManager;
+
+        displayManager.clear();
 
         for (const bunny of this._bunnies) {
             bunny._speedY += 0.75;
@@ -119,10 +121,10 @@ window.app.start(new Exo.Scene({
                 bunny.y = 0;
             }
 
-            displayManager.render(bunny);
+            displayManager.draw(bunny);
         }
 
-        displayManager.end();
+        displayManager.display();
     },
 
     /**

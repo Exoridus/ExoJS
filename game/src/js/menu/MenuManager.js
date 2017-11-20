@@ -239,7 +239,7 @@ export default class MenuManager {
      */
     render(displayManager) {
         if (this._currentMenu) {
-            displayManager.render(this._currentMenu);
+            this._currentMenu.render(displayManager);
         }
 
         return this;

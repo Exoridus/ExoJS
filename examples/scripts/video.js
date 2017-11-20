@@ -54,7 +54,10 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        this.app.displayManager.renderBatch(this._video);
+        this.app.displayManager
+            .clear()
+            .draw(this._video)
+            .display();
     },
 
     /**
