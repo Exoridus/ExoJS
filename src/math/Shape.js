@@ -107,15 +107,6 @@ export default class Shape {
 
     /**
      * @public
-     * @param {Rectangle|Circle|Polygon} shape
-     * @returns {Boolean}
-     */
-    equals(shape) {
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
      * @returns {Rectangle}
      */
     getBounds() {

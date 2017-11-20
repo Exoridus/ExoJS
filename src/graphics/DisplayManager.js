@@ -4,13 +4,7 @@ import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
-import View from './View';
-import Rectangle from '../math/Rectangle';
-import Vector from '../math/Vector';
-import GLProgram from './webgl/GLProgram';
-import GLBuffer from './webgl/GLBuffer';
-import GLTexture from './webgl/GLTexture';
-import GLFramebuffer from './webgl/GLFramebuffer';
+import GLTexture from './GLTexture';
 
 /**
  * @class DisplayManager
@@ -77,10 +71,7 @@ export default class DisplayManager {
          * @private
          * @member {Map<String, Renderer>}
          */
-        this._renderers = new Map([
-            ['sprite', new SpriteRenderer()],
-            ['particle', new ParticleRenderer()],
-        ]);
+        this._renderers = new Map();
 
         /**
          * @private
@@ -108,27 +99,15 @@ export default class DisplayManager {
 
         /**
          * @private
-         * @member {?Texture}
-         */
-        this._texture = null;
-
-        /**
-         * @private
-         * @member {Map<Number, Texture>}
-         */
-        this._textures = new Map();
-
-        /**
-         * @private
          * @member {Number}
          */
         this._textureUnit = 0;
 
         /**
          * @private
-         * @member {?View}
+         * @member {?Texture}
          */
-        this._view = null;
+        this._texture = null;
 
         /**
          * @private
@@ -152,19 +131,15 @@ export default class DisplayManager {
          * @private
          * @member {RenderTarget}
          */
-        this._defaultRenderTarget = new RenderTarget(width, height, true);
-
-        /**
-         * @private
-         * @member {View}
-         */
-        this._defaultView = new View(0, 0, width, height);
+        this._rootRenderTarget = new RenderTarget(width, height, true);
 
         this._setupContext();
         this._addEvents();
 
-        this.setRenderTarget(this._defaultRenderTarget);
-        this.setView(this._defaultView);
+        this.addRenderer('sprite', new SpriteRenderer());
+        this.addRenderer('particle', new ParticleRenderer());
+
+        this.setRenderTarget(this._rootRenderTarget);
         this.setBlendMode(blendMode);
         this.setClearColor(clearColor);
 
@@ -232,7 +207,7 @@ export default class DisplayManager {
      * @member {?Texture}
      */
     get texture() {
-        return this._textures.get(this._textureUnit) || null;
+        return this._texture;
     }
 
     set texture(texture) {
@@ -249,18 +224,6 @@ export default class DisplayManager {
 
     set textureUnit(textureUnit) {
         this.setTextureUnit(textureUnit);
-    }
-
-    /**
-     * @public
-     * @member {View}
-     */
-    get view() {
-        return this._view;
-    }
-
-    set view(view) {
-        this.setView(view);
     }
 
     /**
@@ -290,21 +253,19 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {?RenderTarget} renderTarget
+     * @param {?RenderTarget|?RenderTexture} renderTarget
      * @returns {DisplayManager}
      */
-    setRenderTarget(renderTarget) {
+    setRenderTarget(target) {
+        const renderTarget = target || this._rootRenderTarget;
+
         if (this._renderTarget !== renderTarget) {
             if (this._renderTarget) {
                 this._renderTarget.unbind();
+                this._renderTarget = null;
             }
 
-            this._renderTarget = renderTarget || null;
-
-            if (this._renderTarget) {
-                this._renderTarget.bind(this);
-                this._updateViewport();
-            }
+            this._renderTarget = renderTarget && renderTarget.bind(this);
         }
 
         return this;
@@ -317,12 +278,15 @@ export default class DisplayManager {
      * @returns {DisplayManager}
      */
     setRenderer(renderer) {
-        if (this._renderer !== renderer) {
+        const newRenderer = renderer || null;
+
+        if (this._renderer !== newRenderer) {
             if (this._renderer) {
                 this._renderer.unbind();
+                this._renderer = null;
             }
 
-            this._renderer = renderer ? renderer.bind(this) : null;
+            this._renderer = newRenderer && newRenderer.bind(this);
         }
 
         return this;
@@ -331,16 +295,45 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {Shader} shader
+     * @param {?Shader} shader
      * @returns {DisplayManager}
      */
     setShader(shader) {
-        if (this._shader !== shader) {
+        const newShader = shader || null;
+
+        if (this._shader !== newShader) {
             if (this._shader) {
                 this._shader.unbind();
+                this._shader = null;
             }
 
-            this._shader = shader ? shader.bind(this) : null;
+            this._shader = newShader && newShader.bind(this);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {?Texture|?RenderTexture} texture
+     * @param {Number} [unit]
+     * @returns {DisplayManager}
+     */
+    setTexture(texture, unit) {
+        const newTexture = texture || null;
+
+        if (unit !== undefined) {
+            this.setTextureUnit(unit);
+        }
+
+        if (this._texture !== newTexture) {
+            if (this._texture) {
+                this._texture.unbind();
+                this._texture = null;
+            }
+
+            this._texture = newTexture && newTexture.bind(this);
         }
 
         return this;
@@ -359,30 +352,6 @@ export default class DisplayManager {
             this._blendMode = blendMode;
 
             gl.blendFunc(blendMode.sFactor, blendMode.dFactor);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {?Texture} texture
-     * @param {Number} [unit]
-     * @returns {DisplayManager}
-     */
-    setTexture(texture, unit) {
-        const currentTexture = this.texture,
-            newTexture = texture || null;
-
-        if (currentTexture !== newTexture) {
-            if (newTexture) {
-                newTexture.bind(this, unit);
-                this._textures.set(this._textureUnit, newTexture);
-            } else if (currentTexture) {
-                currentTexture.unbind();
-                this._textures.delete(this._textureUnit);
-            }
         }
 
         return this;
@@ -411,24 +380,15 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {View} view
-     * @returns {DisplayManager}
-     */
-    setView(view) {
-        this._view = view;
-        this._updateViewport();
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {Color} color
      * @returns {DisplayManager}
      */
     setClearColor(color) {
-        if (!this._clearColor.equals(color, true)) {
+        if (!this._clearColor.equals({
+                r: color.r,
+                g: color.g,
+                b: color.b,
+            })) {
             const gl = this._context;
 
             this._clearColor.copy(color);
@@ -499,11 +459,7 @@ export default class DisplayManager {
         this._canvas.width = width;
         this._canvas.height = height;
 
-        this._defaultRenderTarget.resize(width, height);
-
-        if (this._renderTarget === this._defaultRenderTarget) {
-            this._updateViewport();
-        }
+        this._rootRenderTarget.resize(width, height);
 
         return this;
     }
@@ -567,14 +523,34 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {Number} count
-     * @param {ArrayBufferView} data
+     * @param {Renderable[]|Renderable} renderables
      * @returns {DisplayManager}
      */
-    drawElements(count, data) {
+    renderBatch(renderables) {
+        if (!Array.isArray(renderables)) {
+            renderables = [renderables];
+        }
+
+        this.begin();
+
+        for (const renderable of renderables) {
+            this.render(renderable);
+        }
+
+        this.end();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} count
+     * @returns {DisplayManager}
+     */
+    drawElements(count) {
         const gl = this._context;
 
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
         gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
 
         return this;
@@ -591,42 +567,6 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Vector} point
-     * @param {View} [view=this._view]
-     * @param {Vector} [result=new Vector()]
-     * @returns {Vector}
-     */
-    mapPixelToCoords(point, view = this._view, result = new Vector()) {
-        const viewport = view.viewport;
-
-        result.set(
-            -1 + (2 * (point.x - viewport.left) / viewport.width),
-             1 - (2 * (point.y - viewport.top) / viewport.height)
-        );
-
-        return result.transform(view.getInverseTransform());
-    }
-
-    /**
-     * @public
-     * @param {Vector} point
-     * @param {View} [view=this._view]
-     * @param {Vector} [result=new Vector()]
-     * @returns {Vector}
-     */
-    mapCoordsToPixel(point, view = this._view, result = new Vector()) {
-        const viewport = view.viewport;
-
-        point.transform(view.getTransform(), result);
-
-        return result.set(
-            ((( result.x + 1) / 2 * viewport.width) + viewport.left) | 0,
-            (((-result.y + 1) / 2 * viewport.height) + viewport.top) | 0
-        );
-    }
-
-    /**
-     * @public
      */
     destroy() {
         this._removeEvents();
@@ -634,7 +574,6 @@ export default class DisplayManager {
         this.setRenderTarget(null);
         this.setRenderer(null);
         this.setShader(null);
-        this.setView(null);
         this.setTexture(null);
 
         for (const renderer of this._renderers.values()) {
@@ -647,11 +586,8 @@ export default class DisplayManager {
         this._clearColor.destroy();
         this._clearColor = null;
 
-        this._defaultRenderTarget.destroy();
-        this._defaultRenderTarget = null;
-
-        this._defaultView.destroy();
-        this._defaultView = null;
+        this._rootRenderTarget.destroy();
+        this._rootRenderTarget = null;
 
         this._canvas = null;
         this._context = null;
@@ -662,7 +598,6 @@ export default class DisplayManager {
         this._blendMode = null;
         this._texture = null;
         this._textureUnit = null;
-        this._view = null;
         this._clearBeforeRender = null;
         this._isRendering = null;
     }
@@ -700,28 +635,6 @@ export default class DisplayManager {
         gl.disable(gl.CULL_FACE);
 
         gl.colorMask(true, true, true, false);
-    }
-
-    /**
-     * @private
-     * @chainable
-     * @returns {DisplayManager}
-     */
-    _updateViewport() {
-        if (this._renderTarget && this._view) {
-            const gl = this._context,
-                size = this._renderTarget.size,
-                viewport = this._view.viewport;
-
-            gl.viewport(
-                Math.round(size.width * viewport.x),
-                Math.round(size.height * viewport.y),
-                Math.round(size.width * viewport.width),
-                Math.round(size.height * viewport.height)
-            );
-        }
-
-        return this;
     }
 
     /**

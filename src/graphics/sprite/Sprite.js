@@ -9,14 +9,14 @@ export default class Sprite extends Container {
 
     /**
      * @constructor
-     * @param {?Texture} texture
+     * @param {?Texture|?RenderTexture} texture
      */
     constructor(texture) {
         super();
 
         /**
          * @private
-         * @member {?Texture}
+         * @member {?Texture|?RenderTexture}
          */
         this._texture = null;
 
@@ -67,7 +67,7 @@ export default class Sprite extends Container {
 
     /**
      * @public
-     * @member {Texture}
+     * @member {?Texture|?RenderTexture}
      */
     get texture() {
         return this._texture;
@@ -166,7 +166,7 @@ export default class Sprite extends Container {
     /**
      * @public
      * @chainable
-     * @param {Texture} texture
+     * @param {?Texture|?RenderTexture} texture
      * @returns {Sprite}
      */
     setTexture(texture) {

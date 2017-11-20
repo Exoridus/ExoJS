@@ -94,36 +94,6 @@ export default class Matrix {
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get array() {
-        const array = this._array || (this._array = new Float32Array(9));
-
-        array[0] = this.a; array[1] = this.c; array[2] = this.e;
-        array[3] = this.b; array[4] = this.d; array[5] = this.f;
-        array[6] = this.x; array[7] = this.y; array[8] = this.z;
-
-        return array;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Float32Array}
-     */
-    get transposedArray() {
-        const array = this._array || (this._array = new Float32Array(9));
-
-        array[0] = this.a; array[1] = this.b; array[2] = this.x;
-        array[3] = this.c; array[4] = this.d; array[5] = this.y;
-        array[6] = this.e; array[7] = this.f; array[8] = this.z;
-
-        return array;
-    }
-
-    /**
      * | a | b | x |
      * | c | d | y |
      * | e | f | z |
@@ -182,16 +152,37 @@ export default class Matrix {
     }
 
     /**
+     * | a | b | x |
+     * | c | d | y |
+     * | e | f | z |
+     *
      * @public
-     * @param {Matrix} matrix
+     * @param {Matrix|Object} matrix
+     * @param {Number} [matrix.a]
+     * @param {Number} [matrix.b]
+     * @param {Number} [matrix.x]
+     * @param {Number} [matrix.c]
+     * @param {Number} [matrix.d]
+     * @param {Number} [matrix.y]
+     * @param {Number} [matrix.e]
+     * @param {Number} [matrix.f]
+     * @param {Number} [matrix.z]
      * @returns {Boolean}
      */
-    equals(matrix) {
-        return (this === matrix) || (
-            (this.a === matrix.a) && (this.c * matrix.c) && (this.e * matrix.e) &&
-            (this.b === matrix.b) && (this.d * matrix.d) && (this.f * matrix.f) &&
-            (this.x === matrix.x) && (this.y * matrix.y) && (this.z * matrix.z)
-        );
+    equals({
+        a, b, x,
+        c, d, y,
+        e, f, z
+    } = {}) {
+        return (a === undefined || this.a === a)
+            && (b === undefined || this.b === b)
+            && (x === undefined || this.x === x)
+            && (c === undefined || this.c === c)
+            && (d === undefined || this.d === d)
+            && (y === undefined || this.y === y)
+            && (e === undefined || this.e === e)
+            && (f === undefined || this.f === f)
+            && (z === undefined || this.z === z);
     }
 
     /**
@@ -301,33 +292,23 @@ export default class Matrix {
 
     /**
      * @public
-     * @chainable
-     * @param {Vector} point
-     * @param {Vector} [result=point]
-     * @returns {Vector}
-     */
-    transformPoint(point, result = point) {
-        return point.transform(this, result);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Rectangle} rect
-     * @param {Rectangle} [result=rect]
-     * @returns {Rectangle}
-     */
-    transformRect(rect, result = rect) {
-        return rect.transform(this, result);
-    }
-
-    /**
-     * @public
      * @param {Boolean} [transpose=false]
      * @returns {Float32Array}
      */
     toArray(transpose = false) {
-        return transpose ? this.transposedArray : this.array;
+        const array = this._array || (this._array = new Float32Array(9));
+
+        if (transpose) {
+            array[0] = this.a; array[1] = this.b; array[2] = this.x;
+            array[3] = this.c; array[4] = this.d; array[5] = this.y;
+            array[6] = this.e; array[7] = this.f; array[8] = this.z;
+        } else {
+            array[0] = this.a; array[1] = this.c; array[2] = this.e;
+            array[3] = this.b; array[4] = this.d; array[5] = this.f;
+            array[6] = this.x; array[7] = this.y; array[8] = this.z;
+        }
+
+        return array;
     }
 
     /**

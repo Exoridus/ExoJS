@@ -1,16 +1,8 @@
 import settings from '../settings';
 import { addFlag, hasFlag, removeFlag } from '../utils';
 import Size from '../math/Size';
-import GLTexture from './webgl/GLTexture';
-
-const FLAGS = {
-    NONE: 0,
-    SCALE_MODE: 1 << 0,
-    WRAP_MODE: 1 << 1,
-    PREMULTIPLY_ALPHA: 1 << 2,
-    SOURCE: 1 << 3,
-    SIZE: 1 << 4,
-};
+import GLTexture from './GLTexture';
+import { TEXTURE_FLAGS } from '../const';
 
 /**
  * @class Texture
@@ -28,7 +20,7 @@ export default class Texture {
     constructor(source, {
         scaleMode = settings.SCALE_MODE,
         wrapMode = settings.WRAP_MODE,
-        premultiplyAlpha = settings.PREMULTIPLY_ALPHA
+        premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
     } = {}) {
 
         /**
@@ -45,47 +37,46 @@ export default class Texture {
 
         /**
          * @private
-         * @member {?DisplayManager}
-         */
-        this._displayManager = null;
-
-        /**
-         * @private
          * @member {?GLTexture}
          */
-        this._glTexture = null;
+        this._texture = null;
 
         /**
          * @private
          * @member {Number}
          */
-        this._scaleMode = null;
+        this._scaleMode = scaleMode;
 
         /**
          * @private
          * @member {Number}
          */
-        this._wrapMode = null;
+        this._wrapMode = wrapMode;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._premultiplyAlpha = null;
+        this._premultiplyAlpha = premultiplyAlpha;
 
         /**
          * @private
          * @member {Number}
          */
-        this._flags = FLAGS.NONE;
-
-        this.setScaleMode(scaleMode);
-        this.setWrapMode(wrapMode);
-        this.setPremultiplyAlpha(premultiplyAlpha);
+        this._flags = (TEXTURE_FLAGS.SCALE_MODE | TEXTURE_FLAGS.WRAP_MODE | TEXTURE_FLAGS.PREMULTIPLY_ALPHA);
 
         if (source) {
             this.setSource(source);
         }
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?GLTexture}
+     */
+    get glTexture() {
+        return this._texture;
     }
 
     /**
@@ -141,23 +132,11 @@ export default class Texture {
      * @member {Size}
      */
     get size() {
-        if (hasFlag(FLAGS.SIZE, this._flags)) {
-            const source = this._source;
-
-            this._size.set(
-                (source && (source.naturalWidth || source.videoWidth || source.width)) || 0,
-                (source && (source.naturalHeight || source.videoHeight || source.height)) || 0
-            );
-
-            this._flags = removeFlag(FLAGS.SIZE, this._flags);
-        }
-
         return this._size;
     }
 
     set size(size) {
         this._size.copy(size);
-        this._flags = removeFlag(FLAGS.SIZE, this._flags);
     }
 
     /**
@@ -165,7 +144,7 @@ export default class Texture {
      * @member {Number}
      */
     get width() {
-        return this.size.width;
+        return this._size.width;
     }
 
     set width(width) {
@@ -177,7 +156,7 @@ export default class Texture {
      * @member {Number}
      */
     get height() {
-        return this.size.height;
+        return this._size.height;
     }
 
     set height(height) {
@@ -190,7 +169,52 @@ export default class Texture {
      * @member {Boolean}
      */
     get bound() {
-        return this._displayManager && (this._displayManager.texture === this);
+        return !!this._displayManager && (this._displayManager.texture === this);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} scaleMode
+     * @returns {Texture}
+     */
+    setScaleMode(scaleMode) {
+        if (this._scaleMode !== scaleMode) {
+            this._scaleMode = scaleMode;
+            this._flags = addFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} wrapMode
+     * @returns {Texture}
+     */
+    setWrapMode(wrapMode) {
+        if (this._wrapMode !== wrapMode) {
+            this._wrapMode = wrapMode;
+            this._flags = addFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Boolean} premultiplyAlpha
+     * @returns {Texture}
+     */
+    setPremultiplyAlpha(premultiplyAlpha) {
+        if (this._premultiplyAlpha !== premultiplyAlpha) {
+            this._premultiplyAlpha = premultiplyAlpha;
+            this._flags = addFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+        }
+
+        return this;
     }
 
     /**
@@ -211,67 +235,15 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {Number} scaleMode
-     * @returns {Texture}
-     */
-    setScaleMode(scaleMode) {
-        if (this._scaleMode !== scaleMode) {
-            this._scaleMode = scaleMode;
-            this._flags = addFlag(FLAGS.SCALE_MODE, this._flags);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} wrapMode
-     * @returns {Texture}
-     */
-    setWrapMode(wrapMode) {
-        if (this._wrapMode !== wrapMode) {
-            this._wrapMode = wrapMode;
-            this._flags = addFlag(FLAGS.WRAP_MODE, this._flags);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Boolean} premultiplyAlpha
-     * @returns {Texture}
-     */
-    setPremultiplyAlpha(premultiplyAlpha) {
-        if (this._premultiplyAlpha !== premultiplyAlpha) {
-            this._premultiplyAlpha = premultiplyAlpha;
-            this._flags = addFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @returns {Texture}
      */
     updateSource() {
-        this._flags = addFlag(FLAGS.SOURCE, this._flags);
-        this.updateSize();
+        this._flags = addFlag(TEXTURE_FLAGS.SOURCE, this._flags);
 
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Texture}
-     */
-    updateSize() {
-        this._flags = addFlag(FLAGS.SIZE, this._flags);
+        this._size.set(
+            (this._source && this._source.naturalWidth || this._source.videoWidth || this._source.width) || 0,
+            (this._source && this._source.naturalHeight || this._source.videoHeight || this._source.height) || 0
+        );
 
         return this;
     }
@@ -282,26 +254,26 @@ export default class Texture {
      * @returns {Texture}
      */
     update() {
-        if (this._flags && this._glTexture) {
+        if (this._flags && this._texture) {
 
-            if (hasFlag(FLAGS.SCALE_MODE, this._flags)) {
-                this._glTexture.setScaleMode(this._scaleMode);
-                this._flags = removeFlag(FLAGS.SCALE_MODE, this._flags);
+            if (hasFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
+                this._texture.setScaleMode(this._scaleMode);
+                this._flags = removeFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
             }
 
-            if (hasFlag(FLAGS.WRAP_MODE, this._flags)) {
-                this._glTexture.setWrapMode(this._wrapMode);
-                this._flags = removeFlag(FLAGS.WRAP_MODE, this._flags);
+            if (hasFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
+                this._texture.setWrapMode(this._wrapMode);
+                this._flags = removeFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
             }
 
-            if (hasFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
-                this._glTexture.setPremultiplyAlpha(this._premultiplyAlpha);
-                this._flags = removeFlag(FLAGS.PREMULTIPLY_ALPHA, this._flags);
+            if (hasFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
+                this._texture.setPremultiplyAlpha(this._premultiplyAlpha);
+                this._flags = removeFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
             }
 
-            if (hasFlag(FLAGS.SOURCE, this._flags) && this._source) {
-                this._glTexture.setTextureSource(this._source);
-                this._flags = removeFlag(FLAGS.SOURCE, this._flags);
+            if (hasFlag(TEXTURE_FLAGS.SOURCE, this._flags) && this._source) {
+                this._texture.setTextureSource(this._source);
+                this._flags = removeFlag(TEXTURE_FLAGS.SOURCE, this._flags);
             }
         }
 
@@ -312,17 +284,16 @@ export default class Texture {
      * @public
      * @chainable
      * @param {DisplayManager} displayManager
-     * @param {Number}  [unit]
      * @returns {Texture}
      */
-    bind(displayManager, unit) {
-        if (!this._displayManager) {
+    bind(displayManager) {
+        if (!this._texture) {
+            this._texture = new GLTexture(displayManager.context);
             this._displayManager = displayManager;
-            this._glTexture = new GLTexture(displayManager.context);
         }
 
         if (!this.bound) {
-            this._glTexture.bind(unit);
+            this._texture.bind();
             this.update();
         }
 
@@ -336,7 +307,7 @@ export default class Texture {
      */
     unbind() {
         if (this.bound) {
-            this._glTexture.unbind();
+            this._texture.unbind();
         }
 
         return this;
@@ -348,19 +319,19 @@ export default class Texture {
     destroy() {
         this.unbind();
 
-        if (this._glTexture) {
-            this._glTexture.destroy();
-            this._glTexture = null;
+        if (this._texture) {
+            this._texture.destroy();
+            this._texture = null;
         }
 
         this._size.destroy();
         this._size = null;
 
-        this._source = null;
-        this._displayManager = null;
+        this._flags = null;
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
-        this._flags = null;
+        this._source = null;
+        this._displayManager = null;
     }
 }

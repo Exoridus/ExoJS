@@ -106,21 +106,6 @@ export default class Bounds {
     /**
      * @public
      * @chainable
-     * @param {Vector} point
-     * @param {Matrix} [transform]
-     * @returns {Bounds}
-     */
-    addPoint(point, transform) {
-        if (transform) {
-            point = point.transform(transform, Vector.Temp);
-        }
-
-        return this.addCoords(point.x, point.y);
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {Rectangle} rectangle
      * @param {Matrix} [transform]
      * @returns {Bounds}

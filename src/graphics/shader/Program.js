@@ -1,9 +1,9 @@
 import { UNIFORM_TYPE } from '../../const';
 
 /**
- * @class GLProgram
+ * @class Program
  */
-export default class GLProgram {
+export default class Program {
 
     /**
      * @constructor
@@ -153,7 +153,7 @@ export default class GLProgram {
      * @param {String} uniform
      * @param {Number|Number[]|ArrayBufferView|Texture} value
      * @param {Number} type
-     * @returns {GLProgram}
+     * @returns {Program}
      */
     setUniformValue(uniform, value, type) {
         const gl = this._context,
@@ -192,7 +192,7 @@ export default class GLProgram {
      * @param {boolean} normalized
      * @param {Number} stride
      * @param {Number} offset
-     * @returns {GLProgram}
+     * @returns {Program}
      */
     setVertexPointer(attribute, size, type, normalized, stride, offset) {
         const gl = this._context,
@@ -208,7 +208,7 @@ export default class GLProgram {
      * @chainable
      * @param {String} attribute
      * @param {Boolean} enabled
-     * @returns {GLProgram}
+     * @returns {Program}
      */
     toggleVertexArray(attribute, enabled) {
         const gl = this._context,
@@ -226,7 +226,7 @@ export default class GLProgram {
     /**
      * @public
      * @chainable
-     * @returns {GLProgram}
+     * @returns {Program}
      */
     bind() {
         this._context.useProgram(this._program);
@@ -237,7 +237,7 @@ export default class GLProgram {
     /**
      * @public
      * @chainable
-     * @returns {GLProgram}
+     * @returns {Program}
      */
     unbind() {
         this._context.useProgram(null);

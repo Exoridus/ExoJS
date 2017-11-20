@@ -102,11 +102,14 @@ export default class Vector {
 
     /**
      * @public
-     * @param {Vector} vector
+     * @param {Vector|Object} vector
+     * @param {Number} [vector.x]
+     * @param {Number} [vector.y]
      * @returns {Boolean}
      */
-    equals(vector) {
-        return (vector === this) || (this._x === vector.x && this._y === vector.y);
+    equals({ x, y } = {}) {
+        return (x === undefined || this.x === x)
+            && (y === undefined || this.y === y);
     }
 
     /**
@@ -269,7 +272,8 @@ export default class Vector {
         const x = this._x,
             y = this._y;
 
-        return this.project(axis)
+        return this
+            .project(axis)
             .multiply(2)
             .subtract(x, y);
     }

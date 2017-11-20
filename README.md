@@ -11,6 +11,8 @@ A lightweight, flexibile and powerful game engine.
 * IndexedDB to store assets and data offline
 * Customizable Gamepad Mapping
 * Text and Video rendering
+* Camera Handling
+* RenderTarget and RenderTexture
 * Font Loading
 * Blendmodes
 
@@ -22,7 +24,6 @@ A lightweight, flexibile and powerful game engine.
 ### WIP / Planned ###
 * SAT Collision Detection/Response
 * Primitive rendering with Shapes
-* Rendertarget / Rendertexture
 * Filters
 * Masking
 * 9-Sclice integration
@@ -30,4 +31,3 @@ A lightweight, flexibile and powerful game engine.
 * Premultiplied alpha support
 * Mesh rendering
 * Tilemap with Autotiles
-* Scene Graph

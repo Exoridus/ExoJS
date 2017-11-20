@@ -140,11 +140,14 @@ export default class Size {
 
     /**
      * @public
-     * @param {Size} size
+     * @param {Size|Object} size
+     * @param {Number} [size.width]
+     * @param {Number} [size.height]
      * @returns {Boolean}
      */
-    equals(size) {
-        return (size === this) || (this._width === size.width && this._height === size.height);
+    equals({ width, height } = {}) {
+        return (width === undefined || this.width === width)
+            && (height === undefined || this.height === height);
     }
 
     /**

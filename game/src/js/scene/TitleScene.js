@@ -40,11 +40,10 @@ export default class TitleScene extends Scene {
     update(delta) {
         this._menuManager.update(delta);
 
-        this.app.displayManager
-            .begin()
-            .render(this._background)
-            .render(this._menuManager)
-            .end();
+        this.app.displayManager.renderBatch([
+            this._background,
+            this._menuManager
+        ]);
     }
 
     /**

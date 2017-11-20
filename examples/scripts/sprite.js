@@ -36,10 +36,7 @@ window.app.start(new Exo.Scene({
     update(delta) {
         this._bunny.rotate(delta.seconds * 360);
 
-        this.app.displayManager
-            .begin()
-            .render(this._bunny)
-            .end();
+        this.app.displayManager.renderBatch(this._bunny);
     },
 
     /**

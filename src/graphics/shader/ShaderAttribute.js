@@ -7,14 +7,19 @@ export default class ShaderAttribute {
 
     /**
      * @constructor
-     * @param {Object} options
-     * @param {String} options.name
-     * @param {Number} [options.type]
-     * @param {Number} [options.size]
-     * @param {Boolean} [options.normalized=false]
-     * @param {Boolean} [options.enabled=true]
+     * @param {String} name
+     * @param {Number} type
+     * @param {Number} size
+     * @param {Boolean} [normalized=false]
+     * @param {Boolean} [enabled=true]
      */
-    constructor({ name, type, size = 1, normalized = false, enabled = true } = {}) {
+    constructor(name, type, size, normalized = false, enabled = true) {
+
+        /**
+         * @private
+         * @member {?Program}
+         */
+        this._program = null;
 
         /**
          * @private
@@ -45,12 +50,6 @@ export default class ShaderAttribute {
          * @member {Boolean}
          */
         this._enabled = enabled;
-
-        /**
-         * @private
-         * @member {?GLProgram}
-         */
-        this._program = null;
 
         /**
          * @private
@@ -97,14 +96,11 @@ export default class ShaderAttribute {
 
     /**
      * @public
+     * @readonly
      * @member {Boolean}
      */
     get enabled() {
         return this._enabled;
-    }
-
-    set enabled(enabled) {
-        this.setEnabled(enabled);
     }
 
     /**
@@ -140,24 +136,30 @@ export default class ShaderAttribute {
 
     /**
      * @public
+     * @chainable
      * @param {Boolean} enabled
+     * @returns {ShaderAttribute}
      */
     setEnabled(enabled) {
         if (this._enabled !== enabled) {
             this._enabled = enabled;
             this.upload();
         }
+
+        return this;
     }
 
     /**
      * @public
-     * @param {GLProgram} glProgram
+     * @chainable
+     * @param {Program} program
      * @param {Number} stride
      * @param {Number} offset
+     * @returns {ShaderAttribute}
      */
-    bind(glProgram, stride, offset) {
+    bind(program, stride, offset) {
         if (!this._program) {
-            this._program = glProgram;
+            this._program = program;
         }
 
         if (!this._bound) {
@@ -165,34 +167,44 @@ export default class ShaderAttribute {
             this._program.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
             this.upload();
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {ShaderAttribute}
      */
     unbind() {
         this._bound = false;
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {ShaderAttribute}
      */
     upload() {
         if (this._bound) {
             this._program.toggleVertexArray(this._name, this._enabled);
         }
+
+        return this;
     }
 
     /**
      * @public
      */
     destroy() {
+        this._program = null;
         this._name = null;
         this._type = null;
         this._size = null;
         this._normalized = null;
         this._enabled = null;
-        this._program = null;
         this._bound = null;
     }
 }

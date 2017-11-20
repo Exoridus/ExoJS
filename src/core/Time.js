@@ -130,11 +130,18 @@ export default class Time {
 
     /**
      * @public
-     * @param {Time} time
+     * @param {Time|Object} time
+     * @param {Number} [time.milliseconds]
+     * @param {Number} [time.seconds]
+     * @param {Number} [time.minutes]
+     * @param {Number} [time.hours]
      * @returns {Boolean}
      */
-    equals(time) {
-        return this._milliseconds === time.milliseconds;
+    equals({ milliseconds, seconds, minutes, hours } = {}) {
+        return (milliseconds === undefined || this.milliseconds === milliseconds)
+            && (seconds === undefined || this.seconds === seconds)
+            && (minutes === undefined || this.minutes === minutes)
+            && (hours === undefined || this.hours === hours);
     }
 
     /**

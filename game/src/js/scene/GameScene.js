@@ -64,11 +64,10 @@ export default class GameScene extends Scene {
             this._player.update(delta);
             this._worldMap.update(delta);
 
-            this.app.displayManager
-                .begin()
-                .render(this._worldMap)
-                .render(this._player)
-                .end();
+            this.app.displayManager.renderBatch([
+                this._worldMap,
+                this._player
+            ]);
         }
 
         return this;
@@ -108,7 +107,7 @@ export default class GameScene extends Scene {
             centerX = this._camera.width / 2,
             centerY = this._camera.height / 2;
 
-        displayManager.setView(this._camera.setCenter(
+        displayManager.renderTarget.setView(this._camera.setCenter(
             utils.clamp(x, centerX, maxX - centerX),
             utils.clamp(y, centerY, maxY - centerY)
         ));

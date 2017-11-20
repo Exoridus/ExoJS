@@ -52,10 +52,7 @@ window.app.start(new Exo.Scene({
             .setText(`Hello World! ${this._ticker.add(delta).seconds | 0}`)
             .rotate(delta.seconds * 36);
 
-        this.app.displayManager
-            .begin()
-            .render(this._text)
-            .end();
+        this.app.displayManager.renderBatch(this._text);
     },
 
     /**

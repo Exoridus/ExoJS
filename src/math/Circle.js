@@ -73,10 +73,17 @@ export default class Circle extends Shape {
     }
 
     /**
-     * @override
+     * @public
+     * @param {Circle|Object} circle
+     * @param {Number} [circle.x]
+     * @param {Number} [circle.y]
+     * @param {Number} [circle.radius]
+     * @returns {Boolean}
      */
-    equals(circle) {
-        return circle === this || (this.position.equals(circle.position) && this._radius === circle.radius);
+    equals({ x, y, radius } = {}) {
+        return (x === undefined || this.x === x)
+            && (y === undefined || this.y === y)
+            && (radius === undefined || this.radius === radius);
     }
 
     /**

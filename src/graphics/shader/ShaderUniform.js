@@ -7,13 +7,17 @@ export default class ShaderUniform {
 
     /**
      * @constructor
-     * @param {Object} options
-     * @param {String} options.name
-     * @param {Number} options.type
-     * @param {Number} [options.value]
-     * @param {Boolean} [options.transpose=false]
+     * @param {String} name
+     * @param {Number} type
+     * @param {Number|Number[]|ArrayBufferView} [value]
      */
-    constructor({ name, type, value, transpose = false } = {}) {
+    constructor(name, type, value) {
+
+        /**
+         * @private
+         * @member {Program}
+         */
+        this._program = null;
 
         /**
          * @private
@@ -29,7 +33,7 @@ export default class ShaderUniform {
 
         /**
          * @private
-         * @member {*}
+         * @member {Number|Number[]|ArrayBufferView}
          */
         this._value = null;
 
@@ -37,25 +41,13 @@ export default class ShaderUniform {
          * @private
          * @member {Boolean}
          */
-        this._transpose = transpose;
-
-        /**
-         * @private
-         * @member {?GLProgram}
-         */
-        this._program = null;
+        this._dirty = false;
 
         /**
          * @private
          * @member {Boolean}
          */
         this._bound = false;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._dirty = false;
 
         if (value !== undefined) {
             this.setValue(value);
@@ -73,72 +65,89 @@ export default class ShaderUniform {
 
     /**
      * @public
-     * @member {Number|Number[]|Vector|Matrix|Texture}
+     * @readonly
+     * @member {Number}
+     */
+    get type() {
+        return this._type;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number|Number[]|ArrayBufferView}
      */
     get value() {
         return this._value;
     }
 
-    set value(value) {
-        this.setValue(value);
-    }
-
     /**
      * @public
-     * @param {*} value
+     * @chainable
+     * @param {Number|Number[]|ArrayBufferView} value
+     * @returns {ShaderUniform}
      */
     setValue(value) {
-        this._value = (value instanceof Matrix) ? value.toArray(this._transpose) : value;
+        this._value = value;
         this._dirty = true;
-
         this.upload();
+
+        return this;
     }
 
     /**
      * @public
-     * @param {GLProgram} glProgram
+     * @chainable
+     * @param {Program} program
+     * @returns {ShaderUniform}
      */
-    bind(glProgram) {
+    bind(program) {
         if (!this._program) {
-            this._program = glProgram;
+            this._program = program;
         }
 
         if (!this._bound) {
             this._bound = true;
-
             this.upload();
         }
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {ShaderUniform}
      */
     unbind() {
-        if (this._bound) {
-            this._bound = false;
-        }
+        this._bound = false;
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
+     * @returns {ShaderUniform}
      */
     upload() {
         if (this._bound && this._dirty) {
             this._program.setUniformValue(this._name, this._value, this._type);
             this._dirty = false;
         }
+
+        return this;
     }
 
     /**
      * @public
      */
     destroy() {
+        this._program = null;
         this._name = null;
         this._type = null;
         this._value = null;
-        this._transpose = null;
-        this._program = null;
-        this._bound = null;
         this._dirty = null;
+        this._bound = null;
     }
 }

@@ -18,46 +18,15 @@ export default class ParticleShader extends Shader {
         this.setVertexSource(readFileSync(join(__dirname, './glsl/particle.vert'), 'utf8'));
         this.setFragmentSource(readFileSync(join(__dirname, './glsl/particle.frag'), 'utf8'));
 
-        this.setAttributes([{
-            name: 'aVertexPosition',
-            type: ATTRIBUTE_TYPE.FLOAT,
-            size: 2,
-            normalized: false,
-        }, {
-            name: 'aTextureCoord',
-            type: ATTRIBUTE_TYPE.FLOAT,
-            size: 2,
-            normalized: false,
-        }, {
-            name: 'aPosition',
-            type: ATTRIBUTE_TYPE.FLOAT,
-            size: 2,
-            normalized: false,
-        }, {
-            name: 'aScale',
-            type: ATTRIBUTE_TYPE.FLOAT,
-            size: 2,
-            normalized: false,
-        }, {
-            name: 'aRotation',
-            type: ATTRIBUTE_TYPE.FLOAT,
-            size: 1,
-            normalized: false,
-        }, {
-            name: 'aColor',
-            type: ATTRIBUTE_TYPE.UNSIGNED_BYTE,
-            size: 4,
-            normalized: true,
-        }]);
+        this.setAttribute('aVertexPosition', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('aTextureCoord', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('aPosition', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('aScale', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('aRotation', ATTRIBUTE_TYPE.FLOAT, 1, false);
+        this.setAttribute('aColor', ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
-        this.setUniforms([{
-            name: 'projectionMatrix',
-            type: UNIFORM_TYPE.FLOAT_MAT3,
-        }, {
-            name: 'uSampler',
-            type: UNIFORM_TYPE.SAMPLER_2D,
-            value: 0,
-        }]);
+        this.setUniform('projectionMatrix', UNIFORM_TYPE.FLOAT_MAT3);
+        this.setUniform('uSampler', UNIFORM_TYPE.SAMPLER_2D, 0);
     }
 
     /**
@@ -65,6 +34,6 @@ export default class ParticleShader extends Shader {
      */
     setProjection(projection) {
         this.getUniform('projectionMatrix')
-            .setValue(projection);
+            .setValue(projection.toArray(false));
     }
 }

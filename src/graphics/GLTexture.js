@@ -1,5 +1,5 @@
-import Size from '../../math/Size';
-import { getMediaHeight, getMediaWidth } from '../../utils';
+import Size from '../math/Size';
+import { getMediaHeight, getMediaWidth } from '../utils';
 
 /**
  * @class GLTexture
@@ -32,6 +32,17 @@ export default class GLTexture {
          * @member {Size}
          */
         this._size = new Size(-1, -1);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get bound() {
+        const gl = this._context;
+
+        return (this._texture === gl.getParameter(gl.TEXTURE_BINDING_2D));
     }
 
     /**

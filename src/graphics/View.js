@@ -23,7 +23,7 @@ export default class View {
          * @private
          * @member {ObservableVector}
          */
-        this._center = new ObservableVector(this._setDirty, this, centerX, centerY);
+        this._center = new ObservableVector(this._setDirty, this, centerX + (width / 2), centerY + (height / 2));
 
         /**
          * @private
@@ -84,8 +84,6 @@ export default class View {
          * @member {Number}
          */
         this._updateId = 0;
-
-        this.reset(centerX, centerY, width, height);
     }
 
     /**
@@ -102,6 +100,30 @@ export default class View {
 
     /**
      * @public
+     * @member {Number}
+     */
+    get centerX() {
+        return this._center.x;
+    }
+
+    set centerX(centerX) {
+        this._center.x = centerX;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get centerY() {
+        return this._center.y;
+    }
+
+    set centerY(centerY) {
+        this._center.y = centerY;
+    }
+
+    /**
+     * @public
      * @member {ObservableSize}
      */
     get size() {
@@ -114,20 +136,26 @@ export default class View {
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
     get width() {
         return this._size.width;
     }
 
+    set width(width) {
+        this._size.width = width;
+    }
+
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
     get height() {
         return this._size.height;
+    }
+
+    set height(height) {
+        this._size.height = height;
     }
 
     /**
@@ -138,16 +166,8 @@ export default class View {
         return this._rotation;
     }
 
-    set rotation(degrees) {
-        const trimmed = degrees % 360,
-            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
-            radians = degreesToRadians(rotation);
-
-        this._rotation = (rotation < 0) ? rotation + 360 : rotation;
-        this._cos = Math.cos(radians);
-        this._sin = Math.sin(radians);
-
-        this._setDirty();
+    set rotation(rotation) {
+        this.setRotation(rotation);
     }
 
     /**
@@ -165,71 +185,11 @@ export default class View {
 
     /**
      * @public
-     * @member {Matrix}
-     */
-    get transform() {
-        return this.getTransform();
-    }
-
-    set transform(transform) {
-        this._transform.copy(transform);
-    }
-
-    /**
-     * @public
-     * @member {Matrix}
-     */
-    get inverseTransform() {
-        return this.getInverseTransform();
-    }
-
-    set inverseTransform(inverseTransform) {
-        this._inverseTransform.copy(inverseTransform);
-    }
-
-    /**
-     * @public
      * @readonly
      * @member {Number}
      */
     get updateId() {
         return this._updateId;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get left() {
-        return this._center.x - (this._size.width / 2);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get top() {
-        return this._center.y - (this._size.height / 2);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get right() {
-        return this._center.x + (this._size.width / 2);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get bottom() {
-        return this._center.y + (this._size.height / 2);
     }
 
     /**
@@ -248,12 +208,45 @@ export default class View {
     /**
      * @public
      * @chainable
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {View}
+     */
+    setSize(width, height) {
+        this._size.set(width, height);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} degrees
+     * @returns {View}
+     */
+    setRotation(degrees) {
+        const trimmed = degrees % 360,
+            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
+            radians = degreesToRadians(rotation);
+
+        this._rotation = (rotation < 0) ? rotation + 360 : rotation;
+        this._cos = Math.cos(radians);
+        this._sin = Math.sin(radians);
+
+        this._setDirty();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Number} x
      * @param {Number} y
      * @returns {View}
      */
     move(x, y) {
-        this._center.add(x, y);
+        this.setCenter(this._center.x + x, this._center.y + y);
 
         return this;
     }
@@ -265,7 +258,7 @@ export default class View {
      * @returns {View}
      */
     zoom(factor) {
-        this._size.multiply(factor);
+        this.setSize(this._size.width * factor, this._size.height * factor);
 
         return this;
     }
@@ -277,7 +270,7 @@ export default class View {
      * @returns {View}
      */
     rotate(degrees) {
-        this.rotation += degrees;
+        this.setRotation(this._rotation + degrees);
 
         return this;
     }
@@ -294,9 +287,10 @@ export default class View {
     reset(centerX, centerY, width, height) {
         this._size.set(width, height);
         this._center.set(centerX + (width / 2), centerY + (height / 2));
+        this._viewport.set(0, 0, 1, 1);
         this._rotation = 0;
-        this._cos = 1;
         this._sin = 0;
+        this._cos = 1;
 
         this._setDirty();
 
@@ -369,10 +363,8 @@ export default class View {
     copy(view) {
         this.center = view.center;
         this.size = view.size;
-        this.viewport = view.viewport;
-        this.transform = view.transform;
-        this.inverseTransform = view.inverseTransform;
         this.rotation = view.rotation;
+        this.viewport = view.viewport;
 
         return this;
     }

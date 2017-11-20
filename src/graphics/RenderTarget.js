@@ -1,6 +1,8 @@
 import Size from '../math/Size';
-import Color from '../core/Color';
-import GLFramebuffer from './webgl/GLFramebuffer';
+import Framebuffer from './Framebuffer';
+import View from './View';
+import Rectangle from '../math/Rectangle';
+import Vector from '../math/Vector';
 
 /**
  * @class RenderTarget
@@ -35,21 +37,39 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {?GLFramebuffer}
+         * @member {?Framebuffer}
          */
         this._framebuffer = null;
+
+        /**
+         * @private
+         * @member {Rectangle}
+         */
+        this._viewport = new Rectangle();
+
+        /**
+         * @private
+         * @member {View}
+         */
+        this._defaultView = new View(0, 0, width, height);
+
+        /**
+         * @private
+         * @member {View}
+         */
+        this._view = this._defaultView;
     }
 
     /**
      * @public
-     * @member {Boolean}
+     * @member {View}
      */
-    get root() {
-        return this._root;
+    get view() {
+        return this._view;
     }
 
-    set root(root) {
-        this._root = root;
+    set view(view) {
+        this.setView(view);
     }
 
     /**
@@ -94,7 +114,20 @@ export default class RenderTarget {
      * @member {Boolean}
      */
     get bound() {
-        return this._displayManager && (this._displayManager.renderTarget === this);
+        return !!this._displayManager && (this._displayManager.renderTarget === this);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {View} view
+     * @returns {RenderTarget}
+     */
+    setView(view) {
+        this._view = view || this._defaultView;
+        this.updateViewport();
+
+        return this;
     }
 
     /**
@@ -105,8 +138,41 @@ export default class RenderTarget {
      * @returns {RenderTarget}
      */
     resize(width, height) {
-        if (this.width !== width || this.height !== height) {
+        if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
+            this._defaultView.setSize(width, height);
+            this.updateViewport();
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @param {View} [view=this._view]
+     * @returns {Rectangle}
+     */
+    getViewport(view = this._view) {
+        const viewport = view.viewport;
+
+        return this._viewport.set(
+            Math.round(viewport.x * this.width),
+            Math.round(viewport.y * this.height),
+            Math.round(viewport.width * this.width),
+            Math.round(viewport.height * this.height)
+        );
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {RenderTarget}
+     */
+    updateViewport() {
+        if (this._framebuffer) {
+            const viewport = this.getViewport();
+
+            this._framebuffer.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
         }
 
         return this;
@@ -119,13 +185,14 @@ export default class RenderTarget {
      * @returns {RenderTarget}
      */
     bind(displayManager) {
-        if (!this._displayManager) {
+        if (!this._framebuffer) {
+            this._framebuffer = new Framebuffer(displayManager.context, this._root);
             this._displayManager = displayManager;
-            this._framebuffer = this._root ? null : new GLFramebuffer(displayManager.context);
         }
 
-        if (this._framebuffer && !this.bound) {
+        if (!this.bound) {
             this._framebuffer.bind();
+            this.updateViewport();
         }
 
         return this;
@@ -137,11 +204,43 @@ export default class RenderTarget {
      * @returns {RenderTarget}
      */
     unbind() {
-        if (this._framebuffer && this.bound) {
+        if (this.bound) {
             this._framebuffer.unbind();
         }
 
         return this;
+    }
+
+    /**
+     * @public
+     * @param {Vector} point
+     * @param {View} [view=this._view]
+     * @returns {Vector}
+     */
+    mapPixelToCoords(point, view = this._view) {
+        const viewport = this.getViewport(view),
+            normalized = new Vector(
+                -1 + (2 * (point.x - viewport.left) / viewport.width),
+                1 - (2 * (point.y - viewport.top) / viewport.height)
+            );
+
+        return normalized.transform(view.getInverseTransform());
+    }
+
+    /**
+     * @public
+     * @param {Vector} point
+     * @param {View} [view=this._view]
+     * @returns {Vector}
+     */
+    mapCoordsToPixel(point, view = this._view) {
+        const viewport = this.getViewport(view),
+            normalized = point.transform(view.getTransform(), new Vector());
+
+        return normalized.set(
+            ((( normalized.x + 1) / 2 * viewport.width) + viewport.left) | 0,
+            (((-normalized.y + 1) / 2 * viewport.height) + viewport.top) | 0
+        );
     }
 
     /**
@@ -155,10 +254,17 @@ export default class RenderTarget {
             this._framebuffer = null;
         }
 
+        this._defaultView.destroy();
+        this._defaultView = null;
+
+        this._viewport.destroy();
+        this._viewport = null;
+
         this._size.destroy();
         this._size = null;
 
         this._root = null;
+        this._view = null;
         this._displayManager = null;
     }
 }

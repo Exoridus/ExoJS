@@ -207,6 +207,10 @@ const
     determineMimeType = (arrayBuffer) => {
         const header = new Uint8Array(arrayBuffer);
 
+        if (!header.length) {
+            throw new Error('Cannot determine mime type: No data.');
+        }
+
         for (const type of FILE_TYPES) {
             if (header.length < type.pattern.length) {
                 continue;

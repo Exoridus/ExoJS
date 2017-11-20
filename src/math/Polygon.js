@@ -123,10 +123,13 @@ export default class Polygon extends Shape {
     }
 
     /**
-     * @override
+     * @public
+     * @param {Polygon|Object} polygon
+     * @param {Vector[]} polygon.points
+     * @returns {Boolean}
      */
-    equals(polygon) {
-        return (polygon === this) || (this._points.length === polygon.points.length && this._points.every((point, index) => point.equals(polygon.points[index])));
+    equals({ points } = {}) {
+        return (points.length === this.points.length) && (this.points.every((point, index) => point.equals(points[index])));
     }
 
     /**

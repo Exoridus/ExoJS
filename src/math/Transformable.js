@@ -138,18 +138,6 @@ export default class Transformable extends EventEmitter {
 
     /**
      * @public
-     * @member {Matrix}
-     */
-    get transform() {
-        return this.getTransform();
-    }
-
-    set transform(transform) {
-        this._transform.copy(transform);
-    }
-
-    /**
-     * @public
      * @chainable
      * @returns {Matrix}
      */

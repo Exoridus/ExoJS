@@ -10,7 +10,7 @@ export default class Input extends EventEmitter {
 
     /**
      * @constructor
-     * @param {Set<Number>|Number[]} channels
+     * @param {Set<Number>|Number[]|Number} channels
      * @param {Object} [options={}]
      * @param {Function} [options.start]
      * @param {Function} [options.stop]
@@ -37,7 +37,7 @@ export default class Input extends EventEmitter {
          * @private
          * @member {Set<Number>}
          */
-        this._channels = new Set(channels);
+        this._channels = new Set((typeof channels === 'number') ? [channels] : channels);
 
         /**
          * @private

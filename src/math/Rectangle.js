@@ -184,10 +184,19 @@ export default class Rectangle extends Shape {
     }
 
     /**
-     * @override
+     * @public
+     * @param {Rectangle|Object} rectangle
+     * @param {Number} [rectangle.x]
+     * @param {Number} [rectangle.y]
+     * @param {Number} [rectangle.width]
+     * @param {Number} [rectangle.height]
+     * @returns {Boolean}
      */
-    equals(rectangle) {
-        return (rectangle === this) || (this.position.equals(rectangle.position) && this._size.equals(rectangle.size));
+    equals({ x, y, width, height } = {}) {
+        return (x === undefined || this.x === x)
+            && (y === undefined || this.y === y)
+            && (width === undefined || this.width === width)
+            && (height === undefined || this.height === height);
     }
 
     /**

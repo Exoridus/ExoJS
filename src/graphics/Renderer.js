@@ -8,23 +8,11 @@ export default class Renderer {
      */
     constructor() {
 
-    }
-
-    /**
-     * @public
-     * @param {DisplayManager} displayManager
-     */
-    bind(displayManager) {
-        // do nothing
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Renderer}
-     */
-    unbind() {
-        // do nothing
+        /**
+         * @private
+         * @member {?DisplayManager}
+         */
+        this._displayManager = null;
     }
 
     /**
@@ -48,8 +36,27 @@ export default class Renderer {
 
     /**
      * @public
+     * @param {DisplayManager} displayManager
+     */
+    bind(displayManager) {
+        // do nothing
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Renderer}
+     */
+    unbind() {
+        // do nothing
+    }
+
+    /**
+     * @public
      */
     destroy() {
+        this.unbind();
 
+        this._displayManager = null;
     }
 }

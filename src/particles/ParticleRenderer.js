@@ -2,7 +2,7 @@ import Renderer from '../graphics/Renderer';
 import ParticleShader from './ParticleShader';
 import { degreesToRadians } from '../utils';
 import settings from '../settings';
-import GLBuffer from '../graphics/webgl/GLBuffer';
+import Buffer from '../graphics/Buffer';
 
 /**
  * @class ParticleRenderer
@@ -15,24 +15,6 @@ export default class ParticleRenderer extends Renderer {
      */
     constructor() {
         super();
-
-        /**
-         * @private
-         * @member {?ParticleShader}
-         */
-        this._shader = new ParticleShader();
-
-        /**
-         * @private
-         * @member {?DisplayManager}
-         */
-        this._displayManager = null;
-
-        /**
-         * @private
-         * @member {?GLBuffer}
-         */
-        this._buffer = null;
 
         /**
          * @private
@@ -62,6 +44,54 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
+         * @member {?DisplayManager}
+         */
+        this._displayManager = null;
+
+        /**
+         * @private
+         * @member {?Buffer}
+         */
+        this._vertexBuffer = null;
+
+        /**
+         * @private
+         * @member {?Buffer}
+         */
+        this._indexBuffer = null;
+
+        /**
+         * @private
+         * @member {ParticleShader}
+         */
+        this._shader = new ParticleShader();
+
+        /**
+         * @private
+         * @member {ArrayBuffer}
+         */
+        this._vertexData = new ArrayBuffer(this._batchSize * this._attributeCount * 4);
+
+        /**
+         * @private
+         * @member {Uint16Array}
+         */
+        this._indexData = new Uint16Array(this._batchSize * 6);
+
+        /**
+         * @private
+         * @member {Float32Array}
+         */
+        this._float32View = new Float32Array(this._vertexData);
+
+        /**
+         * @private
+         * @member {Uint32Array}
+         */
+        this._uint32View = new Uint32Array(this._vertexData);
+
+        /**
+         * @private
          * @member {?Texture}
          */
         this._currentTexture = null;
@@ -71,6 +101,15 @@ export default class ParticleRenderer extends Renderer {
          * @member {Number}
          */
         this._viewId = -1;
+
+        for (let i = 0, offset = 0, len = this._indexData.length; i < len; i += 6, offset += 4) {
+            this._indexData[i] = offset;
+            this._indexData[i + 1] = offset + 1;
+            this._indexData[i + 2] = offset + 3;
+            this._indexData[i + 3] = offset;
+            this._indexData[i + 4] = offset + 2;
+            this._indexData[i + 5] = offset + 3;
+        }
     }
 
     /**
@@ -87,18 +126,16 @@ export default class ParticleRenderer extends Renderer {
      */
     bind(displayManager) {
         if (!this._displayManager) {
+            const gl = displayManager.context;
+
+            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
+            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
             this._displayManager = displayManager;
-            this._buffer = new GLBuffer(displayManager.context, this._batchSize, this._attributeCount);
         }
 
-        if (!this.bound) {
-            this._buffer.bind();
-            this._displayManager.setShader(this._shader);
-
-            if (this._currentTexture) {
-                this._currentTexture.bind(this._displayManager);
-            }
-        }
+        this._vertexBuffer.bind();
+        this._indexBuffer.bind();
+        this._displayManager.setShader(this._shader);
 
         return this;
     }
@@ -110,13 +147,11 @@ export default class ParticleRenderer extends Renderer {
         if (this.bound) {
             this.flush();
 
-            this._buffer.unbind();
+            this._vertexBuffer.unbind();
+            this._indexBuffer.unbind();
             this._displayManager.setShader(null);
 
-            if (this._currentTexture) {
-                this._currentTexture.unbind();
-            }
-
+            this._currentTexture = null;
             this._viewId = -1;
         }
 
@@ -127,20 +162,21 @@ export default class ParticleRenderer extends Renderer {
      * @override
      */
     render(emitter) {
-        const floatView = this._buffer.floatView,
-            uintView = this._buffer.uintView,
+        const float32View = this._float32View,
+            uint32View = this._uint32View,
             texture = emitter.texture,
             particles = emitter.activeParticles,
             textureFrame = emitter.textureFrame,
             textureCoords = emitter.textureCoords;
 
-        if (this._currentTexture !== texture) {
+        if (texture !== this._currentTexture) {
             this.flush();
 
-            this._currentTexture = texture.bind(this._displayManager);
+            this._currentTexture = texture;
+            this._displayManager.setTexture(texture);
         }
 
-        this._currentTexture.update();
+        texture.update();
 
         for (const particle of particles) {
             if (this._batchIndex >= this._batchSize) {
@@ -150,45 +186,53 @@ export default class ParticleRenderer extends Renderer {
             const index = this._batchIndex * this._attributeCount,
                 { position, scale, rotation, color } = particle;
 
-            floatView[index] = floatView[index + 11] = textureFrame.x;
-            floatView[index + 1] = floatView[index + 20] = textureFrame.y;
+            float32View[index] = float32View[index + 11] = textureFrame.x;
+            float32View[index + 1] = float32View[index + 20] = textureFrame.y;
 
-            floatView[index + 2] = floatView[index + 22] = textureCoords.x;
-            floatView[index + 3] = floatView[index + 13] = textureCoords.y;
+            float32View[index + 2] = float32View[index + 22] = textureCoords.x;
+            float32View[index + 3] = float32View[index + 13] = textureCoords.y;
 
-            floatView[index + 10] = floatView[index + 30] = textureFrame.width;
-            floatView[index + 21] = floatView[index + 31] = textureFrame.height;
+            float32View[index + 10] = float32View[index + 30] = textureFrame.width;
+            float32View[index + 21] = float32View[index + 31] = textureFrame.height;
 
-            floatView[index + 12] = floatView[index + 32] = textureCoords.width;
-            floatView[index + 23] = floatView[index + 33] = textureCoords.height;
+            float32View[index + 12] = float32View[index + 32] = textureCoords.width;
+            float32View[index + 23] = float32View[index + 33] = textureCoords.height;
 
-            floatView[index + 4]
-                = floatView[index + 14]
-                = floatView[index + 24]
-                = floatView[index + 34] = position.x;
-            floatView[index + 5]
-                = floatView[index + 15]
-                = floatView[index + 25]
-                = floatView[index + 35] = position.y;
+            float32View[index + 4]
+                = float32View[index + 14]
+                = float32View[index + 24]
+                = float32View[index + 34]
+                = position.x;
 
-            floatView[index + 6]
-                = floatView[index + 16]
-                = floatView[index + 26]
-                = floatView[index + 36] = scale.x;
-            floatView[index + 7]
-                = floatView[index + 17]
-                = floatView[index + 27]
-                = floatView[index + 37] = scale.y;
+            float32View[index + 5]
+                = float32View[index + 15]
+                = float32View[index + 25]
+                = float32View[index + 35]
+                = position.y;
 
-            floatView[index + 8]
-                = floatView[index + 18]
-                = floatView[index + 28]
-                = floatView[index + 38] = degreesToRadians(rotation);
+            float32View[index + 6]
+                = float32View[index + 16]
+                = float32View[index + 26]
+                = float32View[index + 36]
+                = scale.x;
 
-            uintView[index + 9]
-                = uintView[index + 19]
-                = uintView[index + 29]
-                = uintView[index + 39] = color.getRGBA();
+            float32View[index + 7]
+                = float32View[index + 17]
+                = float32View[index + 27]
+                = float32View[index + 37]
+                = scale.y;
+
+            float32View[index + 8]
+                = float32View[index + 18]
+                = float32View[index + 28]
+                = float32View[index + 38]
+                = degreesToRadians(rotation);
+
+            uint32View[index + 9]
+                = uint32View[index + 19]
+                = uint32View[index + 29]
+                = uint32View[index + 39]
+                = color.getRGBA();
 
             this._batchIndex++;
         }
@@ -201,18 +245,15 @@ export default class ParticleRenderer extends Renderer {
      */
     flush() {
         if (this.bound && this._batchIndex > 0) {
-            const view = this._displayManager.view;
+            const view = this._displayManager.renderTarget.view;
 
             if (this._viewId !== view.updateId) {
                 this._shader.setProjection(view.getTransform());
                 this._viewId = view.updateId;
             }
 
-            this._displayManager.drawElements(
-                this._batchIndex * 6,
-                this._buffer.floatView.subarray(0, this._batchIndex * this._attributeCount)
-            );
-
+            this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
+            this._displayManager.drawElements(this._batchIndex * 6);
             this._batchIndex = 0;
         }
 
@@ -225,19 +266,26 @@ export default class ParticleRenderer extends Renderer {
     destroy() {
         this.unbind();
 
-        if (this._buffer) {
-            this._buffer.destroy();
-            this._buffer = null;
+        if (this._vertexBuffer) {
+            this._vertexBuffer.destroy();
+            this._vertexBuffer = null;
+        }
+
+        if (this._indexBuffer) {
+            this._indexBuffer.destroy();
+            this._indexBuffer = null;
         }
 
         this._shader.destroy();
         this._shader = null;
 
-        this._displayManager = null;
+        this._uint32View = null;
+        this._float32View = null;
+        this._viewId = null;
         this._batchSize = null;
         this._batchIndex = null;
         this._attributeCount = null;
         this._currentTexture = null;
-        this._viewId = null;
+        this._displayManager = null;
     }
 }

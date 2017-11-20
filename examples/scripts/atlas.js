@@ -65,10 +65,7 @@ window.app.start(new Exo.Scene({
         this._textureFrame.y = ((this._ticker / this._framesX | 0) % this._framesY) * this._textureFrame.height;
         this._atlas.setTextureFrame(this._textureFrame);
 
-        this.app.displayManager
-            .begin()
-            .render(this._atlas)
-            .end();
+        this.app.displayManager.renderBatch(this._atlas);
     },
 
     /**

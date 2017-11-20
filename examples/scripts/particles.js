@@ -75,10 +75,7 @@ window.app.start(new Exo.Scene({
 
         this._emitter.update(delta);
 
-        this.app.displayManager
-            .begin()
-            .render(this._emitter)
-            .end();
+        this.app.displayManager.renderBatch(this._emitter);
     },
 
     /**

@@ -70,11 +70,10 @@ window.app.start(new Exo.Scene({
 
         this._bunnies.rotate(delta.seconds * 36);
 
-        this.app.displayManager
-            .begin()
-            .render(this._rainbow)
-            .render(this._bunnies)
-            .end();
+        this.app.displayManager.renderBatch([
+            this._rainbow,
+            this._bunnies
+        ]);
     },
 
     /**

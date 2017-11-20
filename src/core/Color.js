@@ -192,12 +192,18 @@ export default class Color {
 
     /**
      * @public
+     * @param {Color|Object} color
+     * @param {Number} [color.r]
+     * @param {Number} [color.g]
+     * @param {Number} [color.b]
+     * @param {Number} [color.a]
      * @returns {Boolean}
-     * @param {Color} color
-     * @param {Boolean} [ignoreAlpha=false]
      */
-    equals(color, ignoreAlpha = false) {
-        return (color === this) || (this._r === color.r && this._g === color.g && this._b === color.b) && (ignoreAlpha || this._a === color.a);
+    equals({ r, g, b, a } = {}) {
+        return (r === undefined || this.r === r)
+            && (g === undefined || this.g === g)
+            && (b === undefined || this.b === b)
+            && (a === undefined || this.a === a);
     }
 
     /**
