@@ -19,21 +19,21 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const app = this.app,
-            canvas = app.canvas;
+        const canvas = this.app.canvas,
+            mediaManager = this.app.mediaManager;
 
         /**
          * @private
          * @member {Music}
          */
         this._music = resources.get('music', 'example');
-        this._music.connect(app.mediaManager);
+        this._music.connect(mediaManager);
 
         /**
          * @private
          * @member {AudioAnalyser}
          */
-        this._analyser = new Exo.AudioAnalyser(app.mediaManager);
+        this._analyser = new Exo.AudioAnalyser(mediaManager);
 
         /**
          * @private
@@ -44,7 +44,7 @@ window.app.start(new Exo.Scene({
         this._canvas.style.top = '12.5%';
         this._canvas.style.left = 0;
         this._canvas.width = canvas.width;
-        this._canvas.height = canvas.height * 0.75 | 0;
+        this._canvas.height = canvas.height;
 
         /**
          * @private
@@ -69,9 +69,21 @@ window.app.start(new Exo.Scene({
 
         /**
          * @private
+         * @member {Texture}
+         */
+        this._texture = new Exo.Texture(this._canvas);
+
+        /**
+         * @private
+         * @member {Sprite}
+         */
+        this._screen = new Exo.Sprite(this._texture);
+
+        /**
+         * @private
          * @member {Color}
          */
-        this._color = new Exo.Color();
+        this._clearColor = new Exo.Color();
 
         /**
          * @private
@@ -79,23 +91,9 @@ window.app.start(new Exo.Scene({
          */
         this._time = new Exo.Time();
 
-        /**
-         * @private
-         * @member {Input}
-         */
-        this._input = new Exo.Input([
-            Exo.KEYBOARD.Space,
-            Exo.GAMEPAD.FaceBottom,
-        ], {
-            context: this,
-            trigger() {
-                this._music.toggle();
-            },
+        this.app.on('pointer:down', () => {
+            this._music.toggle();
         });
-
-        canvas.parentNode.appendChild(this._canvas);
-
-        app.inputManager.add(this._input);
 
         this._music.play({ loop: true });
     },
@@ -108,14 +106,11 @@ window.app.start(new Exo.Scene({
             return;
         }
 
-        this._time.add(delta);
-
-        const displayManager = this.app.displayManager,
-            canvas = this._canvas,
+        const canvas = this._canvas,
             context = this._context,
             freqData = this._analyser.frequencyData,
             timeDomain = this._analyser.timeDomainData,
-            seconds = this._time.seconds,
+            seconds = this._time.add(delta).seconds,
             width = canvas.width,
             height = canvas.height,
             length = freqData.length,
@@ -139,7 +134,7 @@ window.app.start(new Exo.Scene({
             }
         }
 
-        displayManager.clear(this._color.set(r / length, g / length, b / length));
+        this._clearColor.set(r / length, g / length, b / length);
 
         context.clearRect(0, 0, width, height);
         context.beginPath();
@@ -154,28 +149,36 @@ window.app.start(new Exo.Scene({
         }
 
         context.stroke();
+
+        this._screen.updateTexture();
+
+        this.app.displayManager
+            .clear(this._clearColor)
+            .draw(this._screen)
+            .display();
     },
 
     /**
      * @override
      */
     destroy() {
-        this.app.inputManager.remove(this._input);
-
         this._music.destroy();
         this._music = null;
+
+        this._texture.destroy();
+        this._texture = null;
+
+        this._screen.destroy();
+        this._screen = null;
 
         this._analyser.destroy();
         this._analyser = null;
 
-        this._color.destroy();
-        this._color = null;
+        this._clearColor.destroy();
+        this._clearColor = null;
 
         this._time.destroy();
         this._time = null;
-
-        this._input.destroy();
-        this._input = null;
 
         this._gradient = null;
         this._context = null;

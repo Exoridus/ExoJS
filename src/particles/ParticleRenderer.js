@@ -98,18 +98,17 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
+         * @member {?Number}
+         */
+        this._currentBlendMode = null;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._viewId = -1;
 
-        for (let i = 0, offset = 0, len = this._indexData.length; i < len; i += 6, offset += 4) {
-            this._indexData[i] = offset;
-            this._indexData[i + 1] = offset + 1;
-            this._indexData[i + 2] = offset + 3;
-            this._indexData[i + 3] = offset;
-            this._indexData[i + 4] = offset + 2;
-            this._indexData[i + 5] = offset + 3;
-        }
+        this.fillIndexData(this._indexData);
     }
 
     /**
@@ -119,6 +118,26 @@ export default class ParticleRenderer extends Renderer {
      */
     get bound() {
         return this._displayManager && (this._displayManager.renderer === this);
+    }
+
+    /**
+     * @public
+     * @param {Uint16Array} data
+     * @returns {SpriteRenderer}
+     */
+    fillIndexData(data) {
+        const len = data.length;
+
+        for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
+            data[i] = offset;
+            data[i + 1] = offset + 1;
+            data[i + 2] = offset + 3;
+            data[i + 3] = offset;
+            data[i + 4] = offset + 2;
+            data[i + 5] = offset + 3;
+        }
+
+        return this;
     }
 
     /**
@@ -152,6 +171,7 @@ export default class ParticleRenderer extends Renderer {
             this._displayManager.setShader(null);
 
             this._currentTexture = null;
+            this._currentBlendMode = null;
             this._viewId = -1;
         }
 
@@ -165,15 +185,25 @@ export default class ParticleRenderer extends Renderer {
         const float32View = this._float32View,
             uint32View = this._uint32View,
             texture = emitter.texture,
+            blendMode = emitter.blendMode,
             particles = emitter.activeParticles,
             textureFrame = emitter.textureFrame,
-            textureCoords = emitter.textureCoords;
+            textureCoords = emitter.textureCoords,
+            textureChanged = (texture !== this._currentTexture),
+            blendModeChanged = (blendMode !== this._currentBlendMode);
 
-        if (texture !== this._currentTexture) {
+        if (textureChanged || blendModeChanged) {
             this.flush();
 
-            this._currentTexture = texture;
-            this._displayManager.setTexture(texture);
+            if (textureChanged) {
+                this._currentTexture = texture;
+                this._displayManager.setTexture(texture);
+            }
+
+            if (blendModeChanged) {
+                this._currentBlendMode = blendMode;
+                this._displayManager.setBlendMode(blendMode);
+            }
         }
 
         texture.update();
@@ -286,6 +316,7 @@ export default class ParticleRenderer extends Renderer {
         this._batchIndex = null;
         this._attributeCount = null;
         this._currentTexture = null;
+        this._currentBlendMode = null;
         this._displayManager = null;
     }
 }

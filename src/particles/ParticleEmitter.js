@@ -3,6 +3,7 @@ import Particle from './Particle';
 import Rectangle from '../math/Rectangle';
 import Time from '../core/Time';
 import ParticleOptions from './ParticleOptions';
+import { BLEND_MODE } from '../const';
 
 /**
  * @class ParticleEmitter
@@ -77,6 +78,12 @@ export default class ParticleEmitter extends Renderable {
          * @member {ParticleModifier[]}
          */
         this._modifiers = [];
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._blendMode = BLEND_MODE.NORMAL;
 
         if (texture) {
             this.setTexture(texture);
@@ -187,6 +194,18 @@ export default class ParticleEmitter extends Renderable {
      * @public
      * @member {Number}
      */
+    get blendMode() {
+        return this._blendMode;
+    }
+
+    set blendMode(blendMode) {
+        this.setBlendMode(blendMode);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
     get emissionRate() {
         return this._emissionRate;
     }
@@ -250,6 +269,18 @@ export default class ParticleEmitter extends Renderable {
      */
     resetTextureFrame() {
         return this.setTextureFrame(Rectangle.Temp.set(0, 0, this._texture.width, this._texture.height));
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} blendMode
+     * @returns {Renderable}
+     */
+    setBlendMode(blendMode) {
+        this._blendMode = blendMode;
+
+        return this;
     }
 
     /**
@@ -407,6 +438,7 @@ export default class ParticleEmitter extends Renderable {
         this._modifiers = null;
 
         this._texture = null;
+        this._blendMode = null;
         this._emissionRate = null;
         this._emissionDelta = null;
         this._updateTexCoords = null;

@@ -286,6 +286,7 @@ export default class SpriteRenderer extends Renderer {
         this._batchIndex = null;
         this._attributeCount = null;
         this._currentTexture = null;
+        this._currentBlendMode = null;
         this._displayManager = null;
     }
 }
