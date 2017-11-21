@@ -1,14 +1,11 @@
-import { SHAPE } from '../const';
 import { inRange } from '../utils';
 import Vector from './Vector';
-import Shape from './Shape';
 import Size from './Size';
 
 /**
  * @class Rectangle
- * @extends Shape
  */
-export default class Rectangle extends Shape {
+export default class Rectangle {
 
     /**
      * @constructor
@@ -18,7 +15,12 @@ export default class Rectangle extends Shape {
      * @param {Number} [height=width]
      */
     constructor(x = 0, y = x, width = 0, height = width) {
-        super(x, y);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._position = new Vector(x, y);
 
         /**
          * @private
@@ -28,10 +30,39 @@ export default class Rectangle extends Shape {
     }
 
     /**
-     * @override
+     * @public
+     * @member {Vector}
      */
-    get type() {
-        return SHAPE.RECTANGLE;
+    get position() {
+        return this._position;
+    }
+
+    set position(position) {
+        this._position.copy(position);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get x() {
+        return this._position.x;
+    }
+
+    set x(x) {
+        this._position.x = x;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get y() {
+        return this._position.y;
+    }
+
+    set y(y) {
+        this._position.y = y;
     }
 
     /**
@@ -160,7 +191,7 @@ export default class Rectangle extends Shape {
      * @override
      */
     set(x, y, width, height) {
-        this.position.set(x, y);
+        this._position.set(x, y);
         this._size.set(width, height);
 
         return this;
@@ -170,7 +201,7 @@ export default class Rectangle extends Shape {
      * @override
      */
     copy(rectangle) {
-        this.position.copy(rectangle.position);
+        this._position.copy(rectangle.position);
         this._size.copy(rectangle.size);
 
         return this;
@@ -197,17 +228,6 @@ export default class Rectangle extends Shape {
             && (y === undefined || this.y === y)
             && (width === undefined || this.width === width)
             && (height === undefined || this.height === height);
-    }
-
-    /**
-     * @override
-     */
-    getBounds() {
-        if (!this._bounds) {
-            this._bounds = new Rectangle();
-        }
-
-        return this._bounds.copy(this);
     }
 
     /**
@@ -240,6 +260,23 @@ export default class Rectangle extends Shape {
 
     /**
      * @public
+     * @param {Rectangle} rect
+     * @returns {Boolean}
+     */
+    intersectsRect(rect) {
+        if ((rect.left > this.right) || (rect.top > this.bottom)) {
+            return false;
+        }
+
+        if ((this.left > rect.right) || (this.top > rect.bottom)) {
+            return null;
+        }
+
+        return true;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Number} x
      * @param {Number} y
@@ -268,7 +305,8 @@ export default class Rectangle extends Shape {
      * @override
      */
     destroy() {
-        super.destroy();
+        this._position.destroy();
+        this._position = null;
 
         this._size.destroy();
         this._size = null;

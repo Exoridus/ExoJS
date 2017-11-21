@@ -51,7 +51,7 @@ export default class RenderTarget {
          * @private
          * @member {View}
          */
-        this._defaultView = new View(0, 0, width, height);
+        this._defaultView = new View(width / 2, height / 2, width, height);
 
         /**
          * @private

@@ -3,7 +3,7 @@ import Rectangle from '../math/Rectangle';
 import Matrix from '../math/Matrix';
 import { degreesToRadians } from '../utils';
 import ObservableSize from '../math/ObservableSize';
-import Vector from '../math/Vector';
+import Bounds from '../core/Bounds';
 
 /**
  * @class View
@@ -23,7 +23,7 @@ export default class View {
          * @private
          * @member {ObservableVector}
          */
-        this._center = new ObservableVector(this._setDirty, this, centerX + (width / 2), centerY + (height / 2));
+        this._center = new ObservableVector(this._setDirty, this, centerX, centerY);
 
         /**
          * @private
@@ -69,6 +69,12 @@ export default class View {
 
         /**
          * @private
+         * @member {Bounds}
+         */
+        this._bounds = new Bounds();
+
+        /**
+         * @private
          * @member {Boolean}
          */
         this._updateTransform = true;
@@ -78,6 +84,12 @@ export default class View {
          * @member {Boolean}
          */
         this._updateInverseTransform = true;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._updateBounds = true;
 
         /**
          * @private
@@ -96,30 +108,6 @@ export default class View {
 
     set center(center) {
         this._center.copy(center);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get centerX() {
-        return this._center.x;
-    }
-
-    set centerX(centerX) {
-        this._center.x = centerX;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get centerY() {
-        return this._center.y;
-    }
-
-    set centerY(centerY) {
-        this._center.y = centerY;
     }
 
     /**
@@ -286,7 +274,7 @@ export default class View {
      */
     reset(centerX, centerY, width, height) {
         this._size.set(width, height);
-        this._center.set(centerX + (width / 2), centerY + (height / 2));
+        this._center.set(centerX, centerY);
         this._viewport.set(0, 0, 1, 1);
         this._rotation = 0;
         this._sin = 0;
@@ -356,6 +344,35 @@ export default class View {
 
     /**
      * @public
+     * @returns {Rectangle}
+     */
+    getBounds() {
+        if (this._updateBounds) {
+            this.updateBounds();
+            this._updateBounds = false;
+        }
+
+        return this._bounds.getRect();
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {View}
+     */
+    updateBounds() {
+        const offsetX = this.width / 2,
+            offsetY = this.height / 2;
+
+        this._bounds.reset()
+            .addCoords(this._center.x - offsetX, this._center.y - offsetY)
+            .addCoords(this._center.x + offsetX, this._center.y + offsetY);
+
+        return this;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {View} view
      * @returns {View}
@@ -388,12 +405,16 @@ export default class View {
         this._inverseTransform.destroy();
         this._inverseTransform = null;
 
+        this._bounds.destroy();
+        this._bounds = null;
+
         this._rotation = null;
         this._cos = null;
         this._sin = null;
 
         this._updateTransform = null;
         this._updateInverseTransform = null;
+        this._updateBounds = null;
         this._updateId = null;
     }
 
@@ -403,6 +424,7 @@ export default class View {
     _setDirty() {
         this._updateTransform = true;
         this._updateInverseTransform = true;
+        this._updateBounds = true;
         this._updateId++;
     }
 }

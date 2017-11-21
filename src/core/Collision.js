@@ -1,6 +1,6 @@
-import Vector from './Vector';
-import Interval from './Interval';
-import Polygon from './Polygon';
+import Vector from '../math/Vector';
+import Interval from '../math/Interval';
+import Polygon from '../math/Polygon';
 
 /**
  * @class Collision

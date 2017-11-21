@@ -98,7 +98,7 @@ window.app.start(new Exo.Scene({
 
         for (const bunny of this._bunnies) {
             bunny._speedY += 0.75;
-            bunny.translate(bunny._speedX, bunny._speedY);
+            bunny.move(bunny._speedX, bunny._speedY);
 
             if (bunny.x + bunny.width > this._maxX) {
                 bunny._speedX *= -1;

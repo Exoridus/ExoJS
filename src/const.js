@@ -39,23 +39,6 @@ export const
     /**
      * @public
      * @constant
-     * @name SHAPE
-     * @type {Object<String, Number>}
-     * @property {Number} NONE
-     * @property {Number} POLYGON
-     * @property {Number} RECTANGLE
-     * @property {Number} CIRCLE
-     */
-    SHAPE = {
-        NONE: 0,
-        POLYGON: 1,
-        RECTANGLE: 2,
-        CIRCLE: 3,
-    },
-
-    /**
-     * @public
-     * @constant
      * @name TIME
      * @type {Object<String, Number>}
      * @property {Number} MILLISECONDS

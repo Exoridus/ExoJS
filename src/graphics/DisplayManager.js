@@ -494,11 +494,12 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Renderable|*} renderable
+     * @param {Renderable} renderable
+     * @param {View} [view=this._renderTarget.view]
      * @returns {Boolean}
      */
-    isVisible(renderable) {
-        return renderable.active;
+    insideViewport(renderable, view = this._renderTarget.view) {
+        return view.getBounds().intersectsRect(renderable.getBounds());
     }
 
     /**

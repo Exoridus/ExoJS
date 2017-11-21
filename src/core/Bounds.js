@@ -1,5 +1,4 @@
 import Rectangle from '../math/Rectangle';
-import Vector from '../math/Vector';
 import Matrix from '../math/Matrix';
 
 /**

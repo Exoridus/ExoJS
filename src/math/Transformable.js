@@ -239,7 +239,7 @@ export default class Transformable extends EventEmitter {
      * @param {Number} y
      * @returns {Transformable}
      */
-    translate(x, y) {
+    move(x, y) {
         return this.setPosition(this.x + x, this.y + y);
     }
 

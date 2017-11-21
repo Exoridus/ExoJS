@@ -245,7 +245,7 @@ export default class Matrix {
      * @param {Number} [y=x]
      * @returns {Matrix}
      */
-    translate(x, y = x) {
+    move(x, y = x) {
         return this.combine(Matrix.Temp.set(
             1, 0, x,
             0, 1, y,

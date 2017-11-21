@@ -41,12 +41,6 @@ window.app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {RenderTarget}
-         */
-        this._renderTarget = this.app.displayManager.renderTarget;
-
-        /**
-         * @private
          * @member {View}
          */
         this._camera = new Exo.View(0, 0, canvas.width, canvas.height);
@@ -57,7 +51,6 @@ window.app.start(new Exo.Scene({
          */
         this._sprite = new Exo.Sprite(resources.get('texture', 'example'));
         this._sprite.setOrigin(0.5, 0.5);
-        this._sprite.setPosition(canvas.width / 2, canvas.height / 2);
 
         /**
          * @private
@@ -82,19 +75,16 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const displayManager = this.app.displayManager,
-            renderTarget = displayManager.renderTarget;
+        const displayManager = this.app.displayManager;
 
         displayManager.clear();
 
-        renderTarget.setView(this._camera);
-
+        displayManager.renderTarget.setView(this._camera);
         displayManager
             .draw(this._sprite)
             .display();
 
-        renderTarget.setView(null);
-
+        displayManager.renderTarget.setView(null);
         displayManager
             .draw(this._info)
             .display();
@@ -105,9 +95,7 @@ window.app.start(new Exo.Scene({
      */
     destroy() {
         this.app.inputManager.clear(true);
-
-        this._renderTarget.setView(null);
-        this._renderTarget = null;
+        this.app.displayManager.renderTarget.setView(null);
 
         this._camera.destroy();
         this._camera = null;
@@ -123,6 +111,7 @@ window.app.start(new Exo.Scene({
      * @private
      */
     addInputs() {
+        const canvas = this.app.canvas;
 
         this.app.inputManager.add([
 
@@ -194,7 +183,7 @@ window.app.start(new Exo.Scene({
             new Exo.Input(Exo.KEYBOARD.R, {
                 context: this,
                 trigger(value) {
-                    this._camera.reset(0, 0, this._renderTarget.width, this._renderTarget.height);
+                    this._camera.reset(0, 0, canvas.width, canvas.height);
                 },
             })
         ]);

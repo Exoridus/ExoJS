@@ -1,15 +1,10 @@
-import { SHAPE } from '../const';
-import Shape from './Shape';
-import Collision from './Collision';
-import Bounds from '../core/Bounds';
 import Interval from './Interval';
 import Vector from './Vector';
 
 /**
  * @class Polygon
- * @extends Shape
  */
-export default class Polygon extends Shape {
+export default class Polygon {
 
     /**
      * @constructor
@@ -18,7 +13,12 @@ export default class Polygon extends Shape {
      * @param {Vector[]} [points=[]]
      */
     constructor(x = 0, y = 0, points = []) {
-        super(x, y);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._position = new Vector(x, y);
 
         /**
          * @private
@@ -28,10 +28,39 @@ export default class Polygon extends Shape {
     }
 
     /**
-     * @override
+     * @public
+     * @member {Vector}
      */
-    get type() {
-        return SHAPE.POLYGON;
+    get position() {
+        return this._position;
+    }
+
+    set position(position) {
+        this._position.copy(position);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get x() {
+        return this._position.x;
+    }
+
+    set x(x) {
+        this._position.x = x;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get y() {
+        return this._position.y;
+    }
+
+    set y(y) {
+        this._position.y = y;
     }
 
     /**
@@ -99,7 +128,7 @@ export default class Polygon extends Shape {
      * @override
      */
     set(x, y, points) {
-        this.position.set(x, y);
+        this._position.set(x, y);
         this.setPoints(points);
 
         return this;
@@ -109,7 +138,7 @@ export default class Polygon extends Shape {
      * @override
      */
     copy(polygon) {
-        this.position.copy(polygon.position);
+        this._position.copy(polygon.position);
         this.setPoints(polygon.points);
 
         return this;
@@ -130,23 +159,6 @@ export default class Polygon extends Shape {
      */
     equals({ points } = {}) {
         return (points.length === this.points.length) && (this.points.every((point, index) => point.equals(points[index])));
-    }
-
-    /**
-     * @override
-     */
-    getBounds() {
-        if (!this._bounds) {
-            this._bounds = new Bounds();
-        } else {
-            this._bounds.reset();
-        }
-
-        for (const point of this._points) {
-            this._bounds.addCoords(point.x + this.x, point.y + this.y);
-        }
-
-        return this._bounds.getRect();
     }
 
     /**
@@ -181,11 +193,13 @@ export default class Polygon extends Shape {
      * @override
      */
     destroy() {
-        super.destroy();
 
         for (const point of this._points) {
             point.destroy();
         }
+
+        this._position.destroy();
+        this._position = null;
 
         this._points.length = 0;
         this._points = null;

@@ -266,7 +266,7 @@ export default class Player extends Sprite {
                 offsetX = (mag > 1 ? (velX / mag) : velX) * distance,
                 offsetY = (mag > 1 ? (velY / mag) : velY) * distance;
 
-            this.translate(offsetX, offsetY);
+            this.move(offsetX, offsetY);
             this._updateDirection();
 
             if (!this._moving) {

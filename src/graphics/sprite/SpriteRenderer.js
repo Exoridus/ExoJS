@@ -100,6 +100,12 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
+         * @member {?View}
+         */
+        this._currentView = null;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._viewId = -1;
@@ -168,6 +174,7 @@ export default class SpriteRenderer extends Renderer {
 
             this._currentTexture = null;
             this._currentBlendMode = null;
+            this._currentView = null;
             this._viewId = -1;
         }
 
@@ -245,11 +252,14 @@ export default class SpriteRenderer extends Renderer {
      */
     flush() {
         if (this.bound && this._batchIndex > 0) {
-            const view = this._displayManager.renderTarget.view;
+            const view = this._displayManager.renderTarget.view,
+                viewId = view.updateId;
 
-            if (this._viewId !== view.updateId) {
+            if (this._currentView !== view || this._viewId !== viewId) {
+                this._currentView = view;
+                this._viewId = viewId;
+
                 this._shader.setProjection(view.getTransform());
-                this._viewId = view.updateId;
             }
 
             this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
@@ -287,6 +297,7 @@ export default class SpriteRenderer extends Renderer {
         this._attributeCount = null;
         this._currentTexture = null;
         this._currentBlendMode = null;
+        this._currentView = null;
         this._displayManager = null;
     }
 }

@@ -104,6 +104,7 @@ export default class WorldMap {
      */
     render(displayManager) {
         const camera = displayManager.renderTarget.view,
+            viewport = camera.getBounds(),
             mapData = this._mapData,
             tilesX = this._tilesX,
             tilesY = this._tilesY,
@@ -111,10 +112,10 @@ export default class WorldMap {
             tileset = this._tileset,
             tileWidth = this._tileSize.width,
             tileHeight = this._tileSize.height,
-            tilesHorizontal = ((camera.width / tileWidth) + 2) | 0,
-            tilesVertical = ((camera.height / tileHeight) + 2) | 0,
-            startTileX = utils.clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-            startTileY = utils.clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+            tilesHorizontal = ((viewport.width / tileWidth) + 2) | 0,
+            tilesVertical = ((viewport.height / tileHeight) + 2) | 0,
+            startTileX = utils.clamp(viewport.x / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+            startTileY = utils.clamp(viewport.y / tileHeight, 0, tilesY - tilesVertical) | 0,
             startTileIndex = (startTileY * tilesX) + startTileX,
             tilesTotal = tilesHorizontal * tilesVertical;
 
