@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 4);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -86,11 +86,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _exojs = __webpack_require__(0);
 
-var _MenuPath = __webpack_require__(9);
+var _MenuPath = __webpack_require__(10);
 
 var _MenuPath2 = _interopRequireDefault(_MenuPath);
 
-var _MenuAction = __webpack_require__(10);
+var _MenuAction = __webpack_require__(11);
 
 var _MenuAction2 = _interopRequireDefault(_MenuAction);
 
@@ -570,9 +570,281 @@ exports.default = MenuItem;
 "use strict";
 
 
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 var _exojs = __webpack_require__(0);
 
-var _LauncherScene = __webpack_require__(4);
+var _WorldMap = __webpack_require__(13);
+
+var _WorldMap2 = _interopRequireDefault(_WorldMap);
+
+var _Player = __webpack_require__(16);
+
+var _Player2 = _interopRequireDefault(_Player);
+
+var _Tileset = __webpack_require__(17);
+
+var _Tileset2 = _interopRequireDefault(_Tileset);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class GameScene
+ * @extends {Scene}
+ */
+var GameScene = function (_Scene) {
+    _inherits(GameScene, _Scene);
+
+    function GameScene() {
+        _classCallCheck(this, GameScene);
+
+        return _possibleConstructorReturn(this, (GameScene.__proto__ || Object.getPrototypeOf(GameScene)).apply(this, arguments));
+    }
+
+    _createClass(GameScene, [{
+        key: 'init',
+
+
+        /**
+         * @override
+         */
+        value: function init(resources) {
+            var app = this.app,
+                canvas = app.canvas;
+
+            /**
+             * @private
+             * @member {WorldMap}
+             */
+            this._worldMap = new _WorldMap2.default(new _Tileset2.default(resources.get('texture', 'game/tileset'), 32));
+
+            /**
+             * @private
+             * @member {Player}
+             */
+            this._player = new _Player2.default(app, {
+                spawnPoint: new _exojs.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
+                worldBounds: this._worldMap.bounds
+            });
+
+            /**
+             * @private
+             * @member {View}
+             */
+            this._camera = new _exojs.View(0, 0, canvas.width, canvas.height);
+
+            /**
+             * @private
+             * @member {Boolean}
+             */
+            this._paused = false;
+
+            /**
+             * @private
+             * @member {Music}
+             */
+            this._backgroundMusic = resources.get('music', 'overworld');
+            this._backgroundMusic.connect(app.mediaManager);
+            this._backgroundMusic.play({ loop: true });
+
+            this._addEvents();
+            this._addInputs();
+            this._updateCamera();
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'update',
+        value: function update(delta) {
+            if (!this._paused) {
+                this._player.update(delta);
+                this._worldMap.update(delta);
+
+                this.app.displayManager.clear().draw(this._worldMap).draw(this._player).display();
+            }
+
+            return this;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'unload',
+        value: function unload() {
+            this._removeEvents();
+            this._removeInputs();
+
+            this._worldMap.destroy();
+            this._worldMap = null;
+
+            this._player.destroy();
+            this._player = null;
+
+            this._camera.destroy();
+            this._camera = null;
+
+            this._backgroundMusic.destroy();
+            this._backgroundMusic = null;
+
+            this._paused = null;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_updateCamera',
+        value: function _updateCamera() {
+            var displayManager = this.app.displayManager,
+                x = this._player.x,
+                y = this._player.y - this._player.height / 2,
+                maxX = this._worldMap.width,
+                maxY = this._worldMap.height,
+                centerX = this._camera.width / 2,
+                centerY = this._camera.height / 2;
+
+            displayManager.renderTarget.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_pauseGame',
+        value: function _pauseGame() {
+            if (!this._paused) {
+                this._paused = true;
+                this._backgroundMusic.pause();
+                this._openMenu();
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_resumeGame',
+        value: function _resumeGame() {
+            if (this._paused) {
+                this._paused = false;
+                this._backgroundMusic.play();
+                this._closeMenu();
+            }
+
+            return this;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_openMenu',
+        value: function _openMenu() {}
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_closeMenu',
+        value: function _closeMenu() {}
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addEvents',
+        value: function _addEvents() {
+            this._player.on('move', this._updateCamera, this);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_removeEvents',
+        value: function _removeEvents() {
+            this._player.off('move', this._updateCamera, this);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_addInputs',
+        value: function _addInputs() {
+
+            /**
+             * @private
+             * @member {Input}
+             */
+            this._toggleMenuInput = new _exojs.Input([_exojs.KEYBOARD.Escape, _exojs.GAMEPAD.Start], {
+                context: this,
+                trigger: function trigger() {
+                    if (this._paused) {
+                        this._resumeGame();
+                    } else {
+                        this._pauseGame();
+                    }
+                }
+            });
+
+            this.app.inputManager.add(this._toggleMenuInput);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_removeInputs',
+        value: function _removeInputs() {
+            this.app.inputManager.remove(this._toggleMenuInput);
+
+            this._toggleMenuInput.destroy();
+            this._toggleMenuInput = null;
+        }
+    }]);
+
+    return GameScene;
+}(_exojs.Scene);
+
+exports.default = GameScene;
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _exojs = __webpack_require__(0);
+
+var _LauncherScene = __webpack_require__(5);
 
 var _LauncherScene2 = _interopRequireDefault(_LauncherScene);
 
@@ -597,7 +869,7 @@ window.addEventListener('load', function () {
 }, false);
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -613,7 +885,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _exojs = __webpack_require__(0);
 
-var _TitleScene = __webpack_require__(5);
+var _TitleScene = __webpack_require__(6);
 
 var _TitleScene2 = _interopRequireDefault(_TitleScene);
 
@@ -688,18 +960,22 @@ var LauncherScene = function (_Scene) {
 
       loader.on('progress', function (length, index, resource) {
         return _this2._renderProgress(index / length * 100);
-      }).addList('texture', {
+      });
+
+      loader.addList('texture', {
         'title/logo': 'image/title/logo.png',
         'title/background': 'image/title/background.jpg',
         'game/tileset': 'image/game/tileset.png',
         'game/player': 'image/game/player.png'
-      }).addList('music', {
+      });
+
+      loader.addList('music', {
         'title': 'audio/title.ogg',
         'overworld': 'audio/overworld.ogg'
-      }).addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
+      });
+
+      loader.addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
         family: 'AndyBold'
-      }).load().then(function () {
-        return _this2.app.trigger('scene:start');
       });
 
       this._renderProgress(0);
@@ -803,7 +1079,7 @@ var LauncherScene = function (_Scene) {
   }, {
     key: '_openTitle',
     value: function _openTitle() {
-      this.app.trigger('scene:change', new _TitleScene2.default());
+      this.app.sceneManager.changeScene(new _TitleScene2.default());
     }
   }]);
 
@@ -813,7 +1089,7 @@ var LauncherScene = function (_Scene) {
 exports.default = LauncherScene;
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -827,7 +1103,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _exojs = __webpack_require__(0);
 
-var _TitleMenuManager = __webpack_require__(6);
+var _TitleMenuManager = __webpack_require__(7);
 
 var _TitleMenuManager2 = _interopRequireDefault(_TitleMenuManager);
 
@@ -892,7 +1168,7 @@ var TitleScene = function (_Scene) {
     value: function update(delta) {
       this._menuManager.update(delta);
 
-      this.app.displayManager.begin().render(this._background).render(this._menuManager).end();
+      this.app.displayManager.clear().draw(this._background).draw(this._menuManager).display();
     }
 
     /**
@@ -919,7 +1195,7 @@ var TitleScene = function (_Scene) {
 exports.default = TitleScene;
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -929,15 +1205,15 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _MenuManager2 = __webpack_require__(7);
+var _MenuManager2 = __webpack_require__(8);
 
 var _MenuManager3 = _interopRequireDefault(_MenuManager2);
 
-var _MainMenu = __webpack_require__(8);
+var _MainMenu = __webpack_require__(9);
 
 var _MainMenu2 = _interopRequireDefault(_MainMenu);
 
-var _NewGameMenu = __webpack_require__(11);
+var _NewGameMenu = __webpack_require__(12);
 
 var _NewGameMenu2 = _interopRequireDefault(_NewGameMenu);
 
@@ -983,7 +1259,7 @@ var TitleMenuManager = function (_MenuManager) {
 exports.default = TitleMenuManager;
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1226,7 +1502,7 @@ var MenuManager = function () {
         key: 'render',
         value: function render(displayManager) {
             if (this._currentMenu) {
-                displayManager.render(this._currentMenu);
+                this._currentMenu.render(displayManager);
             }
 
             return this;
@@ -1269,7 +1545,7 @@ var MenuManager = function () {
 exports.default = MenuManager;
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1461,7 +1737,7 @@ var MainMenu = function (_Menu) {
 exports.default = MainMenu;
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1570,7 +1846,7 @@ var MenuPath = function () {
 exports.default = MenuPath;
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1689,7 +1965,7 @@ var MenuAction = function () {
 exports.default = MenuAction;
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1711,7 +1987,7 @@ var _MenuItem = __webpack_require__(2);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
-var _GameScene = __webpack_require__(12);
+var _GameScene = __webpack_require__(3);
 
 var _GameScene2 = _interopRequireDefault(_GameScene);
 
@@ -1813,12 +2089,12 @@ var NewGameMenu = function (_Menu) {
     }, {
         key: '_onSelectCreateWorld',
         value: function _onSelectCreateWorld() {
-            this._app.trigger('scene:change', new _GameScene2.default());
+            this._app.sceneManager.changeScene(new _GameScene2.default());
         }
     }, {
         key: '_onSelectCreateCharacter',
         value: function _onSelectCreateCharacter() {
-            this._app.trigger('scene:change', new _GameScene2.default());
+            this._app.sceneManager.changeScene(new _GameScene2.default());
         }
     }]);
 
@@ -1826,278 +2102,6 @@ var NewGameMenu = function (_Menu) {
 }(_Menu3.default);
 
 exports.default = NewGameMenu;
-
-/***/ }),
-/* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _exojs = __webpack_require__(0);
-
-var _WorldMap = __webpack_require__(13);
-
-var _WorldMap2 = _interopRequireDefault(_WorldMap);
-
-var _Player = __webpack_require__(16);
-
-var _Player2 = _interopRequireDefault(_Player);
-
-var _Tileset = __webpack_require__(17);
-
-var _Tileset2 = _interopRequireDefault(_Tileset);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class GameScene
- * @extends {Scene}
- */
-var GameScene = function (_Scene) {
-    _inherits(GameScene, _Scene);
-
-    function GameScene() {
-        _classCallCheck(this, GameScene);
-
-        return _possibleConstructorReturn(this, (GameScene.__proto__ || Object.getPrototypeOf(GameScene)).apply(this, arguments));
-    }
-
-    _createClass(GameScene, [{
-        key: 'init',
-
-
-        /**
-         * @override
-         */
-        value: function init(resources) {
-            var app = this.app,
-                canvas = app.canvas;
-
-            /**
-             * @private
-             * @member {WorldMap}
-             */
-            this._worldMap = new _WorldMap2.default(new _Tileset2.default(resources.get('texture', 'game/tileset'), 32));
-
-            /**
-             * @private
-             * @member {Player}
-             */
-            this._player = new _Player2.default(app, {
-                spawnPoint: new _exojs.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
-                worldBounds: this._worldMap.bounds
-            });
-
-            /**
-             * @private
-             * @member {View}
-             */
-            this._camera = new _exojs.View(0, 0, canvas.width, canvas.height);
-
-            /**
-             * @private
-             * @member {Boolean}
-             */
-            this._paused = false;
-
-            /**
-             * @private
-             * @member {Music}
-             */
-            this._backgroundMusic = resources.get('music', 'overworld');
-            this._backgroundMusic.connect(app.mediaManager);
-            this._backgroundMusic.play({ loop: true });
-
-            this._addEvents();
-            this._addInputs();
-            this._updateCamera();
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'update',
-        value: function update(delta) {
-            if (!this._paused) {
-                this._player.update(delta);
-                this._worldMap.update(delta);
-
-                this.app.displayManager.begin().render(this._worldMap).render(this._player).end();
-            }
-
-            return this;
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'unload',
-        value: function unload() {
-            this._removeEvents();
-            this._removeInputs();
-
-            this._worldMap.destroy();
-            this._worldMap = null;
-
-            this._player.destroy();
-            this._player = null;
-
-            this._camera.destroy();
-            this._camera = null;
-
-            this._backgroundMusic.destroy();
-            this._backgroundMusic = null;
-
-            this._paused = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_updateCamera',
-        value: function _updateCamera() {
-            var displayManager = this.app.displayManager,
-                x = this._player.x,
-                y = this._player.y - this._player.height / 2,
-                maxX = this._worldMap.width,
-                maxY = this._worldMap.height,
-                centerX = this._camera.width / 2,
-                centerY = this._camera.height / 2;
-
-            displayManager.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_pauseGame',
-        value: function _pauseGame() {
-            if (!this._paused) {
-                this._paused = true;
-                this._backgroundMusic.pause();
-                this._openMenu();
-            }
-
-            return this;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_resumeGame',
-        value: function _resumeGame() {
-            if (this._paused) {
-                this._paused = false;
-                this._backgroundMusic.play();
-                this._closeMenu();
-            }
-
-            return this;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_openMenu',
-        value: function _openMenu() {}
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_closeMenu',
-        value: function _closeMenu() {}
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_addEvents',
-        value: function _addEvents() {
-            this._player.on('move', this._updateCamera, this);
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_removeEvents',
-        value: function _removeEvents() {
-            this._player.off('move', this._updateCamera, this);
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_addInputs',
-        value: function _addInputs() {
-
-            /**
-             * @private
-             * @member {Input}
-             */
-            this._toggleMenuInput = new _exojs.Input([_exojs.KEYBOARD.Escape, _exojs.GAMEPAD.Start], {
-                context: this,
-                trigger: function trigger() {
-                    if (this._paused) {
-                        this._resumeGame();
-                    } else {
-                        this._pauseGame();
-                    }
-                }
-            });
-
-            this.app.inputManager.add(this._toggleMenuInput);
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_removeInputs',
-        value: function _removeInputs() {
-            this.app.inputManager.remove(this._toggleMenuInput);
-
-            this._toggleMenuInput.destroy();
-            this._toggleMenuInput = null;
-        }
-    }]);
-
-    return GameScene;
-}(_exojs.Scene);
-
-exports.default = GameScene;
 
 /***/ }),
 /* 13 */
@@ -2210,7 +2214,7 @@ var WorldMap = function () {
   }, {
     key: 'render',
     value: function render(displayManager) {
-      var camera = displayManager.view,
+      var camera = displayManager.renderTarget.view,
           mapData = this._mapData,
           tilesX = this._tilesX,
           tilesY = this._tilesY,
@@ -3382,6 +3386,10 @@ var _MenuItem = __webpack_require__(2);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
+var _GameScene = __webpack_require__(3);
+
+var _GameScene2 = _interopRequireDefault(_GameScene);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -3462,7 +3470,7 @@ var LoadGameMenu = function (_Menu) {
     }, {
         key: '_onSelectLoadWorld',
         value: function _onSelectLoadWorld() {
-            this._app.trigger('scene:change', 'game');
+            this._app.sceneManager.changeScene(new _GameScene2.default());
         }
     }, {
         key: 'destroy',

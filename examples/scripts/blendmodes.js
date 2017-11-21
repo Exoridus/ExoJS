@@ -17,8 +17,7 @@ window.app.start(new Exo.Scene({
                 bunny: 'image/bunny.png',
             }, {
                 scaleMode: Exo.SCALE_MODE.NEAREST,
-            })
-            .load(() => this.app.trigger('scene:start'));
+            });
     },
 
     /**

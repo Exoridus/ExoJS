@@ -11,8 +11,9 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('font', 'example', 'font/AndyBold/AndyBold.woff2', { family: 'AndyBold' })
-            .load(() => this.app.trigger('scene:start'));
+        loader.addItem('font', 'example', 'font/AndyBold/AndyBold.woff2', {
+            family: 'AndyBold',
+        });
     },
 
     /**

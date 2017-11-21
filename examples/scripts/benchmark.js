@@ -11,8 +11,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('texture', 'bunny', 'image/bunny.png')
-            .load(() => this.app.trigger('scene:start'));
+        loader.addItem('texture', 'bunny', 'image/bunny.png');
     },
 
     /**

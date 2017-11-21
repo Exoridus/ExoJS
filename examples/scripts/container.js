@@ -12,10 +12,9 @@ window.app.start(new Exo.Scene({
      */
     load(loader) {
         loader.addList('texture', {
-                bunny: 'image/bunny.png',
-                rainbow: 'image/rainbow.png',
-            })
-            .load(() => this.app.trigger('scene:start'));
+            bunny: 'image/bunny.png',
+            rainbow: 'image/rainbow.png',
+        });
     },
 
     /**

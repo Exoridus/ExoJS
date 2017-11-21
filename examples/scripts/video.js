@@ -11,8 +11,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('video', 'example', 'video/example.webm')
-            .load(() => this.app.trigger('scene:start'));
+        loader.addItem('video', 'example', 'video/example.webm');
     },
 
     /**

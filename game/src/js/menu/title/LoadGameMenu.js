@@ -1,5 +1,6 @@
 import Menu from '../Menu';
 import MenuItem from '../MenuItem';
+import GameScene from '../../scene/GameScene';
 
 /**
  * @class LoadGameMenu
@@ -64,7 +65,7 @@ export default class LoadGameMenu extends Menu {
     }
 
     _onSelectLoadWorld() {
-        this._app.trigger('scene:change', 'game');
+        this._app.sceneManager.changeScene(new GameScene());
     }
 
     destroy() {

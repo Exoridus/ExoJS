@@ -11,8 +11,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('music', 'example', 'audio/example.ogg')
-            .load(() => this.app.trigger('scene:start'));
+        loader.addItem('music', 'example', 'audio/example.ogg');
     },
 
     /**

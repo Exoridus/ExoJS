@@ -50,22 +50,23 @@ export default class LauncherScene extends Scene {
          */
         this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
-        loader.on('progress', (length, index, resource) => this._renderProgress(index / length * 100))
-            .addList('texture', {
-                'title/logo': 'image/title/logo.png',
-                'title/background': 'image/title/background.jpg',
-                'game/tileset': 'image/game/tileset.png',
-                'game/player': 'image/game/player.png',
-            })
-            .addList('music', {
-                'title': 'audio/title.ogg',
-                'overworld': 'audio/overworld.ogg',
-            })
-            .addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
-                family: 'AndyBold'
-            })
-            .load()
-            .then(() => this.app.trigger('scene:start'));
+        loader.on('progress', (length, index, resource) => this._renderProgress(index / length * 100));
+
+        loader.addList('texture', {
+            'title/logo': 'image/title/logo.png',
+            'title/background': 'image/title/background.jpg',
+            'game/tileset': 'image/game/tileset.png',
+            'game/player': 'image/game/player.png',
+        });
+
+        loader.addList('music', {
+            'title': 'audio/title.ogg',
+            'overworld': 'audio/overworld.ogg',
+        });
+
+        loader.addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
+            family: 'AndyBold'
+        });
 
         this._renderProgress(0);
     }
@@ -164,6 +165,6 @@ export default class LauncherScene extends Scene {
      * @private
      */
     _openTitle() {
-        this.app.trigger('scene:change', new TitleScene());
+        this.app.sceneManager.changeScene(new TitleScene());
     }
 }

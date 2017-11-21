@@ -26,11 +26,6 @@ export default class SceneManager {
          * @member {Boolean}
          */
         this._sceneActive = false;
-
-        app
-            .on('scene:change', this.changeScene, this)
-            .on('scene:start', this.startScene, this)
-            .on('scene:stop', this.stopScene, this);
     }
 
     /**
@@ -50,7 +45,7 @@ export default class SceneManager {
      */
     startScene() {
         if (!this._currentScene) {
-            throw new Error('No scene was specified, use scene:change!');
+            throw new Error('No scene was specified, use changeScene()!');
         }
 
         if (this._sceneActive) {
@@ -90,17 +85,18 @@ export default class SceneManager {
         this._currentScene = scene;
         this._currentScene.app = this._app;
         this._currentScene.load(this._app.loader);
+
+        this._app.loader.load(() => this.startScene());
     }
 
     /**
      * @public
      */
     destroy() {
-        this._app.trigger('scene:stop')
-            .off('scene:change', this.changeScene, this)
-            .off('scene:start', this.startScene, this)
-            .off('scene:stop', this.stopScene, this);
+        this.stopScene();
 
+        this._currentScene = null;
+        this._sceneActive = null;
         this._app = null;
     }
 }

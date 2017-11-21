@@ -11,8 +11,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('texture', 'particle', 'image/particle.png')
-            .load(() => this.app.trigger('scene:start'));
+        loader.addItem('texture', 'particle', 'image/particle.png');
     },
 
     /**

@@ -152,7 +152,7 @@ export default class Scene extends EventEmitter {
      * @param {ResourceLoader} loader
      */
     load(loader) { // eslint-disable-line
-        this._app.trigger('scene:start');
+        // do nothing
     }
 
     /**
