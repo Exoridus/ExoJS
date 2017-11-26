@@ -63,6 +63,7 @@ export const
      * @property {Number} WRAP_MODE
      * @property {Number} PREMULTIPLY_ALPHA
      * @property {Number} SOURCE
+     * @property {Number} SIZE
      */
     TEXTURE_FLAGS = {
         NONE: 0,
@@ -70,6 +71,7 @@ export const
         WRAP_MODE: 1 << 1,
         PREMULTIPLY_ALPHA: 1 << 2,
         SOURCE: 1 << 3,
+        SIZE: 1 << 4,
     },
 
     /**

@@ -187,14 +187,11 @@ export default class DisplayManager {
 
     /**
      * @public
+     * @readonly
      * @member {?Texture}
      */
     get texture() {
         return this._texture;
-    }
-
-    set texture(texture) {
-        this.setTexture(texture);
     }
 
     /**
@@ -304,7 +301,12 @@ export default class DisplayManager {
                 this._texture = null;
             }
 
-            this._texture = newTexture && newTexture.bind(this);
+            if (newTexture) {
+                newTexture.connect(this._context);
+                newTexture.bind();
+            }
+
+            this._texture = newTexture;
         }
 
         return this;
