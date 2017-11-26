@@ -30,7 +30,6 @@ export default class TitleScene extends Scene {
          * @member {Music}
          */
         this._titleMusic = resources.get('music', 'title');
-        this._titleMusic.connect(this.app.mediaManager);
         this._titleMusic.play({ loop: true });
     }
 

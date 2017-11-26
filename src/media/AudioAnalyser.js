@@ -8,7 +8,7 @@ export default class AudioAnalyser {
 
     /**
      * @constructor
-     * @param {Media|Sound|Music|Video|MediaManager} media
+     * @param {Media|Sound|Music|Video} media
      * @param {Object} [options={}]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
@@ -43,7 +43,7 @@ export default class AudioAnalyser {
 
         /**
          * @private
-         * @member {Media|Sound|Music|Video|MediaManager}
+         * @member {Media|Sound|Music|Video}
          */
         this._media = media;
 

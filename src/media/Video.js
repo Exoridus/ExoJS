@@ -2,6 +2,7 @@ import { audioContext, clamp } from '../utils';
 import Sprite from '../graphics/sprite/Sprite';
 import Texture from '../graphics/Texture';
 import support from '../support';
+import settings from '../settings';
 
 /**
  * @class Video
@@ -12,8 +13,18 @@ export default class Video extends Sprite {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
+     * @param {Object} [options={}]
+     * @property {Number} [options.volume=settings.VOLUME_VIDEO]
+     * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
+     * @property {Number} [options.speed=settings.MEDIA_SPEED]
+     * @property {Number} [options.time=settings.MEDIA_TIME]
      */
-    constructor(mediaSource) {
+    constructor(mediaSource, {
+        volume = settings.VOLUME_VIDEO,
+        loop = settings.MEDIA_LOOP,
+        speed = settings.MEDIA_SPEED,
+        time = settings.MEDIA_TIME,
+    } = {}) {
         super(new Texture(mediaSource.mediaElement));
 
         /**
@@ -52,17 +63,25 @@ export default class Video extends Sprite {
          */
         this._loop = this._mediaElement.loop || false;
 
-        /**
-         * @private
-         * @member {?MediaElementAudioSourceNode}
-         */
-        this._sourceNode = null;
+        if (support.webAudio) {
 
-        /**
-         * @private
-         * @member {?GainNode}
-         */
-        this._gainNode = null;
+            /**
+             * @private
+             * @member {?GainNode}
+             */
+            this._gainNode = audioContext.createGain();
+            this._gainNode.gain.value = this.volume;
+            this._gainNode.connect(audioContext.destination);
+
+            /**
+             * @private
+             * @member {?MediaElementAudioSourceNode}
+             */
+            this._sourceNode = audioContext.createMediaElementSource(this._mediaElement);
+            this._sourceNode.connect(this._gainNode);
+        }
+
+        this.applyOptions({ volume, loop, speed, time });
     }
 
     /**
@@ -306,51 +325,20 @@ export default class Video extends Sprite {
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {MediaManager} mediaManager
-     * @returns {Video}
-     */
-    connect(mediaManager) {
-        if (support.webAudio && !this._gainNode) {
-            this._gainNode = audioContext.createGain();
-            this._gainNode.gain.value = this.volume;
-            this._gainNode.connect(mediaManager.videoGain);
-
-            this._sourceNode = audioContext.createMediaElementSource(this._mediaElement);
-            this._sourceNode.connect(this._gainNode);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Video}
-     */
-    disconnect() {
-        if (this._sourceNode) {
-            this._sourceNode.disconnect();
-            this._sourceNode = null;
-        }
-
-        if (this._gainNode) {
-            this._gainNode.disconnect();
-            this._gainNode = null;
-        }
-
-        return this;
-    }
-
-    /**
      * @override
      */
     destroy() {
         super.destroy();
 
         this.stop();
-        this.disconnect();
+
+        if (support.webAudio) {
+            this._sourceNode.disconnect();
+            this._sourceNode = null;
+
+            this._gainNode.disconnect();
+            this._gainNode = null;
+        }
 
         this._mediaSource = null;
         this._mediaElement = null;

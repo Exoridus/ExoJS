@@ -18,21 +18,19 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas,
-            mediaManager = this.app.mediaManager;
+        const canvas = this.app.canvas;
 
         /**
          * @private
          * @member {Music}
          */
         this._music = resources.get('music', 'example');
-        this._music.connect(mediaManager);
 
         /**
          * @private
          * @member {AudioAnalyser}
          */
-        this._analyser = new Exo.AudioAnalyser(mediaManager);
+        this._analyser = new Exo.AudioAnalyser(this._music);
 
         /**
          * @private

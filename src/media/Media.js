@@ -10,8 +10,13 @@ export default class Media extends EventEmitter {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
+     * @param {Object} [options]
+     * @property {Number} [options.volume]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.time]
      */
-    constructor(mediaSource) {
+    constructor(mediaSource, options) {
         super();
 
         /**
@@ -49,6 +54,10 @@ export default class Media extends EventEmitter {
          * @member {Boolean}
          */
         this._loop = false;
+
+        if (options !== undefined) {
+            this.applyOptions(options);
+        }
     }
 
     /**
@@ -244,23 +253,23 @@ export default class Media extends EventEmitter {
      * @public
      * @chainable
      * @param {Object} [options]
+     * @property {Number} [options.volume]
      * @property {Boolean} [options.loop]
      * @property {Number} [options.speed]
-     * @property {Number} [options.volume]
      * @property {Number} [options.time]
      * @returns {Media}
      */
-    applyOptions({ loop, speed, volume, time } = {}) {
+    applyOptions({ volume, loop, speed, time } = {}) {
+        if (volume !== undefined) {
+            this.volume = volume;
+        }
+
         if (loop !== undefined) {
             this.loop = loop;
         }
 
         if (speed !== undefined) {
             this.speed = speed;
-        }
-
-        if (volume !== undefined) {
-            this.volume = volume;
         }
 
         if (time !== undefined) {
@@ -272,31 +281,11 @@ export default class Media extends EventEmitter {
 
     /**
      * @public
-     * @chainable
-     * @param {MediaManager} mediaManager
-     * @returns {Media}
-     */
-    connect(mediaManager) { // eslint-disable-line
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Media}
-     */
-    disconnect() {
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
         super.destroy();
 
         this.stop();
-        this.disconnect();
 
         this._mediaSource = null;
         this._mediaElement = null;

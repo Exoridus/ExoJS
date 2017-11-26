@@ -1,6 +1,7 @@
 import { audioContext, clamp } from '../utils';
 import support from '../support';
 import Media from './Media';
+import settings from '../settings';
 
 /**
  * @class Music
@@ -11,9 +12,19 @@ export default class Music extends Media {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
+     * @param {Object} [options={}]
+     * @property {Number} [options.volume=settings.VOLUME_MUSIC]
+     * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
+     * @property {Number} [options.speed=settings.MEDIA_SPEED]
+     * @property {Number} [options.time=settings.MEDIA_TIME]
      */
-    constructor(mediaSource) {
-        super(mediaSource);
+    constructor(mediaSource, {
+        volume = settings.VOLUME_MUSIC,
+        loop = settings.MEDIA_LOOP,
+        speed = settings.MEDIA_SPEED,
+        time = settings.MEDIA_TIME,
+    } = {}) {
+        super(mediaSource, { volume, loop, speed, time });
 
         if (!this.mediaElement) {
             throw new Error('MediaElement is missing in MediaSource');
@@ -43,17 +54,23 @@ export default class Music extends Media {
          */
         this._loop = this.mediaElement.loop;
 
-        /**
-         * @private
-         * @member {?MediaElementAudioSourceNode}
-         */
-        this._sourceNode = null;
+        if (support.webAudio) {
 
-        /**
-         * @private
-         * @member {?GainNode}
-         */
-        this._gainNode = null;
+            /**
+             * @private
+             * @member {?GainNode}
+             */
+            this._gainNode = audioContext.createGain();
+            this._gainNode.gain.value = this.volume;
+            this._gainNode.connect(audioContext.destination);
+
+            /**
+             * @private
+             * @member {?MediaElementAudioSourceNode}
+             */
+            this._sourceNode = audioContext.createMediaElementSource(this.mediaElement);
+            this._sourceNode.connect(this._gainNode);
+        }
     }
 
     /**
@@ -85,33 +102,15 @@ export default class Music extends Media {
     /**
      * @override
      */
-    connect(mediaManager) {
-        if (support.webAudio && !this._gainNode) {
-            this._gainNode = audioContext.createGain();
-            this._gainNode.gain.value = this.volume;
-            this._gainNode.connect(mediaManager.musicGain);
+    destroy() {
+        super.destroy();
 
-            this._sourceNode = audioContext.createMediaElementSource(this.mediaElement);
-            this._sourceNode.connect(this._gainNode);
-        }
-
-        return this;
-    }
-
-    /**
-     * @override
-     */
-    disconnect() {
-        if (this._sourceNode) {
+        if (support.webAudio) {
             this._sourceNode.disconnect();
             this._sourceNode = null;
-        }
 
-        if (this._gainNode) {
             this._gainNode.disconnect();
             this._gainNode = null;
         }
-
-        return this;
     }
 }

@@ -48,7 +48,6 @@ export default class GameScene extends Scene {
          * @member {Music}
          */
         this._backgroundMusic = resources.get('music', 'overworld');
-        this._backgroundMusic.connect(app.mediaManager);
         this._backgroundMusic.play({ loop: true });
 
         this._addEvents();

@@ -2,7 +2,6 @@ import EventEmitter from './EventEmitter';
 import Clock from './Clock';
 import SceneManager from './SceneManager';
 import DisplayManager from '../graphics/DisplayManager';
-import MediaManager from '../media/MediaManager';
 import InputManager from '../input/InputManager';
 import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
@@ -19,9 +18,6 @@ export default class Application extends EventEmitter {
      * @param {String} [options.basePath='']
      * @param {Number} [options.width=800]
      * @param {Number} [options.height=600]
-     * @param {Number} [options.soundVolume=1]
-     * @param {Number} [options.musicVolume=1]
-     * @param {Number} [options.masterVolume=1]
      * @param {?HTMLCanvasElement|?String} [options.canvas=null]
      * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
      * @param {Color} [options.blendMode=BLEND_MODES.NORMAL]
@@ -63,12 +59,6 @@ export default class Application extends EventEmitter {
          * @member {DisplayManager}
          */
         this._displayManager = new DisplayManager(this, config);
-
-        /**
-         * @private
-         * @member {MediaManager}
-         */
-        this._mediaManager = new MediaManager(this, config);
 
         /**
          * @private
@@ -145,15 +135,6 @@ export default class Application extends EventEmitter {
      */
     get displayManager() {
         return this._displayManager;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {MediaManager}
-     */
-    get mediaManager() {
-        return this._mediaManager;
     }
 
     /**
@@ -254,9 +235,6 @@ export default class Application extends EventEmitter {
 
         this._inputManager.destroy();
         this._inputManager = null;
-
-        this._mediaManager.destroy();
-        this._mediaManager = null;
 
         this._displayManager.destroy();
         this._displayManager = null;

@@ -10,10 +10,6 @@ export default {
      * @property {String} basePath=''
      * @property {Number} width=800
      * @property {Number} height=600
-     * @property {Number} soundVolume=1
-     * @property {Number} musicVolume=1
-     * @property {Number} masterVolume=1
-     * @property {Number} videoVolume=1
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
      * @property {Color} clearColor=Color.Black
@@ -30,10 +26,6 @@ export default {
         basePath: '',
         width: 800,
         height: 600,
-        soundVolume: 1,
-        musicVolume: 1,
-        masterVolume: 1,
-        videoVolume: 1,
         canvas: null,
         canvasParent: null,
         clearColor: Color.Black,
@@ -79,6 +71,54 @@ export default {
      * @default true
      */
     GENERATE_MIPMAP: true,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 1.0
+     */
+    MEDIA_SPEED: 1.0,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default false
+     */
+    MEDIA_LOOP: false,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 0
+     */
+    MEDIA_TIME: 0,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 1.0
+     */
+    VOLUME_MUSIC: 1.0,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 1.0
+     */
+    VOLUME_SOUND: 1.0,
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 1.0
+     */
+    VOLUME_VIDEO: 1.0,
 
     /**
      * @public

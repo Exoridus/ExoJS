@@ -16,7 +16,6 @@ export default class SettingsMenu extends Menu {
         super(app, previousMenu);
 
         const canvas = app.canvas,
-            mediaManager = app.mediaManager,
             centerX = canvas.width / 2,
             offsetY = 50;
 
@@ -31,21 +30,21 @@ export default class SettingsMenu extends Menu {
          * @private
          * @member {MenuItem}
          */
-        this._masterVolumeButton = new MenuItem(`Master Volume: ${(mediaManager.masterVolume * 100 | 0)}%`);
+        this._masterVolumeButton = new MenuItem(`Master Volume: 100%`);
         this._masterVolumeButton.setPosition(centerX, this._settingsTitle.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._musicVolumeButton = new MenuItem(`Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`);
+        this._musicVolumeButton = new MenuItem(`Music Volume: 100%`);
         this._musicVolumeButton.setPosition(centerX, this._masterVolumeButton.bottom + offsetY);
 
         /**
          * @private
          * @member {MenuItem}
          */
-        this._soundsVolumeButton = new MenuItem(`Sound Volume: ${(mediaManager.soundVolume * 100 | 0)}%`);
+        this._soundsVolumeButton = new MenuItem(`Sound Volume: 100%`);
         this._soundsVolumeButton.setPosition(centerX, this._musicVolumeButton.bottom + offsetY);
 
         /**
@@ -138,21 +137,7 @@ export default class SettingsMenu extends Menu {
      * @param {MenuAction} action
      */
     _onOptionLeft(action) {
-        const mediaManager = this.app.mediaManager;
 
-        switch (action.item) {
-            case this._masterVolumeButton:
-                mediaManager.masterVolume -= this._volumeStep;
-                break;
-            case this._musicVolumeButton:
-                mediaManager.musicVolume -= this._volumeStep;
-                break;
-            case this._soundsVolumeButton:
-                mediaManager.soundVolume -= this._volumeStep;
-                break;
-        }
-
-        this._updateButtons();
     }
 
     /**
@@ -160,28 +145,6 @@ export default class SettingsMenu extends Menu {
      * @param {MenuAction} action
      */
     _onOptionRight(action) {
-        const mediaManager = this._app.mediaManager;
 
-        switch (action.item) {
-            case this._masterVolumeButton:
-                mediaManager.masterVolume += this._volumeStep;
-                break;
-            case this._musicVolumeButton:
-                mediaManager.musicVolume += this._volumeStep;
-                break;
-            case this._soundsVolumeButton:
-                mediaManager.soundVolume += this._volumeStep;
-                break;
-        }
-
-        this._updateButtons();
-    }
-
-    _updateButtons() {
-        const mediaManager = this._app.mediaManager;
-
-        this._masterVolumeButton.text = `Master Volume: ${(mediaManager.musicVolume * 100 | 0)}%`;
-        this._musicVolumeButton.text = `Music Volume: ${(mediaManager.musicVolume * 100 | 0)}%`;
-        this._soundsVolumeButton.text = `Sound Volume: ${(mediaManager.soundVolume * 100 | 0)}%`;
     }
 }
