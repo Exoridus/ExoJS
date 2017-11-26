@@ -160,16 +160,23 @@ export default class Sprite extends Container {
     get texCoordData() {
         if (this._updateTexCoords) {
             const { left, top, right, bottom } = this._textureFrame,
-                { width, height } = this._texture,
+                { width, height, flipY } = this._texture,
                 minX = ((left / width) * 65535 & 65535),
                 minY = ((top / height) * 65535 & 65535) << 16,
                 maxX = ((right / width) * 65535 & 65535),
                 maxY = ((bottom / height) * 65535 & 65535) << 16;
 
-            this._texCoordData[0] = (minY | minX);
-            this._texCoordData[1] = (minY | maxX);
-            this._texCoordData[2] = (maxY | minX);
-            this._texCoordData[3] = (maxY | maxX);
+            if (flipY) {
+                this._texCoordData[0] = (maxY | minX);
+                this._texCoordData[1] = (maxY | maxX);
+                this._texCoordData[2] = (minY | minX);
+                this._texCoordData[3] = (minY | maxX);
+            } else {
+                this._texCoordData[0] = (minY | minX);
+                this._texCoordData[1] = (minY | maxX);
+                this._texCoordData[2] = (maxY | minX);
+                this._texCoordData[3] = (maxY | maxX);
+            }
 
             this._updateTexCoords = false;
         }

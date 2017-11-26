@@ -1,5 +1,4 @@
 import Size from '../math/Size';
-import Framebuffer from './Framebuffer';
 import View from './View';
 import Rectangle from '../math/Rectangle';
 import Vector from '../math/Vector';
@@ -31,13 +30,13 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?WebGLRenderingContext}
          */
-        this._displayManager = null;
+        this._context = null;
 
         /**
          * @private
-         * @member {?Framebuffer}
+         * @member {?WebGLFramebuffer}
          */
         this._framebuffer = null;
 
@@ -81,7 +80,7 @@ export default class RenderTarget {
     }
 
     set size(size) {
-        this.resize(size.width, size.height);
+        this.setSize(size.width, size.height);
     }
 
     /**
@@ -93,7 +92,7 @@ export default class RenderTarget {
     }
 
     set width(width) {
-        this.resize(width, this.height);
+        this.setSize(width, this.height);
     }
 
     /**
@@ -105,16 +104,74 @@ export default class RenderTarget {
     }
 
     set height(height) {
-        this.resize(this.width, height);
+        this.setSize(this.width, height);
     }
 
     /**
      * @public
-     * @readonly
-     * @member {Boolean}
+     * @chainable
+     * @param {WebGLRenderingContext} context
+     * @returns {RenderTarget}
      */
-    get bound() {
-        return !!this._displayManager && (this._displayManager.renderTarget === this);
+    connect(context) {
+        if (!this._context) {
+            this._context = context;
+            this._framebuffer = this._root ? null : context.createFramebuffer();
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {RenderTarget}
+     */
+    disconnect() {
+        this.unbindFramebuffer();
+
+        if (this._context) {
+            this._context.deleteFramebuffer(this._framebuffer);
+
+            this._context = null;
+            this._framebuffer = null;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {RenderTarget}
+     */
+    bindFramebuffer() {
+        if (!this._context) {
+            throw new Error('Texture has to be connected first!')
+        }
+
+        const gl = this._context;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
+
+        this.updateViewport();
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {RenderTarget}
+     */
+    unbindFramebuffer() {
+        if (this._context) {
+            const gl = this._context;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+
+        return this;
     }
 
     /**
@@ -137,7 +194,7 @@ export default class RenderTarget {
      * @param {Number} height
      * @returns {RenderTarget}
      */
-    resize(width, height) {
+    setSize(width, height) {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
             this._defaultView.setSize(width, height);
@@ -169,43 +226,11 @@ export default class RenderTarget {
      * @returns {RenderTarget}
      */
     updateViewport() {
-        if (this._framebuffer) {
-            const viewport = this.getViewport();
+        if (this._context) {
+            const gl = this._context,
+                viewport = this.getViewport();
 
-            this._framebuffer.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {DisplayManager} displayManager
-     * @returns {RenderTarget}
-     */
-    bind(displayManager) {
-        if (!this._framebuffer) {
-            this._framebuffer = new Framebuffer(displayManager.context, this._root);
-            this._displayManager = displayManager;
-        }
-
-        if (!this.bound) {
-            this._framebuffer.bind();
-            this.updateViewport();
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {RenderTarget}
-     */
-    unbind() {
-        if (this.bound) {
-            this._framebuffer.unbind();
+            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
         }
 
         return this;
@@ -247,12 +272,7 @@ export default class RenderTarget {
      * @public
      */
     destroy() {
-        this.unbind();
-
-        if (this._framebuffer) {
-            this._framebuffer.destroy();
-            this._framebuffer = null;
-        }
+        this.disconnect();
 
         this._defaultView.destroy();
         this._defaultView = null;
@@ -265,6 +285,5 @@ export default class RenderTarget {
 
         this._root = null;
         this._view = null;
-        this._displayManager = null;
     }
 }

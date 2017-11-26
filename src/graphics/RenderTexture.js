@@ -1,44 +1,36 @@
 import settings from '../settings';
 import { addFlag, getMediaHeight, getMediaWidth, hasFlag, isPowerOfTwo, removeFlag } from '../utils';
-import Size from '../math/Size';
 import { TEXTURE_FLAGS } from '../const';
+import RenderTarget from './RenderTarget';
+import { SCALE_MODE, WRAP_MODE } from '../const';
 
 /**
- * @class Texture
+ * @class RenderTexture
+ * @extends RenderTarget
  */
-export default class Texture {
+export default class RenderTexture extends RenderTarget {
 
     /**
      * @constructor
-     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
+     * @param {Number} width
+     * @param {Number} height
      * @param {Object} [options={}]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
      */
-    constructor(source, {
+    constructor(width, height, {
         scaleMode = settings.SCALE_MODE,
         wrapMode = settings.WRAP_MODE,
         premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
     } = {}) {
+        super(width, height, false);
 
         /**
          * @private
-         * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+         * @member {?DataView}
          */
         this._source = null;
-
-        /**
-         * @private
-         * @member {Size}
-         */
-        this._size = new Size(-1, -1);
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
 
         /**
          * @private
@@ -68,26 +60,22 @@ export default class Texture {
          * @private
          * @member {Number}
          */
-        this._flags = TEXTURE_FLAGS.NONE;
+        this._flags = (TEXTURE_FLAGS.SOURCE | TEXTURE_FLAGS.SIZE);
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._flipY = false;
+        this._flipY = true;
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
         this.setPremultiplyAlpha(premultiplyAlpha);
-
-        if (source) {
-            this.setSource(source);
-        }
     }
 
     /**
      * @public
-     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+     * @member {?DataView}
      */
     get source() {
         return this._source;
@@ -95,42 +83,6 @@ export default class Texture {
 
     set source(source) {
         this.setSource(source);
-    }
-
-    /**
-     * @public
-     * @member {Size}
-     */
-    get size() {
-        return this._size;
-    }
-
-    set size(size) {
-        this.setSize(size.width, size.height);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get width() {
-        return this._size.width;
-    }
-
-    set width(width) {
-        this.setSize(width, this.height);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get height() {
-        return this._size.height;
-    }
-
-    set height(height) {
-        this.setSize(this.width, height);
     }
 
     /**
@@ -182,43 +134,40 @@ export default class Texture {
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Boolean}
-     */
-    get powerOfTwo() {
-        return isPowerOfTwo(this.width)
-            && isPowerOfTwo(this.height);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {WebGLRenderingContext} gl
-     * @returns {Texture}
+     * @override
      */
     connect(gl) {
         if (!this._context) {
             this._context = gl;
             this._texture = gl.createTexture();
+            this._framebuffer = gl.createFramebuffer();
+
+            this.bind();
+            this.bindFramebuffer();
+
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._texture, 0);
+
+            this.unbind();
+            this.unbindFramebuffer();
         }
 
         return this;
     }
 
     /**
-     * @public
-     * @chainable
-     * @returns {Texture}
+     * @override
      */
     disconnect() {
+        this.unbindFramebuffer();
         this.unbind();
 
         if (this._context) {
+            this._context.deleteFramebuffer(this._framebuffer);
             this._context.deleteTexture(this._texture);
 
             this._context = null;
             this._texture = null;
+            this._framebuffer = null;
         }
 
         return this;
@@ -227,8 +176,7 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {Number} [unit]
-     * @returns {Texture}
+     * @returns {RenderTarget}
      */
     bind(unit) {
         if (!this._context) {
@@ -251,7 +199,7 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @returns {Texture}
+     * @returns {RenderTexture}
      */
     unbind() {
         if (this._context) {
@@ -267,7 +215,7 @@ export default class Texture {
      * @public
      * @chainable
      * @param {Number} scaleMode
-     * @returns {Texture}
+     * @returns {RenderTexture}
      */
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
@@ -282,7 +230,7 @@ export default class Texture {
      * @public
      * @chainable
      * @param {Number} wrapMode
-     * @returns {Texture}
+     * @returns {RenderTexture}
      */
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
@@ -297,7 +245,7 @@ export default class Texture {
      * @public
      * @chainable
      * @param {Boolean} premultiplyAlpha
-     * @returns {Texture}
+     * @returns {RenderTexture}
      */
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
@@ -311,8 +259,8 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
-     * @returns {Texture}
+     * @param {?DataView} source
+     * @returns {RenderTexture}
      */
     setSource(source) {
         if (this._source !== source) {
@@ -326,29 +274,21 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @returns {Texture}
+     * @returns {RenderTexture}
      */
     updateSource() {
-        this._flags = addFlag(TEXTURE_FLAGS.SOURCE, this._flags);
-
-        this.setSize(
-            getMediaWidth(this._source),
-            getMediaHeight(this._source)
-        );
-
         return this;
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Number} width
-     * @param {Number} height
-     * @returns {Texture}
+     * @override
      */
     setSize(width, height) {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
+            this._defaultView.setSize(width, height);
+            this.updateViewport();
+
             this._flags = addFlag(TEXTURE_FLAGS.SIZE, this._flags);
         }
 
@@ -358,7 +298,7 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @returns {Texture}
+     * @returns {RenderTexture}
      */
     update() {
         if (this._flags && this._context) {
@@ -384,11 +324,11 @@ export default class Texture {
                 this._flags = removeFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.SOURCE, this._flags) && this._source) {
-                if (hasFlag(TEXTURE_FLAGS.SIZE, this._flags)) {
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
+            if (hasFlag(TEXTURE_FLAGS.SOURCE, this._flags)) {
+                if (hasFlag(TEXTURE_FLAGS.SIZE, this._flags) || !this._source) {
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 } else {
-                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
+                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 }
 
                 if (this.powerOfTwo) {
@@ -403,21 +343,17 @@ export default class Texture {
     }
 
     /**
-     * @public
+     * @override
      */
     destroy() {
-        this.disconnect();
-
-        this._size.destroy();
-        this._size = null;
+        super.destroy();
 
         this._source = null;
+        this._texture = null;
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
         this._flags = null;
-        this._context = null;
-        this._texture = null;
         this._flipY = null;
     }
 }

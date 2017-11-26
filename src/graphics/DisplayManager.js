@@ -139,14 +139,20 @@ export default class DisplayManager {
 
     /**
      * @public
+     * @readonly
      * @member {?RenderTarget}
      */
     get renderTarget() {
         return this._renderTarget;
     }
 
-    set renderTarget(renderTarget) {
-        this.setRenderTarget(renderTarget);
+    /**
+     * @public
+     * @readonly
+     * @member {?Texture}
+     */
+    get texture() {
+        return this._texture;
     }
 
     /**
@@ -187,15 +193,6 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @readonly
-     * @member {?Texture}
-     */
-    get texture() {
-        return this._texture;
-    }
-
-    /**
-     * @public
      * @member {Number}
      */
     get textureUnit() {
@@ -229,11 +226,16 @@ export default class DisplayManager {
 
         if (this._renderTarget !== renderTarget) {
             if (this._renderTarget) {
-                this._renderTarget.unbind();
+                this._renderTarget.unbindFramebuffer();
                 this._renderTarget = null;
             }
 
-            this._renderTarget = renderTarget && renderTarget.bind(this);
+            if (renderTarget) {
+                renderTarget.connect(this._context);
+                renderTarget.bindFramebuffer();
+            }
+
+            this._renderTarget = renderTarget;
         }
 
         return this;
@@ -448,7 +450,7 @@ export default class DisplayManager {
         this._canvas.width = width;
         this._canvas.height = height;
 
-        this._rootRenderTarget.resize(width, height);
+        this._rootRenderTarget.setSize(width, height);
 
         return this;
     }
