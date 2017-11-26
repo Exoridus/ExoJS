@@ -212,7 +212,7 @@ export default class Texture {
      * @returns {Texture}
      */
     disconnect() {
-        this.unbind();
+        this.unbindTexture();
 
         if (this._context) {
             this._context.deleteTexture(this._texture);
@@ -230,7 +230,7 @@ export default class Texture {
      * @param {Number} [unit]
      * @returns {Texture}
      */
-    bind(unit) {
+    bindTexture(unit) {
         if (!this._context) {
             throw new Error('Texture has to be connected first!')
         }
@@ -253,7 +253,7 @@ export default class Texture {
      * @chainable
      * @returns {Texture}
      */
-    unbind() {
+    unbindTexture() {
         if (this._context) {
             const gl = this._context;
 

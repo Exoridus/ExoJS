@@ -142,12 +142,12 @@ export default class RenderTexture extends RenderTarget {
             this._texture = gl.createTexture();
             this._framebuffer = gl.createFramebuffer();
 
-            this.bind();
+            this.bindTexture();
             this.bindFramebuffer();
 
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._texture, 0);
 
-            this.unbind();
+            this.unbindTexture();
             this.unbindFramebuffer();
         }
 
@@ -159,7 +159,7 @@ export default class RenderTexture extends RenderTarget {
      */
     disconnect() {
         this.unbindFramebuffer();
-        this.unbind();
+        this.unbindTexture();
 
         if (this._context) {
             this._context.deleteFramebuffer(this._framebuffer);
@@ -178,7 +178,7 @@ export default class RenderTexture extends RenderTarget {
      * @chainable
      * @returns {RenderTarget}
      */
-    bind(unit) {
+    bindTexture(unit) {
         if (!this._context) {
             throw new Error('Texture has to be connected first!')
         }
@@ -201,7 +201,7 @@ export default class RenderTexture extends RenderTarget {
      * @chainable
      * @returns {RenderTexture}
      */
-    unbind() {
+    unbindTexture() {
         if (this._context) {
             const gl = this._context;
 

@@ -14,9 +14,9 @@ export default class Shader {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?WebGLRenderingContext}
          */
-        this._displayManager = null;
+        this._context = null;
 
         /**
          * @private
@@ -51,11 +51,83 @@ export default class Shader {
 
     /**
      * @public
-     * @readonly
-     * @member {Boolean}
+     * @chainable
+     * @param {WebGLRenderingContext} gl
+     * @returns {Shader}
      */
-    get bound() {
-        return !!this._displayManager && (this._displayManager.shader === this);
+    connect(gl) {
+        if (!this._context) {
+            this._context = gl;
+            this._program = new Program(gl, this._vertexSource, this._fragmentSource);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    disconnect() {
+        this.unbindProgram();
+
+        if (this._context) {
+            this._program.destroy();
+            this._program = null;
+            this._context = null;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    bindProgram() {
+        if (!this._context) {
+            throw new Error('Texture has to be connected first!')
+        }
+
+        const stride = [...this._attributes.values()].reduce((stride, attribute) => stride + attribute.byteSize, 0);
+        let offset = 0;
+
+        this._program.bind();
+
+        for (const attribute of this._attributes.values()) {
+            attribute.bind(this._program, stride, offset);
+
+            offset += attribute.byteSize;
+        }
+
+        for (const uniform of this._uniforms.values()) {
+            uniform.bind(this._program);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    unbindProgram() {
+        if (this._context) {
+            this._program.unbind();
+
+            for (const attribute of this._attributes.values()) {
+                attribute.unbind();
+            }
+
+            for (const uniform of this._uniforms.values()) {
+                uniform.unbind();
+            }
+        }
+
+        return this;
     }
 
     /**
@@ -148,60 +220,9 @@ export default class Shader {
 
     /**
      * @public
-     * @chainable
-     * @param {DisplayManager} displayManager
-     * @returns {Shader}
-     */
-    bind(displayManager) {
-        if (!this._program) {
-            this._program = new Program(displayManager.context, this._vertexSource, this._fragmentSource);
-            this._displayManager = displayManager;
-        }
-
-        if (!this.bound) {
-            const stride = [...this._attributes.values()].reduce((stride, attribute) => stride + attribute.byteSize, 0);
-            let offset = 0;
-
-            this._program.bind();
-
-            for (const attribute of this._attributes.values()) {
-                attribute.bind(this._program, stride, offset);
-
-                offset += attribute.byteSize;
-            }
-
-            for (const uniform of this._uniforms.values()) {
-                uniform.bind(this._program);
-            }
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     */
-    unbind() {
-        if (this.bound) {
-            this._program.unbind();
-
-            for (const attribute of this._attributes.values()) {
-                attribute.unbind();
-            }
-
-            for (const uniform of this._uniforms.values()) {
-                uniform.unbind();
-            }
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
-        this.unbind();
+        this.disconnect();
 
         for (const attribute of this._attributes.values()) {
             attribute.destroy();
@@ -209,11 +230,6 @@ export default class Shader {
 
         for (const uniform of this._uniforms.values()) {
             uniform.destroy();
-        }
-
-        if (this._program) {
-            this._program.destroy();
-            this._program = null;
         }
 
         this._attributes.clear();
@@ -224,6 +240,6 @@ export default class Shader {
 
         this._vertexSource = null;
         this._fragmentSource = null;
-        this._displayManager = null;
+        this._context = null;
     }
 }

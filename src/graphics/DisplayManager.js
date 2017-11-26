@@ -273,11 +273,16 @@ export default class DisplayManager {
 
         if (this._shader !== newShader) {
             if (this._shader) {
-                this._shader.unbind();
+                this._shader.unbindProgram();
                 this._shader = null;
             }
 
-            this._shader = newShader && newShader.bind(this);
+            if (newShader) {
+                newShader.connect(this._context);
+                newShader.bindProgram();
+            }
+
+            this._shader = newShader;
         }
 
         return this;
@@ -299,13 +304,13 @@ export default class DisplayManager {
 
         if (this._texture !== newTexture) {
             if (this._texture) {
-                this._texture.unbind();
+                this._texture.unbindTexture();
                 this._texture = null;
             }
 
             if (newTexture) {
                 newTexture.connect(this._context);
-                newTexture.bind();
+                newTexture.bindTexture();
             }
 
             this._texture = newTexture;

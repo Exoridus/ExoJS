@@ -5386,7 +5386,7 @@ var Texture = function () {
     }, {
         key: 'disconnect',
         value: function disconnect() {
-            this.unbind();
+            this.unbindTexture();
 
             if (this._context) {
                 this._context.deleteTexture(this._texture);
@@ -5406,8 +5406,8 @@ var Texture = function () {
          */
 
     }, {
-        key: 'bind',
-        value: function bind(unit) {
+        key: 'bindTexture',
+        value: function bindTexture(unit) {
             if (!this._context) {
                 throw new Error('Texture has to be connected first!');
             }
@@ -5432,8 +5432,8 @@ var Texture = function () {
          */
 
     }, {
-        key: 'unbind',
-        value: function unbind() {
+        key: 'unbindTexture',
+        value: function unbindTexture() {
             if (this._context) {
                 var gl = this._context;
 
@@ -8165,9 +8165,9 @@ var Shader = function () {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?WebGLRenderingContext}
          */
-        this._displayManager = null;
+        this._context = null;
 
         /**
          * @private
@@ -8202,14 +8202,183 @@ var Shader = function () {
 
     /**
      * @public
-     * @readonly
-     * @member {Boolean}
+     * @chainable
+     * @param {WebGLRenderingContext} gl
+     * @returns {Shader}
      */
 
 
     _createClass(Shader, [{
-        key: 'setVertexSource',
+        key: 'connect',
+        value: function connect(gl) {
+            if (!this._context) {
+                this._context = gl;
+                this._program = new _Program2.default(gl, this._vertexSource, this._fragmentSource);
+            }
 
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'disconnect',
+        value: function disconnect() {
+            this.unbindProgram();
+
+            if (this._context) {
+                this._program.destroy();
+                this._program = null;
+                this._context = null;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'bindProgram',
+        value: function bindProgram() {
+            if (!this._context) {
+                throw new Error('Texture has to be connected first!');
+            }
+
+            var stride = [].concat(_toConsumableArray(this._attributes.values())).reduce(function (stride, attribute) {
+                return stride + attribute.byteSize;
+            }, 0);
+            var offset = 0;
+
+            this._program.bind();
+
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._attributes.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var attribute = _step.value;
+
+                    attribute.bind(this._program, stride, offset);
+
+                    offset += attribute.byteSize;
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = this._uniforms.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var uniform = _step2.value;
+
+                    uniform.bind(this._program);
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'unbindProgram',
+        value: function unbindProgram() {
+            if (this._context) {
+                this._program.unbind();
+
+                var _iteratorNormalCompletion3 = true;
+                var _didIteratorError3 = false;
+                var _iteratorError3 = undefined;
+
+                try {
+                    for (var _iterator3 = this._attributes.values()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                        var attribute = _step3.value;
+
+                        attribute.unbind();
+                    }
+                } catch (err) {
+                    _didIteratorError3 = true;
+                    _iteratorError3 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                            _iterator3.return();
+                        }
+                    } finally {
+                        if (_didIteratorError3) {
+                            throw _iteratorError3;
+                        }
+                    }
+                }
+
+                var _iteratorNormalCompletion4 = true;
+                var _didIteratorError4 = false;
+                var _iteratorError4 = undefined;
+
+                try {
+                    for (var _iterator4 = this._uniforms.values()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                        var uniform = _step4.value;
+
+                        uniform.unbind();
+                    }
+                } catch (err) {
+                    _didIteratorError4 = true;
+                    _iteratorError4 = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                            _iterator4.return();
+                        }
+                    } finally {
+                        if (_didIteratorError4) {
+                            throw _iteratorError4;
+                        }
+                    }
+                }
+            }
+
+            return this;
+        }
 
         /**
          * @public
@@ -8217,6 +8386,9 @@ var Shader = function () {
          * @param {String|String[]} source
          * @returns {Shader}
          */
+
+    }, {
+        key: 'setVertexSource',
         value: function setVertexSource(source) {
             this._vertexSource = Array.isArray(source) ? source.join('\n') : source;
 
@@ -8319,155 +8491,12 @@ var Shader = function () {
 
         /**
          * @public
-         * @chainable
-         * @param {DisplayManager} displayManager
-         * @returns {Shader}
-         */
-
-    }, {
-        key: 'bind',
-        value: function bind(displayManager) {
-            if (!this._program) {
-                this._program = new _Program2.default(displayManager.context, this._vertexSource, this._fragmentSource);
-                this._displayManager = displayManager;
-            }
-
-            if (!this.bound) {
-                var stride = [].concat(_toConsumableArray(this._attributes.values())).reduce(function (stride, attribute) {
-                    return stride + attribute.byteSize;
-                }, 0);
-                var offset = 0;
-
-                this._program.bind();
-
-                var _iteratorNormalCompletion = true;
-                var _didIteratorError = false;
-                var _iteratorError = undefined;
-
-                try {
-                    for (var _iterator = this._attributes.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                        var attribute = _step.value;
-
-                        attribute.bind(this._program, stride, offset);
-
-                        offset += attribute.byteSize;
-                    }
-                } catch (err) {
-                    _didIteratorError = true;
-                    _iteratorError = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion && _iterator.return) {
-                            _iterator.return();
-                        }
-                    } finally {
-                        if (_didIteratorError) {
-                            throw _iteratorError;
-                        }
-                    }
-                }
-
-                var _iteratorNormalCompletion2 = true;
-                var _didIteratorError2 = false;
-                var _iteratorError2 = undefined;
-
-                try {
-                    for (var _iterator2 = this._uniforms.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                        var uniform = _step2.value;
-
-                        uniform.bind(this._program);
-                    }
-                } catch (err) {
-                    _didIteratorError2 = true;
-                    _iteratorError2 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                            _iterator2.return();
-                        }
-                    } finally {
-                        if (_didIteratorError2) {
-                            throw _iteratorError2;
-                        }
-                    }
-                }
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            if (this.bound) {
-                this._program.unbind();
-
-                var _iteratorNormalCompletion3 = true;
-                var _didIteratorError3 = false;
-                var _iteratorError3 = undefined;
-
-                try {
-                    for (var _iterator3 = this._attributes.values()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                        var attribute = _step3.value;
-
-                        attribute.unbind();
-                    }
-                } catch (err) {
-                    _didIteratorError3 = true;
-                    _iteratorError3 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                            _iterator3.return();
-                        }
-                    } finally {
-                        if (_didIteratorError3) {
-                            throw _iteratorError3;
-                        }
-                    }
-                }
-
-                var _iteratorNormalCompletion4 = true;
-                var _didIteratorError4 = false;
-                var _iteratorError4 = undefined;
-
-                try {
-                    for (var _iterator4 = this._uniforms.values()[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                        var uniform = _step4.value;
-
-                        uniform.unbind();
-                    }
-                } catch (err) {
-                    _didIteratorError4 = true;
-                    _iteratorError4 = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                            _iterator4.return();
-                        }
-                    } finally {
-                        if (_didIteratorError4) {
-                            throw _iteratorError4;
-                        }
-                    }
-                }
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
          */
 
     }, {
         key: 'destroy',
         value: function destroy() {
-            this.unbind();
+            this.disconnect();
 
             var _iteratorNormalCompletion5 = true;
             var _didIteratorError5 = false;
@@ -8519,11 +8548,6 @@ var Shader = function () {
                 }
             }
 
-            if (this._program) {
-                this._program.destroy();
-                this._program = null;
-            }
-
             this._attributes.clear();
             this._attributes = null;
 
@@ -8532,12 +8556,7 @@ var Shader = function () {
 
             this._vertexSource = null;
             this._fragmentSource = null;
-            this._displayManager = null;
-        }
-    }, {
-        key: 'bound',
-        get: function get() {
-            return !!this._displayManager && this._displayManager.shader === this;
+            this._context = null;
         }
     }]);
 
@@ -13062,11 +13081,16 @@ var DisplayManager = function () {
 
             if (this._shader !== newShader) {
                 if (this._shader) {
-                    this._shader.unbind();
+                    this._shader.unbindProgram();
                     this._shader = null;
                 }
 
-                this._shader = newShader && newShader.bind(this);
+                if (newShader) {
+                    newShader.connect(this._context);
+                    newShader.bindProgram();
+                }
+
+                this._shader = newShader;
             }
 
             return this;
@@ -13091,13 +13115,13 @@ var DisplayManager = function () {
 
             if (this._texture !== newTexture) {
                 if (this._texture) {
-                    this._texture.unbind();
+                    this._texture.unbindTexture();
                     this._texture = null;
                 }
 
                 if (newTexture) {
                     newTexture.connect(this._context);
-                    newTexture.bind();
+                    newTexture.bindTexture();
                 }
 
                 this._texture = newTexture;
@@ -23139,12 +23163,12 @@ var RenderTexture = function (_RenderTarget) {
                 this._texture = gl.createTexture();
                 this._framebuffer = gl.createFramebuffer();
 
-                this.bind();
+                this.bindTexture();
                 this.bindFramebuffer();
 
                 gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._texture, 0);
 
-                this.unbind();
+                this.unbindTexture();
                 this.unbindFramebuffer();
             }
 
@@ -23159,7 +23183,7 @@ var RenderTexture = function (_RenderTarget) {
         key: 'disconnect',
         value: function disconnect() {
             this.unbindFramebuffer();
-            this.unbind();
+            this.unbindTexture();
 
             if (this._context) {
                 this._context.deleteFramebuffer(this._framebuffer);
@@ -23180,8 +23204,8 @@ var RenderTexture = function (_RenderTarget) {
          */
 
     }, {
-        key: 'bind',
-        value: function bind(unit) {
+        key: 'bindTexture',
+        value: function bindTexture(unit) {
             if (!this._context) {
                 throw new Error('Texture has to be connected first!');
             }
@@ -23206,8 +23230,8 @@ var RenderTexture = function (_RenderTarget) {
          */
 
     }, {
-        key: 'unbind',
-        value: function unbind() {
+        key: 'unbindTexture',
+        value: function unbindTexture() {
             if (this._context) {
                 var gl = this._context;
 
