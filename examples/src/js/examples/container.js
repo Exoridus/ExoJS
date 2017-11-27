@@ -25,19 +25,9 @@ window.app.start(new Exo.Scene({
             canvas = app.canvas;
 
         /**
-         * @type {Texture}
-         */
-        this._bunnyTexture = resources.get('texture', 'bunny');
-
-        /**
-         * @type {Texture}
-         */
-        this._rainbowTexture = resources.get('texture', 'rainbow');
-
-        /**
          * @type {Sprite}
          */
-        this._rainbow = new Exo.Sprite(this._rainbowTexture);
+        this._rainbow = new Exo.Sprite(resources.get('texture', 'rainbow'));
 
         /**
          * @type {Container}
@@ -46,7 +36,7 @@ window.app.start(new Exo.Scene({
         this._bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
 
         for (let i = 0; i < 25; i++) {
-            const bunny = new Exo.Sprite(this._bunnyTexture);
+            const bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
 
             bunny.setPosition((i % 5) * (bunny.width + 10), (i / 5 | 0) * (bunny.height + 10));
 
@@ -83,12 +73,6 @@ window.app.start(new Exo.Scene({
         for (const bunny of this._bunnies.children) {
             bunny.destroy();
         }
-
-        this._bunnyTexture.destroy();
-        this._bunnyTexture = null;
-
-        this._rainbowTexture.destroy();
-        this._rainbowTexture = null;
 
         this._rainbow.destroy();
         this._rainbow = null;

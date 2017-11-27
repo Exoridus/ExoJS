@@ -21917,7 +21917,9 @@ var Random = function () {
      * @constructor
      * @param {Number} [seed]
      */
-    function Random(seed) {
+    function Random() {
+        var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Date.now();
+
         _classCallCheck(this, Random);
 
         /**

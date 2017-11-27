@@ -7,9 +7,9 @@ export default class Random {
 
     /**
      * @constructor
-     * @param {Number} [seed]
+     * @param {Number} [seed=Date.now()]
      */
-    constructor(seed) {
+    constructor(seed = Date.now()) {
 
         /**
          * @private

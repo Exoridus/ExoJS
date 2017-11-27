@@ -22,8 +22,9 @@ window.addEventListener('load', () => {
         node = document.createElement('script');
         node.type = 'text/javascript';
         node.async = true;
-        node.src = `scripts/${name}.js?no-cache=${Date.now()}`;
+        node.src = `src/js/examples/${name}.js?no-cache=${Date.now()}`;
         node.id = 'current-example';
+
         document.getElementsByTagName('head')[0].appendChild(node);
     }
 
