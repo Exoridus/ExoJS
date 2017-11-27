@@ -1,44 +1,40 @@
-import { UNIFORM_TYPE } from '../../const';
+import ShaderAttribute from './ShaderAttribute';
+import ShaderUniform from './ShaderUniform';
+import { UNIFORM_TYPE } from '../const';
 
 /**
- * @class Program
+ * @class Shader
  */
-export default class Program {
+export default class Shader {
 
     /**
      * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {String} vertexSource
-     * @param {String} fragmentSource
      */
-    constructor(context, vertexSource, fragmentSource) {
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
+    constructor() {
 
         /**
          * @private
-         * @member {WebGLRenderingContext}
+         * @member {?String}
          */
-        this._context = context;
+        this._vertexSource = null;
 
         /**
          * @private
-         * @member {WebGLShader}
+         * @member {?String}
          */
-        this._vertexShader = this.createShader(context.VERTEX_SHADER, vertexSource);
+        this._fragmentSource = null;
 
         /**
          * @private
-         * @member {WebGLShader}
+         * @member {Map<String, ShaderUniform>}
          */
-        this._fragmentShader = this.createShader(context.FRAGMENT_SHADER, fragmentSource);
+        this._uniforms = new Map();
 
         /**
          * @private
-         * @member {WebGLProgram}
+         * @member {Map<String, ShaderAttribute>}
          */
-        this._program = this.createProgram(this._vertexShader, this._fragmentShader);
+        this._attributes = new Map();
 
         /**
          * @private
@@ -51,6 +47,208 @@ export default class Program {
          * @member {Map<String, Number>}
          */
         this._attributeLocations = new Map();
+
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
+
+        /**
+         * @private
+         * @member {?WebGLShader}
+         */
+        this._vertexShader = null;
+
+        /**
+         * @private
+         * @member {?WebGLShader}
+         */
+        this._fragmentShader = null;
+
+        /**
+         * @private
+         * @member {?WebGLProgram}
+         */
+        this._program = null;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {WebGLRenderingContext} gl
+     * @returns {Shader}
+     */
+    connect(gl) {
+        if (!this._context) {
+            this._context = gl;
+            this._vertexShader = this.createShader(gl.VERTEX_SHADER, this._vertexSource);
+            this._fragmentShader = this.createShader(gl.FRAGMENT_SHADER, this._fragmentSource);
+            this._program = this.createProgram(this._vertexShader, this._fragmentShader);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    disconnect() {
+        this.unbindProgram();
+
+        if (this._context) {
+            const gl = this._context;
+
+            gl.deleteShader(this._vertexShader);
+            gl.deleteShader(this._fragmentShader);
+            gl.deleteProgram(this._program);
+
+            this._vertexShader = null;
+            this._fragmentShader = null;
+            this._program = null;
+            this._context = null;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    bindProgram() {
+        if (!this._context) {
+            throw new Error('Texture has to be connected first!')
+        }
+
+        const stride = [...this._attributes.values()].reduce((stride, attribute) => stride + attribute.byteSize, 0);
+        let offset = 0;
+
+        this._context.useProgram(this._program);
+
+        for (const attribute of this._attributes.values()) {
+            attribute.bind(this, stride, offset);
+
+            offset += attribute.byteSize;
+        }
+
+        for (const uniform of this._uniforms.values()) {
+            uniform.bind(this);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    unbindProgram() {
+        if (this._context) {
+            this._context.useProgram(null);
+
+            for (const attribute of this._attributes.values()) {
+                attribute.unbind();
+            }
+
+            for (const uniform of this._uniforms.values()) {
+                uniform.unbind();
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String|String[]} source
+     * @returns {Shader}
+     */
+    setVertexSource(source) {
+        this._vertexSource = Array.isArray(source) ? source.join('\n') : source;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String|String[]} source
+     * @returns {Shader}
+     */
+    setFragmentSource(source) {
+        this._fragmentSource = Array.isArray(source) ? source.join('\n') : source;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} name
+     * @param {Number} type
+     * @param {Number} size
+     * @param {Boolean} [normalized=false]
+     * @param {Boolean} [enabled=true]
+     * @returns {Shader}
+     */
+    setAttribute(name, type, size, normalized = false, enabled = true) {
+        if (this._attributes.has(name)) {
+            throw new Error(`Attribute "${name}" has already been defined.`);
+        }
+
+        this._attributes.set(name, new ShaderAttribute(name, type, size, normalized, enabled));
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @param {String} name
+     * @returns {ShaderAttribute}
+     */
+    getAttribute(name) {
+        if (!this._attributes.has(name)) {
+            throw new Error(`Could not find Attribute "${name}".`);
+        }
+
+        return this._attributes.get(name);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} name
+     * @param {Number} type
+     * @param {Number} [value]
+     * @returns {Shader}
+     */
+    setUniform(name, type, value) {
+        if (this._uniforms.has(name)) {
+            throw new Error(`Uniform "${name}" has already been defined.`);
+        }
+
+        this._uniforms.set(name, new ShaderUniform(name, type, value));
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @param {String} name
+     * @returns {ShaderUniform}
+     */
+    getUniform(name) {
+        if (!this._uniforms.has(name)) {
+            throw new Error(`Could not find Uniform "${name}".`);
+        }
+
+        return this._uniforms.get(name);
     }
 
     /**
@@ -153,7 +351,7 @@ export default class Program {
      * @param {String} uniform
      * @param {Number|Number[]|ArrayBufferView|Texture} value
      * @param {Number} type
-     * @returns {Program}
+     * @returns {Shader}
      */
     setUniformValue(uniform, value, type) {
         const gl = this._context,
@@ -192,7 +390,7 @@ export default class Program {
      * @param {boolean} normalized
      * @param {Number} stride
      * @param {Number} offset
-     * @returns {Program}
+     * @returns {Shader}
      */
     setVertexPointer(attribute, size, type, normalized, stride, offset) {
         const gl = this._context,
@@ -208,7 +406,7 @@ export default class Program {
      * @chainable
      * @param {String} attribute
      * @param {Boolean} enabled
-     * @returns {Program}
+     * @returns {Shader}
      */
     toggleVertexArray(attribute, enabled) {
         const gl = this._context,
@@ -225,35 +423,23 @@ export default class Program {
 
     /**
      * @public
-     * @chainable
-     * @returns {Program}
-     */
-    bind() {
-        this._context.useProgram(this._program);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Program}
-     */
-    unbind() {
-        this._context.useProgram(null);
-
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
-        const gl = this._context;
+        this.disconnect();
 
-        gl.deleteShader(this._vertexShader);
-        gl.deleteShader(this._fragmentShader);
-        gl.deleteProgram(this._program);
+        for (const attribute of this._attributes.values()) {
+            attribute.destroy();
+        }
+
+        for (const uniform of this._uniforms.values()) {
+            uniform.destroy();
+        }
+
+        this._attributes.clear();
+        this._attributes = null;
+
+        this._uniforms.clear();
+        this._uniforms = null;
 
         this._uniformLocations.clear();
         this._uniformLocations = null;
@@ -261,9 +447,8 @@ export default class Program {
         this._attributeLocations.clear();
         this._attributeLocations = null;
 
+        this._vertexSource = null;
+        this._fragmentSource = null;
         this._context = null;
-        this._vertexShader = null;
-        this._fragmentShader = null;
-        this._program = null;
     }
 }

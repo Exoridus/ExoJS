@@ -8205,9 +8205,7 @@ var _ShaderUniform = __webpack_require__(55);
 
 var _ShaderUniform2 = _interopRequireDefault(_ShaderUniform);
 
-var _Program = __webpack_require__(75);
-
-var _Program2 = _interopRequireDefault(_Program);
+var _const = __webpack_require__(0);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8225,18 +8223,6 @@ var Shader = function () {
      */
     function Shader() {
         _classCallCheck(this, Shader);
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
-
-        /**
-         * @private
-         * @member {?Program}
-         */
-        this._program = null;
 
         /**
          * @private
@@ -8261,6 +8247,42 @@ var Shader = function () {
          * @member {Map<String, ShaderAttribute>}
          */
         this._attributes = new Map();
+
+        /**
+         * @private
+         * @member {Map<String, WebGLUniformLocation>}
+         */
+        this._uniformLocations = new Map();
+
+        /**
+         * @private
+         * @member {Map<String, Number>}
+         */
+        this._attributeLocations = new Map();
+
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
+
+        /**
+         * @private
+         * @member {?WebGLShader}
+         */
+        this._vertexShader = null;
+
+        /**
+         * @private
+         * @member {?WebGLShader}
+         */
+        this._fragmentShader = null;
+
+        /**
+         * @private
+         * @member {?WebGLProgram}
+         */
+        this._program = null;
     }
 
     /**
@@ -8276,7 +8298,9 @@ var Shader = function () {
         value: function connect(gl) {
             if (!this._context) {
                 this._context = gl;
-                this._program = new _Program2.default(gl, this._vertexSource, this._fragmentSource);
+                this._vertexShader = this.createShader(gl.VERTEX_SHADER, this._vertexSource);
+                this._fragmentShader = this.createShader(gl.FRAGMENT_SHADER, this._fragmentSource);
+                this._program = this.createProgram(this._vertexShader, this._fragmentShader);
             }
 
             return this;
@@ -8294,7 +8318,14 @@ var Shader = function () {
             this.unbindProgram();
 
             if (this._context) {
-                this._program.destroy();
+                var gl = this._context;
+
+                gl.deleteShader(this._vertexShader);
+                gl.deleteShader(this._fragmentShader);
+                gl.deleteProgram(this._program);
+
+                this._vertexShader = null;
+                this._fragmentShader = null;
                 this._program = null;
                 this._context = null;
             }
@@ -8320,7 +8351,7 @@ var Shader = function () {
             }, 0);
             var offset = 0;
 
-            this._program.bind();
+            this._context.useProgram(this._program);
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
@@ -8330,7 +8361,7 @@ var Shader = function () {
                 for (var _iterator = this._attributes.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                     var attribute = _step.value;
 
-                    attribute.bind(this._program, stride, offset);
+                    attribute.bind(this, stride, offset);
 
                     offset += attribute.byteSize;
                 }
@@ -8357,7 +8388,7 @@ var Shader = function () {
                 for (var _iterator2 = this._uniforms.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
                     var uniform = _step2.value;
 
-                    uniform.bind(this._program);
+                    uniform.bind(this);
                 }
             } catch (err) {
                 _didIteratorError2 = true;
@@ -8387,7 +8418,7 @@ var Shader = function () {
         key: 'unbindProgram',
         value: function unbindProgram() {
             if (this._context) {
-                this._program.unbind();
+                this._context.useProgram(null);
 
                 var _iteratorNormalCompletion3 = true;
                 var _didIteratorError3 = false;
@@ -8554,6 +8585,213 @@ var Shader = function () {
 
         /**
          * @public
+         * @param {Number} type
+         * @param {String} source
+         * @returns {WebGLShader}
+         */
+
+    }, {
+        key: 'createShader',
+        value: function createShader(type, source) {
+            var gl = this._context,
+                shader = gl.createShader(type);
+
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
+
+                return null;
+            }
+
+            return shader;
+        }
+
+        /**
+         * @public
+         * @param {WebGLShader} vertexShader
+         * @param {WebGLShader} fragmentShader
+         * @returns {?WebGLProgram}
+         */
+
+    }, {
+        key: 'createProgram',
+        value: function createProgram(vertexShader, fragmentShader) {
+            var gl = this._context,
+                program = gl.createProgram();
+
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                gl.detachShader(program, vertexShader);
+                gl.detachShader(program, fragmentShader);
+
+                gl.deleteProgram(program);
+
+                console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
+                console.error('gl.getError()', gl.getError()); // eslint-disable-line
+
+                if (gl.getProgramInfoLog(program)) {
+                    console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
+                }
+
+                return null;
+            }
+
+            return program;
+        }
+
+        /**
+         * @public
+         * @param {String} uniform
+         * @returns {WebGLUniformLocation}
+         */
+
+    }, {
+        key: 'getUniformLocation',
+        value: function getUniformLocation(uniform) {
+            if (!this._uniformLocations.has(uniform)) {
+                var location = this._context.getUniformLocation(this._program, uniform);
+
+                if (!location) {
+                    throw new Error('Uniform "' + this._name + '" is not available.');
+                }
+
+                this._uniformLocations.set(uniform, location);
+            }
+
+            return this._uniformLocations.get(uniform);
+        }
+
+        /**
+         * @public
+         * @param {String} attribute
+         * @returns {Number}
+         */
+
+    }, {
+        key: 'getAttributeLocation',
+        value: function getAttributeLocation(attribute) {
+            if (!this._attributeLocations.has(attribute)) {
+                var location = this._context.getAttribLocation(this._program, attribute);
+
+                if (location === -1) {
+                    throw new Error('Attribute "' + this._name + '" is not available.');
+                }
+
+                this._attributeLocations.set(attribute, location);
+            }
+
+            return this._attributeLocations.get(attribute);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} uniform
+         * @param {Number|Number[]|ArrayBufferView|Texture} value
+         * @param {Number} type
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'setUniformValue',
+        value: function setUniformValue(uniform, value, type) {
+            var gl = this._context,
+                location = this.getUniformLocation(uniform);
+
+            switch (type) {
+                case _const.UNIFORM_TYPE.INT:
+                    gl.uniform1i(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT:
+                    gl.uniform1f(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_VEC2:
+                    gl.uniform2fv(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_VEC3:
+                    gl.uniform3fv(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_VEC4:
+                    gl.uniform4fv(location, value);break;
+                case _const.UNIFORM_TYPE.INT_VEC2:
+                    gl.uniform2iv(location, value);break;
+                case _const.UNIFORM_TYPE.INT_VEC3:
+                    gl.uniform3iv(location, value);break;
+                case _const.UNIFORM_TYPE.INT_VEC4:
+                    gl.uniform4iv(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL:
+                    gl.uniform1i(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL_VEC2:
+                    gl.uniform2iv(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL_VEC3:
+                    gl.uniform3iv(location, value);break;
+                case _const.UNIFORM_TYPE.BOOL_VEC4:
+                    gl.uniform4iv(location, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_MAT2:
+                    gl.uniformMatrix2fv(location, false, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_MAT3:
+                    gl.uniformMatrix3fv(location, false, value);break;
+                case _const.UNIFORM_TYPE.FLOAT_MAT4:
+                    gl.uniformMatrix4fv(location, false, value);break;
+                case _const.UNIFORM_TYPE.SAMPLER_2D:
+                    gl.uniform1i(location, value);break;
+                default:
+                    throw new Error('Unknown uniform type "' + type + '".');
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} attribute
+         * @param {Number} size
+         * @param {Number} type
+         * @param {boolean} normalized
+         * @param {Number} stride
+         * @param {Number} offset
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'setVertexPointer',
+        value: function setVertexPointer(attribute, size, type, normalized, stride, offset) {
+            var gl = this._context,
+                location = this.getAttributeLocation(attribute);
+
+            gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} attribute
+         * @param {Boolean} enabled
+         * @returns {Shader}
+         */
+
+    }, {
+        key: 'toggleVertexArray',
+        value: function toggleVertexArray(attribute, enabled) {
+            var gl = this._context,
+                location = this.getAttributeLocation(attribute);
+
+            if (enabled) {
+                gl.enableVertexAttribArray(location);
+            } else {
+                gl.disableVertexAttribArray(location);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
          */
 
     }, {
@@ -8616,6 +8854,12 @@ var Shader = function () {
 
             this._uniforms.clear();
             this._uniforms = null;
+
+            this._uniformLocations.clear();
+            this._uniformLocations = null;
+
+            this._attributeLocations.clear();
+            this._attributeLocations = null;
 
             this._vertexSource = null;
             this._fragmentSource = null;
@@ -14955,9 +15199,9 @@ var ShaderAttribute = function () {
 
         /**
          * @private
-         * @member {?Program}
+         * @member {?Shader}
          */
-        this._program = null;
+        this._shader = null;
 
         /**
          * @private
@@ -15025,7 +15269,7 @@ var ShaderAttribute = function () {
         /**
          * @public
          * @chainable
-         * @param {Program} program
+         * @param {Shader} shader
          * @param {Number} stride
          * @param {Number} offset
          * @returns {ShaderAttribute}
@@ -15033,14 +15277,14 @@ var ShaderAttribute = function () {
 
     }, {
         key: 'bind',
-        value: function bind(program, stride, offset) {
-            if (!this._program) {
-                this._program = program;
+        value: function bind(shader, stride, offset) {
+            if (!this._shader) {
+                this._shader = shader;
             }
 
             if (!this._bound) {
                 this._bound = true;
-                this._program.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
+                this._shader.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
                 this.upload();
             }
 
@@ -15071,7 +15315,7 @@ var ShaderAttribute = function () {
         key: 'upload',
         value: function upload() {
             if (this._bound) {
-                this._program.toggleVertexArray(this._name, this._enabled);
+                this._shader.toggleVertexArray(this._name, this._enabled);
             }
 
             return this;
@@ -15084,7 +15328,7 @@ var ShaderAttribute = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            this._program = null;
+            this._shader = null;
             this._name = null;
             this._type = null;
             this._size = null;
@@ -15226,9 +15470,9 @@ var ShaderUniform = function () {
 
         /**
          * @private
-         * @member {Program}
+         * @member {Shader}
          */
-        this._program = null;
+        this._shader = null;
 
         /**
          * @private
@@ -15293,15 +15537,15 @@ var ShaderUniform = function () {
         /**
          * @public
          * @chainable
-         * @param {Program} program
+         * @param {Shader} shader
          * @returns {ShaderUniform}
          */
 
     }, {
         key: 'bind',
-        value: function bind(program) {
-            if (!this._program) {
-                this._program = program;
+        value: function bind(shader) {
+            if (!this._shader) {
+                this._shader = shader;
             }
 
             if (!this._bound) {
@@ -15336,7 +15580,7 @@ var ShaderUniform = function () {
         key: 'upload',
         value: function upload() {
             if (this._bound && this._dirty) {
-                this._program.setUniformValue(this._name, this._value, this._type);
+                this._shader.setUniformValue(this._name, this._value, this._type);
                 this._dirty = false;
             }
 
@@ -15350,7 +15594,7 @@ var ShaderUniform = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            this._program = null;
+            this._shader = null;
             this._name = null;
             this._type = null;
             this._value = null;
@@ -15622,7 +15866,7 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(76)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(75)))
 
 /***/ }),
 /* 57 */
@@ -19413,7 +19657,7 @@ Object.keys(_core).forEach(function (key) {
     });
 });
 
-var _graphics = __webpack_require__(82);
+var _graphics = __webpack_require__(81);
 
 Object.keys(_graphics).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19425,7 +19669,7 @@ Object.keys(_graphics).forEach(function (key) {
     });
 });
 
-var _particles = __webpack_require__(86);
+var _particles = __webpack_require__(85);
 
 Object.keys(_particles).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19437,7 +19681,7 @@ Object.keys(_particles).forEach(function (key) {
     });
 });
 
-var _input = __webpack_require__(91);
+var _input = __webpack_require__(90);
 
 Object.keys(_input).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19449,7 +19693,7 @@ Object.keys(_input).forEach(function (key) {
     });
 });
 
-var _math = __webpack_require__(93);
+var _math = __webpack_require__(92);
 
 Object.keys(_math).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19461,7 +19705,7 @@ Object.keys(_math).forEach(function (key) {
     });
 });
 
-var _media = __webpack_require__(95);
+var _media = __webpack_require__(94);
 
 Object.keys(_media).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -20387,7 +20631,7 @@ Object.defineProperty(exports, 'Application', {
   }
 });
 
-var _Quadtree = __webpack_require__(77);
+var _Quadtree = __webpack_require__(76);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -20396,7 +20640,7 @@ Object.defineProperty(exports, 'Quadtree', {
   }
 });
 
-var _Scene = __webpack_require__(78);
+var _Scene = __webpack_require__(77);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -20441,7 +20685,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(79);
+var _Timer = __webpack_require__(78);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -20459,7 +20703,7 @@ Object.defineProperty(exports, 'Bounds', {
   }
 });
 
-var _Random = __webpack_require__(80);
+var _Random = __webpack_require__(79);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -20468,7 +20712,7 @@ Object.defineProperty(exports, 'Random', {
   }
 });
 
-var _Collision = __webpack_require__(81);
+var _Collision = __webpack_require__(80);
 
 Object.defineProperty(exports, 'Collision', {
   enumerable: true,
@@ -20823,345 +21067,6 @@ exports.default = Application;
 
 /***/ }),
 /* 75 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _const = __webpack_require__(0);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class Program
- */
-var Program = function () {
-
-    /**
-     * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {String} vertexSource
-     * @param {String} fragmentSource
-     */
-    function Program(context, vertexSource, fragmentSource) {
-        _classCallCheck(this, Program);
-
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
-
-        /**
-         * @private
-         * @member {WebGLRenderingContext}
-         */
-        this._context = context;
-
-        /**
-         * @private
-         * @member {WebGLShader}
-         */
-        this._vertexShader = this.createShader(context.VERTEX_SHADER, vertexSource);
-
-        /**
-         * @private
-         * @member {WebGLShader}
-         */
-        this._fragmentShader = this.createShader(context.FRAGMENT_SHADER, fragmentSource);
-
-        /**
-         * @private
-         * @member {WebGLProgram}
-         */
-        this._program = this.createProgram(this._vertexShader, this._fragmentShader);
-
-        /**
-         * @private
-         * @member {Map<String, WebGLUniformLocation>}
-         */
-        this._uniformLocations = new Map();
-
-        /**
-         * @private
-         * @member {Map<String, Number>}
-         */
-        this._attributeLocations = new Map();
-    }
-
-    /**
-     * @public
-     * @param {Number} type
-     * @param {String} source
-     * @returns {WebGLShader}
-     */
-
-
-    _createClass(Program, [{
-        key: 'createShader',
-        value: function createShader(type, source) {
-            var gl = this._context,
-                shader = gl.createShader(type);
-
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
-
-                return null;
-            }
-
-            return shader;
-        }
-
-        /**
-         * @public
-         * @param {WebGLShader} vertexShader
-         * @param {WebGLShader} fragmentShader
-         * @returns {?WebGLProgram}
-         */
-
-    }, {
-        key: 'createProgram',
-        value: function createProgram(vertexShader, fragmentShader) {
-            var gl = this._context,
-                program = gl.createProgram();
-
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
-
-            gl.linkProgram(program);
-
-            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                gl.detachShader(program, vertexShader);
-                gl.detachShader(program, fragmentShader);
-
-                gl.deleteProgram(program);
-
-                console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
-                console.error('gl.getError()', gl.getError()); // eslint-disable-line
-
-                if (gl.getProgramInfoLog(program)) {
-                    console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
-                }
-
-                return null;
-            }
-
-            return program;
-        }
-
-        /**
-         * @public
-         * @param {String} uniform
-         * @returns {WebGLUniformLocation}
-         */
-
-    }, {
-        key: 'getUniformLocation',
-        value: function getUniformLocation(uniform) {
-            if (!this._uniformLocations.has(uniform)) {
-                var location = this._context.getUniformLocation(this._program, uniform);
-
-                if (!location) {
-                    throw new Error('Uniform "' + this._name + '" is not available.');
-                }
-
-                this._uniformLocations.set(uniform, location);
-            }
-
-            return this._uniformLocations.get(uniform);
-        }
-
-        /**
-         * @public
-         * @param {String} attribute
-         * @returns {Number}
-         */
-
-    }, {
-        key: 'getAttributeLocation',
-        value: function getAttributeLocation(attribute) {
-            if (!this._attributeLocations.has(attribute)) {
-                var location = this._context.getAttribLocation(this._program, attribute);
-
-                if (location === -1) {
-                    throw new Error('Attribute "' + this._name + '" is not available.');
-                }
-
-                this._attributeLocations.set(attribute, location);
-            }
-
-            return this._attributeLocations.get(attribute);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} uniform
-         * @param {Number|Number[]|ArrayBufferView|Texture} value
-         * @param {Number} type
-         * @returns {Program}
-         */
-
-    }, {
-        key: 'setUniformValue',
-        value: function setUniformValue(uniform, value, type) {
-            var gl = this._context,
-                location = this.getUniformLocation(uniform);
-
-            switch (type) {
-                case _const.UNIFORM_TYPE.INT:
-                    gl.uniform1i(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT:
-                    gl.uniform1f(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_VEC2:
-                    gl.uniform2fv(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_VEC3:
-                    gl.uniform3fv(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_VEC4:
-                    gl.uniform4fv(location, value);break;
-                case _const.UNIFORM_TYPE.INT_VEC2:
-                    gl.uniform2iv(location, value);break;
-                case _const.UNIFORM_TYPE.INT_VEC3:
-                    gl.uniform3iv(location, value);break;
-                case _const.UNIFORM_TYPE.INT_VEC4:
-                    gl.uniform4iv(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL:
-                    gl.uniform1i(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL_VEC2:
-                    gl.uniform2iv(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL_VEC3:
-                    gl.uniform3iv(location, value);break;
-                case _const.UNIFORM_TYPE.BOOL_VEC4:
-                    gl.uniform4iv(location, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_MAT2:
-                    gl.uniformMatrix2fv(location, false, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_MAT3:
-                    gl.uniformMatrix3fv(location, false, value);break;
-                case _const.UNIFORM_TYPE.FLOAT_MAT4:
-                    gl.uniformMatrix4fv(location, false, value);break;
-                case _const.UNIFORM_TYPE.SAMPLER_2D:
-                    gl.uniform1i(location, value);break;
-                default:
-                    throw new Error('Unknown uniform type "' + type + '".');
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} attribute
-         * @param {Number} size
-         * @param {Number} type
-         * @param {boolean} normalized
-         * @param {Number} stride
-         * @param {Number} offset
-         * @returns {Program}
-         */
-
-    }, {
-        key: 'setVertexPointer',
-        value: function setVertexPointer(attribute, size, type, normalized, stride, offset) {
-            var gl = this._context,
-                location = this.getAttributeLocation(attribute);
-
-            gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} attribute
-         * @param {Boolean} enabled
-         * @returns {Program}
-         */
-
-    }, {
-        key: 'toggleVertexArray',
-        value: function toggleVertexArray(attribute, enabled) {
-            var gl = this._context,
-                location = this.getAttributeLocation(attribute);
-
-            if (enabled) {
-                gl.enableVertexAttribArray(location);
-            } else {
-                gl.disableVertexAttribArray(location);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Program}
-         */
-
-    }, {
-        key: 'bind',
-        value: function bind() {
-            this._context.useProgram(this._program);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Program}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            this._context.useProgram(null);
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            var gl = this._context;
-
-            gl.deleteShader(this._vertexShader);
-            gl.deleteShader(this._fragmentShader);
-            gl.deleteProgram(this._program);
-
-            this._uniformLocations.clear();
-            this._uniformLocations = null;
-
-            this._attributeLocations.clear();
-            this._attributeLocations = null;
-
-            this._context = null;
-            this._vertexShader = null;
-            this._fragmentShader = null;
-            this._program = null;
-        }
-    }]);
-
-    return Program;
-}();
-
-exports.default = Program;
-
-/***/ }),
-/* 76 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -21351,7 +21256,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 77 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21670,7 +21575,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 78 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21814,7 +21719,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 79 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21996,7 +21901,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 80 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22199,7 +22104,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 81 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22601,7 +22506,7 @@ var Collision = function () {
 exports.default = Collision;
 
 /***/ }),
-/* 82 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22629,7 +22534,7 @@ Object.defineProperty(exports, 'RenderTarget', {
   }
 });
 
-var _RenderTexture = __webpack_require__(83);
+var _RenderTexture = __webpack_require__(82);
 
 Object.defineProperty(exports, 'RenderTexture', {
   enumerable: true,
@@ -22683,7 +22588,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Text = __webpack_require__(84);
+var _Text = __webpack_require__(83);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -22737,7 +22642,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Spritesheet = __webpack_require__(85);
+var _Spritesheet = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Spritesheet', {
   enumerable: true,
@@ -22767,7 +22672,7 @@ Object.defineProperty(exports, 'SpriteShader', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23216,7 +23121,7 @@ var RenderTexture = function (_RenderTarget) {
 exports.default = RenderTexture;
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23580,7 +23485,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 85 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23848,7 +23753,7 @@ var Spritesheet = function (_Sprite) {
 exports.default = Spritesheet;
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23867,7 +23772,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(87);
+var _ParticleEmitter = __webpack_require__(86);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -23912,7 +23817,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(88);
+var _ForceModifier = __webpack_require__(87);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -23921,7 +23826,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(89);
+var _ScaleModifier = __webpack_require__(88);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -23930,7 +23835,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(90);
+var _TorqueModifier = __webpack_require__(89);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -23942,7 +23847,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 87 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24633,7 +24538,7 @@ var ParticleEmitter = function (_Renderable) {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 88 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24755,7 +24660,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 89 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24875,7 +24780,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 90 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24987,7 +24892,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 91 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25006,7 +24911,7 @@ Object.defineProperty(exports, 'ChannelManager', {
   }
 });
 
-var _Input = __webpack_require__(92);
+var _Input = __webpack_require__(91);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -25099,7 +25004,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 92 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25438,7 +25343,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 93 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25502,7 +25407,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(94);
+var _Circle = __webpack_require__(93);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -25541,7 +25446,7 @@ Object.defineProperty(exports, 'ObservableSize', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 94 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25758,7 +25663,7 @@ Circle.Empty = new Circle(0, 0, 0);
 Circle.Temp = new Circle();
 
 /***/ }),
-/* 95 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25813,7 +25718,7 @@ Object.defineProperty(exports, 'MediaSource', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(96);
+var _AudioAnalyser = __webpack_require__(95);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -25825,7 +25730,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 96 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

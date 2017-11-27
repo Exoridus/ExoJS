@@ -1,4 +1,4 @@
-import Matrix from '../../math/Matrix';
+import Matrix from '../math/Matrix';
 
 /**
  * @class ShaderUniform
@@ -15,9 +15,9 @@ export default class ShaderUniform {
 
         /**
          * @private
-         * @member {Program}
+         * @member {Shader}
          */
-        this._program = null;
+        this._shader = null;
 
         /**
          * @private
@@ -98,12 +98,12 @@ export default class ShaderUniform {
     /**
      * @public
      * @chainable
-     * @param {Program} program
+     * @param {Shader} shader
      * @returns {ShaderUniform}
      */
-    bind(program) {
-        if (!this._program) {
-            this._program = program;
+    bind(shader) {
+        if (!this._shader) {
+            this._shader = shader;
         }
 
         if (!this._bound) {
@@ -132,7 +132,7 @@ export default class ShaderUniform {
      */
     upload() {
         if (this._bound && this._dirty) {
-            this._program.setUniformValue(this._name, this._value, this._type);
+            this._shader.setUniformValue(this._name, this._value, this._type);
             this._dirty = false;
         }
 
@@ -143,7 +143,7 @@ export default class ShaderUniform {
      * @public
      */
     destroy() {
-        this._program = null;
+        this._shader = null;
         this._name = null;
         this._type = null;
         this._value = null;

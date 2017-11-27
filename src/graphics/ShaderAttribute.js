@@ -1,4 +1,4 @@
-import { ATTRIBUTE_TYPE } from '../../const';
+import { ATTRIBUTE_TYPE } from '../const';
 
 /**
  * @class ShaderAttribute
@@ -17,9 +17,9 @@ export default class ShaderAttribute {
 
         /**
          * @private
-         * @member {?Program}
+         * @member {?Shader}
          */
-        this._program = null;
+        this._shader = null;
 
         /**
          * @private
@@ -152,19 +152,19 @@ export default class ShaderAttribute {
     /**
      * @public
      * @chainable
-     * @param {Program} program
+     * @param {Shader} shader
      * @param {Number} stride
      * @param {Number} offset
      * @returns {ShaderAttribute}
      */
-    bind(program, stride, offset) {
-        if (!this._program) {
-            this._program = program;
+    bind(shader, stride, offset) {
+        if (!this._shader) {
+            this._shader = shader;
         }
 
         if (!this._bound) {
             this._bound = true;
-            this._program.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
+            this._shader.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
             this.upload();
         }
 
@@ -189,7 +189,7 @@ export default class ShaderAttribute {
      */
     upload() {
         if (this._bound) {
-            this._program.toggleVertexArray(this._name, this._enabled);
+            this._shader.toggleVertexArray(this._name, this._enabled);
         }
 
         return this;
@@ -199,7 +199,7 @@ export default class ShaderAttribute {
      * @public
      */
     destroy() {
-        this._program = null;
+        this._shader = null;
         this._name = null;
         this._type = null;
         this._size = null;
