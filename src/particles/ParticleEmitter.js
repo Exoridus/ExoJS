@@ -1,4 +1,4 @@
-import Renderable from '../graphics/Renderable';
+import Drawable from '../graphics/Drawable';
 import Particle from './Particle';
 import Rectangle from '../math/Rectangle';
 import Time from '../core/Time';
@@ -7,9 +7,9 @@ import { BLEND_MODE } from '../const';
 
 /**
  * @class ParticleEmitter
- * @extends Renderable
+ * @extends Drawable
  */
-export default class ParticleEmitter extends Renderable {
+export default class ParticleEmitter extends Drawable {
 
     /**
      * @constructor
@@ -275,7 +275,7 @@ export default class ParticleEmitter extends Renderable {
      * @public
      * @chainable
      * @param {Number} blendMode
-     * @returns {Renderable}
+     * @returns {Drawable}
      */
     setBlendMode(blendMode) {
         this._blendMode = blendMode;

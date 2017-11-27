@@ -1,11 +1,11 @@
-import Renderable from './Renderable';
+import Drawable from './Drawable';
 import { removeItems } from '../utils';
 
 /**
  * @class Container
- * @extends Renderable
+ * @extends Drawable
  */
-export default class Container extends Renderable {
+export default class Container extends Drawable {
 
     /**
      * @constructor
@@ -15,7 +15,7 @@ export default class Container extends Renderable {
 
         /**
          * @private
-         * @member {Renderable[]}
+         * @member {Drawable[]}
          */
         this._children = [];
     }
@@ -23,7 +23,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @readonly
-     * @member {Renderable[]}
+     * @member {Drawable[]}
      */
     get children() {
         return this._children;
@@ -92,7 +92,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Renderable} child
+     * @param {Drawable} child
      * @returns {Container}
      */
     addChild(child) {
@@ -102,7 +102,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Renderable} child
+     * @param {Drawable} child
      * @param {Number} index
      * @returns {Container}
      */
@@ -129,8 +129,8 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Renderable} firstChild
-     * @param {Renderable} secondChild
+     * @param {Drawable} firstChild
+     * @param {Drawable} secondChild
      * @returns {Container}
      */
     swapChildren(firstChild, secondChild) {
@@ -144,14 +144,14 @@ export default class Container extends Renderable {
 
     /**
      * @public
-     * @param {Renderable} child
+     * @param {Drawable} child
      * @returns {Number}
      */
     getChildIndex(child) {
         const index = this._children.indexOf(child);
 
         if (index === -1) {
-            throw new Error('Renderable is not a child of the container.');
+            throw new Error('Drawable is not a child of the container.');
         }
 
         return index;
@@ -160,7 +160,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Renderable} child
+     * @param {Drawable} child
      * @param {Number} index
      * @returns {Container}
      */
@@ -179,7 +179,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @param {Number} index
-     * @returns {Renderable}
+     * @returns {Drawable}
      */
     getChildAt(index) {
         if (index < 0 || index >= this._children.length) {
@@ -192,7 +192,7 @@ export default class Container extends Renderable {
     /**
      * @public
      * @chainable
-     * @param {Renderable} child
+     * @param {Drawable} child
      * @returns {Container}
      */
     removeChild(child) {

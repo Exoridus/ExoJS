@@ -463,12 +463,12 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @param {Renderable|*} renderable
+     * @param {Drawable|*} drawable
      * @returns {DisplayManager}
      */
-    draw(renderable) {
+    draw(drawable) {
         if (!this._contextLost) {
-            renderable.render(this);
+            drawable.render(this);
         }
 
         return this;
@@ -503,12 +503,12 @@ export default class DisplayManager {
 
     /**
      * @public
-     * @param {Renderable} renderable
+     * @param {Drawable} drawable
      * @param {View} [view=this._renderTarget.view]
      * @returns {Boolean}
      */
-    insideViewport(renderable, view = this._renderTarget.view) {
-        return view.getBounds().intersectsRect(renderable.getBounds());
+    insideViewport(drawable, view = this._renderTarget.view) {
+        return view.getBounds().intersectsRect(drawable.getBounds());
     }
 
     /**

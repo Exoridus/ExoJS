@@ -277,7 +277,7 @@ export default class Sprite extends Container {
      * @public
      * @chainable
      * @param {Color} color
-     * @returns {Renderable}
+     * @returns {Drawable}
      */
     setTint(color) {
         this._tint.copy(color);
@@ -289,7 +289,7 @@ export default class Sprite extends Container {
      * @public
      * @chainable
      * @param {Number} blendMode
-     * @returns {Renderable}
+     * @returns {Drawable}
      */
     setBlendMode(blendMode) {
         this._blendMode = blendMode;

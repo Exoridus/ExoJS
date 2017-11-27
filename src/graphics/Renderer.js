@@ -18,10 +18,10 @@ export default class Renderer {
     /**
      * @public
      * @chainable
-     * @param {*} renderable
+     * @param {*} drawable
      * @returns {Renderer}
      */
-    render(renderable) { // eslint-disable-line
+    render(drawable) { // eslint-disable-line
         // do nothing
     }
 

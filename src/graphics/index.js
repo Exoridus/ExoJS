@@ -7,7 +7,7 @@ export { default as RenderTexture } from './RenderTexture';
 export { default as Texture } from './Texture';
 export { default as View } from './View';
 export { default as Renderer } from './Renderer';
-export { default as Renderable } from './Renderable';
+export { default as Drawable } from './Drawable';
 export { default as Container } from './Container';
 export { default as Text } from './Text';
 export { default as TextStyle } from './TextStyle';
