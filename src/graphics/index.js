@@ -15,5 +15,6 @@ export { default as Shader } from './shader/Shader';
 export { default as ShaderAttribute } from './shader/ShaderAttribute';
 export { default as ShaderUniform } from './shader/ShaderUniform';
 export { default as Sprite } from './sprite/Sprite';
+export { default as Spritesheet } from './sprite/Spritesheet';
 export { default as SpriteRenderer } from './sprite/SpriteRenderer';
 export { default as SpriteShader } from './sprite/SpriteShader';
