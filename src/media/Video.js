@@ -18,14 +18,18 @@ export default class Video extends Sprite {
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]
      * @property {Number} [options.time=settings.MEDIA_TIME]
+     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     constructor(mediaSource, {
         volume = settings.VOLUME_VIDEO,
         loop = settings.MEDIA_LOOP,
         speed = settings.MEDIA_SPEED,
         time = settings.MEDIA_TIME,
+        muted = settings.MEDIA_MUTED,
     } = {}) {
         super(new Texture(mediaSource.mediaElement));
+
+        const mediaElement = mediaSource.mediaElement;
 
         /**
          * @private
@@ -37,31 +41,37 @@ export default class Video extends Sprite {
          * @private
          * @member {?HTMLMediaElement}
          */
-        this._mediaElement = mediaSource.mediaElement;
+        this._mediaElement = mediaElement;
 
         /**
          * @private
          * @member {Number}
          */
-        this._duration = this._mediaElement.duration || 0;
+        this._duration = mediaElement ? mediaElement.duration : 0;
 
         /**
          * @private
          * @member {Number}
          */
-        this._volume = this._mediaElement.volume || 1;
+        this._volume = mediaElement ? mediaElement.volume : 1;
 
         /**
          * @private
          * @member {Number}
          */
-        this._speed = this._mediaElement.playbackRate || 1;
+        this._speed = mediaElement ? mediaElement.playbackRate : 1;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._loop = this._mediaElement.loop || false;
+        this._loop = mediaElement ? mediaElement.loop : false;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._muted = mediaElement ? mediaElement.muted : false;
 
         if (support.webAudio) {
 
@@ -81,7 +91,7 @@ export default class Video extends Sprite {
             this._sourceNode.connect(this._gainNode);
         }
 
-        this.applyOptions({ volume, loop, speed, time });
+        this.applyOptions({ volume, loop, speed, time, muted });
     }
 
     /**
@@ -126,7 +136,7 @@ export default class Video extends Sprite {
             this._volume = volume;
 
             if (this._gainNode) {
-                this._gainNode.gain.value = volume;
+                this._gainNode.gain.value = this.muted ? 0 : volume;
             }
         }
     }
@@ -172,6 +182,26 @@ export default class Video extends Sprite {
 
     set currentTime(currentTime) {
         this._mediaElement.currentTime = Math.max(0, currentTime);
+    }
+
+    /**
+     * @public
+     * @member {Boolean}
+     */
+    get muted() {
+        return this._muted;
+    }
+
+    set muted(value) {
+        const muted = !!value;
+
+        if (this._muted !== muted) {
+            this._muted = muted;
+
+            if (this._gainNode) {
+                this._gainNode.gain.value = muted ? 0 : this.volume;
+            }
+        }
     }
 
     /**
@@ -232,6 +262,7 @@ export default class Video extends Sprite {
      * @property {Number} [options.speed]
      * @property {Number} [options.volume]
      * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      * @returns {Video}
      */
     play(options) {
@@ -288,10 +319,19 @@ export default class Video extends Sprite {
     /**
      * @public
      * @chainable
-     * @param {MediaOptions} [options]
+     * @param {Object} [options]
+     * @property {Number} [options.volume]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      * @returns {Video}
      */
-    applyOptions({ loop, speed, volume, time } = {}) {
+    applyOptions({ volume, loop, speed, time, muted } = {}) {
+        if (volume !== undefined) {
+            this.volume = volume;
+        }
+
         if (loop !== undefined) {
             this.loop = loop;
         }
@@ -300,12 +340,12 @@ export default class Video extends Sprite {
             this.speed = speed;
         }
 
-        if (volume !== undefined) {
-            this.volume = volume;
-        }
-
         if (time !== undefined) {
             this.currentTime = time;
+        }
+
+        if (muted !== undefined) {
+            this.muted = muted;
         }
 
         return this;
@@ -346,5 +386,6 @@ export default class Video extends Sprite {
         this._volume = null;
         this._speed = null;
         this._loop = null;
+        this._muted = null;
     }
 }

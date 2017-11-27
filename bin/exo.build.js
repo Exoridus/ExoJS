@@ -1344,6 +1344,14 @@ exports.default = {
     /**
      * @public
      * @static
+     * @type {Boolean}
+     * @default false
+     */
+    MEDIA_MUTED: false,
+
+    /**
+     * @public
+     * @static
      * @type {Number}
      * @default 1.0
      */
@@ -6820,6 +6828,7 @@ var Media = function (_EventEmitter) {
      * @property {Boolean} [options.loop]
      * @property {Number} [options.speed]
      * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      */
     function Media(mediaSource, options) {
         _classCallCheck(this, Media);
@@ -6862,6 +6871,12 @@ var Media = function (_EventEmitter) {
          */
         _this._loop = false;
 
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        _this._muted = false;
+
         if (options !== undefined) {
             _this.applyOptions(options);
         }
@@ -6887,6 +6902,7 @@ var Media = function (_EventEmitter) {
          * @property {Number} [options.speed]
          * @property {Number} [options.volume]
          * @property {Number} [options.time]
+         * @property {Boolean} [options.muted]
          * @returns {Media}
          */
         value: function play(options) {
@@ -6957,6 +6973,7 @@ var Media = function (_EventEmitter) {
          * @property {Boolean} [options.loop]
          * @property {Number} [options.speed]
          * @property {Number} [options.time]
+         * @property {Boolean} [options.muted]
          * @returns {Media}
          */
 
@@ -6967,7 +6984,8 @@ var Media = function (_EventEmitter) {
                 volume = _ref.volume,
                 loop = _ref.loop,
                 speed = _ref.speed,
-                time = _ref.time;
+                time = _ref.time,
+                muted = _ref.muted;
 
             if (volume !== undefined) {
                 this.volume = volume;
@@ -6983,6 +7001,10 @@ var Media = function (_EventEmitter) {
 
             if (time !== undefined) {
                 this.currentTime = time;
+            }
+
+            if (muted !== undefined) {
+                this.muted = muted;
             }
 
             return this;
@@ -7005,6 +7027,7 @@ var Media = function (_EventEmitter) {
             this._volume = null;
             this._speed = null;
             this._loop = null;
+            this._muted = null;
         }
     }, {
         key: 'mediaSource',
@@ -7102,6 +7125,24 @@ var Media = function (_EventEmitter) {
         },
         set: function set(currentTime) {
             this._mediaElement.currentTime = Math.max(0, currentTime);
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'muted',
+        get: function get() {
+            return this._muted;
+        },
+        set: function set(value) {
+            var muted = !!value;
+
+            if (this.muted !== muted) {
+                this._mediaElement.muted = this._muted = muted;
+            }
         }
 
         /**
@@ -10227,7 +10268,7 @@ exports.default = MediaSource;
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -10261,132 +10302,143 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends Media
  */
 var Music = function (_Media) {
-    _inherits(Music, _Media);
+  _inherits(Music, _Media);
+
+  /**
+   * @constructor
+   * @param {MediaSource} mediaSource
+   * @param {Object} [options={}]
+   * @property {Number} [options.volume=settings.VOLUME_MUSIC]
+   * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
+   * @property {Number} [options.speed=settings.MEDIA_SPEED]
+   * @property {Number} [options.time=settings.MEDIA_TIME]
+   * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
+   */
+  function Music(mediaSource) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$volume = _ref.volume,
+        volume = _ref$volume === undefined ? _settings2.default.VOLUME_MUSIC : _ref$volume,
+        _ref$loop = _ref.loop,
+        loop = _ref$loop === undefined ? _settings2.default.MEDIA_LOOP : _ref$loop,
+        _ref$speed = _ref.speed,
+        speed = _ref$speed === undefined ? _settings2.default.MEDIA_SPEED : _ref$speed,
+        _ref$time = _ref.time,
+        time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time,
+        _ref$muted = _ref.muted,
+        muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted;
+
+    _classCallCheck(this, Music);
+
+    var _this = _possibleConstructorReturn(this, (Music.__proto__ || Object.getPrototypeOf(Music)).call(this, mediaSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted }));
+
+    var mediaElement = _this.mediaElement;
+
+    if (!mediaElement) {
+      throw new Error('MediaElement is missing in MediaSource');
+    }
 
     /**
-     * @constructor
-     * @param {MediaSource} mediaSource
-     * @param {Object} [options={}]
-     * @property {Number} [options.volume=settings.VOLUME_MUSIC]
-     * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
-     * @property {Number} [options.speed=settings.MEDIA_SPEED]
-     * @property {Number} [options.time=settings.MEDIA_TIME]
+     * @private
+     * @member {Number}
      */
-    function Music(mediaSource) {
-        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-            _ref$volume = _ref.volume,
-            volume = _ref$volume === undefined ? _settings2.default.VOLUME_MUSIC : _ref$volume,
-            _ref$loop = _ref.loop,
-            loop = _ref$loop === undefined ? _settings2.default.MEDIA_LOOP : _ref$loop,
-            _ref$speed = _ref.speed,
-            speed = _ref$speed === undefined ? _settings2.default.MEDIA_SPEED : _ref$speed,
-            _ref$time = _ref.time,
-            time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time;
+    _this._duration = mediaElement.duration;
 
-        _classCallCheck(this, Music);
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._volume = mediaElement.volume;
 
-        var _this = _possibleConstructorReturn(this, (Music.__proto__ || Object.getPrototypeOf(Music)).call(this, mediaSource, { volume: volume, loop: loop, speed: speed, time: time }));
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._speed = mediaElement.playbackRate;
 
-        if (!_this.mediaElement) {
-            throw new Error('MediaElement is missing in MediaSource');
+    /**
+     * @private
+     * @member {Boolean}
+     */
+    _this._loop = mediaElement.loop;
+
+    /**
+     * @private
+     * @member {Boolean}
+     */
+    _this._muted = mediaElement.muted;
+
+    if (_support2.default.webAudio) {
+
+      /**
+       * @private
+       * @member {?GainNode}
+       */
+      _this._gainNode = _utils.audioContext.createGain();
+      _this._gainNode.gain.value = _this.volume;
+      _this._gainNode.connect(_utils.audioContext.destination);
+
+      /**
+       * @private
+       * @member {?MediaElementAudioSourceNode}
+       */
+      _this._sourceNode = _utils.audioContext.createMediaElementSource(_this.mediaElement);
+      _this._sourceNode.connect(_this._gainNode);
+    }
+    return _this;
+  }
+
+  /**
+   * @override
+   */
+
+
+  _createClass(Music, [{
+    key: 'destroy',
+
+
+    /**
+     * @override
+     */
+    value: function destroy() {
+      _get(Music.prototype.__proto__ || Object.getPrototypeOf(Music.prototype), 'destroy', this).call(this);
+
+      if (_support2.default.webAudio) {
+        this._sourceNode.disconnect();
+        this._sourceNode = null;
+
+        this._gainNode.disconnect();
+        this._gainNode = null;
+      }
+    }
+  }, {
+    key: 'volume',
+    get: function get() {
+      return this._volume;
+    },
+    set: function set(value) {
+      var volume = (0, _utils.clamp)(value, 0, 2);
+
+      if (this._volume !== volume) {
+        this._volume = volume;
+
+        if (this._gainNode) {
+          this._gainNode.gain.value = volume;
         }
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._duration = _this.mediaElement.duration;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._volume = _this.mediaElement.volume;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._speed = _this.mediaElement.playbackRate;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        _this._loop = _this.mediaElement.loop;
-
-        if (_support2.default.webAudio) {
-
-            /**
-             * @private
-             * @member {?GainNode}
-             */
-            _this._gainNode = _utils.audioContext.createGain();
-            _this._gainNode.gain.value = _this.volume;
-            _this._gainNode.connect(_utils.audioContext.destination);
-
-            /**
-             * @private
-             * @member {?MediaElementAudioSourceNode}
-             */
-            _this._sourceNode = _utils.audioContext.createMediaElementSource(_this.mediaElement);
-            _this._sourceNode.connect(_this._gainNode);
-        }
-        return _this;
+      }
     }
 
     /**
      * @override
      */
 
+  }, {
+    key: 'analyserTarget',
+    get: function get() {
+      return this._gainNode;
+    }
+  }]);
 
-    _createClass(Music, [{
-        key: 'destroy',
-
-
-        /**
-         * @override
-         */
-        value: function destroy() {
-            _get(Music.prototype.__proto__ || Object.getPrototypeOf(Music.prototype), 'destroy', this).call(this);
-
-            if (_support2.default.webAudio) {
-                this._sourceNode.disconnect();
-                this._sourceNode = null;
-
-                this._gainNode.disconnect();
-                this._gainNode = null;
-            }
-        }
-    }, {
-        key: 'volume',
-        get: function get() {
-            return this._volume;
-        },
-        set: function set(value) {
-            var volume = (0, _utils.clamp)(value, 0, 2);
-
-            if (this._volume !== volume) {
-                this._volume = volume;
-
-                if (this._gainNode) {
-                    this._gainNode.gain.value = volume;
-                }
-            }
-        }
-
-        /**
-         * @override
-         */
-
-    }, {
-        key: 'analyserTarget',
-        get: function get() {
-            return this._gainNode;
-        }
-    }]);
-
-    return Music;
+  return Music;
 }(_Media3.default);
 
 exports.default = Music;
@@ -10942,6 +10994,7 @@ var Sound = function (_Media) {
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]
      * @property {Number} [options.time=settings.MEDIA_TIME]
+     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     function Sound(mediaSource) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -10952,27 +11005,31 @@ var Sound = function (_Media) {
             _ref$speed = _ref.speed,
             speed = _ref$speed === undefined ? _settings2.default.MEDIA_SPEED : _ref$speed,
             _ref$time = _ref.time,
-            time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time;
+            time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time,
+            _ref$muted = _ref.muted,
+            muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted;
 
         _classCallCheck(this, Sound);
 
-        var _this = _possibleConstructorReturn(this, (Sound.__proto__ || Object.getPrototypeOf(Sound)).call(this, mediaSource, { volume: volume, loop: loop, speed: speed, time: time }));
+        var _this = _possibleConstructorReturn(this, (Sound.__proto__ || Object.getPrototypeOf(Sound)).call(this, mediaSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted }));
 
-        if (!_this.audioBuffer) {
+        var audioBuffer = _this.audioBuffer;
+
+        if (!audioBuffer) {
             throw new Error('AudioBuffer is missing in MediaSource');
         }
 
         /**
          * @private
-         * @member {?HTMLMediaElement}
+         * @member {AudioBuffer}
          */
-        _this._audioBuffer = mediaSource.audioBuffer;
+        _this._audioBuffer = audioBuffer;
 
         /**
          * @private
          * @member {Number}
          */
-        _this._duration = _this._audioBuffer.duration;
+        _this._duration = audioBuffer.duration;
 
         /**
          * @private
@@ -11118,7 +11175,7 @@ var Sound = function (_Media) {
                 this._volume = volume;
 
                 if (this._gainNode) {
-                    this._gainNode.gain.value = volume;
+                    this._gainNode.gain.value = this.muted ? 0 : volume;
                 }
             }
         }
@@ -11176,6 +11233,24 @@ var Sound = function (_Media) {
             this.pause();
             this._currentTime = Math.max(0, currentTime);
             this.play();
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'muted',
+        set: function set(value) {
+            var muted = !!value;
+
+            if (this._muted !== muted) {
+                this._muted = muted;
+
+                if (this._gainNode) {
+                    this._gainNode.gain.value = muted ? 0 : this.volume;
+                }
+            }
         }
 
         /**
@@ -11517,6 +11592,7 @@ var Video = function (_Sprite) {
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]
      * @property {Number} [options.time=settings.MEDIA_TIME]
+     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     function Video(mediaSource) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -11527,47 +11603,57 @@ var Video = function (_Sprite) {
             _ref$speed = _ref.speed,
             speed = _ref$speed === undefined ? _settings2.default.MEDIA_SPEED : _ref$speed,
             _ref$time = _ref.time,
-            time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time;
+            time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time,
+            _ref$muted = _ref.muted,
+            muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted;
 
         _classCallCheck(this, Video);
+
+        var _this = _possibleConstructorReturn(this, (Video.__proto__ || Object.getPrototypeOf(Video)).call(this, new _Texture2.default(mediaSource.mediaElement)));
+
+        var mediaElement = mediaSource.mediaElement;
 
         /**
          * @private
          * @member {MediaSource}
          */
-        var _this = _possibleConstructorReturn(this, (Video.__proto__ || Object.getPrototypeOf(Video)).call(this, new _Texture2.default(mediaSource.mediaElement)));
-
         _this._mediaSource = mediaSource;
 
         /**
          * @private
          * @member {?HTMLMediaElement}
          */
-        _this._mediaElement = mediaSource.mediaElement;
+        _this._mediaElement = mediaElement;
 
         /**
          * @private
          * @member {Number}
          */
-        _this._duration = _this._mediaElement.duration || 0;
+        _this._duration = mediaElement ? mediaElement.duration : 0;
 
         /**
          * @private
          * @member {Number}
          */
-        _this._volume = _this._mediaElement.volume || 1;
+        _this._volume = mediaElement ? mediaElement.volume : 1;
 
         /**
          * @private
          * @member {Number}
          */
-        _this._speed = _this._mediaElement.playbackRate || 1;
+        _this._speed = mediaElement ? mediaElement.playbackRate : 1;
 
         /**
          * @private
          * @member {Boolean}
          */
-        _this._loop = _this._mediaElement.loop || false;
+        _this._loop = mediaElement ? mediaElement.loop : false;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        _this._muted = mediaElement ? mediaElement.muted : false;
 
         if (_support2.default.webAudio) {
 
@@ -11587,7 +11673,7 @@ var Video = function (_Sprite) {
             _this._sourceNode.connect(_this._gainNode);
         }
 
-        _this.applyOptions({ volume: volume, loop: loop, speed: speed, time: time });
+        _this.applyOptions({ volume: volume, loop: loop, speed: speed, time: time, muted: muted });
         return _this;
     }
 
@@ -11610,6 +11696,7 @@ var Video = function (_Sprite) {
          * @property {Number} [options.speed]
          * @property {Number} [options.volume]
          * @property {Number} [options.time]
+         * @property {Boolean} [options.muted]
          * @returns {Video}
          */
         value: function play(options) {
@@ -11675,7 +11762,12 @@ var Video = function (_Sprite) {
         /**
          * @public
          * @chainable
-         * @param {MediaOptions} [options]
+         * @param {Object} [options]
+         * @property {Number} [options.volume]
+         * @property {Boolean} [options.loop]
+         * @property {Number} [options.speed]
+         * @property {Number} [options.time]
+         * @property {Boolean} [options.muted]
          * @returns {Video}
          */
 
@@ -11683,10 +11775,15 @@ var Video = function (_Sprite) {
         key: 'applyOptions',
         value: function applyOptions() {
             var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+                volume = _ref2.volume,
                 loop = _ref2.loop,
                 speed = _ref2.speed,
-                volume = _ref2.volume,
-                time = _ref2.time;
+                time = _ref2.time,
+                muted = _ref2.muted;
+
+            if (volume !== undefined) {
+                this.volume = volume;
+            }
 
             if (loop !== undefined) {
                 this.loop = loop;
@@ -11696,12 +11793,12 @@ var Video = function (_Sprite) {
                 this.speed = speed;
             }
 
-            if (volume !== undefined) {
-                this.volume = volume;
-            }
-
             if (time !== undefined) {
                 this.currentTime = time;
+            }
+
+            if (muted !== undefined) {
+                this.muted = muted;
             }
 
             return this;
@@ -11748,6 +11845,7 @@ var Video = function (_Sprite) {
             this._volume = null;
             this._speed = null;
             this._loop = null;
+            this._muted = null;
         }
     }, {
         key: 'mediaSource',
@@ -11796,7 +11894,7 @@ var Video = function (_Sprite) {
                 this._volume = volume;
 
                 if (this._gainNode) {
-                    this._gainNode.gain.value = volume;
+                    this._gainNode.gain.value = this.muted ? 0 : volume;
                 }
             }
         }
@@ -11848,6 +11946,28 @@ var Video = function (_Sprite) {
         },
         set: function set(currentTime) {
             this._mediaElement.currentTime = Math.max(0, currentTime);
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'muted',
+        get: function get() {
+            return this._muted;
+        },
+        set: function set(value) {
+            var muted = !!value;
+
+            if (this._muted !== muted) {
+                this._muted = muted;
+
+                if (this._gainNode) {
+                    this._gainNode.gain.value = muted ? 0 : this.volume;
+                }
+            }
         }
 
         /**

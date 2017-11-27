@@ -15,6 +15,7 @@ export default class Media extends EventEmitter {
      * @property {Boolean} [options.loop]
      * @property {Number} [options.speed]
      * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      */
     constructor(mediaSource, options) {
         super();
@@ -54,6 +55,12 @@ export default class Media extends EventEmitter {
          * @member {Boolean}
          */
         this._loop = false;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._muted = false;
 
         if (options !== undefined) {
             this.applyOptions(options);
@@ -151,6 +158,22 @@ export default class Media extends EventEmitter {
      * @public
      * @member {Boolean}
      */
+    get muted() {
+        return this._muted;
+    }
+
+    set muted(value) {
+        const muted = !!value;
+
+        if (this.muted !== muted) {
+            this._mediaElement.muted = this._muted = muted;
+        }
+    }
+
+    /**
+     * @public
+     * @member {Boolean}
+     */
     get paused() {
         return this._mediaElement.paused;
     }
@@ -196,6 +219,7 @@ export default class Media extends EventEmitter {
      * @property {Number} [options.speed]
      * @property {Number} [options.volume]
      * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      * @returns {Media}
      */
     play(options) {
@@ -257,9 +281,10 @@ export default class Media extends EventEmitter {
      * @property {Boolean} [options.loop]
      * @property {Number} [options.speed]
      * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      * @returns {Media}
      */
-    applyOptions({ volume, loop, speed, time } = {}) {
+    applyOptions({ volume, loop, speed, time, muted } = {}) {
         if (volume !== undefined) {
             this.volume = volume;
         }
@@ -274,6 +299,10 @@ export default class Media extends EventEmitter {
 
         if (time !== undefined) {
             this.currentTime = time;
+        }
+
+        if (muted !== undefined) {
+            this.muted = muted;
         }
 
         return this;
@@ -293,5 +322,6 @@ export default class Media extends EventEmitter {
         this._volume = null;
         this._speed = null;
         this._loop = null;
+        this._muted = null;
     }
 }

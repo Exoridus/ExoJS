@@ -17,16 +17,20 @@ export default class Music extends Media {
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]
      * @property {Number} [options.time=settings.MEDIA_TIME]
+     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     constructor(mediaSource, {
         volume = settings.VOLUME_MUSIC,
         loop = settings.MEDIA_LOOP,
         speed = settings.MEDIA_SPEED,
         time = settings.MEDIA_TIME,
+        muted = settings.MEDIA_MUTED,
     } = {}) {
-        super(mediaSource, { volume, loop, speed, time });
+        super(mediaSource, { volume, loop, speed, time, muted });
 
-        if (!this.mediaElement) {
+        const mediaElement = this.mediaElement;
+
+        if (!mediaElement) {
             throw new Error('MediaElement is missing in MediaSource');
         }
 
@@ -34,25 +38,31 @@ export default class Music extends Media {
          * @private
          * @member {Number}
          */
-        this._duration = this.mediaElement.duration;
+        this._duration = mediaElement.duration;
 
         /**
          * @private
          * @member {Number}
          */
-        this._volume = this.mediaElement.volume;
+        this._volume = mediaElement.volume;
 
         /**
          * @private
          * @member {Number}
          */
-        this._speed = this.mediaElement.playbackRate;
+        this._speed = mediaElement.playbackRate;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._loop = this.mediaElement.loop;
+        this._loop = mediaElement.loop;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._muted = mediaElement.muted;
 
         if (support.webAudio) {
 

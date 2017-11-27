@@ -17,30 +17,34 @@ export default class Sound extends Media {
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]
      * @property {Number} [options.time=settings.MEDIA_TIME]
+     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     constructor(mediaSource, {
         volume = settings.VOLUME_SOUND,
         loop = settings.MEDIA_LOOP,
         speed = settings.MEDIA_SPEED,
         time = settings.MEDIA_TIME,
+        muted = settings.MEDIA_MUTED,
     } = {}) {
-        super(mediaSource, { volume, loop, speed, time });
+        super(mediaSource, { volume, loop, speed, time, muted });
 
-        if (!this.audioBuffer) {
+        const audioBuffer = this.audioBuffer;
+
+        if (!audioBuffer) {
             throw new Error('AudioBuffer is missing in MediaSource');
         }
 
         /**
          * @private
-         * @member {?HTMLMediaElement}
+         * @member {AudioBuffer}
          */
-        this._audioBuffer = mediaSource.audioBuffer;
+        this._audioBuffer = audioBuffer;
 
         /**
          * @private
          * @member {Number}
          */
-        this._duration = this._audioBuffer.duration;
+        this._duration = audioBuffer.duration;
 
         /**
          * @private
@@ -92,7 +96,7 @@ export default class Sound extends Media {
             this._volume = volume;
 
             if (this._gainNode) {
-                this._gainNode.gain.value = volume;
+                this._gainNode.gain.value = this.muted ? 0 : volume;
             }
         }
     }
@@ -142,6 +146,21 @@ export default class Sound extends Media {
         this.pause();
         this._currentTime = Math.max(0, currentTime);
         this.play();
+    }
+
+    /**
+     * @override
+     */
+    set muted(value) {
+        const muted = !!value;
+
+        if (this._muted !== muted) {
+            this._muted = muted;
+
+            if (this._gainNode) {
+                this._gainNode.gain.value = muted ? 0 : this.volume;
+            }
+        }
     }
 
     /**

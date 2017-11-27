@@ -99,6 +99,14 @@ export default {
     /**
      * @public
      * @static
+     * @type {Boolean}
+     * @default false
+     */
+    MEDIA_MUTED: false,
+
+    /**
+     * @public
+     * @static
      * @type {Number}
      * @default 1.0
      */
