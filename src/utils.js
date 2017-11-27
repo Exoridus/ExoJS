@@ -298,7 +298,44 @@ const
      * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
      * @returns {Size}
      */
-    getMediaSize = (element) => new Size(getMediaWidth(element), getMediaHeight(element));
+    getMediaSize = (element) => new Size(getMediaWidth(element), getMediaHeight(element)),
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {Number} fromX
+     * @param {Number} fromY
+     * @param {Number} cpX1
+     * @param {Number} cpY1
+     * @param {Number} cpX2
+     * @param {Number} cpY2
+     * @param {Number} toX
+     * @param {Number} toY
+     * @param {Number[]} [path=[]]
+     * @return {Number[]}
+     */
+    bezierCurveTo = (fromX, fromY, cpX1, cpY1, cpX2, cpY2, toX, toY, path = []) => {
+        path.push(fromX, fromY);
+
+        for (let i = 1, j = 0, dt1 = 0, dt2 = 0, dt3 = 0, t2 = 0, t3 = 0; i <= 20; i++) {
+            j = i / 20;
+
+            dt1 = (1 - j);
+            dt2 = dt1 * dt1;
+            dt3 = dt2 * dt1;
+
+            t2 = j * j;
+            t3 = t2 * j;
+
+            path.push(
+                (dt3 * fromX) + (3 * dt2 * j * cpX1) + (3 * dt1 * t2 * cpX2) + (t3 * toX),
+                (dt3 * fromY) + (3 * dt2 * j * cpY1) + (3 * dt1 * t2 * cpY2) + (t3 * toY)
+            );
+        }
+
+        return path;
+    };
 
 export {
     audio,

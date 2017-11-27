@@ -18,8 +18,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const app = this.app,
-            canvas = app.canvas;
+        const canvas = this.app.canvas;
 
         /**
          * @type {Random}

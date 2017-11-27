@@ -1,4 +1,4 @@
-import Matrix from '../math/Matrix';
+import Matrix from '../../math/Matrix';
 
 /**
  * @class ShaderUniform

@@ -17,6 +17,39 @@ export default class Renderer {
 
     /**
      * @public
+     * @param {RenderManager} renderManager
+     */
+    connect(renderManager) {
+        // do nothing
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Renderer}
+     */
+    disconnect() {
+        // do nothing
+    }
+
+    /**
+     * @public
+     */
+    bind() {
+        // do nothing
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Renderer}
+     */
+    unbind() {
+        // do nothing
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {*} drawable
      * @returns {Renderer}
@@ -31,23 +64,6 @@ export default class Renderer {
      * @returns {Renderer}
      */
     flush() {
-        // do nothing
-    }
-
-    /**
-     * @public
-     * @param {RenderManager} renderManager
-     */
-    bind(renderManager) {
-        // do nothing
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Renderer}
-     */
-    unbind() {
         // do nothing
     }
 

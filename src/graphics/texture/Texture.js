@@ -1,7 +1,7 @@
-import settings from '../settings';
-import { addFlag, getMediaHeight, getMediaWidth, hasFlag, isPowerOfTwo, removeFlag } from '../utils';
-import Size from '../math/Size';
-import { TEXTURE_FLAGS } from '../const';
+import settings from '../../settings';
+import { addFlag, getMediaHeight, getMediaWidth, hasFlag, isPowerOfTwo, removeFlag } from '../../utils';
+import Size from '../../math/Size';
+import { TEXTURE_FLAGS } from '../../const';
 
 /**
  * @class Texture

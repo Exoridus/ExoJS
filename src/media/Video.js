@@ -1,6 +1,6 @@
 import { audioContext, clamp } from '../utils';
 import Sprite from '../graphics/sprite/Sprite';
-import Texture from '../graphics/Texture';
+import Texture from '../graphics/texture/Texture';
 import support from '../support';
 import settings from '../settings';
 
@@ -355,7 +355,7 @@ export default class Video extends Sprite {
      * @override
      */
     render(renderManager) {
-        if (this.active) {
+        if (this.visible) {
             this.texture.updateSource();
 
             super.render(renderManager);

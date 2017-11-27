@@ -23,12 +23,6 @@ export default class SceneNode extends Transformable {
 
         /**
          * @private
-         * @member {Boolean}
-         */
-        this._active = true;
-
-        /**
-         * @private
          * @member {Matrix}
          */
         this._globalTransform = new Matrix();
@@ -68,18 +62,6 @@ export default class SceneNode extends Transformable {
 
     set parent(parent) {
         this._parent = parent;
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get active() {
-        return this._active;
-    }
-
-    set active(active) {
-        this._active = active;
     }
 
     /**
@@ -208,6 +190,5 @@ export default class SceneNode extends Transformable {
         this._bounds = null;
 
         this._parent = null;
-        this._active = null;
     }
 }

@@ -301,7 +301,7 @@ export default class Sprite extends Container {
      * @override
      */
     render(renderManager) {
-        if (this.active && renderManager.insideViewport(this)) {
+        if (this.visible && renderManager.insideViewport(this)) {
             const renderer = renderManager.getRenderer('sprite');
 
             renderManager.setRenderer(renderer);

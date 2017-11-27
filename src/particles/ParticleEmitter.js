@@ -367,7 +367,7 @@ export default class ParticleEmitter extends Drawable {
      * @override
      */
     render(renderManager) {
-        if (this.active && renderManager.insideViewport(this)) {
+        if (this.visible && renderManager.insideViewport(this)) {
             const renderer = renderManager.getRenderer('particle');
 
             renderManager.setRenderer(renderer);

@@ -1,6 +1,6 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
-import { UNIFORM_TYPE } from '../const';
+import { UNIFORM_TYPE } from '../../const';
 
 /**
  * @class Shader

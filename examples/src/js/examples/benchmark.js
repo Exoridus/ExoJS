@@ -18,8 +18,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const app = this.app,
-            canvas = app.canvas;
+        const canvas = this.app.canvas;
 
         /**
          * @private
@@ -72,7 +71,7 @@ window.app.start(new Exo.Scene({
             },
         });
 
-        app.inputManager.add(this._addInput);
+        this.app.inputManager.add(this._addInput);
 
         this.createBunnies(this._startAmount);
     },

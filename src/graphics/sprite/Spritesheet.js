@@ -1,4 +1,4 @@
-import Texture from '../Texture';
+import Texture from '../texture/Texture';
 import Rectangle from '../../math/Rectangle';
 import Sprite from './Sprite';
 import { removeItems } from '../../utils';

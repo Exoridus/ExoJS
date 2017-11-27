@@ -1,8 +1,8 @@
-import { NEWLINE } from '../const';
-import Sprite from './sprite/Sprite';
-import Texture from './Texture';
+import { NEWLINE } from '../../const';
+import Sprite from '../sprite/Sprite';
+import Texture from '../texture/Texture';
 import TextStyle from './TextStyle';
-import Rectangle from '../math/Rectangle';
+import Rectangle from '../../math/Rectangle';
 
 const heightCache = new Map();
 
@@ -237,7 +237,7 @@ export default class Text extends Sprite {
      * @override
      */
     render(renderManager) {
-        if (this.active) {
+        if (this.visible) {
             this.updateTexture();
 
             super.render(renderManager);

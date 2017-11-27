@@ -256,7 +256,12 @@ export default class RenderManager {
                 this._renderer = null;
             }
 
-            this._renderer = newRenderer && newRenderer.bind(this);
+            if (newRenderer) {
+                newRenderer.connect(this);
+                newRenderer.bind();
+            }
+
+            this._renderer = newRenderer;
         }
 
         return this;

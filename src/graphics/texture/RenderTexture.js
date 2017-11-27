@@ -1,8 +1,8 @@
-import settings from '../settings';
-import { addFlag, getMediaHeight, getMediaWidth, hasFlag, isPowerOfTwo, removeFlag } from '../utils';
-import { TEXTURE_FLAGS } from '../const';
-import RenderTarget from './RenderTarget';
-import { SCALE_MODE, WRAP_MODE } from '../const';
+import settings from '../../settings';
+import { addFlag, getMediaHeight, getMediaWidth, hasFlag, isPowerOfTwo, removeFlag } from '../../utils';
+import { TEXTURE_FLAGS } from '../../const';
+import RenderTarget from '../RenderTarget';
+import { SCALE_MODE, WRAP_MODE } from '../../const';
 
 /**
  * @class RenderTexture

@@ -240,7 +240,7 @@ export default class Container extends Drawable {
      * @override
      */
     render(renderManager) {
-        if (this.active) {
+        if (this.visible) {
             for (const child of this._children) {
                 child.render(renderManager);
             }
@@ -257,7 +257,7 @@ export default class Container extends Drawable {
             .addRect(this.getLocalBounds(), this.getGlobalTransform());
 
         for (const child of this._children) {
-            if (child.active) {
+            if (child.visible) {
                 this._bounds.addRect(child.getBounds());
             }
         }

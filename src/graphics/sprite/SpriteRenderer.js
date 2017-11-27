@@ -46,6 +46,12 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
+
+        /**
+         * @private
          * @member {?Buffer}
          */
         this._vertexBuffer = null;
@@ -110,33 +116,40 @@ export default class SpriteRenderer extends Renderer {
          */
         this._viewId = -1;
 
-        this.fillIndexData(this._indexData);
+        this._fillIndexData(this._indexData);
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {Boolean}
+     * @override
      */
-    get bound() {
-        return this._renderManager && (this._renderManager.renderer === this);
+    connect(renderManager) {
+        if (!this._context) {
+            const gl = renderManager.context;
+
+            this._context = gl;
+            this._renderManager = renderManager;
+            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
+            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
+        }
+
+        return this;
     }
 
     /**
-     * @public
-     * @param {Uint16Array} data
-     * @returns {SpriteRenderer}
+     * @override
      */
-    fillIndexData(data) {
-        const len = data.length;
+    disconnect() {
+        this.unbind();
 
-        for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
-            data[i] = offset;
-            data[i + 1] = offset + 1;
-            data[i + 2] = offset + 3;
-            data[i + 3] = offset;
-            data[i + 4] = offset + 2;
-            data[i + 5] = offset + 3;
+        if (this._context) {
+            this._vertexBuffer.destroy();
+            this._vertexBuffer = null;
+
+            this._indexBuffer.destroy();
+            this._indexBuffer = null;
+
+            this._renderManager = null;
+            this._context = null;
         }
 
         return this;
@@ -146,12 +159,8 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     bind(renderManager) {
-        if (!this._renderManager) {
-            const gl = renderManager.context;
-
-            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
-            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
-            this._renderManager = renderManager;
+        if (!this._context) {
+            throw new Error('Renderer has to be connected first!')
         }
 
         this._vertexBuffer.bind();
@@ -165,7 +174,7 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     unbind() {
-        if (this.bound) {
+        if (this._context) {
             this.flush();
 
             this._vertexBuffer.unbind();
@@ -251,7 +260,7 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     flush() {
-        if (this.bound && this._batchIndex > 0) {
+        if (this._batchIndex > 0) {
             const view = this._renderManager.renderTarget.view,
                 viewId = view.updateId;
 
@@ -274,17 +283,7 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     destroy() {
-        this.unbind();
-
-        if (this._vertexBuffer) {
-            this._vertexBuffer.destroy();
-            this._vertexBuffer = null;
-        }
-
-        if (this._indexBuffer) {
-            this._indexBuffer.destroy();
-            this._indexBuffer = null;
-        }
+        this.disconnect();
 
         this._shader.destroy();
         this._shader = null;
@@ -299,5 +298,26 @@ export default class SpriteRenderer extends Renderer {
         this._currentBlendMode = null;
         this._currentView = null;
         this._renderManager = null;
+        this._context = null;
+    }
+
+    /**
+     * @private
+     * @param {Uint16Array} data
+     * @returns {SpriteRenderer}
+     */
+    _fillIndexData(data) {
+        const len = data.length;
+
+        for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
+            data[i] = offset;
+            data[i + 1] = offset + 1;
+            data[i + 2] = offset + 3;
+            data[i + 3] = offset;
+            data[i + 4] = offset + 2;
+            data[i + 5] = offset + 3;
+        }
+
+        return this;
     }
 }

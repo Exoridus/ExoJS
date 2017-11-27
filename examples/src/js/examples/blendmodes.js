@@ -115,7 +115,7 @@ window.app.start(new Exo.Scene({
         this._info.setText([
             `Click to switch between blend modes`,
             `Current blend mode: ${this._blendModeNames[this._blendModeIndex]}`,
-        ].join('\n'))
+        ].join('\n'));
     },
 
     /**

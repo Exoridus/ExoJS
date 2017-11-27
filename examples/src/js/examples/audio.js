@@ -92,7 +92,7 @@ window.app.start(new Exo.Scene({
             this._music.toggle();
         });
 
-        this._music.play({ loop: true });
+        this._music.play({ loop: true, volume: 0.3 });
     },
 
     /**
