@@ -10,9 +10,9 @@ export default class Renderer {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?RenderManager}
          */
-        this._displayManager = null;
+        this._renderManager = null;
     }
 
     /**
@@ -36,9 +36,9 @@ export default class Renderer {
 
     /**
      * @public
-     * @param {DisplayManager} displayManager
+     * @param {RenderManager} renderManager
      */
-    bind(displayManager) {
+    bind(renderManager) {
         // do nothing
     }
 
@@ -57,6 +57,6 @@ export default class Renderer {
     destroy() {
         this.unbind();
 
-        this._displayManager = null;
+        this._renderManager = null;
     }
 }

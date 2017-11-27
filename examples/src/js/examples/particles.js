@@ -74,7 +74,7 @@ window.app.start(new Exo.Scene({
 
         this._emitter.update(delta);
 
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._emitter)
             .display();

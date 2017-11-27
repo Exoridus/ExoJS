@@ -63,7 +63,7 @@ export default class GameScene extends Scene {
             this._player.update(delta);
             this._worldMap.update(delta);
 
-            this.app.displayManager
+            this.app.renderManager
                 .clear()
                 .draw(this._worldMap)
                 .draw(this._player)
@@ -99,7 +99,7 @@ export default class GameScene extends Scene {
      * @private
      */
     _updateCamera() {
-        const displayManager = this.app.displayManager,
+        const renderManager = this.app.renderManager,
             x = this._player.x,
             y = this._player.y - (this._player.height / 2),
             maxX = this._worldMap.width,
@@ -107,7 +107,7 @@ export default class GameScene extends Scene {
             centerX = this._camera.width / 2,
             centerY = this._camera.height / 2;
 
-        displayManager.renderTarget.setView(this._camera.setCenter(
+        renderManager.renderTarget.setView(this._camera.setCenter(
             utils.clamp(x, centerX, maxX - centerX),
             utils.clamp(y, centerY, maxY - centerY)
         ));

@@ -39,7 +39,7 @@ export default class TitleScene extends Scene {
     update(delta) {
         this._menuManager.update(delta);
 
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._background)
             .draw(this._menuManager)

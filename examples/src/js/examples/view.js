@@ -75,17 +75,17 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const displayManager = this.app.displayManager;
+        const renderManager = this.app.renderManager;
 
-        displayManager.clear();
+        renderManager.clear();
 
-        displayManager.renderTarget.setView(this._camera);
-        displayManager
+        renderManager.renderTarget.setView(this._camera);
+        renderManager
             .draw(this._sprite)
             .display();
 
-        displayManager.renderTarget.setView(null);
-        displayManager
+        renderManager.renderTarget.setView(null);
+        renderManager
             .draw(this._info)
             .display();
     },
@@ -95,7 +95,7 @@ window.app.start(new Exo.Scene({
      */
     destroy() {
         this.app.inputManager.clear(true);
-        this.app.displayManager.renderTarget.setView(null);
+        this.app.renderManager.renderTarget.setView(null);
 
         this._camera.destroy();
         this._camera = null;

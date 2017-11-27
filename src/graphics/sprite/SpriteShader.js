@@ -23,7 +23,7 @@ export default class SpriteShader extends Shader {
         this.setAttribute('aColor', ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
         this.setUniform('projectionMatrix', UNIFORM_TYPE.FLOAT_MAT3);
-        this.setUniform('uSampler', UNIFORM_TYPE.SAMPLER_2D, 0);
+        this.setUniform('texture', UNIFORM_TYPE.SAMPLER_2D, 0);
     }
 
     /**

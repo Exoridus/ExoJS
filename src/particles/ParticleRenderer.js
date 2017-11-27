@@ -44,9 +44,9 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?RenderManager}
          */
-        this._displayManager = null;
+        this._renderManager = null;
 
         /**
          * @private
@@ -123,7 +123,7 @@ export default class ParticleRenderer extends Renderer {
      * @member {Boolean}
      */
     get bound() {
-        return this._displayManager && (this._displayManager.renderer === this);
+        return this._renderManager && (this._renderManager.renderer === this);
     }
 
     /**
@@ -149,18 +149,18 @@ export default class ParticleRenderer extends Renderer {
     /**
      * @override
      */
-    bind(displayManager) {
-        if (!this._displayManager) {
-            const gl = displayManager.context;
+    bind(renderManager) {
+        if (!this._renderManager) {
+            const gl = renderManager.context;
 
             this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
             this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
-            this._displayManager = displayManager;
+            this._renderManager = renderManager;
         }
 
         this._vertexBuffer.bind();
         this._indexBuffer.bind();
-        this._displayManager.setShader(this._shader);
+        this._renderManager.setShader(this._shader);
 
         return this;
     }
@@ -174,7 +174,7 @@ export default class ParticleRenderer extends Renderer {
 
             this._vertexBuffer.unbind();
             this._indexBuffer.unbind();
-            this._displayManager.setShader(null);
+            this._renderManager.setShader(null);
 
             this._currentTexture = null;
             this._currentBlendMode = null;
@@ -204,12 +204,12 @@ export default class ParticleRenderer extends Renderer {
 
             if (textureChanged) {
                 this._currentTexture = texture;
-                this._displayManager.setTexture(texture);
+                this._renderManager.setTexture(texture);
             }
 
             if (blendModeChanged) {
                 this._currentBlendMode = blendMode;
-                this._displayManager.setBlendMode(blendMode);
+                this._renderManager.setBlendMode(blendMode);
             }
         }
 
@@ -282,7 +282,7 @@ export default class ParticleRenderer extends Renderer {
      */
     flush() {
         if (this.bound && this._batchIndex > 0) {
-            const view = this._displayManager.renderTarget.view,
+            const view = this._renderManager.renderTarget.view,
                 viewId = view.updateId;
 
             if (this._currentView !== view || this._viewId !== viewId) {
@@ -293,7 +293,7 @@ export default class ParticleRenderer extends Renderer {
             }
 
             this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-            this._displayManager.drawElements(this._batchIndex * 6);
+            this._renderManager.drawElements(this._batchIndex * 6);
             this._batchIndex = 0;
         }
 
@@ -328,6 +328,6 @@ export default class ParticleRenderer extends Renderer {
         this._currentTexture = null;
         this._currentBlendMode = null;
         this._currentView = null;
-        this._displayManager = null;
+        this._renderManager = null;
     }
 }

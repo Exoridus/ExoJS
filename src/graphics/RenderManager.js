@@ -6,9 +6,9 @@ import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
 
 /**
- * @class DisplayManager
+ * @class RenderManager
  */
-export default class DisplayManager {
+export default class RenderManager {
 
     /**
      * @constructor
@@ -219,7 +219,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {?RenderTarget|?RenderTexture} renderTarget
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setRenderTarget(target) {
         const renderTarget = target || this._rootRenderTarget;
@@ -245,7 +245,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Renderer} renderer
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setRenderer(renderer) {
         const newRenderer = renderer || null;
@@ -266,7 +266,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {?Shader} shader
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setShader(shader) {
         const newShader = shader || null;
@@ -293,7 +293,7 @@ export default class DisplayManager {
      * @chainable
      * @param {?Texture|?RenderTexture} texture
      * @param {Number} [unit]
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setTexture(texture, unit) {
         const newTexture = texture || null;
@@ -323,7 +323,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Number} blendMode
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setBlendMode(blendMode) {
         if (blendMode !== this._blendMode) {
@@ -357,7 +357,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Number} unit
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setTextureUnit(unit) {
         const textureUnit = unit | 0;
@@ -377,7 +377,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Color} color
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     setClearColor(color) {
         if (!this._clearColor.equals({
@@ -400,7 +400,7 @@ export default class DisplayManager {
      * @chainable
      * @param {String} name
      * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     addRenderer(name, renderer) {
         if (this._renderers.has(name)) {
@@ -430,7 +430,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Color} [color]
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     clear(color) {
         const gl = this._context;
@@ -449,7 +449,7 @@ export default class DisplayManager {
      * @chainable
      * @param {Number} width
      * @param {Number} height
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     resize(width, height) {
         this._canvas.width = width;
@@ -464,7 +464,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Drawable|*} drawable
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     draw(drawable) {
         if (!this._contextLost) {
@@ -477,7 +477,7 @@ export default class DisplayManager {
     /**
      * @public
      * @chainable
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     display() {
         if (this._renderer && !this._contextLost) {
@@ -491,7 +491,7 @@ export default class DisplayManager {
      * @public
      * @chainable
      * @param {Number} count
-     * @returns {DisplayManager}
+     * @returns {RenderManager}
      */
     drawElements(count) {
         const gl = this._context;

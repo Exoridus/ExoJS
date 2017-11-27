@@ -236,11 +236,11 @@ export default class Text extends Sprite {
     /**
      * @override
      */
-    render(displayManager) {
+    render(renderManager) {
         if (this.active) {
             this.updateTexture();
 
-            super.render(displayManager);
+            super.render(renderManager);
         }
 
         return this;

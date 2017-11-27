@@ -59,7 +59,7 @@ window.app.start(new Exo.Scene({
 
         this._bunnies.rotate(delta.seconds * 36);
 
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._rainbow)
             .draw(this._bunnies)

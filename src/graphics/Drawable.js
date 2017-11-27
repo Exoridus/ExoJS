@@ -9,10 +9,10 @@ export default class Drawable extends SceneNode {
     /**
      * @public
      * @chainable
-     * @param {DisplayManager} displayManager
+     * @param {RenderManager} renderManager
      * @returns {Drawable}
      */
-    render(displayManager) {
+    render(renderManager) {
         throw new Error('Method not implemented!');
     }
 }

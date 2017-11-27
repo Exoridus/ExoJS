@@ -1,7 +1,7 @@
 import EventEmitter from './EventEmitter';
 import Clock from './Clock';
 import SceneManager from './SceneManager';
-import DisplayManager from '../graphics/DisplayManager';
+import RenderManager from '../graphics/RenderManager';
 import InputManager from '../input/InputManager';
 import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
@@ -56,9 +56,9 @@ export default class Application extends EventEmitter {
 
         /**
          * @private
-         * @member {DisplayManager}
+         * @member {RenderManager}
          */
-        this._displayManager = new DisplayManager(this, config);
+        this._renderManager = new RenderManager(this, config);
 
         /**
          * @private
@@ -131,10 +131,10 @@ export default class Application extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {DisplayManager}
+     * @member {RenderManager}
      */
-    get displayManager() {
-        return this._displayManager;
+    get renderManager() {
+        return this._renderManager;
     }
 
     /**
@@ -236,8 +236,8 @@ export default class Application extends EventEmitter {
         this._inputManager.destroy();
         this._inputManager = null;
 
-        this._displayManager.destroy();
-        this._displayManager = null;
+        this._renderManager.destroy();
+        this._renderManager = null;
 
         this._sceneManager.destroy();
         this._sceneManager = null;

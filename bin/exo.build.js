@@ -6033,11 +6033,11 @@ var Sprite = function (_Container) {
 
     }, {
         key: 'render',
-        value: function render(displayManager) {
-            if (this.active && displayManager.insideViewport(this)) {
-                var renderer = displayManager.getRenderer('sprite');
+        value: function render(renderManager) {
+            if (this.active && renderManager.insideViewport(this)) {
+                var renderer = renderManager.getRenderer('sprite');
 
-                displayManager.setRenderer(renderer);
+                renderManager.setRenderer(renderer);
 
                 renderer.render(this);
 
@@ -6049,7 +6049,7 @@ var Sprite = function (_Container) {
                     for (var _iterator = this.children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                         var child = _step.value;
 
-                        child.render(displayManager);
+                        child.render(renderManager);
                     }
                 } catch (err) {
                     _didIteratorError = true;
@@ -7244,10 +7244,10 @@ var Drawable = function (_SceneNode) {
     /**
      * @public
      * @chainable
-     * @param {DisplayManager} displayManager
+     * @param {RenderManager} renderManager
      * @returns {Drawable}
      */
-    value: function render(displayManager) {
+    value: function render(renderManager) {
       throw new Error('Method not implemented!');
     }
   }]);
@@ -8102,9 +8102,9 @@ var Renderer = function () {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?RenderManager}
          */
-        this._displayManager = null;
+        this._renderManager = null;
     }
 
     /**
@@ -8135,12 +8135,12 @@ var Renderer = function () {
 
         /**
          * @public
-         * @param {DisplayManager} displayManager
+         * @param {RenderManager} renderManager
          */
 
     }, {
         key: "bind",
-        value: function bind(displayManager) {}
+        value: function bind(renderManager) {}
         // do nothing
 
 
@@ -8165,7 +8165,7 @@ var Renderer = function () {
         value: function destroy() {
             this.unbind();
 
-            this._displayManager = null;
+            this._renderManager = null;
         }
     }]);
 
@@ -12044,11 +12044,11 @@ var Video = function (_Sprite) {
 
     }, {
         key: 'render',
-        value: function render(displayManager) {
+        value: function render(renderManager) {
             if (this.active) {
                 this.texture.updateSource();
 
-                _get(Video.prototype.__proto__ || Object.getPrototypeOf(Video.prototype), 'render', this).call(this, displayManager);
+                _get(Video.prototype.__proto__ || Object.getPrototypeOf(Video.prototype), 'render', this).call(this, renderManager);
             }
 
             return this;
@@ -12513,7 +12513,7 @@ var Container = function (_Drawable) {
 
     }, {
         key: 'render',
-        value: function render(displayManager) {
+        value: function render(renderManager) {
             if (this.active) {
                 var _iteratorNormalCompletion = true;
                 var _didIteratorError = false;
@@ -12523,7 +12523,7 @@ var Container = function (_Drawable) {
                     for (var _iterator = this._children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                         var child = _step.value;
 
-                        child.render(displayManager);
+                        child.render(renderManager);
                     }
                 } catch (err) {
                     _didIteratorError = true;
@@ -13245,9 +13245,9 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
- * @class DisplayManager
+ * @class RenderManager
  */
-var DisplayManager = function () {
+var RenderManager = function () {
 
     /**
      * @constructor
@@ -13258,7 +13258,7 @@ var DisplayManager = function () {
      * @param {Color} [config.clearColor=Color.Black]
      * @param {Object} [config.contextOptions]
      */
-    function DisplayManager(app) {
+    function RenderManager(app) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             _ref$width = _ref.width,
             width = _ref$width === undefined ? 800 : _ref$width,
@@ -13276,7 +13276,7 @@ var DisplayManager = function () {
             depth: false
         } : _ref$contextOptions;
 
-        _classCallCheck(this, DisplayManager);
+        _classCallCheck(this, RenderManager);
 
         if (!_support2.default.webGL) {
             throw new Error('This browser or hardware does not support WebGL.');
@@ -13381,7 +13381,7 @@ var DisplayManager = function () {
      */
 
 
-    _createClass(DisplayManager, [{
+    _createClass(RenderManager, [{
         key: 'setRenderTarget',
 
 
@@ -13389,7 +13389,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {?RenderTarget|?RenderTexture} renderTarget
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
         value: function setRenderTarget(target) {
             var renderTarget = target || this._rootRenderTarget;
@@ -13415,7 +13415,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Renderer} renderer
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13439,7 +13439,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {?Shader} shader
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13469,7 +13469,7 @@ var DisplayManager = function () {
          * @chainable
          * @param {?Texture|?RenderTexture} texture
          * @param {Number} [unit]
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13502,7 +13502,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Number} blendMode
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13539,7 +13539,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Number} unit
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13562,7 +13562,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Color} color
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13588,7 +13588,7 @@ var DisplayManager = function () {
          * @chainable
          * @param {String} name
          * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13624,7 +13624,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Color} [color]
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13646,7 +13646,7 @@ var DisplayManager = function () {
          * @chainable
          * @param {Number} width
          * @param {Number} height
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13664,7 +13664,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Drawable|*} drawable
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13680,7 +13680,7 @@ var DisplayManager = function () {
         /**
          * @public
          * @chainable
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13697,7 +13697,7 @@ var DisplayManager = function () {
          * @public
          * @chainable
          * @param {Number} count
-         * @returns {DisplayManager}
+         * @returns {RenderManager}
          */
 
     }, {
@@ -13979,10 +13979,10 @@ var DisplayManager = function () {
         }
     }]);
 
-    return DisplayManager;
+    return RenderManager;
 }();
 
-exports.default = DisplayManager;
+exports.default = RenderManager;
 
 /***/ }),
 /* 50 */
@@ -14792,9 +14792,9 @@ var SpriteRenderer = function (_Renderer) {
 
                 /**
                  * @private
-                 * @member {?DisplayManager}
+                 * @member {?RenderManager}
                  */
-                _this._displayManager = null;
+                _this._renderManager = null;
 
                 /**
                  * @private
@@ -14903,18 +14903,18 @@ var SpriteRenderer = function (_Renderer) {
 
         }, {
                 key: 'bind',
-                value: function bind(displayManager) {
-                        if (!this._displayManager) {
-                                var gl = displayManager.context;
+                value: function bind(renderManager) {
+                        if (!this._renderManager) {
+                                var gl = renderManager.context;
 
                                 this._vertexBuffer = new _Buffer2.default(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
                                 this._indexBuffer = new _Buffer2.default(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
-                                this._displayManager = displayManager;
+                                this._renderManager = renderManager;
                         }
 
                         this._vertexBuffer.bind();
                         this._indexBuffer.bind();
-                        this._displayManager.setShader(this._shader);
+                        this._renderManager.setShader(this._shader);
 
                         return this;
                 }
@@ -14931,7 +14931,7 @@ var SpriteRenderer = function (_Renderer) {
 
                                 this._vertexBuffer.unbind();
                                 this._indexBuffer.unbind();
-                                this._displayManager.setShader(null);
+                                this._renderManager.setShader(null);
 
                                 this._currentTexture = null;
                                 this._currentBlendMode = null;
@@ -14966,12 +14966,12 @@ var SpriteRenderer = function (_Renderer) {
 
                                 if (textureChanged) {
                                         this._currentTexture = texture;
-                                        this._displayManager.setTexture(texture);
+                                        this._renderManager.setTexture(texture);
                                 }
 
                                 if (blendModeChanged) {
                                         this._currentBlendMode = blendMode;
-                                        this._displayManager.setBlendMode(blendMode);
+                                        this._renderManager.setBlendMode(blendMode);
                                 }
                         }
 
@@ -15015,7 +15015,7 @@ var SpriteRenderer = function (_Renderer) {
                 key: 'flush',
                 value: function flush() {
                         if (this.bound && this._batchIndex > 0) {
-                                var view = this._displayManager.renderTarget.view,
+                                var view = this._renderManager.renderTarget.view,
                                     viewId = view.updateId;
 
                                 if (this._currentView !== view || this._viewId !== viewId) {
@@ -15026,7 +15026,7 @@ var SpriteRenderer = function (_Renderer) {
                                 }
 
                                 this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-                                this._displayManager.drawElements(this._batchIndex * 6);
+                                this._renderManager.drawElements(this._batchIndex * 6);
                                 this._batchIndex = 0;
                         }
 
@@ -15064,12 +15064,12 @@ var SpriteRenderer = function (_Renderer) {
                         this._currentTexture = null;
                         this._currentBlendMode = null;
                         this._currentView = null;
-                        this._displayManager = null;
+                        this._renderManager = null;
                 }
         }, {
                 key: 'bound',
                 get: function get() {
-                        return this._displayManager && this._displayManager.renderer === this;
+                        return this._renderManager && this._renderManager.renderer === this;
                 }
         }]);
 
@@ -15123,14 +15123,14 @@ var SpriteShader = function (_Shader) {
         var _this = _possibleConstructorReturn(this, (SpriteShader.__proto__ || Object.getPrototypeOf(SpriteShader)).call(this));
 
         _this.setVertexSource('precision lowp float;\r\n\r\nattribute vec2 aVertexPosition;\r\nattribute vec2 aTextureCoord;\r\nattribute vec4 aColor;\r\n\r\nuniform mat3 projectionMatrix;\r\n\r\nvarying vec2 vTextureCoord;\r\nvarying vec4 vColor;\r\n\r\nvoid main(void) {\r\n    vTextureCoord = aTextureCoord;\r\n    vColor = vec4(aColor.rgb * aColor.a, aColor.a);\r\n\r\n    gl_Position = vec4((projectionMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
-        _this.setFragmentSource('precision lowp float;\r\n\r\nuniform sampler2D uSampler;\r\n\r\nvarying vec2 vTextureCoord;\r\nvarying vec4 vColor;\r\n\r\nvoid main(void) {\r\n    gl_FragColor = texture2D(uSampler, vTextureCoord) * vColor;\r\n}\r\n');
+        _this.setFragmentSource('precision lowp float;\r\n\r\nuniform sampler2D texture;\r\n\r\nvarying vec2 vTextureCoord;\r\nvarying vec4 vColor;\r\n\r\nvoid main(void) {\r\n    gl_FragColor = texture2D(texture, vTextureCoord) * vColor;\r\n}\r\n');
 
         _this.setAttribute('aVertexPosition', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
         _this.setAttribute('aTextureCoord', _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
         _this.setAttribute('aColor', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
         _this.setUniform('projectionMatrix', _const.UNIFORM_TYPE.FLOAT_MAT3);
-        _this.setUniform('uSampler', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
+        _this.setUniform('texture', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
         return _this;
     }
 
@@ -16127,9 +16127,9 @@ var ParticleRenderer = function (_Renderer) {
 
         /**
          * @private
-         * @member {?DisplayManager}
+         * @member {?RenderManager}
          */
-        _this._displayManager = null;
+        _this._renderManager = null;
 
         /**
          * @private
@@ -16238,18 +16238,18 @@ var ParticleRenderer = function (_Renderer) {
 
     }, {
         key: 'bind',
-        value: function bind(displayManager) {
-            if (!this._displayManager) {
-                var gl = displayManager.context;
+        value: function bind(renderManager) {
+            if (!this._renderManager) {
+                var gl = renderManager.context;
 
                 this._vertexBuffer = new _Buffer2.default(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
                 this._indexBuffer = new _Buffer2.default(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
-                this._displayManager = displayManager;
+                this._renderManager = renderManager;
             }
 
             this._vertexBuffer.bind();
             this._indexBuffer.bind();
-            this._displayManager.setShader(this._shader);
+            this._renderManager.setShader(this._shader);
 
             return this;
         }
@@ -16266,7 +16266,7 @@ var ParticleRenderer = function (_Renderer) {
 
                 this._vertexBuffer.unbind();
                 this._indexBuffer.unbind();
-                this._displayManager.setShader(null);
+                this._renderManager.setShader(null);
 
                 this._currentTexture = null;
                 this._currentBlendMode = null;
@@ -16299,12 +16299,12 @@ var ParticleRenderer = function (_Renderer) {
 
                 if (textureChanged) {
                     this._currentTexture = texture;
-                    this._displayManager.setTexture(texture);
+                    this._renderManager.setTexture(texture);
                 }
 
                 if (blendModeChanged) {
                     this._currentBlendMode = blendMode;
-                    this._displayManager.setBlendMode(blendMode);
+                    this._renderManager.setBlendMode(blendMode);
                 }
             }
 
@@ -16381,7 +16381,7 @@ var ParticleRenderer = function (_Renderer) {
         key: 'flush',
         value: function flush() {
             if (this.bound && this._batchIndex > 0) {
-                var view = this._displayManager.renderTarget.view,
+                var view = this._renderManager.renderTarget.view,
                     viewId = view.updateId;
 
                 if (this._currentView !== view || this._viewId !== viewId) {
@@ -16392,7 +16392,7 @@ var ParticleRenderer = function (_Renderer) {
                 }
 
                 this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-                this._displayManager.drawElements(this._batchIndex * 6);
+                this._renderManager.drawElements(this._batchIndex * 6);
                 this._batchIndex = 0;
             }
 
@@ -16430,12 +16430,12 @@ var ParticleRenderer = function (_Renderer) {
             this._currentTexture = null;
             this._currentBlendMode = null;
             this._currentView = null;
-            this._displayManager = null;
+            this._renderManager = null;
         }
     }, {
         key: 'bound',
         get: function get() {
-            return this._displayManager && this._displayManager.renderer === this;
+            return this._renderManager && this._renderManager.renderer === this;
         }
     }]);
 
@@ -16489,7 +16489,7 @@ var ParticleShader = function (_Shader) {
         var _this = _possibleConstructorReturn(this, (ParticleShader.__proto__ || Object.getPrototypeOf(ParticleShader)).call(this));
 
         _this.setVertexSource('precision lowp float;\n\nattribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\nattribute vec2 aPosition;\nattribute vec2 aScale;\nattribute float aRotation;\nattribute vec4 aColor;\n\nuniform mat3 projectionMatrix;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vColor;\n\nvoid main(void) {\n    vTextureCoord = aTextureCoord;\n    vColor = vec4(aColor.rgb * aColor.a, aColor.a);\n\n    vec2 pos = vec2(\n        (aVertexPosition.x * cos(aRotation)) - (aVertexPosition.y * sin(aRotation)),\n        (aVertexPosition.x * sin(aRotation)) + (aVertexPosition.y * cos(aRotation))\n    );\n\n    gl_Position = vec4((projectionMatrix * vec3((pos * aScale) + aPosition, 1.0)).xy, 0.0, 1.0);\n}\n');
-        _this.setFragmentSource('precision lowp float;\n\nuniform sampler2D uSampler;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vColor;\n\nvoid main(void) {\n    gl_FragColor = texture2D(uSampler, vTextureCoord) * vColor;\n}\n');
+        _this.setFragmentSource('precision lowp float;\n\nuniform sampler2D texture;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vColor;\n\nvoid main(void) {\n    gl_FragColor = texture2D(texture, vTextureCoord) * vColor;\n}\n');
 
         _this.setAttribute('aVertexPosition', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
         _this.setAttribute('aTextureCoord', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
@@ -16499,7 +16499,7 @@ var ParticleShader = function (_Shader) {
         _this.setAttribute('aColor', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
         _this.setUniform('projectionMatrix', _const.UNIFORM_TYPE.FLOAT_MAT3);
-        _this.setUniform('uSampler', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
+        _this.setUniform('texture', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
         return _this;
     }
 
@@ -20740,9 +20740,9 @@ var _SceneManager = __webpack_require__(48);
 
 var _SceneManager2 = _interopRequireDefault(_SceneManager);
 
-var _DisplayManager = __webpack_require__(49);
+var _RenderManager = __webpack_require__(49);
 
-var _DisplayManager2 = _interopRequireDefault(_DisplayManager);
+var _RenderManager2 = _interopRequireDefault(_RenderManager);
 
 var _InputManager = __webpack_require__(60);
 
@@ -20817,9 +20817,9 @@ var Application = function (_EventEmitter) {
 
         /**
          * @private
-         * @member {DisplayManager}
+         * @member {RenderManager}
          */
-        _this._displayManager = new _DisplayManager2.default(_this, config);
+        _this._renderManager = new _RenderManager2.default(_this, config);
 
         /**
          * @private
@@ -20955,8 +20955,8 @@ var Application = function (_EventEmitter) {
             this._inputManager.destroy();
             this._inputManager = null;
 
-            this._displayManager.destroy();
-            this._displayManager = null;
+            this._renderManager.destroy();
+            this._renderManager = null;
 
             this._sceneManager.destroy();
             this._sceneManager = null;
@@ -21004,13 +21004,13 @@ var Application = function (_EventEmitter) {
         /**
          * @public
          * @readonly
-         * @member {DisplayManager}
+         * @member {RenderManager}
          */
 
     }, {
-        key: 'displayManager',
+        key: 'renderManager',
         get: function get() {
-            return this._displayManager;
+            return this._renderManager;
         }
 
         /**
@@ -21915,7 +21915,7 @@ var Random = function () {
 
     /**
      * @constructor
-     * @param {Number} [seed]
+     * @param {Number} [seed=Date.now()]
      */
     function Random() {
         var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Date.now();
@@ -22508,12 +22508,12 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _DisplayManager = __webpack_require__(49);
+var _RenderManager = __webpack_require__(49);
 
-Object.defineProperty(exports, 'DisplayManager', {
+Object.defineProperty(exports, 'RenderManager', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_DisplayManager).default;
+    return _interopRequireDefault(_RenderManager).default;
   }
 });
 
@@ -23383,11 +23383,11 @@ var Text = function (_Sprite) {
 
     }, {
         key: 'render',
-        value: function render(displayManager) {
+        value: function render(renderManager) {
             if (this.active) {
                 this.updateTexture();
 
-                _get(Text.prototype.__proto__ || Object.getPrototypeOf(Text.prototype), 'render', this).call(this, displayManager);
+                _get(Text.prototype.__proto__ || Object.getPrototypeOf(Text.prototype), 'render', this).call(this, renderManager);
             }
 
             return this;
@@ -24203,11 +24203,11 @@ var ParticleEmitter = function (_Drawable) {
 
     }, {
         key: 'render',
-        value: function render(displayManager) {
-            if (this.active && displayManager.insideViewport(this)) {
-                var renderer = displayManager.getRenderer('particle');
+        value: function render(renderManager) {
+            if (this.active && renderManager.insideViewport(this)) {
+                var renderer = renderManager.getRenderer('particle');
 
-                displayManager.setRenderer(renderer);
+                renderManager.setRenderer(renderer);
 
                 renderer.render(this);
             }

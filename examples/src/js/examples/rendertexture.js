@@ -66,16 +66,16 @@ window.app.start(new Exo.Scene({
      * @returns {RenderTexture}
      */
     createRenderTexture(container) {
-        const displayManager = this.app.displayManager,
+        const renderManager = this.app.renderManager,
             renderTexture = new Exo.RenderTexture(Math.ceil(container.width), Math.ceil(container.height));
 
-        displayManager.setRenderTarget(renderTexture);
+        renderManager.setRenderTarget(renderTexture);
 
-        displayManager.clear();
-        displayManager.draw(container);
-        displayManager.display();
+        renderManager.clear();
+        renderManager.draw(container);
+        renderManager.display();
 
-        displayManager.setRenderTarget(null);
+        renderManager.setRenderTarget(null);
 
         return renderTexture;
     },
@@ -84,7 +84,7 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._container)
             .draw(this._renderSprite)

@@ -239,10 +239,10 @@ export default class Container extends Drawable {
     /**
      * @override
      */
-    render(displayManager) {
+    render(renderManager) {
         if (this.active) {
             for (const child of this._children) {
-                child.render(displayManager);
+                child.render(renderManager);
             }
         }
 

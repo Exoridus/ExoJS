@@ -62,9 +62,41 @@ window.app.start(new Exo.Scene({
 
         /**
          * @private
+         * @member {String[]}
+         */
+        this._blendModeNames = [
+            'NORMAL',
+            'ADD',
+            'SUBTRACT',
+            'MULTIPLY',
+            'SCREEN',
+        ];
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._blendModeIndex = 0;
+
+        /**
+         * @private
          * @type {Number}
          */
         this._ticker = 0;
+
+        /**
+         * @private
+         * @member {Text}
+         */
+        this._info = new Exo.Text('Click to switch between blend modes', {
+            fontSize: 16,
+            padding: 10,
+            fill: '#fff',
+            align: 'center',
+        });
+
+        this._info.setPosition(canvas.width / 2, 0);
+        this._info.setOrigin(0.5, 0);
 
         this.app.on('pointer:down', this.updateBlendMode, this);
 
@@ -75,10 +107,15 @@ window.app.start(new Exo.Scene({
      * @private
      */
     updateBlendMode() {
-        const blendModes = this._blendModes;
+        this._blendModeIndex = (this._blendModeIndex + 1) % this._blendModes.length;
 
-        this._leftBunny.setBlendMode(blendModes[(blendModes.indexOf(this._leftBunny.blendMode) + 1) % blendModes.length]);
-        this._rightBunny.setBlendMode(blendModes[(blendModes.indexOf(this._rightBunny.blendMode) + 1) % blendModes.length]);
+        this._leftBunny.setBlendMode(this._blendModes[this._blendModeIndex]);
+        this._rightBunny.setBlendMode(this._blendModes[this._blendModeIndex]);
+
+        this._info.setText([
+            `Click to switch between blend modes`,
+            `Current blend mode: ${this._blendModeNames[this._blendModeIndex]}`,
+        ].join('\n'))
     },
 
     /**
@@ -93,11 +130,12 @@ window.app.start(new Exo.Scene({
 
         this._ticker += delta.seconds;
 
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._background)
             .draw(this._leftBunny)
             .draw(this._rightBunny)
+            .draw(this._info)
             .display();
     },
 
@@ -114,9 +152,16 @@ window.app.start(new Exo.Scene({
         this._rightBunny.destroy();
         this._rightBunny = null;
 
+        this._info.destroy();
+        this._info = null;
+
         this._blendModes.length = 0;
         this._blendModes = null;
 
+        this._blendModeNames.length = 0;
+        this._blendModeNames = null;
+
+        this._blendModeIndex = null;
         this._ticker = null;
     },
 }));

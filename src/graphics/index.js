@@ -1,7 +1,7 @@
 /**
  * @namespace Exo
  */
-export { default as DisplayManager } from './DisplayManager';
+export { default as RenderManager } from './RenderManager';
 export { default as RenderTarget } from './RenderTarget';
 export { default as RenderTexture } from './RenderTexture';
 export { default as Texture } from './Texture';

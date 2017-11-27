@@ -149,7 +149,7 @@ window.app.start(new Exo.Scene({
 
         this._screen.updateTexture();
 
-        this.app.displayManager
+        this.app.renderManager
             .clear(this._clearColor)
             .draw(this._screen)
             .display();

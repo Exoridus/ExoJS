@@ -354,11 +354,11 @@ export default class Video extends Sprite {
     /**
      * @override
      */
-    render(displayManager) {
+    render(renderManager) {
         if (this.active) {
             this.texture.updateSource();
 
-            super.render(displayManager);
+            super.render(renderManager);
         }
 
         return this;

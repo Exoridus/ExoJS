@@ -69,7 +69,7 @@ window.app.start(new Exo.Scene({
             this._timer.restart();
         }
 
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._bunnies)
             .display();

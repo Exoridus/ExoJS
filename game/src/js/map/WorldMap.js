@@ -100,10 +100,10 @@ export default class WorldMap {
 
     /**
      * @public
-     * @param {DisplayManager} displayManager
+     * @param {RenderManager} renderManager
      */
-    render(displayManager) {
-        const camera = displayManager.renderTarget.view,
+    render(renderManager) {
+        const camera = renderManager.renderTarget.view,
             viewport = camera.getBounds(),
             mapData = this._mapData,
             tilesX = this._tilesX,
@@ -129,7 +129,7 @@ export default class WorldMap {
             tile.x = (startTileX + x) * tileWidth;
             tile.y = (startTileY + y) * tileHeight;
 
-            tile.render(displayManager);
+            tile.render(renderManager);
         }
     }
 }

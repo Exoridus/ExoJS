@@ -234,12 +234,12 @@ export default class MenuManager {
     /**
      * @public
      * @chainable
-     * @param {DisplayManager} displayManager
+     * @param {RenderManager} renderManager
      * @returns {MenuManager}
      */
-    render(displayManager) {
+    render(renderManager) {
         if (this._currentMenu) {
-            this._currentMenu.render(displayManager);
+            this._currentMenu.render(renderManager);
         }
 
         return this;

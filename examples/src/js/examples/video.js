@@ -52,7 +52,7 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        this.app.displayManager
+        this.app.renderManager
             .clear()
             .draw(this._video)
             .display();
