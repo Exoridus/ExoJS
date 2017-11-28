@@ -1755,14 +1755,6 @@ exports.default = {
     /**
      * @public
      * @static
-     * @type {Boolean}
-     * @default true
-     */
-    GENERATE_MIPMAP: true,
-
-    /**
-     * @public
-     * @static
      * @type {Number}
      * @default 1.0
      */
@@ -12135,10 +12127,6 @@ var _ImageFactory3 = _interopRequireDefault(_ImageFactory2);
 var _Texture = __webpack_require__(14);
 
 var _Texture2 = _interopRequireDefault(_Texture);
-
-var _settings = __webpack_require__(3);
-
-var _settings2 = _interopRequireDefault(_settings);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 

@@ -619,8 +619,7 @@ var GameScene = function (_Scene) {
          * @override
          */
         value: function init(resources) {
-            var app = this.app,
-                canvas = app.canvas;
+            var canvas = this.app.canvas;
 
             /**
              * @private
@@ -632,7 +631,7 @@ var GameScene = function (_Scene) {
              * @private
              * @member {Player}
              */
-            this._player = new _Player2.default(app, {
+            this._player = new _Player2.default(this.app, {
                 spawnPoint: new _exojs.Vector(this._worldMap.width / 2, this._worldMap.height / 2),
                 worldBounds: this._worldMap.bounds
             });
@@ -654,7 +653,6 @@ var GameScene = function (_Scene) {
              * @member {Music}
              */
             this._backgroundMusic = resources.get('music', 'overworld');
-            this._backgroundMusic.connect(app.mediaManager);
             this._backgroundMusic.play({ loop: true });
 
             this._addEvents();
@@ -673,7 +671,7 @@ var GameScene = function (_Scene) {
                 this._player.update(delta);
                 this._worldMap.update(delta);
 
-                this.app.displayManager.clear().draw(this._worldMap).draw(this._player).display();
+                this.app.renderManager.clear().draw(this._worldMap).draw(this._player).display();
             }
 
             return this;
@@ -711,7 +709,7 @@ var GameScene = function (_Scene) {
     }, {
         key: '_updateCamera',
         value: function _updateCamera() {
-            var displayManager = this.app.displayManager,
+            var renderManager = this.app.renderManager,
                 x = this._player.x,
                 y = this._player.y - this._player.height / 2,
                 maxX = this._worldMap.width,
@@ -719,7 +717,7 @@ var GameScene = function (_Scene) {
                 centerX = this._camera.width / 2,
                 centerY = this._camera.height / 2;
 
-            displayManager.renderTarget.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
+            renderManager.renderTarget.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
         }
 
         /**
@@ -851,18 +849,17 @@ var _LauncherScene2 = _interopRequireDefault(_LauncherScene);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 window.addEventListener('load', function () {
+    Exo.settings.VOLUME_MASTER = 0.5;
+
     var app = new _exojs.Application({
         basePath: 'assets/',
         width: 1280,
         height: 720,
-        soundVolume: 0.5,
-        musicVolume: 0.5,
         canvas: document.querySelector('#game-canvas')
     });
 
     app.loader.request.cache = 'no-cache';
     app.loader.database = new _exojs.Database('game', 3);
-
     app.start(new _LauncherScene2.default());
 
     window.app = app;
@@ -876,7 +873,7 @@ window.addEventListener('load', function () {
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -902,188 +899,195 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {Scene}
  */
 var LauncherScene = function (_Scene) {
-  _inherits(LauncherScene, _Scene);
+    _inherits(LauncherScene, _Scene);
 
-  function LauncherScene() {
-    _classCallCheck(this, LauncherScene);
+    function LauncherScene() {
+        _classCallCheck(this, LauncherScene);
 
-    return _possibleConstructorReturn(this, (LauncherScene.__proto__ || Object.getPrototypeOf(LauncherScene)).apply(this, arguments));
-  }
-
-  _createClass(LauncherScene, [{
-    key: 'load',
-
-
-    /**
-     * @override
-     */
-    value: function load(loader) {
-      var _this2 = this;
-
-      /**
-       * @private
-       * @member {jQuery}
-       */
-      this._$launcher = jQuery('.launcher');
-      this._$launcher.removeClass('hidden');
-
-      /**
-       * @private
-       * @member {jQuery}
-       */
-      this._$indicator = this._$launcher.find('.loading-indicator');
-      this._$indicator.removeClass('finished');
-
-      /**
-       * @private
-       * @member {jQuery}
-       */
-      this._$indicatorText = this._$indicator.find('.indicator-text');
-
-      /**
-       * @private
-       * @member {HTMLImageElement}
-       */
-      this._indicatorProgress = this._$indicator.find('.indicator-progress')[0];
-
-      /**
-       * @private
-       * @member {HTMLCanvasElement}
-       */
-      this._indicatorCanvas = this._$indicator.find('.indicator-canvas')[0];
-
-      /**
-       * @private
-       * @member {CanvasRenderingContext2D}
-       */
-      this._indicatorContext = this._indicatorCanvas.getContext('2d');
-
-      loader.on('progress', function (length, index, resource) {
-        return _this2._renderProgress(index / length * 100);
-      });
-
-      loader.addList('texture', {
-        'title/logo': 'image/title/logo.png',
-        'title/background': 'image/title/background.jpg',
-        'game/tileset': 'image/game/tileset.png',
-        'game/player': 'image/game/player.png'
-      });
-
-      loader.addList('music', {
-        'title': 'audio/title.ogg',
-        'overworld': 'audio/overworld.ogg'
-      });
-
-      loader.addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
-        family: 'AndyBold'
-      });
-
-      this._renderProgress(0);
+        return _possibleConstructorReturn(this, (LauncherScene.__proto__ || Object.getPrototypeOf(LauncherScene)).apply(this, arguments));
     }
 
-    /**
-     * @override
-     */
+    _createClass(LauncherScene, [{
+        key: 'load',
 
-  }, {
-    key: 'init',
-    value: function init(resources) {
 
-      /**
-       * @private
-       * @member {Function}
-       */
-      this._openTitleHandler = this._openTitle.bind(this);
+        /**
+         * @override
+         */
+        value: function load(loader) {
+            var _this2 = this;
 
-      /**
-       * @private
-       * @member {Input}
-       */
-      this._playInput = new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.Start, _exojs.GAMEPAD.FaceBottom]);
+            /**
+             * @private
+             * @member {jQuery}
+             */
+            this._$launcher = jQuery('.launcher');
+            this._$launcher.removeClass('hidden');
 
-      this._playInput.on('trigger', this._openTitleHandler);
+            /**
+             * @private
+             * @member {jQuery}
+             */
+            this._$indicator = this._$launcher.find('.loading-indicator');
+            this._$indicator.removeClass('finished');
 
-      this._$indicator.addClass('finished');
-      this._$indicatorText.html('PLAY');
-      this._$indicatorText.on('click', this._openTitleHandler);
+            /**
+             * @private
+             * @member {jQuery}
+             */
+            this._$indicatorText = this._$indicator.find('.indicator-text');
 
-      this.app.inputManager.add(this._playInput);
-    }
+            /**
+             * @private
+             * @member {HTMLImageElement}
+             */
+            this._indicatorProgress = this._$indicator.find('.indicator-progress')[0];
 
-    /**
-     * @override
-     */
+            /**
+             * @private
+             * @member {HTMLCanvasElement}
+             */
+            this._indicatorCanvas = this._$indicator.find('.indicator-canvas')[0];
 
-  }, {
-    key: 'unload',
-    value: function unload() {
-      this.app.inputManager.remove(this._playInput);
-      this._$indicatorText.off('click', this._openTitleHandler);
+            /**
+             * @private
+             * @member {CanvasRenderingContext2D}
+             */
+            this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
-      this._playInput.destroy();
-      this._playInput = null;
+            loader.on('progress', function (length, index, resource) {
+                return _this2._renderProgress(index / length * 100);
+            });
 
-      this._openTitleHandler = null;
-    }
+            loader.addList('texture', {
+                'title/logo': 'image/title/logo.png',
+                'title/background': 'image/title/background.jpg'
+            }, {
+                scaleMode: _exojs.SCALE_MODE.LINEAR
+            });
 
-    /**
-     * @override
-     */
+            loader.addList('texture', {
+                'game/tileset': 'image/game/tileset.png',
+                'game/player': 'image/game/player.png'
+            }, {
+                scaleMode: _exojs.SCALE_MODE.NEAREST
+            });
 
-  }, {
-    key: 'destroy',
-    value: function destroy() {
-      _get(LauncherScene.prototype.__proto__ || Object.getPrototypeOf(LauncherScene.prototype), 'destroy', this).call(this);
+            loader.addList('music', {
+                'title': 'audio/title.ogg',
+                'overworld': 'audio/overworld.ogg'
+            });
 
-      this._$launcher.addClass('hidden');
+            loader.addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
+                family: 'AndyBold'
+            });
 
-      this._$launcher = null;
-      this._$indicator = null;
-      this._$indicatorText = null;
-      this._indicatorProgress = null;
-      this._indicatorCanvas = null;
-      this._indicatorContext = null;
-    }
+            this._renderProgress(0);
+        }
 
-    /**
-     * @private
-     * @param {Number} percentage
-     */
+        /**
+         * @override
+         */
 
-  }, {
-    key: '_renderProgress',
-    value: function _renderProgress(percentage) {
-      var context = this._indicatorContext,
-          canvas = this._indicatorCanvas,
-          width = canvas.width,
-          height = canvas.height,
-          centerX = width / 2 | 0,
-          centerY = height / 2 | 0,
-          radius = (centerX + centerY) / 2 | 0,
-          offsetAngle = 270;
+    }, {
+        key: 'init',
+        value: function init(resources) {
 
-      this._$indicatorText.html((percentage | 0) + '%');
+            /**
+             * @private
+             * @member {Function}
+             */
+            this._openTitleHandler = this._openTitle.bind(this);
 
-      context.drawImage(this._indicatorProgress, 0, 0, width, height);
-      context.beginPath();
-      context.moveTo(centerX, centerY);
-      context.arc(centerX, centerY, radius, _exojs.utils.degreesToRadians(offsetAngle), _exojs.utils.degreesToRadians(percentage * 3.6 + offsetAngle), true);
-      context.clip();
-      context.clearRect(0, 0, width, height);
-    }
+            /**
+             * @private
+             * @member {Input}
+             */
+            this._playInput = new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.Start, _exojs.GAMEPAD.FaceBottom]);
 
-    /**
-     * @private
-     */
+            this._playInput.on('trigger', this._openTitleHandler);
 
-  }, {
-    key: '_openTitle',
-    value: function _openTitle() {
-      this.app.sceneManager.changeScene(new _TitleScene2.default());
-    }
-  }]);
+            this._$indicator.addClass('finished');
+            this._$indicatorText.html('PLAY');
+            this._$indicatorText.on('click', this._openTitleHandler);
 
-  return LauncherScene;
+            this.app.inputManager.add(this._playInput);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'unload',
+        value: function unload() {
+            this.app.inputManager.remove(this._playInput);
+            this._$indicatorText.off('click', this._openTitleHandler);
+
+            this._playInput.destroy();
+            this._playInput = null;
+
+            this._openTitleHandler = null;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            _get(LauncherScene.prototype.__proto__ || Object.getPrototypeOf(LauncherScene.prototype), 'destroy', this).call(this);
+
+            this._$launcher.addClass('hidden');
+
+            this._$launcher = null;
+            this._$indicator = null;
+            this._$indicatorText = null;
+            this._indicatorProgress = null;
+            this._indicatorCanvas = null;
+            this._indicatorContext = null;
+        }
+
+        /**
+         * @private
+         * @param {Number} percentage
+         */
+
+    }, {
+        key: '_renderProgress',
+        value: function _renderProgress(percentage) {
+            var context = this._indicatorContext,
+                canvas = this._indicatorCanvas,
+                width = canvas.width,
+                height = canvas.height,
+                centerX = width / 2 | 0,
+                centerY = height / 2 | 0,
+                radius = (centerX + centerY) / 2 | 0,
+                offsetAngle = 270;
+
+            this._$indicatorText.html((percentage | 0) + '%');
+
+            context.drawImage(this._indicatorProgress, 0, 0, width, height);
+            context.beginPath();
+            context.moveTo(centerX, centerY);
+            context.arc(centerX, centerY, radius, _exojs.utils.degreesToRadians(offsetAngle), _exojs.utils.degreesToRadians(percentage * 3.6 + offsetAngle), true);
+            context.clip();
+            context.clearRect(0, 0, width, height);
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: '_openTitle',
+        value: function _openTitle() {
+            this.app.sceneManager.changeScene(new _TitleScene2.default());
+        }
+    }]);
+
+    return LauncherScene;
 }(_exojs.Scene);
 
 exports.default = LauncherScene;
@@ -1155,7 +1159,6 @@ var TitleScene = function (_Scene) {
        * @member {Music}
        */
       this._titleMusic = resources.get('music', 'title');
-      this._titleMusic.connect(this.app.mediaManager);
       this._titleMusic.play({ loop: true });
     }
 
@@ -1168,7 +1171,7 @@ var TitleScene = function (_Scene) {
     value: function update(delta) {
       this._menuManager.update(delta);
 
-      this.app.displayManager.clear().draw(this._background).draw(this._menuManager).display();
+      this.app.renderManager.clear().draw(this._background).draw(this._menuManager).display();
     }
 
     /**
@@ -1494,15 +1497,15 @@ var MenuManager = function () {
         /**
          * @public
          * @chainable
-         * @param {DisplayManager} displayManager
+         * @param {RenderManager} renderManager
          * @returns {MenuManager}
          */
 
     }, {
         key: 'render',
-        value: function render(displayManager) {
+        value: function render(renderManager) {
             if (this._currentMenu) {
-                this._currentMenu.render(displayManager);
+                this._currentMenu.render(renderManager);
             }
 
             return this;
@@ -2140,15 +2143,9 @@ var WorldMap = function () {
 
     /**
      * @private
-     * @member {Number}
+     * @member {Tileset}
      */
-    this._tilesX = 256;
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    this._tilesY = 256;
+    this._tileset = tileset;
 
     /**
      * @private
@@ -2158,21 +2155,9 @@ var WorldMap = function () {
 
     /**
      * @private
-     * @member {Tileset}
+     * @member {Vector}
      */
-    this._tileset = tileset;
-
-    /**
-     * @private
-     * @member {MapGenerator}
-     */
-    this._mapGenerator = new _MapGenerator2.default();
-
-    /**
-     * @private
-     * @member {Number[]}
-     */
-    this._mapData = this._mapGenerator.generate(this._tilesX, this._tilesY);
+    this._tileCount = new _exojs.Vector(1024, 1024);
 
     /**
      * @private
@@ -2184,9 +2169,21 @@ var WorldMap = function () {
 
     /**
      * @private
+     * @member {MapGenerator}
+     */
+    this._mapGenerator = new _MapGenerator2.default();
+
+    /**
+     * @private
+     * @member {Number[]}
+     */
+    this._mapData = this._mapGenerator.generate(this._tileCount.x, this._tileCount.y);
+
+    /**
+     * @private
      * @member {Rectangle}
      */
-    this._bounds = new _exojs.Rectangle(0, 0, this._tilesX * this._tileSize.width, this._tilesY * this._tileSize.height);
+    this._bounds = new _exojs.Rectangle(0, 0, this._tileCount.x * this._tileSize.width, this._tileCount.y * this._tileSize.height);
   }
 
   /**
@@ -2208,24 +2205,25 @@ var WorldMap = function () {
 
     /**
      * @public
-     * @param {DisplayManager} displayManager
+     * @param {RenderManager} renderManager
      */
 
   }, {
     key: 'render',
-    value: function render(displayManager) {
-      var camera = displayManager.renderTarget.view,
+    value: function render(renderManager) {
+      var camera = renderManager.renderTarget.view,
+          viewport = camera.getBounds(),
           mapData = this._mapData,
-          tilesX = this._tilesX,
-          tilesY = this._tilesY,
           tile = this._tile,
           tileset = this._tileset,
+          tilesX = this._tileCount.x,
+          tilesY = this._tileCount.y,
           tileWidth = this._tileSize.width,
           tileHeight = this._tileSize.height,
-          tilesHorizontal = camera.width / tileWidth + 2 | 0,
-          tilesVertical = camera.height / tileHeight + 2 | 0,
-          startTileX = _exojs.utils.clamp(camera.left / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-          startTileY = _exojs.utils.clamp(camera.top / tileHeight, 0, tilesY - tilesVertical) | 0,
+          tilesHorizontal = viewport.width / tileWidth + 2 | 0,
+          tilesVertical = viewport.height / tileHeight + 2 | 0,
+          startTileX = _exojs.utils.clamp(viewport.x / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+          startTileY = _exojs.utils.clamp(viewport.y / tileHeight, 0, tilesY - tilesVertical) | 0,
           startTileIndex = startTileY * tilesX + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
 
@@ -2239,7 +2237,7 @@ var WorldMap = function () {
         tile.x = (startTileX + x) * tileWidth;
         tile.y = (startTileY + y) * tileHeight;
 
-        tile.render(displayManager);
+        tile.render(renderManager);
       }
     }
   }, {
@@ -2963,7 +2961,7 @@ var Player = function (_Sprite) {
                     offsetX = (mag > 1 ? velX / mag : velX) * distance,
                     offsetY = (mag > 1 ? velY / mag : velY) * distance;
 
-                this.translate(offsetX, offsetY);
+                this.move(offsetX, offsetY);
                 this._updateDirection();
 
                 if (!this._moving) {
@@ -3496,7 +3494,7 @@ exports.default = LoadGameMenu;
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -3524,195 +3522,153 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends {Menu}
  */
 var SettingsMenu = function (_Menu) {
-    _inherits(SettingsMenu, _Menu);
+  _inherits(SettingsMenu, _Menu);
+
+  /**
+   * @constructor
+   * @param {Application} app
+   * @param {String} previousMenu
+   */
+  function SettingsMenu(app, previousMenu) {
+    _classCallCheck(this, SettingsMenu);
+
+    var _this = _possibleConstructorReturn(this, (SettingsMenu.__proto__ || Object.getPrototypeOf(SettingsMenu)).call(this, app, previousMenu));
+
+    var canvas = app.canvas,
+        centerX = canvas.width / 2,
+        offsetY = 50;
 
     /**
-     * @constructor
-     * @param {Application} app
-     * @param {String} previousMenu
+     * @private
+     * @member {MenuItem}
      */
-    function SettingsMenu(app, previousMenu) {
-        _classCallCheck(this, SettingsMenu);
+    _this._settingsTitle = new _MenuItem2.default('Settings:');
+    _this._settingsTitle.setPosition(centerX, canvas.height / 3);
 
-        var _this = _possibleConstructorReturn(this, (SettingsMenu.__proto__ || Object.getPrototypeOf(SettingsMenu)).call(this, app, previousMenu));
+    /**
+     * @private
+     * @member {MenuItem}
+     */
+    _this._masterVolumeButton = new _MenuItem2.default('Master Volume: 100%');
+    _this._masterVolumeButton.setPosition(centerX, _this._settingsTitle.bottom + offsetY);
 
-        var canvas = app.canvas,
-            mediaManager = app.mediaManager,
-            centerX = canvas.width / 2,
-            offsetY = 50;
+    /**
+     * @private
+     * @member {MenuItem}
+     */
+    _this._musicVolumeButton = new _MenuItem2.default('Music Volume: 100%');
+    _this._musicVolumeButton.setPosition(centerX, _this._masterVolumeButton.bottom + offsetY);
 
-        /**
-         * @private
-         * @member {MenuItem}
-         */
-        _this._settingsTitle = new _MenuItem2.default('Settings:');
-        _this._settingsTitle.setPosition(centerX, canvas.height / 3);
+    /**
+     * @private
+     * @member {MenuItem}
+     */
+    _this._soundsVolumeButton = new _MenuItem2.default('Sound Volume: 100%');
+    _this._soundsVolumeButton.setPosition(centerX, _this._musicVolumeButton.bottom + offsetY);
 
-        /**
-         * @private
-         * @member {MenuItem}
-         */
-        _this._masterVolumeButton = new _MenuItem2.default('Master Volume: ' + (mediaManager.masterVolume * 100 | 0) + '%');
-        _this._masterVolumeButton.setPosition(centerX, _this._settingsTitle.bottom + offsetY);
+    /**
+     * @private
+     * @member {MenuItem}
+     */
+    _this._backButton = new _MenuItem2.default('Back');
+    _this._backButton.setPosition(centerX, _this._soundsVolumeButton.bottom + offsetY);
 
-        /**
-         * @private
-         * @member {MenuItem}
-         */
-        _this._musicVolumeButton = new _MenuItem2.default('Music Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%');
-        _this._musicVolumeButton.setPosition(centerX, _this._masterVolumeButton.bottom + offsetY);
+    /**
+     * @private
+     * @member {Function}
+     */
+    _this._onOptionLeftHandler = _this._onOptionLeft.bind(_this);
 
-        /**
-         * @private
-         * @member {MenuItem}
-         */
-        _this._soundsVolumeButton = new _MenuItem2.default('Sound Volume: ' + (mediaManager.soundVolume * 100 | 0) + '%');
-        _this._soundsVolumeButton.setPosition(centerX, _this._musicVolumeButton.bottom + offsetY);
+    /**
+     * @private
+     * @member {Function}
+     */
+    _this._onOptionRightHandler = _this._onOptionRight.bind(_this);
 
-        /**
-         * @private
-         * @member {MenuItem}
-         */
-        _this._backButton = new _MenuItem2.default('Back');
-        _this._backButton.setPosition(centerX, _this._soundsVolumeButton.bottom + offsetY);
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._volumeStep = 0.05;
 
-        /**
-         * @private
-         * @member {Function}
-         */
-        _this._onOptionLeftHandler = _this._onOptionLeft.bind(_this);
+    _this._addItems();
+    _this._addPaths();
+    _this._addActions();
 
-        /**
-         * @private
-         * @member {Function}
-         */
-        _this._onOptionRightHandler = _this._onOptionRight.bind(_this);
+    _this.setStartChild(_this._musicVolumeButton);
+    return _this;
+  }
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        _this._volumeStep = 0.05;
+  /**
+   * @override
+   */
 
-        _this._addItems();
-        _this._addPaths();
-        _this._addActions();
 
-        _this.setStartChild(_this._musicVolumeButton);
-        return _this;
+  _createClass(SettingsMenu, [{
+    key: 'destroy',
+    value: function destroy() {
+      _get(SettingsMenu.prototype.__proto__ || Object.getPrototypeOf(SettingsMenu.prototype), 'destroy', this).call(this);
+
+      this._onOptionLeftHandler = null;
+      this._onOptionRightHandler = null;
+
+      this._settingsTitle = null;
+      this._masterVolumeButton = null;
+      this._musicVolumeButton = null;
+      this._soundsVolumeButton = null;
+      this._backButton = null;
     }
 
     /**
-     * @override
+     * @private
      */
 
+  }, {
+    key: '_addItems',
+    value: function _addItems() {
+      return this.addChild(this._settingsTitle).addChild(this._masterVolumeButton).addChild(this._musicVolumeButton).addChild(this._soundsVolumeButton).addChild(this._backButton);
+    }
 
-    _createClass(SettingsMenu, [{
-        key: 'destroy',
-        value: function destroy() {
-            _get(SettingsMenu.prototype.__proto__ || Object.getPrototypeOf(SettingsMenu.prototype), 'destroy', this).call(this);
+    /**
+     * @private
+     */
 
-            this._onOptionLeftHandler = null;
-            this._onOptionRightHandler = null;
+  }, {
+    key: '_addPaths',
+    value: function _addPaths() {
+      return this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up').addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up').addPath(this._soundsVolumeButton, this._backButton, 'down', 'up').addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
+    }
 
-            this._settingsTitle = null;
-            this._masterVolumeButton = null;
-            this._musicVolumeButton = null;
-            this._soundsVolumeButton = null;
-            this._backButton = null;
-        }
+    /**
+     * @private
+     */
 
-        /**
-         * @private
-         */
+  }, {
+    key: '_addActions',
+    value: function _addActions() {
+      return this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right').addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right').addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right').addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
+    }
 
-    }, {
-        key: '_addItems',
-        value: function _addItems() {
-            return this.addChild(this._settingsTitle).addChild(this._masterVolumeButton).addChild(this._musicVolumeButton).addChild(this._soundsVolumeButton).addChild(this._backButton);
-        }
+    /**
+     * @private
+     * @param {MenuAction} action
+     */
 
-        /**
-         * @private
-         */
+  }, {
+    key: '_onOptionLeft',
+    value: function _onOptionLeft(action) {}
 
-    }, {
-        key: '_addPaths',
-        value: function _addPaths() {
-            return this.addPath(this._masterVolumeButton, this._musicVolumeButton, 'down', 'up').addPath(this._musicVolumeButton, this._soundsVolumeButton, 'down', 'up').addPath(this._soundsVolumeButton, this._backButton, 'down', 'up').addPath(this._backButton, this._masterVolumeButton, 'down', 'up');
-        }
+    /**
+     * @private
+     * @param {MenuAction} action
+     */
 
-        /**
-         * @private
-         */
+  }, {
+    key: '_onOptionRight',
+    value: function _onOptionRight(action) {}
+  }]);
 
-    }, {
-        key: '_addActions',
-        value: function _addActions() {
-            return this.addAction(this._masterVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._masterVolumeButton, this._onOptionRightHandler, 'right').addAction(this._musicVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._musicVolumeButton, this._onOptionRightHandler, 'right').addAction(this._soundsVolumeButton, this._onOptionLeftHandler, 'left').addAction(this._soundsVolumeButton, this._onOptionRightHandler, 'right').addAction(this._backButton, this.openPreviousMenu.bind(this), 'select');
-        }
-
-        /**
-         * @private
-         * @param {MenuAction} action
-         */
-
-    }, {
-        key: '_onOptionLeft',
-        value: function _onOptionLeft(action) {
-            var mediaManager = this.app.mediaManager;
-
-            switch (action.item) {
-                case this._masterVolumeButton:
-                    mediaManager.masterVolume -= this._volumeStep;
-                    break;
-                case this._musicVolumeButton:
-                    mediaManager.musicVolume -= this._volumeStep;
-                    break;
-                case this._soundsVolumeButton:
-                    mediaManager.soundVolume -= this._volumeStep;
-                    break;
-            }
-
-            this._updateButtons();
-        }
-
-        /**
-         * @private
-         * @param {MenuAction} action
-         */
-
-    }, {
-        key: '_onOptionRight',
-        value: function _onOptionRight(action) {
-            var mediaManager = this._app.mediaManager;
-
-            switch (action.item) {
-                case this._masterVolumeButton:
-                    mediaManager.masterVolume += this._volumeStep;
-                    break;
-                case this._musicVolumeButton:
-                    mediaManager.musicVolume += this._volumeStep;
-                    break;
-                case this._soundsVolumeButton:
-                    mediaManager.soundVolume += this._volumeStep;
-                    break;
-            }
-
-            this._updateButtons();
-        }
-    }, {
-        key: '_updateButtons',
-        value: function _updateButtons() {
-            var mediaManager = this._app.mediaManager;
-
-            this._masterVolumeButton.text = 'Master Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%';
-            this._musicVolumeButton.text = 'Music Volume: ' + (mediaManager.musicVolume * 100 | 0) + '%';
-            this._soundsVolumeButton.text = 'Sound Volume: ' + (mediaManager.soundVolume * 100 | 0) + '%';
-        }
-    }]);
-
-    return SettingsMenu;
+  return SettingsMenu;
 }(_Menu3.default);
 
 exports.default = SettingsMenu;

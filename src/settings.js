@@ -67,14 +67,6 @@ export default {
     /**
      * @public
      * @static
-     * @type {Boolean}
-     * @default true
-     */
-    GENERATE_MIPMAP: true,
-
-    /**
-     * @public
-     * @static
      * @type {Number}
      * @default 1.0
      */

@@ -13,8 +13,7 @@ export default class GameScene extends Scene {
      * @override
      */
     init(resources) {
-        const app = this.app,
-            canvas = app.canvas;
+        const canvas = this.app.canvas;
 
         /**
          * @private
@@ -26,7 +25,7 @@ export default class GameScene extends Scene {
          * @private
          * @member {Player}
          */
-        this._player = new Player(app, {
+        this._player = new Player(this.app, {
             spawnPoint: new Vector(this._worldMap.width / 2, this._worldMap.height / 2),
             worldBounds: this._worldMap.bounds,
         });

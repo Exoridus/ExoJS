@@ -1,4 +1,4 @@
-import { utils, Size, Sprite, Rectangle } from 'exojs';
+import { utils, Size, Sprite, Rectangle, Vector } from 'exojs';
 import MapGenerator from './MapGenerator';
 
 /**
@@ -14,15 +14,9 @@ export default class WorldMap {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Tileset}
          */
-        this._tilesX = 256;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._tilesY = 256;
+        this._tileset = tileset;
 
         /**
          * @private
@@ -32,21 +26,9 @@ export default class WorldMap {
 
         /**
          * @private
-         * @member {Tileset}
+         * @member {Vector}
          */
-        this._tileset = tileset;
-
-        /**
-         * @private
-         * @member {MapGenerator}
-         */
-        this._mapGenerator = new MapGenerator();
-
-        /**
-         * @private
-         * @member {Number[]}
-         */
-        this._mapData = this._mapGenerator.generate(this._tilesX, this._tilesY);
+        this._tileCount = new Vector(256, 256);
 
         /**
          * @private
@@ -58,9 +40,21 @@ export default class WorldMap {
 
         /**
          * @private
+         * @member {MapGenerator}
+         */
+        this._mapGenerator = new MapGenerator();
+
+        /**
+         * @private
+         * @member {Number[]}
+         */
+        this._mapData = this._mapGenerator.generate(this._tileCount.x, this._tileCount.y);
+
+        /**
+         * @private
          * @member {Rectangle}
          */
-        this._bounds = new Rectangle(0, 0, (this._tilesX * this._tileSize.width), (this._tilesY * this._tileSize.height));
+        this._bounds = new Rectangle(0, 0, (this._tileCount.x * this._tileSize.width), (this._tileCount.y * this._tileSize.height));
     }
 
     /**
@@ -106,10 +100,10 @@ export default class WorldMap {
         const camera = renderManager.renderTarget.view,
             viewport = camera.getBounds(),
             mapData = this._mapData,
-            tilesX = this._tilesX,
-            tilesY = this._tilesY,
             tile = this._tile,
             tileset = this._tileset,
+            tilesX = this._tileCount.x,
+            tilesY = this._tileCount.y,
             tileWidth = this._tileSize.width,
             tileHeight = this._tileSize.height,
             tilesHorizontal = ((viewport.width / tileWidth) + 2) | 0,
