@@ -1,7 +1,7 @@
 import Drawable from '../graphics/Drawable';
 import Particle from './Particle';
 import Rectangle from '../math/Rectangle';
-import Time from '../core/Time';
+import Time from '../core/time/Time';
 import ParticleOptions from './ParticleOptions';
 import { BLEND_MODE } from '../const';
 

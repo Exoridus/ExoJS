@@ -1,4 +1,4 @@
-import { TIME } from '../const';
+import { TIME } from '../../const';
 
 /**
  * @class Time

@@ -8,36 +8,24 @@ window.app = new Exo.Application({
 window.app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
-     */
-    load(loader) {
-        loader.addItem('texture', 'bunny', 'image/bunny.png');
-    },
-
-    /**
      * @param {ResourceContainer} resources
      */
     init(resources) {
         const canvas = this.app.canvas;
 
         /**
-         * @private
-         * @member {Sprite}
+         * @type {Drawable}
          */
-        this._bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
-        this._bunny.setOrigin(0.5);
-        this._bunny.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
+        this._drawable = new Exo.Drawable();
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        this._bunny.rotate(delta.seconds * 360);
-
         this.app.renderManager
             .clear()
-            .draw(this._bunny)
+            .draw(this._drawable)
             .display();
     },
 
@@ -45,7 +33,7 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
-        this._bunny.destroy();
-        this._bunny = null;
+        this._drawable.destroy();
+        this._drawable = null;
     },
 }));

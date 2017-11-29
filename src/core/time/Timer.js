@@ -1,4 +1,4 @@
-import { TIME } from '../const';
+import { TIME } from '../../const';
 import Clock from './Clock';
 import Time from './Time';
 

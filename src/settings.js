@@ -11,8 +11,8 @@ export default {
      * @property {String} assetsPath=''
      * @property {Number} width=800
      * @property {Number} height=600
-     * @property {?HTMLCanvasElement|?String} canvas=null
-     * @property {?HTMLCanvasElement|?String} canvasParent=null
+     * @property {?HTMLCanvasElement} canvas=null
+     * @property {?HTMLElement} canvasParent=null
      * @property {Color} clearColor=Color.Black
      * @property {?Database} database=null
      */

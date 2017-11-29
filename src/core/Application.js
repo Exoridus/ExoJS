@@ -1,5 +1,5 @@
 import EventEmitter from './EventEmitter';
-import Clock from './Clock';
+import Clock from './time/Clock';
 import SceneManager from './SceneManager';
 import RenderManager from '../graphics/RenderManager';
 import InputManager from '../input/InputManager';
@@ -18,8 +18,8 @@ export default class Application extends EventEmitter {
      * @param {String} [options.assetsPath='']
      * @param {Number} [options.width=800]
      * @param {Number} [options.height=600]
-     * @param {?HTMLCanvasElement|?String} [options.canvas=null]
-     * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
+     * @param {?HTMLCanvasElement} [options.canvas=null]
+     * @param {?HTMLElement} [options.canvasParent=null]
      * @param {Color} [options.clearColor=Color.Black]
      * @param {?Database} [options.database=null]
      */
@@ -44,7 +44,7 @@ export default class Application extends EventEmitter {
          * @private
          * @member {HTMLElement}
          */
-        this._canvasParent = (typeof config.canvasParent === 'string' ? document.querySelector(config.canvasParent) : config.canvasParent) || null;
+        this._canvasParent = (config.canvas instanceof HTMLElement) ? config.canvasParent : null;
 
         /**
          * @private

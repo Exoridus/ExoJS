@@ -1,6 +1,6 @@
 window.app = new Exo.Application({
     assetsPath: 'assets/',
-    canvasParent: '.container-canvas',
+    canvasParent: document.querySelector('.container-canvas'),
     width: 800,
     height: 600,
     clearBeforeRender: false,

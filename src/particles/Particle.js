@@ -1,6 +1,6 @@
 import Vector from '../math/Vector';
 import Color from '../core/Color';
-import Time from '../core/Time';
+import Time from '../core/time/Time';
 import { TIME } from '../const';
 import ParticleOptions from './ParticleOptions';
 

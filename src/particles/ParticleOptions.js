@@ -1,7 +1,7 @@
 import { TIME } from '../const';
 import Vector from '../math/Vector';
 import Color from '../core/Color';
-import Time from '../core/Time';
+import Time from '../core/time/Time';
 
 /**
  * @class ParticleOptions
