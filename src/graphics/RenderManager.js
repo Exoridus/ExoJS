@@ -1,5 +1,6 @@
 import { BLEND_MODE } from '../const';
 import support from '../support';
+import settings from '../settings';
 import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
@@ -13,28 +14,13 @@ export default class RenderManager {
     /**
      * @constructor
      * @param {Application} app
-     * @param {Object} [config]
-     * @param {Number} [config.width=800]
-     * @param {Number} [config.height=600]
-     * @param {Color} [config.clearColor=Color.Black]
-     * @param {Object} [config.contextOptions]
      */
-    constructor(app, {
-        width = 800,
-        height = 600,
-        clearColor = new Color(),
-        contextOptions = {
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: true,
-            depth: false,
-        },
-    } = {}) {
+    constructor(app) {
         if (!support.webGL) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
+
+        const { width, height, clearColor } = app.config;
 
         /**
          * @private
@@ -46,7 +32,7 @@ export default class RenderManager {
          * @private
          * @member {?WebGLRenderingContext}
          */
-        this._context = this._createContext(contextOptions);
+        this._context = this._createContext();
 
         if (!this._context) {
             throw new Error('This browser or hardware does not support WebGL.');
@@ -552,9 +538,10 @@ export default class RenderManager {
     }
 
     /**
-     * @override
+     * @private
+     * @returns {?WebGLRenderingContext}
      */
-    _createContext(options) {
+    _createContext(options = settings.CONTEXT_OPTIONS) {
         try {
             return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
         } catch (e) {

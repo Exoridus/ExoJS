@@ -849,17 +849,15 @@ var _LauncherScene2 = _interopRequireDefault(_LauncherScene);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 window.addEventListener('load', function () {
-    Exo.settings.VOLUME_MASTER = 0.5;
-
     var app = new _exojs.Application({
-        basePath: 'assets/',
+        assetsPath: 'assets/',
         width: 1280,
         height: 720,
-        canvas: document.querySelector('#game-canvas')
+        canvas: document.querySelector('#game-canvas'),
+        database: new _exojs.Database('game', 3)
     });
 
     app.loader.request.cache = 'no-cache';
-    app.loader.database = new _exojs.Database('game', 3);
     app.start(new _LauncherScene2.default());
 
     window.app = app;
@@ -2157,7 +2155,7 @@ var WorldMap = function () {
      * @private
      * @member {Vector}
      */
-    this._tileCount = new _exojs.Vector(1024, 1024);
+    this._tileCount = new _exojs.Vector(256, 256);
 
     /**
      * @private

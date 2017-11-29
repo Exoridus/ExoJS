@@ -22,8 +22,9 @@ export default class ResourceLoader extends EventEmitter {
      * @constructor
      * @param {Object} [options={}]
      * @param {String} [options.basePath='']
+     * @param {Database} [options.database=null]
      */
-    constructor({ basePath = '' } = {}) {
+    constructor({ basePath = '', database = null } = {}) {
         super();
 
         /**
@@ -64,7 +65,7 @@ export default class ResourceLoader extends EventEmitter {
          * @private
          * @member {?Database}
          */
-        this._database = null;
+        this._database = database;
 
         this.addFactory('arrayBuffer', new ArrayBufferFactory())
             .addFactory('mediaSource', new MediaSourceFactory())
@@ -120,8 +121,8 @@ export default class ResourceLoader extends EventEmitter {
         return this._database;
     }
 
-    set database(request) {
-        this._database = request;
+    set database(database) {
+        this._database = database;
     }
 
     /**

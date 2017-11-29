@@ -7,37 +7,43 @@ export default {
     /**
      * @static
      * @type {Object}
-     * @property {String} basePath=''
+     * @name APP_OPTIONS
+     * @property {String} assetsPath=''
      * @property {Number} width=800
      * @property {Number} height=600
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
      * @property {Color} clearColor=Color.Black
-     * @property {Boolean} clearBeforeRender=true
-     * @property {Object} contextOptions
-     * @property {Boolean} contextOptions.alpha=false
-     * @property {Boolean} contextOptions.antialias=false
-     * @property {Boolean} contextOptions.premultipliedAlpha=false
-     * @property {Boolean} contextOptions.preserveDrawingBuffer=false
-     * @property {Boolean} contextOptions.stencil=false
-     * @property {Boolean} contextOptions.depth=false
+     * @property {?Database} database=null
      */
-    GAME_CONFIG: {
-        basePath: '',
+    APP_OPTIONS: {
+        assetsPath: '',
         width: 800,
         height: 600,
         canvas: null,
         canvasParent: null,
         clearColor: Color.Black,
-        clearBeforeRender: true,
-        contextOptions: {
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: false,
-            depth: false,
-        },
+        database: null,
+    },
+
+    /**
+     * @static
+     * @type {Object}
+     * @name CONTEXT_OPTIONS
+     * @property {Boolean} alpha=false
+     * @property {Boolean} antialias=false
+     * @property {Boolean} premultipliedAlpha=false
+     * @property {Boolean} preserveDrawingBuffer=false
+     * @property {Boolean} stencil=false
+     * @property {Boolean} depth=false
+     */
+    CONTEXT_OPTIONS: {
+        alpha: false,
+        antialias: false,
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: false,
+        stencil: false,
+        depth: false,
     },
 
     /**

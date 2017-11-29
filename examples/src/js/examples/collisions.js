@@ -1,5 +1,5 @@
 window.app = new Exo.Application({
-    basePath: 'assets/',
+    assetsPath: 'assets/',
     canvasParent: '.container-canvas',
     width: 800,
     height: 600,

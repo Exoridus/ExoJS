@@ -15,20 +15,18 @@ export default class Application extends EventEmitter {
     /**
      * @constructor
      * @param {Object} [options]
-     * @param {String} [options.basePath='']
+     * @param {String} [options.assetsPath='']
      * @param {Number} [options.width=800]
      * @param {Number} [options.height=600]
      * @param {?HTMLCanvasElement|?String} [options.canvas=null]
      * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
-     * @param {Color} [options.blendMode=BLEND_MODES.NORMAL]
-     * @param {Color} [options.clearColor=Color.White]
-     * @param {Boolean} [options.clearBeforeRender=true]
-     * @param {Object} [options.contextOptions]
+     * @param {Color} [options.clearColor=Color.Black]
+     * @param {?Database} [options.database=null]
      */
     constructor(options) {
         super();
 
-        const config = Object.assign({}, settings.GAME_CONFIG, options);
+        const config = Object.assign({}, settings.APP_OPTIONS, options);
 
         /**
          * @private
@@ -52,13 +50,13 @@ export default class Application extends EventEmitter {
          * @private
          * @member {ResourceLoader}
          */
-        this._loader = new ResourceLoader(config);
+        this._loader = new ResourceLoader({ basePath: config.assetsPath, database: config.database });
 
         /**
          * @private
          * @member {RenderManager}
          */
-        this._renderManager = new RenderManager(this, config);
+        this._renderManager = new RenderManager(this);
 
         /**
          * @private

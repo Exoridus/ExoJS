@@ -1695,37 +1695,43 @@ exports.default = {
     /**
      * @static
      * @type {Object}
-     * @property {String} basePath=''
+     * @name APP_OPTIONS
+     * @property {String} assetsPath=''
      * @property {Number} width=800
      * @property {Number} height=600
      * @property {?HTMLCanvasElement|?String} canvas=null
      * @property {?HTMLCanvasElement|?String} canvasParent=null
      * @property {Color} clearColor=Color.Black
-     * @property {Boolean} clearBeforeRender=true
-     * @property {Object} contextOptions
-     * @property {Boolean} contextOptions.alpha=false
-     * @property {Boolean} contextOptions.antialias=false
-     * @property {Boolean} contextOptions.premultipliedAlpha=false
-     * @property {Boolean} contextOptions.preserveDrawingBuffer=false
-     * @property {Boolean} contextOptions.stencil=false
-     * @property {Boolean} contextOptions.depth=false
+     * @property {?Database} database=null
      */
-    GAME_CONFIG: {
-        basePath: '',
+    APP_OPTIONS: {
+        assetsPath: '',
         width: 800,
         height: 600,
         canvas: null,
         canvasParent: null,
         clearColor: _Color2.default.Black,
-        clearBeforeRender: true,
-        contextOptions: {
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: false,
-            depth: false
-        }
+        database: null
+    },
+
+    /**
+     * @static
+     * @type {Object}
+     * @name CONTEXT_OPTIONS
+     * @property {Boolean} alpha=false
+     * @property {Boolean} antialias=false
+     * @property {Boolean} premultipliedAlpha=false
+     * @property {Boolean} preserveDrawingBuffer=false
+     * @property {Boolean} stencil=false
+     * @property {Boolean} depth=false
+     */
+    CONTEXT_OPTIONS: {
+        alpha: false,
+        antialias: false,
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: false,
+        stencil: false,
+        depth: false
     },
 
     /**
@@ -9897,11 +9903,14 @@ var ResourceLoader = function (_EventEmitter) {
      * @constructor
      * @param {Object} [options={}]
      * @param {String} [options.basePath='']
+     * @param {Database} [options.database=null]
      */
     function ResourceLoader() {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref$basePath = _ref.basePath,
-            basePath = _ref$basePath === undefined ? '' : _ref$basePath;
+            basePath = _ref$basePath === undefined ? '' : _ref$basePath,
+            _ref$database = _ref.database,
+            database = _ref$database === undefined ? null : _ref$database;
 
         _classCallCheck(this, ResourceLoader);
 
@@ -9945,7 +9954,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @private
          * @member {?Database}
          */
-        _this._database = null;
+        _this._database = database;
 
         _this.addFactory('arrayBuffer', new _ArrayBufferFactory2.default()).addFactory('mediaSource', new _MediaSourceFactory2.default()).addFactory('blob', new _BlobFactory2.default()).addFactory('font', new _FontFactory2.default()).addFactory('music', new _MusicFactory2.default()).addFactory('sound', new _SoundFactory2.default()).addFactory('video', new _VideoFactory2.default()).addFactory('image', new _ImageFactory2.default()).addFactory('texture', new _TextureFactory2.default()).addFactory('string', new _StringFactory2.default()).addFactory('json', new _JSONFactory2.default());
         return _this;
@@ -10248,8 +10257,8 @@ var ResourceLoader = function (_EventEmitter) {
         get: function get() {
             return this._database;
         },
-        set: function set(request) {
-            this._database = request;
+        set: function set(database) {
+            this._database = database;
         }
     }]);
 
@@ -13309,6 +13318,10 @@ var _support = __webpack_require__(4);
 
 var _support2 = _interopRequireDefault(_support);
 
+var _settings = __webpack_require__(3);
+
+var _settings2 = _interopRequireDefault(_settings);
+
 var _RenderTarget = __webpack_require__(26);
 
 var _RenderTarget2 = _interopRequireDefault(_RenderTarget);
@@ -13337,47 +13350,31 @@ var RenderManager = function () {
     /**
      * @constructor
      * @param {Application} app
-     * @param {Object} [config]
-     * @param {Number} [config.width=800]
-     * @param {Number} [config.height=600]
-     * @param {Color} [config.clearColor=Color.Black]
-     * @param {Object} [config.contextOptions]
      */
     function RenderManager(app) {
-        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-            _ref$width = _ref.width,
-            width = _ref$width === undefined ? 800 : _ref$width,
-            _ref$height = _ref.height,
-            height = _ref$height === undefined ? 600 : _ref$height,
-            _ref$clearColor = _ref.clearColor,
-            clearColor = _ref$clearColor === undefined ? new _Color2.default() : _ref$clearColor,
-            _ref$contextOptions = _ref.contextOptions,
-            contextOptions = _ref$contextOptions === undefined ? {
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: true,
-            depth: false
-        } : _ref$contextOptions;
-
         _classCallCheck(this, RenderManager);
 
         if (!_support2.default.webGL) {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
+        var _app$config = app.config,
+            width = _app$config.width,
+            height = _app$config.height,
+            clearColor = _app$config.clearColor;
+
         /**
          * @private
          * @member {HTMLCanvasElement}
          */
+
         this._canvas = app.canvas;
 
         /**
          * @private
          * @member {?WebGLRenderingContext}
          */
-        this._context = this._createContext(contextOptions);
+        this._context = this._createContext();
 
         if (!this._context) {
             throw new Error('This browser or hardware does not support WebGL.');
@@ -13875,12 +13872,15 @@ var RenderManager = function () {
         }
 
         /**
-         * @override
+         * @private
+         * @returns {?WebGLRenderingContext}
          */
 
     }, {
         key: '_createContext',
-        value: function _createContext(options) {
+        value: function _createContext() {
+            var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _settings2.default.CONTEXT_OPTIONS;
+
             try {
                 return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
             } catch (e) {
@@ -20889,22 +20889,20 @@ var Application = function (_EventEmitter) {
     /**
      * @constructor
      * @param {Object} [options]
-     * @param {String} [options.basePath='']
+     * @param {String} [options.assetsPath='']
      * @param {Number} [options.width=800]
      * @param {Number} [options.height=600]
      * @param {?HTMLCanvasElement|?String} [options.canvas=null]
      * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
-     * @param {Color} [options.blendMode=BLEND_MODES.NORMAL]
-     * @param {Color} [options.clearColor=Color.White]
-     * @param {Boolean} [options.clearBeforeRender=true]
-     * @param {Object} [options.contextOptions]
+     * @param {Color} [options.clearColor=Color.Black]
+     * @param {?Database} [options.database=null]
      */
     function Application(options) {
         _classCallCheck(this, Application);
 
         var _this = _possibleConstructorReturn(this, (Application.__proto__ || Object.getPrototypeOf(Application)).call(this));
 
-        var config = Object.assign({}, _settings2.default.GAME_CONFIG, options);
+        var config = Object.assign({}, _settings2.default.APP_OPTIONS, options);
 
         /**
          * @private
@@ -20928,13 +20926,13 @@ var Application = function (_EventEmitter) {
          * @private
          * @member {ResourceLoader}
          */
-        _this._loader = new _ResourceLoader2.default(config);
+        _this._loader = new _ResourceLoader2.default({ basePath: config.assetsPath, database: config.database });
 
         /**
          * @private
          * @member {RenderManager}
          */
-        _this._renderManager = new _RenderManager2.default(_this, config);
+        _this._renderManager = new _RenderManager2.default(_this);
 
         /**
          * @private
