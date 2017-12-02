@@ -1,3 +1,4 @@
+import { Scene, Sprite } from 'exojs';
 import TitleMenuManager from '../menu/title/TitleMenuManager';
 
 /**

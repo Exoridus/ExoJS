@@ -22,6 +22,20 @@ const
     /**
      * @inner
      * @constant
+     * @type {HTMLCanvasElement}
+     */
+    canvas = document.createElement('canvas'),
+
+    /**
+     * @inner
+     * @constant
+     * @type {CanvasRenderingContext2D}
+     */
+    canvasContext = canvas.getContext('2d'),
+
+    /**
+     * @inner
+     * @constant
      * @type {Random}
      */
     rng = new Random(),
@@ -109,11 +123,11 @@ const
      * @returns {Number}
      */
     getVornoiRegion = (line, point) => {
-        var dp = point.dot(line);
+        var dp = point.dot(line.x, line.y);
 
         if (dp < 0) {
             return VORONOI.LEFT;
-        } else if (dp > line.lengthSquared) {
+        } else if (dp > line.len2) {
             return VORONOI.RIGHT;
         } else {
             return VORONOI.MIDDLE;
@@ -373,11 +387,28 @@ const
      * @param {Number} [max]
      * @return {Number}
      */
-    random = (min, max) => rng.next(min, max);
+    random = (min, max) => rng.next(min, max),
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {HTMLImageElement} image
+     * @return {String}
+     */
+    imageToBase64 = (image) => {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        canvasContext.drawImage(image, 0,0);
+
+        return canvas.toDataURL();
+    };
 
 export {
     audio,
     audioContext,
+    canvas,
+    canvasContext,
     rng,
     supportsCodec,
     decodeAudioBuffer,
@@ -400,4 +431,5 @@ export {
     getMediaSize,
     bezierCurveTo,
     random,
+    imageToBase64,
 };

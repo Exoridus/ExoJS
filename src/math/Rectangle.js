@@ -265,23 +265,21 @@ export default class Rectangle {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        const point = Vector.Temp;
-
-        let min = axis.dot(point.set(this.left, this.top)),
+        let min = axis.dot(this.left, this.top),
             max = min,
             projection;
 
-        projection = axis.dot(point.set(this.right, this.top));
+        projection = axis.dot(this.right, this.top);
 
         min = Math.min(min, projection);
         max = Math.max(max, projection);
 
-        projection = axis.dot(point.set(this.right, this.bottom));
+        projection = axis.dot(this.right, this.bottom);
 
         min = Math.min(min, projection);
         max = Math.max(max, projection);
 
-        projection = axis.dot(point.set(this.left, this.bottom));
+        projection = axis.dot(this.left, this.bottom);
 
         min = Math.min(min, projection);
         max = Math.max(max, projection);

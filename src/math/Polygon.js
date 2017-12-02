@@ -226,13 +226,16 @@ export default class Polygon {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        const len = this._points.length;
+        const points = this._points,
+            len = points.length,
+            { x, y } = points[0];
 
-        let min = axis.dot(this._points[0]),
+        let min = axis.dot(x, y),
             max = min;
 
         for (let i = 1; i < len; i++) {
-            const projection = axis.dot(this._points[i]);
+            const { x, y } = points[i],
+                projection = axis.dot(x, y);
 
             min = Math.min(min, projection);
             max = Math.max(max, projection);

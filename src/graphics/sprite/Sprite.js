@@ -4,7 +4,6 @@ import Vector from '../../math/Vector';
 import Color from '../../core/Color';
 import { BLEND_MODE } from '../../const';
 import Interval from '../../math/Interval';
-import Collision from '../../core/Collision';
 
 /**
  * @class Sprite
@@ -136,21 +135,20 @@ export default class Sprite extends Container {
      * @member {Float32Array}
      */
     get positionData() {
-        const positionData = this._positionData,
-            { left, top, right, bottom } = this.getLocalBounds(),
-            { a, b, c, d, x, y } = this.getGlobalTransform();
+        const vertices = this.getVertices(),
+            positionData = this._positionData;
 
-        positionData[0] = (left * a) + (top * b) + x;
-        positionData[1] = (left * c) + (top * d) + y;
+        positionData[0] = vertices[0].x;
+        positionData[1] = vertices[0].y;
 
-        positionData[2] = (right * a) + (top * b) + x;
-        positionData[3] = (right * c) + (top * d) + y;
+        positionData[2] = vertices[1].x;
+        positionData[3] = vertices[1].y;
 
-        positionData[4] = (left * a) + (bottom * b) + x;
-        positionData[5] = (left * c) + (bottom * d) + y;
+        positionData[4] = vertices[3].x;
+        positionData[5] = vertices[3].y;
 
-        positionData[6] = (right * a) + (bottom * b) + x;
-        positionData[7] = (right * c) + (bottom * d) + y;
+        positionData[6] = vertices[2].x;
+        positionData[7] = vertices[2].y;
 
         return positionData;
     }
@@ -325,15 +323,26 @@ export default class Sprite extends Container {
      * @public
      * @returns {Vector[]}
      */
-    getNormals() {
+    getVertices() {
         const bounds = this.getLocalBounds(),
-            transform = this.getGlobalTransform(),
-            vertices = [
-                new Vector(bounds.left, bounds.top).transform(transform),
-                new Vector(bounds.right, bounds.top).transform(transform),
-                new Vector(bounds.right, bounds.bottom).transform(transform),
-                new Vector(bounds.left, bounds.bottom).transform(transform),
-            ],
+            transform = this.getGlobalTransform();
+
+        return [
+            new Vector(bounds.left, bounds.top).transform(transform),
+            new Vector(bounds.right, bounds.top).transform(transform),
+            new Vector(bounds.right, bounds.bottom).transform(transform),
+            new Vector(bounds.left, bounds.bottom).transform(transform),
+        ];
+    }
+
+    /**
+     * todo - cache this
+     *
+     * @public
+     * @returns {Vector[]}
+     */
+    getNormals() {
+        const vertices = this.getVertices(),
             len = vertices.length,
             normals = [];
 
@@ -359,27 +368,48 @@ export default class Sprite extends Container {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        const bounds = this.getLocalBounds(),
-            transform = this.getGlobalTransform(),
-            vertices = [
-                new Vector(bounds.left, bounds.top).transform(transform),
-                new Vector(bounds.right, bounds.top).transform(transform),
-                new Vector(bounds.right, bounds.bottom).transform(transform),
-                new Vector(bounds.left, bounds.bottom).transform(transform),
-            ],
-            len = vertices.length;
+        const vertices = this.getVertices(),
+            len = vertices.length,
+            { x, y } = vertices[0];
 
-        let min = axis.dot(vertices[0]),
+        let min = axis.dot(x, y),
             max = min;
 
         for (let i = 1; i < len; i++) {
-            const projection = axis.dot(vertices[i]);
+            const { x, y } = vertices[i],
+                projection = axis.dot(x, y);
 
             min = Math.min(min, projection);
             max = Math.max(max, projection);
         }
 
         return result.set(min, max);
+    }
+
+    /**
+     * @override
+     */
+    contains(x, y) {
+        if ((this.rotation % 90 === 0)) {
+            return this.getBounds().contains(x, y);
+        }
+
+        const temp = Vector.Temp,
+            vertices = this.getVertices(),
+            { x: x1, y: y1 } = vertices[0],
+            { x: x2, y: y2 } = vertices[1],
+            { x: x3, y: y3 } = vertices[2],
+            vecA = temp.set(x2 - x1, y2 - y1),
+            dotA = vecA.dot(x - x1, y - y1),
+            lenA = vecA.dot(vecA.x, vecA.y),
+            vecB = temp.set(x3 - x2, y3 - y2),
+            dotB = vecB.dot(x - x2, y - y2),
+            lenB = vecB.dot(vecB.x, vecB.y);
+
+        return (dotA > 0)
+            && (dotA <= lenA)
+            && (dotB > 0)
+            && (dotB <= lenB);
     }
 
     /**

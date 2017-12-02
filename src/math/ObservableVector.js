@@ -89,7 +89,7 @@ export default class ObservableVector extends Vector {
     /**
      * @override
      */
-    multiply(x, y = x) {
+    scale(x, y = x) {
         return this.set(this._x * x, this._y * y);
     }
 

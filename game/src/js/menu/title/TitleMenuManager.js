@@ -20,7 +20,6 @@ export default class TitleMenuManager extends MenuManager {
         this.addMenu('main', new MainMenu(app))
             .addMenu('newGame', new NewGameMenu(app, 'main'))
             .addMenu('loadGame', new LoadGameMenu(app, 'main'))
-            .addMenu('settings', new SettingsMenu(app, 'main'))
-            .openMenu('main');
+            .addMenu('settings', new SettingsMenu(app, 'main'));
     }
 }

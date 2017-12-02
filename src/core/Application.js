@@ -5,6 +5,9 @@ import RenderManager from '../graphics/RenderManager';
 import InputManager from '../input/InputManager';
 import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
+import Texture from '../graphics/texture/Texture';
+import Sprite from '../graphics/sprite/Sprite';
+import { imageToBase64 } from '../utils';
 
 /**
  * @class Application
@@ -94,6 +97,12 @@ export default class Application extends EventEmitter {
          */
         this._isRunning = false;
 
+        /**
+         * @private
+         * @member {String}
+         */
+        this._cursor = this._canvas.style.cursor;
+
         if (this._canvasParent) {
             this._canvasParent.appendChild(this._canvas);
         }
@@ -151,6 +160,18 @@ export default class Application extends EventEmitter {
      */
     get sceneManager() {
         return this._sceneManager;
+    }
+
+    /**
+     * @public
+     * @member {String}
+     */
+    get cursor() {
+        return this._cursor;
+    }
+
+    set cursor(cursor) {
+        this.setCursor(cursor);
     }
 
     /**
@@ -216,6 +237,28 @@ export default class Application extends EventEmitter {
 
     /**
      * @public
+     * @chainable
+     * @param {String|HTMLImageElement|Texture} cursor
+     * @returns {Application}
+     */
+    setCursor(cursor) {
+        if (cursor !== this._cursor) {
+            if (cursor instanceof Texture) {
+                cursor = cursor.source;
+            }
+
+            if (cursor instanceof HTMLImageElement) {
+                cursor = `url(${imageToBase64(cursor)})`;
+            }
+
+            this._canvas.style.cursor = this._cursor = cursor;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
      */
     destroy() {
         super.destroy();
@@ -249,5 +292,6 @@ export default class Application extends EventEmitter {
         this._updateHandler = null;
         this._updateId = null;
         this._isRunning = null;
+        this._cursor = null;
     }
 }

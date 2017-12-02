@@ -89,7 +89,7 @@ export default class ObservableSize extends Size {
     /**
      * @override
      */
-    multiply(x, y = x) {
+    scale(x, y = x) {
         return this.set(this._width * x, this._height * y);
     }
 

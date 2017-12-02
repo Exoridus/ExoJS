@@ -96,7 +96,7 @@ export default class Size {
      * @param {Number} [height=width]
      * @returns {Size}
      */
-    multiply(width, height = width) {
+    scale(width, height = width) {
         this._width *= width;
         this._height *= height;
 

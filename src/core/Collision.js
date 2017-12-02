@@ -374,25 +374,26 @@ export default class Collision {
                 );
 
             if (region === VORONOI.LEFT) {
-                const point = points[(i === 0 ? len - 1 : i - 1)];
+                const prev = points[(i === 0 ? len - 1 : i - 1)];
 
-                positionB.set(x - point.x, y - point.y);
-                edgeB.set(pointA.x - point.x, pointA.y - point.y);
+                edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
+                positionB.set(x - prev.x, y - prev.y);
 
-                if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT) && (positionA.length > circle.radius)) {
+                if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT) && (positionA.len > circle.radius)) {
                     return false;
                 }
             } else if (region === VORONOI.RIGHT) {
-                const point = points[(i + 2) % len];
+                const next = points[(i + 2) % len]; // pointB ?
 
-                positionB.set(x - pointB.x, y - pointB.y);
-                edgeB.set(point.x - pointB.x, point.y - pointB.y);
+                edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
+                positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
-                if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT && (positionA.length > circle.radius)) {
+                if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT && (positionB.len > circle.radius)) {
                     return false;
                 }
             } else {
-                const distance = positionA.dot(edgeA.perp().normalize());
+                const normal = edgeA.perp().normalize(),
+                    distance = positionA.dot(normal.x, normal.y);
 
                 if (distance > 0 && (Math.abs(distance) > circle.radius)) {
                     return false;
@@ -506,7 +507,7 @@ export default class Collision {
                     positionA.set(x - pointA.x, y - pointA.y)
                 );
 
-            if (positionA.length > radius) {
+            if (positionA.len > radius) {
                 containsA = false;
             }
 
@@ -517,7 +518,7 @@ export default class Collision {
                 positionB.set(x - prev.x, y - prev.y);
 
                 if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT)) {
-                    const distance = positionA.length;
+                    const distance = positionA.len;
 
                     if (distance > radius) {
                         return null;
@@ -537,7 +538,7 @@ export default class Collision {
                 positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
                 if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT) {
-                    const distance = positionB.length;
+                    const distance = positionB.len;
 
                     if (distance > radius) {
                         return null;
@@ -552,7 +553,7 @@ export default class Collision {
                 }
             } else {
                 const normal = edgeA.perp().normalize(),
-                    distance = positionA.dot(normal);
+                    distance = positionA.dot(normal.x, normal.y);
 
                 if (distance > 0 && (Math.abs(distance) > radius)) {
                     return null;
@@ -570,8 +571,8 @@ export default class Collision {
         }
 
         return new Collision({
-            shapeA: polygon,
-            shapeB: circle,
+            shapeA: swap ? circle : polygon,
+            shapeB: swap ? polygon : circle,
             distance: 0, // todo
             separation: overlapN.scale(overlap),
             shapeAInB: swap ? containsB : containsA,

@@ -61,6 +61,12 @@ export default class Pointer extends ChannelManager {
 
         /**
          * @private
+         * @member {Vector}
+         */
+        this._downPosition = new Vector(-1, -1);
+
+        /**
+         * @private
          * @member {Size}
          */
         this._size = new Size(event.width, event.height);
@@ -121,6 +127,15 @@ export default class Pointer extends ChannelManager {
      */
     get position() {
         return this._position;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Vector}
+     */
+    get downPosition() {
+        return this._downPosition;
     }
 
     /**
@@ -311,6 +326,9 @@ export default class Pointer extends ChannelManager {
 
         this._position.destroy();
         this._position = null;
+
+        this._downPosition.destroy();
+        this._downPosition = null;
 
         this._size.destroy();
         this._size = null;

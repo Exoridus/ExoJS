@@ -157,14 +157,27 @@ export default class PointerManager extends ChannelManager {
             }
 
             if (hasFlag(FLAGS.DOWN, this._flags)) {
-                this._triggerPointerEvents('down', this._pointersDown);
+                this._triggerPointerEvents('down', this._pointersDown, { touchEvent: 'start' });
                 this._pointersDown.clear();
 
                 this._flags = removeFlag(FLAGS.DOWN, this._flags);
             }
 
             if (hasFlag(FLAGS.UP, this._flags)) {
-                this._triggerPointerEvents('up', this._pointersUp);
+                for (const pointer of this._pointersUp) {
+                    const { x, y } = pointer.downPosition;
+
+                    this._triggerPointerEvent('up', pointer, { touchEvent: 'end' });
+
+                    if (x > 0 && y > 0 && pointer.position.distanceTo(x, y) < 10) {
+                        this._triggerPointerEvent('tap', pointer, { mouseEvent: 'click' });
+                    } else {
+                        this._triggerPointerEvent('tapoutside', pointer, { mouseEvent: 'clickoutside' });
+                    }
+
+                    pointer.downPosition.set(-1, -1);
+                }
+
                 this._pointersUp.clear();
 
                 this._flags = removeFlag(FLAGS.UP, this._flags);
@@ -305,7 +318,11 @@ export default class PointerManager extends ChannelManager {
      * @param {PointerEvent} event
      */
     _onDown(event) {
-        this._pointersDown.add(this._updatePointer(event));
+        const pointer = this._updatePointer(event);
+
+        pointer.downPosition.set(pointer.x, pointer.y);
+
+        this._pointersDown.add(pointer);
         this._flags = addFlag(FLAGS.DOWN, this._flags);
 
         event.preventDefault();
@@ -368,18 +385,37 @@ export default class PointerManager extends ChannelManager {
      * @private
      * @param {String} event
      * @param {Set<Pointer>} pointers
+     * @param {Object} [overrides]
+     * @param {String} [overrides.pointerEvent]
+     * @param {String} [overrides.mouseEvent]
+     * @param {String} [overrides.touchEvent]
+     * @param {String} [overrides.penEvent]
      */
-    _triggerPointerEvents(event, pointers) {
+    _triggerPointerEvents(event, pointers, overrides) {
         for (const pointer of pointers) {
-            this._app.trigger(`pointer:${event}`, pointer, this._pointers);
+            this._triggerPointerEvent(event, pointer, overrides);
+        }
+    }
 
-            if (pointer.type === 'mouse') {
-                this._app.trigger(`mouse:${event}`, pointer, this._pointers);
-            } else if (pointer.type === 'touch') {
-                this._app.trigger(`touch:${event}`, pointer, this._pointers);
-            } else if (pointer.type === 'pen') {
-                this._app.trigger(`pen:${event}`, pointer, this._pointers);
-            }
+    /**
+     * @private
+     * @param {String} event
+     * @param {Pointer} pointer
+     * @param {Object} [overrides]
+     * @param {String} [overrides.pointerEvent]
+     * @param {String} [overrides.mouseEvent]
+     * @param {String} [overrides.touchEvent]
+     * @param {String} [overrides.penEvent]
+     */
+    _triggerPointerEvent(event, pointer, { pointerEvent, mouseEvent, touchEvent, penEvent } = {}) {
+        this._app.trigger(`pointer:${pointerEvent || event}`, pointer, this._pointers);
+
+        if (pointer.type === 'mouse') {
+            this._app.trigger(`mouse:${mouseEvent || event}`, pointer, this._pointers);
+        } else if (pointer.type === 'touch') {
+            this._app.trigger(`touch:${touchEvent || event}`, pointer, this._pointers);
+        } else if (pointer.type === 'pen') {
+            this._app.trigger(`pen:${penEvent || event}`, pointer, this._pointers);
         }
     }
 }

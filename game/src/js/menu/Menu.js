@@ -1,6 +1,7 @@
 import { Container } from 'exojs';
 import MenuPath from './MenuPath';
 import MenuAction from './MenuAction';
+import MenuItem from './MenuItem';
 
 /**
  * @class Menu
@@ -84,12 +85,17 @@ export default class Menu extends Container {
      * @returns {Menu}
      */
     setActiveChild(child) {
-        if (this._activeChild) {
-            this._activeChild.reset();
-        }
+        if ((child !== this._activeChild)) {
+            if (this._activeChild) {
+                this._activeChild.reset();
+            }
 
-        this._activeChild = child;
-        child.activate();
+            this._activeChild = child || null;
+
+            if (this._activeChild) {
+                this._activeChild.activate();
+            }
+        }
 
         return this;
     }
@@ -132,8 +138,22 @@ export default class Menu extends Container {
      * @chainable
      * @returns {Menu}
      */
-    activate() {
+    enable() {
         return this.setActiveChild(this._startChild);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Menu}
+     */
+    disable() {
+        if (this._activeChild) {
+            this._activeChild.reset();
+            this._activeChild = null;
+        }
+
+        return this;
     }
 
     /**
@@ -145,20 +165,6 @@ export default class Menu extends Container {
     update(delta) {
         if (this._activeChild) {
             this._activeChild.update(delta);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Menu}
-     */
-    reset() {
-        if (this._activeChild) {
-            this._activeChild.reset();
-            this._activeChild = null;
         }
 
         return this;
@@ -251,6 +257,25 @@ export default class Menu extends Container {
      */
     openPreviousMenu() {
         this.trigger('openPreviousMenu');
+    }
+
+    /**
+     * @public
+     * @param {Pointer} pointer
+     * @returns {MenuItem}
+     */
+    getPointerChild(pointer) {
+        for (const child of this.children) {
+            if (!(child instanceof MenuItem)) {
+                continue;
+            }
+
+            if (child.contains(pointer.x, pointer.y)) {
+                return child;
+            }
+        }
+
+        return null;
     }
 
     /**

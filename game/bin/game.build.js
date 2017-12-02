@@ -77,6 +77,124 @@ module.exports = Exo;
 
 
 Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _exojs = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class MenuItem
+ * @extends {Text}
+ */
+var MenuItem = function (_Text) {
+  _inherits(MenuItem, _Text);
+
+  /**
+   * @constructor
+   * @param {String} text
+   * @param {Object} [style]
+   */
+  function MenuItem(text) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$fill = _ref.fill,
+        fill = _ref$fill === undefined ? 'white' : _ref$fill,
+        _ref$fontSize = _ref.fontSize,
+        fontSize = _ref$fontSize === undefined ? 45 : _ref$fontSize,
+        _ref$fontFamily = _ref.fontFamily,
+        fontFamily = _ref$fontFamily === undefined ? 'AndyBold' : _ref$fontFamily,
+        _ref$stroke = _ref.stroke,
+        stroke = _ref$stroke === undefined ? 'black' : _ref$stroke,
+        _ref$strokeThickness = _ref.strokeThickness,
+        strokeThickness = _ref$strokeThickness === undefined ? 5 : _ref$strokeThickness;
+
+    _classCallCheck(this, MenuItem);
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, { fill: fill, fontSize: fontSize, fontFamily: fontFamily, stroke: stroke, strokeThickness: strokeThickness }));
+
+    _this._ticker = 0;
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._scalingFactor = 1.2;
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._scalingSpeed = 2;
+
+    _this.setOrigin(0.5, 0.5);
+    return _this;
+  }
+
+  /**
+   * @public
+   */
+
+
+  _createClass(MenuItem, [{
+    key: 'activate',
+    value: function activate() {
+      this.setTint(_exojs.Color.Yellow);
+      this._ticker = 0;
+    }
+
+    /**
+     * @public
+     * @param {Time} delta
+     */
+
+  }, {
+    key: 'update',
+    value: function update(delta) {
+      var time = this._ticker * this._scalingSpeed,
+          scalingCenter = (this._scalingFactor - 1) / 2,
+          scale = 1 + Math.sin(time * Math.PI) * scalingCenter + scalingCenter;
+
+      this.setScale(scale, scale);
+      this._ticker += delta.seconds;
+    }
+
+    /**
+     * @public
+     */
+
+  }, {
+    key: 'reset',
+    value: function reset() {
+      this.setTint(_exojs.Color.White);
+      this.setScale(1);
+      this._ticker = 0;
+    }
+  }]);
+
+  return MenuItem;
+}(_exojs.Text);
+
+exports.default = MenuItem;
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
@@ -93,6 +211,10 @@ var _MenuPath2 = _interopRequireDefault(_MenuPath);
 var _MenuAction = __webpack_require__(11);
 
 var _MenuAction2 = _interopRequireDefault(_MenuAction);
+
+var _MenuItem = __webpack_require__(1);
+
+var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -191,12 +313,17 @@ var Menu = function (_Container) {
     }, {
         key: 'setActiveChild',
         value: function setActiveChild(child) {
-            if (this._activeChild) {
-                this._activeChild.reset();
-            }
+            if (child !== this._activeChild) {
+                if (this._activeChild) {
+                    this._activeChild.reset();
+                }
 
-            this._activeChild = child;
-            child.activate();
+                this._activeChild = child || null;
+
+                if (this._activeChild) {
+                    this._activeChild.activate();
+                }
+            }
 
             return this;
         }
@@ -247,9 +374,26 @@ var Menu = function (_Container) {
          */
 
     }, {
-        key: 'activate',
-        value: function activate() {
+        key: 'enable',
+        value: function enable() {
             return this.setActiveChild(this._startChild);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Menu}
+         */
+
+    }, {
+        key: 'disable',
+        value: function disable() {
+            if (this._activeChild) {
+                this._activeChild.reset();
+                this._activeChild = null;
+            }
+
+            return this;
         }
 
         /**
@@ -264,23 +408,6 @@ var Menu = function (_Container) {
         value: function update(delta) {
             if (this._activeChild) {
                 this._activeChild.update(delta);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Menu}
-         */
-
-    }, {
-        key: 'reset',
-        value: function reset() {
-            if (this._activeChild) {
-                this._activeChild.reset();
-                this._activeChild = null;
             }
 
             return this;
@@ -404,6 +531,49 @@ var Menu = function (_Container) {
 
         /**
          * @public
+         * @param {Pointer} pointer
+         * @returns {MenuItem}
+         */
+
+    }, {
+        key: 'getPointerChild',
+        value: function getPointerChild(pointer) {
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this.children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var child = _step.value;
+
+                    if (!(child instanceof _MenuItem2.default)) {
+                        continue;
+                    }
+
+                    if (child.contains(pointer.x, pointer.y)) {
+                        return child;
+                    }
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * @public
          */
 
     }, {
@@ -444,124 +614,6 @@ var Menu = function (_Container) {
 }(_exojs.Container);
 
 exports.default = Menu;
-
-/***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _exojs = __webpack_require__(0);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class MenuItem
- * @extends {Text}
- */
-var MenuItem = function (_Text) {
-  _inherits(MenuItem, _Text);
-
-  /**
-   * @constructor
-   * @param {String} text
-   * @param {Object} [style]
-   */
-  function MenuItem(text) {
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$fill = _ref.fill,
-        fill = _ref$fill === undefined ? 'white' : _ref$fill,
-        _ref$fontSize = _ref.fontSize,
-        fontSize = _ref$fontSize === undefined ? 45 : _ref$fontSize,
-        _ref$fontFamily = _ref.fontFamily,
-        fontFamily = _ref$fontFamily === undefined ? 'AndyBold' : _ref$fontFamily,
-        _ref$stroke = _ref.stroke,
-        stroke = _ref$stroke === undefined ? 'black' : _ref$stroke,
-        _ref$strokeThickness = _ref.strokeThickness,
-        strokeThickness = _ref$strokeThickness === undefined ? 5 : _ref$strokeThickness;
-
-    _classCallCheck(this, MenuItem);
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, { fill: fill, fontSize: fontSize, fontFamily: fontFamily, stroke: stroke, strokeThickness: strokeThickness }));
-
-    _this._ticker = 0;
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._scalingFactor = 1.2;
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._scalingSpeed = 2;
-
-    _this.setOrigin(0.5, 0.5);
-    return _this;
-  }
-
-  /**
-   * @public
-   */
-
-
-  _createClass(MenuItem, [{
-    key: 'activate',
-    value: function activate() {
-      this.tint = _exojs.Color.Yellow;
-      this._ticker = 0;
-    }
-
-    /**
-     * @public
-     * @param {Time} delta
-     */
-
-  }, {
-    key: 'update',
-    value: function update(delta) {
-      var time = this._ticker * this._scalingSpeed,
-          scalingCenter = (this._scalingFactor - 1) / 2,
-          scale = 1 + Math.sin(time * Math.PI) * scalingCenter + scalingCenter;
-
-      this.setScale(scale, scale);
-      this._ticker += delta.seconds;
-    }
-
-    /**
-     * @public
-     */
-
-  }, {
-    key: 'reset',
-    value: function reset() {
-      this.tint = _exojs.Color.White;
-      this.setScale(1, 1);
-      this._ticker = 0;
-    }
-  }]);
-
-  return MenuItem;
-}(_exojs.Text);
-
-exports.default = MenuItem;
 
 /***/ }),
 /* 3 */
@@ -1109,6 +1161,8 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _exojs = __webpack_require__(0);
+
 var _TitleMenuManager = __webpack_require__(7);
 
 var _TitleMenuManager2 = _interopRequireDefault(_TitleMenuManager);
@@ -1154,7 +1208,7 @@ var TitleScene = function (_Scene) {
        * @private
        * @member {Sprite}
        */
-      this._background = new Sprite(resources.get('texture', 'title/background'));
+      this._background = new _exojs.Sprite(resources.get('texture', 'title/background'));
 
       /**
        * @private
@@ -1203,7 +1257,7 @@ var TitleScene = function (_Scene) {
   }]);
 
   return TitleScene;
-}(Scene);
+}(_exojs.Scene);
 
 exports.default = TitleScene;
 
@@ -1262,7 +1316,7 @@ var TitleMenuManager = function (_MenuManager) {
 
     var _this = _possibleConstructorReturn(this, (TitleMenuManager.__proto__ || Object.getPrototypeOf(TitleMenuManager)).call(this, app));
 
-    _this.addMenu('main', new _MainMenu2.default(app)).addMenu('newGame', new _NewGameMenu2.default(app, 'main')).addMenu('loadGame', new _LoadGameMenu2.default(app, 'main')).addMenu('settings', new _SettingsMenu2.default(app, 'main')).openMenu('main');
+    _this.addMenu('main', new _MainMenu2.default(app)).addMenu('newGame', new _NewGameMenu2.default(app, 'main')).addMenu('loadGame', new _LoadGameMenu2.default(app, 'main')).addMenu('settings', new _SettingsMenu2.default(app, 'main'));
     return _this;
   }
 
@@ -1285,6 +1339,12 @@ Object.defineProperty(exports, "__esModule", {
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _exojs = __webpack_require__(0);
+
+var _MenuItem = __webpack_require__(1);
+
+var _MenuItem2 = _interopRequireDefault(_MenuItem);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1371,6 +1431,9 @@ var MenuManager = function () {
                 }
             }
         })];
+
+        app.on('pointer:move', this._onPointerMove, this);
+        app.on('pointer:tap', this._onPointerTap, this);
     }
 
     /**
@@ -1414,7 +1477,7 @@ var MenuManager = function () {
                 this._app.inputManager.remove(this._inputs);
 
                 if (this._currentMenu) {
-                    this._currentMenu.reset();
+                    this._currentMenu.disable();
                     this._currentMenu = null;
                 }
             }
@@ -1457,13 +1520,13 @@ var MenuManager = function () {
         key: 'openMenu',
         value: function openMenu(name) {
             if (this._currentMenu) {
-                this._currentMenu.reset();
+                this._currentMenu.disable();
             }
 
             this._currentMenu = this._menus.get(name) || null;
 
             if (this._currentMenu) {
-                this._currentMenu.activate();
+                this._currentMenu.enable();
             }
 
             return this;
@@ -1528,6 +1591,9 @@ var MenuManager = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
+            this._app.off('pointer:move', this._onPointerMove, this);
+            this._app.off('pointer:tap', this._onPointerTap, this);
+
             if (this._active) {
                 this.disable();
             }
@@ -1541,6 +1607,44 @@ var MenuManager = function () {
 
             this._currentMenu = null;
             this._app = null;
+        }
+
+        /**
+         * @private
+         * @param {Pointer} pointer
+         */
+
+    }, {
+        key: '_onPointerMove',
+        value: function _onPointerMove(pointer) {
+            if (this._currentMenu) {
+                var child = this._currentMenu.getPointerChild(pointer);
+
+                if (child) {
+                    this._currentMenu.setActiveChild(child);
+                    this._app.setCursor('pointer');
+                } else {
+                    this._app.setCursor('default');
+                }
+            }
+        }
+
+        /**
+         * @private
+         * @param {Pointer} pointer
+         */
+
+    }, {
+        key: '_onPointerTap',
+        value: function _onPointerTap(pointer) {
+            if (this._currentMenu) {
+                var child = this._currentMenu.getPointerChild(pointer);
+
+                if (child) {
+                    this._currentMenu.setActiveChild(child);
+                    this._currentMenu.updateInput('select');
+                }
+            }
         }
     }, {
         key: 'active',
@@ -1574,11 +1678,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _exojs = __webpack_require__(0);
 
-var _Menu2 = __webpack_require__(1);
+var _Menu2 = __webpack_require__(2);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(2);
+var _MenuItem = __webpack_require__(1);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
@@ -1645,7 +1749,7 @@ var MainMenu = function (_Menu) {
 
         /**
          * @private
-         * @member {VersionText}
+         * @member {MenuItem}
          */
         _this._versionText = new _MenuItem2.default('Ver. 0.0.1', { fontSize: 25, strokeThickness: 3 });
         _this._versionText.setPosition(canvas.width - 10, canvas.height);
@@ -1686,8 +1790,8 @@ var MainMenu = function (_Menu) {
          */
 
     }, {
-        key: 'reset',
-        value: function reset() {
+        key: 'disable',
+        value: function disable() {
             if (this._activeChild) {
                 this._activeChild.reset();
             }
@@ -1992,11 +2096,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(1);
+var _Menu2 = __webpack_require__(2);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(2);
+var _MenuItem = __webpack_require__(1);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
@@ -3386,11 +3490,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(1);
+var _Menu2 = __webpack_require__(2);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(2);
+var _MenuItem = __webpack_require__(1);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 
@@ -3511,11 +3615,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Menu2 = __webpack_require__(1);
+var _Menu2 = __webpack_require__(2);
 
 var _Menu3 = _interopRequireDefault(_Menu2);
 
-var _MenuItem = __webpack_require__(2);
+var _MenuItem = __webpack_require__(1);
 
 var _MenuItem2 = _interopRequireDefault(_MenuItem);
 

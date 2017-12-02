@@ -178,11 +178,10 @@ export default class SceneNode extends Transformable {
      * @public
      * @param {Number} x
      * @param {Number} y
-     * @param {Matrix} [transform]
      * @returns {Boolean}
      */
-    contains(x, y, transform) {
-        return this.getBounds().contains(x, y, transform);
+    contains(x, y) {
+        return this.getBounds().contains(x, y);
     }
 
     /**

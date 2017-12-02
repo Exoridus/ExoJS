@@ -798,7 +798,7 @@ FILE_TYPES = exports.FILE_TYPES = [{
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.random = exports.bezierCurveTo = exports.getMediaSize = exports.getMediaHeight = exports.getMediaWidth = exports.stopEvent = exports.removeFlag = exports.addFlag = exports.hasFlag = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.inRange = exports.isPowerOfTwo = exports.sign = exports.clamp = exports.getVornoiRegion = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = exports.rng = exports.audioContext = exports.audio = undefined;
+exports.imageToBase64 = exports.random = exports.bezierCurveTo = exports.getMediaSize = exports.getMediaHeight = exports.getMediaWidth = exports.stopEvent = exports.removeFlag = exports.addFlag = exports.hasFlag = exports.determineMimeType = exports.removeItems = exports.rgbToHex = exports.inRange = exports.isPowerOfTwo = exports.sign = exports.clamp = exports.getVornoiRegion = exports.radiansToDegrees = exports.degreesToRadians = exports.decodeAudioBuffer = exports.supportsCodec = exports.rng = exports.canvasContext = exports.canvas = exports.audioContext = exports.audio = undefined;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -836,6 +836,22 @@ audio = new Audio(),
  * @type {AudioContext}
  */
 audioContext = _support2.default.webAudio ? new AudioContext() : null,
+
+
+/**
+ * @inner
+ * @constant
+ * @type {HTMLCanvasElement}
+ */
+canvas = document.createElement('canvas'),
+
+
+/**
+ * @inner
+ * @constant
+ * @type {CanvasRenderingContext2D}
+ */
+canvasContext = canvas.getContext('2d'),
 
 
 /**
@@ -966,11 +982,11 @@ sign = function sign(value) {
  * @returns {Number}
  */
 getVornoiRegion = function getVornoiRegion(line, point) {
-    var dp = point.dot(line);
+    var dp = point.dot(line.x, line.y);
 
     if (dp < 0) {
         return _const.VORONOI.LEFT;
-    } else if (dp > line.lengthSquared) {
+    } else if (dp > line.len2) {
         return _const.VORONOI.RIGHT;
     } else {
         return _const.VORONOI.MIDDLE;
@@ -1300,10 +1316,28 @@ bezierCurveTo = function bezierCurveTo(fromX, fromY, cpX1, cpY1, cpX2, cpY2, toX
  */
 random = function random(min, max) {
     return rng.next(min, max);
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLImageElement} image
+ * @return {String}
+ */
+imageToBase64 = function imageToBase64(image) {
+    canvas.width = image.width;
+    canvas.height = image.height;
+    canvasContext.drawImage(image, 0, 0);
+
+    return canvas.toDataURL();
 };
 
 exports.audio = audio;
 exports.audioContext = audioContext;
+exports.canvas = canvas;
+exports.canvasContext = canvasContext;
 exports.rng = rng;
 exports.supportsCodec = supportsCodec;
 exports.decodeAudioBuffer = decodeAudioBuffer;
@@ -1326,6 +1360,7 @@ exports.getMediaHeight = getMediaHeight;
 exports.getMediaSize = getMediaSize;
 exports.bezierCurveTo = bezierCurveTo;
 exports.random = random;
+exports.imageToBase64 = imageToBase64;
 
 /***/ }),
 /* 2 */
@@ -1570,6 +1605,24 @@ var Vector = function () {
 
         /**
          * @public
+         * @chainable
+         * @param {Matrix} matrix
+         * @param {Vector} [result=this]
+         * @returns {Vector}
+         */
+
+    }, {
+        key: "transformInverse",
+        value: function transformInverse(matrix) {
+            var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this;
+
+            var id = 1 / (this.a * this.d + this.c * -this.b);
+
+            return result.set(this._x * matrix.d * id + this._y * -matrix.c * id + (matrix.y * matrix.c - matrix.x * matrix.d) * id, this._y * matrix.a * id + this._x * -matrix.b * id + (-matrix.y * matrix.a + matrix.x * matrix.b) * id);
+        }
+
+        /**
+         * @public
          * @param {Vector} [result=this]
          * @returns {Vector}
          */
@@ -1612,29 +1665,33 @@ var Vector = function () {
 
         /**
          * @public
-         * @param {Vector} vector
+         * @param {Number} x
+         * @param {Number} y
          * @returns {Number}
          */
 
     }, {
         key: "dot",
-        value: function dot(vector) {
-            return this._x * vector.x + this._y * vector.y;
+        value: function dot(x, y) {
+            return this._x * x + this._y * y;
         }
 
         /**
          * @public
          * @chainable
          * @param {Vector} vector
+         * @param {Vector} [result=this]
          * @returns {Vector}
          */
 
     }, {
         key: "project",
         value: function project(vector) {
-            var dot = this.dot(vector) / vector.dot(vector);
+            var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this;
 
-            return this.set(dot * vector.x, dot * vector.y);
+            var amt = this.dot(vector.x, vector.y) / vector.len2;
+
+            return result.set(amt * vector.x, amt * vector.y);
         }
 
         /**
@@ -1647,10 +1704,12 @@ var Vector = function () {
     }, {
         key: "reflect",
         value: function reflect(axis) {
+            var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this;
+
             var x = this._x,
                 y = this._y;
 
-            return this.project(axis).multiply(2).subtract(x, y);
+            return this.project(axis, result).scale(2).subtract(x, y);
         }
 
         /**
@@ -1707,7 +1766,7 @@ var Vector = function () {
     }, {
         key: "magnitude",
         get: function get() {
-            return this.length;
+            return this.len;
         }
 
         /**
@@ -1717,9 +1776,9 @@ var Vector = function () {
          */
 
     }, {
-        key: "length",
+        key: "len",
         get: function get() {
-            return Math.sqrt(this.lengthSquared);
+            return Math.sqrt(this.len2);
         }
 
         /**
@@ -1729,7 +1788,7 @@ var Vector = function () {
          */
 
     }, {
-        key: "lengthSquared",
+        key: "len2",
         get: function get() {
             return this._x * this._x + this._y * this._y;
         }
@@ -1984,7 +2043,7 @@ var _Polygon = __webpack_require__(19);
 
 var _Polygon2 = _interopRequireDefault(_Polygon);
 
-var _Collision = __webpack_require__(12);
+var _Collision = __webpack_require__(17);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
@@ -2181,23 +2240,21 @@ var Rectangle = function () {
         value: function project(axis) {
             var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : new _Interval2.default();
 
-            var point = _Vector2.default.Temp;
-
-            var min = axis.dot(point.set(this.left, this.top)),
+            var min = axis.dot(this.left, this.top),
                 max = min,
                 projection = void 0;
 
-            projection = axis.dot(point.set(this.right, this.top));
+            projection = axis.dot(this.right, this.top);
 
             min = Math.min(min, projection);
             max = Math.max(max, projection);
 
-            projection = axis.dot(point.set(this.right, this.bottom));
+            projection = axis.dot(this.right, this.bottom);
 
             min = Math.min(min, projection);
             max = Math.max(max, projection);
 
-            projection = axis.dot(point.set(this.left, this.bottom));
+            projection = axis.dot(this.left, this.bottom);
 
             min = Math.min(min, projection);
             max = Math.max(max, projection);
@@ -2991,8 +3048,8 @@ var Size = function () {
          */
 
     }, {
-        key: "multiply",
-        value: function multiply(width) {
+        key: "scale",
+        value: function scale(width) {
             var height = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : width;
 
             this._width *= width;
@@ -4766,1532 +4823,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _utils = __webpack_require__(1);
-
-var _Vector = __webpack_require__(2);
-
-var _Vector2 = _interopRequireDefault(_Vector);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * | a | b | x |
- * | c | d | y |
- * | e | f | z |
- *
- * @class Matrix
- */
-var Matrix = function () {
-
-    /**
-     * @constructor
-     * @param {Number} [a=1]
-     * @param {Number} [b=0]
-     * @param {Number} [x=0]
-     * @param {Number} [c=0]
-     * @param {Number} [d=1]
-     * @param {Number} [y=0]
-     * @param {Number} [e=0]
-     * @param {Number} [f=0]
-     * @param {Number} [z=1]
-     */
-    function Matrix() {
-        var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-        var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-        var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-        var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-        var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
-        var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
-        var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-        var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-        var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 1;
-
-        _classCallCheck(this, Matrix);
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.a = a;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.b = b;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.x = x;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.c = c;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.d = d;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.y = y;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.e = e;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.f = f;
-
-        /**
-         * @public
-         * @member {Number}
-         */
-        this.z = z;
-
-        /**
-         * @private
-         * @member {?Float32Array} _array
-         */
-        this._array = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._updateId = 0;
-    }
-
-    /**
-     * | a | b | x |
-     * | c | d | y |
-     * | e | f | z |
-     *
-     * @public
-     * @chainable
-     * @param {Number} [a=this.a]
-     * @param {Number} [b=this.b]
-     * @param {Number} [x=this.x]
-     * @param {Number} [c=this.c]
-     * @param {Number} [d=this.d]
-     * @param {Number} [y=this.y]
-     * @param {Number} [e=this.e]
-     * @param {Number} [f=this.f]
-     * @param {Number} [z=this.z]
-     * @returns {Matrix}
-     */
-
-
-    _createClass(Matrix, [{
-        key: 'set',
-        value: function set() {
-            var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.a;
-            var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.b;
-            var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this.x;
-            var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : this.c;
-            var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : this.d;
-            var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : this.y;
-            var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : this.e;
-            var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : this.f;
-            var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : this.z;
-
-            this.a = a;this.b = b;this.x = x;
-            this.c = c;this.d = d;this.y = y;
-            this.e = e;this.f = f;this.z = z;
-
-            this._updateId++;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Matrix} matrix
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'copy',
-        value: function copy(matrix) {
-            this.a = matrix.a;this.b = matrix.b;this.x = matrix.x;
-            this.c = matrix.c;this.d = matrix.d;this.y = matrix.y;
-            this.e = matrix.e;this.f = matrix.f;this.z = matrix.z;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'clone',
-        value: function clone() {
-            return new Matrix(this.a, this.b, this.x, this.c, this.d, this.y, this.e, this.f, this.z);
-        }
-
-        /**
-         * | a | b | x |
-         * | c | d | y |
-         * | e | f | z |
-         *
-         * @public
-         * @param {Matrix|Object} matrix
-         * @param {Number} [matrix.a]
-         * @param {Number} [matrix.b]
-         * @param {Number} [matrix.x]
-         * @param {Number} [matrix.c]
-         * @param {Number} [matrix.d]
-         * @param {Number} [matrix.y]
-         * @param {Number} [matrix.e]
-         * @param {Number} [matrix.f]
-         * @param {Number} [matrix.z]
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'equals',
-        value: function equals() {
-            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-                a = _ref.a,
-                b = _ref.b,
-                x = _ref.x,
-                c = _ref.c,
-                d = _ref.d,
-                y = _ref.y,
-                e = _ref.e,
-                f = _ref.f,
-                z = _ref.z;
-
-            return (a === undefined || this.a === a) && (b === undefined || this.b === b) && (x === undefined || this.x === x) && (c === undefined || this.c === c) && (d === undefined || this.d === d) && (y === undefined || this.y === y) && (e === undefined || this.e === e) && (f === undefined || this.f === f) && (z === undefined || this.z === z);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Matrix} matrix
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'combine',
-        value: function combine(matrix) {
-            return this.set(this.a * matrix.a + this.c * matrix.b + this.e * matrix.x, this.b * matrix.a + this.d * matrix.b + this.f * matrix.x, this.x * matrix.a + this.y * matrix.b + this.z * matrix.x, this.a * matrix.c + this.c * matrix.d + this.e * matrix.y, this.b * matrix.c + this.d * matrix.d + this.f * matrix.y, this.x * matrix.c + this.y * matrix.d + this.z * matrix.y, this.a * matrix.e + this.c * matrix.f + this.e * matrix.z, this.b * matrix.e + this.d * matrix.f + this.f * matrix.z, this.x * matrix.e + this.y * matrix.f + this.z * matrix.z);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Matrix} [result=this]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'getInverse',
-        value: function getInverse() {
-            var result = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this;
-
-            var determinant = this.a * (this.z * this.d - this.y * this.f) - this.b * (this.z * this.c - this.y * this.e) + this.x * (this.f * this.c - this.d * this.e);
-
-            if (determinant === 0) {
-                return result.copy(Matrix.Identity);
-            }
-
-            return result.set((this.z * this.d - this.y * this.f) / determinant, (this.z * this.c - this.y * this.e) / -determinant, (this.f * this.c - this.d * this.e) / determinant, (this.z * this.b - this.x * this.f) / -determinant, (this.z * this.a - this.x * this.e) / determinant, (this.f * this.a - this.b * this.e) / -determinant, (this.y * this.b - this.x * this.d) / determinant, (this.y * this.a - this.x * this.c) / -determinant, (this.d * this.a - this.b * this.c) / determinant);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} x
-         * @param {Number} [y=x]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'move',
-        value: function move(x) {
-            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
-
-            return this.combine(Matrix.Temp.set(1, 0, x, 0, 1, y, 0, 0, 1));
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} angle
-         * @param {Number} [centerX=0]
-         * @param {Number} [centerY=centerX]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'rotate',
-        value: function rotate(angle) {
-            var centerX = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-            var centerY = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : centerX;
-
-            var radian = (0, _utils.degreesToRadians)(angle),
-                cos = Math.cos(radian),
-                sin = Math.sin(radian);
-
-            return this.combine(Matrix.Temp.set(cos, -sin, centerX * (1 - cos) + centerY * sin, sin, cos, centerY * (1 - cos) - centerX * sin, 0, 0, 1));
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} scaleX
-         * @param {Number} [scaleY=scaleX]
-         * @param {Number} [centerX=0]
-         * @param {Number} [centerY=centerX]
-         * @returns {Matrix}
-         */
-
-    }, {
-        key: 'scale',
-        value: function scale(scaleX) {
-            var scaleY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : scaleX;
-            var centerX = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-            var centerY = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : centerX;
-
-            return this.combine(Matrix.Temp.set(scaleX, 0, centerX * (1 - scaleX), 0, scaleY, centerY * (1 - scaleY), 0, 0, 1));
-        }
-
-        /**
-         * @public
-         * @param {Boolean} [transpose=false]
-         * @returns {Float32Array}
-         */
-
-    }, {
-        key: 'toArray',
-        value: function toArray() {
-            var transpose = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-            var array = this._array || (this._array = new Float32Array(9));
-
-            if (transpose) {
-                array[0] = this.a;array[1] = this.b;array[2] = this.x;
-                array[3] = this.c;array[4] = this.d;array[5] = this.y;
-                array[6] = this.e;array[7] = this.f;array[8] = this.z;
-            } else {
-                array[0] = this.a;array[1] = this.c;array[2] = this.e;
-                array[3] = this.b;array[4] = this.d;array[5] = this.f;
-                array[6] = this.x;array[7] = this.y;array[8] = this.z;
-            }
-
-            return array;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            if (this._array) {
-                this._array = null;
-            }
-
-            this.a = null;this.b = null;this.x = null;
-            this.c = null;this.d = null;this.y = null;
-            this.e = null;this.f = null;this.z = null;
-        }
-    }]);
-
-    return Matrix;
-}();
-
-/**
- * @public
- * @static
- * @readonly
- * @member {Matrix}
- */
-
-
-exports.default = Matrix;
-Matrix.Identity = new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
-/**
- * @public
- * @static
- * @constant
- * @member {Matrix}
- */
-Matrix.Temp = new Matrix();
-
-/***/ }),
-/* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _Vector = __webpack_require__(2);
-
-var _Vector2 = _interopRequireDefault(_Vector);
-
-var _Interval = __webpack_require__(9);
-
-var _Interval2 = _interopRequireDefault(_Interval);
-
-var _Polygon = __webpack_require__(19);
-
-var _Polygon2 = _interopRequireDefault(_Polygon);
-
-var _const = __webpack_require__(0);
-
-var _utils = __webpack_require__(1);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class Collision
- */
-var Collision = function () {
-
-    /**
-     * @constructor
-     * @param {Object} options
-     * @param {*} options.shapeA
-     * @param {*} options.shapeB
-     * @param {Number} options.distance
-     * @param {Vector} options.separation
-     * @param {Boolean} options.shapeAInB
-     * @param {Boolean} options.shapeBInA
-     */
-    function Collision() {
-        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-            shapeA = _ref.shapeA,
-            shapeB = _ref.shapeB,
-            _ref$distance = _ref.distance,
-            distance = _ref$distance === undefined ? 0 : _ref$distance,
-            _ref$separation = _ref.separation,
-            separation = _ref$separation === undefined ? _Vector2.default.Empty : _ref$separation,
-            _ref$shapeAInB = _ref.shapeAInB,
-            shapeAInB = _ref$shapeAInB === undefined ? false : _ref$shapeAInB,
-            _ref$shapeBInA = _ref.shapeBInA,
-            shapeBInA = _ref$shapeBInA === undefined ? false : _ref$shapeBInA;
-
-        _classCallCheck(this, Collision);
-
-        /**
-         * @private
-         * @member {*}
-         */
-        this._shapeA = shapeA;
-
-        /**
-         * @private
-         * @member {*}
-         */
-        this._shapeB = shapeB;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._distance = distance;
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._separation = separation.clone();
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._shapeAInB = shapeAInB;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._shapeBInA = shapeBInA;
-    }
-
-    /**
-     * @public
-     * @member {*}
-     */
-
-
-    _createClass(Collision, [{
-        key: 'destroy',
-
-
-        /**
-         * @public
-         */
-        value: function destroy() {
-            this._shapeA = null;
-            this._shapeB = null;
-            this._distance = null;
-            this._separation = null;
-            this._shapeAInB = null;
-            this._shapeBInA = null;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {*} shapeA
-         * @param {*} shapeB
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'shapeA',
-        get: function get() {
-            return this._shapeA;
-        },
-        set: function set(value) {
-            this._shapeA = value;
-        }
-
-        /**
-         * @public
-         * @member {*}
-         */
-
-    }, {
-        key: 'shapeB',
-        get: function get() {
-            return this._shapeB;
-        },
-        set: function set(value) {
-            this._shapeB = value;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'distance',
-        get: function get() {
-            return this._distance;
-        },
-        set: function set(value) {
-            this._distance = value;
-        }
-
-        /**
-         * @public
-         * @member {Vector}
-         */
-
-    }, {
-        key: 'separation',
-        get: function get() {
-            return this._separation;
-        },
-        set: function set(value) {
-            this._separation.copy(value);
-        }
-
-        /**
-         * @public
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'shapeAInB',
-        get: function get() {
-            return this._shapeAInB;
-        },
-        set: function set(value) {
-            this._shapeAInB = value;
-        }
-
-        /**
-         * @public
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'shapeBInA',
-        get: function get() {
-            return this._shapeBInA;
-        },
-        set: function set(value) {
-            this._shapeBInA = value;
-        }
-    }], [{
-        key: 'intersectionSAT',
-        value: function intersectionSAT(shapeA, shapeB) {
-            var normalsA = shapeA.getNormals(),
-                normalsB = shapeB.getNormals(),
-                lenA = normalsA.length,
-                lenB = normalsB.length,
-                projA = new _Interval2.default(),
-                projB = new _Interval2.default();
-
-            for (var i = 0; i < lenA; i++) {
-                var normal = normalsA[i];
-
-                shapeA.project(normal, projA);
-                shapeB.project(normal, projB);
-
-                if (!projA.overlaps(projB)) {
-                    return false;
-                }
-            }
-
-            for (var _i = 0; _i < lenB; _i++) {
-                var _normal = normalsB[_i];
-
-                shapeA.project(_normal, projA);
-                shapeB.project(_normal, projB);
-
-                if (!projA.overlaps(projB)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {*} shapeA
-         * @param {*} shapeB
-         * @returns {?Collision}
-         */
-
-    }, {
-        key: 'collisionSAT',
-        value: function collisionSAT(shapeA, shapeB) {
-            var _ref2;
-
-            var normalsA = shapeA.getNormals(),
-                normalsB = shapeB.getNormals(),
-                lenA = normalsA.length,
-                lenB = normalsB.length,
-                projA = new _Interval2.default(),
-                projB = new _Interval2.default(),
-                separation = new _Vector2.default();
-
-            var containsA = false,
-                containsB = false,
-                shapeAInB = true,
-                shapeBInA = true,
-                distance = Infinity,
-                overlap = void 0;
-
-            for (var i = 0; i < lenA; i++) {
-                var normal = normalsA[i];
-
-                shapeA.project(normal, projA);
-                shapeB.project(normal, projB);
-
-                if (!projA.overlaps(projB)) {
-                    return null;
-                }
-
-                overlap = projA.getOverlap(projB);
-                containsA = projB.contains(projA);
-                containsB = projA.contains(projB);
-
-                if (!containsA && shapeAInB) {
-                    shapeAInB = false;
-                }
-
-                if (!containsB && shapeBInA) {
-                    shapeBInA = false;
-                }
-
-                if (containsA || containsB) {
-                    overlap += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
-                }
-
-                if (overlap < distance) {
-                    distance = overlap;
-                    separation.copy(normal);
-                }
-            }
-
-            for (var _i2 = 0; _i2 < lenB; _i2++) {
-                var _normal2 = normalsB[_i2];
-
-                shapeA.project(_normal2, projA);
-                shapeB.project(_normal2, projB);
-
-                if (!projA.overlaps(projB)) {
-                    return null;
-                }
-
-                overlap = projA.getOverlap(projB);
-                containsA = projB.contains(projA);
-                containsB = projA.contains(projB);
-
-                if (!containsA && shapeAInB) {
-                    shapeAInB = false;
-                }
-
-                if (!containsB && shapeBInA) {
-                    shapeBInA = false;
-                }
-
-                if (containsA || containsB) {
-                    overlap += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
-                }
-
-                if (overlap < distance) {
-                    distance = overlap;
-                    separation.copy(_normal2);
-                }
-            }
-
-            return new Collision((_ref2 = {
-                shapeA: shapeA
-            }, _defineProperty(_ref2, 'shapeA', shapeA), _defineProperty(_ref2, 'distance', distance), _defineProperty(_ref2, 'separation', separation), _defineProperty(_ref2, 'shapeAInB', shapeAInB), _defineProperty(_ref2, 'shapeBInA', shapeBInA), _ref2));
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Rectangle} rectA
-         * @param {Rectangle} rectB
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'intersectionRectRect',
-        value: function intersectionRectRect(rectA, rectB) {
-            if (rectB.left > rectA.right || rectB.top > rectA.bottom) {
-                return false;
-            }
-
-            if (rectA.left > rectB.right || rectA.top > rectB.bottom) {
-                return false;
-            }
-
-            return true;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Circle} circleA
-         * @param {Circle} circleB
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'intersectionCircleCircle',
-        value: function intersectionCircleCircle(circleA, circleB) {
-            return circleA.position.distanceTo(circleB.x, circleB.y) <= circleA.radius + circleB.radius;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Circle} circle
-         * @param {Rectangle} rect
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'intersectionCircleRect',
-        value: function intersectionCircleRect(circle, rect) {
-            var centerWidth = rect.width / 2,
-                centerHeight = rect.height / 2,
-                radius = circle.radius,
-                distanceX = Math.abs(circle.x - rect.x),
-                distanceY = Math.abs(circle.y - rect.y);
-
-            if (distanceX > centerWidth + radius) {
-                return false;
-            }
-
-            if (distanceY > centerHeight + radius) {
-                return false;
-            }
-
-            if (distanceX <= centerWidth) {
-                return true;
-            }
-
-            if (distanceY <= centerHeight) {
-                return true;
-            }
-
-            return circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight) <= radius;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Polygon} polygon
-         * @param {Circle} circle
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'intersectionPolyCircle',
-        value: function intersectionPolyCircle(polygon, circle) {
-            var points = polygon.points,
-                x = circle.x - polygon.x,
-                y = circle.y - polygon.y,
-                positionA = new _Vector2.default(),
-                positionB = new _Vector2.default(),
-                edgeA = new _Vector2.default(),
-                edgeB = new _Vector2.default(),
-                len = points.length;
-
-            for (var i = 0; i < len; i++) {
-                var pointA = points[i],
-                    pointB = points[(i + 1) % len],
-                    region = (0, _utils.getVornoiRegion)(edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y), positionA.set(x - pointA.x, y - pointA.y));
-
-                if (region === _const.VORONOI.LEFT) {
-                    var point = points[i === 0 ? len - 1 : i - 1];
-
-                    positionB.set(x - point.x, y - point.y);
-                    edgeB.set(pointA.x - point.x, pointA.y - point.y);
-
-                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.RIGHT && positionA.length > circle.radius) {
-                        return false;
-                    }
-                } else if (region === _const.VORONOI.RIGHT) {
-                    var _point = points[(i + 2) % len];
-
-                    positionB.set(x - pointB.x, y - pointB.y);
-                    edgeB.set(_point.x - pointB.x, _point.y - pointB.y);
-
-                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.LEFT && positionA.length > circle.radius) {
-                        return false;
-                    }
-                } else {
-                    var distance = positionA.dot(edgeA.perp().normalize());
-
-                    if (distance > 0 && Math.abs(distance) > circle.radius) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Rectangle} rectA
-         * @param {Rectangle} rectB
-         * @returns {?Collision}
-         */
-
-    }, {
-        key: 'collisionRectRect',
-        value: function collisionRectRect(rectA, rectB) {
-            if (rectB.left > rectA.right || rectB.top > rectA.bottom) {
-                return null;
-            }
-
-            if (rectA.left > rectB.right || rectA.top > rectB.bottom) {
-                return null;
-            }
-
-            return new Collision({
-                shapeA: rectA,
-                shapeB: rectB,
-                distance: 0, // todo
-                separation: _Vector2.default.Empty, // todo
-                shapeAInB: rectB.containsRect(rectA),
-                shapeBInA: rectA.containsRect(rectB)
-            });
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Circle} circleA
-         * @param {Circle} circleB
-         * @returns {?Collision}
-         */
-
-    }, {
-        key: 'collisionCircleCircle',
-        value: function collisionCircleCircle(circleA, circleB) {
-            var distance = circleA.position.distanceTo(circleB.x, circleB.y),
-                radii = circleA.radius + circleB.radius;
-
-            return distance > radii ? null : new Collision({
-                shapeA: circleA,
-                shapeB: circleB,
-                distance: distance,
-                separation: new _Vector2.default(circleB.x - circleA.x, circleB.y - circleA.y).normalize().scale(radii - distance),
-                shapeAInB: circleA.radius <= circleB.radius && distance <= circleB.radius - circleA.radius,
-                shapeBInA: circleB.radius <= circleA.radius && distance <= circleA.radius - circleB.radius
-            });
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Circle} circle
-         * @param {Rectangle} rect
-         * @param {Boolean} [swap=false]
-         * @returns {?Collision}
-         */
-
-    }, {
-        key: 'collisionCircleRect',
-        value: function collisionCircleRect(circle, rect) {
-            var swap = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-            var centerWidth = rect.width / 2,
-                centerHeight = rect.height / 2,
-                distance = circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight),
-                containsA = circle.radius <= Math.min(centerWidth, centerHeight) && distance <= Math.min(centerWidth, centerHeight) - circle.radius,
-                containsB = Math.max(centerWidth, centerHeight) <= circle.radius && distance <= circle.radius - Math.max(centerWidth, centerHeight);
-
-            return distance <= circle.radius ? new Collision({
-                shapeA: swap ? rect : circle,
-                shapeB: swap ? circle : rect,
-                distance: distance,
-                separation: _Vector2.default.Empty, // todo
-                shapeAInB: swap ? containsB : containsA,
-                shapeBInA: swap ? containsA : containsB
-            }) : null;
-        }
-
-        /**
-         * @public
-         * @static
-         * @param {Polygon} polygon
-         * @param {Circle} circle
-         * @returns {?Collision}
-         */
-
-    }, {
-        key: 'collisionPolyCircle',
-        value: function collisionPolyCircle(polygon, circle) {
-            var swap = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-            var points = polygon.points,
-                x = circle.x - polygon.x,
-                y = circle.y - polygon.y,
-                radius = circle.radius,
-                positionA = new _Vector2.default(),
-                positionB = new _Vector2.default(),
-                edgeA = new _Vector2.default(),
-                edgeB = new _Vector2.default(),
-                len = points.length,
-                overlapN = new _Vector2.default();
-
-            var containsA = true,
-                containsB = true,
-                overlap = 0;
-
-            for (var i = 0; i < len; i++) {
-                var pointA = points[i],
-                    pointB = points[(i + 1) % len],
-                    region = (0, _utils.getVornoiRegion)(edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y), positionA.set(x - pointA.x, y - pointA.y));
-
-                if (positionA.length > radius) {
-                    containsA = false;
-                }
-
-                if (region === _const.VORONOI.LEFT) {
-                    var prev = points[i === 0 ? len - 1 : i - 1];
-
-                    edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
-                    positionB.set(x - prev.x, y - prev.y);
-
-                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.RIGHT) {
-                        var distance = positionA.length;
-
-                        if (distance > radius) {
-                            return null;
-                        }
-
-                        if (Math.abs(radius - distance) < Math.abs(overlap)) {
-                            overlap = radius - distance;
-                            overlapN.copy(positionA).normalize();
-                        }
-
-                        containsB = false;
-                    }
-                } else if (region === _const.VORONOI.RIGHT) {
-                    var next = points[(i + 2) % len]; // pointB ?
-
-                    edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
-                    positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
-
-                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.LEFT) {
-                        var _distance = positionB.length;
-
-                        if (_distance > radius) {
-                            return null;
-                        }
-
-                        if (Math.abs(radius - _distance) < Math.abs(overlap)) {
-                            overlap = radius - _distance;
-                            overlapN.copy(positionB).normalize();
-                        }
-
-                        containsB = false;
-                    }
-                } else {
-                    var normal = edgeA.perp().normalize(),
-                        _distance2 = positionA.dot(normal);
-
-                    if (_distance2 > 0 && Math.abs(_distance2) > radius) {
-                        return null;
-                    }
-
-                    if (_distance2 >= 0 || radius - _distance2 < 2 * radius) {
-                        containsB = false;
-                    }
-
-                    if (Math.abs(radius - _distance2) < Math.abs(overlap)) {
-                        overlap = radius - _distance2;
-                        overlapN.copy(normal);
-                    }
-                }
-            }
-
-            return new Collision({
-                shapeA: polygon,
-                shapeB: circle,
-                distance: 0, // todo
-                separation: overlapN.scale(overlap),
-                shapeAInB: swap ? containsB : containsA,
-                shapeBInA: swap ? containsA : containsB
-            });
-        }
-    }]);
-
-    return Collision;
-}();
-
-exports.default = Collision;
-
-/***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _const = __webpack_require__(0);
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class Time
- */
-var Time = function () {
-
-    /**
-     * @constructor
-     * @param {Number} [time=0]
-     * @param {Number} [factor=TIME.MILLISECONDS]
-     */
-    function Time() {
-        var time = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-        var factor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _const.TIME.MILLISECONDS;
-
-        _classCallCheck(this, Time);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._milliseconds = time * factor;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-
-
-    _createClass(Time, [{
-        key: 'set',
-
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} [time=0]
-         * @param {Number} [factor=TIME.MILLISECONDS]
-         * @returns {Time}
-         */
-        value: function set() {
-            var time = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-            var factor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _const.TIME.MILLISECONDS;
-
-            this._milliseconds = time * factor;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} milliseconds
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'setMilliseconds',
-        value: function setMilliseconds(milliseconds) {
-            this.milliseconds = milliseconds;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} seconds
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'setSeconds',
-        value: function setSeconds(seconds) {
-            this.seconds = seconds;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} minutes
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'setMinutes',
-        value: function setMinutes(minutes) {
-            this.minutes = minutes;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} hours
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'setHours',
-        value: function setHours(hours) {
-            this.hours = hours;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @param {Time|Object} time
-         * @param {Number} [time.milliseconds]
-         * @param {Number} [time.seconds]
-         * @param {Number} [time.minutes]
-         * @param {Number} [time.hours]
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'equals',
-        value: function equals() {
-            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-                milliseconds = _ref.milliseconds,
-                seconds = _ref.seconds,
-                minutes = _ref.minutes,
-                hours = _ref.hours;
-
-            return (milliseconds === undefined || this.milliseconds === milliseconds) && (seconds === undefined || this.seconds === seconds) && (minutes === undefined || this.minutes === minutes) && (hours === undefined || this.hours === hours);
-        }
-
-        /**
-         * @public
-         * @param {Time} time
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'greaterThan',
-        value: function greaterThan(time) {
-            return this._milliseconds > time.milliseconds;
-        }
-
-        /**
-         * @public
-         * @param {Time} time
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'lessThan',
-        value: function lessThan(time) {
-            return this._milliseconds < time.milliseconds;
-        }
-
-        /**
-         * @public
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'clone',
-        value: function clone() {
-            return new Time(this._milliseconds);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Time} time
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'copy',
-        value: function copy(time) {
-            this._milliseconds = time.milliseconds;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Time} time
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'add',
-        value: function add(time) {
-            this._milliseconds += time.milliseconds;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Time} time
-         * @returns {Time}
-         */
-
-    }, {
-        key: 'subtract',
-        value: function subtract(time) {
-            this._milliseconds -= time.milliseconds;
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._milliseconds = null;
-        }
-    }, {
-        key: 'milliseconds',
-        get: function get() {
-            return this._milliseconds;
-        },
-        set: function set(milliseconds) {
-            this._milliseconds = milliseconds;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'seconds',
-        get: function get() {
-            return this._milliseconds / _const.TIME.SECONDS;
-        },
-        set: function set(seconds) {
-            this._milliseconds = seconds * _const.TIME.SECONDS;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'minutes',
-        get: function get() {
-            return this._milliseconds / _const.TIME.MINUTES;
-        },
-        set: function set(minutes) {
-            this._milliseconds = minutes * _const.TIME.MINUTES;
-        }
-
-        /**
-         * @public
-         * @member {Number}
-         */
-
-    }, {
-        key: 'hours',
-        get: function get() {
-            return this._milliseconds / _const.TIME.HOURS;
-        },
-        set: function set(hours) {
-            this._milliseconds = hours * _const.TIME.HOURS;
-        }
-    }]);
-
-    return Time;
-}();
-
-/**
- * @public
- * @static
- * @constant
- * @member {Time}
- */
-
-
-exports.default = Time;
-Time.Empty = new Time(0);
-
-/**
- * @public
- * @static
- * @constant
- * @member {Time}
- */
-Time.Temp = new Time();
-
-/***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _ResourceFactory2 = __webpack_require__(17);
-
-var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class ArrayBufferFactory
- * @extends ResourceFactory
- */
-var ArrayBufferFactory = function (_ResourceFactory) {
-  _inherits(ArrayBufferFactory, _ResourceFactory);
-
-  function ArrayBufferFactory() {
-    _classCallCheck(this, ArrayBufferFactory);
-
-    return _possibleConstructorReturn(this, (ArrayBufferFactory.__proto__ || Object.getPrototypeOf(ArrayBufferFactory)).apply(this, arguments));
-  }
-
-  _createClass(ArrayBufferFactory, [{
-    key: 'process',
-
-
-    /**
-     * @override
-     */
-    value: function process(response) {
-      return response.arrayBuffer();
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
-    key: 'create',
-    value: function create(source, options) {
-      // eslint-disable-line
-      return Promise.resolve(source);
-    }
-  }, {
-    key: 'storageType',
-
-
-    /**
-     * @override
-     */
-    get: function get() {
-      return 'arrayBuffer';
-    }
-  }]);
-
-  return ArrayBufferFactory;
-}(_ResourceFactory3.default);
-
-exports.default = ArrayBufferFactory;
-
-/***/ }),
-/* 15 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _ArrayBufferFactory2 = __webpack_require__(14);
-
-var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
-
-var _MediaSource = __webpack_require__(40);
-
-var _MediaSource2 = _interopRequireDefault(_MediaSource);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class MediaSourceFactory
- * @extends ArrayBufferFactory
- */
-var MediaSourceFactory = function (_ArrayBufferFactory) {
-    _inherits(MediaSourceFactory, _ArrayBufferFactory);
-
-    function MediaSourceFactory() {
-        _classCallCheck(this, MediaSourceFactory);
-
-        return _possibleConstructorReturn(this, (MediaSourceFactory.__proto__ || Object.getPrototypeOf(MediaSourceFactory)).apply(this, arguments));
-    }
-
-    _createClass(MediaSourceFactory, [{
-        key: 'create',
-
-
-        /**
-         * @override
-         */
-        value: function create(source) {
-            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                type = _ref.type,
-                createMediaElement = _ref.createMediaElement,
-                decodeAudioBuffer = _ref.decodeAudioBuffer,
-                mimeType = _ref.mimeType,
-                loadEvent = _ref.loadEvent;
-
-            return _get(MediaSourceFactory.prototype.__proto__ || Object.getPrototypeOf(MediaSourceFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
-                return new _MediaSource2.default(type, arrayBuffer, { mimeType: mimeType, loadEvent: loadEvent });
-            }).then(function (mediaSource) {
-                return createMediaElement ? mediaSource.createMediaElement().then(function (mediaElement) {
-                    return mediaSource;
-                }) : mediaSource;
-            }).then(function (mediaSource) {
-                return decodeAudioBuffer ? mediaSource.decodeAudioBuffer().then(function (audioBuffer) {
-                    return mediaSource;
-                }) : mediaSource;
-            });
-        }
-    }, {
-        key: 'storageType',
-
-
-        /**
-         * @override
-         */
-        get: function get() {
-            return 'mediaSource';
-        }
-    }]);
-
-    return MediaSourceFactory;
-}(_ArrayBufferFactory3.default);
-
-exports.default = MediaSourceFactory;
-
-/***/ }),
-/* 16 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
@@ -6790,7 +5321,7 @@ var Texture = function () {
 exports.default = Texture;
 
 /***/ }),
-/* 17 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6802,84 +5333,339 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _utils = __webpack_require__(1);
+
+var _Vector = __webpack_require__(2);
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
- * @class ResourceFactory
+ * | a | b | x |
+ * | c | d | y |
+ * | e | f | z |
+ *
+ * @class Matrix
  */
-var ResourceFactory = function () {
-    function ResourceFactory() {
-        _classCallCheck(this, ResourceFactory);
+var Matrix = function () {
+
+    /**
+     * @constructor
+     * @param {Number} [a=1]
+     * @param {Number} [b=0]
+     * @param {Number} [x=0]
+     * @param {Number} [c=0]
+     * @param {Number} [d=1]
+     * @param {Number} [y=0]
+     * @param {Number} [e=0]
+     * @param {Number} [f=0]
+     * @param {Number} [z=1]
+     */
+    function Matrix() {
+        var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+        var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+        var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+        var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+        var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
+        var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
+        var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
+        var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
+        var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 1;
+
+        _classCallCheck(this, Matrix);
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.a = a;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.b = b;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.x = x;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.c = c;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.d = d;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.y = y;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.e = e;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.f = f;
+
+        /**
+         * @public
+         * @member {Number}
+         */
+        this.z = z;
+
+        /**
+         * @private
+         * @member {?Float32Array} _array
+         */
+        this._array = null;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._updateId = 0;
     }
 
-    _createClass(ResourceFactory, [{
-        key: 'request',
+    /**
+     * | a | b | x |
+     * | c | d | y |
+     * | e | f | z |
+     *
+     * @public
+     * @chainable
+     * @param {Number} [a=this.a]
+     * @param {Number} [b=this.b]
+     * @param {Number} [x=this.x]
+     * @param {Number} [c=this.c]
+     * @param {Number} [d=this.d]
+     * @param {Number} [y=this.y]
+     * @param {Number} [e=this.e]
+     * @param {Number} [f=this.f]
+     * @param {Number} [z=this.z]
+     * @returns {Matrix}
+     */
 
 
-        /**
-         * @public
-         * @param {String} path
-         * @param {Object} [options]
-         * @param {String} [options.method='GET']
-         * @param {String} [options.mode='cors']
-         * @param {String} [options.cache='default']
-         * @returns {Promise<Response>}
-         */
-        value: function request(path) {
-            var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
-                method: 'GET',
-                mode: 'cors',
-                cache: 'default'
-            };
+    _createClass(Matrix, [{
+        key: 'set',
+        value: function set() {
+            var a = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.a;
+            var b = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.b;
+            var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this.x;
+            var c = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : this.c;
+            var d = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : this.d;
+            var y = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : this.y;
+            var e = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : this.e;
+            var f = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : this.f;
+            var z = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : this.z;
 
-            return fetch(path, options);
+            this.a = a;this.b = b;this.x = x;
+            this.c = c;this.d = d;this.y = y;
+            this.e = e;this.f = f;this.z = z;
+
+            this._updateId++;
+
+            return this;
         }
 
         /**
          * @public
-         * @param {Response} response
-         * @returns {Promise<*>}
+         * @chainable
+         * @param {Matrix} matrix
+         * @returns {Matrix}
          */
 
     }, {
-        key: 'process',
-        value: function process(response) {
-            // eslint-disable-line
-            return Promise.resolve(null);
+        key: 'copy',
+        value: function copy(matrix) {
+            this.a = matrix.a;this.b = matrix.b;this.x = matrix.x;
+            this.c = matrix.c;this.d = matrix.d;this.y = matrix.y;
+            this.e = matrix.e;this.f = matrix.f;this.z = matrix.z;
+
+            return this;
         }
 
         /**
          * @public
-         * @param {Response} source
-         * @param {Object} [options]
-         * @returns {Promise<*>}
+         * @returns {Matrix}
          */
 
     }, {
-        key: 'create',
-        value: function create(source, options) {
-            // eslint-disable-line
-            return Promise.resolve(source);
+        key: 'clone',
+        value: function clone() {
+            return new Matrix(this.a, this.b, this.x, this.c, this.d, this.y, this.e, this.f, this.z);
+        }
+
+        /**
+         * | a | b | x |
+         * | c | d | y |
+         * | e | f | z |
+         *
+         * @public
+         * @param {Matrix|Object} matrix
+         * @param {Number} [matrix.a]
+         * @param {Number} [matrix.b]
+         * @param {Number} [matrix.x]
+         * @param {Number} [matrix.c]
+         * @param {Number} [matrix.d]
+         * @param {Number} [matrix.y]
+         * @param {Number} [matrix.e]
+         * @param {Number} [matrix.f]
+         * @param {Number} [matrix.z]
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'equals',
+        value: function equals() {
+            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+                a = _ref.a,
+                b = _ref.b,
+                x = _ref.x,
+                c = _ref.c,
+                d = _ref.d,
+                y = _ref.y,
+                e = _ref.e,
+                f = _ref.f,
+                z = _ref.z;
+
+            return (a === undefined || this.a === a) && (b === undefined || this.b === b) && (x === undefined || this.x === x) && (c === undefined || this.c === c) && (d === undefined || this.d === d) && (y === undefined || this.y === y) && (e === undefined || this.e === e) && (f === undefined || this.f === f) && (z === undefined || this.z === z);
         }
 
         /**
          * @public
-         * @param {String} path
-         * @param {Object} [request]
-         * @param {Object} [options]
-         * @returns {Promise<*>}
+         * @chainable
+         * @param {Matrix} matrix
+         * @returns {Matrix}
          */
 
     }, {
-        key: 'load',
-        value: function load(path, request, options) {
-            var _this = this;
+        key: 'combine',
+        value: function combine(matrix) {
+            return this.set(this.a * matrix.a + this.c * matrix.b + this.e * matrix.x, this.b * matrix.a + this.d * matrix.b + this.f * matrix.x, this.x * matrix.a + this.y * matrix.b + this.z * matrix.x, this.a * matrix.c + this.c * matrix.d + this.e * matrix.y, this.b * matrix.c + this.d * matrix.d + this.f * matrix.y, this.x * matrix.c + this.y * matrix.d + this.z * matrix.y, this.a * matrix.e + this.c * matrix.f + this.e * matrix.z, this.b * matrix.e + this.d * matrix.f + this.f * matrix.z, this.x * matrix.e + this.y * matrix.f + this.z * matrix.z);
+        }
 
-            return this.request(path, request).then(function (response) {
-                return _this.process(response);
-            }).then(function (source) {
-                return _this.create(source, options);
-            });
+        /**
+         * @public
+         * @chainable
+         * @param {Matrix} [result=this]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'getInverse',
+        value: function getInverse() {
+            var result = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this;
+
+            var determinant = this.a * (this.z * this.d - this.y * this.f) - this.b * (this.z * this.c - this.y * this.e) + this.x * (this.f * this.c - this.d * this.e);
+
+            if (determinant === 0) {
+                return result.copy(Matrix.Identity);
+            }
+
+            return result.set((this.z * this.d - this.y * this.f) / determinant, (this.z * this.c - this.y * this.e) / -determinant, (this.f * this.c - this.d * this.e) / determinant, (this.z * this.b - this.x * this.f) / -determinant, (this.z * this.a - this.x * this.e) / determinant, (this.f * this.a - this.b * this.e) / -determinant, (this.y * this.b - this.x * this.d) / determinant, (this.y * this.a - this.x * this.c) / -determinant, (this.d * this.a - this.b * this.c) / determinant);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} x
+         * @param {Number} [y=x]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'translate',
+        value: function translate(x) {
+            var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
+
+            return this.combine(Matrix.Temp.set(1, 0, x, 0, 1, y, 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} angle
+         * @param {Number} [centerX=0]
+         * @param {Number} [centerY=centerX]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'rotate',
+        value: function rotate(angle) {
+            var centerX = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+            var centerY = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : centerX;
+
+            var radian = (0, _utils.degreesToRadians)(angle),
+                cos = Math.cos(radian),
+                sin = Math.sin(radian);
+
+            return this.combine(Matrix.Temp.set(cos, -sin, centerX * (1 - cos) + centerY * sin, sin, cos, centerY * (1 - cos) - centerX * sin, 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} scaleX
+         * @param {Number} [scaleY=scaleX]
+         * @param {Number} [centerX=0]
+         * @param {Number} [centerY=centerX]
+         * @returns {Matrix}
+         */
+
+    }, {
+        key: 'scale',
+        value: function scale(scaleX) {
+            var scaleY = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : scaleX;
+            var centerX = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+            var centerY = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : centerX;
+
+            return this.combine(Matrix.Temp.set(scaleX, 0, centerX * (1 - scaleX), 0, scaleY, centerY * (1 - scaleY), 0, 0, 1));
+        }
+
+        /**
+         * @public
+         * @param {Boolean} [transpose=false]
+         * @returns {Float32Array}
+         */
+
+    }, {
+        key: 'toArray',
+        value: function toArray() {
+            var transpose = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+            var array = this._array || (this._array = new Float32Array(9));
+
+            if (transpose) {
+                array[0] = this.a;array[1] = this.b;array[2] = this.x;
+                array[3] = this.c;array[4] = this.d;array[5] = this.y;
+                array[6] = this.e;array[7] = this.f;array[8] = this.z;
+            } else {
+                array[0] = this.a;array[1] = this.c;array[2] = this.e;
+                array[3] = this.b;array[4] = this.d;array[5] = this.f;
+                array[6] = this.x;array[7] = this.y;array[8] = this.z;
+            }
+
+            return array;
         }
 
         /**
@@ -6889,29 +5675,515 @@ var ResourceFactory = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            // do nothing
+            if (this._array) {
+                this._array = null;
+            }
+
+            this.a = null;this.b = null;this.x = null;
+            this.c = null;this.d = null;this.y = null;
+            this.e = null;this.f = null;this.z = null;
+        }
+    }]);
+
+    return Matrix;
+}();
+
+/**
+ * @public
+ * @static
+ * @readonly
+ * @member {Matrix}
+ */
+
+
+exports.default = Matrix;
+Matrix.Identity = new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Matrix}
+ */
+Matrix.Temp = new Matrix();
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _const = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class Time
+ */
+var Time = function () {
+
+    /**
+     * @constructor
+     * @param {Number} [time=0]
+     * @param {Number} [factor=TIME.MILLISECONDS]
+     */
+    function Time() {
+        var time = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+        var factor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _const.TIME.MILLISECONDS;
+
+        _classCallCheck(this, Time);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._milliseconds = time * factor;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+
+
+    _createClass(Time, [{
+        key: 'set',
+
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} [time=0]
+         * @param {Number} [factor=TIME.MILLISECONDS]
+         * @returns {Time}
+         */
+        value: function set() {
+            var time = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+            var factor = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _const.TIME.MILLISECONDS;
+
+            this._milliseconds = time * factor;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} milliseconds
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'setMilliseconds',
+        value: function setMilliseconds(milliseconds) {
+            this.milliseconds = milliseconds;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} seconds
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'setSeconds',
+        value: function setSeconds(seconds) {
+            this.seconds = seconds;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} minutes
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'setMinutes',
+        value: function setMinutes(minutes) {
+            this.minutes = minutes;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} hours
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'setHours',
+        value: function setHours(hours) {
+            this.hours = hours;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @param {Time|Object} time
+         * @param {Number} [time.milliseconds]
+         * @param {Number} [time.seconds]
+         * @param {Number} [time.minutes]
+         * @param {Number} [time.hours]
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'equals',
+        value: function equals() {
+            var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+                milliseconds = _ref.milliseconds,
+                seconds = _ref.seconds,
+                minutes = _ref.minutes,
+                hours = _ref.hours;
+
+            return (milliseconds === undefined || this.milliseconds === milliseconds) && (seconds === undefined || this.seconds === seconds) && (minutes === undefined || this.minutes === minutes) && (hours === undefined || this.hours === hours);
+        }
+
+        /**
+         * @public
+         * @param {Time} time
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'greaterThan',
+        value: function greaterThan(time) {
+            return this._milliseconds > time.milliseconds;
+        }
+
+        /**
+         * @public
+         * @param {Time} time
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'lessThan',
+        value: function lessThan(time) {
+            return this._milliseconds < time.milliseconds;
+        }
+
+        /**
+         * @public
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'clone',
+        value: function clone() {
+            return new Time(this._milliseconds);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Time} time
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'copy',
+        value: function copy(time) {
+            this._milliseconds = time.milliseconds;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Time} time
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'add',
+        value: function add(time) {
+            this._milliseconds += time.milliseconds;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Time} time
+         * @returns {Time}
+         */
+
+    }, {
+        key: 'subtract',
+        value: function subtract(time) {
+            this._milliseconds -= time.milliseconds;
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            this._milliseconds = null;
+        }
+    }, {
+        key: 'milliseconds',
+        get: function get() {
+            return this._milliseconds;
+        },
+        set: function set(milliseconds) {
+            this._milliseconds = milliseconds;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'seconds',
+        get: function get() {
+            return this._milliseconds / _const.TIME.SECONDS;
+        },
+        set: function set(seconds) {
+            this._milliseconds = seconds * _const.TIME.SECONDS;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'minutes',
+        get: function get() {
+            return this._milliseconds / _const.TIME.MINUTES;
+        },
+        set: function set(minutes) {
+            this._milliseconds = minutes * _const.TIME.MINUTES;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'hours',
+        get: function get() {
+            return this._milliseconds / _const.TIME.HOURS;
+        },
+        set: function set(hours) {
+            this._milliseconds = hours * _const.TIME.HOURS;
+        }
+    }]);
+
+    return Time;
+}();
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+
+
+exports.default = Time;
+Time.Empty = new Time(0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.Temp = new Time();
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _ResourceFactory2 = __webpack_require__(18);
+
+var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class ArrayBufferFactory
+ * @extends ResourceFactory
+ */
+var ArrayBufferFactory = function (_ResourceFactory) {
+  _inherits(ArrayBufferFactory, _ResourceFactory);
+
+  function ArrayBufferFactory() {
+    _classCallCheck(this, ArrayBufferFactory);
+
+    return _possibleConstructorReturn(this, (ArrayBufferFactory.__proto__ || Object.getPrototypeOf(ArrayBufferFactory)).apply(this, arguments));
+  }
+
+  _createClass(ArrayBufferFactory, [{
+    key: 'process',
+
+
+    /**
+     * @override
+     */
+    value: function process(response) {
+      return response.arrayBuffer();
+    }
+
+    /**
+     * @override
+     */
+
+  }, {
+    key: 'create',
+    value: function create(source, options) {
+      // eslint-disable-line
+      return Promise.resolve(source);
+    }
+  }, {
+    key: 'storageType',
+
+
+    /**
+     * @override
+     */
+    get: function get() {
+      return 'arrayBuffer';
+    }
+  }]);
+
+  return ArrayBufferFactory;
+}(_ResourceFactory3.default);
+
+exports.default = ArrayBufferFactory;
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _ArrayBufferFactory2 = __webpack_require__(14);
+
+var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
+
+var _MediaSource = __webpack_require__(40);
+
+var _MediaSource2 = _interopRequireDefault(_MediaSource);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class MediaSourceFactory
+ * @extends ArrayBufferFactory
+ */
+var MediaSourceFactory = function (_ArrayBufferFactory) {
+    _inherits(MediaSourceFactory, _ArrayBufferFactory);
+
+    function MediaSourceFactory() {
+        _classCallCheck(this, MediaSourceFactory);
+
+        return _possibleConstructorReturn(this, (MediaSourceFactory.__proto__ || Object.getPrototypeOf(MediaSourceFactory)).apply(this, arguments));
+    }
+
+    _createClass(MediaSourceFactory, [{
+        key: 'create',
+
+
+        /**
+         * @override
+         */
+        value: function create(source) {
+            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                type = _ref.type,
+                createMediaElement = _ref.createMediaElement,
+                decodeAudioBuffer = _ref.decodeAudioBuffer,
+                mimeType = _ref.mimeType,
+                loadEvent = _ref.loadEvent;
+
+            return _get(MediaSourceFactory.prototype.__proto__ || Object.getPrototypeOf(MediaSourceFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
+                return new _MediaSource2.default(type, arrayBuffer, { mimeType: mimeType, loadEvent: loadEvent });
+            }).then(function (mediaSource) {
+                return createMediaElement ? mediaSource.createMediaElement().then(function (mediaElement) {
+                    return mediaSource;
+                }) : mediaSource;
+            }).then(function (mediaSource) {
+                return decodeAudioBuffer ? mediaSource.decodeAudioBuffer().then(function (audioBuffer) {
+                    return mediaSource;
+                }) : mediaSource;
+            });
         }
     }, {
         key: 'storageType',
 
 
         /**
-         * @public
-         * @readonly
-         * @member {String}
+         * @override
          */
         get: function get() {
-            return 'resource';
+            return 'mediaSource';
         }
     }]);
 
-    return ResourceFactory;
-}();
+    return MediaSourceFactory;
+}(_ArrayBufferFactory3.default);
 
-exports.default = ResourceFactory;
+exports.default = MediaSourceFactory;
 
 /***/ }),
-/* 18 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6946,10 +6218,6 @@ var _const = __webpack_require__(0);
 var _Interval = __webpack_require__(9);
 
 var _Interval2 = _interopRequireDefault(_Interval);
-
-var _Collision = __webpack_require__(12);
-
-var _Collision2 = _interopRequireDefault(_Collision);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7206,11 +6474,25 @@ var Sprite = function (_Container) {
          */
 
     }, {
+        key: 'getVertices',
+        value: function getVertices() {
+            var bounds = this.getLocalBounds(),
+                transform = this.getGlobalTransform();
+
+            return [new _Vector2.default(bounds.left, bounds.top).transform(transform), new _Vector2.default(bounds.right, bounds.top).transform(transform), new _Vector2.default(bounds.right, bounds.bottom).transform(transform), new _Vector2.default(bounds.left, bounds.bottom).transform(transform)];
+        }
+
+        /**
+         * todo - cache this
+         *
+         * @public
+         * @returns {Vector[]}
+         */
+
+    }, {
         key: 'getNormals',
         value: function getNormals() {
-            var bounds = this.getLocalBounds(),
-                transform = this.getGlobalTransform(),
-                vertices = [new _Vector2.default(bounds.left, bounds.top).transform(transform), new _Vector2.default(bounds.right, bounds.top).transform(transform), new _Vector2.default(bounds.right, bounds.bottom).transform(transform), new _Vector2.default(bounds.left, bounds.bottom).transform(transform)],
+            var vertices = this.getVertices(),
                 len = vertices.length,
                 normals = [];
 
@@ -7235,23 +6517,61 @@ var Sprite = function (_Container) {
         key: 'project',
         value: function project(axis) {
             var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : new _Interval2.default();
+            var vertices = this.getVertices(),
+                len = vertices.length,
+                _vertices$ = vertices[0],
+                x = _vertices$.x,
+                y = _vertices$.y;
 
-            var bounds = this.getLocalBounds(),
-                transform = this.getGlobalTransform(),
-                vertices = [new _Vector2.default(bounds.left, bounds.top).transform(transform), new _Vector2.default(bounds.right, bounds.top).transform(transform), new _Vector2.default(bounds.right, bounds.bottom).transform(transform), new _Vector2.default(bounds.left, bounds.bottom).transform(transform)],
-                len = vertices.length;
 
-            var min = axis.dot(vertices[0]),
+            var min = axis.dot(x, y),
                 max = min;
 
             for (var i = 1; i < len; i++) {
-                var projection = axis.dot(vertices[i]);
+                var _vertices$i = vertices[i],
+                    _x3 = _vertices$i.x,
+                    _y = _vertices$i.y,
+                    projection = axis.dot(_x3, _y);
+
 
                 min = Math.min(min, projection);
                 max = Math.max(max, projection);
             }
 
             return result.set(min, max);
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'contains',
+        value: function contains(x, y) {
+            if (this.rotation % 90 === 0) {
+                return this.getBounds().contains(x, y);
+            }
+
+            var temp = _Vector2.default.Temp,
+                vertices = this.getVertices(),
+                _vertices$2 = vertices[0],
+                x1 = _vertices$2.x,
+                y1 = _vertices$2.y,
+                _vertices$3 = vertices[1],
+                x2 = _vertices$3.x,
+                y2 = _vertices$3.y,
+                _vertices$4 = vertices[2],
+                x3 = _vertices$4.x,
+                y3 = _vertices$4.y,
+                vecA = temp.set(x2 - x1, y2 - y1),
+                dotA = vecA.dot(x - x1, y - y1),
+                lenA = vecA.dot(vecA.x, vecA.y),
+                vecB = temp.set(x3 - x2, y3 - y2),
+                dotB = vecB.dot(x - x2, y - y2),
+                lenB = vecB.dot(vecB.x, vecB.y);
+
+
+            return dotA > 0 && dotA <= lenA && dotB > 0 && dotB <= lenB;
         }
 
         /**
@@ -7336,32 +6656,20 @@ var Sprite = function (_Container) {
     }, {
         key: 'positionData',
         get: function get() {
-            var positionData = this._positionData,
-                _getLocalBounds = this.getLocalBounds(),
-                left = _getLocalBounds.left,
-                top = _getLocalBounds.top,
-                right = _getLocalBounds.right,
-                bottom = _getLocalBounds.bottom,
-                _getGlobalTransform = this.getGlobalTransform(),
-                a = _getGlobalTransform.a,
-                b = _getGlobalTransform.b,
-                c = _getGlobalTransform.c,
-                d = _getGlobalTransform.d,
-                x = _getGlobalTransform.x,
-                y = _getGlobalTransform.y;
+            var vertices = this.getVertices(),
+                positionData = this._positionData;
 
+            positionData[0] = vertices[0].x;
+            positionData[1] = vertices[0].y;
 
-            positionData[0] = left * a + top * b + x;
-            positionData[1] = left * c + top * d + y;
+            positionData[2] = vertices[1].x;
+            positionData[3] = vertices[1].y;
 
-            positionData[2] = right * a + top * b + x;
-            positionData[3] = right * c + top * d + y;
+            positionData[4] = vertices[3].x;
+            positionData[5] = vertices[3].y;
 
-            positionData[4] = left * a + bottom * b + x;
-            positionData[5] = left * c + bottom * d + y;
-
-            positionData[6] = right * a + bottom * b + x;
-            positionData[7] = right * c + bottom * d + y;
+            positionData[6] = vertices[2].x;
+            positionData[7] = vertices[2].y;
 
             return positionData;
         }
@@ -7444,6 +6752,792 @@ var Sprite = function (_Container) {
 exports.default = Sprite;
 
 /***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Vector = __webpack_require__(2);
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+var _Interval = __webpack_require__(9);
+
+var _Interval2 = _interopRequireDefault(_Interval);
+
+var _Polygon = __webpack_require__(19);
+
+var _Polygon2 = _interopRequireDefault(_Polygon);
+
+var _const = __webpack_require__(0);
+
+var _utils = __webpack_require__(1);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class Collision
+ */
+var Collision = function () {
+
+    /**
+     * @constructor
+     * @param {Object} options
+     * @param {*} options.shapeA
+     * @param {*} options.shapeB
+     * @param {Number} options.distance
+     * @param {Vector} options.separation
+     * @param {Boolean} options.shapeAInB
+     * @param {Boolean} options.shapeBInA
+     */
+    function Collision() {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            shapeA = _ref.shapeA,
+            shapeB = _ref.shapeB,
+            _ref$distance = _ref.distance,
+            distance = _ref$distance === undefined ? 0 : _ref$distance,
+            _ref$separation = _ref.separation,
+            separation = _ref$separation === undefined ? _Vector2.default.Empty : _ref$separation,
+            _ref$shapeAInB = _ref.shapeAInB,
+            shapeAInB = _ref$shapeAInB === undefined ? false : _ref$shapeAInB,
+            _ref$shapeBInA = _ref.shapeBInA,
+            shapeBInA = _ref$shapeBInA === undefined ? false : _ref$shapeBInA;
+
+        _classCallCheck(this, Collision);
+
+        /**
+         * @private
+         * @member {*}
+         */
+        this._shapeA = shapeA;
+
+        /**
+         * @private
+         * @member {*}
+         */
+        this._shapeB = shapeB;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._distance = distance;
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._separation = separation.clone();
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._shapeAInB = shapeAInB;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._shapeBInA = shapeBInA;
+    }
+
+    /**
+     * @public
+     * @member {*}
+     */
+
+
+    _createClass(Collision, [{
+        key: 'destroy',
+
+
+        /**
+         * @public
+         */
+        value: function destroy() {
+            this._shapeA = null;
+            this._shapeB = null;
+            this._distance = null;
+            this._separation = null;
+            this._shapeAInB = null;
+            this._shapeBInA = null;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {*} shapeA
+         * @param {*} shapeB
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'shapeA',
+        get: function get() {
+            return this._shapeA;
+        },
+        set: function set(value) {
+            this._shapeA = value;
+        }
+
+        /**
+         * @public
+         * @member {*}
+         */
+
+    }, {
+        key: 'shapeB',
+        get: function get() {
+            return this._shapeB;
+        },
+        set: function set(value) {
+            this._shapeB = value;
+        }
+
+        /**
+         * @public
+         * @member {Number}
+         */
+
+    }, {
+        key: 'distance',
+        get: function get() {
+            return this._distance;
+        },
+        set: function set(value) {
+            this._distance = value;
+        }
+
+        /**
+         * @public
+         * @member {Vector}
+         */
+
+    }, {
+        key: 'separation',
+        get: function get() {
+            return this._separation;
+        },
+        set: function set(value) {
+            this._separation.copy(value);
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'shapeAInB',
+        get: function get() {
+            return this._shapeAInB;
+        },
+        set: function set(value) {
+            this._shapeAInB = value;
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'shapeBInA',
+        get: function get() {
+            return this._shapeBInA;
+        },
+        set: function set(value) {
+            this._shapeBInA = value;
+        }
+    }], [{
+        key: 'intersectionSAT',
+        value: function intersectionSAT(shapeA, shapeB) {
+            var normalsA = shapeA.getNormals(),
+                normalsB = shapeB.getNormals(),
+                lenA = normalsA.length,
+                lenB = normalsB.length,
+                projA = new _Interval2.default(),
+                projB = new _Interval2.default();
+
+            for (var i = 0; i < lenA; i++) {
+                var normal = normalsA[i];
+
+                shapeA.project(normal, projA);
+                shapeB.project(normal, projB);
+
+                if (!projA.overlaps(projB)) {
+                    return false;
+                }
+            }
+
+            for (var _i = 0; _i < lenB; _i++) {
+                var _normal = normalsB[_i];
+
+                shapeA.project(_normal, projA);
+                shapeB.project(_normal, projB);
+
+                if (!projA.overlaps(projB)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {*} shapeA
+         * @param {*} shapeB
+         * @returns {?Collision}
+         */
+
+    }, {
+        key: 'collisionSAT',
+        value: function collisionSAT(shapeA, shapeB) {
+            var _ref2;
+
+            var normalsA = shapeA.getNormals(),
+                normalsB = shapeB.getNormals(),
+                lenA = normalsA.length,
+                lenB = normalsB.length,
+                projA = new _Interval2.default(),
+                projB = new _Interval2.default(),
+                separation = new _Vector2.default();
+
+            var containsA = false,
+                containsB = false,
+                shapeAInB = true,
+                shapeBInA = true,
+                distance = Infinity,
+                overlap = void 0;
+
+            for (var i = 0; i < lenA; i++) {
+                var normal = normalsA[i];
+
+                shapeA.project(normal, projA);
+                shapeB.project(normal, projB);
+
+                if (!projA.overlaps(projB)) {
+                    return null;
+                }
+
+                overlap = projA.getOverlap(projB);
+                containsA = projB.contains(projA);
+                containsB = projA.contains(projB);
+
+                if (!containsA && shapeAInB) {
+                    shapeAInB = false;
+                }
+
+                if (!containsB && shapeBInA) {
+                    shapeBInA = false;
+                }
+
+                if (containsA || containsB) {
+                    overlap += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
+                }
+
+                if (overlap < distance) {
+                    distance = overlap;
+                    separation.copy(normal);
+                }
+            }
+
+            for (var _i2 = 0; _i2 < lenB; _i2++) {
+                var _normal2 = normalsB[_i2];
+
+                shapeA.project(_normal2, projA);
+                shapeB.project(_normal2, projB);
+
+                if (!projA.overlaps(projB)) {
+                    return null;
+                }
+
+                overlap = projA.getOverlap(projB);
+                containsA = projB.contains(projA);
+                containsB = projA.contains(projB);
+
+                if (!containsA && shapeAInB) {
+                    shapeAInB = false;
+                }
+
+                if (!containsB && shapeBInA) {
+                    shapeBInA = false;
+                }
+
+                if (containsA || containsB) {
+                    overlap += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
+                }
+
+                if (overlap < distance) {
+                    distance = overlap;
+                    separation.copy(_normal2);
+                }
+            }
+
+            return new Collision((_ref2 = {
+                shapeA: shapeA
+            }, _defineProperty(_ref2, 'shapeA', shapeA), _defineProperty(_ref2, 'distance', distance), _defineProperty(_ref2, 'separation', separation), _defineProperty(_ref2, 'shapeAInB', shapeAInB), _defineProperty(_ref2, 'shapeBInA', shapeBInA), _ref2));
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Rectangle} rectA
+         * @param {Rectangle} rectB
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'intersectionRectRect',
+        value: function intersectionRectRect(rectA, rectB) {
+            if (rectB.left > rectA.right || rectB.top > rectA.bottom) {
+                return false;
+            }
+
+            if (rectA.left > rectB.right || rectA.top > rectB.bottom) {
+                return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Circle} circleA
+         * @param {Circle} circleB
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'intersectionCircleCircle',
+        value: function intersectionCircleCircle(circleA, circleB) {
+            return circleA.position.distanceTo(circleB.x, circleB.y) <= circleA.radius + circleB.radius;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Circle} circle
+         * @param {Rectangle} rect
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'intersectionCircleRect',
+        value: function intersectionCircleRect(circle, rect) {
+            var centerWidth = rect.width / 2,
+                centerHeight = rect.height / 2,
+                radius = circle.radius,
+                distanceX = Math.abs(circle.x - rect.x),
+                distanceY = Math.abs(circle.y - rect.y);
+
+            if (distanceX > centerWidth + radius) {
+                return false;
+            }
+
+            if (distanceY > centerHeight + radius) {
+                return false;
+            }
+
+            if (distanceX <= centerWidth) {
+                return true;
+            }
+
+            if (distanceY <= centerHeight) {
+                return true;
+            }
+
+            return circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight) <= radius;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Polygon} polygon
+         * @param {Circle} circle
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: 'intersectionPolyCircle',
+        value: function intersectionPolyCircle(polygon, circle) {
+            var points = polygon.points,
+                x = circle.x - polygon.x,
+                y = circle.y - polygon.y,
+                positionA = new _Vector2.default(),
+                positionB = new _Vector2.default(),
+                edgeA = new _Vector2.default(),
+                edgeB = new _Vector2.default(),
+                len = points.length;
+
+            for (var i = 0; i < len; i++) {
+                var pointA = points[i],
+                    pointB = points[(i + 1) % len],
+                    region = (0, _utils.getVornoiRegion)(edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y), positionA.set(x - pointA.x, y - pointA.y));
+
+                if (region === _const.VORONOI.LEFT) {
+                    var prev = points[i === 0 ? len - 1 : i - 1];
+
+                    edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
+                    positionB.set(x - prev.x, y - prev.y);
+
+                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.RIGHT && positionA.len > circle.radius) {
+                        return false;
+                    }
+                } else if (region === _const.VORONOI.RIGHT) {
+                    var next = points[(i + 2) % len]; // pointB ?
+
+                    edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
+                    positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
+
+                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.LEFT && positionB.len > circle.radius) {
+                        return false;
+                    }
+                } else {
+                    var normal = edgeA.perp().normalize(),
+                        distance = positionA.dot(normal.x, normal.y);
+
+                    if (distance > 0 && Math.abs(distance) > circle.radius) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Rectangle} rectA
+         * @param {Rectangle} rectB
+         * @returns {?Collision}
+         */
+
+    }, {
+        key: 'collisionRectRect',
+        value: function collisionRectRect(rectA, rectB) {
+            if (rectB.left > rectA.right || rectB.top > rectA.bottom) {
+                return null;
+            }
+
+            if (rectA.left > rectB.right || rectA.top > rectB.bottom) {
+                return null;
+            }
+
+            return new Collision({
+                shapeA: rectA,
+                shapeB: rectB,
+                distance: 0, // todo
+                separation: _Vector2.default.Empty, // todo
+                shapeAInB: rectB.containsRect(rectA),
+                shapeBInA: rectA.containsRect(rectB)
+            });
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Circle} circleA
+         * @param {Circle} circleB
+         * @returns {?Collision}
+         */
+
+    }, {
+        key: 'collisionCircleCircle',
+        value: function collisionCircleCircle(circleA, circleB) {
+            var distance = circleA.position.distanceTo(circleB.x, circleB.y),
+                radii = circleA.radius + circleB.radius;
+
+            return distance > radii ? null : new Collision({
+                shapeA: circleA,
+                shapeB: circleB,
+                distance: distance,
+                separation: new _Vector2.default(circleB.x - circleA.x, circleB.y - circleA.y).normalize().scale(radii - distance),
+                shapeAInB: circleA.radius <= circleB.radius && distance <= circleB.radius - circleA.radius,
+                shapeBInA: circleB.radius <= circleA.radius && distance <= circleA.radius - circleB.radius
+            });
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Circle} circle
+         * @param {Rectangle} rect
+         * @param {Boolean} [swap=false]
+         * @returns {?Collision}
+         */
+
+    }, {
+        key: 'collisionCircleRect',
+        value: function collisionCircleRect(circle, rect) {
+            var swap = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+            var centerWidth = rect.width / 2,
+                centerHeight = rect.height / 2,
+                distance = circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight),
+                containsA = circle.radius <= Math.min(centerWidth, centerHeight) && distance <= Math.min(centerWidth, centerHeight) - circle.radius,
+                containsB = Math.max(centerWidth, centerHeight) <= circle.radius && distance <= circle.radius - Math.max(centerWidth, centerHeight);
+
+            return distance <= circle.radius ? new Collision({
+                shapeA: swap ? rect : circle,
+                shapeB: swap ? circle : rect,
+                distance: distance,
+                separation: _Vector2.default.Empty, // todo
+                shapeAInB: swap ? containsB : containsA,
+                shapeBInA: swap ? containsA : containsB
+            }) : null;
+        }
+
+        /**
+         * @public
+         * @static
+         * @param {Polygon} polygon
+         * @param {Circle} circle
+         * @returns {?Collision}
+         */
+
+    }, {
+        key: 'collisionPolyCircle',
+        value: function collisionPolyCircle(polygon, circle) {
+            var swap = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+            var points = polygon.points,
+                x = circle.x - polygon.x,
+                y = circle.y - polygon.y,
+                radius = circle.radius,
+                positionA = new _Vector2.default(),
+                positionB = new _Vector2.default(),
+                edgeA = new _Vector2.default(),
+                edgeB = new _Vector2.default(),
+                len = points.length,
+                overlapN = new _Vector2.default();
+
+            var containsA = true,
+                containsB = true,
+                overlap = 0;
+
+            for (var i = 0; i < len; i++) {
+                var pointA = points[i],
+                    pointB = points[(i + 1) % len],
+                    region = (0, _utils.getVornoiRegion)(edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y), positionA.set(x - pointA.x, y - pointA.y));
+
+                if (positionA.len > radius) {
+                    containsA = false;
+                }
+
+                if (region === _const.VORONOI.LEFT) {
+                    var prev = points[i === 0 ? len - 1 : i - 1];
+
+                    edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
+                    positionB.set(x - prev.x, y - prev.y);
+
+                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.RIGHT) {
+                        var distance = positionA.len;
+
+                        if (distance > radius) {
+                            return null;
+                        }
+
+                        if (Math.abs(radius - distance) < Math.abs(overlap)) {
+                            overlap = radius - distance;
+                            overlapN.copy(positionA).normalize();
+                        }
+
+                        containsB = false;
+                    }
+                } else if (region === _const.VORONOI.RIGHT) {
+                    var next = points[(i + 2) % len]; // pointB ?
+
+                    edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
+                    positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
+
+                    if ((0, _utils.getVornoiRegion)(edgeB, positionB) === _const.VORONOI.LEFT) {
+                        var _distance = positionB.len;
+
+                        if (_distance > radius) {
+                            return null;
+                        }
+
+                        if (Math.abs(radius - _distance) < Math.abs(overlap)) {
+                            overlap = radius - _distance;
+                            overlapN.copy(positionB).normalize();
+                        }
+
+                        containsB = false;
+                    }
+                } else {
+                    var normal = edgeA.perp().normalize(),
+                        _distance2 = positionA.dot(normal.x, normal.y);
+
+                    if (_distance2 > 0 && Math.abs(_distance2) > radius) {
+                        return null;
+                    }
+
+                    if (_distance2 >= 0 || radius - _distance2 < 2 * radius) {
+                        containsB = false;
+                    }
+
+                    if (Math.abs(radius - _distance2) < Math.abs(overlap)) {
+                        overlap = radius - _distance2;
+                        overlapN.copy(normal);
+                    }
+                }
+            }
+
+            return new Collision({
+                shapeA: swap ? circle : polygon,
+                shapeB: swap ? polygon : circle,
+                distance: 0, // todo
+                separation: overlapN.scale(overlap),
+                shapeAInB: swap ? containsB : containsA,
+                shapeBInA: swap ? containsA : containsB
+            });
+        }
+    }]);
+
+    return Collision;
+}();
+
+exports.default = Collision;
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class ResourceFactory
+ */
+var ResourceFactory = function () {
+    function ResourceFactory() {
+        _classCallCheck(this, ResourceFactory);
+    }
+
+    _createClass(ResourceFactory, [{
+        key: 'request',
+
+
+        /**
+         * @public
+         * @param {String} path
+         * @param {Object} [options]
+         * @param {String} [options.method='GET']
+         * @param {String} [options.mode='cors']
+         * @param {String} [options.cache='default']
+         * @returns {Promise<Response>}
+         */
+        value: function request(path) {
+            var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'default'
+            };
+
+            return fetch(path, options);
+        }
+
+        /**
+         * @public
+         * @param {Response} response
+         * @returns {Promise<*>}
+         */
+
+    }, {
+        key: 'process',
+        value: function process(response) {
+            // eslint-disable-line
+            return Promise.resolve(null);
+        }
+
+        /**
+         * @public
+         * @param {Response} source
+         * @param {Object} [options]
+         * @returns {Promise<*>}
+         */
+
+    }, {
+        key: 'create',
+        value: function create(source, options) {
+            // eslint-disable-line
+            return Promise.resolve(source);
+        }
+
+        /**
+         * @public
+         * @param {String} path
+         * @param {Object} [request]
+         * @param {Object} [options]
+         * @returns {Promise<*>}
+         */
+
+    }, {
+        key: 'load',
+        value: function load(path, request, options) {
+            var _this = this;
+
+            return this.request(path, request).then(function (response) {
+                return _this.process(response);
+            }).then(function (source) {
+                return _this.create(source, options);
+            });
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            // do nothing
+        }
+    }, {
+        key: 'storageType',
+
+
+        /**
+         * @public
+         * @readonly
+         * @member {String}
+         */
+        get: function get() {
+            return 'resource';
+        }
+    }]);
+
+    return ResourceFactory;
+}();
+
+exports.default = ResourceFactory;
+
+/***/ }),
 /* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -7468,7 +7562,7 @@ var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Collision = __webpack_require__(12);
+var _Collision = __webpack_require__(17);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
@@ -7731,14 +7825,22 @@ var Polygon = function () {
         key: 'project',
         value: function project(axis) {
             var result = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : new _Interval2.default();
+            var points = this._points,
+                len = points.length,
+                _points$ = points[0],
+                x = _points$.x,
+                y = _points$.y;
 
-            var len = this._points.length;
 
-            var min = axis.dot(this._points[0]),
+            var min = axis.dot(x, y),
                 max = min;
 
             for (var i = 1; i < len; i++) {
-                var projection = axis.dot(this._points[i]);
+                var _points$i = points[i],
+                    _x6 = _points$i.x,
+                    _y = _points$i.y,
+                    projection = axis.dot(_x6, _y);
+
 
                 min = Math.min(min, projection);
                 max = Math.max(max, projection);
@@ -9295,8 +9397,8 @@ var ObservableVector = function (_Vector) {
          */
 
     }, {
-        key: 'multiply',
-        value: function multiply(x) {
+        key: 'scale',
+        value: function scale(x) {
             var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
 
             return this.set(this._x * x, this._y * y);
@@ -9416,7 +9518,7 @@ var _Polygon = __webpack_require__(19);
 
 var _Polygon2 = _interopRequireDefault(_Polygon);
 
-var _Collision = __webpack_require__(12);
+var _Collision = __webpack_require__(17);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
@@ -9772,7 +9874,7 @@ var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Matrix = __webpack_require__(11);
+var _Matrix = __webpack_require__(12);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -12630,7 +12732,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ResourceFactory2 = __webpack_require__(17);
+var _ResourceFactory2 = __webpack_require__(18);
 
 var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
 
@@ -14092,7 +14194,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ResourceFactory2 = __webpack_require__(17);
+var _ResourceFactory2 = __webpack_require__(18);
 
 var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
 
@@ -14174,7 +14276,7 @@ var _ImageFactory2 = __webpack_require__(22);
 
 var _ImageFactory3 = _interopRequireDefault(_ImageFactory2);
 
-var _Texture = __webpack_require__(16);
+var _Texture = __webpack_require__(11);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
@@ -14211,11 +14313,10 @@ var TextureFactory = function (_ImageFactory) {
                 mimeType = _ref.mimeType,
                 scaleMode = _ref.scaleMode,
                 wrapMode = _ref.wrapMode,
-                premultiplyAlpha = _ref.premultiplyAlpha,
-                generateMipmap = _ref.generateMipmap;
+                premultiplyAlpha = _ref.premultiplyAlpha;
 
             return _get(TextureFactory.prototype.__proto__ || Object.getPrototypeOf(TextureFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (image) {
-                return new _Texture2.default(image, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha, generateMipmap: generateMipmap });
+                return new _Texture2.default(image, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha });
             });
         }
     }, {
@@ -14335,11 +14436,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _utils = __webpack_require__(1);
 
-var _Sprite2 = __webpack_require__(18);
+var _Sprite2 = __webpack_require__(16);
 
 var _Sprite3 = _interopRequireDefault(_Sprite2);
 
-var _Texture = __webpack_require__(16);
+var _Texture = __webpack_require__(11);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
@@ -14841,7 +14942,7 @@ var _ObservableVector = __webpack_require__(26);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
-var _Matrix = __webpack_require__(11);
+var _Matrix = __webpack_require__(12);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -16137,7 +16238,7 @@ var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Matrix = __webpack_require__(11);
+var _Matrix = __webpack_require__(12);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -16761,8 +16862,8 @@ var ObservableSize = function (_Size) {
          */
 
     }, {
-        key: 'multiply',
-        value: function multiply(x) {
+        key: 'scale',
+        value: function scale(x) {
             var y = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : x;
 
             return this.set(this._width * x, this._height * y);
@@ -17591,7 +17692,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Matrix = __webpack_require__(11);
+var _Matrix = __webpack_require__(12);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -19791,14 +19892,50 @@ var PointerManager = function (_ChannelManager) {
                 }
 
                 if ((0, _utils.hasFlag)(FLAGS.DOWN, this._flags)) {
-                    this._triggerPointerEvents('down', this._pointersDown);
+                    this._triggerPointerEvents('down', this._pointersDown, { touchEvent: 'start' });
                     this._pointersDown.clear();
 
                     this._flags = (0, _utils.removeFlag)(FLAGS.DOWN, this._flags);
                 }
 
                 if ((0, _utils.hasFlag)(FLAGS.UP, this._flags)) {
-                    this._triggerPointerEvents('up', this._pointersUp);
+                    var _iteratorNormalCompletion = true;
+                    var _didIteratorError = false;
+                    var _iteratorError = undefined;
+
+                    try {
+                        for (var _iterator = this._pointersUp[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                            var pointer = _step.value;
+                            var _pointer$downPosition = pointer.downPosition,
+                                x = _pointer$downPosition.x,
+                                y = _pointer$downPosition.y;
+
+
+                            this._triggerPointerEvent('up', pointer, { touchEvent: 'end' });
+
+                            if (x > 0 && y > 0 && pointer.position.distanceTo(x, y) < 10) {
+                                this._triggerPointerEvent('tap', pointer, { mouseEvent: 'click' });
+                            } else {
+                                this._triggerPointerEvent('tapoutside', pointer, { mouseEvent: 'clickoutside' });
+                            }
+
+                            pointer.downPosition.set(-1, -1);
+                        }
+                    } catch (err) {
+                        _didIteratorError = true;
+                        _iteratorError = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion && _iterator.return) {
+                                _iterator.return();
+                            }
+                        } finally {
+                            if (_didIteratorError) {
+                                throw _iteratorError;
+                            }
+                        }
+                    }
+
                     this._pointersUp.clear();
 
                     this._flags = (0, _utils.removeFlag)(FLAGS.UP, this._flags);
@@ -19819,27 +19956,27 @@ var PointerManager = function (_ChannelManager) {
                 }
             }
 
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
 
             try {
-                for (var _iterator = this._pointers.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var pointer = _step.value;
+                for (var _iterator2 = this._pointers.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _pointer = _step2.value;
 
-                    pointer.update();
+                    _pointer.update();
                 }
             } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
                     }
                 } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
                     }
                 }
             }
@@ -19856,27 +19993,27 @@ var PointerManager = function (_ChannelManager) {
 
             this._removeEventListeners();
 
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
 
             try {
-                for (var _iterator2 = this._pointers.values()[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var pointer = _step2.value;
+                for (var _iterator3 = this._pointers.values()[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                    var pointer = _step3.value;
 
                     pointer.destroy();
                 }
             } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
+                _didIteratorError3 = true;
+                _iteratorError3 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
+                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                        _iterator3.return();
                     }
                 } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
+                    if (_didIteratorError3) {
+                        throw _iteratorError3;
                     }
                 }
             }
@@ -19999,7 +20136,11 @@ var PointerManager = function (_ChannelManager) {
     }, {
         key: '_onDown',
         value: function _onDown(event) {
-            this._pointersDown.add(this._updatePointer(event));
+            var pointer = this._updatePointer(event);
+
+            pointer.downPosition.set(pointer.x, pointer.y);
+
+            this._pointersDown.add(pointer);
             this._flags = (0, _utils.addFlag)(FLAGS.DOWN, this._flags);
 
             event.preventDefault();
@@ -20075,42 +20216,70 @@ var PointerManager = function (_ChannelManager) {
          * @private
          * @param {String} event
          * @param {Set<Pointer>} pointers
+         * @param {Object} [overrides]
+         * @param {String} [overrides.pointerEvent]
+         * @param {String} [overrides.mouseEvent]
+         * @param {String} [overrides.touchEvent]
+         * @param {String} [overrides.penEvent]
          */
 
     }, {
         key: '_triggerPointerEvents',
-        value: function _triggerPointerEvents(event, pointers) {
-            var _iteratorNormalCompletion3 = true;
-            var _didIteratorError3 = false;
-            var _iteratorError3 = undefined;
+        value: function _triggerPointerEvents(event, pointers, overrides) {
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
 
             try {
-                for (var _iterator3 = pointers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                    var pointer = _step3.value;
+                for (var _iterator4 = pointers[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var pointer = _step4.value;
 
-                    this._app.trigger('pointer:' + event, pointer, this._pointers);
-
-                    if (pointer.type === 'mouse') {
-                        this._app.trigger('mouse:' + event, pointer, this._pointers);
-                    } else if (pointer.type === 'touch') {
-                        this._app.trigger('touch:' + event, pointer, this._pointers);
-                    } else if (pointer.type === 'pen') {
-                        this._app.trigger('pen:' + event, pointer, this._pointers);
-                    }
+                    this._triggerPointerEvent(event, pointer, overrides);
                 }
             } catch (err) {
-                _didIteratorError3 = true;
-                _iteratorError3 = err;
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                        _iterator3.return();
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
                     }
                 } finally {
-                    if (_didIteratorError3) {
-                        throw _iteratorError3;
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
                     }
                 }
+            }
+        }
+
+        /**
+         * @private
+         * @param {String} event
+         * @param {Pointer} pointer
+         * @param {Object} [overrides]
+         * @param {String} [overrides.pointerEvent]
+         * @param {String} [overrides.mouseEvent]
+         * @param {String} [overrides.touchEvent]
+         * @param {String} [overrides.penEvent]
+         */
+
+    }, {
+        key: '_triggerPointerEvent',
+        value: function _triggerPointerEvent(event, pointer) {
+            var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+                pointerEvent = _ref.pointerEvent,
+                mouseEvent = _ref.mouseEvent,
+                touchEvent = _ref.touchEvent,
+                penEvent = _ref.penEvent;
+
+            this._app.trigger('pointer:' + (pointerEvent || event), pointer, this._pointers);
+
+            if (pointer.type === 'mouse') {
+                this._app.trigger('mouse:' + (mouseEvent || event), pointer, this._pointers);
+            } else if (pointer.type === 'touch') {
+                this._app.trigger('touch:' + (touchEvent || event), pointer, this._pointers);
+            } else if (pointer.type === 'pen') {
+                this._app.trigger('pen:' + (penEvent || event), pointer, this._pointers);
             }
         }
     }, {
@@ -20234,6 +20403,12 @@ var Pointer = function (_ChannelManager) {
          * @member {Vector}
          */
         _this._position = new _Vector2.default(event.clientX - bounds.left, event.clientY - bounds.top);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        _this._downPosition = new _Vector2.default(-1, -1);
 
         /**
          * @private
@@ -20398,6 +20573,9 @@ var Pointer = function (_ChannelManager) {
             this._position.destroy();
             this._position = null;
 
+            this._downPosition.destroy();
+            this._downPosition = null;
+
             this._size.destroy();
             this._size = null;
 
@@ -20439,6 +20617,18 @@ var Pointer = function (_ChannelManager) {
         key: 'position',
         get: function get() {
             return this._position;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Vector}
+         */
+
+    }, {
+        key: 'downPosition',
+        get: function get() {
+            return this._downPosition;
         }
 
         /**
@@ -21581,7 +21771,7 @@ Object.defineProperty(exports, 'ResourceContainer', {
   }
 });
 
-var _ResourceFactory = __webpack_require__(17);
+var _ResourceFactory = __webpack_require__(18);
 
 Object.defineProperty(exports, 'ResourceFactory', {
   enumerable: true,
@@ -22131,7 +22321,7 @@ var _Transformable2 = __webpack_require__(51);
 
 var _Transformable3 = _interopRequireDefault(_Transformable2);
 
-var _Matrix = __webpack_require__(11);
+var _Matrix = __webpack_require__(12);
 
 var _Matrix2 = _interopRequireDefault(_Matrix);
 
@@ -22143,7 +22333,7 @@ var _Bounds = __webpack_require__(28);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
-var _Collision = __webpack_require__(12);
+var _Collision = __webpack_require__(17);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
@@ -22314,14 +22504,13 @@ var SceneNode = function (_Transformable) {
          * @public
          * @param {Number} x
          * @param {Number} y
-         * @param {Matrix} [transform]
          * @returns {Boolean}
          */
 
     }, {
         key: 'contains',
-        value: function contains(x, y, transform) {
-            return this.getBounds().contains(x, y, transform);
+        value: function contains(x, y) {
+            return this.getBounds().contains(x, y);
         }
 
         /**
@@ -22564,7 +22753,7 @@ Object.defineProperty(exports, 'Bounds', {
   }
 });
 
-var _Collision = __webpack_require__(12);
+var _Collision = __webpack_require__(17);
 
 Object.defineProperty(exports, 'Collision', {
   enumerable: true,
@@ -22617,6 +22806,16 @@ var _ResourceLoader2 = _interopRequireDefault(_ResourceLoader);
 var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
+
+var _Texture = __webpack_require__(11);
+
+var _Texture2 = _interopRequireDefault(_Texture);
+
+var _Sprite = __webpack_require__(16);
+
+var _Sprite2 = _interopRequireDefault(_Sprite);
+
+var _utils = __webpack_require__(1);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -22717,6 +22916,12 @@ var Application = function (_EventEmitter) {
          */
         _this._isRunning = false;
 
+        /**
+         * @private
+         * @member {String}
+         */
+        _this._cursor = _this._canvas.style.cursor;
+
         if (_this._canvasParent) {
             _this._canvasParent.appendChild(_this._canvas);
         }
@@ -22794,6 +22999,31 @@ var Application = function (_EventEmitter) {
 
         /**
          * @public
+         * @chainable
+         * @param {String|HTMLImageElement|Texture} cursor
+         * @returns {Application}
+         */
+
+    }, {
+        key: 'setCursor',
+        value: function setCursor(cursor) {
+            if (cursor !== this._cursor) {
+                if (cursor instanceof _Texture2.default) {
+                    cursor = cursor.source;
+                }
+
+                if (cursor instanceof HTMLImageElement) {
+                    cursor = 'url(' + (0, _utils.imageToBase64)(cursor) + ')';
+                }
+
+                this._canvas.style.cursor = this._cursor = cursor;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
          */
 
     }, {
@@ -22830,6 +23060,7 @@ var Application = function (_EventEmitter) {
             this._updateHandler = null;
             this._updateId = null;
             this._isRunning = null;
+            this._cursor = null;
         }
     }, {
         key: 'canvas',
@@ -22895,6 +23126,20 @@ var Application = function (_EventEmitter) {
         key: 'sceneManager',
         get: function get() {
             return this._sceneManager;
+        }
+
+        /**
+         * @public
+         * @member {String}
+         */
+
+    }, {
+        key: 'cursor',
+        get: function get() {
+            return this._cursor;
+        },
+        set: function set(cursor) {
+            this.setCursor(cursor);
         }
 
         /**
@@ -23792,7 +24037,7 @@ Object.defineProperty(exports, 'RenderTexture', {
   }
 });
 
-var _Texture = __webpack_require__(16);
+var _Texture = __webpack_require__(11);
 
 Object.defineProperty(exports, 'Texture', {
   enumerable: true,
@@ -23891,7 +24136,7 @@ Object.defineProperty(exports, 'ShaderUniform', {
   }
 });
 
-var _Sprite = __webpack_require__(18);
+var _Sprite = __webpack_require__(16);
 
 Object.defineProperty(exports, 'Sprite', {
   enumerable: true,
@@ -24842,11 +25087,11 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _Sprite2 = __webpack_require__(18);
+var _Sprite2 = __webpack_require__(16);
 
 var _Sprite3 = _interopRequireDefault(_Sprite2);
 
-var _Texture = __webpack_require__(16);
+var _Texture = __webpack_require__(11);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
@@ -25204,7 +25449,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Texture = __webpack_require__(16);
+var _Texture = __webpack_require__(11);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
@@ -25212,7 +25457,7 @@ var _Rectangle = __webpack_require__(4);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Sprite2 = __webpack_require__(18);
+var _Sprite2 = __webpack_require__(16);
 
 var _Sprite3 = _interopRequireDefault(_Sprite2);
 
@@ -27076,7 +27321,7 @@ Object.defineProperty(exports, 'ObservableVector', {
   }
 });
 
-var _Matrix = __webpack_require__(11);
+var _Matrix = __webpack_require__(12);
 
 Object.defineProperty(exports, 'Matrix', {
   enumerable: true,

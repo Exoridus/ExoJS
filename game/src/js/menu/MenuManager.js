@@ -1,4 +1,5 @@
 import { KEYBOARD, GAMEPAD, Input } from 'exojs';
+import MenuItem from './MenuItem';
 
 /**
  * @class MenuManager
@@ -111,6 +112,9 @@ export default class MenuManager {
                 },
             }),
         ];
+
+        app.on('pointer:move', this._onPointerMove, this);
+        app.on('pointer:tap', this._onPointerTap, this);
     }
 
     /**
@@ -153,7 +157,7 @@ export default class MenuManager {
             this._app.inputManager.remove(this._inputs);
 
             if (this._currentMenu) {
-                this._currentMenu.reset();
+                this._currentMenu.disable();
                 this._currentMenu = null;
             }
         }
@@ -190,13 +194,13 @@ export default class MenuManager {
      */
     openMenu(name) {
         if (this._currentMenu) {
-            this._currentMenu.reset();
+            this._currentMenu.disable();
         }
 
         this._currentMenu = this._menus.get(name) || null;
 
         if (this._currentMenu) {
-            this._currentMenu.activate();
+            this._currentMenu.enable();
         }
 
         return this;
@@ -249,6 +253,9 @@ export default class MenuManager {
      * @public
      */
     destroy() {
+        this._app.off('pointer:move', this._onPointerMove, this);
+        this._app.off('pointer:tap', this._onPointerTap, this);
+
         if (this._active) {
             this.disable();
         }
@@ -262,5 +269,37 @@ export default class MenuManager {
 
         this._currentMenu = null;
         this._app = null;
+    }
+
+    /**
+     * @private
+     * @param {Pointer} pointer
+     */
+    _onPointerMove(pointer) {
+        if (this._currentMenu) {
+            const child = this._currentMenu.getPointerChild(pointer);
+
+            if (child) {
+                this._currentMenu.setActiveChild(child);
+                this._app.setCursor('pointer');
+            } else {
+                this._app.setCursor('default');
+            }
+        }
+    }
+
+    /**
+     * @private
+     * @param {Pointer} pointer
+     */
+    _onPointerTap(pointer) {
+        if (this._currentMenu) {
+            const child = this._currentMenu.getPointerChild(pointer);
+
+            if (child) {
+                this._currentMenu.setActiveChild(child);
+                this._currentMenu.updateInput('select');
+            }
+        }
     }
 }

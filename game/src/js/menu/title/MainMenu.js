@@ -52,7 +52,7 @@ export default class MainMenu extends Menu {
 
         /**
          * @private
-         * @member {VersionText}
+         * @member {MenuItem}
          */
         this._versionText = new MenuItem('Ver. 0.0.1', { fontSize: 25, strokeThickness: 3 });
         this._versionText.setPosition(canvas.width - 10, canvas.height);
@@ -86,7 +86,7 @@ export default class MainMenu extends Menu {
     /**
      * @override
      */
-    reset() {
+    disable() {
         if (this._activeChild) {
             this._activeChild.reset();
         }

@@ -45,7 +45,7 @@ export default class MenuItem extends Text {
      * @public
      */
     activate() {
-        this.tint = Color.Yellow;
+        this.setTint(Color.Yellow);
         this._ticker = 0;
     }
 
@@ -66,8 +66,8 @@ export default class MenuItem extends Text {
      * @public
      */
     reset() {
-        this.tint = Color.White;
-        this.setScale(1, 1);
+        this.setTint(Color.White);
+        this.setScale(1);
         this._ticker = 0;
     }
 }

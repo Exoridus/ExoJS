@@ -62,7 +62,7 @@ export default class Vector {
      * @member {Number}
      */
     get magnitude() {
-        return this.length;
+        return this.len;
     }
 
     /**
@@ -70,8 +70,8 @@ export default class Vector {
      * @readonly
      * @member {Number}
      */
-    get length() {
-        return Math.sqrt(this.lengthSquared);
+    get len() {
+        return Math.sqrt(this.len2);
     }
 
     /**
@@ -79,7 +79,7 @@ export default class Vector {
      * @readonly
      * @member {Number}
      */
-    get lengthSquared() {
+    get len2() {
         return (this._x * this._x) + (this._y * this._y);
     }
 
@@ -230,6 +230,22 @@ export default class Vector {
 
     /**
      * @public
+     * @chainable
+     * @param {Matrix} matrix
+     * @param {Vector} [result=this]
+     * @returns {Vector}
+     */
+    transformInverse(matrix, result = this) {
+        const id = 1 / ((this.a * this.d) + (this.c * -this.b));
+
+        return result.set(
+            (this._x * matrix.d * id) + (this._y * -matrix.c * id) + (((matrix.y * matrix.c) - (matrix.x * matrix.d)) * id),
+            (this._y * matrix.a * id) + (this._x * -matrix.b * id) + (((-matrix.y * matrix.a) + (matrix.x * matrix.b)) * id)
+        );
+    }
+
+    /**
+     * @public
      * @param {Vector} [result=this]
      * @returns {Vector}
      */
@@ -261,23 +277,25 @@ export default class Vector {
 
     /**
      * @public
-     * @param {Vector} vector
+     * @param {Number} x
+     * @param {Number} y
      * @returns {Number}
      */
-    dot(vector) {
-        return (this._x * vector.x) + (this._y * vector.y);
+    dot(x, y) {
+        return (this._x * x) + (this._y * y);
     }
 
     /**
      * @public
      * @chainable
      * @param {Vector} vector
+     * @param {Vector} [result=this]
      * @returns {Vector}
      */
-    project(vector) {
-        const dot = this.dot(vector) / vector.dot(vector);
+    project(vector, result = this) {
+        const amt = this.dot(vector.x, vector.y) / vector.len2;
 
-        return this.set(dot * vector.x, dot * vector.y);
+        return result.set(amt * vector.x, amt * vector.y);
     }
 
     /**
@@ -286,13 +304,13 @@ export default class Vector {
      * @param {Vector} axis
      * @returns {Vector}
      */
-    reflect(axis) {
+    reflect(axis, result = this) {
         const x = this._x,
             y = this._y;
 
         return this
-            .project(axis)
-            .multiply(2)
+            .project(axis, result)
+            .scale(2)
             .subtract(x, y);
     }
 
