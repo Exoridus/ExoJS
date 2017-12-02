@@ -50,12 +50,17 @@ window.app.start(new Exo.Scene({
 
         this._spritesheet.setFrame(`explosion ${x}-${y}`);
 
-        this.app.renderManager
+        this._ticker++;
+    },
+
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._spritesheet)
             .display();
-
-        this._ticker++;
     },
 
     /**

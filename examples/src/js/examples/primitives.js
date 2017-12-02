@@ -11,7 +11,6 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
 
         /**
          * @type {Drawable}
@@ -20,10 +19,10 @@ window.app.start(new Exo.Scene({
     },
 
     /**
-     * @param {Time} delta
+     * @param {RenderManager} renderManager
      */
-    update(delta) {
-        this.app.renderManager
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._drawable)
             .display();

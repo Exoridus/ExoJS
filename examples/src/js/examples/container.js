@@ -57,8 +57,13 @@ window.app.start(new Exo.Scene({
         this._rainbow.height = bounds.height;
 
         this._bunnies.rotate(delta.seconds * 36);
+    },
 
-        this.app.renderManager
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._rainbow)
             .draw(this._bunnies)

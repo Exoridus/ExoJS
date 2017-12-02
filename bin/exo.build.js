@@ -1699,8 +1699,8 @@ exports.default = {
      * @property {String} assetsPath=''
      * @property {Number} width=800
      * @property {Number} height=600
-     * @property {?HTMLCanvasElement|?String} canvas=null
-     * @property {?HTMLCanvasElement|?String} canvasParent=null
+     * @property {?HTMLCanvasElement} canvas=null
+     * @property {?HTMLElement} canvasParent=null
      * @property {Color} clearColor=Color.Black
      * @property {?Database} database=null
      */
@@ -5844,7 +5844,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Container2 = __webpack_require__(22);
+var _Container2 = __webpack_require__(21);
 
 var _Container3 = _interopRequireDefault(_Container2);
 
@@ -6302,227 +6302,6 @@ exports.default = Sprite;
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _Rectangle = __webpack_require__(5);
-
-var _Rectangle2 = _interopRequireDefault(_Rectangle);
-
-var _Matrix = __webpack_require__(10);
-
-var _Matrix2 = _interopRequireDefault(_Matrix);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class Bounds
- */
-var Bounds = function () {
-
-    /**
-     * @constructor
-     */
-    function Bounds() {
-        _classCallCheck(this, Bounds);
-
-        /**
-         * @private
-         * @type {Number}
-         */
-        this._minX = Infinity;
-
-        /**
-         * @private
-         * @type {Number}
-         */
-        this._minY = Infinity;
-
-        /**
-         * @private
-         * @type {Number}
-         */
-        this._maxX = -Infinity;
-
-        /**
-         * @private
-         * @type {Number}
-         */
-        this._maxY = -Infinity;
-
-        /**
-         * @private
-         * @type {Rectangle}
-         */
-        this._rect = new _Rectangle2.default();
-
-        /**
-         * @private
-         * @type {Boolean}
-         */
-        this._dirty = true;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-
-
-    _createClass(Bounds, [{
-        key: 'addCoords',
-
-
-        /**
-         * @public
-         * @chainable
-         * @param {Number} x
-         * @param {Number} y
-         * @returns {Bounds}
-         */
-        value: function addCoords(x, y) {
-            this._minX = Math.min(this._minX, x);
-            this._minY = Math.min(this._minY, y);
-            this._maxX = Math.max(this._maxX, x);
-            this._maxY = Math.max(this._maxY, y);
-
-            this._dirty = true;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {Rectangle} rectangle
-         * @param {Matrix} [transform]
-         * @returns {Bounds}
-         */
-
-    }, {
-        key: 'addRect',
-        value: function addRect(rectangle, transform) {
-            if (transform) {
-                rectangle = rectangle.transform(transform, _Rectangle2.default.Temp);
-            }
-
-            return this.addCoords(rectangle.left, rectangle.top).addCoords(rectangle.right, rectangle.bottom);
-        }
-
-        /**
-         * @public
-         * @returns {Rectangle}
-         */
-
-    }, {
-        key: 'getRect',
-        value: function getRect() {
-            if (this._dirty) {
-                this._rect.set(this._minX, this._minY, this._maxX - this._minX, this._maxY - this._minY);
-
-                this._dirty = false;
-            }
-
-            return this._rect;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Bounds}
-         */
-
-    }, {
-        key: 'reset',
-        value: function reset() {
-            this._minX = Infinity;
-            this._minY = Infinity;
-            this._maxX = -Infinity;
-            this._maxY = -Infinity;
-
-            this._dirty = true;
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: 'destroy',
-        value: function destroy() {
-            this._rect.destroy();
-            this._rect = null;
-
-            this._minX = null;
-            this._minY = null;
-            this._maxX = null;
-            this._maxY = null;
-
-            this._dirty = null;
-        }
-    }, {
-        key: 'minX',
-        get: function get() {
-            return this._minX;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'minY',
-        get: function get() {
-            return this._minY;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'maxX',
-        get: function get() {
-            return this._maxX;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'maxY',
-        get: function get() {
-            return this._maxY;
-        }
-    }]);
-
-    return Bounds;
-}();
-
-exports.default = Bounds;
-
-/***/ }),
-/* 18 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
@@ -6596,7 +6375,7 @@ var ParticleModifier = function () {
 exports.default = ParticleModifier;
 
 /***/ }),
-/* 19 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6671,7 +6450,7 @@ var BlobFactory = function (_ArrayBufferFactory) {
 exports.default = BlobFactory;
 
 /***/ }),
-/* 20 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6685,7 +6464,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _BlobFactory2 = __webpack_require__(19);
+var _BlobFactory2 = __webpack_require__(18);
 
 var _BlobFactory3 = _interopRequireDefault(_BlobFactory2);
 
@@ -6820,7 +6599,7 @@ var ImageFactory = function (_BlobFactory) {
 exports.default = ImageFactory;
 
 /***/ }),
-/* 21 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7235,7 +7014,7 @@ var Media = function (_EventEmitter) {
 exports.default = Media;
 
 /***/ }),
-/* 22 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7249,7 +7028,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Drawable2 = __webpack_require__(23);
+var _Drawable2 = __webpack_require__(22);
 
 var _Drawable3 = _interopRequireDefault(_Drawable2);
 
@@ -7648,7 +7427,7 @@ var Container = function (_Drawable) {
 exports.default = Container;
 
 /***/ }),
-/* 23 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7744,7 +7523,7 @@ var Drawable = function (_SceneNode) {
 exports.default = Drawable;
 
 /***/ }),
-/* 24 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7956,6 +7735,227 @@ var ObservableVector = function (_Vector) {
 }(_Vector3.default);
 
 exports.default = ObservableVector;
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Rectangle = __webpack_require__(5);
+
+var _Rectangle2 = _interopRequireDefault(_Rectangle);
+
+var _Matrix = __webpack_require__(10);
+
+var _Matrix2 = _interopRequireDefault(_Matrix);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class Bounds
+ */
+var Bounds = function () {
+
+    /**
+     * @constructor
+     */
+    function Bounds() {
+        _classCallCheck(this, Bounds);
+
+        /**
+         * @private
+         * @type {Number}
+         */
+        this._minX = Infinity;
+
+        /**
+         * @private
+         * @type {Number}
+         */
+        this._minY = Infinity;
+
+        /**
+         * @private
+         * @type {Number}
+         */
+        this._maxX = -Infinity;
+
+        /**
+         * @private
+         * @type {Number}
+         */
+        this._maxY = -Infinity;
+
+        /**
+         * @private
+         * @type {Rectangle}
+         */
+        this._rect = new _Rectangle2.default();
+
+        /**
+         * @private
+         * @type {Boolean}
+         */
+        this._dirty = true;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+
+
+    _createClass(Bounds, [{
+        key: 'addCoords',
+
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} x
+         * @param {Number} y
+         * @returns {Bounds}
+         */
+        value: function addCoords(x, y) {
+            this._minX = Math.min(this._minX, x);
+            this._minY = Math.min(this._minY, y);
+            this._maxX = Math.max(this._maxX, x);
+            this._maxY = Math.max(this._maxY, y);
+
+            this._dirty = true;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Rectangle} rectangle
+         * @param {Matrix} [transform]
+         * @returns {Bounds}
+         */
+
+    }, {
+        key: 'addRect',
+        value: function addRect(rectangle, transform) {
+            if (transform) {
+                rectangle = rectangle.transform(transform, _Rectangle2.default.Temp);
+            }
+
+            return this.addCoords(rectangle.left, rectangle.top).addCoords(rectangle.right, rectangle.bottom);
+        }
+
+        /**
+         * @public
+         * @returns {Rectangle}
+         */
+
+    }, {
+        key: 'getRect',
+        value: function getRect() {
+            if (this._dirty) {
+                this._rect.set(this._minX, this._minY, this._maxX - this._minX, this._maxY - this._minY);
+
+                this._dirty = false;
+            }
+
+            return this._rect;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Bounds}
+         */
+
+    }, {
+        key: 'reset',
+        value: function reset() {
+            this._minX = Infinity;
+            this._minY = Infinity;
+            this._maxX = -Infinity;
+            this._maxY = -Infinity;
+
+            this._dirty = true;
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            this._rect.destroy();
+            this._rect = null;
+
+            this._minX = null;
+            this._minY = null;
+            this._maxX = null;
+            this._maxY = null;
+
+            this._dirty = null;
+        }
+    }, {
+        key: 'minX',
+        get: function get() {
+            return this._minX;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'minY',
+        get: function get() {
+            return this._minY;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'maxX',
+        get: function get() {
+            return this._maxX;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: 'maxY',
+        get: function get() {
+            return this._maxY;
+        }
+    }]);
+
+    return Bounds;
+}();
+
+exports.default = Bounds;
 
 /***/ }),
 /* 25 */
@@ -9842,7 +9842,7 @@ var _ArrayBufferFactory = __webpack_require__(12);
 
 var _ArrayBufferFactory2 = _interopRequireDefault(_ArrayBufferFactory);
 
-var _BlobFactory = __webpack_require__(19);
+var _BlobFactory = __webpack_require__(18);
 
 var _BlobFactory2 = _interopRequireDefault(_BlobFactory);
 
@@ -9850,7 +9850,7 @@ var _FontFactory = __webpack_require__(33);
 
 var _FontFactory2 = _interopRequireDefault(_FontFactory);
 
-var _ImageFactory = __webpack_require__(20);
+var _ImageFactory = __webpack_require__(19);
 
 var _ImageFactory2 = _interopRequireDefault(_ImageFactory);
 
@@ -11026,7 +11026,7 @@ var _support = __webpack_require__(4);
 
 var _support2 = _interopRequireDefault(_support);
 
-var _Media2 = __webpack_require__(21);
+var _Media2 = __webpack_require__(20);
 
 var _Media3 = _interopRequireDefault(_Media2);
 
@@ -11708,7 +11708,7 @@ var _support = __webpack_require__(4);
 
 var _support2 = _interopRequireDefault(_support);
 
-var _Media2 = __webpack_require__(21);
+var _Media2 = __webpack_require__(20);
 
 var _Media3 = _interopRequireDefault(_Media2);
 
@@ -12129,7 +12129,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _ImageFactory2 = __webpack_require__(20);
+var _ImageFactory2 = __webpack_require__(19);
 
 var _ImageFactory3 = _interopRequireDefault(_ImageFactory2);
 
@@ -12796,7 +12796,7 @@ var _EventEmitter2 = __webpack_require__(6);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ObservableVector = __webpack_require__(24);
+var _ObservableVector = __webpack_require__(23);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -13215,6 +13215,7 @@ var SceneManager = function () {
             }
 
             this._currentScene.update(delta);
+            this._currentScene.draw(this._app.renderManager);
         }
 
         /**
@@ -14087,7 +14088,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ObservableVector = __webpack_require__(24);
+var _ObservableVector = __webpack_require__(23);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -14105,7 +14106,7 @@ var _ObservableSize = __webpack_require__(51);
 
 var _ObservableSize2 = _interopRequireDefault(_ObservableSize);
 
-var _Bounds = __webpack_require__(17);
+var _Bounds = __webpack_require__(24);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
@@ -19783,7 +19784,7 @@ Object.keys(_core).forEach(function (key) {
     });
 });
 
-var _graphics = __webpack_require__(81);
+var _graphics = __webpack_require__(80);
 
 Object.keys(_graphics).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19795,7 +19796,7 @@ Object.keys(_graphics).forEach(function (key) {
     });
 });
 
-var _particles = __webpack_require__(86);
+var _particles = __webpack_require__(85);
 
 Object.keys(_particles).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19807,7 +19808,7 @@ Object.keys(_particles).forEach(function (key) {
     });
 });
 
-var _input = __webpack_require__(91);
+var _input = __webpack_require__(90);
 
 Object.keys(_input).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19819,7 +19820,7 @@ Object.keys(_input).forEach(function (key) {
     });
 });
 
-var _math = __webpack_require__(93);
+var _math = __webpack_require__(92);
 
 Object.keys(_math).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -19910,7 +19911,7 @@ Object.defineProperty(exports, 'ResourceFactory', {
   }
 });
 
-var _BlobFactory = __webpack_require__(19);
+var _BlobFactory = __webpack_require__(18);
 
 Object.defineProperty(exports, 'BlobFactory', {
   enumerable: true,
@@ -19973,7 +19974,7 @@ Object.defineProperty(exports, 'VideoFactory', {
   }
 });
 
-var _ImageFactory = __webpack_require__(20);
+var _ImageFactory = __webpack_require__(19);
 
 Object.defineProperty(exports, 'ImageFactory', {
   enumerable: true,
@@ -20459,7 +20460,7 @@ var _Rectangle = __webpack_require__(5);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Bounds = __webpack_require__(17);
+var _Bounds = __webpack_require__(24);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
@@ -20799,7 +20800,7 @@ Object.defineProperty(exports, 'Timer', {
   }
 });
 
-var _Bounds = __webpack_require__(17);
+var _Bounds = __webpack_require__(24);
 
 Object.defineProperty(exports, 'Bounds', {
   enumerable: true,
@@ -20808,16 +20809,7 @@ Object.defineProperty(exports, 'Bounds', {
   }
 });
 
-var _Random = __webpack_require__(79);
-
-Object.defineProperty(exports, 'Random', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_Random).default;
-  }
-});
-
-var _Collision = __webpack_require__(80);
+var _Collision = __webpack_require__(79);
 
 Object.defineProperty(exports, 'Collision', {
   enumerable: true,
@@ -20892,8 +20884,8 @@ var Application = function (_EventEmitter) {
      * @param {String} [options.assetsPath='']
      * @param {Number} [options.width=800]
      * @param {Number} [options.height=600]
-     * @param {?HTMLCanvasElement|?String} [options.canvas=null]
-     * @param {?HTMLCanvasElement|?String} [options.canvasParent=null]
+     * @param {?HTMLCanvasElement} [options.canvas=null]
+     * @param {?HTMLElement} [options.canvasParent=null]
      * @param {Color} [options.clearColor=Color.Black]
      * @param {?Database} [options.database=null]
      */
@@ -20920,7 +20912,7 @@ var Application = function (_EventEmitter) {
          * @private
          * @member {HTMLElement}
          */
-        _this._canvasParent = (typeof config.canvasParent === 'string' ? document.querySelector(config.canvasParent) : config.canvasParent) || null;
+        _this._canvasParent = config.canvasParent instanceof HTMLElement ? config.canvasParent : null;
 
         /**
          * @private
@@ -21696,14 +21688,6 @@ var _EventEmitter2 = __webpack_require__(6);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _Bounds = __webpack_require__(17);
-
-var _Bounds2 = _interopRequireDefault(_Bounds);
-
-var _Rectangle = __webpack_require__(5);
-
-var _Rectangle2 = _interopRequireDefault(_Rectangle);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21725,6 +21709,7 @@ var Scene = function (_EventEmitter) {
      * @param {Function} [prototype.load]
      * @param {Function} [prototype.init]
      * @param {Function} [prototype.update]
+     * @param {Function} [prototype.draw]
      * @param {Function} [prototype.unload]
      * @param {Function} [prototype.destroy]
      */
@@ -21782,6 +21767,17 @@ var Scene = function (_EventEmitter) {
     }, {
         key: 'update',
         value: function update(delta) {} // eslint-disable-line
+        // do nothing
+
+
+        /**
+         * @public
+         * @param {RenderManager} renderManager
+         */
+
+    }, {
+        key: 'draw',
+        value: function draw(renderManager) {} // eslint-disable-line
         // do nothing
 
 
@@ -22005,211 +22001,6 @@ exports.default = Timer;
 
 /***/ }),
 /* 79 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var limit = Math.pow(2, 32) - 1;
-
-/**
- * @class Random
- */
-
-var Random = function () {
-
-    /**
-     * @constructor
-     * @param {Number} [seed=Date.now()]
-     */
-    function Random() {
-        var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Date.now();
-
-        _classCallCheck(this, Random);
-
-        /**
-         * @private
-         * @type {Number[]}
-         */
-        this._state = new Uint32Array(624);
-
-        /**
-         * @private
-         * @type {Number}
-         */
-        this._iteration = 0;
-
-        /**
-         * @private
-         * @type {?Number}
-         */
-        this._seed = null;
-
-        /**
-         * @private
-         * @type {?Number}
-         */
-        this._value = null;
-
-        this.seed = seed;
-
-        this._twist();
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {?Number}
-     */
-
-
-    _createClass(Random, [{
-        key: "reset",
-
-
-        /**
-         * @public
-         * @returns {Random}
-         */
-        value: function reset() {
-            this._state[0] = this._seed;
-
-            for (var i = 1; i < 624; i++) {
-                var s = this._state[i - 1] ^ this._state[i - 1] >>> 30;
-
-                this._state[i] = (((s & 0xffff0000) >>> 16) * 1812433253 << 16) + (s & 0x0000ffff) * 1812433253 + i;
-                this._state[i] |= 0;
-            }
-
-            this._iteration = 0;
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @param {Number} [min=0]
-         * @param {Number} [max=1]
-         * @returns {Number}
-         */
-
-    }, {
-        key: "next",
-        value: function next() {
-            var min = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-            var max = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-
-            if (this._iteration >= 624) {
-                this._twist();
-            }
-
-            this._value = this._state[this._iteration++];
-            this._value ^= this._value >>> 11;
-            this._value ^= this._value << 7 & 0x9d2c5680;
-            this._value ^= this._value << 15 & 0xefc60000;
-            this._value ^= this._value >>> 18;
-            this._value = (this._value >>> 0) / limit * (max - min) + min;
-
-            return this._value;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: "destroy",
-        value: function destroy() {
-            this._state = null;
-            this._iteration = null;
-            this._seed = null;
-            this._value = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: "_twist",
-        value: function _twist() {
-            var state = this._state;
-
-            // first 624-397=227 words
-            for (var i = 0; i < 227; i++) {
-                var bits = state[i] & 0x80000000 | state[i + 1] & 0x7fffffff;
-
-                state[i] = state[i + 397] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
-            }
-
-            // remaining words (except the very last one)
-            for (var _i = 227; _i < 623; _i++) {
-                var bits = state[_i] & 0x80000000 | state[_i + 1] & 0x7fffffff;
-
-                state[_i] = state[_i - 227] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
-            }
-
-            // last word is computed pretty much the same way, but i + 1 must wrap around to 0
-            var bits = state[623] & 0x80000000 | state[0] & 0x7fffffff;
-
-            state[623] = state[396] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
-
-            // word used for next random number
-            this._iteration = 0;
-            this._value = null;
-        }
-    }, {
-        key: "seed",
-        get: function get() {
-            return this._value;
-        },
-        set: function set(seed) {
-            this._seed = seed;
-            this.reset();
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {?Number}
-         */
-
-    }, {
-        key: "value",
-        get: function get() {
-            return this._value;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: "iteration",
-        get: function get() {
-            return this._iteration;
-        }
-    }]);
-
-    return Random;
-}();
-
-exports.default = Random;
-
-/***/ }),
-/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22611,7 +22402,7 @@ var Collision = function () {
 exports.default = Collision;
 
 /***/ }),
-/* 81 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22639,7 +22430,7 @@ Object.defineProperty(exports, 'RenderTarget', {
   }
 });
 
-var _RenderTexture = __webpack_require__(82);
+var _RenderTexture = __webpack_require__(81);
 
 Object.defineProperty(exports, 'RenderTexture', {
   enumerable: true,
@@ -22675,7 +22466,7 @@ Object.defineProperty(exports, 'Renderer', {
   }
 });
 
-var _Drawable = __webpack_require__(23);
+var _Drawable = __webpack_require__(22);
 
 Object.defineProperty(exports, 'Drawable', {
   enumerable: true,
@@ -22684,7 +22475,7 @@ Object.defineProperty(exports, 'Drawable', {
   }
 });
 
-var _Drawing = __webpack_require__(83);
+var _Drawing = __webpack_require__(82);
 
 Object.defineProperty(exports, 'Drawing', {
   enumerable: true,
@@ -22693,7 +22484,7 @@ Object.defineProperty(exports, 'Drawing', {
   }
 });
 
-var _Container = __webpack_require__(22);
+var _Container = __webpack_require__(21);
 
 Object.defineProperty(exports, 'Container', {
   enumerable: true,
@@ -22702,7 +22493,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Text = __webpack_require__(84);
+var _Text = __webpack_require__(83);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -22756,7 +22547,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Spritesheet = __webpack_require__(85);
+var _Spritesheet = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Spritesheet', {
   enumerable: true,
@@ -22786,7 +22577,7 @@ Object.defineProperty(exports, 'SpriteShader', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 82 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23235,7 +23026,7 @@ var RenderTexture = function (_RenderTarget) {
 exports.default = RenderTexture;
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23251,7 +23042,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _Container2 = __webpack_require__(22);
+var _Container2 = __webpack_require__(21);
 
 var _Container3 = _interopRequireDefault(_Container2);
 
@@ -23682,7 +23473,7 @@ var Drawing = function (_Container) {
 exports.default = Drawing;
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24046,7 +23837,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 85 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24314,7 +24105,7 @@ var Spritesheet = function (_Sprite) {
 exports.default = Spritesheet;
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24333,7 +24124,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(87);
+var _ParticleEmitter = __webpack_require__(86);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -24369,7 +24160,7 @@ Object.defineProperty(exports, 'ParticleRenderer', {
   }
 });
 
-var _ParticleModifier = __webpack_require__(18);
+var _ParticleModifier = __webpack_require__(17);
 
 Object.defineProperty(exports, 'ParticleModifier', {
   enumerable: true,
@@ -24378,7 +24169,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(88);
+var _ForceModifier = __webpack_require__(87);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -24387,7 +24178,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(89);
+var _ScaleModifier = __webpack_require__(88);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -24396,7 +24187,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(90);
+var _TorqueModifier = __webpack_require__(89);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -24408,7 +24199,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 87 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24422,7 +24213,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Drawable2 = __webpack_require__(23);
+var _Drawable2 = __webpack_require__(22);
 
 var _Drawable3 = _interopRequireDefault(_Drawable2);
 
@@ -25099,7 +24890,7 @@ var ParticleEmitter = function (_Drawable) {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 88 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25111,7 +24902,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(18);
+var _ParticleModifier2 = __webpack_require__(17);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -25221,7 +25012,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 89 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25233,7 +25024,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(18);
+var _ParticleModifier2 = __webpack_require__(17);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -25341,7 +25132,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 90 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25353,7 +25144,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ParticleModifier2 = __webpack_require__(18);
+var _ParticleModifier2 = __webpack_require__(17);
 
 var _ParticleModifier3 = _interopRequireDefault(_ParticleModifier2);
 
@@ -25453,7 +25244,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 91 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25472,7 +25263,7 @@ Object.defineProperty(exports, 'ChannelManager', {
   }
 });
 
-var _Input = __webpack_require__(92);
+var _Input = __webpack_require__(91);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -25565,7 +25356,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 92 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25904,7 +25695,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 93 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25923,7 +25714,7 @@ Object.defineProperty(exports, 'Vector', {
   }
 });
 
-var _ObservableVector = __webpack_require__(24);
+var _ObservableVector = __webpack_require__(23);
 
 Object.defineProperty(exports, 'ObservableVector', {
   enumerable: true,
@@ -25968,7 +25759,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(94);
+var _Circle = __webpack_require__(93);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -25995,6 +25786,15 @@ Object.defineProperty(exports, 'Size', {
   }
 });
 
+var _Random = __webpack_require__(94);
+
+Object.defineProperty(exports, 'Random', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_Random).default;
+  }
+});
+
 var _ObservableSize = __webpack_require__(51);
 
 Object.defineProperty(exports, 'ObservableSize', {
@@ -26007,7 +25807,7 @@ Object.defineProperty(exports, 'ObservableSize', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 94 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26224,6 +26024,211 @@ Circle.Empty = new Circle(0, 0, 0);
 Circle.Temp = new Circle();
 
 /***/ }),
+/* 94 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var limit = Math.pow(2, 32) - 1;
+
+/**
+ * @class Random
+ */
+
+var Random = function () {
+
+    /**
+     * @constructor
+     * @param {Number} [seed=Date.now()]
+     */
+    function Random() {
+        var seed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : Date.now();
+
+        _classCallCheck(this, Random);
+
+        /**
+         * @private
+         * @type {Number[]}
+         */
+        this._state = new Uint32Array(624);
+
+        /**
+         * @private
+         * @type {Number}
+         */
+        this._iteration = 0;
+
+        /**
+         * @private
+         * @type {?Number}
+         */
+        this._seed = null;
+
+        /**
+         * @private
+         * @type {?Number}
+         */
+        this._value = null;
+
+        this.seed = seed;
+
+        this._twist();
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?Number}
+     */
+
+
+    _createClass(Random, [{
+        key: "reset",
+
+
+        /**
+         * @public
+         * @returns {Random}
+         */
+        value: function reset() {
+            this._state[0] = this._seed;
+
+            for (var i = 1; i < 624; i++) {
+                var s = this._state[i - 1] ^ this._state[i - 1] >>> 30;
+
+                this._state[i] = (((s & 0xffff0000) >>> 16) * 1812433253 << 16) + (s & 0x0000ffff) * 1812433253 + i;
+                this._state[i] |= 0;
+            }
+
+            this._iteration = 0;
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @param {Number} [min=0]
+         * @param {Number} [max=1]
+         * @returns {Number}
+         */
+
+    }, {
+        key: "next",
+        value: function next() {
+            var min = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+            var max = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+
+            if (this._iteration >= 624) {
+                this._twist();
+            }
+
+            this._value = this._state[this._iteration++];
+            this._value ^= this._value >>> 11;
+            this._value ^= this._value << 7 & 0x9d2c5680;
+            this._value ^= this._value << 15 & 0xefc60000;
+            this._value ^= this._value >>> 18;
+            this._value = (this._value >>> 0) / limit * (max - min) + min;
+
+            return this._value;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: "destroy",
+        value: function destroy() {
+            this._state = null;
+            this._iteration = null;
+            this._seed = null;
+            this._value = null;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
+        key: "_twist",
+        value: function _twist() {
+            var state = this._state;
+
+            // first 624-397=227 words
+            for (var i = 0; i < 227; i++) {
+                var bits = state[i] & 0x80000000 | state[i + 1] & 0x7fffffff;
+
+                state[i] = state[i + 397] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
+            }
+
+            // remaining words (except the very last one)
+            for (var _i = 227; _i < 623; _i++) {
+                var bits = state[_i] & 0x80000000 | state[_i + 1] & 0x7fffffff;
+
+                state[_i] = state[_i - 227] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
+            }
+
+            // last word is computed pretty much the same way, but i + 1 must wrap around to 0
+            var bits = state[623] & 0x80000000 | state[0] & 0x7fffffff;
+
+            state[623] = state[396] ^ bits >>> 1 ^ (bits & 1) * 0x9908b0df;
+
+            // word used for next random number
+            this._iteration = 0;
+            this._value = null;
+        }
+    }, {
+        key: "seed",
+        get: function get() {
+            return this._value;
+        },
+        set: function set(seed) {
+            this._seed = seed;
+            this.reset();
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {?Number}
+         */
+
+    }, {
+        key: "value",
+        get: function get() {
+            return this._value;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Number}
+         */
+
+    }, {
+        key: "iteration",
+        get: function get() {
+            return this._iteration;
+        }
+    }]);
+
+    return Random;
+}();
+
+exports.default = Random;
+
+/***/ }),
 /* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26234,7 +26239,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Media = __webpack_require__(21);
+var _Media = __webpack_require__(20);
 
 Object.defineProperty(exports, 'Media', {
   enumerable: true,

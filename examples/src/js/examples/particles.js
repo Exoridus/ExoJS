@@ -73,8 +73,13 @@ window.app.start(new Exo.Scene({
         options.velocity.set(random.next(-100, 100), random.next(-100, 0));
 
         this._emitter.update(delta);
+    },
 
-        this.app.renderManager
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._emitter)
             .display();

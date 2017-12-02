@@ -103,15 +103,9 @@ window.app.start(new Exo.Scene({
             return;
         }
 
-        const canvas = this._canvas,
-            context = this._context,
-            freqData = this._analyser.frequencyData,
-            timeDomain = this._analyser.timeDomainData,
+        const freqData = this._analyser.frequencyData,
             seconds = this._time.add(delta).seconds,
-            width = canvas.width,
-            height = canvas.height,
             length = freqData.length,
-            barWidth = Math.ceil(width / length),
             redModifier = (Math.cos(seconds) * 0.5) + 0.5,
             greenModifier = (Math.sin(seconds) * 0.5) + 0.5;
 
@@ -132,24 +126,41 @@ window.app.start(new Exo.Scene({
         }
 
         this._clearColor.set(r / length, g / length, b / length);
+    },
 
-        context.clearRect(0, 0, width, height);
-        context.beginPath();
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        if (this._music.paused) {
+            return;
+        }
+
+        const canvas = this._canvas,
+            freqData = this._analyser.frequencyData,
+            timeDomain = this._analyser.timeDomainData,
+            width = canvas.width,
+            height = canvas.height,
+            length = freqData.length,
+            barWidth = Math.ceil(width / length);
+
+        this._context.clearRect(0, 0, width, height);
+        this._context.beginPath();
 
         for (let i = 0; i < length; i++) {
             const barHeight = height * freqData[i] / 255,
                 lineHeight = height * timeDomain[i] / 255,
                 offsetX = (i * barWidth) | 0;
 
-            context.fillRect(offsetX, ((height / 2) - (barHeight / 2)) | 0, barWidth, barHeight | 0);
-            context.lineTo(offsetX, ((height * 0.75) - (lineHeight / 2)) | 0);
+            this._context.fillRect(offsetX, ((height / 2) - (barHeight / 2)) | 0, barWidth, barHeight | 0);
+            this._context.lineTo(offsetX, ((height * 0.75) - (lineHeight / 2)) | 0);
         }
 
-        context.stroke();
+        this._context.stroke();
 
         this._screen.updateTexture();
 
-        this.app.renderManager
+        renderManager
             .clear(this._clearColor)
             .draw(this._screen)
             .display();

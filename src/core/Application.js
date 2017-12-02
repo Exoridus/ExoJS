@@ -44,7 +44,7 @@ export default class Application extends EventEmitter {
          * @private
          * @member {HTMLElement}
          */
-        this._canvasParent = (config.canvas instanceof HTMLElement) ? config.canvasParent : null;
+        this._canvasParent = (config.canvasParent instanceof HTMLElement) ? config.canvasParent : null;
 
         /**
          * @private

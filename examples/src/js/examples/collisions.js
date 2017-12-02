@@ -53,8 +53,13 @@ window.app.start(new Exo.Scene({
             this._leftBunny.setTint(Exo.Color.White);
             this._rightBunny.setTint(Exo.Color.White);
         }
+    },
 
-        this.app.renderManager
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._leftBunny)
             .draw(this._rightBunny)

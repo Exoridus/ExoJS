@@ -129,8 +129,13 @@ window.app.start(new Exo.Scene({
         this._rightBunny.setPosition((canvas.width / 2) + offset, canvas.height / 2);
 
         this._ticker += delta.seconds;
+    },
 
-        this.app.renderManager
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._background)
             .draw(this._leftBunny)

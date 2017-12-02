@@ -1,6 +1,4 @@
 import EventEmitter from './EventEmitter';
-import Bounds from './Bounds';
-import Rectangle from '../math/Rectangle';
 
 /**
  * @class Scene
@@ -14,6 +12,7 @@ export default class Scene extends EventEmitter {
      * @param {Function} [prototype.load]
      * @param {Function} [prototype.init]
      * @param {Function} [prototype.update]
+     * @param {Function} [prototype.draw]
      * @param {Function} [prototype.unload]
      * @param {Function} [prototype.destroy]
      */
@@ -64,6 +63,14 @@ export default class Scene extends EventEmitter {
      * @param {Time} delta
      */
     update(delta) { // eslint-disable-line
+        // do nothing
+    }
+
+    /**
+     * @public
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) { // eslint-disable-line
         // do nothing
     }
 

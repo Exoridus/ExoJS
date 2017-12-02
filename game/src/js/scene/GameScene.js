@@ -61,15 +61,18 @@ export default class GameScene extends Scene {
         if (!this._paused) {
             this._player.update(delta);
             this._worldMap.update(delta);
-
-            this.app.renderManager
-                .clear()
-                .draw(this._worldMap)
-                .draw(this._player)
-                .display();
         }
+    }
 
-        return this;
+    /**
+     * @override
+     */
+    draw(renderManager) {
+        renderManager
+            .clear()
+            .draw(this._worldMap)
+            .draw(this._player)
+            .display();
     }
 
     /**

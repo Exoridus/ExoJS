@@ -67,8 +67,13 @@ window.app.start(new Exo.Scene({
 
             this._timer.restart();
         }
+    },
 
-        this.app.renderManager
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._bunnies)
             .display();

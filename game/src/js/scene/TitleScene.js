@@ -1,4 +1,3 @@
-import { Scene, Sprite } from 'exojs';
 import TitleMenuManager from '../menu/title/TitleMenuManager';
 
 /**
@@ -38,8 +37,13 @@ export default class TitleScene extends Scene {
      */
     update(delta) {
         this._menuManager.update(delta);
+    }
 
-        this.app.renderManager
+    /**
+     * @override
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._background)
             .draw(this._menuManager)

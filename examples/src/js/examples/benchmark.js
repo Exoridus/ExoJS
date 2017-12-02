@@ -28,9 +28,9 @@ window.app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Sprite[]}
+         * @member {Container}
          */
-        this._bunnies = [];
+        this._bunnies = new Exo.Container();
 
         /**
          * @private
@@ -83,7 +83,7 @@ window.app.start(new Exo.Scene({
             bunny._speedX = Math.random() * 10;
             bunny._speedY = Math.random() * 10;
 
-            this._bunnies.push(bunny);
+            this._bunnies.addChild(bunny);
         }
     },
 
@@ -91,11 +91,7 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const renderManager = this.app.renderManager;
-
-        renderManager.clear();
-
-        for (const bunny of this._bunnies) {
+        for (const bunny of this._bunnies.children) {
             bunny._speedY += 0.75;
             bunny.move(bunny._speedX, bunny._speedY);
 
@@ -118,11 +114,17 @@ window.app.start(new Exo.Scene({
                 bunny._speedY *= -1;
                 bunny.y = 0;
             }
-
-            renderManager.draw(bunny);
         }
+    },
 
-        renderManager.display();
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
+            .clear()
+            .draw(this._bunnies)
+            .display();
     },
 
     /**
@@ -131,14 +133,14 @@ window.app.start(new Exo.Scene({
     destroy() {
         this.app.inputManager.remove(this._addInput);
 
-        for (const bunny of this._bunnies) {
+        for (const bunny of this._bunnies.children) {
             bunny.destroy();
         }
 
         this._bunnyTexture.destroy();
         this._bunnyTexture = null;
 
-        this._bunnies.length = 0;
+        this._bunnies.destroy();
         this._bunnies = null;
 
         this._addInput.destroy();

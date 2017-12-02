@@ -52,8 +52,13 @@ window.app.start(new Exo.Scene({
         this._text
             .setText(`Hello World! ${this._ticker.add(delta).seconds | 0}`)
             .rotate(delta.seconds * 36);
+    },
 
-        this.app.renderManager
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager
             .clear()
             .draw(this._text)
             .display();

@@ -670,11 +670,17 @@ var GameScene = function (_Scene) {
             if (!this._paused) {
                 this._player.update(delta);
                 this._worldMap.update(delta);
-
-                this.app.renderManager.clear().draw(this._worldMap).draw(this._player).display();
             }
+        }
 
-            return this;
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'draw',
+        value: function draw(renderManager) {
+            renderManager.clear().draw(this._worldMap).draw(this._player).display();
         }
 
         /**
@@ -1103,8 +1109,6 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _exojs = __webpack_require__(0);
-
 var _TitleMenuManager = __webpack_require__(7);
 
 var _TitleMenuManager2 = _interopRequireDefault(_TitleMenuManager);
@@ -1150,7 +1154,7 @@ var TitleScene = function (_Scene) {
        * @private
        * @member {Sprite}
        */
-      this._background = new _exojs.Sprite(resources.get('texture', 'title/background'));
+      this._background = new Sprite(resources.get('texture', 'title/background'));
 
       /**
        * @private
@@ -1168,8 +1172,16 @@ var TitleScene = function (_Scene) {
     key: 'update',
     value: function update(delta) {
       this._menuManager.update(delta);
+    }
 
-      this.app.renderManager.clear().draw(this._background).draw(this._menuManager).display();
+    /**
+     * @override
+     */
+
+  }, {
+    key: 'draw',
+    value: function draw(renderManager) {
+      renderManager.clear().draw(this._background).draw(this._menuManager).display();
     }
 
     /**
@@ -1191,7 +1203,7 @@ var TitleScene = function (_Scene) {
   }]);
 
   return TitleScene;
-}(_exojs.Scene);
+}(Scene);
 
 exports.default = TitleScene;
 

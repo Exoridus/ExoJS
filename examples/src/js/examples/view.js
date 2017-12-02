@@ -72,11 +72,9 @@ window.app.start(new Exo.Scene({
     },
 
     /**
-     * @param {Time} delta
+     * @param {RenderManager} renderManager
      */
-    update(delta) {
-        const renderManager = this.app.renderManager;
-
+    draw(renderManager) {
         renderManager.clear();
 
         renderManager.renderTarget.setView(this._camera);

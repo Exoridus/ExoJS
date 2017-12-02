@@ -38,6 +38,7 @@ export default class SceneManager {
         }
 
         this._currentScene.update(delta);
+        this._currentScene.draw(this._app.renderManager);
     }
 
     /**
