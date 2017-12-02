@@ -98,6 +98,12 @@ export default class RenderManager {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._clearAlpha = false;
+
+        /**
+         * @private
          * @member {RenderTarget}
          */
         this._rootRenderTarget = new RenderTarget(width, height, true);
@@ -371,16 +377,18 @@ export default class RenderManager {
      * @returns {RenderManager}
      */
     setClearColor(color) {
-        if (!this._clearColor.equals({
-                r: color.r,
-                g: color.g,
-                b: color.b,
-            })) {
+        if (!this._clearColor.equals({ r: color.r, g: color.g, b: color.b })) {
             const gl = this._context;
 
             this._clearColor.copy(color);
 
             gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+
+            if (this._clearAlpha !== color.a < 1) {
+                this._clearAlpha = color.a < 1;
+
+                gl.colorMask(true, true, true, this._clearAlpha);
+            }
         }
 
         return this;
@@ -535,6 +543,7 @@ export default class RenderManager {
         this._blendMode = null;
         this._texture = null;
         this._textureUnit = null;
+        this._clearAlpha = null;
     }
 
     /**
@@ -571,7 +580,7 @@ export default class RenderManager {
         gl.disable(gl.CULL_FACE);
 
         gl.blendEquation(gl.FUNC_ADD);
-        gl.colorMask(true, true, true, false);
+        gl.colorMask(true, true, true, this._clearAlpha);
     }
 
     /**
