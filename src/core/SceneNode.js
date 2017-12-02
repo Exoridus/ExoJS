@@ -2,6 +2,8 @@ import Transformable from '../math/Transformable';
 import Matrix from '../math/Matrix';
 import Rectangle from '../math/Rectangle';
 import Bounds from './Bounds';
+import Collision from './Collision';
+import Interval from '../math/Interval';
 
 /**
  * @class SceneNode
@@ -156,10 +158,61 @@ export default class SceneNode extends Transformable {
 
     /**
      * @public
+     * @returns {Vector[]}
+     */
+    getNormals() {
+        return this.getBounds().getNormals();
+    }
+
+    /**
+     * @public
+     * @param {Vector} axis
+     * @param {Interval} [result=new Interval()]
+     * @returns {Interval}
+     */
+    project(axis, result = new Interval()) {
+        return this.getBounds().project(axis, result);
+    }
+
+    /**
+     * @public
      * @param {Number} x
-     * @param {Number} [y=x]
-     * @param {Boolean} [relative=true]
-     * @returns {SceneNode}
+     * @param {Number} y
+     * @param {Matrix} [transform]
+     * @returns {Boolean}
+     */
+    contains(x, y, transform) {
+        return this.getBounds().contains(x, y, transform);
+    }
+
+    /**
+     * @public
+     * @param {SceneNode} node
+     * @returns {Boolean}
+     */
+    intersects(node) {
+        if ((this.rotation % 90 === 0) && (node.rotation % 90 === 0)) {
+            return Collision.intersectionRectRect(this.getBounds(), node.getBounds());
+        }
+
+        return Collision.intersectionSAT(this, node);
+    }
+
+    /**
+     * @public
+     * @param {SceneNode} node
+     * @returns {?Collision}
+     */
+    getCollision(node) {
+        if ((this.rotation % 90 === 0) && (node.rotation % 90 === 0)) {
+            return Collision.collisionRectRect(this.getBounds(), node.getBounds());
+        }
+
+        return Collision.collisionSAT(this, node);
+    }
+
+    /**
+     * @override
      */
     setOrigin(x, y = x, relative = true) {
         if (relative) {

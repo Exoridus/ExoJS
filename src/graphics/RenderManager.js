@@ -499,7 +499,7 @@ export default class RenderManager {
      * @returns {Boolean}
      */
     insideViewport(drawable, view = this._renderTarget.view) {
-        return view.getBounds().intersectsRect(drawable.getBounds());
+        return view.getBounds().intersets(drawable.getBounds());
     }
 
     /**

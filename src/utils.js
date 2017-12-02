@@ -1,6 +1,7 @@
-import { CODEC_NOT_SUPPORTED, FILE_TYPES, RAD_PER_DEG, DEG_PER_RAD } from './const';
+import { CODEC_NOT_SUPPORTED, FILE_TYPES, RAD_PER_DEG, DEG_PER_RAD, VORONOI } from './const';
 import support from './support';
 import Size from './math/Size';
+import Random from './math/Random';
 
 const
 
@@ -17,6 +18,13 @@ const
      * @type {AudioContext}
      */
     audioContext = support.webAudio ? new AudioContext() : null,
+
+    /**
+     * @inner
+     * @constant
+     * @type {Random}
+     */
+    rng = new Random(),
 
     /**
      * @public
@@ -91,6 +99,26 @@ const
     sign = (value) => (
         value && (value < 0 ? -1 : 1)
     ),
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {Vector} line
+     * @param {Vector} point
+     * @returns {Number}
+     */
+    getVornoiRegion = (line, point) => {
+        var dp = point.dot(line);
+
+        if (dp < 0) {
+            return VORONOI.LEFT;
+        } else if (dp > line.lengthSquared) {
+            return VORONOI.RIGHT;
+        } else {
+            return VORONOI.MIDDLE;
+        }
+    },
 
     /**
      * @public
@@ -335,15 +363,27 @@ const
         }
 
         return path;
-    };
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {Number} [min]
+     * @param {Number} [max]
+     * @return {Number}
+     */
+    random = (min, max) => rng.next(min, max);
 
 export {
     audio,
     audioContext,
+    rng,
     supportsCodec,
     decodeAudioBuffer,
     degreesToRadians,
     radiansToDegrees,
+    getVornoiRegion,
     clamp,
     sign,
     isPowerOfTwo,
@@ -358,4 +398,6 @@ export {
     getMediaWidth,
     getMediaHeight,
     getMediaSize,
+    bezierCurveTo,
+    random,
 };

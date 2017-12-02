@@ -1,6 +1,8 @@
 import Vector from '../math/Vector';
 import Interval from '../math/Interval';
 import Polygon from '../math/Polygon';
+import { VORONOI } from '../const';
+import { getVornoiRegion } from '../utils';
 
 /**
  * @class Collision
@@ -143,16 +145,55 @@ export default class Collision {
     /**
      * @public
      * @static
-     * @param {Polygon} polygonA
-     * @param {Polygon} polygonB
+     * @param {*} shapeA
+     * @param {*} shapeB
+     * @returns {Boolean}
+     */
+    static intersectionSAT(shapeA, shapeB) {
+        const normalsA = shapeA.getNormals(),
+            normalsB = shapeB.getNormals(),
+            lenA = normalsA.length,
+            lenB = normalsB.length,
+            projA = new Interval(),
+            projB = new Interval();
+
+        for (let i = 0; i < lenA; i++) {
+            const normal = normalsA[i];
+
+            shapeA.project(normal, projA);
+            shapeB.project(normal, projB);
+
+            if (!projA.overlaps(projB)) {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < lenB; i++) {
+            const normal = normalsB[i];
+
+            shapeA.project(normal, projA);
+            shapeB.project(normal, projB);
+
+            if (!projA.overlaps(projB)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {*} shapeA
+     * @param {*} shapeB
      * @returns {?Collision}
      */
-    static checkPolygonPolygon(polygonA, polygonB) {
-        const axis = Vector.Temp,
-            pointsA = polygonA.points,
-            pointsB = polygonB.points,
-            lenA = pointsA.length,
-            lenB = pointsB.length,
+    static collisionSAT(shapeA, shapeB) {
+        const normalsA = shapeA.getNormals(),
+            normalsB = shapeB.getNormals(),
+            lenA = normalsA.length,
+            lenB = normalsB.length,
             projA = new Interval(),
             projB = new Interval(),
             separation = new Vector();
@@ -165,20 +206,16 @@ export default class Collision {
             overlap;
 
         for (let i = 0; i < lenA; i++) {
-            const point = pointsA[i],
-                nextPoint = pointsA[(i + 1) % lenA];
+            const normal = normalsA[i];
 
-            axis.copy(nextPoint)
-                .subtract(point.x, point.y)
-                .perp();
-
-            polygonA.project(axis, projA);
-            polygonB.project(axis, projB);
+            shapeA.project(normal, projA);
+            shapeB.project(normal, projB);
 
             if (!projA.overlaps(projB)) {
                 return null;
             }
 
+            overlap = projA.getOverlap(projB);
             containsA = projB.contains(projA);
             containsB = projA.contains(projB);
 
@@ -190,8 +227,6 @@ export default class Collision {
                 shapeBInA = false;
             }
 
-            overlap = projA.getOverlap(projB);
-
             if (containsA || containsB) {
                 overlap += Math.min(
                     Math.abs(projA.min - projB.min),
@@ -201,25 +236,21 @@ export default class Collision {
 
             if (overlap < distance) {
                 distance = overlap;
-                separation.copy(axis);
+                separation.copy(normal);
             }
         }
 
         for (let i = 0; i < lenB; i++) {
-            const point = pointsB[i],
-                nextPoint = pointsB[(i + 1) % lenB];
+            const normal = normalsB[i];
 
-            axis.copy(nextPoint)
-                .subtract(point.x, point.y)
-                .perp();
-
-            polygonA.project(axis, projA);
-            polygonB.project(axis, projB);
+            shapeA.project(normal, projA);
+            shapeB.project(normal, projB);
 
             if (!projA.overlaps(projB)) {
                 return null;
             }
 
+            overlap = projA.getOverlap(projB);
             containsA = projB.contains(projA);
             containsB = projA.contains(projB);
 
@@ -231,8 +262,6 @@ export default class Collision {
                 shapeBInA = false;
             }
 
-            overlap = projA.getOverlap(projB);
-
             if (containsA || containsB) {
                 overlap += Math.min(
                     Math.abs(projA.min - projB.min),
@@ -242,13 +271,13 @@ export default class Collision {
 
             if (overlap < distance) {
                 distance = overlap;
-                separation.copy(axis);
+                separation.copy(normal);
             }
         }
 
         return new Collision({
-            shapeA: polygonA,
-            shapeB: polygonB,
+            shapeA,
+            shapeA,
             distance,
             separation,
             shapeAInB,
@@ -259,28 +288,20 @@ export default class Collision {
     /**
      * @public
      * @static
-     * @param {Polygon} polygon
-     * @param {Rectangle} rect
-     * @returns {?Collision}
+     * @param {Rectangle} rectA
+     * @param {Rectangle} rectB
+     * @returns {Boolean}
      */
-    static checkPolygonRectangle(polygon, rect) {
-        return Collision.checkPolygonPolygon(polygon, Polygon.Temp.set(0, 0, [
-            new Vector(rect.left, rect.top),
-            new Vector(rect.right, rect.top),
-            new Vector(rect.left, rect.bottom),
-            new Vector(rect.right, rect.bottom),
-        ]));
-    }
+    static intersectionRectRect(rectA, rectB) {
+        if ((rectB.left > rectA.right) || (rectB.top > rectA.bottom)) {
+            return false;
+        }
 
-    /**
-     * @public
-     * @static
-     * @param {Polygon} polygon
-     * @param {Circle} circle
-     * @returns {?Collision}
-     */
-    static checkPolygonCircle(polygon, circle) {
+        if ((rectA.left > rectB.right) || (rectA.top > rectB.bottom)) {
+            return false;
+        }
 
+        return true;
     }
 
     /**
@@ -288,20 +309,10 @@ export default class Collision {
      * @static
      * @param {Circle} circleA
      * @param {Circle} circleB
-     * @returns {?Collision}
+     * @returns {Boolean}
      */
-    static checkCircleCircle(circleA, circleB) {
-        const distance = circleA.position.distanceTo(circleB.x, circleB.y),
-            totalRadius = circleA.radius + circleB.radius;
-
-        return (distance > totalRadius) ? null : new Collision({
-            shapeA: circleA,
-            shapeB: circleB,
-            distance: distance,
-            separation: circleB.position.clone().subtract(circleA.x, circleA.y).normalize().multiply(totalRadius - distance),
-            shapeAInB: (circleA.radius <= circleB.radius) && (distance <= (circleB.radius - circleA.radius)),
-            shapeBInA: (circleB.radius <= circleA.radius) && (distance <= (circleA.radius - circleB.radius)),
-        });
+    static intersectionCircleCircle(circleA, circleB) {
+        return circleA.position.distanceTo(circleB.x, circleB.y) <= (circleA.radius + circleB.radius);
     }
 
     /**
@@ -309,10 +320,87 @@ export default class Collision {
      * @static
      * @param {Circle} circle
      * @param {Rectangle} rect
-     * @returns {?Collision}
+     * @returns {Boolean}
      */
-    static checkCircleRectangle(circle, rect) {
+    static intersectionCircleRect(circle, rect) {
+        const centerWidth = rect.width / 2,
+            centerHeight = rect.height / 2,
+            radius = circle.radius,
+            distanceX = Math.abs(circle.x - rect.x),
+            distanceY = Math.abs(circle.y - rect.y);
 
+        if (distanceX > (centerWidth + radius)) {
+            return false;
+        }
+
+        if (distanceY > (centerHeight + radius)) {
+            return false;
+        }
+
+        if (distanceX <= centerWidth) {
+            return true;
+        }
+
+        if (distanceY <= centerHeight) {
+            return true;
+        }
+
+        return circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight) <= radius;
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Polygon} polygon
+     * @param {Circle} circle
+     * @returns {Boolean}
+     */
+    static intersectionPolyCircle(polygon, circle) {
+        const points = polygon.points,
+            x = (circle.x - polygon.x),
+            y = (circle.y - polygon.y),
+            positionA = new Vector(),
+            positionB = new Vector(),
+            edgeA = new Vector(),
+            edgeB = new Vector(),
+            len = points.length;
+
+        for (var i = 0; i < len; i++) {
+            const pointA = points[i],
+                pointB = points[(i + 1) % len],
+                region = getVornoiRegion(
+                    edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y),
+                    positionA.set(x - pointA.x, y - pointA.y)
+                );
+
+            if (region === VORONOI.LEFT) {
+                const point = points[(i === 0 ? len - 1 : i - 1)];
+
+                positionB.set(x - point.x, y - point.y);
+                edgeB.set(pointA.x - point.x, pointA.y - point.y);
+
+                if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT) && (positionA.length > circle.radius)) {
+                    return false;
+                }
+            } else if (region === VORONOI.RIGHT) {
+                const point = points[(i + 2) % len];
+
+                positionB.set(x - pointB.x, y - pointB.y);
+                edgeB.set(point.x - pointB.x, point.y - pointB.y);
+
+                if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT && (positionA.length > circle.radius)) {
+                    return false;
+                }
+            } else {
+                const distance = positionA.dot(edgeA.perp().normalize());
+
+                if (distance > 0 && (Math.abs(distance) > circle.radius)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -322,7 +410,7 @@ export default class Collision {
      * @param {Rectangle} rectB
      * @returns {?Collision}
      */
-    static checkRectangleRectangle(rectA, rectB) {
+    static collisionRectRect(rectA, rectB) {
         if ((rectB.left > rectA.right) || (rectB.top > rectA.bottom)) {
             return null;
         }
@@ -334,10 +422,160 @@ export default class Collision {
         return new Collision({
             shapeA: rectA,
             shapeB: rectB,
-            distance: 0,
-            separation: Vector.Empty,
+            distance: 0, // todo
+            separation: Vector.Empty, // todo
             shapeAInB: rectB.containsRect(rectA),
             shapeBInA: rectA.containsRect(rectB),
+        });
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Circle} circleA
+     * @param {Circle} circleB
+     * @returns {?Collision}
+     */
+    static collisionCircleCircle(circleA, circleB) {
+        const distance = circleA.position.distanceTo(circleB.x, circleB.y),
+            radii = circleA.radius + circleB.radius;
+
+        return (distance > radii) ? null : new Collision({
+            shapeA: circleA,
+            shapeB: circleB,
+            distance: distance,
+            separation: new Vector(circleB.x - circleA.x, circleB.y - circleA.y).normalize().scale(radii - distance),
+            shapeAInB: (circleA.radius <= circleB.radius) && (distance <= (circleB.radius - circleA.radius)),
+            shapeBInA: (circleB.radius <= circleA.radius) && (distance <= (circleA.radius - circleB.radius)),
+        });
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Circle} circle
+     * @param {Rectangle} rect
+     * @param {Boolean} [swap=false]
+     * @returns {?Collision}
+     */
+    static collisionCircleRect(circle, rect, swap = false) {
+        const centerWidth = rect.width / 2,
+            centerHeight = rect.height / 2,
+            distance = circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight),
+            containsA = (circle.radius <= Math.min(centerWidth, centerHeight)) && (distance <= (Math.min(centerWidth, centerHeight) - circle.radius)),
+            containsB = (Math.max(centerWidth, centerHeight) <= circle.radius) && (distance <= (circle.radius - Math.max(centerWidth, centerHeight)));
+
+        return (distance <= circle.radius) ? new Collision({
+            shapeA: swap ? rect : circle,
+            shapeB: swap ? circle : rect,
+            distance: distance,
+            separation: Vector.Empty, // todo
+            shapeAInB: swap ? containsB : containsA,
+            shapeBInA: swap ? containsA : containsB,
+        }) : null;
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Polygon} polygon
+     * @param {Circle} circle
+     * @returns {?Collision}
+     */
+    static collisionPolyCircle(polygon, circle, swap = false) {
+        const points = polygon.points,
+            x = (circle.x - polygon.x),
+            y = (circle.y - polygon.y),
+            radius = circle.radius,
+            positionA = new Vector(),
+            positionB = new Vector(),
+            edgeA = new Vector(),
+            edgeB = new Vector(),
+            len = points.length,
+            overlapN = new Vector();
+
+        let containsA = true,
+            containsB = true,
+            overlap = 0;
+
+        for (var i = 0; i < len; i++) {
+            const pointA = points[i],
+                pointB = points[(i + 1) % len],
+                region = getVornoiRegion(
+                    edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y),
+                    positionA.set(x - pointA.x, y - pointA.y)
+                );
+
+            if (positionA.length > radius) {
+                containsA = false;
+            }
+
+            if (region === VORONOI.LEFT) {
+                const prev = points[(i === 0 ? len - 1 : i - 1)];
+
+                edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
+                positionB.set(x - prev.x, y - prev.y);
+
+                if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT)) {
+                    const distance = positionA.length;
+
+                    if (distance > radius) {
+                        return null;
+                    }
+
+                    if (Math.abs(radius - distance) < Math.abs(overlap)) {
+                        overlap = radius - distance;
+                        overlapN.copy(positionA).normalize();
+                    }
+
+                    containsB = false;
+                }
+            } else if (region === VORONOI.RIGHT) {
+                const next = points[(i + 2) % len]; // pointB ?
+
+                edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
+                positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
+
+                if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT) {
+                    const distance = positionB.length;
+
+                    if (distance > radius) {
+                        return null;
+                    }
+
+                    if (Math.abs(radius - distance) < Math.abs(overlap)) {
+                        overlap = radius - distance;
+                        overlapN.copy(positionB).normalize();
+                    }
+
+                    containsB = false;
+                }
+            } else {
+                const normal = edgeA.perp().normalize(),
+                    distance = positionA.dot(normal);
+
+                if (distance > 0 && (Math.abs(distance) > radius)) {
+                    return null;
+                }
+
+                if (distance >= 0 || (radius - distance) < (2 * radius)) {
+                    containsB = false;
+                }
+
+                if (Math.abs(radius - distance) < Math.abs(overlap)) {
+                    overlap = radius - distance;
+                    overlapN.copy(normal);
+                }
+            }
+        }
+
+        return new Collision({
+            shapeA: polygon,
+            shapeB: circle,
+            distance: 0, // todo
+            separation: overlapN.scale(overlap),
+            shapeAInB: swap ? containsB : containsA,
+            shapeBInA: swap ? containsA : containsB,
         });
     }
 }

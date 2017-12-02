@@ -1,7 +1,10 @@
 import Container from '../Container';
 import Rectangle from '../../math/Rectangle';
+import Vector from '../../math/Vector';
 import Color from '../../core/Color';
 import { BLEND_MODE } from '../../const';
+import Interval from '../../math/Interval';
+import Collision from '../../core/Collision';
 
 /**
  * @class Sprite
@@ -314,6 +317,69 @@ export default class Sprite extends Container {
         }
 
         return this;
+    }
+
+    /**
+     * todo - cache this
+     *
+     * @public
+     * @returns {Vector[]}
+     */
+    getNormals() {
+        const bounds = this.getLocalBounds(),
+            transform = this.getGlobalTransform(),
+            vertices = [
+                new Vector(bounds.left, bounds.top).transform(transform),
+                new Vector(bounds.right, bounds.top).transform(transform),
+                new Vector(bounds.right, bounds.bottom).transform(transform),
+                new Vector(bounds.left, bounds.bottom).transform(transform),
+            ],
+            len = vertices.length,
+            normals = [];
+
+        for (let i = 0; i < len; i++) {
+            const point = vertices[i],
+                nextPoint = vertices[(i + 1) % len];
+
+            normals.push(
+                nextPoint.clone()
+                    .subtract(point.x, point.y)
+                    .perp()
+                    .normalize()
+            );
+        }
+
+        return normals;
+    }
+
+    /**
+     * @public
+     * @param {Vector} axis
+     * @param {Interval} [result=new Interval()]
+     * @returns {Interval}
+     */
+    project(axis, result = new Interval()) {
+        const bounds = this.getLocalBounds(),
+            transform = this.getGlobalTransform(),
+            vertices = [
+                new Vector(bounds.left, bounds.top).transform(transform),
+                new Vector(bounds.right, bounds.top).transform(transform),
+                new Vector(bounds.right, bounds.bottom).transform(transform),
+                new Vector(bounds.left, bounds.bottom).transform(transform),
+            ],
+            len = vertices.length;
+
+        let min = axis.dot(vertices[0]),
+            max = min;
+
+        for (let i = 1; i < len; i++) {
+            const projection = axis.dot(vertices[i]);
+
+            min = Math.min(min, projection);
+            max = Math.max(max, projection);
+        }
+
+        return result.set(min, max);
     }
 
     /**

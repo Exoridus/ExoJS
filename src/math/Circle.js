@@ -1,4 +1,8 @@
 import Vector from './Vector';
+import Rectangle from './Rectangle';
+import Polygon from './Polygon';
+import Collision from '../core/Collision';
+import Interval from './Interval';
 
 /**
  * @class Circle
@@ -75,7 +79,37 @@ export default class Circle {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {Circle}
+     */
+    setPosition(x, y) {
+        this._position.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} radius
+     * @returns {Circle}
+     */
+    setRadius(radius) {
+        this._radius = radius;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @param {Number} radius
+     * @returns {Circle}
      */
     set(x, y, radius) {
         this._position.set(x, y);
@@ -85,7 +119,10 @@ export default class Circle {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {Circle} circle
+     * @returns {Circle}
      */
     copy(circle) {
         this._position.copy(circle.position);
@@ -95,10 +132,11 @@ export default class Circle {
     }
 
     /**
-     * @override
+     * @public
+     * @returns {Circle}
      */
     clone() {
-        return new Circle(this.x, this.y, this._radius);
+        return new Circle(this.x, this.y, this.radius);
     }
 
     /**
@@ -116,7 +154,44 @@ export default class Circle {
     }
 
     /**
-     * @override
+     * @public
+     * @returns {Rectangle}
+     */
+    getBounds() {
+        return new Rectangle(
+            this.x - this.radius,
+            this.y - this.radius,
+            this.radius * 2,
+            this.radius * 2
+        );
+    }
+
+    /**
+     * todo - cache this
+     *
+     * @public
+     * @returns {Vector[]}
+     */
+    getNormals() {
+        return [];
+    }
+
+    /**
+     * @public
+     * @param {Vector} axis
+     * @param {Interval} [result=new Interval()]
+     * @returns {Interval}
+     */
+    project(axis, result = new Interval()) {
+        return result.set(0, 0);
+    }
+
+    /**
+     * @public
+     * @param {Number} x
+     * @param {Number} y
+     * @param {Matrix} [transform]
+     * @returns {Boolean}
      */
     contains(x, y, transform) {
         let position = this._position;
@@ -125,11 +200,53 @@ export default class Circle {
             position = position.transform(transform, Vector.Temp);
         }
 
-        return position.distanceTo(x, y) <= this._radius;
+        return (position.distanceTo(x, y) <= this._radius);
     }
 
     /**
-     * @override
+     * @public
+     * @param {Circle|Rectangle|Polygon} object
+     * @returns {Boolean}
+     */
+    intersets(object) {
+        if (object instanceof Circle) {
+            return Collision.intersectionCircleCircle(this, object);
+        }
+
+        if (object instanceof Rectangle) {
+            return Collision.intersectionCircleRect(this, object);
+        }
+
+        if (object instanceof Polygon) {
+            return Collision.intersectionPolyCircle(object, this);
+        }
+
+        return false;
+    }
+
+    /**
+     * @public
+     * @param {Circle|Rectangle|Polygon} object
+     * @returns {?Collision}
+     */
+    getCollision(object) {
+        if (object instanceof Circle) {
+            return Collision.collisionCircleCircle(this, object);
+        }
+
+        if (object instanceof Rectangle) {
+            return Collision.collisionCircleRect(this, object);
+        }
+
+        if (object instanceof Polygon) {
+            return Collision.collisionPolyCircle(object, this, true);
+        }
+
+        return null;
+    }
+
+    /**
+     * @public
      */
     destroy() {
         this._position.destroy();

@@ -1,6 +1,10 @@
 import { inRange } from '../utils';
 import Vector from './Vector';
 import Size from './Size';
+import Circle from './Circle';
+import Polygon from './Polygon';
+import Collision from '../core/Collision';
+import Interval from './Interval';
 
 /**
  * @class Rectangle
@@ -140,6 +144,154 @@ export default class Rectangle {
     /**
      * @public
      * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {Rectangle}
+     */
+    setPosition(x, y) {
+        this.position.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {Rectangle}
+     */
+    setSize(width, height) {
+        this._size.set(width, height);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {Rectangle}
+     */
+    set(x, y, width, height) {
+        this._position.set(x, y);
+        this._size.set(width, height);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Rectangle} rectangle
+     * @returns {Rectangle}
+     */
+    copy(rectangle) {
+        this._position.copy(rectangle.position);
+        this._size.copy(rectangle.size);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @returns {Rectangle}
+     */
+    clone() {
+        return new Rectangle(this.x, this.y, this.width, this.height);
+    }
+
+    /**
+     * @public
+     * @param {Rectangle|Object} rectangle
+     * @param {Number} [rectangle.x]
+     * @param {Number} [rectangle.y]
+     * @param {Number} [rectangle.width]
+     * @param {Number} [rectangle.height]
+     * @returns {Boolean}
+     */
+    equals({ x, y, width, height } = {}) {
+        return (x === undefined || this.x === x)
+            && (y === undefined || this.y === y)
+            && (width === undefined || this.width === width)
+            && (height === undefined || this.height === height);
+    }
+
+    /**
+     * @public
+     * @returns {Rectangle}
+     */
+    getBounds() {
+        return this.clone();
+    }
+
+    /**
+     * todo - cache this
+     *
+     * @public
+     * @returns {Vector[]}
+     */
+    getNormals() {
+        const point = Vector.Temp,
+            normals = [];
+
+        for (let i = 0; i < 4; i++) {
+            point.set(
+                (((i + 1) % 3) === 0) ? this.left : this.right,
+                (((i + 1) / 2 | 0) === 0) ? this.top : this.bottom,
+            );
+
+            normals.push(
+                point.clone()
+                    .subtract(
+                        ((i % 3) === 0) ? this.left : this.right,
+                        ((i / 2 | 0) === 0) ? this.top : this.bottom
+                    )
+                    .perp()
+                    .normalize()
+            );
+        }
+
+        return normals;
+    }
+
+    /**
+     * @public
+     * @param {Vector} axis
+     * @param {Interval} [result=new Interval()]
+     * @returns {Interval}
+     */
+    project(axis, result = new Interval()) {
+        const point = Vector.Temp;
+
+        let min = axis.dot(point.set(this.left, this.top)),
+            max = min,
+            projection;
+
+        projection = axis.dot(point.set(this.right, this.top));
+
+        min = Math.min(min, projection);
+        max = Math.max(max, projection);
+
+        projection = axis.dot(point.set(this.right, this.bottom));
+
+        min = Math.min(min, projection);
+        max = Math.max(max, projection);
+
+        projection = axis.dot(point.set(this.left, this.bottom));
+
+        min = Math.min(min, projection);
+        max = Math.max(max, projection);
+
+        return result.set(min, max);
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Matrix} matrix
      * @param {Rectangle} [result=this]
      * @returns {Rectangle}
@@ -188,50 +340,11 @@ export default class Rectangle {
     }
 
     /**
-     * @override
-     */
-    set(x, y, width, height) {
-        this._position.set(x, y);
-        this._size.set(width, height);
-
-        return this;
-    }
-
-    /**
-     * @override
-     */
-    copy(rectangle) {
-        this._position.copy(rectangle.position);
-        this._size.copy(rectangle.size);
-
-        return this;
-    }
-
-    /**
-     * @override
-     */
-    clone() {
-        return new Rectangle(this.x, this.y, this.width, this.height);
-    }
-
-    /**
      * @public
-     * @param {Rectangle|Object} rectangle
-     * @param {Number} [rectangle.x]
-     * @param {Number} [rectangle.y]
-     * @param {Number} [rectangle.width]
-     * @param {Number} [rectangle.height]
+     * @param {Number} x
+     * @param {Number} y
+     * @param {Matrix} [transform]
      * @returns {Boolean}
-     */
-    equals({ x, y, width, height } = {}) {
-        return (x === undefined || this.x === x)
-            && (y === undefined || this.y === y)
-            && (width === undefined || this.width === width)
-            && (height === undefined || this.height === height);
-    }
-
-    /**
-     * @override
      */
     contains(x, y, transform) {
         let min = new Vector(this.left, this.top),
@@ -260,49 +373,48 @@ export default class Rectangle {
 
     /**
      * @public
-     * @param {Rectangle} rect
+     * @param {Circle|Rectangle|Polygon} object
      * @returns {Boolean}
      */
-    intersectsRect(rect) {
-        if ((rect.left > this.right) || (rect.top > this.bottom)) {
-            return false;
+    intersets(object) {
+        if (object instanceof Rectangle) {
+            return Collision.intersectionRectRect(this, object);
         }
 
-        if ((this.left > rect.right) || (this.top > rect.bottom)) {
-            return null;
+        if (object instanceof Polygon) {
+            return Collision.intersectionSAT(this, object);
         }
 
-        return true;
+        if (object instanceof Circle) {
+            return Collision.intersectionCircleRect(object, this);
+        }
+
+        return false;
     }
 
     /**
      * @public
-     * @chainable
-     * @param {Number} x
-     * @param {Number} y
-     * @returns {Rectangle}
+     * @param {Circle|Rectangle|Polygon} object
+     * @returns {?Collision}
      */
-    setPosition(x, y) {
-        this.position.set(x, y);
+    getCollision(object) {
+        if (object instanceof Rectangle) {
+            return Collision.collisionRectRect(this, object);
+        }
 
-        return this;
+        if (object instanceof Polygon) {
+            return Collision.collisionSAT(this, object);
+        }
+
+        if (object instanceof Circle) {
+            return Collision.collisionCircleRect(object, this, true);
+        }
+
+        return null;
     }
 
     /**
      * @public
-     * @chainable
-     * @param {Number} width
-     * @param {Number} height
-     * @returns {Rectangle}
-     */
-    setSize(width, height) {
-        this._size.set(width, height);
-
-        return this;
-    }
-
-    /**
-     * @override
      */
     destroy() {
         this._position.destroy();

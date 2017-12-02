@@ -37,7 +37,7 @@ window.app.start(new Exo.Scene({
         for (let i = 0; i < 25; i++) {
             const bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
 
-            bunny.setPosition((i % 5) * (bunny.width + 10), (i / 5 | 0) * (bunny.height + 10));
+            bunny.setPosition((i % 5) * (bunny.width + 15), (i / 5 | 0) * (bunny.height + 10));
 
             this._bunnies.addChild(bunny);
         }

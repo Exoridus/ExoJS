@@ -127,3 +127,19 @@ export default class Interval {
         this._max = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Interval}
+ */
+Interval.Empty = new Interval(0, 0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Interval}
+ */
+Interval.Temp = new Interval();

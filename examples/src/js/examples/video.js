@@ -28,23 +28,11 @@ window.app.start(new Exo.Scene({
         this._video.width = canvas.width;
         this._video.height = canvas.height;
 
-        /**
-         * @private
-         * @member {Input}
-         */
-        this._input = new Exo.Input([
-            Exo.KEYBOARD.Space,
-            Exo.GAMEPAD.FaceBottom,
-        ], {
-            context: this,
-            trigger() {
-                this._video.toggle();
-            },
-        });
-
-        this.app.inputManager.add(this._input);
-
         this._video.play({ loop: true });
+
+        this.app.on('pointer:down', () => {
+            this._video.toggle();
+        });
     },
 
     /**
@@ -61,8 +49,6 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
-        this.app.inputManager.remove(this._input);
-
         this._video.destroy();
         this._video = null;
 

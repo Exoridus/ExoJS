@@ -62,7 +62,25 @@ export default class Vector {
      * @member {Number}
      */
     get magnitude() {
-        return Math.sqrt((this._x * this._x) + (this._y * this._y));
+        return this.length;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get length() {
+        return Math.sqrt(this.lengthSquared);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get lengthSquared() {
+        return (this._x * this._x) + (this._y * this._y);
     }
 
     /**
@@ -175,7 +193,7 @@ export default class Vector {
      * @param {Number} [y=x]
      * @returns {Vector}
      */
-    multiply(x, y = x) {
+    scale(x, y = x) {
         this._x *= x;
         this._y *= y;
 

@@ -39,6 +39,21 @@ export const
     /**
      * @public
      * @constant
+     * @name VORONOI
+     * @type {Object<String, Number>}
+     * @property {Number} LEFT
+     * @property {Number} MIDDLE
+     * @property {Number} RIGHT
+     */
+    VORONOI = {
+        LEFT: -1,
+        MIDDLE: 0,
+        RIGHT: 1,
+    },
+
+    /**
+     * @public
+     * @constant
      * @name TIME
      * @type {Object<String, Number>}
      * @property {Number} MILLISECONDS
