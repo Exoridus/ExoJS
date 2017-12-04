@@ -1,17 +1,12 @@
-window.app = new Exo.Application({
-    assetsPath: 'assets/',
-    canvasParent: document.querySelector('.container-canvas'),
-    width: 800,
-    height: 600,
-});
-
 window.app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('texture', 'bunny', 'image/bunny.png');
+        loader.add('texture', {
+            bunny: 'image/bunny.png'
+        });
     },
 
     /**
@@ -21,9 +16,28 @@ window.app.start(new Exo.Scene({
         const canvas = this.app.canvas;
 
         /**
-         * @type {Random}
+         * @type {Texture}
          */
-        this._random = new Exo.Random();
+        this._bunnyTexture = resources.get('texture', 'bunny');
+
+        /**
+         * @type {Container}
+         */
+        this._bunnies = new Exo.Container();
+
+        for (let i = 0; i < 25; i++) {
+            const bunny = new Exo.Sprite(this._bunnyTexture);
+
+            bunny.setPosition(
+                (i % 5) * (bunny.width + 10),
+                (i / 5 | 0) * (bunny.height + 10)
+            );
+
+            this._bunnies.addChild(bunny);
+        }
+
+        this._bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
+        this._bunnies.setOrigin(0.5, 0.5);
 
         /**
          * @type {Timer}
@@ -31,25 +45,24 @@ window.app.start(new Exo.Scene({
         this._timer = new Exo.Timer(true, 500, Exo.TIME.MILLISECONDS);
 
         /**
-         * @type {Container}
+         * @type {Random}
          */
-        this._bunnies = new Exo.Container();
-        this._bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
+        this._random = new Exo.Random();
 
-        for (let i = 0; i < 25; i++) {
-            const bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+        this.tintBunnies();
+    },
 
-            bunny.setPosition((i % 5) * (bunny.width + 10), (i / 5 | 0) * (bunny.height + 10));
-            bunny.setTint(new Exo.Color(
+    /**
+     * @public
+     */
+    tintBunnies() {
+        for (const bunny of this._bunnies.children) {
+            bunny.tint.set(
                 this._random.next(50, 255),
                 this._random.next(50, 255),
                 this._random.next(50, 255)
-            ));
-
-            this._bunnies.addChild(bunny);
+            );
         }
-
-        this._bunnies.setOrigin(0.5);
     },
 
     /**
@@ -57,14 +70,7 @@ window.app.start(new Exo.Scene({
      */
     update(delta) {
         if (this._timer.expired) {
-            for (const bunny of this._bunnies.children) {
-                bunny.setTint(new Exo.Color(
-                    this._random.next(50, 255),
-                    this._random.next(50, 255),
-                    this._random.next(50, 255)
-                ));
-            }
-
+            this.tintBunnies();
             this._timer.restart();
         }
     },

@@ -8,16 +8,16 @@ export default class TorqueModifier extends ParticleModifier {
 
     /**
      * @constructor
-     * @param {Number} angularAcceleration
+     * @param {Number} angularAcceleration=0
      */
-    constructor(angularAcceleration) {
+    constructor(angularAcceleration = 0) {
         super();
 
         /**
          * @private
          * @member {Number}
          */
-        this._angularAcceleration = angularAcceleration || 0;
+        this._angularAcceleration = angularAcceleration;
     }
 
     /**
@@ -25,25 +25,30 @@ export default class TorqueModifier extends ParticleModifier {
      * @member {Number}
      */
     get angularAcceleration() {
-        return this._acceleration;
+        return this._angularAcceleration;
     }
 
     set angularAcceleration(angularAcceleration) {
+        this.setAngularAcceleration(angularAcceleration);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} angularAcceleration
+     * @returns {TorqueModifier}
+     */
+    setAngularAcceleration(angularAcceleration) {
         this._angularAcceleration = angularAcceleration;
+
+        return this;
     }
 
     /**
      * @override
      */
     apply(particle, delta) {
-        particle.rotationSpeed = particle.rotationSpeed + (delta.seconds * this._angularAcceleration);
-    }
-
-    /**
-     * @override
-     */
-    copy(modifier) {
-        this.angularAcceleration = modifier.angularAcceleration;
+        particle.rotationSpeed = particle.rotationSpeed + (this._angularAcceleration * delta.seconds);
 
         return this;
     }

@@ -6,7 +6,6 @@ import InputManager from '../input/InputManager';
 import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
 import Texture from '../graphics/texture/Texture';
-import Sprite from '../graphics/sprite/Sprite';
 import { imageToBase64 } from '../utils';
 
 /**
@@ -18,7 +17,7 @@ export default class Application extends EventEmitter {
     /**
      * @constructor
      * @param {Object} [options]
-     * @param {String} [options.assetsPath='']
+     * @param {String} [options.resourcePath='']
      * @param {Number} [options.width=800]
      * @param {Number} [options.height=600]
      * @param {?HTMLCanvasElement} [options.canvas=null]
@@ -53,7 +52,10 @@ export default class Application extends EventEmitter {
          * @private
          * @member {ResourceLoader}
          */
-        this._loader = new ResourceLoader({ basePath: config.assetsPath, database: config.database });
+        this._loader = new ResourceLoader({
+            resourcePath: config.resourcePath,
+            database: config.database
+        });
 
         /**
          * @private
@@ -201,7 +203,7 @@ export default class Application extends EventEmitter {
     start(scene) {
         if (!this._running) {
             this._running = true;
-            this._sceneManager.changeScene(scene);
+            this._sceneManager.setScene(scene);
             this._delta.restart();
 
             this._updateId = requestAnimationFrame(this._updateHandler);
@@ -217,11 +219,11 @@ export default class Application extends EventEmitter {
      */
     stop() {
         if (this._running) {
-            this._running = false;
-            this._sceneManager.stopScene();
-            this._delta.stop();
-
             cancelAnimationFrame(this._updateId);
+
+            this._delta.stop();
+            this._sceneManager.setScene(null);
+            this._running = false;
         }
 
         return this;
@@ -272,9 +274,7 @@ export default class Application extends EventEmitter {
     destroy() {
         super.destroy();
 
-        if (this._running) {
-            this.stop();
-        }
+        this.stop();
 
         if (this._canvasParent) {
             this._canvasParent.removeChild(this._canvas);

@@ -1,17 +1,12 @@
-window.app = new Exo.Application({
-    assetsPath: 'assets/',
-    canvasParent: document.querySelector('.container-canvas'),
-    width: 800,
-    height: 600,
-});
-
 window.app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('font', 'example', 'font/AndyBold/AndyBold.woff2', {
+        loader.add('font', {
+            example: 'font/AndyBold/AndyBold.woff2'
+        }, {
             family: 'AndyBold',
         });
     },
@@ -58,8 +53,7 @@ window.app.start(new Exo.Scene({
      * @param {RenderManager} renderManager
      */
     draw(renderManager) {
-        renderManager
-            .clear()
+        renderManager.clear()
             .draw(this._text)
             .display();
     },

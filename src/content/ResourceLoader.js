@@ -11,6 +11,7 @@ import StringFactory from './factories/StringFactory';
 import TextureFactory from './factories/TextureFactory';
 import MediaSourceFactory from './factories/MediaSourceFactory';
 import VideoFactory from './factories/VideoFactory';
+import settings from '../settings';
 
 /**
  * @class ResourceLoader
@@ -21,11 +22,29 @@ export default class ResourceLoader extends EventEmitter {
     /**
      * @constructor
      * @param {Object} [options]
-     * @param {String} [options.basePath='']
+     * @param {String} [options.resourcePath='']
      * @param {Database} [options.database=null]
      */
-    constructor({ basePath = '', database = null } = {}) {
+    constructor({ resourcePath = '', database = null } = {}) {
         super();
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._resourcePath = resourcePath;
+
+        /**
+         * @private
+         * @member {?Database}
+         */
+        this._database = database;
+
+        /**
+         * @private
+         * @member {Map<String, ResourceFactory>}
+         */
+        this._factories = new Map();
 
         /**
          * @private
@@ -41,43 +60,41 @@ export default class ResourceLoader extends EventEmitter {
 
         /**
          * @private
-         * @member {Map<String, ResourceFactory>}
+         * @member {String}
          */
-        this._factories = new Map();
+        this._method = settings.REQUEST_METHOD;
 
         /**
          * @private
          * @member {String}
          */
-        this._basePath = basePath;
+        this._mode = settings.REQUEST_MODE;
 
         /**
          * @private
-         * @member {Object}
+         * @member {String}
          */
-        this._request = {
-            method: 'GET',
-            mode: 'cors',
-            cache: 'default',
-        };
+        this._cache = settings.REQUEST_CACHE;
 
-        /**
-         * @private
-         * @member {?Database}
-         */
-        this._database = database;
+        this._addFactories();
+    }
 
-        this.addFactory('arrayBuffer', new ArrayBufferFactory())
-            .addFactory('mediaSource', new MediaSourceFactory())
-            .addFactory('blob', new BlobFactory())
-            .addFactory('font', new FontFactory())
-            .addFactory('music', new MusicFactory())
-            .addFactory('sound', new SoundFactory())
-            .addFactory('video', new VideoFactory())
-            .addFactory('image', new ImageFactory())
-            .addFactory('texture', new TextureFactory())
-            .addFactory('string', new StringFactory())
-            .addFactory('json', new JSONFactory());
+    /**
+     * @public
+     * @readonly
+     * @member {Map<String, ResourceFactory>}
+     */
+    get factories() {
+        return this._factories;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Set<Object>}
+     */
+    get queue() {
+        return this._queue;
     }
 
     /**
@@ -93,24 +110,12 @@ export default class ResourceLoader extends EventEmitter {
      * @public
      * @member {String}
      */
-    get basePath() {
-        return this._basePath;
+    get resourcePath() {
+        return this._resourcePath;
     }
 
-    set basePath(basePath) {
-        this._basePath = basePath;
-    }
-
-    /**
-     * @public
-     * @member {Object<String, String>}
-     */
-    get request() {
-        return this._request;
-    }
-
-    set request(request) {
-        this._request = request;
+    set resourcePath(resourcePath) {
+        this._resourcePath = resourcePath;
     }
 
     /**
@@ -123,6 +128,42 @@ export default class ResourceLoader extends EventEmitter {
 
     set database(database) {
         this._database = database;
+    }
+
+    /**
+     * @public
+     * @member {String}
+     */
+    get method() {
+        return this._method;
+    }
+
+    set method(method) {
+        this._method = method;
+    }
+
+    /**
+     * @public
+     * @member {String}
+     */
+    get mode() {
+        return this._mode;
+    }
+
+    set mode(mode) {
+        this._mode = mode;
+    }
+
+    /**
+     * @public
+     * @member {String}
+     */
+    get cache() {
+        return this._cache;
+    }
+
+    set cache(cache) {
+        this._cache = cache;
     }
 
     /**
@@ -141,7 +182,6 @@ export default class ResourceLoader extends EventEmitter {
 
     /**
      * @public
-     * @chainable
      * @param {String} type
      * @returns {ResourceFactory}
      */
@@ -151,6 +191,41 @@ export default class ResourceLoader extends EventEmitter {
         }
 
         return this._factories.get(type);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} type
+     * @param {Object<String, String>} list
+     * @param {Object} [options]
+     * @returns {ResourceLoader}
+     */
+    add(type, list, options) {
+        for (const [name, path] of Object.entries(list)) {
+            this.addItem(type, name, path, options);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {String} type
+     * @param {String} name
+     * @param {String} path
+     * @param {Object} [options]
+     * @returns {ResourceLoader}
+     */
+    addItem(type, name, path, options) {
+        if (!this._factories.has(type)) {
+            throw new Error(`No resource factory for type "${type}".`);
+        }
+
+        this._queue.add({ type, name, path, options });
+
+        return this;
     }
 
     /**
@@ -194,13 +269,19 @@ export default class ResourceLoader extends EventEmitter {
             return Promise.resolve(this._resources.get(type, name));
         }
 
-        const factory = this.getFactory(type);
+        const factory = this.getFactory(type),
+            completePath = this._resourcePath + path,
+            request = {
+                method: this._method,
+                mode: this._mode,
+                cache: this._cache,
+            };
 
         if (this._database) {
             return this._database
                 .loadData(factory.storageType, name)
                 .then((result) => result.data || factory
-                    .request(this._basePath + path, this._request)
+                    .request(completePath, request)
                     .then((response) => factory.process(response))
                     .then((data) => this._database
                         .saveData(factory.storageType, name, data)
@@ -214,7 +295,7 @@ export default class ResourceLoader extends EventEmitter {
         }
 
         return factory
-            .load(this._basePath + path, this._request, options)
+            .load(completePath, request, options)
             .then((resource) => {
                 this._resources.set(type, name, resource);
 
@@ -225,38 +306,23 @@ export default class ResourceLoader extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @param {String} type
-     * @param {String} name
-     * @param {String} path
      * @param {Object} [options]
+     * @param {Boolean} [options.events=true]
+     * @param {Boolean} [options.queue=true]
+     * @param {Boolean} [options.resources=true]
      * @returns {ResourceLoader}
      */
-    addItem(type, name, path, options) {
-        if (!this._factories.has(type)) {
-            throw new Error(`No resource factory for type "${type}".`);
+    clear({ events = true, queue = true, resources = true } = {}) {
+        if (events) {
+            this.off();
         }
 
-        this._queue.add({
-            type,
-            name,
-            path,
-            options,
-        });
+        if (queue) {
+            this._queue.clear();
+        }
 
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {String} type
-     * @param {Object<String, String>} list
-     * @param {Object} [options]
-     * @returns {ResourceLoader}
-     */
-    addList(type, list, options) {
-        for (const [name, path] of Object.entries(list)) {
-            this.addItem(type, name, path, options);
+        if (resources) {
+            this._resources.clear();
         }
 
         return this;
@@ -277,16 +343,35 @@ export default class ResourceLoader extends EventEmitter {
             this._database = null;
         }
 
-        this._resources.destroy();
-        this._resources = null;
+        this._factories.clear();
+        this._factories = null;
 
         this._queue.clear();
         this._queue = null;
 
-        this._factories.clear();
-        this._factories = null;
+        this._resources.destroy();
+        this._resources = null;
 
-        this._basePath = null;
-        this._request = null;
+        this._resourcePath = null;
+        this._method = null;
+        this._mode = null;
+        this._cache = null;
+    }
+
+    /**
+     * @private
+     */
+    _addFactories() {
+        this.addFactory('arrayBuffer', new ArrayBufferFactory());
+        this.addFactory('mediaSource', new MediaSourceFactory());
+        this.addFactory('blob', new BlobFactory());
+        this.addFactory('font', new FontFactory());
+        this.addFactory('music', new MusicFactory());
+        this.addFactory('sound', new SoundFactory());
+        this.addFactory('video', new VideoFactory());
+        this.addFactory('image', new ImageFactory());
+        this.addFactory('texture', new TextureFactory());
+        this.addFactory('string', new StringFactory());
+        this.addFactory('json', new JSONFactory());
     }
 }

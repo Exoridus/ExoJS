@@ -9,16 +9,17 @@ export default class ScaleModifier extends ParticleModifier {
 
     /**
      * @constructor
-     * @param {Vector} scaleFactor
+     * @param {Number} factorX
+     * @param {Number} factorY
      */
-    constructor(scaleFactor) {
+    constructor(factorX, factorY) {
         super();
 
         /**
          * @private
          * @member {Vector}
          */
-        this._scaleFactor = (scaleFactor && scaleFactor.clone()) || new Vector();
+        this._scaleFactor = new Vector(factorX, factorY);
     }
 
     /**
@@ -30,24 +31,17 @@ export default class ScaleModifier extends ParticleModifier {
     }
 
     set scaleFactor(scaleFactor) {
+        this.setScaleFactor(scaleFactor);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Vector} scaleFactor
+     * @returns {ScaleModifier}
+     */
+    setScaleFactor(scaleFactor) {
         this._scaleFactor.copy(scaleFactor);
-    }
-
-    /**
-     * @override
-     */
-    apply(particle, delta) {
-        const scaleFactor = this._scaleFactor,
-            seconds = delta.seconds;
-
-        particle.scale.add(seconds * scaleFactor.x, seconds * scaleFactor.y);
-    }
-
-    /**
-     * @override
-     */
-    copy(modifier) {
-        this.scaleFactor = modifier.scaleFactor;
 
         return this;
     }
@@ -55,8 +49,18 @@ export default class ScaleModifier extends ParticleModifier {
     /**
      * @override
      */
+    apply(particle, delta) {
+        const { x, y } = this._scaleFactor,
+            { seconds } = delta;
+
+        particle.scale.add(x * seconds, y * seconds);
+    }
+
+    /**
+     * @override
+     */
     clone() {
-        return new ScaleModifier(this._scaleFactor);
+        return new ScaleModifier(this._scaleFactor.x, this._scaleFactor.y);
     }
 
     /**

@@ -1,34 +1,28 @@
-window.app = new Exo.Application({
-    assetsPath: 'assets/',
-    canvasParent: document.querySelector('.container-canvas'),
-    width: 800,
-    height: 600,
-});
-
 window.app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('video', 'example', 'video/example.webm');
+        loader.add('video', { example: 'video/example.webm' });
     },
 
     /**
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const { width, height } = this.app.canvas;
 
         /**
          * @private
          * @member {Video}
          */
         this._video = resources.get('video', 'example');
-        this._video.width = canvas.width;
-        this._video.height = canvas.height;
-
-        this._video.play({ loop: true });
+        this._video.width = width;
+        this._video.height = height;
+        this._video.volume = 0.5;
+        this._video.loop = true;
+        this._video.play();
 
         this.app.on('pointer:down', () => {
             this._video.toggle();
@@ -39,8 +33,7 @@ window.app.start(new Exo.Scene({
      * @param {RenderManager} renderManager
      */
     draw(renderManager) {
-        renderManager
-            .clear()
+        renderManager.clear()
             .draw(this._video)
             .display();
     },

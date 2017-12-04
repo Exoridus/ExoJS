@@ -1,8 +1,6 @@
 import Container from '../Container';
 import Rectangle from '../../math/Rectangle';
 import Vector from '../../math/Vector';
-import Color from '../../core/Color';
-import { BLEND_MODE } from '../../const';
 import Interval from '../../math/Interval';
 
 /**
@@ -29,18 +27,6 @@ export default class Sprite extends Container {
          * @member {Rectangle}
          */
         this._textureFrame = new Rectangle();
-
-        /**
-         * @private
-         * @member {Color}
-         */
-        this._tint = Color.White.clone();
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._blendMode = BLEND_MODE.NORMAL;
 
         /**
          * 48 Bytes for 12 4-Byte Properties:
@@ -103,30 +89,6 @@ export default class Sprite extends Container {
 
     set textureFrame(frame) {
         this.setTextureFrame(frame);
-    }
-
-    /**
-     * @public
-     * @member {Color}
-     */
-    get tint() {
-        return this._tint;
-    }
-
-    set tint(tint) {
-        this.setTint(tint);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get blendMode() {
-        return this._blendMode;
-    }
-
-    set blendMode(blendMode) {
-        this.setBlendMode(blendMode);
     }
 
     /**
@@ -275,30 +237,6 @@ export default class Sprite extends Container {
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Color} color
-     * @returns {Drawable}
-     */
-    setTint(color) {
-        this._tint.copy(color);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} blendMode
-     * @returns {Drawable}
-     */
-    setBlendMode(blendMode) {
-        this._blendMode = blendMode;
-
-        return this;
-    }
-
-    /**
      * @override
      */
     render(renderManager) {
@@ -417,14 +355,10 @@ export default class Sprite extends Container {
     destroy() {
         super.destroy();
 
-        this._tint.destroy();
-        this._tint = null;
-
         this._textureFrame.destroy();
         this._textureFrame = null;
 
         this._texture = null;
-        this._blendMode = null;
         this._spriteData = null;
         this._vertexData = null;
         this._texCoordData = null;

@@ -15,20 +15,16 @@ export default class Text extends Sprite {
     /**
      * @constructor
      * @param {String} text
+     * @param {TextStyle|Object} [style]
      * @param {Object} [options]
-     * @param {TextStyle|Object} [options.style]
-     * @param {HTMLCanvasElement} [options.canvas=document.createElement('canvas')]
      * @param {Number} [options.scaleMode]
      * @param {Number} [options.wrapMode]
      * @param {Boolean} [options.premultiplyAlpha]
      * @param {Boolean} [options.generateMipMap]
+     * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]
      */
-    constructor(text, {
-        style = new TextStyle(),
-        canvas = document.createElement('canvas'),
-        scaleMode, wrapMode, premultiplyAlpha, generateMipMap,
-    } = {}) {
-        super(new Texture(canvas, { scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
+    constructor(text, style, options, canvas = document.createElement('canvas')) {
+        super(new Texture(canvas, options));
 
         /**
          * @private
@@ -52,7 +48,7 @@ export default class Text extends Sprite {
          * @private
          * @member {CanvasRenderingContext2D}
          */
-        this._context = this._canvas.getContext('2d');
+        this._context = canvas.getContext('2d');
 
         /**
          * @private

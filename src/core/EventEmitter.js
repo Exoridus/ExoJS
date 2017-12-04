@@ -170,6 +170,7 @@ export default class EventEmitter {
                 events.length = 0;
             }
         }
+
         this._events.clear();
         this._events = null;
     }

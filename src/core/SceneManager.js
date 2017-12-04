@@ -1,13 +1,27 @@
 /**
- * @class SceneManager
+ * @inner
+ * @type {Object<String, Number>}
  */
-export default class SceneManager {
+import EventEmitter from './EventEmitter';
+
+const STATUS = {
+    NONE: 0,
+    LOADING: 1,
+    RUNNING: 2,
+};
+
+/**
+ * @class SceneManager
+ * @extends EventEmitter
+ */
+export default class SceneManager extends EventEmitter {
 
     /**
      * @constructor
      * @param {Application} app
      */
     constructor(app) {
+        super();
 
         /**
          * @private
@@ -17,87 +31,129 @@ export default class SceneManager {
 
         /**
          * @private
-         * @member {?Scene}
+         * @member {ResourceLoader}
          */
-        this._currentScene = null;
+        this._loader = app.loader;
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {Number}
          */
-        this._sceneActive = false;
+        this._status = STATUS.NONE;
+
+        /**
+         * @private
+         * @member {?Scene}
+         */
+        this._scene = null;
     }
 
     /**
      * @public
+     * @member {?Scene}
+     */
+    get scene() {
+        return this._scene;
+    }
+
+    set scene(scene) {
+        this.setScene(scene);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get sceneLoading() {
+        return (this._status === STATUS.LOADING);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Boolean}
+     */
+    get sceneRunning() {
+        return (this._status === STATUS.RUNNING);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {?Scene} scene
+     * @returns {SceneManager}
+     */
+    setScene(scene) {
+        if (scene !== this._scene) {
+            this._unloadScene();
+            this._scene = scene;
+            this._loadScene();
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {Time} delta
+     * @returns {SceneManager}
      */
     update(delta) {
-        if (!this._currentScene || !this._sceneActive) {
-            return;
+        if (this.sceneRunning) {
+            this._scene.update(delta);
+            this._scene.draw(this._app.renderManager);
         }
 
-        this._currentScene.update(delta);
-        this._currentScene.draw(this._app.renderManager);
-    }
-
-    /**
-     * @public
-     */
-    startScene() {
-        if (!this._currentScene) {
-            throw new Error('No scene was specified, use changeScene()!');
-        }
-
-        if (this._sceneActive) {
-            throw new Error('Scene can only be started once!');
-        }
-
-        this._sceneActive = true;
-        this._currentScene.init(this._app.loader.resources);
-    }
-
-    /**
-     * @public
-     */
-    stopScene() {
-        if (!this._currentScene) {
-            return;
-        }
-
-        if (this._sceneActive) {
-            this._currentScene.unload();
-            this._sceneActive = false;
-        }
-
-        this._currentScene.destroy();
-        this._currentScene = null;
-
-        this._app.loader.off();
-    }
-
-    /**
-     * @public
-     * @param {Scene} scene
-     */
-    changeScene(scene) {
-        this.stopScene();
-
-        this._currentScene = scene;
-        this._currentScene.app = this._app;
-        this._currentScene.load(this._app.loader);
-
-        this._app.loader.load(() => this.startScene());
+        return this;
     }
 
     /**
      * @public
      */
     destroy() {
-        this.stopScene();
+        super.destroy();
 
-        this._currentScene = null;
-        this._sceneActive = null;
+        this._unloadScene();
+
+        this._scene = null;
+        this._status = null;
+        this._loader = null;
         this._app = null;
+    }
+
+    /**
+     * @private
+     */
+    _loadScene() {
+        if (this._scene) {
+            this._status = STATUS.LOADING;
+
+            this._scene.app = this._app;
+            this._scene.load(this._loader);
+
+            this._loader.load().then(() => {
+                this._status = STATUS.RUNNING;
+                this._scene.init(this._loader.resources);
+            });
+        }
+    }
+
+    /**
+     * @private
+     */
+    _unloadScene() {
+        if (this._scene) {
+            if (this.sceneRunning) {
+                this._scene.unload();
+            }
+
+            this._scene.destroy();
+            this._scene = null;
+
+            this._status = STATUS.NONE;
+            this._loader.clear();
+        }
     }
 }

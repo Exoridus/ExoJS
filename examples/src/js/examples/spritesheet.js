@@ -1,18 +1,16 @@
-window.app = new Exo.Application({
-    assetsPath: 'assets/',
-    canvasParent: document.querySelector('.container-canvas'),
-    width: 800,
-    height: 600,
-});
-
 window.app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addItem('texture', 'explosion', 'image/explosion.png');
-        loader.addItem('json', 'spritesheet', 'json/spritesheet.json');
+        loader.add('texture', {
+            explosion: 'image/explosion.png'
+        });
+
+        loader.add('json', {
+            spritesheet: 'json/spritesheet.json'
+        });
     },
 
     /**

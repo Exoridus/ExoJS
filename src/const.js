@@ -571,7 +571,7 @@ export const
     /**
      * @public
      * @constant
-     * @name BLEND_MODE
+     * @name BLEND_MODES
      * @type {Object<String, Number>}
      * @property {Number} NORMAL
      * @property {Number} ADD
@@ -579,9 +579,9 @@ export const
      * @property {Number} MULTIPLY
      * @property {Number} SCREEN
      */
-    BLEND_MODE = {
+    BLEND_MODES = {
         NORMAL: 0,
-        ADD: 1,
+        ADDITIVE: 1,
         SUBTRACT: 2,
         MULTIPLY: 3,
         SCREEN: 4,

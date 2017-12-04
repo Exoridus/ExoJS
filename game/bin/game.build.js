@@ -908,14 +908,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 window.addEventListener('load', function () {
     var app = new _exojs.Application({
-        assetsPath: 'assets/',
+        resourcePath: 'assets/',
         width: 1280,
         height: 720,
         canvas: document.querySelector('#game-canvas'),
         database: new _exojs.Database('game', 3)
     });
 
-    app.loader.request.cache = 'no-cache';
+    app.loader.cache = 'no-cache';
+
     app.start(new _LauncherScene2.default());
 
     window.app = app;
@@ -1015,21 +1016,21 @@ var LauncherScene = function (_Scene) {
                 return _this2._renderProgress(index / length * 100);
             });
 
-            loader.addList('texture', {
+            loader.add('texture', {
                 'title/logo': 'image/title/logo.png',
                 'title/background': 'image/title/background.jpg'
             }, {
-                scaleMode: _exojs.SCALE_MODE.LINEAR
+                scaleMode: _exojs.SCALE_MODES.LINEAR
             });
 
-            loader.addList('texture', {
+            loader.add('texture', {
                 'game/tileset': 'image/game/tileset.png',
                 'game/player': 'image/game/player.png'
             }, {
-                scaleMode: _exojs.SCALE_MODE.NEAREST
+                scaleMode: _exojs.SCALE_MODES.NEAREST
             });
 
-            loader.addList('music', {
+            loader.add('music', {
                 'title': 'audio/title.ogg',
                 'overworld': 'audio/overworld.ogg'
             });
@@ -1055,19 +1056,14 @@ var LauncherScene = function (_Scene) {
              */
             this._openTitleHandler = this._openTitle.bind(this);
 
-            /**
-             * @private
-             * @member {Input}
-             */
-            this._playInput = new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.Start, _exojs.GAMEPAD.FaceBottom]);
-
-            this._playInput.on('trigger', this._openTitleHandler);
-
             this._$indicator.addClass('finished');
             this._$indicatorText.html('PLAY');
             this._$indicatorText.on('click', this._openTitleHandler);
 
-            this.app.inputManager.add(this._playInput);
+            this.app.inputManager.add(new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.Start, _exojs.GAMEPAD.FaceBottom], {
+                context: this,
+                trigger: this._openTitleHandler
+            }));
         }
 
         /**
@@ -1077,11 +1073,8 @@ var LauncherScene = function (_Scene) {
     }, {
         key: 'unload',
         value: function unload() {
-            this.app.inputManager.remove(this._playInput);
+            this.app.inputManager.clear(true);
             this._$indicatorText.off('click', this._openTitleHandler);
-
-            this._playInput.destroy();
-            this._playInput = null;
 
             this._openTitleHandler = null;
         }
@@ -1139,7 +1132,7 @@ var LauncherScene = function (_Scene) {
     }, {
         key: '_openTitle',
         value: function _openTitle() {
-            this.app.sceneManager.changeScene(new _TitleScene2.default());
+            this.app.sceneManager.setScene(new _TitleScene2.default());
         }
     }]);
 
@@ -2206,12 +2199,12 @@ var NewGameMenu = function (_Menu) {
     }, {
         key: '_onSelectCreateWorld',
         value: function _onSelectCreateWorld() {
-            this._app.sceneManager.changeScene(new _GameScene2.default());
+            this._app.sceneManager.setScene(new _GameScene2.default());
         }
     }, {
         key: '_onSelectCreateCharacter',
         value: function _onSelectCreateCharacter() {
-            this._app.sceneManager.changeScene(new _GameScene2.default());
+            this._app.sceneManager.setScene(new _GameScene2.default());
         }
     }]);
 
@@ -3032,7 +3025,7 @@ var Player = function (_Sprite) {
     }, {
         key: '_updateFrameIndex',
         value: function _updateFrameIndex() {
-            if (this._moving && this._frameTimer.isExpired) {
+            if (this._moving && this._frameTimer.expired) {
                 this._frameTimer.restart();
                 this._setFrameIndex(this._frameIndex + 1);
             }
@@ -3582,7 +3575,7 @@ var LoadGameMenu = function (_Menu) {
     }, {
         key: '_onSelectLoadWorld',
         value: function _onSelectLoadWorld() {
-            this._app.sceneManager.changeScene(new _GameScene2.default());
+            this._app.sceneManager.setScene(new _GameScene2.default());
         }
     }, {
         key: 'destroy',

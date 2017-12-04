@@ -65,7 +65,7 @@ export default class LoadGameMenu extends Menu {
     }
 
     _onSelectLoadWorld() {
-        this._app.sceneManager.changeScene(new GameScene());
+        this._app.sceneManager.setScene(new GameScene());
     }
 
     destroy() {

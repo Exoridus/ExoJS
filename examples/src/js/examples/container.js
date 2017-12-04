@@ -1,17 +1,10 @@
-window.app = new Exo.Application({
-    assetsPath: 'assets/',
-    canvasParent: document.querySelector('.container-canvas'),
-    width: 800,
-    height: 600,
-});
-
 window.app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.addList('texture', {
+        loader.add('texture', {
             bunny: 'image/bunny.png',
             rainbow: 'image/rainbow.png',
         });

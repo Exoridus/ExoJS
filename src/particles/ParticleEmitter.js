@@ -1,4 +1,4 @@
-import { BLEND_MODE, TIME } from '../const';
+import { TIME } from '../const';
 import Drawable from '../graphics/Drawable';
 import Particle from './Particle';
 import Rectangle from '../math/Rectangle';
@@ -129,12 +129,6 @@ export default class ParticleEmitter extends Drawable {
          * @member {Number}
          */
         this._emissionDelta = 0;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._blendMode = BLEND_MODE.NORMAL;
 
         if (texture) {
             this.setTexture(texture);
@@ -380,18 +374,6 @@ export default class ParticleEmitter extends Drawable {
      * @public
      * @member {Number}
      */
-    get blendMode() {
-        return this._blendMode;
-    }
-
-    set blendMode(blendMode) {
-        this.setBlendMode(blendMode);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
     get width() {
         return Math.abs(this.scale.x) * this._textureFrame.width;
     }
@@ -516,18 +498,6 @@ export default class ParticleEmitter extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Number} blendMode
-     * @returns {Drawable}
-     */
-    setBlendMode(blendMode) {
-        this._blendMode = blendMode;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {ParticleModifier} modifier
      * @returns {ParticleEmitter}
      */
@@ -614,7 +584,6 @@ export default class ParticleEmitter extends Drawable {
         this.textureFrame = emitter.textureFrame;
         this.emissionRate = emitter.emissionRate;
         this.modifiers = emitter.modifiers;
-        this.blendMode = emitter.blendMode;
 
         return this;
     }
@@ -630,7 +599,6 @@ export default class ParticleEmitter extends Drawable {
         emitter.textureFrame = this.textureFrame;
         emitter.emissionRate = this.emissionRate;
         emitter.modifiers = this.modifiers;
-        emitter.blendMode = this.blendMode;
 
         return emitter;
     }

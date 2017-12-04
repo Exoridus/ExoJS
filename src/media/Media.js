@@ -274,11 +274,11 @@ export default class Media extends EventEmitter {
      * @public
      * @chainable
      * @param {Object} [options]
-     * @property {Boolean} [options.loop]
-     * @property {Number} [options.speed]
-     * @property {Number} [options.volume]
-     * @property {Number} [options.time]
-     * @property {Boolean} [options.muted]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
      * @returns {Media}
      */
     toggle(options) {
@@ -289,11 +289,11 @@ export default class Media extends EventEmitter {
      * @public
      * @chainable
      * @param {Object} [options]
-     * @property {Number} [options.volume]
-     * @property {Boolean} [options.loop]
-     * @property {Number} [options.speed]
-     * @property {Number} [options.time]
-     * @property {Boolean} [options.muted]
+     * @param {Number} [options.volume]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
      * @returns {Media}
      */
     applyOptions({ volume, loop, speed, time, muted } = {}) {

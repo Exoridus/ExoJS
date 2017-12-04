@@ -1,4 +1,4 @@
-import { BLEND_MODE, SCALE_MODES, WRAP_MODES } from './const';
+import { SCALE_MODES, WRAP_MODES } from './const';
 import Color from './core/Color';
 import DefaultGamepadMapping from './input/gamepad/DefaultGamepadMapping';
 
@@ -8,7 +8,7 @@ export default {
      * @static
      * @type {Object}
      * @name APP_OPTIONS
-     * @property {String} assetsPath=''
+     * @property {String} resourcePath=''
      * @property {Number} width=800
      * @property {Number} height=600
      * @property {?HTMLCanvasElement} canvas=null
@@ -17,7 +17,7 @@ export default {
      * @property {?Database} database=null
      */
     APP_OPTIONS: {
-        assetsPath: '',
+        resourcePath: '',
         width: 800,
         height: 600,
         canvas: null,
@@ -45,6 +45,30 @@ export default {
         stencil: false,
         depth: false,
     },
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'GET'
+     */
+    REQUEST_METHOD: 'GET',
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'cors'
+     */
+    REQUEST_MODE: 'cors',
+
+    /**
+     * @public
+     * @static
+     * @type {String}
+     * @default 'default'
+     */
+    REQUEST_CACHE: 'default',
 
     /**
      * @public
@@ -172,7 +196,7 @@ export default {
      * @type {Number}
      * @default 300
      */
-    THRESHOLD_INPUT: 300,
+    INPUT_THRESHOLD: 300,
 
     /**
      * @public

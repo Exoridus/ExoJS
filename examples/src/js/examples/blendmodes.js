@@ -1,23 +1,15 @@
-window.app = new Exo.Application({
-    assetsPath: 'assets/',
-    canvasParent: document.querySelector('.container-canvas'),
-    width: 800,
-    height: 600,
-});
-
 window.app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader
-            .addList('texture', {
-                background: 'image/uv.png',
-                bunny: 'image/bunny.png',
-            }, {
-                scaleMode: Exo.SCALE_MODES.NEAREST,
-            });
+        loader.add('texture', {
+            background: 'image/uv.png',
+            bunny: 'image/bunny.png',
+        }, {
+            scaleMode: Exo.SCALE_MODES.NEAREST,
+        });
     },
 
     /**
@@ -53,11 +45,11 @@ window.app.start(new Exo.Scene({
          * @member {Number[]}
          */
         this._blendModes = [
-            Exo.BLEND_MODE.NORMAL,
-            Exo.BLEND_MODE.ADD,
-            Exo.BLEND_MODE.SUBTRACT,
-            Exo.BLEND_MODE.MULTIPLY,
-            Exo.BLEND_MODE.SCREEN,
+            Exo.BLEND_MODES.NORMAL,
+            Exo.BLEND_MODES.ADD,
+            Exo.BLEND_MODES.SUBTRACT,
+            Exo.BLEND_MODES.MULTIPLY,
+            Exo.BLEND_MODES.SCREEN,
         ];
 
         /**

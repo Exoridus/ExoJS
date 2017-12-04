@@ -1,4 +1,3 @@
-import { BLEND_MODE } from '../../const';
 import Container from '../Container';
 import Color from '../../core/Color';
 
@@ -31,18 +30,6 @@ export default class Drawing extends Container {
          * @type {Color}
          */
         this._fillColor = Color.Black.clone();
-
-        /**
-         * @private
-         * @member {Color}
-         */
-        this._tint = Color.White.clone();
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._blendMode = BLEND_MODE.NORMAL;
     }
 
     /**
@@ -79,30 +66,6 @@ export default class Drawing extends Container {
 
     set fillColor(fillColor) {
         this._fillColor.copy(fillColor);
-    }
-
-    /**
-     * @public
-     * @member {Color}
-     */
-    get tint() {
-        return this._tint;
-    }
-
-    set tint(tint) {
-        this.setTint(tint);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get blendMode() {
-        return this._blendMode;
-    }
-
-    set blendMode(blendMode) {
-        this.setBlendMode(blendMode);
     }
 
     /**
@@ -334,10 +297,6 @@ export default class Drawing extends Container {
         this._fillColor.destroy();
         this._fillColor = null;
 
-        this._tint.destroy();
-        this._tint = null;
-
         this._lineWidth = null;
-        this._blendMode = null;
     }
 }

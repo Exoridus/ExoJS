@@ -52,21 +52,21 @@ export default class LauncherScene extends Scene {
 
         loader.on('progress', (length, index, resource) => this._renderProgress(index / length * 100));
 
-        loader.addList('texture', {
+        loader.add('texture', {
             'title/logo': 'image/title/logo.png',
             'title/background': 'image/title/background.jpg',
         }, {
             scaleMode: SCALE_MODES.LINEAR,
         });
 
-        loader.addList('texture', {
+        loader.add('texture', {
             'game/tileset': 'image/game/tileset.png',
             'game/player': 'image/game/player.png',
         }, {
             scaleMode: SCALE_MODES.NEAREST,
         });
 
-        loader.addList('music', {
+        loader.add('music', {
             'title': 'audio/title.ogg',
             'overworld': 'audio/overworld.ogg',
         });
@@ -89,34 +89,26 @@ export default class LauncherScene extends Scene {
          */
         this._openTitleHandler = this._openTitle.bind(this);
 
-        /**
-         * @private
-         * @member {Input}
-         */
-        this._playInput = new Input([
-            KEYBOARD.Enter,
-            GAMEPAD.Start,
-            GAMEPAD.FaceBottom,
-        ]);
-
-        this._playInput.on('trigger', this._openTitleHandler);
-
         this._$indicator.addClass('finished');
         this._$indicatorText.html('PLAY');
         this._$indicatorText.on('click', this._openTitleHandler);
 
-        this.app.inputManager.add(this._playInput);
+        this.app.inputManager.add(new Input([
+            KEYBOARD.Enter,
+            GAMEPAD.Start,
+            GAMEPAD.FaceBottom,
+        ], {
+            context: this,
+            trigger: this._openTitleHandler
+        }));
     }
 
     /**
      * @override
      */
     unload() {
-        this.app.inputManager.remove(this._playInput);
+        this.app.inputManager.clear(true);
         this._$indicatorText.off('click', this._openTitleHandler);
-
-        this._playInput.destroy();
-        this._playInput = null;
 
         this._openTitleHandler = null;
     }
@@ -172,6 +164,6 @@ export default class LauncherScene extends Scene {
      * @private
      */
     _openTitle() {
-        this.app.sceneManager.changeScene(new TitleScene());
+        this.app.sceneManager.setScene(new TitleScene());
     }
 }

@@ -19,7 +19,7 @@ export default class Input extends EventEmitter {
      * @param {*} [options.context]
      * @param {Number} [options.gamepadIndex=0]
      * @param {Number} [options.pointerIndex=0]
-     * @param {Number} [options.threshold=settings.THRESHOLD_INPUT]
+     * @param {Number} [options.threshold=settings.INPUT_THRESHOLD]
      */
     constructor(channels, {
         start,
@@ -29,7 +29,7 @@ export default class Input extends EventEmitter {
         context,
         gamepadIndex = 0,
         pointerIndex = 0,
-        threshold = settings.THRESHOLD_INPUT,
+        threshold = settings.INPUT_THRESHOLD,
     } = {}) {
         super();
 

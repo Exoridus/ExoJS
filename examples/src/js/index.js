@@ -1,36 +1,33 @@
 window.addEventListener('load', () => {
-    let node;
+    const app = new Exo.Application({
+            resourcePath: 'assets/',
+            canvasParent: document.querySelector('.container-canvas'),
+            width: 800,
+            height: 600,
+        }),
+        loadScript = () => {
+            app.stop();
 
-    const loadScript = (name) => {
-        if (!name) {
-            return;
-        }
+            const name = location.hash.slice(1),
+                script = document.createElement('script'),
+                example = document.querySelector('#current-example');
 
-        if (window.app) {
-            window.app.destroy();
-            window.app = null;
-
-            node = document.querySelector('#current-example');
-            node.parentNode.removeChild(node);
-
-            node = document.querySelector('.container-canvas');
-            while (node.firstChild) {
-                node.removeChild(node.firstChild);
+            if (example) {
+                example.parentNode.removeChild(example);
             }
-        }
 
-        node = document.createElement('script');
-        node.type = 'text/javascript';
-        node.async = true;
-        node.src = `src/js/examples/${name}.js?no-cache=${Date.now()}`;
-        node.id = 'current-example';
+            script.type = 'text/javascript';
+            script.async = true;
+            script.src = `src/js/examples/${name}.js?no-cache=${Date.now()}`;
+            script.id = 'current-example';
 
-        document.getElementsByTagName('head')[0].appendChild(node);
-    }
+            document.getElementsByTagName('head')[0].appendChild(script);
+        };
 
-    window.addEventListener('hashchange', () => loadScript(location.hash.slice(1)), false);
+    window.app = app;
+    window.addEventListener('hashchange', loadScript, false);
 
     if (location.hash) {
-        loadScript(location.hash.slice(1));
+        loadScript();
     }
 });

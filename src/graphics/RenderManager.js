@@ -1,4 +1,4 @@
-import { BLEND_MODE } from '../const';
+import { BLEND_MODES } from '../const';
 import support from '../support';
 import settings from '../settings';
 import RenderTarget from './RenderTarget';
@@ -115,7 +115,7 @@ export default class RenderManager {
         this.addRenderer('particle', new ParticleRenderer());
 
         this.setRenderTarget(this._rootRenderTarget);
-        this.setBlendMode(BLEND_MODE.NORMAL);
+        this.setBlendMode(BLEND_MODES.NORMAL);
 
         this.resize(width, height);
     }
@@ -328,16 +328,16 @@ export default class RenderManager {
             this._blendMode = blendMode;
 
             switch (blendMode) {
-                case BLEND_MODE.ADD:
+                case BLEND_MODES.ADD:
                     gl.blendFunc(gl.ONE, gl.ONE);
                     break;
-                case BLEND_MODE.SUBTRACT:
+                case BLEND_MODES.SUBTRACT:
                     gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
                     break;
-                case BLEND_MODE.MULTIPLY:
+                case BLEND_MODES.MULTIPLY:
                     gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
                     break;
-                case BLEND_MODE.SCREEN:
+                case BLEND_MODES.SCREEN:
                     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
                     break;
                 default:

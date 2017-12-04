@@ -87,10 +87,10 @@ export default class NewGameMenu extends Menu {
     }
 
     _onSelectCreateWorld() {
-        this._app.sceneManager.changeScene(new GameScene());
+        this._app.sceneManager.setScene(new GameScene());
     }
 
     _onSelectCreateCharacter() {
-        this._app.sceneManager.changeScene(new GameScene());
+        this._app.sceneManager.setScene(new GameScene());
     }
 }

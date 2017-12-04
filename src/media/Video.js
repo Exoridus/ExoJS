@@ -256,15 +256,6 @@ export default class Video extends Sprite {
     /**
      * @public
      * @readonly
-     * @member {?AudioContext}
-     */
-    get audioContext() {
-        return audioContext;
-    }
-
-    /**
-     * @public
-     * @readonly
      * @member {?AudioNode}
      */
     get analyserTarget() {
@@ -321,27 +312,27 @@ export default class Video extends Sprite {
     /**
      * @public
      * @chainable
+     * @param {Object} [options]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
      * @returns {Video}
      */
-    toggle() {
-        if (this.paused) {
-            this.play();
-        } else {
-            this.pause();
-        }
-
-        return this;
+    toggle(options) {
+        return this.paused ? this.play(options) : this.pause();
     }
 
     /**
      * @public
      * @chainable
      * @param {Object} [options]
-     * @property {Number} [options.volume]
-     * @property {Boolean} [options.loop]
-     * @property {Number} [options.speed]
-     * @property {Number} [options.time]
-     * @property {Boolean} [options.muted]
+     * @param {Number} [options.volume]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
      * @returns {Video}
      */
     applyOptions({ volume, loop, speed, time, muted } = {}) {

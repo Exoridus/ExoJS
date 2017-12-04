@@ -16,16 +16,6 @@ export default class ParticleModifier {
 
     /**
      * @public
-     * @chainable
-     * @param {ParticleModifier} modifier
-     * @returns {ParticleModifier}
-     */
-    copy(modifier) { // eslint-disable-line
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
      * @returns {ParticleModifier}
      */
     clone() {

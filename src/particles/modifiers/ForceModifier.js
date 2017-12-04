@@ -9,38 +9,39 @@ export default class ForceModifier extends ParticleModifier {
 
     /**
      * @constructor
-     * @param {Vector} acceleration
+     * @param {Number} velocityX
+     * @param {Number} velocityY
      */
-    constructor(acceleration) {
+    constructor(velocityX, velocityY) {
         super();
 
         /**
          * @private
          * @member {Vector}
          */
-        this._acceleration = (acceleration && acceleration.clone()) || new Vector();
+        this._velocity = new Vector(velocityX, velocityY);
     }
 
     /**
      * @public
      * @member {Vector}
      */
-    get acceleration() {
-        return this._acceleration;
+    get velocity() {
+        return this._velocity;
     }
 
-    set acceleration(acceleration) {
-        this._acceleration.copy(acceleration);
+    set velocity(velocity) {
+        this.setVelocity(velocity);
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {Vector} velocity
+     * @returns {ForceModifier}
      */
-    apply(particle, delta) {
-        const acceleration = this._acceleration,
-            seconds = delta.seconds;
-
-        particle.velocity.add(seconds * acceleration.x, seconds * acceleration.y);
+    setVelocity(velocity) {
+        this._velocity.copy(velocity);
 
         return this;
     }
@@ -48,8 +49,11 @@ export default class ForceModifier extends ParticleModifier {
     /**
      * @override
      */
-    copy(modifier) {
-        this.acceleration = modifier.acceleration;
+    apply(particle, delta) {
+        const { x, y } = this._velocity,
+            { seconds } = delta;
+
+        particle.velocity.add(x * seconds, y * seconds);
 
         return this;
     }
@@ -58,14 +62,14 @@ export default class ForceModifier extends ParticleModifier {
      * @override
      */
     clone() {
-        return new ForceModifier(this._acceleration);
+        return new ForceModifier(this._velocity.x, this._velocity.y);
     }
 
     /**
      * @override
      */
     destroy() {
-        this._acceleration.destroy();
-        this._acceleration = null;
+        this._velocity.destroy();
+        this._velocity = null;
     }
 }

@@ -9,3 +9,4 @@ export { default as ParticleModifier } from './ParticleModifier';
 export { default as ForceModifier } from './modifiers/ForceModifier';
 export { default as ScaleModifier } from './modifiers/ScaleModifier';
 export { default as TorqueModifier } from './modifiers/TorqueModifier';
+export { default as ColorModifier } from './modifiers/ColorModifier';
