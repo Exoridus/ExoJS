@@ -4,9 +4,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('texture', {
-            particle: 'image/particle.png'
-        });
+        loader.add('texture', { particle: 'image/particle.png' });
     },
 
     /**

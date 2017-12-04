@@ -4,9 +4,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('texture', {
-            bunny: 'image/bunny.png'
-        });
+        loader.add('texture', { bunny: 'image/bunny.png' });
     },
 
     /**

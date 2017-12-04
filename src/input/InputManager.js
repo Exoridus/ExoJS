@@ -89,8 +89,6 @@ export default class InputManager extends ChannelManager {
             for (const input of this._inputs) {
                 input.destroy();
             }
-
-            return;
         }
 
         this._inputs.clear();

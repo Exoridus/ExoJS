@@ -4,9 +4,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('texture', {
-            rainbow: 'image/rainbow.png'
-        });
+        loader.add('texture', { rainbow: 'image/rainbow.png' });
     },
 
     /**

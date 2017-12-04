@@ -19024,8 +19024,6 @@ var InputManager = function (_ChannelManager) {
                         }
                     }
                 }
-
-                return;
             }
 
             this._inputs.clear();

@@ -4,13 +4,8 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('texture', {
-            explosion: 'image/explosion.png'
-        });
-
-        loader.add('json', {
-            spritesheet: 'json/spritesheet.json'
-        });
+        loader.add('texture', { explosion: 'image/explosion.png' });
+        loader.add('json', { spritesheet: 'json/spritesheet.json' });
     },
 
     /**

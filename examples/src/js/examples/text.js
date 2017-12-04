@@ -4,11 +4,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('font', {
-            example: 'font/AndyBold/AndyBold.woff2'
-        }, {
-            family: 'AndyBold',
-        });
+        loader.add('font', { example: 'font/AndyBold/AndyBold.woff2' }, { family: 'AndyBold' });
     },
 
     /**

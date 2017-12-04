@@ -4,9 +4,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('music', {
-            example: 'audio/example.ogg'
-        });
+        loader.add('music', { example: 'audio/example.ogg' });
     },
 
     /**

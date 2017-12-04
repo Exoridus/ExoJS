@@ -4,9 +4,7 @@ window.app.start(new Exo.Scene({
      * @param {ResourceLoader} loader
      */
     load(loader) {
-        loader.add('texture', {
-            example: 'image/uv.png'
-        });
+        loader.add('texture', { example: 'image/uv.png' });
     },
 
     /**
@@ -103,9 +101,10 @@ window.app.start(new Exo.Scene({
      * @private
      */
     addInputs() {
-        const canvas = this.app.canvas;
+        const { canvas, inputManager } = this.app,
+            { width, height } = canvas;
 
-        this.app.inputManager.add([
+        inputManager.add([
 
             // Move Up
             new Exo.Input(Exo.KEYBOARD.W, {
@@ -175,7 +174,7 @@ window.app.start(new Exo.Scene({
             new Exo.Input(Exo.KEYBOARD.R, {
                 context: this,
                 trigger(value) {
-                    this._camera.reset(0, 0, canvas.width, canvas.height);
+                    this._camera.reset(0, 0, width, height);
                 },
             })
         ]);
