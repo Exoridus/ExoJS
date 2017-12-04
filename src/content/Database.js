@@ -77,7 +77,7 @@ export default class Database {
      * @readonly
      * @member {Boolean}
      */
-    get isOpen() {
+    get open() {
         return this._database !== null;
     }
 

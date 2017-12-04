@@ -56,7 +56,7 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        if (this._timer.isExpired) {
+        if (this._timer.expired) {
             for (const bunny of this._bunnies.children) {
                 bunny.setTint(new Exo.Color(
                     this._random.next(50, 255),

@@ -1,7 +1,7 @@
-import settings from '../../settings';
-import { addFlag, getMediaHeight, getMediaWidth, hasFlag, isPowerOfTwo, removeFlag } from '../../utils';
-import Size from '../../math/Size';
 import { TEXTURE_FLAGS } from '../../const';
+import { getMediaHeight, getMediaWidth, powerOfTwo, addFlag, hasFlag, removeFlag } from '../../utils';
+import settings from '../../settings';
+import Size from '../../math/Size';
 
 /**
  * @class Texture
@@ -187,8 +187,8 @@ export default class Texture {
      * @member {Boolean}
      */
     get powerOfTwo() {
-        return isPowerOfTwo(this.width)
-            && isPowerOfTwo(this.height);
+        return powerOfTwo(this.width)
+            && powerOfTwo(this.height);
     }
 
     /**

@@ -1,8 +1,7 @@
+import { TIME } from '../const';
 import Vector from '../math/Vector';
 import Color from '../core/Color';
 import Time from '../core/time/Time';
-import { TIME } from '../const';
-import ParticleOptions from './ParticleOptions';
 
 /**
  * @class Particle
@@ -11,7 +10,15 @@ export default class Particle {
 
     /**
      * @constructor
-     * @param {ParticleOptions|Particle} options
+     * @param {Object} [options]
+     * @param {Time} [options.totalLifetime]
+     * @param {Time} [options.elapsedLifetime]
+     * @param {Vector} [options.position]
+     * @param {Vector} [options.velocity]
+     * @param {Vector} [options.scale]
+     * @param {Number} [options.rotation]
+     * @param {Number} [options.rotationSpeed]
+     * @param {Color} [options.tint]
      */
     constructor(options) {
 
@@ -19,49 +26,77 @@ export default class Particle {
          * @private
          * @member {Time}
          */
-        this._elapsedLifetime = options.elapsedLifetime.clone();
+        this._totalLifetime = new Time(0, TIME.SECONDS);
 
         /**
          * @private
          * @member {Time}
          */
-        this._totalLifetime = options.totalLifetime.clone();
+        this._elapsedLifetime = new Time(0, TIME.SECONDS);
 
         /**
          * @private
          * @member {Vector}
          */
-        this._position = options.position.clone();
+        this._position = new Vector(0, 0);
 
         /**
          * @private
          * @member {Vector}
          */
-        this._velocity = options.velocity.clone();
+        this._velocity = new Vector(0, 0);
 
         /**
          * @private
          * @member {Vector}
          */
-        this._scale = options.scale.clone();
+        this._scale = new Vector(1, 1);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._rotation = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._rotationSpeed = 0;
 
         /**
          * @private
          * @member {Color}
          */
-        this._color = options.color.clone();
+        this._tint = new Color();
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._rotation = options.rotation;
+        if (options !== undefined) {
+            this.copy(options);
+        }
+    }
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._rotationSpeed = options.rotationSpeed;
+    /**
+     * @public
+     * @member {Time}
+     */
+    get totalLifetime() {
+        return this._totalLifetime;
+    }
+
+    set totalLifetime(totalLifetime) {
+        this._totalLifetime.copy(totalLifetime);
+    }
+
+    /**
+     * @public
+     * @member {Time}
+     */
+    get elapsedLifetime() {
+        return this._elapsedLifetime;
+    }
+
+    set elapsedLifetime(elapsedLifetime) {
+        this._elapsedLifetime.copy(elapsedLifetime);
     }
 
     /**
@@ -86,6 +121,18 @@ export default class Particle {
 
     set velocity(velocity) {
         this._velocity.copy(velocity);
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get scale() {
+        return this._scale;
+    }
+
+    set scale(scale) {
+        this._scale.copy(scale);
     }
 
     /**
@@ -116,50 +163,14 @@ export default class Particle {
 
     /**
      * @public
-     * @member {Vector}
-     */
-    get scale() {
-        return this._scale;
-    }
-
-    set scale(scale) {
-        this._scale.copy(scale);
-    }
-
-    /**
-     * @public
      * @member {Color}
      */
-    get color() {
-        return this._color;
+    get tint() {
+        return this._tint;
     }
 
-    set color(color) {
-        this._color.copy(color);
-    }
-
-    /**
-     * @public
-     * @member {Time}
-     */
-    get elapsedLifetime() {
-        return this._elapsedLifetime;
-    }
-
-    set elapsedLifetime(elapsedLifetime) {
-        this._elapsedLifetime.copy(elapsedLifetime);
-    }
-
-    /**
-     * @public
-     * @member {Time}
-     */
-    get totalLifetime() {
-        return this._totalLifetime;
-    }
-
-    set totalLifetime(totalLifetime) {
-        this._totalLifetime.copy(totalLifetime);
+    set tint(color) {
+        this._tint.copy(color);
     }
 
     /**
@@ -194,7 +205,7 @@ export default class Particle {
      * @readonly
      * @member {Boolean}
      */
-    get isExpired() {
+    get expired() {
         return this._elapsedLifetime.greaterThan(this._totalLifetime);
     }
 
@@ -217,37 +228,26 @@ export default class Particle {
     /**
      * @public
      * @chainable
-     * @param {ParticleOptions} options
+     * @param {Particle|Object} options
+     * @param {Time} options.totalLifetime
+     * @param {Time} options.elapsedLifetime
+     * @param {Vector} options.position
+     * @param {Vector} options.velocity
+     * @param {Vector} options.scale
+     * @param {Number} options.rotation
+     * @param {Number} options.rotationSpeed
+     * @param {Color} options.tint
      * @returns {Particle}
      */
-    reset(options) {
-        this._elapsedLifetime.set(0, TIME.SECONDS);
-        this._totalLifetime.copy(options.totalLifetime);
-        this._position.copy(options.position);
-        this._velocity.copy(options.velocity);
-        this._scale.copy(options.scale);
-        this._color.copy(options.color);
-        this._rotation = options.rotation;
-        this._rotationSpeed = options.rotationSpeed;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Particle} particle
-     * @returns {Particle}
-     */
-    copy(particle) {
-        this._elapsedLifetime.copy(particle.elapsedLifetime);
-        this._totalLifetime.copy(particle.totalLifetime);
-        this._position.copy(particle.position);
-        this._velocity.copy(particle.velocity);
-        this._scale.copy(particle.scale);
-        this._color.copy(particle.color);
-        this._rotation = particle.rotation;
-        this._rotationSpeed = particle.rotationSpeed;
+    copy({ totalLifetime, elapsedLifetime, position, velocity, scale, rotation, rotationSpeed, tint } = {}) {
+        this._totalLifetime.copy(totalLifetime);
+        this._elapsedLifetime.copy(elapsedLifetime);
+        this._position.copy(position);
+        this._velocity.copy(velocity);
+        this._scale.copy(scale);
+        this._rotation = rotation;
+        this._rotationSpeed = rotationSpeed;
+        this._tint.copy(tint);
 
         return this;
     }
@@ -257,18 +257,27 @@ export default class Particle {
      * @returns {Particle}
      */
     clone() {
-        return new Particle(this);
+        return new Particle({
+            totalLifetime: this.totalLifetime,
+            elapsedLifetime: this.elapsedLifetime,
+            position: this.position,
+            velocity: this.velocity,
+            scale: this.scale,
+            rotation: this.rotation,
+            rotationSpeed: this.rotationSpeed,
+            tint: this.tint,
+        });
     }
 
     /**
      * @public
      */
     destroy() {
-        this._elapsedLifetime.destroy();
-        this._elapsedLifetime = null;
-
         this._totalLifetime.destroy();
         this._totalLifetime = null;
+
+        this._elapsedLifetime.destroy();
+        this._elapsedLifetime = null;
 
         this._position.destroy();
         this._position = null;
@@ -279,8 +288,8 @@ export default class Particle {
         this._scale.destroy();
         this._scale = null;
 
-        this._color.destroy();
-        this._color = null;
+        this._tint.destroy();
+        this._tint = null;
 
         this._rotation = null;
         this._rotationSpeed = null;

@@ -31,8 +31,8 @@ export default class Timer extends Clock {
     /**
      * @override
      */
-    get isRunning() {
-        return this._isRunning && !this.isExpired;
+    get running() {
+        return this._running && !this.expired;
     }
 
     /**
@@ -40,7 +40,7 @@ export default class Timer extends Clock {
      * @readonly
      * @member {Boolean}
      */
-    get isExpired() {
+    get expired() {
         return this.elapsedMilliseconds >= this._limit;
     }
 
@@ -90,7 +90,7 @@ export default class Timer extends Clock {
     reset(timeLimit = this._limit, factor = TIME.MILLISECONDS) {
         this._limit = (timeLimit * factor);
         this._timeBuffer = 0;
-        this._isRunning = false;
+        this._running = false;
 
         return this;
     }

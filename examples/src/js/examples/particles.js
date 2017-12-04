@@ -37,7 +37,7 @@ window.app.start(new Exo.Scene({
          * @member {ParticleEmitter}
          */
         this._emitter = new Exo.ParticleEmitter(this._texture, {
-            totalLifetime: new Exo.Time(5, Exo.TIME.SECONDS)
+            totalLifetime: new Exo.Time(5, Exo.TIME.SECONDS),
         });
 
         this._emitter.addModifier(new Exo.TorqueModifier(100));
@@ -57,21 +57,17 @@ window.app.start(new Exo.Scene({
      * @param {Number} y
      */
     setParticleCenter(x, y) {
-        const options = this._emitter.particleOptions;
-
-        options.position.set(x - (this._texture.width / 2), y - (this._texture.height / 2));
+        this._emitter.particlePosition.set(x - (this._texture.width / 2), y - (this._texture.height / 2));
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        const options = this._emitter.particleOptions,
-            random = this._random;
+        const random = this._random;
 
-        options.color.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
-        options.velocity.set(random.next(-100, 100), random.next(-100, 0));
-
+        this._emitter.particleTint.set(random.next(0, 255), random.next(0, 255), random.next(0, 255), random.next(0, 1));
+        this._emitter.particleVelocity.set(random.next(-100, 100), random.next(-100, 0));
         this._emitter.update(delta);
     },
 

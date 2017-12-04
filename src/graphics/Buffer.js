@@ -55,18 +55,6 @@ export default class Buffer {
     /**
      * @public
      * @readonly
-     * @member {Boolean}
-     */
-    get bound() {
-        const gl = this._context,
-            binding = (this._bufferType === gl.ARRAY_BUFFER) ? gl.ARRAY_BUFFER_BINDING : gl.ELEMENT_ARRAY_BUFFER_BINDING;
-
-        return (this._buffer === gl.getParameter(binding));
-    }
-
-    /**
-     * @public
-     * @readonly
      * @member {ArrayBuffer|ArrayBufferView}
      */
     get data() {
@@ -100,12 +88,10 @@ export default class Buffer {
      * @returns {Buffer}
      */
     bind() {
-        if (!this.bound) {
-            const gl = this._context;
+        const gl = this._context;
 
-            gl.bindBuffer(this._bufferType, this._buffer);
-            gl.bufferData(this._bufferType, this._data, this._drawType);
-        }
+        gl.bindBuffer(this._bufferType, this._buffer);
+        gl.bufferData(this._bufferType, this._data, this._drawType);
 
         return this;
     }
@@ -116,11 +102,9 @@ export default class Buffer {
      * @returns {Buffer}
      */
     unbind() {
-        if (this.bound) {
-            const gl = this._context;
+        const gl = this._context;
 
-            gl.bindBuffer(this._bufferType, null);
-        }
+        gl.bindBuffer(this._bufferType, null);
 
         return this;
     }

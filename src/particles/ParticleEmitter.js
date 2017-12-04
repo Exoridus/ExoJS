@@ -1,9 +1,10 @@
+import { BLEND_MODE, TIME } from '../const';
 import Drawable from '../graphics/Drawable';
 import Particle from './Particle';
 import Rectangle from '../math/Rectangle';
 import Time from '../core/time/Time';
-import ParticleOptions from './ParticleOptions';
-import { BLEND_MODE } from '../const';
+import Vector from '../math/Vector';
+import Color from '../core/Color';
 
 /**
  * @class ParticleEmitter
@@ -14,34 +15,84 @@ export default class ParticleEmitter extends Drawable {
     /**
      * @constructor
      * @param {Texture} texture
-     * @param {ParticleOptions|Object} [particleOptions]
+     * @param {Object} [options]
+     * @param {Time} [options.totalLifetime]
+     * @param {Time} [options.elapsedLifetime]
+     * @param {Vector} [options.position]
+     * @param {Vector} [options.velocity]
+     * @param {Vector} [options.scale]
+     * @param {Number} [options.rotation]
+     * @param {Number} [options.rotationSpeed]
+     * @param {Color} [options.tint]
      */
-    constructor(texture, particleOptions) {
+    constructor(texture, { totalLifetime, elapsedLifetime, position, velocity, scale, rotation, rotationSpeed, tint } = {}) {
         super();
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {Time}
          */
-        this._updateTexCoords = true;
+        this._particleTotalLifetime = (totalLifetime && totalLifetime.clone()) || new Time(1, TIME.SECONDS);
 
         /**
          * @private
-         * @member {Set<Particle>}
+         * @member {Time}
          */
-        this._activeParticles = new Set();
+        this._particleElapsedLifetime = (elapsedLifetime && elapsedLifetime.clone()) || new Time(0, TIME.SECONDS);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._particlePosition = (position && position.clone()) || new Vector(0, 0);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._particleVelocity = (velocity && velocity.clone()) || new Vector(0, 0);
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._particleScale = (scale && scale.clone()) || new Vector(1, 1);
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._particleRotation = rotation || 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._particleRotationSpeed = rotationSpeed || 0;
+
+        /**
+         * @private
+         * @member {Color}
+         */
+        this._particleTint = (tint && tint.clone()) || new Color(255, 255, 255);
 
         /**
          * @private
          * @member {Particle[]}
          */
-        this._unusedParticles = [];
+        this._particles = [];
 
         /**
          * @private
-         * @member {ParticleOptions}
+         * @member {Particle[]}
          */
-        this._particleOptions = new ParticleOptions(particleOptions);
+        this._graveyard = [];
+
+        /**
+         * @private
+         * @member {ParticleModifier[]}
+         */
+        this._modifiers = [];
 
         /**
          * @private
@@ -63,6 +114,12 @@ export default class ParticleEmitter extends Drawable {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._updateTexCoords = true;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._emissionRate = 1;
@@ -72,12 +129,6 @@ export default class ParticleEmitter extends Drawable {
          * @member {Number}
          */
         this._emissionDelta = 0;
-
-        /**
-         * @private
-         * @member {ParticleModifier[]}
-         */
-        this._modifiers = [];
 
         /**
          * @private
@@ -92,51 +143,174 @@ export default class ParticleEmitter extends Drawable {
 
     /**
      * @public
-     * @member {Set<Particle>}
+     * @member {Time}
      */
-    get activeParticles() {
-        return this._activeParticles;
+    get particleTotalLifetime() {
+        return this._particleTotalLifetime;
     }
 
-    set activeParticles(newParticles) {
-        const activeParticles = this._activeParticles,
-            unusedParticles = this._unusedParticles,
-            activeArray = [...activeParticles],
-            newArray = [...newParticles],
-            activeLength = activeArray.length,
-            newLength = newArray.length,
-            diff = (activeLength - newLength);
+    set particleTotalLifetime(time) {
+        this._particleTotalLifetime.copy(time);
+    }
 
-        for (let i = 0; i < activeLength; i++) {
-            activeArray[i].copy(newArray[i]);
+    /**
+     * @public
+     * @member {Time}
+     */
+    get particleElapsedLifetime() {
+        return this._particleElapsedLifetime;
+    }
+
+    set particleElapsedLifetime(time) {
+        this._particleElapsedLifetime.copy(time);
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get particlePosition() {
+        return this._particlePosition;
+    }
+
+    set particlePosition(position) {
+        this._particlePosition.copy(position);
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get particleVelocity() {
+        return this._particleVelocity;
+    }
+
+    set particleVelocity(velocity) {
+        this._particleVelocity.copy(velocity);
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get particleScale() {
+        return this._particleScale;
+    }
+
+    set particleScale(scale) {
+        this._particleScale.copy(scale);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get particleRotation() {
+        return this._particleRotation;
+    }
+
+    set particleRotation(degrees) {
+        const rotation = degrees % 360;
+
+        this._particleRotation = rotation < 0 ? rotation + 360 : rotation;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get particleRotationSpeed() {
+        return this._particleRotationSpeed;
+    }
+
+    set particleRotationSpeed(rotationSpeed) {
+        this._particleRotationSpeed = rotationSpeed;
+    }
+
+    /**
+     * @public
+     * @member {Color}
+     */
+    get particleTint() {
+        return this._particleTint;
+    }
+
+    set particleTint(color) {
+        this._particleTint.copy(color);
+    }
+
+    /**
+     * @public
+     * @member {Particle[]}
+     */
+    get particles() {
+        return this._particles;
+    }
+
+    set particles(particles) {
+        const graveyard = this._graveyard,
+            particlesA = this._particles,
+            particlesB = particles,
+            lenA = particlesA.length,
+            lenB = particlesB.length,
+            diff = (lenA - lenB);
+
+        for (let i = 0; i < lenA; i++) {
+            particlesA[i].copy(particlesB[i]);
         }
 
         if (diff > 0) {
-            for (let i = 0; i < diff; i++) {
-                const particle = activeArray[i];
-
-                unusedParticles.push(particle);
-                activeParticles.delete(particle);
+            for (let i = lenB; i < lenA; i++) {
+                graveyard.push(particlesA.pop());
             }
         } else if (diff < 0) {
-            for (let i = activeLength; i < newLength; i++) {
-                const particle = unusedParticles.pop();
+            for (let i = lenA; i < lenB; i++) {
+                const particle = (graveyard.pop() || new Particle());
 
-                activeParticles.add(particle ? particle.copy(newArray[i]) : newArray[i].clone());
+                particles.push(particle.copy(particlesB[i]));
             }
         }
     }
 
     /**
      * @public
-     * @member {ParticleOptions}
+     * @member {Object}
      */
     get particleOptions() {
-        return this._particleOptions;
+        return {
+            totalLifetime: this.particleTotalLifetime,
+            elapsedLifetime: this.particleElapsedLifetime,
+            position: this.particlePosition,
+            velocity: this.particleVelocity,
+            scale: this.particleScale,
+            rotation: this.particleRotation,
+            rotationSpeed: this.particleRotationSpeed,
+            tint: this.particleTint,
+        };
     }
 
     set particleOptions(options) {
-        this._particleOptions = options;
+        this.setParticleOptions(options);
+    }
+
+    /**
+     * @public
+     * @member {ParticleModifier[]}
+     */
+    get modifiers() {
+        return this._modifiers;
+    }
+
+    set modifiers(newModifiers) {
+        for (const modifier of this._modifiers) {
+            modifier.destroy();
+        }
+
+        this._modifiers.length = 0;
+
+        for (const modifier of newModifiers) {
+            this._modifiers.push(modifier.clone());
+        }
     }
 
     /**
@@ -194,6 +368,18 @@ export default class ParticleEmitter extends Drawable {
      * @public
      * @member {Number}
      */
+    get emissionRate() {
+        return this._emissionRate;
+    }
+
+    set emissionRate(particlesPerSecond) {
+        this.setEmissionRate(particlesPerSecond);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
     get blendMode() {
         return this._blendMode;
     }
@@ -206,32 +392,74 @@ export default class ParticleEmitter extends Drawable {
      * @public
      * @member {Number}
      */
-    get emissionRate() {
-        return this._emissionRate;
+    get width() {
+        return Math.abs(this.scale.x) * this._textureFrame.width;
     }
 
-    set emissionRate(particlesPerSecond) {
-        this.setEmissionRate(particlesPerSecond);
+    set width(value) {
+        this.scale.x = value / this._textureFrame.width;
     }
 
     /**
      * @public
-     * @member {ParticleModifier[]}
+     * @member {Number}
      */
-    get modifiers() {
-        return this._modifiers;
+    get height() {
+        return Math.abs(this.scale.y) * this._textureFrame.height;
     }
 
-    set modifiers(newModifiers) {
-        for (const modifier of this._modifiers) {
-            modifier.destroy();
+    set height(value) {
+        this.scale.y = value / this._textureFrame.height;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Object} [options]
+     * @param {Time} [options.totalLifetime]
+     * @param {Time} [options.elapsedLifetime]
+     * @param {Vector} [options.position]
+     * @param {Vector} [options.velocity]
+     * @param {Vector} [options.scale]
+     * @param {Number} [options.rotation]
+     * @param {Number} [options.rotationSpeed]
+     * @param {Color} [options.tint]
+     * @returns {Drawable}
+     */
+    setParticleOptions({ totalLifetime, elapsedLifetime, position, velocity, scale, rotation, rotationSpeed, tint } = {}) {
+        if (totalLifetime !== undefined) {
+            this.particleTotalLifetime = totalLifetime;
         }
 
-        this._modifiers.length = 0;
-
-        for (const modifier of newModifiers) {
-            this._modifiers.push(modifier.clone());
+        if (elapsedLifetime !== undefined) {
+            this.particleElapsedLifetime = elapsedLifetime;
         }
+
+        if (position !== undefined) {
+            this.particlePosition = position;
+        }
+
+        if (velocity !== undefined) {
+            this.particleVelocity = velocity;
+        }
+
+        if (scale !== undefined) {
+            this.particleScale = scale;
+        }
+
+        if (rotation !== undefined) {
+            this.particleRotation = rotation;
+        }
+
+        if (rotationSpeed !== undefined) {
+            this.particleRotationSpeed = rotationSpeed;
+        }
+
+        if (tint !== undefined) {
+            this.particleTint = tint;
+        }
+
+        return this;
     }
 
     /**
@@ -259,6 +487,8 @@ export default class ParticleEmitter extends Drawable {
         this._textureFrame.copy(frame);
         this._updateTexCoords = true;
 
+        this.localBounds.set(0, 0, frame.width, frame.height);
+
         return this;
     }
 
@@ -274,11 +504,11 @@ export default class ParticleEmitter extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Number} blendMode
-     * @returns {Drawable}
+     * @param {Number} particlesPerSecond
+     * @returns {ParticleEmitter}
      */
-    setBlendMode(blendMode) {
-        this._blendMode = blendMode;
+    setEmissionRate(particlesPerSecond) {
+        this._emissionRate = particlesPerSecond;
 
         return this;
     }
@@ -286,11 +516,11 @@ export default class ParticleEmitter extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Number} particlesPerSecond
-     * @returns {ParticleEmitter}
+     * @param {Number} blendMode
+     * @returns {Drawable}
      */
-    setEmissionRate(particlesPerSecond) {
-        this._emissionRate = particlesPerSecond;
+    setBlendMode(blendMode) {
+        this._blendMode = blendMode;
 
         return this;
     }
@@ -312,7 +542,7 @@ export default class ParticleEmitter extends Drawable {
      * @param {Time} time
      * @returns {Number}
      */
-    computeParticleCount(time) {
+    getParticleCount(time) {
         const particleAmount = (this._emissionRate * time.seconds) + this._emissionDelta,
             particles = particleAmount | 0;
 
@@ -328,29 +558,23 @@ export default class ParticleEmitter extends Drawable {
      * @returns {ParticleEmitter}
      */
     update(delta) {
-        const particleCount = this.computeParticleCount(delta),
-            particleOptions = this._particleOptions,
-            activeParticles = this._activeParticles,
-            unusedParticles = this._unusedParticles,
-            modifiers = this._modifiers,
-            unusedCount = unusedParticles.length,
-            difference = (unusedCount - particleCount),
-            freeParticles = unusedParticles.splice(Math.max(0, difference), Math.min(unusedCount, particleCount));
+        const count = this.getParticleCount(delta),
+            options = this.particleOptions,
+            particles = this._particles,
+            graveyard = this._graveyard,
+            modifiers = this._modifiers;
 
-        for (const particle of freeParticles) {
-            activeParticles.add(particle.reset(particleOptions));
+        for (let i = 0; i < count; i++) {
+            const particle = (graveyard.pop() || new Particle());
+
+            particles.push(particle.copy(options));
         }
 
-        for (let i = Math.min(0, difference); i < 0; i++) {
-            activeParticles.add(new Particle(particleOptions));
-        }
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const particle = particles[i].update(delta);
 
-        for (const particle of activeParticles) {
-            particle.update(delta);
-
-            if (particle.isExpired) {
-                unusedParticles.push(particle);
-                activeParticles.delete(particle);
+            if (particle.expired) {
+                graveyard.push(particles.splice(i, 1)[0]);
 
                 continue;
             }
@@ -371,7 +595,6 @@ export default class ParticleEmitter extends Drawable {
             const renderer = renderManager.getRenderer('particle');
 
             renderManager.setRenderer(renderer);
-
             renderer.render(this);
         }
 
@@ -385,12 +608,13 @@ export default class ParticleEmitter extends Drawable {
      * @returns {ParticleEmitter}
      */
     copy(emitter) {
-        this.activeParticles = emitter.activeParticles;
         this.particleOptions = emitter.particleOptions;
+        this.particles = emitter.particles;
         this.texture = emitter.texture;
         this.textureFrame = emitter.textureFrame;
         this.emissionRate = emitter.emissionRate;
         this.modifiers = emitter.modifiers;
+        this.blendMode = emitter.blendMode;
 
         return this;
     }
@@ -400,9 +624,15 @@ export default class ParticleEmitter extends Drawable {
      * @returns {ParticleEmitter}
      */
     clone() {
-        const emitter = new ParticleEmitter(this._texture, this._particleOptions);
+        const emitter = new ParticleEmitter(this.texture, this.particleOptions);
 
-        return emitter.copy(this);
+        emitter.particles = this.particles;
+        emitter.textureFrame = this.textureFrame;
+        emitter.emissionRate = this.emissionRate;
+        emitter.modifiers = this.modifiers;
+        emitter.blendMode = this.blendMode;
+
+        return emitter;
     }
 
     /**
@@ -411,22 +641,40 @@ export default class ParticleEmitter extends Drawable {
     destroy() {
         super.destroy();
 
-        for (const particle of this._activeParticles) {
+        for (const particle of this._particles) {
             particle.destroy();
         }
 
-        for (const particle of this._unusedParticles) {
+        for (const particle of this._graveyard) {
             particle.destroy();
         }
 
-        this._activeParticles.clear();
-        this._activeParticles = null;
+        this._particleTotalLifetime.destroy();
+        this._particleTotalLifetime = null;
 
-        this._unusedParticles.length = 0;
-        this._unusedParticles = null;
+        this._particleElapsedLifetime.destroy();
+        this._particleElapsedLifetime = null;
 
-        this._particleOptions.destroy();
-        this._particleOptions = null;
+        this._particlePosition.destroy();
+        this._particlePosition = null;
+
+        this._particleVelocity.destroy();
+        this._particleVelocity = null;
+
+        this._particleScale.destroy();
+        this._particleScale = null;
+
+        this._particleTint.destroy();
+        this._particleTint = null;
+
+        this._particles.length = 0;
+        this._particles = null;
+
+        this._graveyard.length = 0;
+        this._graveyard = null;
+
+        this._modifiers.length = 0;
+        this._modifiers = null;
 
         this._textureFrame.destroy();
         this._textureFrame = null;
@@ -434,13 +682,12 @@ export default class ParticleEmitter extends Drawable {
         this._textureCoords.destroy();
         this._textureCoords = null;
 
-        this._modifiers.length = 0;
-        this._modifiers = null;
-
         this._texture = null;
         this._blendMode = null;
         this._emissionRate = null;
         this._emissionDelta = null;
         this._updateTexCoords = null;
+        this._particleRotation = null;
+        this._particleRotationSpeed = null;
     }
 }

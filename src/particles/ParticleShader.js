@@ -18,12 +18,12 @@ export default class ParticleShader extends Shader {
         this.setVertexSource(readFileSync(join(__dirname, './glsl/particle.vert'), 'utf8'));
         this.setFragmentSource(readFileSync(join(__dirname, './glsl/particle.frag'), 'utf8'));
 
-        this.setAttribute('aVertexPosition', ATTRIBUTE_TYPE.FLOAT, 2, false);
-        this.setAttribute('aTextureCoord', ATTRIBUTE_TYPE.FLOAT, 2, false);
-        this.setAttribute('aPosition', ATTRIBUTE_TYPE.FLOAT, 2, false);
-        this.setAttribute('aScale', ATTRIBUTE_TYPE.FLOAT, 2, false);
-        this.setAttribute('aRotation', ATTRIBUTE_TYPE.FLOAT, 1, false);
-        this.setAttribute('aColor', ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
+        this.setAttribute('vertexPosition', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('textureCoord', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('translation', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('scale', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('rotation', ATTRIBUTE_TYPE.FLOAT, 1, false);
+        this.setAttribute('tint', ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
         this.setUniform('projectionMatrix', UNIFORM_TYPE.FLOAT_MAT3);
         this.setUniform('texture', UNIFORM_TYPE.SAMPLER_2D, 0);

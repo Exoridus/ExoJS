@@ -94,13 +94,13 @@ export default class RenderManager {
          * @private
          * @member {Color}
          */
-        this._clearColor = new Color();
+        this._clearColor = (clearColor && clearColor.clone()) || new Color();
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._clearAlpha = false;
+        this._clearAlpha = (this._clearColor.a < 1);
 
         /**
          * @private
@@ -116,7 +116,6 @@ export default class RenderManager {
 
         this.setRenderTarget(this._rootRenderTarget);
         this.setBlendMode(BLEND_MODE.NORMAL);
-        this.setClearColor(clearColor);
 
         this.resize(width, height);
     }
@@ -377,17 +376,18 @@ export default class RenderManager {
      * @returns {RenderManager}
      */
     setClearColor(color) {
-        if (!this._clearColor.equals({ r: color.r, g: color.g, b: color.b })) {
-            const gl = this._context;
+        if (!this._clearColor.equals(color)) {
+            const gl = this._context,
+                clearAlpha = (color.a < 1);
 
             this._clearColor.copy(color);
 
             gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
 
-            if (this._clearAlpha !== color.a < 1) {
-                this._clearAlpha = color.a < 1;
+            if (this._clearAlpha !== clearAlpha) {
+                this._clearAlpha = clearAlpha;
 
-                gl.colorMask(true, true, true, this._clearAlpha);
+                gl.colorMask(true, true, true, clearAlpha);
             }
         }
 
@@ -573,13 +573,15 @@ export default class RenderManager {
      * @private
      */
     _setupContext() {
-        const gl = this._context;
+        const gl = this._context,
+            { r, g, b, a } = this._clearColor;
 
         gl.enable(gl.BLEND);
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
 
         gl.blendEquation(gl.FUNC_ADD);
+        gl.clearColor(r / 255, g / 255, b / 255, a);
         gl.colorMask(true, true, true, this._clearAlpha);
     }
 

@@ -95,7 +95,7 @@ export default class Application extends EventEmitter {
          * @private
          * @member {Boolean}
          */
-        this._isRunning = false;
+        this._running = false;
 
         /**
          * @private
@@ -164,14 +164,11 @@ export default class Application extends EventEmitter {
 
     /**
      * @public
-     * @member {String}
+     * @readonly
+     * @member {Boolean}
      */
-    get cursor() {
-        return this._cursor;
-    }
-
-    set cursor(cursor) {
-        this.setCursor(cursor);
+    get running() {
+        return this._running;
     }
 
     /**
@@ -185,13 +182,25 @@ export default class Application extends EventEmitter {
 
     /**
      * @public
+     * @member {String}
+     */
+    get cursor() {
+        return this._cursor;
+    }
+
+    set cursor(cursor) {
+        this.setCursor(cursor);
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Scene} scene
      * @returns {Application}
      */
     start(scene) {
-        if (!this._isRunning) {
-            this._isRunning = true;
+        if (!this._running) {
+            this._running = true;
             this._sceneManager.changeScene(scene);
             this._delta.restart();
 
@@ -207,8 +216,8 @@ export default class Application extends EventEmitter {
      * @returns {Application}
      */
     stop() {
-        if (this._isRunning) {
-            this._isRunning = false;
+        if (this._running) {
+            this._running = false;
             this._sceneManager.stopScene();
             this._delta.stop();
 
@@ -224,7 +233,7 @@ export default class Application extends EventEmitter {
      * @returns {Application}
      */
     update() {
-        if (this._isRunning) {
+        if (this._running) {
             this._inputManager.update();
             this._sceneManager.update(this._delta.elapsedTime);
             this._delta.restart();
@@ -263,7 +272,7 @@ export default class Application extends EventEmitter {
     destroy() {
         super.destroy();
 
-        if (this._isRunning) {
+        if (this._running) {
             this.stop();
         }
 
@@ -291,7 +300,7 @@ export default class Application extends EventEmitter {
         this._canvasParent = null;
         this._updateHandler = null;
         this._updateId = null;
-        this._isRunning = null;
+        this._running = null;
         this._cursor = null;
     }
 }

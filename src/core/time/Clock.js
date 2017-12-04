@@ -28,7 +28,7 @@ export default class Clock {
          * @private
          * @member {Boolean}
          */
-        this._isRunning = false;
+        this._running = false;
 
         /**
          * @private
@@ -46,8 +46,8 @@ export default class Clock {
      * @readonly
      * @member {Boolean}
      */
-    get isRunning() {
-        return this._isRunning;
+    get running() {
+        return this._running;
     }
 
     /**
@@ -74,7 +74,7 @@ export default class Clock {
      * @member {Number}
      */
     get elapsedMilliseconds() {
-        if (!this._isRunning) {
+        if (!this._running) {
             return this._timeBuffer;
         }
 
@@ -114,9 +114,9 @@ export default class Clock {
      * @returns {Clock}
      */
     start() {
-        if (!this._isRunning) {
+        if (!this._running) {
             this._startTime = Date.now();
-            this._isRunning = true;
+            this._running = true;
         }
 
         return this;
@@ -128,9 +128,9 @@ export default class Clock {
      * @returns {Clock}
      */
     stop() {
-        if (this._isRunning) {
+        if (this._running) {
             this._timeBuffer += (Date.now() - this._startTime);
-            this._isRunning = false;
+            this._running = false;
         }
 
         return this;
@@ -143,7 +143,7 @@ export default class Clock {
      */
     reset() {
         this._timeBuffer = 0;
-        this._isRunning = false;
+        this._running = false;
 
         return this;
     }
@@ -166,7 +166,7 @@ export default class Clock {
     destroy() {
         this._startTime = null;
         this._timeBuffer = null;
-        this._isRunning = null;
+        this._running = null;
 
         this._time.destroy();
         this._time = null;

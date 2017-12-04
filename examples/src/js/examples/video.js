@@ -51,8 +51,5 @@ window.app.start(new Exo.Scene({
     destroy() {
         this._video.destroy();
         this._video = null;
-
-        this._input.destroy();
-        this._input = null;
     },
 }));

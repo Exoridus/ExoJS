@@ -141,7 +141,7 @@ const
      * @param {Number} value
      * @returns {Boolean}
      */
-    isPowerOfTwo = (value) => (
+    powerOfTwo = (value) => (
         (value !== 0) && ((value & (value - 1)) === 0)
     ),
 
@@ -417,7 +417,7 @@ export {
     getVornoiRegion,
     clamp,
     sign,
-    isPowerOfTwo,
+    powerOfTwo,
     inRange,
     rgbToHex,
     removeItems,

@@ -123,6 +123,18 @@ export default class Video extends Sprite {
 
     /**
      * @public
+     * @readonly
+     * @member {Number}
+     */
+    get progress() {
+        const elapsed = this.currentTime,
+            duration = this.duration;
+
+        return ((elapsed % duration) / duration);
+    }
+
+    /**
+     * @public
      * @member {Number}
      */
     get volume() {

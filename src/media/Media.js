@@ -96,6 +96,18 @@ export default class Media extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Number}
+     */
+    get progress() {
+        const elapsed = this.currentTime,
+            duration = this.duration;
+
+        return ((elapsed % duration) / duration);
+    }
+
+    /**
+     * @public
      * @member {Number}
      */
     get volume() {
@@ -261,16 +273,16 @@ export default class Media extends EventEmitter {
     /**
      * @public
      * @chainable
+     * @param {Object} [options]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.volume]
+     * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
      * @returns {Media}
      */
-    toggle() {
-        if (this.paused) {
-            this.play();
-        } else {
-            this.pause();
-        }
-
-        return this;
+    toggle(options) {
+        return this.paused ? this.play(options) : this.pause();
     }
 
     /**

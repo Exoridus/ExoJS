@@ -229,7 +229,7 @@ export default class Player extends Sprite {
      * @private
      */
     _updateFrameIndex() {
-        if (this._moving && this._frameTimer.isExpired) {
+        if (this._moving && this._frameTimer.expired) {
             this._frameTimer.restart();
             this._setFrameIndex(this._frameIndex + 1);
         }

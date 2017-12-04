@@ -196,17 +196,14 @@ export default class ParticleRenderer extends Renderer {
 
     /**
      * @override
+     * @param {ParticleEmitter} emitter
      */
     render(emitter) {
-        const float32View = this._float32View,
-            uint32View = this._uint32View,
-            texture = emitter.texture,
-            blendMode = emitter.blendMode,
-            particles = emitter.activeParticles,
-            textureFrame = emitter.textureFrame,
-            textureCoords = emitter.textureCoords,
+        const { texture, textureFrame, textureCoords, particles, blendMode } = emitter,
             textureChanged = (texture !== this._currentTexture),
-            blendModeChanged = (blendMode !== this._currentBlendMode);
+            blendModeChanged = (blendMode !== this._currentBlendMode),
+            float32View = this._float32View,
+            uint32View = this._uint32View;
 
         if (textureChanged || blendModeChanged) {
             this.flush();
@@ -229,10 +226,10 @@ export default class ParticleRenderer extends Renderer {
                 this.flush();
             }
 
-            const index = this._batchIndex * this._attributeCount,
-                { position, scale, rotation, color } = particle;
+            const { position, scale, rotation, tint } = particle,
+                index = (this._batchIndex * this._attributeCount);
 
-            float32View[index] = float32View[index + 11] = textureFrame.x;
+            float32View[index + 0] = float32View[index + 11] = textureFrame.x;
             float32View[index + 1] = float32View[index + 20] = textureFrame.y;
 
             float32View[index + 2] = float32View[index + 22] = textureCoords.x;
@@ -278,7 +275,7 @@ export default class ParticleRenderer extends Renderer {
                 = uint32View[index + 19]
                 = uint32View[index + 29]
                 = uint32View[index + 39]
-                = color.getRGBA();
+                = tint.getRGBA();
 
             this._batchIndex++;
         }
@@ -334,7 +331,7 @@ export default class ParticleRenderer extends Renderer {
     /**
      * @private
      * @param {Uint16Array} data
-     * @returns {SpriteRenderer}
+     * @returns {ParticleRenderer}
      */
     _fillIndexData(data) {
         const len = data.length;

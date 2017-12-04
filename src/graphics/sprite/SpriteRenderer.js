@@ -192,19 +192,17 @@ export default class SpriteRenderer extends Renderer {
 
     /**
      * @override
+     * @param {Sprite} sprite
      */
     render(sprite) {
-        const float32View = this._float32View,
-            uint32View = this._uint32View,
-            texture = sprite.texture,
-            blendMode = sprite.blendMode,
-            positionData = sprite.positionData,
-            texCoordData = sprite.texCoordData,
+        const { texture, blendMode, tint, vertexData, texCoordData } = sprite,
             batchFull = (this._batchIndex >= this._batchSize),
             textureChanged = (texture !== this._currentTexture),
             blendModeChanged = (blendMode !== this._currentBlendMode),
-            flush = (textureChanged || blendModeChanged || batchFull),
-            index = flush ? 0 : (this._batchIndex * this._attributeCount);
+            flush = (batchFull || textureChanged || blendModeChanged),
+            index = flush ? 0 : (this._batchIndex * this._attributeCount),
+            float32View = this._float32View,
+            uint32View = this._uint32View;
 
         if (flush) {
             this.flush();
@@ -223,24 +221,26 @@ export default class SpriteRenderer extends Renderer {
         texture.update();
 
         // X / Y
-        float32View[index] = positionData[0];
-        float32View[index + 1] = positionData[1];
+        float32View[index + 0] = vertexData[0];
+        float32View[index + 1] = vertexData[1];
 
         // X / Y
-        float32View[index + 4] = positionData[2];
-        float32View[index + 5] = positionData[3];
+        float32View[index + 4] = vertexData[2];
+        float32View[index + 5] = vertexData[3];
 
         // X / Y
-        float32View[index + 8] = positionData[4];
-        float32View[index + 9] = positionData[5];
+        float32View[index + 8] = vertexData[4];
+        float32View[index + 9] = vertexData[5];
 
         // X / Y
-        float32View[index + 12] = positionData[6];
-        float32View[index + 13] = positionData[7];
+        float32View[index + 12] = vertexData[6];
+        float32View[index + 13] = vertexData[7];
 
         // U / V
         uint32View[index + 2] = texCoordData[0];
         uint32View[index + 6] = texCoordData[1];
+
+        // U / V
         uint32View[index + 10] = texCoordData[2];
         uint32View[index + 14] = texCoordData[3];
 
@@ -249,7 +249,7 @@ export default class SpriteRenderer extends Renderer {
             = uint32View[index + 7]
             = uint32View[index + 11]
             = uint32View[index + 15]
-            = sprite.tint.getRGBA();
+            = tint.getRGBA();
 
         this._batchIndex++;
 
