@@ -42,6 +42,8 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
+        this.app.off('pointer:down');
+
         this._video.destroy();
         this._video = null;
     },

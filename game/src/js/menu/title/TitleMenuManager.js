@@ -6,7 +6,7 @@ import SettingsMenu from './SettingsMenu';
 
 /**
  * @class TitleMenuManager
- * @extends {MenuManager}
+ * @extends MenuManager
  */
 export default class TitleMenuManager extends MenuManager {
 

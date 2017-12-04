@@ -6,7 +6,7 @@ import settings from '../settings';
 
 /**
  * @class Video
- * @extends {Media|Sprite}
+ * @extends Sprite
  */
 export default class Video extends Sprite {
 

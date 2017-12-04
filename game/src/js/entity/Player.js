@@ -15,7 +15,7 @@ const
 
 /**
  * @class Player
- * @extends {Sprite}
+ * @extends Sprite
  */
 export default class Player extends Sprite {
 

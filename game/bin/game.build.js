@@ -92,7 +92,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class MenuItem
- * @extends {Text}
+ * @extends Text
  */
 var MenuItem = function (_Text) {
   _inherits(MenuItem, _Text);
@@ -226,7 +226,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class Menu
- * @extends {Container}
+ * @extends Container
  */
 var Menu = function (_Container) {
     _inherits(Menu, _Container);
@@ -652,7 +652,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class GameScene
- * @extends {Scene}
+ * @extends Scene
  */
 var GameScene = function (_Scene) {
     _inherits(GameScene, _Scene);
@@ -953,7 +953,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class LauncherScene
- * @extends {Scene}
+ * @extends Scene
  */
 var LauncherScene = function (_Scene) {
     _inherits(LauncherScene, _Scene);
@@ -1170,7 +1170,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class TitleScene
- * @extends {Scene}
+ * @extends Scene
  */
 var TitleScene = function (_Scene) {
   _inherits(TitleScene, _Scene);
@@ -1295,7 +1295,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class TitleMenuManager
- * @extends {MenuManager}
+ * @extends MenuManager
  */
 var TitleMenuManager = function (_MenuManager) {
   _inherits(TitleMenuManager, _MenuManager);
@@ -1689,7 +1689,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class MainMenu
- * @extends {Menu}
+ * @extends Menu
  */
 var MainMenu = function (_Menu) {
     _inherits(MainMenu, _Menu);
@@ -2111,7 +2111,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class NewGameMenu
- * @extends {Menu}
+ * @extends Menu
  */
 var NewGameMenu = function (_Menu) {
     _inherits(NewGameMenu, _Menu);
@@ -2790,7 +2790,7 @@ DIRECTION = {
 
 /**
  * @class Player
- * @extends {Sprite}
+ * @extends Sprite
  */
 
 var Player = function (_Sprite) {
@@ -3505,7 +3505,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class LoadGameMenu
- * @extends {Menu}
+ * @extends Menu
  */
 var LoadGameMenu = function (_Menu) {
     _inherits(LoadGameMenu, _Menu);
@@ -3626,7 +3626,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class SettingsMenu
- * @extends {Menu}
+ * @extends Menu
  */
 var SettingsMenu = function (_Menu) {
   _inherits(SettingsMenu, _Menu);

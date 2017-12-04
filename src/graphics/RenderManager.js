@@ -68,6 +68,12 @@ export default class RenderManager {
 
         /**
          * @private
+         * @member {?Buffer}
+         */
+        this._buffer = null;
+
+        /**
+         * @private
          * @member {?Shader}
          */
         this._shader = null;
@@ -156,6 +162,18 @@ export default class RenderManager {
 
     set renderer(renderer) {
         this.setRenderer(renderer);
+    }
+
+    /**
+     * @public
+     * @member {?Buffer}
+     */
+    get buffer() {
+        return this._buffer;
+    }
+
+    set buffer(buffer) {
+        this.setBuffer(buffer);
     }
 
     /**
@@ -253,6 +271,32 @@ export default class RenderManager {
             }
 
             this._renderer = newRenderer;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {?Buffer} buffer
+     * @returns {RenderManager}
+     */
+    setBuffer(buffer) {
+        const newBuffer = buffer || null;
+
+        if (this._buffer !== newBuffer) {
+            if (this._buffer) {
+                this._buffer.unbindBuffers();
+                this._buffer = null;
+            }
+
+            if (newBuffer) {
+                newBuffer.connect(this._context);
+                newBuffer.bindBuffers();
+            }
+
+            this._buffer = newBuffer;
         }
 
         return this;
@@ -519,6 +563,7 @@ export default class RenderManager {
         this.setRenderTarget(null);
         this.setRenderer(null);
         this.setShader(null);
+        this.setBuffer(null);
         this.setTexture(null);
 
         for (const renderer of this._renderers.values()) {
@@ -539,6 +584,7 @@ export default class RenderManager {
         this._contextLost = null;
         this._renderTarget = null;
         this._renderer = null;
+        this._buffer = null;
         this._shader = null;
         this._blendMode = null;
         this._texture = null;
@@ -548,11 +594,11 @@ export default class RenderManager {
 
     /**
      * @private
-     * @returns {?WebGLRenderingContext}
+     * @returns {?WebGLRenderingContext|?WebGL2RenderingContext}
      */
     _createContext(options = settings.CONTEXT_OPTIONS) {
         try {
-            return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
+            return this._canvas.getContext('webgl2', options) || this._canvas.getContext('webgl', options);
         } catch (e) {
             return null;
         }

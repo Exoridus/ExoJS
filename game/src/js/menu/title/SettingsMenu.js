@@ -3,7 +3,7 @@ import MenuItem from '../MenuItem';
 
 /**
  * @class SettingsMenu
- * @extends {Menu}
+ * @extends Menu
  */
 export default class SettingsMenu extends Menu {
 

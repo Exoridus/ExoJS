@@ -1,17 +1,18 @@
+#version 300 es
 precision lowp float;
 
-attribute vec2 vertexPosition;
-attribute vec2 textureCoord;
-attribute vec4 tint;
+uniform mat3 u_projection;
 
-uniform mat3 projectionMatrix;
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_texcoord;
+layout(location = 2) in vec4 a_color;
 
-varying vec2 vTextureCoord;
-varying vec4 vTint;
+out vec2 v_texcoord;
+out vec4 v_color;
 
 void main(void) {
-    vTextureCoord = textureCoord;
-    vTint = vec4(tint.rgb * tint.a, tint.a);
+    v_texcoord = a_texcoord;
+    v_color = a_color;
 
-    gl_Position = vec4((projectionMatrix * vec3(vertexPosition, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);
 }

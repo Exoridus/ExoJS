@@ -1,10 +1,13 @@
+#version 300 es
 precision lowp float;
 
-uniform sampler2D texture;
+uniform sampler2D u_texture;
 
-varying vec2 vTextureCoord;
-varying vec4 vTint;
+in vec2 v_texcoord;
+in vec4 v_color;
+
+layout(location = 0) out vec4 o_fragColor;
 
 void main(void) {
-    gl_FragColor = texture2D(texture, vTextureCoord) * vTint;
+    o_fragColor = texture(u_texture, v_texcoord) * v_color;
 }

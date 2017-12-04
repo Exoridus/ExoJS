@@ -163,6 +163,8 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
+        this.app.off('pointer:down');
+
         this._music.destroy();
         this._music = null;
 

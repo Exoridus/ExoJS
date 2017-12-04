@@ -4,7 +4,7 @@ import MenuItem from '../MenuItem';
 
 /**
  * @class MainMenu
- * @extends {Menu}
+ * @extends Menu
  */
 export default class MainMenu extends Menu {
 

@@ -8,11 +8,6 @@ export default class Renderer {
      */
     constructor() {
 
-        /**
-         * @private
-         * @member {?RenderManager}
-         */
-        this._renderManager = null;
     }
 
     /**
@@ -71,8 +66,7 @@ export default class Renderer {
      * @public
      */
     destroy() {
-        this.unbind();
-
         this._renderManager = null;
+        this._context = null;
     }
 }

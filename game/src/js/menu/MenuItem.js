@@ -2,7 +2,7 @@ import { Text, Color } from 'exojs';
 
 /**
  * @class MenuItem
- * @extends {Text}
+ * @extends Text
  */
 export default class MenuItem extends Text {
 

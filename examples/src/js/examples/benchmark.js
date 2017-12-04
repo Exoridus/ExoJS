@@ -49,22 +49,9 @@ window.app.start(new Exo.Scene({
          */
         this._maxY = canvas.height;
 
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._addInput = new Exo.Input([
-            Exo.KEYBOARD.Space,
-            Exo.POINTER.MouseLeft,
-            Exo.GAMEPAD.FaceBottom,
-        ], {
-            context: this,
-            active() {
-                this.createBunnies(this._addAmount);
-            },
+        this.app.on('pointer:down', () => {
+            this.createBunnies(this._addAmount);
         });
-
-        this.app.inputManager.add(this._addInput);
 
         this.createBunnies(this._startAmount);
     },
@@ -114,8 +101,7 @@ window.app.start(new Exo.Scene({
      * @param {RenderManager} renderManager
      */
     draw(renderManager) {
-        renderManager
-            .clear()
+        renderManager.clear()
             .draw(this._bunnies)
             .display();
     },
@@ -124,7 +110,7 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
-        this.app.inputManager.remove(this._addInput);
+        this.app.off('pointer:down');
 
         for (const bunny of this._bunnies.children) {
             bunny.destroy();
@@ -135,9 +121,6 @@ window.app.start(new Exo.Scene({
 
         this._bunnies.destroy();
         this._bunnies = null;
-
-        this._addInput.destroy();
-        this._addInput = null;
 
         this._startAmount = null;
         this._addAmount = null;

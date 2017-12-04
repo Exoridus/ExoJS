@@ -1,4 +1,5 @@
-const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
+const EMPTY_VERTEX_DATA = new ArrayBuffer(0),
+    EMPTY_INDEX_DATA = new Uint8Array(EMPTY_VERTEX_DATA);
 
 /**
  * @class Buffer
@@ -7,58 +8,69 @@ export default class Buffer {
 
     /**
      * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {Number} bufferType
-     * @param {Number} drawType
-     * @param {ArrayBuffer|ArrayBufferView} data
      */
-    constructor(context, bufferType, drawType, data) {
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
+    constructor(vertexData, indexData) {
 
         /**
          * @private
-         * @member {WebGLRenderingContext}
+         * @member {?WebGLRenderingContext}
          */
-        this._context = context;
+        this._context = null;
 
         /**
          * @private
-         * @member {WebGLBuffer}
+         * @member {?WebGLBuffer}
          */
-        this._buffer = context.createBuffer();
+        this._vertexBuffer = null;
 
         /**
          * @private
-         * @member {Number}
+         * @member {?WebGLBuffer}
          */
-        this._bufferType = bufferType;
+        this._indexBuffer = null;
 
         /**
          * @private
-         * @member {Number}
+         * @member {ArrayBuffer}
          */
-        this._drawType = drawType;
+        this._vertexData = vertexData || EMPTY_VERTEX_DATA;
 
         /**
          * @private
-         * @member {ArrayBuffer|ArrayBufferView}
+         * @member {Uint16Array}
          */
-        this._data = EMPTY_ARRAY_BUFFER;
-
-        if (data) {
-            this.setData(data);
-        }
+        this._indexData = indexData || EMPTY_INDEX_DATA;
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {ArrayBuffer|ArrayBufferView}
+     * @override
      */
-    get data() {
-        return this._data;
+    connect(gl) {
+        if (!this._context) {
+            this._context = gl;
+            this._vertexBuffer = gl.createBuffer();
+            this._indexBuffer = gl.createBuffer();
+        }
+
+        return this;
+    }
+
+    /**
+     * @override
+     */
+    disconnect() {
+        this.unbindBuffers();
+
+        if (this._context) {
+            this._context.deleteBuffer(this._vertexBuffer);
+            this._context.deleteBuffer(this._indexBuffer);
+
+            this._vertexBuffer = null;
+            this._indexBuffer = null;
+            this._context = null;
+        }
+
+        return this;
     }
 
     /**
@@ -66,18 +78,53 @@ export default class Buffer {
      * @chainable
      * @returns {Buffer}
      */
-    setData(data, offset = 0) {
+    bindBuffers() {
+        if (!this._context) {
+            throw new Error('Buffer has to be connected first!')
+        }
+
         const gl = this._context;
 
-        this.bind();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
 
-        if (this._data.byteLength >= data.byteLength) {
-            gl.bufferSubData(this._bufferType, offset, data);
+        gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Buffer}
+     */
+    unbindBuffers() {
+        if (this._context) {
+            const gl = this._context;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Buffer}
+     */
+    uploadVertexData(vertexData, offset = 0) {
+        const gl = this._context;
+
+        if (this._vertexData.byteLength >= vertexData.byteLength) {
+            gl.bufferSubData(gl.ARRAY_BUFFER, offset, vertexData);
         } else {
-            gl.bufferData(this._bufferType, data, this._drawType);
+            gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.DYNAMIC_DRAW);
         }
 
-        this._data = data;
+        this._vertexData = vertexData;
 
         return this;
     }
@@ -87,24 +134,16 @@ export default class Buffer {
      * @chainable
      * @returns {Buffer}
      */
-    bind() {
+    uploadIndexData(indexData, offset = 0) {
         const gl = this._context;
 
-        gl.bindBuffer(this._bufferType, this._buffer);
-        gl.bufferData(this._bufferType, this._data, this._drawType);
+        if (this._indexData.byteLength >= indexData.byteLength) {
+            gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, offset, indexData);
+        } else {
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
+        }
 
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Buffer}
-     */
-    unbind() {
-        const gl = this._context;
-
-        gl.bindBuffer(this._bufferType, null);
+        this._indexData = indexData;
 
         return this;
     }
@@ -113,14 +152,9 @@ export default class Buffer {
      * @public
      */
     destroy() {
-        const gl = this._context;
+        this.disconnect();
 
-        gl.deleteBuffer(this._buffer);
-
-        this._context = null;
-        this._buffer = null;
-        this._bufferType = null;
-        this._drawType = null;
-        this._data = null;
+        this._vertexData = null;
+        this._indexData = null;
     }
 }

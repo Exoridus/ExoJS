@@ -140,6 +140,8 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
+        this.app.off('pointer:down');
+
         this._background.destroy();
         this._background = null;
 

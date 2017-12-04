@@ -10760,12 +10760,6 @@ var Renderer = function () {
      */
     function Renderer() {
         _classCallCheck(this, Renderer);
-
-        /**
-         * @private
-         * @member {?RenderManager}
-         */
-        this._renderManager = null;
     }
 
     /**
@@ -10846,9 +10840,8 @@ var Renderer = function () {
     }, {
         key: "destroy",
         value: function destroy() {
-            this.unbind();
-
             this._renderManager = null;
+            this._context = null;
         }
     }]);
 
@@ -14394,7 +14387,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * @class Video
- * @extends {Media|Sprite}
+ * @extends Sprite
  */
 var Video = function (_Sprite) {
     _inherits(Video, _Sprite);
@@ -15569,6 +15562,12 @@ var RenderManager = function () {
 
         /**
          * @private
+         * @member {?Buffer}
+         */
+        this._buffer = null;
+
+        /**
+         * @private
          * @member {?Shader}
          */
         this._shader = null;
@@ -15681,6 +15680,35 @@ var RenderManager = function () {
                 }
 
                 this._renderer = newRenderer;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {?Buffer} buffer
+         * @returns {RenderManager}
+         */
+
+    }, {
+        key: 'setBuffer',
+        value: function setBuffer(buffer) {
+            var newBuffer = buffer || null;
+
+            if (this._buffer !== newBuffer) {
+                if (this._buffer) {
+                    this._buffer.unbindBuffers();
+                    this._buffer = null;
+                }
+
+                if (newBuffer) {
+                    newBuffer.connect(this._context);
+                    newBuffer.bindBuffers();
+                }
+
+                this._buffer = newBuffer;
             }
 
             return this;
@@ -15991,6 +16019,7 @@ var RenderManager = function () {
             this.setRenderTarget(null);
             this.setRenderer(null);
             this.setShader(null);
+            this.setBuffer(null);
             this.setTexture(null);
 
             var _iteratorNormalCompletion = true;
@@ -16032,6 +16061,7 @@ var RenderManager = function () {
             this._contextLost = null;
             this._renderTarget = null;
             this._renderer = null;
+            this._buffer = null;
             this._shader = null;
             this._blendMode = null;
             this._texture = null;
@@ -16041,7 +16071,7 @@ var RenderManager = function () {
 
         /**
          * @private
-         * @returns {?WebGLRenderingContext}
+         * @returns {?WebGLRenderingContext|?WebGL2RenderingContext}
          */
 
     }, {
@@ -16050,7 +16080,7 @@ var RenderManager = function () {
             var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _settings2.default.CONTEXT_OPTIONS;
 
             try {
-                return this._canvas.getContext('webgl', options) || this._canvas.getContext('experimental-webgl', options);
+                return this._canvas.getContext('webgl2', options) || this._canvas.getContext('webgl', options);
             } catch (e) {
                 return null;
             }
@@ -16185,6 +16215,20 @@ var RenderManager = function () {
         },
         set: function set(renderer) {
             this.setRenderer(renderer);
+        }
+
+        /**
+         * @public
+         * @member {?Buffer}
+         */
+
+    }, {
+        key: 'buffer',
+        get: function get() {
+            return this._buffer;
+        },
+        set: function set(buffer) {
+            this.setBuffer(buffer);
         }
 
         /**
@@ -17057,36 +17101,6 @@ var SpriteRenderer = function (_Renderer) {
 
                 /**
                  * @private
-                 * @member {?RenderManager}
-                 */
-                _this._renderManager = null;
-
-                /**
-                 * @private
-                 * @member {?WebGLRenderingContext}
-                 */
-                _this._context = null;
-
-                /**
-                 * @private
-                 * @member {?Buffer}
-                 */
-                _this._vertexBuffer = null;
-
-                /**
-                 * @private
-                 * @member {?Buffer}
-                 */
-                _this._indexBuffer = null;
-
-                /**
-                 * @private
-                 * @member {SpriteShader}
-                 */
-                _this._shader = new _SpriteShader2.default();
-
-                /**
-                 * @private
                  * @member {ArrayBuffer}
                  */
                 _this._vertexData = new ArrayBuffer(_this._batchSize * _this._attributeCount * 4);
@@ -17108,6 +17122,30 @@ var SpriteRenderer = function (_Renderer) {
                  * @member {Uint32Array}
                  */
                 _this._uint32View = new Uint32Array(_this._vertexData);
+
+                /**
+                 * @private
+                 * @member {Buffer}
+                 */
+                _this._buffer = new _Buffer2.default(_this._vertexData, _this._indexData);
+
+                /**
+                 * @private
+                 * @member {SpriteShader}
+                 */
+                _this._shader = new _SpriteShader2.default();
+
+                /**
+                 * @private
+                 * @member {?RenderManager}
+                 */
+                _this._renderManager = null;
+
+                /**
+                 * @private
+                 * @member {?WebGLRenderingContext}
+                 */
+                _this._context = null;
 
                 /**
                  * @private
@@ -17146,12 +17184,12 @@ var SpriteRenderer = function (_Renderer) {
                 key: 'connect',
                 value: function connect(renderManager) {
                         if (!this._context) {
-                                var gl = renderManager.context;
+                                var context = renderManager.context;
 
-                                this._context = gl;
+                                this._context = context;
                                 this._renderManager = renderManager;
-                                this._vertexBuffer = new _Buffer2.default(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
-                                this._indexBuffer = new _Buffer2.default(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
+                                this._buffer.connect(context);
+                                this._shader.connect(context);
                         }
 
                         return this;
@@ -17164,15 +17202,11 @@ var SpriteRenderer = function (_Renderer) {
         }, {
                 key: 'disconnect',
                 value: function disconnect() {
-                        this.unbind();
-
                         if (this._context) {
-                                this._vertexBuffer.destroy();
-                                this._vertexBuffer = null;
+                                this.unbind();
 
-                                this._indexBuffer.destroy();
-                                this._indexBuffer = null;
-
+                                this._shader.disconnect();
+                                this._buffer.disconnect();
                                 this._renderManager = null;
                                 this._context = null;
                         }
@@ -17186,13 +17220,12 @@ var SpriteRenderer = function (_Renderer) {
 
         }, {
                 key: 'bind',
-                value: function bind(renderManager) {
+                value: function bind() {
                         if (!this._context) {
                                 throw new Error('Renderer has to be connected first!');
                         }
 
-                        this._vertexBuffer.bind();
-                        this._indexBuffer.bind();
+                        this._renderManager.setBuffer(this._buffer);
                         this._renderManager.setShader(this._shader);
 
                         return this;
@@ -17208,9 +17241,8 @@ var SpriteRenderer = function (_Renderer) {
                         if (this._context) {
                                 this.flush();
 
-                                this._vertexBuffer.unbind();
-                                this._indexBuffer.unbind();
                                 this._renderManager.setShader(null);
+                                this._renderManager.setBuffer(null);
 
                                 this._currentTexture = null;
                                 this._currentBlendMode = null;
@@ -17309,7 +17341,7 @@ var SpriteRenderer = function (_Renderer) {
                                         this._shader.setProjection(view.getTransform());
                                 }
 
-                                this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
+                                this._buffer.uploadVertexData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
                                 this._renderManager.drawElements(this._batchIndex * 6);
                                 this._batchIndex = 0;
                         }
@@ -17325,6 +17357,9 @@ var SpriteRenderer = function (_Renderer) {
                 key: 'destroy',
                 value: function destroy() {
                         this.disconnect();
+
+                        this._buffer.destroy();
+                        this._buffer = null;
 
                         this._shader.destroy();
                         this._shader = null;
@@ -17415,15 +17450,15 @@ var SpriteShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (SpriteShader.__proto__ || Object.getPrototypeOf(SpriteShader)).call(this));
 
-        _this.setVertexSource('precision lowp float;\r\n\r\nattribute vec2 vertexPosition;\r\nattribute vec2 textureCoord;\r\nattribute vec4 tint;\r\n\r\nuniform mat3 projectionMatrix;\r\n\r\nvarying vec2 vTextureCoord;\r\nvarying vec4 vTint;\r\n\r\nvoid main(void) {\r\n    vTextureCoord = textureCoord;\r\n    vTint = vec4(tint.rgb * tint.a, tint.a);\r\n\r\n    gl_Position = vec4((projectionMatrix * vec3(vertexPosition, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
-        _this.setFragmentSource('precision lowp float;\r\n\r\nuniform sampler2D texture;\r\n\r\nvarying vec2 vTextureCoord;\r\nvarying vec4 vTint;\r\n\r\nvoid main(void) {\r\n    gl_FragColor = texture2D(texture, vTextureCoord) * vTint;\r\n}\r\n');
+        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = vec4(a_color.rgb * a_color.a, a_color.a);\r\n\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
+        _this.setFragmentSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform sampler2D u_texture;\r\n\r\nin vec2 v_texcoord;\r\nin vec4 v_color;\r\n\r\nlayout(location = 0) out vec4 o_fragColor;\r\n\r\nvoid main(void) {\r\n    o_fragColor = texture(u_texture, v_texcoord) * v_color;\r\n}\r\n');
 
-        _this.setAttribute('vertexPosition', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
-        _this.setAttribute('textureCoord', _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
-        _this.setAttribute('tint', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
+        _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_texcoord', _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
+        _this.setAttribute('a_color', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
-        _this.setUniform('projectionMatrix', _const.UNIFORM_TYPE.FLOAT_MAT3);
-        _this.setUniform('texture', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
+        _this.setUniform('u_projection', _const.UNIFORM_TYPE.FLOAT_MAT3);
+        _this.setUniform('u_texture', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
         return _this;
     }
 
@@ -17435,7 +17470,7 @@ var SpriteShader = function (_Shader) {
     _createClass(SpriteShader, [{
         key: 'setProjection',
         value: function setProjection(projection) {
-            this.getUniform('projectionMatrix').setValue(projection.toArray(false));
+            this.getUniform('u_projection').setValue(projection.toArray(false));
         }
     }]);
 
@@ -18166,7 +18201,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
+var EMPTY_VERTEX_DATA = new ArrayBuffer(0),
+    EMPTY_INDEX_DATA = new Uint8Array(EMPTY_VERTEX_DATA);
 
 /**
  * @class Buffer
@@ -18176,83 +18212,142 @@ var Buffer = function () {
 
     /**
      * @constructor
-     * @param {WebGLRenderingContext} context
-     * @param {Number} bufferType
-     * @param {Number} drawType
-     * @param {ArrayBuffer|ArrayBufferView} data
      */
-    function Buffer(context, bufferType, drawType, data) {
+    function Buffer(vertexData, indexData) {
         _classCallCheck(this, Buffer);
 
-        if (!context) {
-            throw new Error('No Rendering Context was provided.');
-        }
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
 
         /**
          * @private
-         * @member {WebGLRenderingContext}
+         * @member {?WebGLBuffer}
          */
-        this._context = context;
+        this._vertexBuffer = null;
 
         /**
          * @private
-         * @member {WebGLBuffer}
+         * @member {?WebGLBuffer}
          */
-        this._buffer = context.createBuffer();
+        this._indexBuffer = null;
 
         /**
          * @private
-         * @member {Number}
+         * @member {ArrayBuffer}
          */
-        this._bufferType = bufferType;
+        this._vertexData = vertexData || EMPTY_VERTEX_DATA;
 
         /**
          * @private
-         * @member {Number}
+         * @member {Uint16Array}
          */
-        this._drawType = drawType;
-
-        /**
-         * @private
-         * @member {ArrayBuffer|ArrayBufferView}
-         */
-        this._data = EMPTY_ARRAY_BUFFER;
-
-        if (data) {
-            this.setData(data);
-        }
+        this._indexData = indexData || EMPTY_INDEX_DATA;
     }
 
     /**
-     * @public
-     * @readonly
-     * @member {ArrayBuffer|ArrayBufferView}
+     * @override
      */
 
 
     _createClass(Buffer, [{
-        key: 'setData',
+        key: 'connect',
+        value: function connect(gl) {
+            if (!this._context) {
+                this._context = gl;
+                this._vertexBuffer = gl.createBuffer();
+                this._indexBuffer = gl.createBuffer();
+            }
 
+            return this;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'disconnect',
+        value: function disconnect() {
+            this.unbindBuffers();
+
+            if (this._context) {
+                this._context.deleteBuffer(this._vertexBuffer);
+                this._context.deleteBuffer(this._indexBuffer);
+
+                this._vertexBuffer = null;
+                this._indexBuffer = null;
+                this._context = null;
+            }
+
+            return this;
+        }
 
         /**
          * @public
          * @chainable
          * @returns {Buffer}
          */
-        value: function setData(data) {
+
+    }, {
+        key: 'bindBuffers',
+        value: function bindBuffers() {
+            if (!this._context) {
+                throw new Error('Buffer has to be connected first!');
+            }
+
+            var gl = this._context;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexBuffer);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+
+            gl.bufferData(gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Buffer}
+         */
+
+    }, {
+        key: 'unbindBuffers',
+        value: function unbindBuffers() {
+            if (this._context) {
+                var gl = this._context;
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, null);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {Buffer}
+         */
+
+    }, {
+        key: 'uploadVertexData',
+        value: function uploadVertexData(vertexData) {
             var offset = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
             var gl = this._context;
 
-            this.bind();
-
-            if (this._data.byteLength >= data.byteLength) {
-                gl.bufferSubData(this._bufferType, offset, data);
+            if (this._vertexData.byteLength >= vertexData.byteLength) {
+                gl.bufferSubData(gl.ARRAY_BUFFER, offset, vertexData);
             } else {
-                gl.bufferData(this._bufferType, data, this._drawType);
+                gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.DYNAMIC_DRAW);
             }
 
-            this._data = data;
+            this._vertexData = vertexData;
 
             return this;
         }
@@ -18264,28 +18359,19 @@ var Buffer = function () {
          */
 
     }, {
-        key: 'bind',
-        value: function bind() {
+        key: 'uploadIndexData',
+        value: function uploadIndexData(indexData) {
+            var offset = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
             var gl = this._context;
 
-            gl.bindBuffer(this._bufferType, this._buffer);
-            gl.bufferData(this._bufferType, this._data, this._drawType);
+            if (this._indexData.byteLength >= indexData.byteLength) {
+                gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, offset, indexData);
+            } else {
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
+            }
 
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Buffer}
-         */
-
-    }, {
-        key: 'unbind',
-        value: function unbind() {
-            var gl = this._context;
-
-            gl.bindBuffer(this._bufferType, null);
+            this._indexData = indexData;
 
             return this;
         }
@@ -18297,20 +18383,10 @@ var Buffer = function () {
     }, {
         key: 'destroy',
         value: function destroy() {
-            var gl = this._context;
+            this.disconnect();
 
-            gl.deleteBuffer(this._buffer);
-
-            this._context = null;
-            this._buffer = null;
-            this._bufferType = null;
-            this._drawType = null;
-            this._data = null;
-        }
-    }, {
-        key: 'data',
-        get: function get() {
-            return this._data;
+            this._vertexData = null;
+            this._indexData = null;
         }
     }]);
 
@@ -18401,36 +18477,6 @@ var ParticleRenderer = function (_Renderer) {
 
         /**
          * @private
-         * @member {?RenderManager}
-         */
-        _this._renderManager = null;
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        _this._context = null;
-
-        /**
-         * @private
-         * @member {?Buffer}
-         */
-        _this._vertexBuffer = null;
-
-        /**
-         * @private
-         * @member {?Buffer}
-         */
-        _this._indexBuffer = null;
-
-        /**
-         * @private
-         * @member {ParticleShader}
-         */
-        _this._shader = new _ParticleShader2.default();
-
-        /**
-         * @private
          * @member {ArrayBuffer}
          */
         _this._vertexData = new ArrayBuffer(_this._batchSize * _this._attributeCount * 4);
@@ -18452,6 +18498,30 @@ var ParticleRenderer = function (_Renderer) {
          * @member {Uint32Array}
          */
         _this._uint32View = new Uint32Array(_this._vertexData);
+
+        /**
+         * @private
+         * @member {Buffer}
+         */
+        _this._buffer = new _Buffer2.default(_this._vertexData, _this._indexData);
+
+        /**
+         * @private
+         * @member {ParticleShader}
+         */
+        _this._shader = new _ParticleShader2.default();
+
+        /**
+         * @private
+         * @member {?RenderManager}
+         */
+        _this._renderManager = null;
+
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        _this._context = null;
 
         /**
          * @private
@@ -18490,12 +18560,12 @@ var ParticleRenderer = function (_Renderer) {
         key: 'connect',
         value: function connect(renderManager) {
             if (!this._context) {
-                var gl = renderManager.context;
+                var context = renderManager.context;
 
-                this._context = gl;
+                this._context = context;
                 this._renderManager = renderManager;
-                this._vertexBuffer = new _Buffer2.default(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
-                this._indexBuffer = new _Buffer2.default(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
+                this._buffer.connect(context);
+                this._shader.connect(context);
             }
 
             return this;
@@ -18508,15 +18578,11 @@ var ParticleRenderer = function (_Renderer) {
     }, {
         key: 'disconnect',
         value: function disconnect() {
-            this.unbind();
-
             if (this._context) {
-                this._vertexBuffer.destroy();
-                this._vertexBuffer = null;
+                this.unbind();
 
-                this._indexBuffer.destroy();
-                this._indexBuffer = null;
-
+                this._shader.disconnect();
+                this._buffer.disconnect();
                 this._renderManager = null;
                 this._context = null;
             }
@@ -18530,13 +18596,12 @@ var ParticleRenderer = function (_Renderer) {
 
     }, {
         key: 'bind',
-        value: function bind(renderManager) {
+        value: function bind() {
             if (!this._context) {
                 throw new Error('Renderer has to be connected first!');
             }
 
-            this._vertexBuffer.bind();
-            this._indexBuffer.bind();
+            this._renderManager.setBuffer(this._buffer);
             this._renderManager.setShader(this._shader);
 
             return this;
@@ -18552,9 +18617,8 @@ var ParticleRenderer = function (_Renderer) {
             if (this._context) {
                 this.flush();
 
-                this._vertexBuffer.unbind();
-                this._indexBuffer.unbind();
                 this._renderManager.setShader(null);
+                this._renderManager.setBuffer(null);
 
                 this._currentTexture = null;
                 this._currentBlendMode = null;
@@ -18681,7 +18745,7 @@ var ParticleRenderer = function (_Renderer) {
                     this._shader.setProjection(view.getTransform());
                 }
 
-                this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
+                this._buffer.uploadVertexData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
                 this._renderManager.drawElements(this._batchIndex * 6);
                 this._batchIndex = 0;
             }
@@ -18697,6 +18761,9 @@ var ParticleRenderer = function (_Renderer) {
         key: 'destroy',
         value: function destroy() {
             this.disconnect();
+
+            this._buffer.destroy();
+            this._buffer = null;
 
             this._shader.destroy();
             this._shader = null;
@@ -18787,18 +18854,18 @@ var ParticleShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (ParticleShader.__proto__ || Object.getPrototypeOf(ParticleShader)).call(this));
 
-        _this.setVertexSource('precision lowp float;\n\nattribute vec2 vertexPosition;\nattribute vec2 textureCoord;\nattribute vec2 translation;\nattribute vec2 scale;\nattribute float rotation;\nattribute vec4 tint;\n\nuniform mat3 projectionMatrix;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vTint;\n\nvoid main(void) {\n    vTextureCoord = textureCoord;\n    vTint = vec4(tint.rgb * tint.a, tint.a);\n\n    vec2 pos = vec2(\n        (vertexPosition.x * cos(rotation)) - (vertexPosition.y * sin(rotation)),\n        (vertexPosition.x * sin(rotation)) + (vertexPosition.y * cos(rotation))\n    );\n\n    gl_Position = vec4((projectionMatrix * vec3((pos * scale) + translation, 1.0)).xy, 0.0, 1.0);\n}\n');
-        _this.setFragmentSource('precision lowp float;\n\nuniform sampler2D texture;\n\nvarying vec2 vTextureCoord;\nvarying vec4 vTint;\n\nvoid main(void) {\n    gl_FragColor = texture2D(texture, vTextureCoord) * vTint;\n}\n');
+        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec2 a_translation;\r\nlayout(location = 3) in vec2 a_scale;\r\nlayout(location = 4) in float a_rotation;\r\nlayout(location = 5) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = vec4(a_color.rgb * a_color.a, a_color.a);\r\n\r\n    vec2 pos = vec2(\r\n        (a_position.x * cos(a_rotation)) - (a_position.y * sin(a_rotation)),\r\n        (a_position.x * sin(a_rotation)) + (a_position.y * cos(a_rotation))\r\n    );\r\n\r\n    gl_Position = vec4((u_projection * vec3((pos * a_scale) + a_translation, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
+        _this.setFragmentSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform sampler2D u_texture;\r\n\r\nin vec2 v_texcoord;\r\nin vec4 v_color;\r\n\r\nlayout(location = 0) out vec4 o_fragColor;\r\n\r\nvoid main(void) {\r\n    o_fragColor = texture(u_texture, v_texcoord) * v_color;\r\n}\r\n');
 
-        _this.setAttribute('vertexPosition', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
-        _this.setAttribute('textureCoord', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
-        _this.setAttribute('translation', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
-        _this.setAttribute('scale', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
-        _this.setAttribute('rotation', _const.ATTRIBUTE_TYPE.FLOAT, 1, false);
-        _this.setAttribute('tint', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
+        _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_texcoord', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_translation', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_scale', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_rotation', _const.ATTRIBUTE_TYPE.FLOAT, 1, false);
+        _this.setAttribute('a_color', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
-        _this.setUniform('projectionMatrix', _const.UNIFORM_TYPE.FLOAT_MAT3);
-        _this.setUniform('texture', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
+        _this.setUniform('u_projection', _const.UNIFORM_TYPE.FLOAT_MAT3);
+        _this.setUniform('u_texture', _const.UNIFORM_TYPE.SAMPLER_2D, 0);
         return _this;
     }
 
@@ -18810,7 +18877,7 @@ var ParticleShader = function (_Shader) {
     _createClass(ParticleShader, [{
         key: 'setProjection',
         value: function setProjection(projection) {
-            this.getUniform('projectionMatrix').setValue(projection.toArray(false));
+            this.getUniform('u_projection').setValue(projection.toArray(false));
         }
     }]);
 

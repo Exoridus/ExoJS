@@ -95,8 +95,7 @@ window.app.start(new Exo.Scene({
      * @param {RenderManager} renderManager
      */
     draw(renderManager) {
-        renderManager
-            .clear()
+        renderManager.clear()
             .draw(this._container)
             .display();
     },
@@ -105,6 +104,9 @@ window.app.start(new Exo.Scene({
      * @override
      */
     destroy() {
+        this.app.off('pointer:enter');
+        this.app.off('pointer:leave');
+
         this._container.destroy();
         this._container = null;
 

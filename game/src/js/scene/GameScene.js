@@ -5,7 +5,7 @@ import Tileset from '../map/Tileset';
 
 /**
  * @class GameScene
- * @extends {Scene}
+ * @extends Scene
  */
 export default class GameScene extends Scene {
 

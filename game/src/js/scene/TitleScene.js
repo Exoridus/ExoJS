@@ -3,7 +3,7 @@ import TitleMenuManager from '../menu/title/TitleMenuManager';
 
 /**
  * @class TitleScene
- * @extends {Scene}
+ * @extends Scene
  */
 export default class TitleScene extends Scene {
 

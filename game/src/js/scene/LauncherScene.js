@@ -3,7 +3,7 @@ import TitleScene from './TitleScene';
 
 /**
  * @class LauncherScene
- * @extends {Scene}
+ * @extends Scene
  */
 export default class LauncherScene extends Scene {
 

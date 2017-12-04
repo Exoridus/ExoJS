@@ -40,36 +40,6 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?RenderManager}
-         */
-        this._renderManager = null;
-
-        /**
-         * @private
-         * @member {?WebGLRenderingContext}
-         */
-        this._context = null;
-
-        /**
-         * @private
-         * @member {?Buffer}
-         */
-        this._vertexBuffer = null;
-
-        /**
-         * @private
-         * @member {?Buffer}
-         */
-        this._indexBuffer = null;
-
-        /**
-         * @private
-         * @member {SpriteShader}
-         */
-        this._shader = new SpriteShader();
-
-        /**
-         * @private
          * @member {ArrayBuffer}
          */
         this._vertexData = new ArrayBuffer(this._batchSize * this._attributeCount * 4);
@@ -91,6 +61,30 @@ export default class SpriteRenderer extends Renderer {
          * @member {Uint32Array}
          */
         this._uint32View = new Uint32Array(this._vertexData);
+
+        /**
+         * @private
+         * @member {Buffer}
+         */
+        this._buffer = new Buffer(this._vertexData, this._indexData);
+
+        /**
+         * @private
+         * @member {SpriteShader}
+         */
+        this._shader = new SpriteShader();
+
+        /**
+         * @private
+         * @member {?RenderManager}
+         */
+        this._renderManager = null;
+
+        /**
+         * @private
+         * @member {?WebGLRenderingContext}
+         */
+        this._context = null;
 
         /**
          * @private
@@ -124,12 +118,12 @@ export default class SpriteRenderer extends Renderer {
      */
     connect(renderManager) {
         if (!this._context) {
-            const gl = renderManager.context;
+            const context = renderManager.context;
 
-            this._context = gl;
+            this._context = context;
             this._renderManager = renderManager;
-            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW, this._vertexData);
-            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW, this._indexData);
+            this._buffer.connect(context);
+            this._shader.connect(context);
         }
 
         return this;
@@ -139,15 +133,11 @@ export default class SpriteRenderer extends Renderer {
      * @override
      */
     disconnect() {
-        this.unbind();
-
         if (this._context) {
-            this._vertexBuffer.destroy();
-            this._vertexBuffer = null;
+            this.unbind();
 
-            this._indexBuffer.destroy();
-            this._indexBuffer = null;
-
+            this._shader.disconnect();
+            this._buffer.disconnect();
             this._renderManager = null;
             this._context = null;
         }
@@ -158,13 +148,12 @@ export default class SpriteRenderer extends Renderer {
     /**
      * @override
      */
-    bind(renderManager) {
+    bind() {
         if (!this._context) {
             throw new Error('Renderer has to be connected first!')
         }
 
-        this._vertexBuffer.bind();
-        this._indexBuffer.bind();
+        this._renderManager.setBuffer(this._buffer);
         this._renderManager.setShader(this._shader);
 
         return this;
@@ -177,9 +166,8 @@ export default class SpriteRenderer extends Renderer {
         if (this._context) {
             this.flush();
 
-            this._vertexBuffer.unbind();
-            this._indexBuffer.unbind();
             this._renderManager.setShader(null);
+            this._renderManager.setBuffer(null);
 
             this._currentTexture = null;
             this._currentBlendMode = null;
@@ -271,7 +259,7 @@ export default class SpriteRenderer extends Renderer {
                 this._shader.setProjection(view.getTransform());
             }
 
-            this._vertexBuffer.setData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
+            this._buffer.uploadVertexData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
             this._renderManager.drawElements(this._batchIndex * 6);
             this._batchIndex = 0;
         }
@@ -284,6 +272,9 @@ export default class SpriteRenderer extends Renderer {
      */
     destroy() {
         this.disconnect();
+
+        this._buffer.destroy();
+        this._buffer = null;
 
         this._shader.destroy();
         this._shader = null;

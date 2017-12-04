@@ -4,7 +4,7 @@ import GameScene from '../../scene/GameScene';
 
 /**
  * @class LoadGameMenu
- * @extends {Menu}
+ * @extends Menu
  */
 export default class LoadGameMenu extends Menu {
 
