@@ -9,7 +9,7 @@ export default class GamepadControl {
      * @constructor
      * @param {Number} index
      * @param {Number} channel
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Boolean} [options.invert=false]
      * @param {Boolean} [options.normalize=false]
      * @param {Number} [options.threshold=0.2]

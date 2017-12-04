@@ -1,6 +1,6 @@
+import { SCALE_MODES, WRAP_MODES, TEXTURE_FLAGS } from '../../const';
 import settings from '../../settings';
 import { addFlag, hasFlag, removeFlag } from '../../utils';
-import { TEXTURE_FLAGS } from '../../const';
 import RenderTarget from '../RenderTarget';
 
 /**
@@ -13,15 +13,17 @@ export default class RenderTexture extends RenderTarget {
      * @constructor
      * @param {Number} width
      * @param {Number} height
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
+     * @param {Boolean} [options.generateMipMap=settings.GENERATE_MIPMAP]
      */
     constructor(width, height, {
         scaleMode = settings.SCALE_MODE,
         wrapMode = settings.WRAP_MODE,
         premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
+        generateMipMap = settings.GENERATE_MIPMAP,
     } = {}) {
         super(width, height, false);
 
@@ -69,7 +71,8 @@ export default class RenderTexture extends RenderTarget {
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
-        this.setPremultiplyAlpha(premultiplyAlpha);
+        this.premultiplyAlpha = premultiplyAlpha;
+        this.generateMipMap = generateMipMap;
     }
 
     /**
@@ -304,15 +307,21 @@ export default class RenderTexture extends RenderTarget {
             const gl = this._context;
 
             if (hasFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
+                const scaleMode = (this._scaleMode === SCALE_MODES.LINEAR) ? gl.LINEAR : gl.NEAREST;
+
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
                 this._flags = removeFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
             }
 
             if (hasFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
+                const clamp = (this._wrapMode === WRAP_MODES.CLAMP_TO_EDGE) && gl.CLAMP_TO_EDGE,
+                    repeat = (this._wrapMode === WRAP_MODES.REPEAT) && gl.REPEAT,
+                    wrapMode = clamp || repeat || gl.MIRRORED_REPEAT;
+
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
                 this._flags = removeFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
             }

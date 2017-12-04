@@ -1,4 +1,4 @@
-import { KEYBOARD, GAMEPAD, SCALE_MODE, utils, Scene, Input } from 'exojs';
+import { KEYBOARD, GAMEPAD, SCALE_MODES, utils, Scene, Input } from 'exojs';
 import TitleScene from './TitleScene';
 
 /**
@@ -56,14 +56,14 @@ export default class LauncherScene extends Scene {
             'title/logo': 'image/title/logo.png',
             'title/background': 'image/title/background.jpg',
         }, {
-            scaleMode: SCALE_MODE.LINEAR,
+            scaleMode: SCALE_MODES.LINEAR,
         });
 
         loader.addList('texture', {
             'game/tileset': 'image/game/tileset.png',
             'game/player': 'image/game/player.png',
         }, {
-            scaleMode: SCALE_MODE.NEAREST,
+            scaleMode: SCALE_MODES.NEAREST,
         });
 
         loader.addList('music', {

@@ -12,7 +12,7 @@ export default class Music extends Media {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @property {Number} [options.volume=settings.VOLUME_MUSIC]
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]

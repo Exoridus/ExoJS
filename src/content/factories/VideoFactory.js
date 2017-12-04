@@ -17,9 +17,9 @@ export default class VideoFactory extends MediaSourceFactory {
     /**
      * @override
      */
-    create(source, { type = 'video', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent } = {}) {
+    create(source, { type = 'video', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent, volume, loop, speed, time, muted, scaleMode, wrapMode, premultiplyAlpha, generateMipMap } = {}) {
         return super
             .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
-            .then((audioSource) => new Video(audioSource));
+            .then((audioSource) => new Video(audioSource, { volume, loop, speed, time, muted, scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
     }
 }

@@ -17,9 +17,9 @@ export default class MusicFactory extends MediaSourceFactory {
     /**
      * @override
      */
-    create(source, { type = 'audio', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent } = {}) {
+    create(source, { type = 'audio', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent, volume, loop, speed, time, muted } = {}) {
         return super
             .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
-            .then((audioSource) => new Music(audioSource));
+            .then((audioSource) => new Music(audioSource, { volume, loop, speed, time, muted }));
     }
 }

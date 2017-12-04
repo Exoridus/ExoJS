@@ -1,4 +1,4 @@
-import { TEXTURE_FLAGS } from '../../const';
+import { SCALE_MODES, WRAP_MODES, TEXTURE_FLAGS } from '../../const';
 import { getMediaHeight, getMediaWidth, powerOfTwo, addFlag, hasFlag, removeFlag } from '../../utils';
 import settings from '../../settings';
 import Size from '../../math/Size';
@@ -11,15 +11,17 @@ export default class Texture {
     /**
      * @constructor
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
+     * @param {Boolean} [options.generateMipMap=settings.GENERATE_MIPMAP]
      */
     constructor(source, {
         scaleMode = settings.SCALE_MODE,
         wrapMode = settings.WRAP_MODE,
         premultiplyAlpha = settings.PREMULTIPLY_ALPHA,
+        generateMipMap = settings.GENERATE_MIPMAP,
     } = {}) {
 
         /**
@@ -66,6 +68,12 @@ export default class Texture {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._generateMipMap = null;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._flags = TEXTURE_FLAGS.NONE;
@@ -78,7 +86,8 @@ export default class Texture {
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
-        this.setPremultiplyAlpha(premultiplyAlpha);
+        this.premultiplyAlpha = premultiplyAlpha;
+        this.generateMipMap = generateMipMap;
 
         if (source) {
             this.setSource(source);
@@ -166,7 +175,25 @@ export default class Texture {
     }
 
     set premultiplyAlpha(premultiplyAlpha) {
-        this.setPremultiplyAlpha(premultiplyAlpha);
+        if (this._premultiplyAlpha !== premultiplyAlpha) {
+            this._premultiplyAlpha = premultiplyAlpha;
+            this._flags = addFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+        }
+    }
+
+    /**
+     * @public
+     * @member {Boolean}
+     */
+    get generateMipMap() {
+        return this._generateMipMap;
+    }
+
+    set generateMipMap(generateMipMap) {
+        if (this._generateMipMap !== generateMipMap) {
+            this._generateMipMap = generateMipMap;
+            this._flags = addFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+        }
     }
 
     /**
@@ -296,21 +323,6 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {Boolean} premultiplyAlpha
-     * @returns {Texture}
-     */
-    setPremultiplyAlpha(premultiplyAlpha) {
-        if (this._premultiplyAlpha !== premultiplyAlpha) {
-            this._premultiplyAlpha = premultiplyAlpha;
-            this._flags = addFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
      * @returns {Texture}
      */
@@ -365,15 +377,21 @@ export default class Texture {
             const gl = this._context;
 
             if (hasFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
+                const scaleMode = (this._scaleMode === SCALE_MODES.LINEAR) ? gl.LINEAR : gl.NEAREST;
+
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
                 this._flags = removeFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
             }
 
             if (hasFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
+                const clamp = (this._wrapMode === WRAP_MODES.CLAMP_TO_EDGE) && gl.CLAMP_TO_EDGE,
+                    repeat = (this._wrapMode === WRAP_MODES.REPEAT) && gl.REPEAT,
+                    wrapMode = clamp || repeat || gl.MIRRORED_REPEAT;
+
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
                 this._flags = removeFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
             }
@@ -391,7 +409,7 @@ export default class Texture {
                     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 }
 
-                if (this.powerOfTwo) {
+                if (this._generateMipMap && this.powerOfTwo) {
                     gl.generateMipmap(gl.TEXTURE_2D);
                 }
 
@@ -415,6 +433,7 @@ export default class Texture {
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
+        this._generateMipMap = null;
         this._flags = null;
         this._context = null;
         this._texture = null;

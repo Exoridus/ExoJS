@@ -10,7 +10,7 @@ export default class MediaSource {
      * @constructor
      * @param {String} type
      * @param {ArrayBuffer} arrayBuffer
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {String} [options.mimeType=determineMimeType(arrayBuffer)]
      * @param {String} [options.loadEvent='canplaythrough']
      */

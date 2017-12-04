@@ -1,6 +1,5 @@
 import MediaSourceFactory from './MediaSourceFactory';
 import Sound from '../../media/Sound';
-import support from '../../support';
 
 /**
  * @class SoundFactory
@@ -18,9 +17,9 @@ export default class SoundFactory extends MediaSourceFactory {
     /**
      * @override
      */
-    create(source, { type = 'audio', createMediaElement = false, decodeAudioBuffer = true, mimeType, loadEvent } = {}) {
+    create(source, { type = 'audio', createMediaElement = false, decodeAudioBuffer = true, mimeType, loadEvent, volume, loop, speed, time, muted } = {}) {
         return super
             .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
-            .then((audioSource) => new Sound(audioSource));
+            .then((audioSource) => new Sound(audioSource, { volume, loop, speed, time, muted }));
     }
 }

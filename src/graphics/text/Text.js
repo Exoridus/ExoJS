@@ -15,11 +15,20 @@ export default class Text extends Sprite {
     /**
      * @constructor
      * @param {String} text
-     * @param {TextStyle|Object} [style]
-     * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]
+     * @param {Object} [options]
+     * @param {TextStyle|Object} [options.style]
+     * @param {HTMLCanvasElement} [options.canvas=document.createElement('canvas')]
+     * @param {Number} [options.scaleMode]
+     * @param {Number} [options.wrapMode]
+     * @param {Boolean} [options.premultiplyAlpha]
+     * @param {Boolean} [options.generateMipMap]
      */
-    constructor(text, style, canvas = document.createElement('canvas')) {
-        super(new Texture(canvas));
+    constructor(text, {
+        style = new TextStyle(),
+        canvas = document.createElement('canvas'),
+        scaleMode, wrapMode, premultiplyAlpha, generateMipMap,
+    } = {}) {
+        super(new Texture(canvas, { scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
 
         /**
          * @private

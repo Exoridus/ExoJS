@@ -11,7 +11,7 @@ export default class Input extends EventEmitter {
     /**
      * @constructor
      * @param {Set<Number>|Number[]|Number} channels
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Function} [options.start]
      * @param {Function} [options.stop]
      * @param {Function} [options.active]

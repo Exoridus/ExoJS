@@ -1,4 +1,4 @@
-import { BLEND_MODE, SCALE_MODE, WRAP_MODE } from './const';
+import { BLEND_MODE, SCALE_MODES, WRAP_MODES } from './const';
 import Color from './core/Color';
 import DefaultGamepadMapping from './input/gamepad/DefaultGamepadMapping';
 
@@ -50,17 +50,17 @@ export default {
      * @public
      * @static
      * @type {Number}
-     * @default WRAP_MODE.CLAMP_TO_EDGE
+     * @default SCALE_MODES.LINEAR
      */
-    WRAP_MODE: WRAP_MODE.CLAMP_TO_EDGE,
+    SCALE_MODE: SCALE_MODES.LINEAR,
 
     /**
      * @public
      * @static
      * @type {Number}
-     * @default SCALE_MODE.LINEAR
+     * @default WRAP_MODES.CLAMP_TO_EDGE
      */
-    SCALE_MODE: SCALE_MODE.LINEAR,
+    WRAP_MODE: WRAP_MODES.CLAMP_TO_EDGE,
 
     /**
      * @public
@@ -69,6 +69,14 @@ export default {
      * @default true
      */
     PREMULTIPLY_ALPHA: true,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default true
+     */
+    GENERATE_MIPMAP: true,
 
     /**
      * @public

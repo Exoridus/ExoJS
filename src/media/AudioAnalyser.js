@@ -9,7 +9,7 @@ export default class AudioAnalyser {
     /**
      * @constructor
      * @param {Media|Sound|Music|Video} media
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
      * @param {Number} [options.maxDecibels=-30]

@@ -77,6 +77,7 @@ export const
      * @property {Number} SCALE_MODE
      * @property {Number} WRAP_MODE
      * @property {Number} PREMULTIPLY_ALPHA
+     * @property {Number} GENERATE_MIPMAP
      * @property {Number} SOURCE
      * @property {Number} SIZE
      */
@@ -85,36 +86,37 @@ export const
         SCALE_MODE: 1 << 0,
         WRAP_MODE: 1 << 1,
         PREMULTIPLY_ALPHA: 1 << 2,
-        SOURCE: 1 << 3,
-        SIZE: 1 << 4,
+        GENERATE_MIPMAP: 1 << 3,
+        SOURCE: 1 << 4,
+        SIZE: 1 << 5,
     },
 
     /**
      * @public
      * @constant
-     * @name SCALE_MODE
+     * @name SCALE_MODES
      * @type {Object<String, Number>}
-     * @property {Number} NEAREST
      * @property {Number} LINEAR
+     * @property {Number} NEAREST
      */
-    SCALE_MODE = {
-        NEAREST: 0x2600,
-        LINEAR: 0x2601,
+    SCALE_MODES = {
+        LINEAR: 0,
+        NEAREST: 1,
     },
 
     /**
      * @public
      * @constant
-     * @name WRAP_MODE
+     * @name WRAP_MODES
      * @type {Object<String, Number>}
-     * @property {Number} REPEAT
      * @property {Number} CLAMP_TO_EDGE
+     * @property {Number} REPEAT
      * @property {Number} MIRRORED_REPEAT
      */
-    WRAP_MODE = {
-        REPEAT: 0x2901,
-        CLAMP_TO_EDGE: 0x812F,
-        MIRRORED_REPEAT: 0x8370,
+    WRAP_MODES = {
+        CLAMP_TO_EDGE: 0,
+        REPEAT: 1,
+        MIRRORED_REPEAT: 2,
     },
 
     /**

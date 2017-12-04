@@ -20,7 +20,7 @@ export default class ResourceLoader extends EventEmitter {
 
     /**
      * @constructor
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {String} [options.basePath='']
      * @param {Database} [options.database=null]
      */

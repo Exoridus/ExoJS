@@ -159,6 +159,7 @@ TIME = exports.TIME = {
  * @property {Number} SCALE_MODE
  * @property {Number} WRAP_MODE
  * @property {Number} PREMULTIPLY_ALPHA
+ * @property {Number} GENERATE_MIPMAP
  * @property {Number} SOURCE
  * @property {Number} SIZE
  */
@@ -167,38 +168,39 @@ TEXTURE_FLAGS = exports.TEXTURE_FLAGS = {
     SCALE_MODE: 1 << 0,
     WRAP_MODE: 1 << 1,
     PREMULTIPLY_ALPHA: 1 << 2,
-    SOURCE: 1 << 3,
-    SIZE: 1 << 4
+    GENERATE_MIPMAP: 1 << 3,
+    SOURCE: 1 << 4,
+    SIZE: 1 << 5
 },
 
 
 /**
  * @public
  * @constant
- * @name SCALE_MODE
+ * @name SCALE_MODES
  * @type {Object<String, Number>}
- * @property {Number} NEAREST
  * @property {Number} LINEAR
+ * @property {Number} NEAREST
  */
-SCALE_MODE = exports.SCALE_MODE = {
-    NEAREST: 0x2600,
-    LINEAR: 0x2601
+SCALE_MODES = exports.SCALE_MODES = {
+    LINEAR: 0,
+    NEAREST: 1
 },
 
 
 /**
  * @public
  * @constant
- * @name WRAP_MODE
+ * @name WRAP_MODES
  * @type {Object<String, Number>}
- * @property {Number} REPEAT
  * @property {Number} CLAMP_TO_EDGE
+ * @property {Number} REPEAT
  * @property {Number} MIRRORED_REPEAT
  */
-WRAP_MODE = exports.WRAP_MODE = {
-    REPEAT: 0x2901,
-    CLAMP_TO_EDGE: 0x812F,
-    MIRRORED_REPEAT: 0x8370
+WRAP_MODES = exports.WRAP_MODES = {
+    CLAMP_TO_EDGE: 0,
+    REPEAT: 1,
+    MIRRORED_REPEAT: 2
 },
 
 
@@ -1887,17 +1889,17 @@ exports.default = {
      * @public
      * @static
      * @type {Number}
-     * @default WRAP_MODE.CLAMP_TO_EDGE
+     * @default SCALE_MODES.LINEAR
      */
-    WRAP_MODE: _const.WRAP_MODE.CLAMP_TO_EDGE,
+    SCALE_MODE: _const.SCALE_MODES.LINEAR,
 
     /**
      * @public
      * @static
      * @type {Number}
-     * @default SCALE_MODE.LINEAR
+     * @default WRAP_MODES.CLAMP_TO_EDGE
      */
-    SCALE_MODE: _const.SCALE_MODE.LINEAR,
+    WRAP_MODE: _const.WRAP_MODES.CLAMP_TO_EDGE,
 
     /**
      * @public
@@ -1906,6 +1908,14 @@ exports.default = {
      * @default true
      */
     PREMULTIPLY_ALPHA: true,
+
+    /**
+     * @public
+     * @static
+     * @type {Boolean}
+     * @default true
+     */
+    GENERATE_MIPMAP: true,
 
     /**
      * @public
@@ -4847,10 +4857,11 @@ var Texture = function () {
     /**
      * @constructor
      * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
+     * @param {Boolean} [options.generateMipMap=settings.GENERATE_MIPMAP]
      */
     function Texture(source) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -4859,7 +4870,9 @@ var Texture = function () {
             _ref$wrapMode = _ref.wrapMode,
             wrapMode = _ref$wrapMode === undefined ? _settings2.default.WRAP_MODE : _ref$wrapMode,
             _ref$premultiplyAlpha = _ref.premultiplyAlpha,
-            premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha;
+            premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha,
+            _ref$generateMipMap = _ref.generateMipMap,
+            generateMipMap = _ref$generateMipMap === undefined ? _settings2.default.GENERATE_MIPMAP : _ref$generateMipMap;
 
         _classCallCheck(this, Texture);
 
@@ -4907,6 +4920,12 @@ var Texture = function () {
 
         /**
          * @private
+         * @member {Boolean}
+         */
+        this._generateMipMap = null;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._flags = _const.TEXTURE_FLAGS.NONE;
@@ -4919,7 +4938,8 @@ var Texture = function () {
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
-        this.setPremultiplyAlpha(premultiplyAlpha);
+        this.premultiplyAlpha = premultiplyAlpha;
+        this.generateMipMap = generateMipMap;
 
         if (source) {
             this.setSource(source);
@@ -5056,24 +5076,6 @@ var Texture = function () {
         /**
          * @public
          * @chainable
-         * @param {Boolean} premultiplyAlpha
-         * @returns {Texture}
-         */
-
-    }, {
-        key: 'setPremultiplyAlpha',
-        value: function setPremultiplyAlpha(premultiplyAlpha) {
-            if (this._premultiplyAlpha !== premultiplyAlpha) {
-                this._premultiplyAlpha = premultiplyAlpha;
-                this._flags = (0, _utils.addFlag)(_const.TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
          * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
          * @returns {Texture}
          */
@@ -5137,15 +5139,21 @@ var Texture = function () {
                 var gl = this._context;
 
                 if ((0, _utils.hasFlag)(_const.TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
+                    var scaleMode = this._scaleMode === _const.SCALE_MODES.LINEAR ? gl.LINEAR : gl.NEAREST;
+
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
                     this._flags = (0, _utils.removeFlag)(_const.TEXTURE_FLAGS.SCALE_MODE, this._flags);
                 }
 
                 if ((0, _utils.hasFlag)(_const.TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
+                    var clamp = this._wrapMode === _const.WRAP_MODES.CLAMP_TO_EDGE && gl.CLAMP_TO_EDGE,
+                        repeat = this._wrapMode === _const.WRAP_MODES.REPEAT && gl.REPEAT,
+                        wrapMode = clamp || repeat || gl.MIRRORED_REPEAT;
+
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
                     this._flags = (0, _utils.removeFlag)(_const.TEXTURE_FLAGS.WRAP_MODE, this._flags);
                 }
@@ -5163,7 +5171,7 @@ var Texture = function () {
                         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                     }
 
-                    if (this.powerOfTwo) {
+                    if (this._generateMipMap && this.powerOfTwo) {
                         gl.generateMipmap(gl.TEXTURE_2D);
                     }
 
@@ -5190,6 +5198,7 @@ var Texture = function () {
             this._scaleMode = null;
             this._wrapMode = null;
             this._premultiplyAlpha = null;
+            this._generateMipMap = null;
             this._flags = null;
             this._context = null;
             this._texture = null;
@@ -5285,7 +5294,27 @@ var Texture = function () {
             return this._premultiplyAlpha;
         },
         set: function set(premultiplyAlpha) {
-            this.setPremultiplyAlpha(premultiplyAlpha);
+            if (this._premultiplyAlpha !== premultiplyAlpha) {
+                this._premultiplyAlpha = premultiplyAlpha;
+                this._flags = (0, _utils.addFlag)(_const.TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+            }
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'generateMipMap',
+        get: function get() {
+            return this._generateMipMap;
+        },
+        set: function set(generateMipMap) {
+            if (this._generateMipMap !== generateMipMap) {
+                this._generateMipMap = generateMipMap;
+                this._flags = (0, _utils.addFlag)(_const.TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+            }
         }
 
         /**
@@ -11602,7 +11631,7 @@ var ResourceLoader = function (_EventEmitter) {
 
     /**
      * @constructor
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {String} [options.basePath='']
      * @param {Database} [options.database=null]
      */
@@ -12618,10 +12647,15 @@ var MusicFactory = function (_MediaSourceFactory) {
           _ref$decodeAudioBuffe = _ref.decodeAudioBuffer,
           decodeAudioBuffer = _ref$decodeAudioBuffe === undefined ? false : _ref$decodeAudioBuffe,
           mimeType = _ref.mimeType,
-          loadEvent = _ref.loadEvent;
+          loadEvent = _ref.loadEvent,
+          volume = _ref.volume,
+          loop = _ref.loop,
+          speed = _ref.speed,
+          time = _ref.time,
+          muted = _ref.muted;
 
       return _get(MusicFactory.prototype.__proto__ || Object.getPrototypeOf(MusicFactory.prototype), 'create', this).call(this, source, { type: type, createMediaElement: createMediaElement, decodeAudioBuffer: decodeAudioBuffer, mimeType: mimeType, loadEvent: loadEvent }).then(function (audioSource) {
-        return new _Music2.default(audioSource);
+        return new _Music2.default(audioSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted });
       });
     }
   }, {
@@ -12675,7 +12709,7 @@ var MediaSource = function () {
    * @constructor
    * @param {String} type
    * @param {ArrayBuffer} arrayBuffer
-   * @param {Object} [options={}]
+   * @param {Object} [options]
    * @param {String} [options.mimeType=determineMimeType(arrayBuffer)]
    * @param {String} [options.loadEvent='canplaythrough']
    */
@@ -12958,7 +12992,7 @@ var Music = function (_Media) {
   /**
    * @constructor
    * @param {MediaSource} mediaSource
-   * @param {Object} [options={}]
+   * @param {Object} [options]
    * @property {Number} [options.volume=settings.VOLUME_MUSIC]
    * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
    * @property {Number} [options.speed=settings.MEDIA_SPEED]
@@ -13334,7 +13368,7 @@ var GamepadControl = function () {
      * @constructor
      * @param {Number} index
      * @param {Number} channel
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Boolean} [options.invert=false]
      * @param {Boolean} [options.normalize=false]
      * @param {Number} [options.threshold=0.2]
@@ -13529,10 +13563,6 @@ var _Sound = __webpack_require__(45);
 
 var _Sound2 = _interopRequireDefault(_Sound);
 
-var _support = __webpack_require__(5);
-
-var _support2 = _interopRequireDefault(_support);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -13570,10 +13600,15 @@ var SoundFactory = function (_MediaSourceFactory) {
           _ref$decodeAudioBuffe = _ref.decodeAudioBuffer,
           decodeAudioBuffer = _ref$decodeAudioBuffe === undefined ? true : _ref$decodeAudioBuffe,
           mimeType = _ref.mimeType,
-          loadEvent = _ref.loadEvent;
+          loadEvent = _ref.loadEvent,
+          volume = _ref.volume,
+          loop = _ref.loop,
+          speed = _ref.speed,
+          time = _ref.time,
+          muted = _ref.muted;
 
       return _get(SoundFactory.prototype.__proto__ || Object.getPrototypeOf(SoundFactory.prototype), 'create', this).call(this, source, { type: type, createMediaElement: createMediaElement, decodeAudioBuffer: decodeAudioBuffer, mimeType: mimeType, loadEvent: loadEvent }).then(function (audioSource) {
-        return new _Sound2.default(audioSource);
+        return new _Sound2.default(audioSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted });
       });
     }
   }, {
@@ -13640,7 +13675,7 @@ var Sound = function (_Media) {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @property {Number} [options.volume=settings.VOLUME_SOUND]
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
      * @property {Number} [options.speed=settings.MEDIA_SPEED]
@@ -14076,10 +14111,11 @@ var TextureFactory = function (_ImageFactory) {
                 mimeType = _ref.mimeType,
                 scaleMode = _ref.scaleMode,
                 wrapMode = _ref.wrapMode,
-                premultiplyAlpha = _ref.premultiplyAlpha;
+                premultiplyAlpha = _ref.premultiplyAlpha,
+                generateMipMap = _ref.generateMipMap;
 
             return _get(TextureFactory.prototype.__proto__ || Object.getPrototypeOf(TextureFactory.prototype), 'create', this).call(this, source, { mimeType: mimeType }).then(function (image) {
-                return new _Texture2.default(image, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha });
+                return new _Texture2.default(image, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha, generateMipMap: generateMipMap });
             });
         }
     }, {
@@ -14159,10 +14195,19 @@ var VideoFactory = function (_MediaSourceFactory) {
           _ref$decodeAudioBuffe = _ref.decodeAudioBuffer,
           decodeAudioBuffer = _ref$decodeAudioBuffe === undefined ? false : _ref$decodeAudioBuffe,
           mimeType = _ref.mimeType,
-          loadEvent = _ref.loadEvent;
+          loadEvent = _ref.loadEvent,
+          volume = _ref.volume,
+          loop = _ref.loop,
+          speed = _ref.speed,
+          time = _ref.time,
+          muted = _ref.muted,
+          scaleMode = _ref.scaleMode,
+          wrapMode = _ref.wrapMode,
+          premultiplyAlpha = _ref.premultiplyAlpha,
+          generateMipMap = _ref.generateMipMap;
 
       return _get(VideoFactory.prototype.__proto__ || Object.getPrototypeOf(VideoFactory.prototype), 'create', this).call(this, source, { type: type, createMediaElement: createMediaElement, decodeAudioBuffer: decodeAudioBuffer, mimeType: mimeType, loadEvent: loadEvent }).then(function (audioSource) {
-        return new _Video2.default(audioSource);
+        return new _Video2.default(audioSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted, scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha, generateMipMap: generateMipMap });
       });
     }
   }, {
@@ -14233,12 +14278,16 @@ var Video = function (_Sprite) {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
-     * @param {Object} [options={}]
-     * @property {Number} [options.volume=settings.VOLUME_VIDEO]
-     * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
-     * @property {Number} [options.speed=settings.MEDIA_SPEED]
-     * @property {Number} [options.time=settings.MEDIA_TIME]
-     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
+     * @param {Object} [options]
+     * @param {Number} [options.volume=settings.VOLUME_VIDEO]
+     * @param {Boolean} [options.loop=settings.MEDIA_LOOP]
+     * @param {Number} [options.speed=settings.MEDIA_SPEED]
+     * @param {Number} [options.time=settings.MEDIA_TIME]
+     * @param {Boolean} [options.muted=settings.MEDIA_MUTED]
+     * @param {Number} [options.scaleMode]
+     * @param {Number} [options.wrapMode]
+     * @param {Boolean} [options.premultiplyAlpha]
+     * @param {Boolean} [options.generateMipMap]
      */
     function Video(mediaSource) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -14251,11 +14300,15 @@ var Video = function (_Sprite) {
             _ref$time = _ref.time,
             time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time,
             _ref$muted = _ref.muted,
-            muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted;
+            muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted,
+            scaleMode = _ref.scaleMode,
+            wrapMode = _ref.wrapMode,
+            premultiplyAlpha = _ref.premultiplyAlpha,
+            generateMipMap = _ref.generateMipMap;
 
         _classCallCheck(this, Video);
 
-        var _this = _possibleConstructorReturn(this, (Video.__proto__ || Object.getPrototypeOf(Video)).call(this, new _Texture2.default(mediaSource.mediaElement)));
+        var _this = _possibleConstructorReturn(this, (Video.__proto__ || Object.getPrototypeOf(Video)).call(this, new _Texture2.default(mediaSource.mediaElement, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha, generateMipMap: generateMipMap })));
 
         var mediaElement = mediaSource.mediaElement;
 
@@ -14301,23 +14354,20 @@ var Video = function (_Sprite) {
          */
         _this._muted = mediaElement ? mediaElement.muted : false;
 
-        if (_support2.default.webAudio) {
+        /**
+         * @private
+         * @member {?GainNode}
+         */
+        _this._gainNode = _utils.audioContext.createGain();
+        _this._gainNode.gain.value = _this.volume;
+        _this._gainNode.connect(_utils.audioContext.destination);
 
-            /**
-             * @private
-             * @member {?GainNode}
-             */
-            _this._gainNode = _utils.audioContext.createGain();
-            _this._gainNode.gain.value = _this.volume;
-            _this._gainNode.connect(_utils.audioContext.destination);
-
-            /**
-             * @private
-             * @member {?MediaElementAudioSourceNode}
-             */
-            _this._sourceNode = _utils.audioContext.createMediaElementSource(_this._mediaElement);
-            _this._sourceNode.connect(_this._gainNode);
-        }
+        /**
+         * @private
+         * @member {?MediaElementAudioSourceNode}
+         */
+        _this._sourceNode = _utils.audioContext.createMediaElementSource(_this._mediaElement);
+        _this._sourceNode.connect(_this._gainNode);
 
         _this.applyOptions({ volume: volume, loop: loop, speed: speed, time: time, muted: muted });
         return _this;
@@ -23996,13 +24046,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
+var _const = __webpack_require__(0);
+
 var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
 
 var _utils = __webpack_require__(1);
-
-var _const = __webpack_require__(0);
 
 var _RenderTarget2 = __webpack_require__(30);
 
@@ -24027,10 +24077,11 @@ var RenderTexture = function (_RenderTarget) {
      * @constructor
      * @param {Number} width
      * @param {Number} height
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
      * @param {Boolean} [options.premultiplyAlpha=settings.PREMULTIPLY_ALPHA]
+     * @param {Boolean} [options.generateMipMap=settings.GENERATE_MIPMAP]
      */
     function RenderTexture(width, height) {
         var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
@@ -24039,7 +24090,9 @@ var RenderTexture = function (_RenderTarget) {
             _ref$wrapMode = _ref.wrapMode,
             wrapMode = _ref$wrapMode === undefined ? _settings2.default.WRAP_MODE : _ref$wrapMode,
             _ref$premultiplyAlpha = _ref.premultiplyAlpha,
-            premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha;
+            premultiplyAlpha = _ref$premultiplyAlpha === undefined ? _settings2.default.PREMULTIPLY_ALPHA : _ref$premultiplyAlpha,
+            _ref$generateMipMap = _ref.generateMipMap,
+            generateMipMap = _ref$generateMipMap === undefined ? _settings2.default.GENERATE_MIPMAP : _ref$generateMipMap;
 
         _classCallCheck(this, RenderTexture);
 
@@ -24089,7 +24142,8 @@ var RenderTexture = function (_RenderTarget) {
 
         _this.setScaleMode(scaleMode);
         _this.setWrapMode(wrapMode);
-        _this.setPremultiplyAlpha(premultiplyAlpha);
+        _this.premultiplyAlpha = premultiplyAlpha;
+        _this.generateMipMap = generateMipMap;
         return _this;
     }
 
@@ -24305,15 +24359,21 @@ var RenderTexture = function (_RenderTarget) {
                 var gl = this._context;
 
                 if ((0, _utils.hasFlag)(_const.TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
+                    var scaleMode = this._scaleMode === _const.SCALE_MODES.LINEAR ? gl.LINEAR : gl.NEAREST;
+
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
                     this._flags = (0, _utils.removeFlag)(_const.TEXTURE_FLAGS.SCALE_MODE, this._flags);
                 }
 
                 if ((0, _utils.hasFlag)(_const.TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
+                    var clamp = this._wrapMode === _const.WRAP_MODES.CLAMP_TO_EDGE && gl.CLAMP_TO_EDGE,
+                        repeat = this._wrapMode === _const.WRAP_MODES.REPEAT && gl.REPEAT,
+                        wrapMode = clamp || repeat || gl.MIRRORED_REPEAT;
+
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
                     this._flags = (0, _utils.removeFlag)(_const.TEXTURE_FLAGS.WRAP_MODE, this._flags);
                 }
@@ -24931,11 +24991,24 @@ var Text = function (_Sprite) {
     /**
      * @constructor
      * @param {String} text
-     * @param {TextStyle|Object} [style]
-     * @param {HTMLCanvasElement} [canvas=document.createElement('canvas')]
+     * @param {Object} [options]
+     * @param {TextStyle|Object} [options.style]
+     * @param {HTMLCanvasElement} [options.canvas=document.createElement('canvas')]
+     * @param {Number} [options.scaleMode]
+     * @param {Number} [options.wrapMode]
+     * @param {Boolean} [options.premultiplyAlpha]
+     * @param {Boolean} [options.generateMipMap]
      */
-    function Text(text, style) {
-        var canvas = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : document.createElement('canvas');
+    function Text(text) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            _ref$style = _ref.style,
+            style = _ref$style === undefined ? new _TextStyle2.default() : _ref$style,
+            _ref$canvas = _ref.canvas,
+            canvas = _ref$canvas === undefined ? document.createElement('canvas') : _ref$canvas,
+            scaleMode = _ref.scaleMode,
+            wrapMode = _ref.wrapMode,
+            premultiplyAlpha = _ref.premultiplyAlpha,
+            generateMipMap = _ref.generateMipMap;
 
         _classCallCheck(this, Text);
 
@@ -24943,7 +25016,7 @@ var Text = function (_Sprite) {
          * @private
          * @member {String}
          */
-        var _this = _possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, new _Texture2.default(canvas)));
+        var _this = _possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, new _Texture2.default(canvas, { scaleMode: scaleMode, wrapMode: wrapMode, premultiplyAlpha: premultiplyAlpha, generateMipMap: generateMipMap })));
 
         _this._text = null;
 
@@ -27043,7 +27116,7 @@ var Input = function (_EventEmitter) {
     /**
      * @constructor
      * @param {Set<Number>|Number[]|Number} channels
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Function} [options.start]
      * @param {Function} [options.stop]
      * @param {Function} [options.active]
@@ -27549,7 +27622,7 @@ var AudioAnalyser = function () {
     /**
      * @constructor
      * @param {Media|Sound|Music|Video} media
-     * @param {Object} [options={}]
+     * @param {Object} [options]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
      * @param {Number} [options.maxDecibels=-30]

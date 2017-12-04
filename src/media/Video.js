@@ -13,12 +13,16 @@ export default class Video extends Sprite {
     /**
      * @constructor
      * @param {MediaSource} mediaSource
-     * @param {Object} [options={}]
-     * @property {Number} [options.volume=settings.VOLUME_VIDEO]
-     * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
-     * @property {Number} [options.speed=settings.MEDIA_SPEED]
-     * @property {Number} [options.time=settings.MEDIA_TIME]
-     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
+     * @param {Object} [options]
+     * @param {Number} [options.volume=settings.VOLUME_VIDEO]
+     * @param {Boolean} [options.loop=settings.MEDIA_LOOP]
+     * @param {Number} [options.speed=settings.MEDIA_SPEED]
+     * @param {Number} [options.time=settings.MEDIA_TIME]
+     * @param {Boolean} [options.muted=settings.MEDIA_MUTED]
+     * @param {Number} [options.scaleMode]
+     * @param {Number} [options.wrapMode]
+     * @param {Boolean} [options.premultiplyAlpha]
+     * @param {Boolean} [options.generateMipMap]
      */
     constructor(mediaSource, {
         volume = settings.VOLUME_VIDEO,
@@ -26,8 +30,12 @@ export default class Video extends Sprite {
         speed = settings.MEDIA_SPEED,
         time = settings.MEDIA_TIME,
         muted = settings.MEDIA_MUTED,
+        scaleMode,
+        wrapMode,
+        premultiplyAlpha,
+        generateMipMap,
     } = {}) {
-        super(new Texture(mediaSource.mediaElement));
+        super(new Texture(mediaSource.mediaElement, { scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
 
         const mediaElement = mediaSource.mediaElement;
 
@@ -73,23 +81,20 @@ export default class Video extends Sprite {
          */
         this._muted = mediaElement ? mediaElement.muted : false;
 
-        if (support.webAudio) {
+        /**
+         * @private
+         * @member {?GainNode}
+         */
+        this._gainNode = audioContext.createGain();
+        this._gainNode.gain.value = this.volume;
+        this._gainNode.connect(audioContext.destination);
 
-            /**
-             * @private
-             * @member {?GainNode}
-             */
-            this._gainNode = audioContext.createGain();
-            this._gainNode.gain.value = this.volume;
-            this._gainNode.connect(audioContext.destination);
-
-            /**
-             * @private
-             * @member {?MediaElementAudioSourceNode}
-             */
-            this._sourceNode = audioContext.createMediaElementSource(this._mediaElement);
-            this._sourceNode.connect(this._gainNode);
-        }
+        /**
+         * @private
+         * @member {?MediaElementAudioSourceNode}
+         */
+        this._sourceNode = audioContext.createMediaElementSource(this._mediaElement);
+        this._sourceNode.connect(this._gainNode);
 
         this.applyOptions({ volume, loop, speed, time, muted });
     }
