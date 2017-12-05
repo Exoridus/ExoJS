@@ -99,12 +99,6 @@ export default class Application extends EventEmitter {
          */
         this._running = false;
 
-        /**
-         * @private
-         * @member {String}
-         */
-        this._cursor = this._canvas.style.cursor;
-
         if (this._canvasParent) {
             this._canvasParent.appendChild(this._canvas);
         }
@@ -184,18 +178,6 @@ export default class Application extends EventEmitter {
 
     /**
      * @public
-     * @member {String}
-     */
-    get cursor() {
-        return this._cursor;
-    }
-
-    set cursor(cursor) {
-        this.setCursor(cursor);
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {Scene} scene
      * @returns {Application}
@@ -204,26 +186,10 @@ export default class Application extends EventEmitter {
         if (!this._running) {
             this._running = true;
             this._sceneManager.setScene(scene);
+            this._updateId = requestAnimationFrame(this._updateHandler);
             this._delta.restart();
 
-            this._updateId = requestAnimationFrame(this._updateHandler);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Application}
-     */
-    stop() {
-        if (this._running) {
-            cancelAnimationFrame(this._updateId);
-
-            this._delta.stop();
-            this._sceneManager.setScene(null);
-            this._running = false;
+            this.trigger('start', this);
         }
 
         return this;
@@ -238,9 +204,11 @@ export default class Application extends EventEmitter {
         if (this._running) {
             this._inputManager.update();
             this._sceneManager.update(this._delta.elapsedTime);
-            this._delta.restart();
+
+            this.trigger('update', this);
 
             this._updateId = requestAnimationFrame(this._updateHandler);
+            this._delta.restart();
         }
 
         return this;
@@ -249,21 +217,33 @@ export default class Application extends EventEmitter {
     /**
      * @public
      * @chainable
-     * @param {String|HTMLImageElement|Texture} cursor
      * @returns {Application}
      */
-    setCursor(cursor) {
-        if (cursor !== this._cursor) {
-            if (cursor instanceof Texture) {
-                cursor = cursor.source;
-            }
+    stop() {
+        if (this._running) {
+            cancelAnimationFrame(this._updateId);
 
-            if (cursor instanceof HTMLImageElement) {
-                cursor = `url(${imageToBase64(cursor)})`;
-            }
+            this._sceneManager.setScene(null);
+            this._delta.stop();
+            this._running = false;
 
-            this._canvas.style.cursor = this._cursor = cursor;
+            this.trigger('stop', this);
         }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} width
+     * @param {Number} height
+     * @returns {Application}
+     */
+    resize(width, height) {
+        this._renderManager.resize(width, height);
+
+        this.trigger('resize', width, height, this);
 
         return this;
     }
@@ -301,6 +281,5 @@ export default class Application extends EventEmitter {
         this._updateHandler = null;
         this._updateId = null;
         this._running = null;
-        this._cursor = null;
     }
 }

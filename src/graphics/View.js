@@ -200,7 +200,7 @@ export default class View {
      * @param {Number} height
      * @returns {View}
      */
-    setSize(width, height) {
+    resize(width, height) {
         this._size.set(width, height);
 
         return this;
@@ -246,7 +246,7 @@ export default class View {
      * @returns {View}
      */
     zoom(factor) {
-        this.setSize(this._size.width * factor, this._size.height * factor);
+        this.resize(this._size.width * factor, this._size.height * factor);
 
         return this;
     }

@@ -1,33 +1,52 @@
 window.addEventListener('load', () => {
-    const app = new Exo.Application({
+    let activeScript = null;
+
+    const container = document.querySelector('.canvas-container'),
+        stats = new Stats(),
+        app = new Exo.Application({
             resourcePath: 'assets/',
-            canvasParent: document.querySelector('.container-canvas'),
             width: 800,
             height: 600,
         }),
-        loadScript = () => {
+
+        loadExample = () => {
             app.stop();
 
-            const name = location.hash.slice(1),
-                script = document.createElement('script'),
-                example = document.querySelector('#current-example');
-
-            if (example) {
-                example.parentNode.removeChild(example);
+            if (activeScript) {
+                activeScript.parentNode.removeChild(activeScript);
             }
 
-            script.type = 'text/javascript';
-            script.async = true;
-            script.src = `src/js/examples/${name}.js?no-cache=${Date.now()}`;
-            script.id = 'current-example';
+            activeScript = document.createElement('script');
+            activeScript.type = 'text/javascript',
+            activeScript.async = true,
+            activeScript.src = `src/js/examples/${location.hash.slice(1)}.js?no-cache=${Date.now()}`,
 
-            document.getElementsByTagName('head')[0].appendChild(script);
+            document.body.appendChild(activeScript);
+        },
+
+        getStats = () => {
+            const style = stats.dom.style;
+
+            style.position = 'absolute';
+            style.top = '0';
+            style.left = '0';
+
+            return stats.dom;
         };
 
+    container.appendChild(app.canvas);
+    container.appendChild(getStats());
+
+    app.on('start', () => stats.begin());
+    app.on('update', () => stats.update());
+    app.on('stop', () => stats.end());
+
     window.app = app;
-    window.addEventListener('hashchange', loadScript, false);
+    window.addEventListener('hashchange', loadExample, false);
 
     if (location.hash) {
-        loadScript();
+        loadExample();
+    } else {
+        location.hash = 'sprite';
     }
 });

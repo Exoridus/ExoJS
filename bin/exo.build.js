@@ -10575,11 +10575,10 @@ var RenderTarget = function () {
          */
 
     }, {
-        key: 'setSize',
-        value: function setSize(width, height) {
+        key: 'resize',
+        value: function resize(width, height) {
             if (!this._size.equals({ width: width, height: height })) {
                 this._size.set(width, height);
-                this._defaultView.setSize(width, height);
                 this.updateViewport();
             }
 
@@ -10698,7 +10697,7 @@ var RenderTarget = function () {
             return this._size;
         },
         set: function set(size) {
-            this.setSize(size.width, size.height);
+            this.resize(size.width, size.height);
         }
 
         /**
@@ -10712,7 +10711,7 @@ var RenderTarget = function () {
             return this._size.width;
         },
         set: function set(width) {
-            this.setSize(width, this.height);
+            this.resize(width, this.height);
         }
 
         /**
@@ -10726,7 +10725,7 @@ var RenderTarget = function () {
             return this._size.height;
         },
         set: function set(height) {
-            this.setSize(this.width, height);
+            this.resize(this.width, height);
         }
     }]);
 
@@ -15386,9 +15385,13 @@ var SceneManager = function (_EventEmitter) {
                 this._scene.app = this._app;
                 this._scene.load(this._loader);
 
+                this.trigger('scene:load');
+
                 this._loader.load().then(function () {
                     _this2._status = STATUS.RUNNING;
                     _this2._scene.init(_this2._loader.resources);
+
+                    _this2.trigger('scene:init');
                 });
             }
         }
@@ -15403,6 +15406,8 @@ var SceneManager = function (_EventEmitter) {
             if (this._scene) {
                 if (this.sceneRunning) {
                     this._scene.unload();
+
+                    this.trigger('scene:unload');
                 }
 
                 this._scene.destroy();
@@ -15410,6 +15415,8 @@ var SceneManager = function (_EventEmitter) {
 
                 this._status = STATUS.NONE;
                 this._loader.clear();
+
+                this.trigger('scene:destroy');
             }
         }
     }, {
@@ -15489,6 +15496,8 @@ var _ParticleRenderer2 = _interopRequireDefault(_ParticleRenderer);
 var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
+
+var _utils = __webpack_require__(1);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -15607,6 +15616,12 @@ var RenderManager = function () {
          * @member {RenderTarget}
          */
         this._rootRenderTarget = new _RenderTarget2.default(width, height, true);
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._cursor = this._canvas.style.cursor;
 
         this._setupContext();
         this._addEvents();
@@ -15868,6 +15883,31 @@ var RenderManager = function () {
         /**
          * @public
          * @chainable
+         * @param {String|HTMLImageElement|Texture} cursor
+         * @returns {RenderManager}
+         */
+
+    }, {
+        key: 'setCursor',
+        value: function setCursor(cursor) {
+            if (cursor !== this._cursor) {
+                if (cursor instanceof Texture) {
+                    cursor = cursor.source;
+                }
+
+                if (cursor instanceof HTMLImageElement) {
+                    cursor = 'url(' + (0, _utils.imageToBase64)(cursor) + ')';
+                }
+
+                this._canvas.style.cursor = this._cursor = cursor;
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
          * @param {String} name
          * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
          * @returns {RenderManager}
@@ -15937,7 +15977,7 @@ var RenderManager = function () {
             this._canvas.width = width;
             this._canvas.height = height;
 
-            this._rootRenderTarget.setSize(width, height);
+            this._rootRenderTarget.resize(width, height);
 
             return this;
         }
@@ -16067,6 +16107,7 @@ var RenderManager = function () {
             this._texture = null;
             this._textureUnit = null;
             this._clearAlpha = null;
+            this._cursor = null;
         }
 
         /**
@@ -16286,6 +16327,20 @@ var RenderManager = function () {
         set: function set(color) {
             this.setClearColor(color);
         }
+
+        /**
+         * @public
+         * @member {String}
+         */
+
+    }, {
+        key: 'cursor',
+        get: function get() {
+            return this._cursor;
+        },
+        set: function set(cursor) {
+            this.setCursor(cursor);
+        }
     }]);
 
     return RenderManager;
@@ -16458,8 +16513,8 @@ var View = function () {
          */
 
     }, {
-        key: 'setSize',
-        value: function setSize(width, height) {
+        key: 'resize',
+        value: function resize(width, height) {
             this._size.set(width, height);
 
             return this;
@@ -16514,7 +16569,7 @@ var View = function () {
     }, {
         key: 'zoom',
         value: function zoom(factor) {
-            this.setSize(this._size.width * factor, this._size.height * factor);
+            this.resize(this._size.width * factor, this._size.height * factor);
 
             return this;
         }
@@ -17450,10 +17505,10 @@ var SpriteShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (SpriteShader.__proto__ || Object.getPrototypeOf(SpriteShader)).call(this));
 
-        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = vec4(a_color.rgb * a_color.a, a_color.a);\r\n\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
+        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = a_color;\r\n\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
         _this.setFragmentSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform sampler2D u_texture;\r\n\r\nin vec2 v_texcoord;\r\nin vec4 v_color;\r\n\r\nlayout(location = 0) out vec4 o_fragColor;\r\n\r\nvoid main(void) {\r\n    o_fragColor = texture(u_texture, v_texcoord) * v_color;\r\n}\r\n');
 
-        _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false); // GL_HALF_FLOAT
         _this.setAttribute('a_texcoord', _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
         _this.setAttribute('a_color', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
@@ -23013,12 +23068,6 @@ var Application = function (_EventEmitter) {
          */
         _this._running = false;
 
-        /**
-         * @private
-         * @member {String}
-         */
-        _this._cursor = _this._canvas.style.cursor;
-
         if (_this._canvasParent) {
             _this._canvasParent.appendChild(_this._canvas);
         }
@@ -23046,29 +23095,10 @@ var Application = function (_EventEmitter) {
             if (!this._running) {
                 this._running = true;
                 this._sceneManager.setScene(scene);
+                this._updateId = requestAnimationFrame(this._updateHandler);
                 this._delta.restart();
 
-                this._updateId = requestAnimationFrame(this._updateHandler);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {Application}
-         */
-
-    }, {
-        key: 'stop',
-        value: function stop() {
-            if (this._running) {
-                cancelAnimationFrame(this._updateId);
-
-                this._delta.stop();
-                this._sceneManager.setScene(null);
-                this._running = false;
+                this.trigger('start', this);
             }
 
             return this;
@@ -23086,9 +23116,11 @@ var Application = function (_EventEmitter) {
             if (this._running) {
                 this._inputManager.update();
                 this._sceneManager.update(this._delta.elapsedTime);
-                this._delta.restart();
+
+                this.trigger('update', this);
 
                 this._updateId = requestAnimationFrame(this._updateHandler);
+                this._delta.restart();
             }
 
             return this;
@@ -23097,24 +23129,39 @@ var Application = function (_EventEmitter) {
         /**
          * @public
          * @chainable
-         * @param {String|HTMLImageElement|Texture} cursor
          * @returns {Application}
          */
 
     }, {
-        key: 'setCursor',
-        value: function setCursor(cursor) {
-            if (cursor !== this._cursor) {
-                if (cursor instanceof _Texture2.default) {
-                    cursor = cursor.source;
-                }
+        key: 'stop',
+        value: function stop() {
+            if (this._running) {
+                cancelAnimationFrame(this._updateId);
 
-                if (cursor instanceof HTMLImageElement) {
-                    cursor = 'url(' + (0, _utils.imageToBase64)(cursor) + ')';
-                }
+                this._sceneManager.setScene(null);
+                this._delta.stop();
+                this._running = false;
 
-                this._canvas.style.cursor = this._cursor = cursor;
+                this.trigger('stop', this);
             }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {Number} width
+         * @param {Number} height
+         * @returns {Application}
+         */
+
+    }, {
+        key: 'resize',
+        value: function resize(width, height) {
+            this._renderManager.resize(width, height);
+
+            this.trigger('resize', width, height, this);
 
             return this;
         }
@@ -23155,7 +23202,6 @@ var Application = function (_EventEmitter) {
             this._updateHandler = null;
             this._updateId = null;
             this._running = null;
-            this._cursor = null;
         }
     }, {
         key: 'canvas',
@@ -23245,20 +23291,6 @@ var Application = function (_EventEmitter) {
         key: 'FPS',
         get: function get() {
             return 1000 / this._delta.elapsedTime.milliseconds;
-        }
-
-        /**
-         * @public
-         * @member {String}
-         */
-
-    }, {
-        key: 'cursor',
-        get: function get() {
-            return this._cursor;
-        },
-        set: function set(cursor) {
-            this.setCursor(cursor);
         }
     }]);
 
@@ -24587,7 +24619,7 @@ var RenderTexture = function (_RenderTarget) {
         value: function setSize(width, height) {
             if (!this._size.equals({ width: width, height: height })) {
                 this._size.set(width, height);
-                this._defaultView.setSize(width, height);
+                this._defaultView.resize(width, height);
                 this.updateViewport();
 
                 this._flags = (0, _utils.addFlag)(_const.TEXTURE_FLAGS.SIZE, this._flags);

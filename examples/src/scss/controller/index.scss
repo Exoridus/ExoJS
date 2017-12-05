@@ -1,7 +1,7 @@
 .page-wrap {
-  @include unitize(min-width, 1184);
+  @include unitize(min-width, 1120);
   @include transition(transform 350ms ease);
-  @include unitize(padding-left, 320);
+  @include unitize(padding, 64, 0, 0, 320);
   width: 100%;
   position: absolute;
   display: block;
@@ -10,20 +10,28 @@
   bottom: 0;
 
   .main {
-    @include unitize(max-width, 800);
-    @include unitize(min-width, 800);
-    @include unitize(margin, 96, auto, 0);
     @include depth-shadow(1);
     @include border-radius();
     background: $color-white;
     position: relative;
     overflow: hidden;
-    width: calc(100% - 64px);
+    height: 100%;
 
     .main-content {
+      @include unitize(padding-top, 64);
       background-color: $color-grey-medium;
       overflow: auto;
       overflow-x: hidden;
+      height: 100%;
+    }
+
+    .canvas-container {
+      @include unitize(width, 800);
+      @include unitize(height, 600);
+      position: absolute;
+      left: 0;
+      right: 0;
+      margin: auto;
     }
   }
 
@@ -32,6 +40,8 @@
     background: $color-header;
     position: fixed;
     width: 100%;
+    top: 0;
+    z-index: 10;
 
     .header-content {
       @include depth-shadow(0);

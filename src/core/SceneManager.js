@@ -133,9 +133,13 @@ export default class SceneManager extends EventEmitter {
             this._scene.app = this._app;
             this._scene.load(this._loader);
 
+            this.trigger('scene:load');
+
             this._loader.load().then(() => {
                 this._status = STATUS.RUNNING;
                 this._scene.init(this._loader.resources);
+
+                this.trigger('scene:init');
             });
         }
     }
@@ -147,6 +151,8 @@ export default class SceneManager extends EventEmitter {
         if (this._scene) {
             if (this.sceneRunning) {
                 this._scene.unload();
+
+                this.trigger('scene:unload');
             }
 
             this._scene.destroy();
@@ -154,6 +160,8 @@ export default class SceneManager extends EventEmitter {
 
             this._status = STATUS.NONE;
             this._loader.clear();
+
+            this.trigger('scene:destroy');
         }
     }
 }

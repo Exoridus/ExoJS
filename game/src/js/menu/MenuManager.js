@@ -281,9 +281,9 @@ export default class MenuManager {
 
             if (child) {
                 this._currentMenu.setActiveChild(child);
-                this._app.setCursor('pointer');
+                this._app.renderManager.setCursor('pointer');
             } else {
-                this._app.setCursor('default');
+                this._app.renderManager.setCursor('default');
             }
         }
     }

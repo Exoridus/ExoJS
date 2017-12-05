@@ -11,22 +11,25 @@ window.app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const { width, height } = this.app.canvas;
+        const canvas = this.app.canvas;
 
         /**
          * @private
          * @member {Video}
          */
         this._video = resources.get('video', 'example');
-        this._video.width = width;
-        this._video.height = height;
-        this._video.volume = 0.5;
-        this._video.loop = true;
-        this._video.play();
+        this._video.width = canvas.width;
+        this._video.height = canvas.height;
+        this._video.play({ loop: true, volume: 0.5 });
 
         this.app.on('pointer:down', () => {
             this._video.toggle();
         });
+
+        this.app.on('resize', (width, height) => {
+            this._video.width = width;
+            this._video.height = height;
+        })
     },
 
     /**
@@ -43,6 +46,7 @@ window.app.start(new Exo.Scene({
      */
     destroy() {
         this.app.off('pointer:down');
+        this.app.off('resize');
 
         this._video.destroy();
         this._video = null;

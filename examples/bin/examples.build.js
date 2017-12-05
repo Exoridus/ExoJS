@@ -71,36 +71,55 @@
 
 
 window.addEventListener('load', function () {
-    var app = new Exo.Application({
+    var activeScript = null;
+
+    var container = document.querySelector('.canvas-container'),
+        stats = new Stats(),
+        app = new Exo.Application({
         resourcePath: 'assets/',
-        canvasParent: document.querySelector('.container-canvas'),
         width: 800,
         height: 600
     }),
-        loadScript = function loadScript() {
+        loadExample = function loadExample() {
         app.stop();
 
-        var name = location.hash.slice(1),
-            script = document.createElement('script'),
-            example = document.querySelector('#current-example');
-
-        if (example) {
-            example.parentNode.removeChild(example);
+        if (activeScript) {
+            activeScript.parentNode.removeChild(activeScript);
         }
 
-        script.type = 'text/javascript';
-        script.async = true;
-        script.src = 'src/js/examples/' + name + '.js?no-cache=' + Date.now();
-        script.id = 'current-example';
+        activeScript = document.createElement('script');
+        activeScript.type = 'text/javascript', activeScript.async = true, activeScript.src = 'src/js/examples/' + location.hash.slice(1) + '.js?no-cache=' + Date.now(), document.body.appendChild(activeScript);
+    },
+        getStats = function getStats() {
+        var style = stats.dom.style;
 
-        document.getElementsByTagName('head')[0].appendChild(script);
+        style.position = 'absolute';
+        style.top = '0';
+        style.left = '0';
+
+        return stats.dom;
     };
 
+    container.appendChild(app.canvas);
+    container.appendChild(getStats());
+
+    app.on('start', function () {
+        return stats.begin();
+    });
+    app.on('update', function () {
+        return stats.update();
+    });
+    app.on('stop', function () {
+        return stats.end();
+    });
+
     window.app = app;
-    window.addEventListener('hashchange', loadScript, false);
+    window.addEventListener('hashchange', loadExample, false);
 
     if (location.hash) {
-        loadScript();
+        loadExample();
+    } else {
+        location.hash = 'sprite';
     }
 });
 

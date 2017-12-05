@@ -80,7 +80,7 @@ export default class RenderTarget {
     }
 
     set size(size) {
-        this.setSize(size.width, size.height);
+        this.resize(size.width, size.height);
     }
 
     /**
@@ -92,7 +92,7 @@ export default class RenderTarget {
     }
 
     set width(width) {
-        this.setSize(width, this.height);
+        this.resize(width, this.height);
     }
 
     /**
@@ -104,7 +104,7 @@ export default class RenderTarget {
     }
 
     set height(height) {
-        this.setSize(this.width, height);
+        this.resize(this.width, height);
     }
 
     /**
@@ -194,10 +194,9 @@ export default class RenderTarget {
      * @param {Number} height
      * @returns {RenderTarget}
      */
-    setSize(width, height) {
+    resize(width, height) {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
-            this._defaultView.setSize(width, height);
             this.updateViewport();
         }
 

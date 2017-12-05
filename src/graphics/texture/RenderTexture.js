@@ -288,7 +288,7 @@ export default class RenderTexture extends RenderTarget {
     setSize(width, height) {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
-            this._defaultView.setSize(width, height);
+            this._defaultView.resize(width, height);
             this.updateViewport();
 
             this._flags = addFlag(TEXTURE_FLAGS.SIZE, this._flags);

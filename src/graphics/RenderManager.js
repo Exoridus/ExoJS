@@ -5,6 +5,7 @@ import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
+import { imageToBase64 } from '../utils';
 
 /**
  * @class RenderManager
@@ -114,6 +115,12 @@ export default class RenderManager {
          */
         this._rootRenderTarget = new RenderTarget(width, height, true);
 
+        /**
+         * @private
+         * @member {String}
+         */
+        this._cursor = this._canvas.style.cursor;
+
         this._setupContext();
         this._addEvents();
 
@@ -222,6 +229,18 @@ export default class RenderManager {
 
     set clearColor(color) {
         this.setClearColor(color);
+    }
+
+    /**
+     * @public
+     * @member {String}
+     */
+    get cursor() {
+        return this._cursor;
+    }
+
+    set cursor(cursor) {
+        this.setCursor(cursor);
     }
 
     /**
@@ -441,6 +460,28 @@ export default class RenderManager {
     /**
      * @public
      * @chainable
+     * @param {String|HTMLImageElement|Texture} cursor
+     * @returns {RenderManager}
+     */
+    setCursor(cursor) {
+        if (cursor !== this._cursor) {
+            if (cursor instanceof Texture) {
+                cursor = cursor.source;
+            }
+
+            if (cursor instanceof HTMLImageElement) {
+                cursor = `url(${imageToBase64(cursor)})`;
+            }
+
+            this._canvas.style.cursor = this._cursor = cursor;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
      * @param {String} name
      * @param {SpriteRenderer|ParticleRenderer|Renderer} renderer
      * @returns {RenderManager}
@@ -498,7 +539,7 @@ export default class RenderManager {
         this._canvas.width = width;
         this._canvas.height = height;
 
-        this._rootRenderTarget.setSize(width, height);
+        this._rootRenderTarget.resize(width, height);
 
         return this;
     }
@@ -590,6 +631,7 @@ export default class RenderManager {
         this._texture = null;
         this._textureUnit = null;
         this._clearAlpha = null;
+        this._cursor = null;
     }
 
     /**
