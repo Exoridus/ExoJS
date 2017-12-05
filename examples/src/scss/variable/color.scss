@@ -13,8 +13,8 @@ $color-theme-200a: #448AFF;
 $color-theme-400a: #2979FF;
 $color-theme-700a: #2962FF;
 
-$color-primary: $color-theme-500;
-$color-accent: #FFEB3B;
+$color-primary: #303030;
+$color-accent: #ff0;
 
 $color-white: #FFFFFF;
 $color-grey-light: #FAFAFA;
@@ -26,7 +26,7 @@ $color-red: #DD2C00;
 $color-orange: #F57F17;
 $color-green: #00C853;
 $color-yellow: #ff0;
-$color-blue: $color-theme-500;
+$color-blue: #2196F3;
 
 $color-text: rgba($color-black, 0.87);
 $color-text-secondary: rgba($color-black, 0.54);
@@ -44,7 +44,8 @@ $color-button-active: $color-theme-700;
 $color-button-disabled: $color-divider;
 $color-button-disabled-white: $color-divider-white;
 
-$color-body: $color-grey-light;
+$color-body: #212121;
+$color-card: #424242;
 
 $color-header: $color-primary;
 $color-footer: $color-primary;
@@ -52,4 +53,5 @@ $color-footer: $color-primary;
 $color-toolbar: $color-primary;
 
 $color-border: #CCCCCC;
-$list-item-hover: #E8E8E8;
+$list-item-hover: rgba($color-white, 0.12);
+$list-item-active: rgba($color-white, 0.18);

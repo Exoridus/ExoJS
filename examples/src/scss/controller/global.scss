@@ -32,7 +32,7 @@ img {
 }
 
 a {
-  color: $color-text;
+  color: $color-text-white;
 }
 
 b {
@@ -44,21 +44,21 @@ strong {
 }
 
 ::-webkit-input-placeholder {
-  color: $color-text-secondary;
+  color: $color-text-secondary-white;
 }
 
 :-moz-placeholder {
-  color: $color-text-secondary;
+  color: $color-text-secondary-white;
   opacity:  1;
 }
 
 ::-moz-placeholder {
-  color: $color-text-secondary;
+  color: $color-text-secondary-white;
   opacity:  1;
 }
 
 :-ms-input-placeholder {
-  color: $color-text-secondary;
+  color: $color-text-secondary-white;
 }
 
 ::-webkit-scrollbar {

@@ -1,7 +1,7 @@
 .card {
     @include border-radius();
     @include depth-shadow(1);
-    background: $color-white;
+    background: $color-card;
     position: relative;
     overflow: hidden;
     width: 100%;

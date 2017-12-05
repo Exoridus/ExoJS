@@ -5,6 +5,7 @@ window.addEventListener('load', () => {
         stats = new Stats(),
         app = new Exo.Application({
             resourcePath: 'assets/',
+            clearColor: new Exo.Color(66, 66, 66),
             width: 800,
             height: 600,
         }),

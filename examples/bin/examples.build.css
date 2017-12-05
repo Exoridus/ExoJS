@@ -370,7 +370,7 @@ body {
   font-size: 14px;
   color: rgba(0, 0, 0, 0.87);
   font-weight: 400;
-  background: #FAFAFA;
+  background: #212121;
   background-size: cover;
   line-height: 20px;
   min-height: 100%;
@@ -385,7 +385,7 @@ img {
   display: block; }
 
 a {
-  color: rgba(0, 0, 0, 0.87); }
+  color: white; }
 
 b {
   font-weight: 500; }
@@ -394,18 +394,18 @@ strong {
   font-weight: 700; }
 
 ::-webkit-input-placeholder {
-  color: rgba(0, 0, 0, 0.54); }
+  color: rgba(255, 255, 255, 0.7); }
 
 :-moz-placeholder {
-  color: rgba(0, 0, 0, 0.54);
+  color: rgba(255, 255, 255, 0.7);
   opacity: 1; }
 
 ::-moz-placeholder {
-  color: rgba(0, 0, 0, 0.54);
+  color: rgba(255, 255, 255, 0.7);
   opacity: 1; }
 
 :-ms-input-placeholder {
-  color: rgba(0, 0, 0, 0.54); }
+  color: rgba(255, 255, 255, 0.7); }
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -462,13 +462,11 @@ strong {
     border-radius: 2px;
     background-clip: padding-box;
     /* stops bg color from leaking outside the border: */
-    background: #FFFFFF;
     position: relative;
     overflow: hidden;
     height: 100%; }
     .page-wrap .main .main-content {
       padding-top: 64px;
-      background-color: #F5F5F5;
       overflow: auto;
       overflow-x: hidden;
       height: 100%; }
@@ -483,7 +481,7 @@ strong {
     -webkit-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
     -moz-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
     box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
-    background: #2196F3;
+    background: #303030;
     position: fixed;
     width: 100%;
     top: 0;
@@ -492,7 +490,7 @@ strong {
       -webkit-box-shadow: none;
       -moz-box-shadow: none;
       box-shadow: none;
-      background: #2196F3;
+      background: #303030;
       margin: 0 auto;
       width: 100%;
       display: block;
@@ -530,7 +528,7 @@ strong {
   font-weight: 900; }
 .list {
   padding: 0px 0px 8px;
-  background-color: #FFFFFF;
+  background-color: #424242;
   width: 100%; }
   .list .list-sub-header {
     padding: 0px 16px;
@@ -542,10 +540,15 @@ strong {
     .list .list-sub-header .item-text {
       line-height: 48px;
       font-size: 14px;
-      color: rgba(0, 0, 0, 0.54);
+      color: rgba(255, 255, 255, 0.7);
       font-weight: 500;
       float: left; }
   .list .list-item {
+    -webkit-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+    -moz-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+    -ms-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+    -o-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+    transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
     padding: 0px 16px;
     height: 48px;
     -webkit-tap-highlight-color: transparent;
@@ -554,13 +557,17 @@ strong {
     width: 100%;
     text-decoration: none; }
     .list .list-item:hover {
-      background-color: #E8E8E8; }
+      background-color: rgba(255, 255, 255, 0.12); }
       .list .list-item:hover .item-text {
-        color: #2196F3; }
+        color: #ff0; }
+    .list .list-item:active {
+      background-color: rgba(255, 255, 255, 0.18); }
+      .list .list-item:active .item-text {
+        color: #ff0; }
     .list .list-item .item-text {
       line-height: 48px;
       font-size: 16px;
-      color: rgba(0, 0, 0, 0.87);
+      color: white;
       font-weight: 400;
       float: left; }
 
@@ -572,7 +579,7 @@ strong {
   -webkit-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
   -moz-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
   box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
-  background: #FFFFFF;
+  background: #424242;
   position: relative;
   overflow: hidden;
   width: 100%; }
@@ -585,7 +592,7 @@ strong {
   -webkit-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
   -moz-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
   box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
-  background-color: #2196F3;
+  background-color: #303030;
   white-space: nowrap;
   position: relative;
   display: block;
@@ -602,7 +609,7 @@ strong {
   -webkit-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
   -moz-box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
   box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
-  background: #FFFFFF;
+  background: #424242;
   position: absolute;
   overflow: visible;
   outline: none;

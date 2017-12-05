@@ -3,7 +3,7 @@
     @include unitize(width, 320);
     @include unitize(right, 56);
     @include depth-shadow(1);
-    background: $color-white;
+    background: $color-card;
     position: absolute;
     overflow: visible;
     outline: none;

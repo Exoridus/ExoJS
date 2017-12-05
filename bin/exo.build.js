@@ -17505,10 +17505,10 @@ var SpriteShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (SpriteShader.__proto__ || Object.getPrototypeOf(SpriteShader)).call(this));
 
-        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = a_color;\r\n\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
+        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = vec4(a_color.rgb * a_color.a, a_color.a);\r\n\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
         _this.setFragmentSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform sampler2D u_texture;\r\n\r\nin vec2 v_texcoord;\r\nin vec4 v_color;\r\n\r\nlayout(location = 0) out vec4 o_fragColor;\r\n\r\nvoid main(void) {\r\n    o_fragColor = texture(u_texture, v_texcoord) * v_color;\r\n}\r\n');
 
-        _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false); // GL_HALF_FLOAT
+        _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
         _this.setAttribute('a_texcoord', _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
         _this.setAttribute('a_color', _const.ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
 
