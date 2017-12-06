@@ -1,16 +1,16 @@
 import ResourceFactory from '../ResourceFactory';
 
 /**
- * @class StringFactory
+ * @class TextFactory
  * @extends ResourceFactory
  */
-export default class StringFactory extends ResourceFactory {
+export default class TextFactory extends ResourceFactory {
 
     /**
      * @override
      */
     get storageType() {
-        return 'string';
+        return 'text';
     }
 
     /**

@@ -693,7 +693,7 @@ BLEND_MODES = exports.BLEND_MODES = {
  * @name DATABASE_TYPES
  * @type {String[]}
  */
-DATABASE_TYPES = exports.DATABASE_TYPES = ['arrayBuffer', 'blob', 'font', 'media', 'audio', 'video', 'music', 'sound', 'image', 'texture', 'string', 'json'],
+DATABASE_TYPES = exports.DATABASE_TYPES = ['arrayBuffer', 'blob', 'font', 'media', 'audio', 'video', 'music', 'sound', 'image', 'texture', 'text', 'json'],
 
 
 /**
@@ -11588,9 +11588,9 @@ var _SoundFactory = __webpack_require__(44);
 
 var _SoundFactory2 = _interopRequireDefault(_SoundFactory);
 
-var _StringFactory = __webpack_require__(46);
+var _TextFactory = __webpack_require__(46);
 
-var _StringFactory2 = _interopRequireDefault(_StringFactory);
+var _TextFactory2 = _interopRequireDefault(_TextFactory);
 
 var _TextureFactory = __webpack_require__(47);
 
@@ -11991,7 +11991,7 @@ var ResourceLoader = function (_EventEmitter) {
             this.addFactory('video', new _VideoFactory2.default());
             this.addFactory('image', new _ImageFactory2.default());
             this.addFactory('texture', new _TextureFactory2.default());
-            this.addFactory('string', new _StringFactory2.default());
+            this.addFactory('text', new _TextFactory2.default());
             this.addFactory('json', new _JSONFactory2.default());
         }
     }, {
@@ -14108,19 +14108,19 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class StringFactory
+ * @class TextFactory
  * @extends ResourceFactory
  */
-var StringFactory = function (_ResourceFactory) {
-  _inherits(StringFactory, _ResourceFactory);
+var TextFactory = function (_ResourceFactory) {
+  _inherits(TextFactory, _ResourceFactory);
 
-  function StringFactory() {
-    _classCallCheck(this, StringFactory);
+  function TextFactory() {
+    _classCallCheck(this, TextFactory);
 
-    return _possibleConstructorReturn(this, (StringFactory.__proto__ || Object.getPrototypeOf(StringFactory)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (TextFactory.__proto__ || Object.getPrototypeOf(TextFactory)).apply(this, arguments));
   }
 
-  _createClass(StringFactory, [{
+  _createClass(TextFactory, [{
     key: 'process',
 
 
@@ -14149,14 +14149,14 @@ var StringFactory = function (_ResourceFactory) {
      * @override
      */
     get: function get() {
-      return 'string';
+      return 'text';
     }
   }]);
 
-  return StringFactory;
+  return TextFactory;
 }(_ResourceFactory3.default);
 
-exports.default = StringFactory;
+exports.default = TextFactory;
 
 /***/ }),
 /* 47 */
@@ -21999,12 +21999,12 @@ Object.defineProperty(exports, 'JSONFactory', {
   }
 });
 
-var _StringFactory = __webpack_require__(46);
+var _TextFactory = __webpack_require__(46);
 
-Object.defineProperty(exports, 'StringFactory', {
+Object.defineProperty(exports, 'TextFactory', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_StringFactory).default;
+    return _interopRequireDefault(_TextFactory).default;
   }
 });
 

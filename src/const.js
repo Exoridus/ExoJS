@@ -603,7 +603,7 @@ export const
         'sound',
         'image',
         'texture',
-        'string',
+        'text',
         'json',
     ],
 

@@ -1,4 +1,12 @@
-window.app.start(new Exo.Scene({
+const app = new Exo.Application({
+    resourcePath: 'assets/',
+    clearColor: Exo.Color.Black,
+    canvasParent: document.body,
+    width: 800,
+    height: 600,
+});
+
+app.start(new Exo.Scene({
 
     /**
      * @param {ResourceLoader} loader
@@ -55,6 +63,12 @@ window.app.start(new Exo.Scene({
          */
         this._addBunnies = false;
 
+        /**
+         * @private
+         * @member {Stats}
+         */
+        this._stats = this.createStats();
+
         this.app.on('pointer:down', () => {
             this._addBunnies = true;
         });
@@ -66,6 +80,9 @@ window.app.start(new Exo.Scene({
         this.createBunnies(this._startAmount);
     },
 
+    /**
+     * @param {Number} amount
+     */
     createBunnies(amount) {
         for (let i = 0; i < amount; i++) {
             const bunny = new Exo.Sprite(this._bunnyTexture);
@@ -78,9 +95,26 @@ window.app.start(new Exo.Scene({
     },
 
     /**
+     * @returns {Stats}
+     */
+    createStats() {
+        const stats = new Stats();
+
+        stats.dom.style.position; 'absolute';
+        stats.dom.style.top; '0';
+        stats.dom.style.left; '0';
+
+        document.body.appendChild(stats.dom);
+
+        return stats;
+    },
+
+    /**
      * @param {Time} delta
      */
     update(delta) {
+        this._stats.begin();
+
         if (this._addBunnies) {
             this.createBunnies(this._addAmount);
         }
@@ -118,27 +152,7 @@ window.app.start(new Exo.Scene({
         renderManager.clear()
             .draw(this._bunnies)
             .display();
-    },
 
-    /**
-     * @override
-     */
-    destroy() {
-        this.app.off('pointer:down');
-
-        for (const bunny of this._bunnies.children) {
-            bunny.destroy();
-        }
-
-        this._bunnyTexture.destroy();
-        this._bunnyTexture = null;
-
-        this._bunnies.destroy();
-        this._bunnies = null;
-
-        this._startAmount = null;
-        this._addAmount = null;
-        this._maxX = null;
-        this._maxY = null;
+        this._stats.end();
     },
 }));

@@ -58,7 +58,7 @@ module.exports = (grunt) => {
                 ],
             },
             examples: {
-                entry: './examples/src/js/index.js',
+                entry: '<%= dirs.examples %>/src/js/index.js',
                 output: {
                     path: __dirname + '/examples/bin',
                     filename: 'examples.build.js',
@@ -86,8 +86,8 @@ module.exports = (grunt) => {
                 sourcemap: 'none',
             },
             examples: {
-                src: './examples/src/scss/index.scss',
-                dest: './examples/bin/examples.build.css',
+                src: '<%= dirs.examples %>/src/scss/index.scss',
+                dest: '<%= dirs.examples %>/bin/examples.build.css',
             },
             game: {
                 src: '<%= dirs.game %>/src/scss/index.scss',
@@ -104,14 +104,14 @@ module.exports = (grunt) => {
                 dest: '<%= dirs.build %>/exo.min.js',
             },
             examples: {
-                src: './examples/bin/examples.build.js',
-                dest: './examples/bin/examples.min.js',
+                src: '<%= dirs.examples %>/bin/examples.build.js',
+                dest: '<%= dirs.examples %>/bin/examples.min.js',
             },
         },
         cssmin: {
             examples: {
-                src: './examples/bin/examples.build.css',
-                dest: './examples/bin/examples.min.css',
+                src: '<%= dirs.examples %>/bin/examples.build.css',
+                dest: '<%= dirs.examples %>/bin/examples.min.css',
             },
         },
     });

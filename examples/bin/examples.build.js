@@ -71,52 +71,28 @@
 
 
 $(function () {
-    var app = new Exo.Application({
-        resourcePath: 'assets/',
-        clearColor: new Exo.Color(66, 66, 66),
-        width: 800,
-        height: 600
-    }),
-        stats = new Stats(),
-        $stats = $(stats.dom),
-        $container = $('.main-canvas'),
+    var loader = new Exo.ResourceLoader(),
         $navigation = $('.navigation-list'),
-        activeScript = null,
-        loadExample = function loadExample(path) {
-        app.stop();
+        $content = $('.main-content'),
+        template = '<!DOCTYPE html><html><head><style>body,html{margin:0px;height:100%;overflow:hidden;}canvas{width:100%;height:100%;}</style></head><body>' + '<script src="vendor/stats.js"></script>' + '<script src="vendor/jquery.js"></script>' + '<script src="../bin/exo.build.js"></script>' + '<script>window.onload = function(){__CODE__}</script></body></html>',
+        startScript = function startScript(code) {
+        $content.html('<iframe class="example" src="blank.html">');
 
-        if (activeScript) {
-            activeScript.parentNode.removeChild(activeScript);
+        var example = document.querySelector('.example'),
+            content = example.contentDocument || example.contentWindow.document;
 
-            app.renderManager.setClearColor(app.config.clearColor).clear();
-        }
-
-        activeScript = document.createElement('script');
-        activeScript.type = 'text/javascript', activeScript.async = true, activeScript.src = 'src/js/examples/' + path + '?no-cache=' + Date.now(), document.body.appendChild(activeScript);
-    };
-
-    $container.append(app.canvas);
-    $container.append($stats.css({
-        position: 'absolute',
-        top: '0',
-        left: '0'
-    }));
-
-    app.on('start', function () {
-        return stats.begin();
-    });
-    app.on('update', function () {
-        return stats.update();
-    });
-    app.on('stop', function () {
-        return stats.end();
-    });
-
-    app.loader.loadItem({
-        type: 'json',
-        name: 'examples',
-        path: 'json/examples.json'
-    }).then(function (entries) {
+        content.open();
+        content.write(template.replace('__CODE__', code));
+        content.close();
+    },
+        loadExample = function loadExample(example) {
+        loader.loadItem({
+            type: 'text',
+            name: example.path,
+            path: 'src/js/examples/' + example.path + '?no-cache=' + Date.now()
+        }).then(startScript);
+    },
+        createNavigation = function createNavigation(entries) {
         var _iteratorNormalCompletion = true;
         var _didIteratorError = false;
         var _iteratorError = undefined;
@@ -135,12 +111,8 @@ $(function () {
                         'class': 'navigation-item',
                         'html': example.title
                     }).on('click', function () {
-                        loadExample(example.path);
+                        return loadExample(example);
                     }));
-
-                    if (!activeScript) {
-                        loadExample(example.path);
-                    }
                 };
 
                 var _iteratorNormalCompletion2 = true;
@@ -182,9 +154,13 @@ $(function () {
                 }
             }
         }
-    });
+    };
 
-    window.app = app;
+    loader.loadItem({
+        type: 'json',
+        name: 'examples',
+        path: 'assets/json/examples.json'
+    }).then(createNavigation);
 });
 
 /***/ })

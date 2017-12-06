@@ -1,4 +1,12 @@
-window.app.start(new Exo.Scene({
+const app = new Exo.Application({
+    resourcePath: 'assets/',
+    clearColor: Exo.Color.Black,
+    canvasParent: document.body,
+    width: 800,
+    height: 600,
+});
+
+app.start(new Exo.Scene({
 
     /**
      * @param {ResourceContainer} resources

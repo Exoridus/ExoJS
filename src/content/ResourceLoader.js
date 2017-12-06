@@ -7,7 +7,7 @@ import ImageFactory from './factories/ImageFactory';
 import JSONFactory from './factories/JSONFactory';
 import MusicFactory from './factories/MusicFactory';
 import SoundFactory from './factories/SoundFactory';
-import StringFactory from './factories/StringFactory';
+import TextFactory from './factories/TextFactory';
 import TextureFactory from './factories/TextureFactory';
 import MediaSourceFactory from './factories/MediaSourceFactory';
 import VideoFactory from './factories/VideoFactory';
@@ -198,7 +198,7 @@ export default class ResourceLoader extends EventEmitter {
      * @chainable
      * @param {String} type
      * @param {Object<String, String>|String} itemsOrName
-     * @param {Object|String} optionsOrPath
+     * @param {Object|String} [optionsOrPath]
      * @param {Object} [options]
      * @returns {ResourceLoader}
      */
@@ -363,7 +363,7 @@ export default class ResourceLoader extends EventEmitter {
         this.addFactory('video', new VideoFactory());
         this.addFactory('image', new ImageFactory());
         this.addFactory('texture', new TextureFactory());
-        this.addFactory('string', new StringFactory());
+        this.addFactory('text', new TextFactory());
         this.addFactory('json', new JSONFactory());
     }
 }

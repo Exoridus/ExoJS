@@ -15,4 +15,4 @@ export { default as VideoFactory } from './factories/VideoFactory';
 export { default as ImageFactory } from './factories/ImageFactory';
 export { default as TextureFactory } from './factories/TextureFactory';
 export { default as JSONFactory } from './factories/JSONFactory';
-export { default as StringFactory } from './factories/StringFactory';
+export { default as TextFactory } from './factories/TextFactory';
