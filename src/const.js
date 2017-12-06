@@ -77,18 +77,17 @@ export const
      * @property {Number} SCALE_MODE
      * @property {Number} WRAP_MODE
      * @property {Number} PREMULTIPLY_ALPHA
-     * @property {Number} GENERATE_MIPMAP
      * @property {Number} SOURCE
      * @property {Number} SIZE
+     * @property {Number} FLIP_Y
      */
     TEXTURE_FLAGS = {
         NONE: 0,
         SCALE_MODE: 1 << 0,
         WRAP_MODE: 1 << 1,
         PREMULTIPLY_ALPHA: 1 << 2,
-        GENERATE_MIPMAP: 1 << 3,
-        SOURCE: 1 << 4,
-        SIZE: 1 << 5,
+        SOURCE: 1 << 3,
+        SIZE: 1 << 4,
     },
 
     /**

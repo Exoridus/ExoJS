@@ -1,4 +1,4 @@
-import Texture from '../texture/Texture';
+import Texture from '../Texture';
 import Rectangle from '../../math/Rectangle';
 import Sprite from './Sprite';
 import { removeItems } from '../../utils';
@@ -48,7 +48,7 @@ export default class Spritesheet extends Sprite {
     /**
      * @param {Object<String, Object>[]} frames
      * @param {Boolean} [clearOldFrames=true]
-     * @return {SpriteSheet}
+     * @return {Spritesheet}
      */
     parse(frames, clearOldFrames = true) {
         if (clearOldFrames) {

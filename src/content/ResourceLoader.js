@@ -197,33 +197,25 @@ export default class ResourceLoader extends EventEmitter {
      * @public
      * @chainable
      * @param {String} type
-     * @param {Object<String, String>} list
+     * @param {Object<String, String>|String} itemsOrName
+     * @param {Object|String} optionsOrPath
      * @param {Object} [options]
      * @returns {ResourceLoader}
      */
-    add(type, list, options) {
-        for (const [name, path] of Object.entries(list)) {
-            this.addItem(type, name, path, options);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {String} type
-     * @param {String} name
-     * @param {String} path
-     * @param {Object} [options]
-     * @returns {ResourceLoader}
-     */
-    addItem(type, name, path, options) {
+    add(type, itemsOrName, optionsOrPath, options) {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }
 
-        this._queue.add({ type, name, path, options });
+        if (typeof itemsOrName === 'object') {
+            for (const [name, path] of Object.entries(itemsOrName)) {
+                this._queue.add({ type, name, path, options: optionsOrPath });
+            }
+
+            return this;
+        }
+
+        this._queue.add({ type, name: itemsOrName, path: optionsOrPath, options });
 
         return this;
     }

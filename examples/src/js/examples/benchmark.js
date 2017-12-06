@@ -49,8 +49,18 @@ window.app.start(new Exo.Scene({
          */
         this._maxY = canvas.height;
 
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._addBunnies = false;
+
         this.app.on('pointer:down', () => {
-            this.createBunnies(this._addAmount);
+            this._addBunnies = true;
+        });
+
+        this.app.on('pointer:up', () => {
+            this._addBunnies = false;
         });
 
         this.createBunnies(this._startAmount);
@@ -71,6 +81,10 @@ window.app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
+        if (this._addBunnies) {
+            this.createBunnies(this._addAmount);
+        }
+
         for (const bunny of this._bunnies.children) {
             bunny._speedY += 0.75;
             bunny.move(bunny._speedX, bunny._speedY);

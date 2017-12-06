@@ -1,5 +1,110 @@
-@import "vendor";
-@import "variable";
+@import "variables";
 @import "mixins";
-@import "controller";
-@import "component";
+@import "global";
+
+.page-wrap {
+    @include unitize(min-width, 1120);
+    @include transition(transform 350ms ease);
+    @include unitize(padding-left, 320);
+    width: 100%;
+    position: absolute;
+    display: block;
+    left: 0;
+    top: 0;
+    bottom: 0;
+
+    .main {
+        @include unitize(padding-top, 64);
+        position: relative;
+        overflow: auto;
+        overflow-x: hidden;
+        height: 100%;
+
+        .main-canvas {
+            @include unitize(width, 800);
+            @include unitize(height, 600);
+            position: absolute;
+            margin: auto;
+            left: 0;
+            right: 0;
+
+            canvas {
+                transform: translatez(0);
+            }
+        }
+    }
+
+    .navigation {
+        @include transition(all 350ms ease);
+        @include unitize(width, 320);
+        @include box-shadow(0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12));
+        background: $color-navigation;
+        position: absolute;
+        overflow: visible;
+        outline: none;
+        height: 100%;
+        bottom: 0;
+        left: 0;
+        top: 0;
+
+        .navigation-content {
+            position: absolute;
+            overflow: auto;
+            width: 100%;
+            bottom: 0;
+            left: 0;
+            top: 0;
+
+            .navigation-title {
+                @include unitize(height, 64);
+                @include unitize(padding, 8, 16);
+                @include unitize(line-height, 48);
+                @include unitize(font-size, 20);
+                font-weight: $font-weight-medium;
+                color: $color-white;
+                position: relative;
+                overflow: hidden;
+                cursor: default;
+            }
+
+            .navigation-item {
+                @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
+                @include unitize(padding, 0, 16);
+                @include unitize(height, 48);
+                @include unitize(font-size, 16);
+                @include unitize(line-height, 48);
+                -webkit-tap-highlight-color: $color-transparent;
+                font-weight: $font-weight-regular;
+                color: $list-item-text;
+                text-decoration: none;
+                position: relative;
+                cursor: pointer;
+                display: block;
+                width: 100%;
+
+                &:hover {
+                    background-color: $list-item-hover;
+                }
+
+                &:active {
+                    background-color: $list-item-active;
+                }
+
+                &.sub-header {
+                    @include unitize(font-size, 14);
+                    font-weight: $font-weight-medium;
+                    color: $color-accent;
+                    cursor: default;
+
+                    &:hover {
+                        background-color: $color-transparent;
+                    }
+
+                    &:active {
+                        background-color: $color-transparent;
+                    }
+                }
+            }
+        }
+    }
+}

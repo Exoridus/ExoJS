@@ -6,6 +6,7 @@ import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
 import { imageToBase64 } from '../utils';
+import Texture from './Texture';
 
 /**
  * @class RenderManager
@@ -102,12 +103,6 @@ export default class RenderManager {
          * @member {Color}
          */
         this._clearColor = (clearColor && clearColor.clone()) || new Color();
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._clearAlpha = (this._clearColor.a < 1);
 
         /**
          * @private
@@ -440,18 +435,11 @@ export default class RenderManager {
      */
     setClearColor(color) {
         if (!this._clearColor.equals(color)) {
-            const gl = this._context,
-                clearAlpha = (color.a < 1);
+            const gl = this._context;
 
             this._clearColor.copy(color);
 
             gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-
-            if (this._clearAlpha !== clearAlpha) {
-                this._clearAlpha = clearAlpha;
-
-                gl.colorMask(true, true, true, clearAlpha);
-            }
         }
 
         return this;
@@ -630,7 +618,6 @@ export default class RenderManager {
         this._blendMode = null;
         this._texture = null;
         this._textureUnit = null;
-        this._clearAlpha = null;
         this._cursor = null;
     }
 
@@ -670,7 +657,6 @@ export default class RenderManager {
 
         gl.blendEquation(gl.FUNC_ADD);
         gl.clearColor(r / 255, g / 255, b / 255, a);
-        gl.colorMask(true, true, true, this._clearAlpha);
     }
 
     /**

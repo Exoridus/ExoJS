@@ -1,6 +1,6 @@
 import { NEWLINE } from '../../const';
 import Sprite from '../sprite/Sprite';
-import Texture from '../texture/Texture';
+import Texture from '../Texture';
 import TextStyle from './TextStyle';
 import Rectangle from '../../math/Rectangle';
 

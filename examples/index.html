@@ -1,92 +1,32 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <meta charset="utf-8">
-
-        <title>Examples</title>
-
-        <meta name="format-detection" content="telephone-no">
+        <meta charset="UTF-8">
         <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, minimal-ui">
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+        <meta name="apple-mobile-web-app-capable" content="yes">
+
+        <title>ExoJS Examples</title>
 
         <link href="bin/examples.min.css" rel="stylesheet" type="text/css">
-
+        <script src="vendor/jquery.js"></script>
         <script src="vendor/stats.js"></script>
-
-        <script src="../bin/exo.build.js"></script>
-        <script src="bin/examples.build.js"></script>
     </head>
 
     <body>
-        <main class="page-wrap">
-            <header class="header-main">
-                <div class="toolbar header-content">
-                    <span class="header-title">ExoJS Examples</span>
+        <div class="page-wrap">
+            <nav class="navigation">
+                <div class="navigation-content">
+                    <div class="navigation-title">ExoJS Examples</div>
+                    <div class="navigation-list"></div>
                 </div>
-            </header>
-            <div class="main">
-                <div class="main-content">
-                    <div class="canvas-container"></div>
-                </div>
-            </div>
-        </main>
+            </nav>
+            <main class="main">
+                <div class="main-canvas"></div>
+            </main>
+        </div>
 
-        <aside class="navigation">
-            <div class="navigation-content">
-                <nav class="list">
-                    <div class="list-sub-header">
-                        <span class="item-text">Basics</span>
-                    </div>
-
-                    <a href="#sprite" class="navigation-item list-item">
-                        <span class="item-text">Sprite</span>
-                    </a>
-                    <a href="#container" class="navigation-item list-item">
-                        <span class="item-text">Container</span>
-                    </a>
-                    <a href="#spritesheet" class="navigation-item list-item">
-                        <span class="item-text">Spritesheet</span>
-                    </a>
-                    <a href="#text" class="navigation-item list-item">
-                        <span class="item-text">Display Text</span>
-                    </a>
-                    <a href="#video" class="navigation-item list-item">
-                        <span class="item-text">Display Video</span>
-                    </a>
-                    <a href="#tinting" class="navigation-item list-item">
-                        <span class="item-text">Tinting</span>
-                    </a>
-                    <a href="#blendmodes" class="navigation-item list-item">
-                        <span class="item-text">Blendmodes</span>
-                    </a>
-                    <a href="#view" class="navigation-item list-item">
-                        <span class="item-text">Transform View</span>
-                    </a>
-                    <a href="#rendertexture" class="navigation-item list-item">
-                        <span class="item-text">Render to Texture</span>
-                    </a>
-                    <a href="#collisions" class="navigation-item list-item">
-                        <span class="item-text">Collision Detection</span>
-                    </a>
-                    <!--<a href="#primitives" class="navigation-item list-item">-->
-                        <!--<span class="item-text">Primitive Shapes</span>-->
-                    <!--</a>-->
-
-                    <div class="list-sub-header">
-                        <span class="item-text">Extras</span>
-                    </div>
-
-                    <a href="#benchmark" class="navigation-item list-item">
-                        <span class="item-text">Benchmark</span>
-                    </a>
-                    <a href="#particles" class="navigation-item list-item">
-                        <span class="item-text">Particle Emitter</span>
-                    </a>
-                    <a href="#audio" class="navigation-item list-item">
-                        <span class="item-text">Audio Visualisation</span>
-                    </a>
-                </nav>
-            </div>
-        </aside>
+        <script src="../bin/exo.build.js"></script>
+        <script src="bin/examples.build.js"></script>
     </body>
 </html>

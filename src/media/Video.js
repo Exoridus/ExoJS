@@ -1,6 +1,6 @@
 import { audioContext, clamp } from '../utils';
 import Sprite from '../graphics/sprite/Sprite';
-import Texture from '../graphics/texture/Texture';
+import Texture from '../graphics/Texture';
 import support from '../support';
 import settings from '../settings';
 

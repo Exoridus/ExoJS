@@ -1,9 +1,45 @@
-@import "mixins/unitize";
-@import "mixins/transition";
-@import "mixins/box-shadow";
-@import "mixins/depth-shadow";
-@import "mixins/tap-color";
-@import "mixins/transform";
-@import "mixins/border-radius";
-@import "mixins/clearfix";
-@import "mixins/text-outline";
+@function strip-unit($num) {
+    @return $num / ($num * 0 + 1);
+}
+
+@mixin unitize($property, $params...) {
+    $max: length($params);
+    $pxValues: '';
+    $remValues: '';
+    $size: strip-unit($font-size);
+
+    @for $i from 1 through $max {
+        $param: nth($params, $i);
+
+        @if type-of($param) == number and (unit($param) == px or unitless($param)) {
+            $value: strip-unit($param);
+            $pxValues: #{$pxValues + $value}px;
+            $remValues: #{$remValues + $value / $size}rem;
+        } @else {
+            $pxValues: #{$pxValues + $param};
+            $remValues: #{$remValues + $param};
+        }
+
+        @if $i < $max {
+            $pxValues: #{$pxValues + ' '};
+            $remValues: #{$remValues + ' '};
+        }
+    }
+
+    #{$property}: $pxValues;
+    #{$property}: $remValues;
+}
+
+@mixin box-shadow($args...) {
+    -webkit-box-shadow: $args;
+    -moz-box-shadow: $args;
+    box-shadow: $args;
+}
+
+@mixin transition($args...) {
+    -webkit-transition: $args;
+    -moz-transition: $args;
+    -ms-transition: $args;
+    -o-transition: $args;
+    transition: $args;
+}

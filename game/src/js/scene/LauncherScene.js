@@ -67,12 +67,14 @@ export default class LauncherScene extends Scene {
         });
 
         loader.add('music', {
-            'title': 'audio/title.ogg',
-            'overworld': 'audio/overworld.ogg',
+            title: 'audio/title.ogg',
+            overworld: 'audio/overworld.ogg',
         });
 
-        loader.addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
-            family: 'AndyBold'
+        loader.add('font', {
+            menu: 'font/AndyBold/AndyBold.woff2',
+        }, {
+            family: 'AndyBold',
         });
 
         this._renderProgress(0);

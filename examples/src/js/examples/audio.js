@@ -55,7 +55,11 @@ window.app.start(new Exo.Scene({
         this._gradient.addColorStop(0.5, '#f30');
         this._gradient.addColorStop(1, '#f70');
 
-        this._context.fillStyle = this._gradient;
+        /**
+         * @private
+         * @member {String}
+         */
+        this._progress = 'rgba(255, 255, 255, 0.1)';
 
         /**
          * @private
@@ -81,11 +85,11 @@ window.app.start(new Exo.Scene({
          */
         this._time = new Exo.Time();
 
+        this._music.play({ loop: true, volume: 0.5 });
+
         this.app.on('pointer:down', () => {
             this._music.toggle();
         });
-
-        this._music.play({ loop: true, volume: 0.5 });
     },
 
     /**
@@ -138,6 +142,11 @@ window.app.start(new Exo.Scene({
             barWidth = Math.ceil(width / length);
 
         this._context.clearRect(0, 0, width, height);
+
+        this._context.fillStyle = this._progress;
+        this._context.fillRect(0, 0, (width * this._music.progress), height);
+
+        this._context.fillStyle = this._gradient;
         this._context.beginPath();
 
         for (let i = 0; i < length; i++) {
@@ -183,6 +192,7 @@ window.app.start(new Exo.Scene({
         this._time.destroy();
         this._time = null;
 
+        this._progress = null;
         this._gradient = null;
         this._context = null;
         this._canvas = null;

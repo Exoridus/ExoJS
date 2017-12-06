@@ -5,8 +5,6 @@ import RenderManager from '../graphics/RenderManager';
 import InputManager from '../input/InputManager';
 import ResourceLoader from '../content/ResourceLoader';
 import settings from '../settings';
-import Texture from '../graphics/texture/Texture';
-import { imageToBase64 } from '../utils';
 
 /**
  * @class Application
@@ -54,7 +52,7 @@ export default class Application extends EventEmitter {
          */
         this._loader = new ResourceLoader({
             resourcePath: config.resourcePath,
-            database: config.database
+            database: config.database,
         });
 
         /**

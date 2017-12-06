@@ -159,18 +159,17 @@ TIME = exports.TIME = {
  * @property {Number} SCALE_MODE
  * @property {Number} WRAP_MODE
  * @property {Number} PREMULTIPLY_ALPHA
- * @property {Number} GENERATE_MIPMAP
  * @property {Number} SOURCE
  * @property {Number} SIZE
+ * @property {Number} FLIP_Y
  */
 TEXTURE_FLAGS = exports.TEXTURE_FLAGS = {
     NONE: 0,
     SCALE_MODE: 1 << 0,
     WRAP_MODE: 1 << 1,
     PREMULTIPLY_ALPHA: 1 << 2,
-    GENERATE_MIPMAP: 1 << 3,
-    SOURCE: 1 << 4,
-    SIZE: 1 << 5
+    SOURCE: 1 << 3,
+    SIZE: 1 << 4
 },
 
 
@@ -4951,15 +4950,15 @@ var Texture = function () {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._flags = _const.TEXTURE_FLAGS.NONE;
-
-        /**
-         * @private
          * @member {Boolean}
          */
         this._flipY = false;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._flags = _const.TEXTURE_FLAGS.NONE;
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
@@ -5196,7 +5195,7 @@ var Texture = function () {
                         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                     }
 
-                    if (this._generateMipMap && this.powerOfTwo) {
+                    if (this._generateMipMap) {
                         gl.generateMipmap(gl.TEXTURE_2D);
                     }
 
@@ -5336,10 +5335,7 @@ var Texture = function () {
             return this._generateMipMap;
         },
         set: function set(generateMipMap) {
-            if (this._generateMipMap !== generateMipMap) {
-                this._generateMipMap = generateMipMap;
-                this._flags = (0, _utils.addFlag)(_const.TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
-            }
+            this._generateMipMap = generateMipMap;
         }
 
         /**
@@ -11550,6 +11546,8 @@ Object.defineProperty(exports, "__esModule", {
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -11741,65 +11739,54 @@ var ResourceLoader = function (_EventEmitter) {
          * @public
          * @chainable
          * @param {String} type
-         * @param {Object<String, String>} list
+         * @param {Object<String, String>|String} itemsOrName
+         * @param {Object|String} optionsOrPath
          * @param {Object} [options]
          * @returns {ResourceLoader}
          */
 
     }, {
         key: 'add',
-        value: function add(type, list, options) {
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = Object.entries(list)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _ref2 = _step.value;
-
-                    var _ref3 = _slicedToArray(_ref2, 2);
-
-                    var name = _ref3[0];
-                    var path = _ref3[1];
-
-                    this.addItem(type, name, path, options);
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} type
-         * @param {String} name
-         * @param {String} path
-         * @param {Object} [options]
-         * @returns {ResourceLoader}
-         */
-
-    }, {
-        key: 'addItem',
-        value: function addItem(type, name, path, options) {
+        value: function add(type, itemsOrName, optionsOrPath, options) {
             if (!this._factories.has(type)) {
                 throw new Error('No resource factory for type "' + type + '".');
             }
 
-            this._queue.add({ type: type, name: name, path: path, options: options });
+            if ((typeof itemsOrName === 'undefined' ? 'undefined' : _typeof(itemsOrName)) === 'object') {
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
+
+                try {
+                    for (var _iterator = Object.entries(itemsOrName)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var _ref2 = _step.value;
+
+                        var _ref3 = _slicedToArray(_ref2, 2);
+
+                        var name = _ref3[0];
+                        var path = _ref3[1];
+
+                        this._queue.add({ type: type, name: name, path: path, options: optionsOrPath });
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
+
+                return this;
+            }
+
+            this._queue.add({ type: type, name: itemsOrName, path: optionsOrPath, options: options });
 
             return this;
         }
@@ -15499,6 +15486,10 @@ var _Color2 = _interopRequireDefault(_Color);
 
 var _utils = __webpack_require__(1);
 
+var _Texture = __webpack_require__(11);
+
+var _Texture2 = _interopRequireDefault(_Texture);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -15604,12 +15595,6 @@ var RenderManager = function () {
          * @member {Color}
          */
         this._clearColor = clearColor && clearColor.clone() || new _Color2.default();
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._clearAlpha = this._clearColor.a < 1;
 
         /**
          * @private
@@ -15863,18 +15848,11 @@ var RenderManager = function () {
         key: 'setClearColor',
         value: function setClearColor(color) {
             if (!this._clearColor.equals(color)) {
-                var gl = this._context,
-                    clearAlpha = color.a < 1;
+                var gl = this._context;
 
                 this._clearColor.copy(color);
 
                 gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-
-                if (this._clearAlpha !== clearAlpha) {
-                    this._clearAlpha = clearAlpha;
-
-                    gl.colorMask(true, true, true, clearAlpha);
-                }
             }
 
             return this;
@@ -15891,7 +15869,7 @@ var RenderManager = function () {
         key: 'setCursor',
         value: function setCursor(cursor) {
             if (cursor !== this._cursor) {
-                if (cursor instanceof Texture) {
+                if (cursor instanceof _Texture2.default) {
                     cursor = cursor.source;
                 }
 
@@ -16106,7 +16084,6 @@ var RenderManager = function () {
             this._blendMode = null;
             this._texture = null;
             this._textureUnit = null;
-            this._clearAlpha = null;
             this._cursor = null;
         }
 
@@ -16162,7 +16139,6 @@ var RenderManager = function () {
 
             gl.blendEquation(gl.FUNC_ADD);
             gl.clearColor(r / 255, g / 255, b / 255, a);
-            gl.colorMask(true, true, true, this._clearAlpha);
         }
 
         /**
@@ -22960,12 +22936,6 @@ var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _Texture = __webpack_require__(11);
-
-var _Texture2 = _interopRequireDefault(_Texture);
-
-var _utils = __webpack_require__(1);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24412,15 +24382,21 @@ var RenderTexture = function (_RenderTarget) {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Boolean}
          */
-        _this._flags = _const.TEXTURE_FLAGS.SOURCE | _const.TEXTURE_FLAGS.SIZE;
+        _this._generateMipMap = null;
 
         /**
          * @private
          * @member {Boolean}
          */
         _this._flipY = true;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._flags = _const.TEXTURE_FLAGS.SOURCE | _const.TEXTURE_FLAGS.SIZE;
 
         _this.setScaleMode(scaleMode);
         _this.setWrapMode(wrapMode);
@@ -24673,7 +24649,7 @@ var RenderTexture = function (_RenderTarget) {
                         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                     }
 
-                    if (this.powerOfTwo) {
+                    if (this._generateMipMap) {
                         gl.generateMipmap(gl.TEXTURE_2D);
                     }
 
@@ -24758,12 +24734,38 @@ var RenderTexture = function (_RenderTarget) {
          */
 
     }, {
+        key: 'generateMipMap',
+        get: function get() {
+            return this._generateMipMap;
+        },
+        set: function set(generateMipMap) {
+            this._generateMipMap = generateMipMap;
+        }
+
+        /**
+         * @public
+         * @member {Boolean}
+         */
+
+    }, {
         key: 'flipY',
         get: function get() {
             return this._flipY;
         },
         set: function set(flipY) {
             this._flipY = flipY;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Boolean}
+         */
+
+    }, {
+        key: 'powerOfTwo',
+        get: function get() {
+            return (0, _utils.powerOfTwo)(this.width) && (0, _utils.powerOfTwo)(this.height);
         }
     }]);
 
@@ -25628,7 +25630,7 @@ var Spritesheet = function (_Sprite) {
     /**
      * @param {Object<String, Object>[]} frames
      * @param {Boolean} [clearOldFrames=true]
-     * @return {SpriteSheet}
+     * @return {Spritesheet}
      */
 
 

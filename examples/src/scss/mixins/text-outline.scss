@@ -1,5 +1,0 @@
-@mixin text-outline($outline-width: 1px, $color: $color-black) {
-    $width: #{strip-unit($outline-width)}px;
-
-    text-shadow: #{$width} #{$width} #{$width} #{$color}, #{$width} -#{$width} #{$width} #{$color}, -#{$width} #{$width} #{$width} #{$color}, -#{$width} -#{$width} #{$width} #{$color};
-}
