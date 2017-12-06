@@ -4,39 +4,39 @@
         "examples": [
             {
                 "title": "Sprite",
-                "path": "sprite"
+                "path": "sprite.js"
             },
             {
                 "title": "Container",
-                "path": "container"
+                "path": "container.js"
             },
             {
                 "title": "Spritesheet",
-                "path": "spritesheet"
+                "path": "spritesheet.js"
             },
             {
                 "title": "Display Text",
-                "path": "text"
+                "path": "text.js"
             },
             {
                 "title": "Transform View",
-                "path": "view"
+                "path": "view.js"
             },
             {
                 "title": "Collision Detection",
-                "path": "collisions"
+                "path": "collisions.js"
             },
             {
                 "title": "Blendmodes",
-                "path": "blendmodes"
+                "path": "blendmodes.js"
             },
             {
                 "title": "Tinting",
-                "path": "tinting"
+                "path": "tinting.js"
             },
             {
                 "title": "Render to Texture",
-                "path": "rendertexture"
+                "path": "rendertexture.js"
             }
         ]
     },
@@ -45,11 +45,11 @@
         "examples": [
             {
                 "title": "Display Video",
-                "path": "video"
+                "path": "video.js"
             },
             {
                 "title": "Audio Visualisation",
-                "path": "audio"
+                "path": "audio.js"
             }
         ]
     },
@@ -58,11 +58,11 @@
         "examples": [
             {
                 "title": "Particles",
-                "path": "particles"
+                "path": "particles.js"
             },
             {
                 "title": "Benchmark",
-                "path": "benchmark"
+                "path": "benchmark.js"
             }
         ]
     }

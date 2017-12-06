@@ -78,35 +78,29 @@ $(function () {
         height: 600
     }),
         stats = new Stats(),
+        $stats = $(stats.dom),
         $container = $('.main-canvas'),
         $navigation = $('.navigation-list'),
         activeScript = null,
-        resetApp = function resetApp() {
-        app.renderManager.setClearColor(app.config.clearColor).clear();
-    },
-        loadExample = function loadExample(name) {
+        loadExample = function loadExample(path) {
         app.stop();
 
         if (activeScript) {
             activeScript.parentNode.removeChild(activeScript);
-            resetApp();
+
+            app.renderManager.setClearColor(app.config.clearColor).clear();
         }
 
         activeScript = document.createElement('script');
-        activeScript.type = 'text/javascript', activeScript.async = true, activeScript.src = 'src/js/examples/' + name + '.js?no-cache=' + Date.now(), document.body.appendChild(activeScript);
-    },
-        getStats = function getStats() {
-        var style = stats.dom.style;
-
-        style.position = 'absolute';
-        style.top = '0';
-        style.left = '0';
-
-        return stats.dom;
+        activeScript.type = 'text/javascript', activeScript.async = true, activeScript.src = 'src/js/examples/' + path + '?no-cache=' + Date.now(), document.body.appendChild(activeScript);
     };
 
     $container.append(app.canvas);
-    $container.append(getStats());
+    $container.append($stats.css({
+        position: 'absolute',
+        top: '0',
+        left: '0'
+    }));
 
     app.on('start', function () {
         return stats.begin();
@@ -117,17 +111,6 @@ $(function () {
     app.on('stop', function () {
         return stats.end();
     });
-
-    window.app = app;
-    window.addEventListener('hashchange', function () {
-        loadExample(location.hash.slice(1));
-    }, false);
-
-    if (location.hash) {
-        loadExample(location.hash.slice(1));
-    } else {
-        location.hash = 'sprite';
-    }
 
     app.loader.loadItem({
         type: 'json',
@@ -143,9 +126,22 @@ $(function () {
                 var entry = _step.value;
 
                 $navigation.append($('<div>', {
-                    'class': 'navigation-item sub-header',
+                    'class': 'navigation-sub-header',
                     'html': entry.title
                 }));
+
+                var _loop = function _loop(example) {
+                    $navigation.append($('<div>', {
+                        'class': 'navigation-item',
+                        'html': example.title
+                    }).on('click', function () {
+                        loadExample(example.path);
+                    }));
+
+                    if (!activeScript) {
+                        loadExample(example.path);
+                    }
+                };
 
                 var _iteratorNormalCompletion2 = true;
                 var _didIteratorError2 = false;
@@ -155,11 +151,7 @@ $(function () {
                     for (var _iterator2 = entry.examples[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
                         var example = _step2.value;
 
-                        $navigation.append($('<a>', {
-                            'class': 'navigation-item',
-                            'href': '#' + example.path,
-                            'html': example.title
-                        }));
+                        _loop(example);
                     }
                 } catch (err) {
                     _didIteratorError2 = true;
@@ -191,6 +183,8 @@ $(function () {
             }
         }
     });
+
+    window.app = app;
 });
 
 /***/ })

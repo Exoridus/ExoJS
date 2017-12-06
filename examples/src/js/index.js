@@ -6,59 +6,40 @@ $(() => {
             height: 600,
         }),
         stats = new Stats(),
+        $stats = $(stats.dom),
         $container = $('.main-canvas'),
         $navigation = $('.navigation-list'),
         activeScript = null,
 
-        resetApp = () => {
-            app.renderManager
-                .setClearColor(app.config.clearColor)
-                .clear();
-        },
-
-        loadExample = (name) => {
+        loadExample = (path) => {
             app.stop();
 
             if (activeScript) {
                 activeScript.parentNode.removeChild(activeScript);
-                resetApp();
+
+                app.renderManager
+                    .setClearColor(app.config.clearColor)
+                    .clear();
             }
 
             activeScript = document.createElement('script');
             activeScript.type = 'text/javascript',
             activeScript.async = true,
-            activeScript.src = `src/js/examples/${name}.js?no-cache=${Date.now()}`,
+            activeScript.src = `src/js/examples/${path}?no-cache=${Date.now()}`,
 
             document.body.appendChild(activeScript);
-        },
-
-        getStats = () => {
-            const style = stats.dom.style;
-
-            style.position = 'absolute';
-            style.top = '0';
-            style.left = '0';
-
-            return stats.dom;
         };
 
     $container.append(app.canvas);
-    $container.append(getStats());
+    $container.append($stats.css({
+        position: 'absolute',
+        top: '0',
+        left: '0',
+    }));
 
     app.on('start', () => stats.begin());
     app.on('update', () => stats.update());
     app.on('stop', () => stats.end());
-
-    window.app = app;
-    window.addEventListener('hashchange', () => {
-        loadExample(location.hash.slice(1));
-    }, false);
-
-    if (location.hash) {
-        loadExample(location.hash.slice(1));
-    } else {
-        location.hash = 'sprite';
-    }
 
     app.loader.loadItem({
         type: 'json',
@@ -67,17 +48,24 @@ $(() => {
     }).then((entries) => {
         for (const entry of entries) {
             $navigation.append($('<div>', {
-                'class': 'navigation-item sub-header',
+                'class': 'navigation-sub-header',
                 'html': entry.title
             }));
 
             for (const example of entry.examples) {
-                $navigation.append($('<a>', {
+                $navigation.append($('<div>', {
                     'class': 'navigation-item',
-                    'href': `#${example.path}`,
                     'html': example.title
+                }).on('click', () => {
+                    loadExample(example.path);
                 }));
+
+                if (!activeScript) {
+                    loadExample(example.path);
+                }
             }
         }
     });
+
+    window.app = app;
 });

@@ -55,7 +55,7 @@
             left: 0;
             top: 0;
 
-            .navigation-title {
+            .navigation-header {
                 @include unitize(height, 64);
                 @include unitize(padding, 8, 16);
                 @include unitize(line-height, 48);
@@ -67,6 +67,22 @@
                 cursor: default;
             }
 
+            .navigation-sub-header {
+                @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
+                @include unitize(padding, 0, 16);
+                @include unitize(height, 48);
+                @include unitize(font-size, 14);
+                @include unitize(line-height, 48);
+                -webkit-tap-highlight-color: $color-transparent;
+                font-weight: $font-weight-medium;
+                color: $color-accent;
+                text-decoration: none;
+                position: relative;
+                cursor: default;
+                display: block;
+                width: 100%;
+            }
+
             .navigation-item {
                 @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
                 @include unitize(padding, 0, 16);
@@ -75,7 +91,7 @@
                 @include unitize(line-height, 48);
                 -webkit-tap-highlight-color: $color-transparent;
                 font-weight: $font-weight-regular;
-                color: $list-item-text;
+                color: $color-text;
                 text-decoration: none;
                 position: relative;
                 cursor: pointer;
@@ -83,26 +99,11 @@
                 width: 100%;
 
                 &:hover {
-                    background-color: $list-item-hover;
+                    background-color: rgba($color-white, 0.12);
                 }
 
                 &:active {
-                    background-color: $list-item-active;
-                }
-
-                &.sub-header {
-                    @include unitize(font-size, 14);
-                    font-weight: $font-weight-medium;
-                    color: $color-accent;
-                    cursor: default;
-
-                    &:hover {
-                        background-color: $color-transparent;
-                    }
-
-                    &:active {
-                        background-color: $color-transparent;
-                    }
+                    background-color: rgba($color-white, 0.18);
                 }
             }
         }

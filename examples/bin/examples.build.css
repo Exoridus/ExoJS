@@ -142,7 +142,7 @@ strong {
       bottom: 0;
       left: 0;
       top: 0; }
-      .page-wrap .navigation .navigation-content .navigation-title {
+      .page-wrap .navigation .navigation-content .navigation-header {
         height: 64px;
         height: 4.571429rem;
         padding: 8px 16px;
@@ -156,6 +156,28 @@ strong {
         position: relative;
         overflow: hidden;
         cursor: default; }
+      .page-wrap .navigation .navigation-content .navigation-sub-header {
+        -webkit-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+        -moz-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+        -ms-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+        -o-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+        transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
+        padding: 0px 16px;
+        padding: 0rem 1.142857rem;
+        height: 48px;
+        height: 3.428571rem;
+        font-size: 14px;
+        font-size: 1rem;
+        line-height: 48px;
+        line-height: 3.428571rem;
+        -webkit-tap-highlight-color: transparent;
+        font-weight: 500;
+        color: #FFFF00;
+        text-decoration: none;
+        position: relative;
+        cursor: default;
+        display: block;
+        width: 100%; }
       .page-wrap .navigation .navigation-content .navigation-item {
         -webkit-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
         -moz-transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1);
@@ -182,13 +204,3 @@ strong {
           background-color: rgba(255, 255, 255, 0.12); }
         .page-wrap .navigation .navigation-content .navigation-item:active {
           background-color: rgba(255, 255, 255, 0.18); }
-        .page-wrap .navigation .navigation-content .navigation-item.sub-header {
-          font-size: 14px;
-          font-size: 1rem;
-          font-weight: 500;
-          color: #FFFF00;
-          cursor: default; }
-          .page-wrap .navigation .navigation-content .navigation-item.sub-header:hover {
-            background-color: transparent; }
-          .page-wrap .navigation .navigation-content .navigation-item.sub-header:active {
-            background-color: transparent; }
