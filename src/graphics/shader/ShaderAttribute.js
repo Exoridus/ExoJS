@@ -7,19 +7,14 @@ export default class ShaderAttribute {
 
     /**
      * @constructor
-     * @param {String} name
-     * @param {Number} type
-     * @param {Number} size
-     * @param {Boolean} [normalized=false]
-     * @param {Boolean} [enabled=true]
+     * @param {Object} options
+     * @param {String} options.name
+     * @param {Number} options.type
+     * @param {Number} options.size
+     * @param {Boolean} [options.normalized=false]
+     * @param {Boolean} [options.enabled=true]
      */
     constructor(name, type, size, normalized = false, enabled = true) {
-
-        /**
-         * @private
-         * @member {?Shader}
-         */
-        this._shader = null;
 
         /**
          * @private
@@ -50,57 +45,66 @@ export default class ShaderAttribute {
          * @member {Boolean}
          */
         this._enabled = enabled;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._bound = false;
     }
 
     /**
      * @public
-     * @readonly
      * @member {String}
      */
     get name() {
         return this._name;
     }
 
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get size() {
-        return this._size;
+    set name(name) {
+        this._name = name;
     }
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
     get type() {
         return this._type;
     }
 
+    set type(type) {
+        this._type = type;
+    }
+
     /**
      * @public
-     * @readonly
+     * @member {Number}
+     */
+    get size() {
+        return this._size;
+    }
+
+    set size(size) {
+        this._size = size;
+    }
+
+    /**
+     * @public
      * @member {Boolean}
      */
     get normalized() {
         return this._normalized;
     }
 
+    set normalized(normalized) {
+        this._normalized = normalized;
+    }
+
     /**
      * @public
-     * @readonly
      * @member {Boolean}
      */
     get enabled() {
         return this._enabled;
+    }
+
+    set enabled(enabled) {
+        this._enabled = enabled;
     }
 
     /**
@@ -136,75 +140,12 @@ export default class ShaderAttribute {
 
     /**
      * @public
-     * @chainable
-     * @param {Boolean} enabled
-     * @returns {ShaderAttribute}
-     */
-    setEnabled(enabled) {
-        if (this._enabled !== enabled) {
-            this._enabled = enabled;
-            this.upload();
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Shader} shader
-     * @param {Number} stride
-     * @param {Number} offset
-     * @returns {ShaderAttribute}
-     */
-    bind(shader, stride, offset) {
-        if (!this._shader) {
-            this._shader = shader;
-        }
-
-        if (!this._bound) {
-            this._bound = true;
-            this._shader.setVertexPointer(this._name, this._size, this._type, this._normalized, stride, offset);
-            this.upload();
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {ShaderAttribute}
-     */
-    unbind() {
-        this._bound = false;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {ShaderAttribute}
-     */
-    upload() {
-        if (this._bound) {
-            this._shader.toggleVertexArray(this._name, this._enabled);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
-        this._shader = null;
         this._name = null;
         this._type = null;
         this._size = null;
         this._normalized = null;
         this._enabled = null;
-        this._bound = null;
     }
 }

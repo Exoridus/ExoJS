@@ -13,24 +13,20 @@ export default class SpriteShader extends Shader {
      * @constructor
      */
     constructor() {
-        super();
+        super(
+            readFileSync(join(__dirname, './glsl/sprite.vert'), 'utf8'),
+            readFileSync(join(__dirname, './glsl/sprite.frag'), 'utf8'),
+        );
 
-        this.setVertexSource(readFileSync(join(__dirname, './glsl/sprite.vert'), 'utf8'));
-        this.setFragmentSource(readFileSync(join(__dirname, './glsl/sprite.frag'), 'utf8'));
-
-        this.setAttribute('a_position', ATTRIBUTE_TYPE.FLOAT, 2, false);
-        this.setAttribute('a_texcoord', ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
-        this.setAttribute('a_color', ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
-
-        this.setUniform('u_projection', UNIFORM_TYPE.FLOAT_MAT3);
-        this.setUniform('u_texture', UNIFORM_TYPE.SAMPLER_2D, 0);
+        this.addAttribute('a_position', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.addAttribute('a_texcoord', ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
+        this.addAttribute('a_color', ATTRIBUTE_TYPE.UNSIGNED_BYTE, 4, true);
     }
 
     /**
      * @override
      */
     setProjection(projection) {
-        this.getUniform('u_projection')
-            .setValue(projection.toArray(false));
+        this.setUniform('u_projection', projection.toArray(false));
     }
 }
