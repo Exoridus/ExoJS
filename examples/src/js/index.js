@@ -60,7 +60,7 @@ $(() => {
             loader.loadItem({
                 type: 'text',
                 name: activePath,
-                path: `src/js/examples/${activePath}`,
+                path: `src/js/examples/${activePath}?no-cache=${Date.now()}`,
             }).then(createExample);
         },
 
@@ -87,7 +87,7 @@ $(() => {
     loader.loadItem({
         type: 'json',
         name: 'examples',
-        path: 'assets/json/examples.json',
+        path: `assets/json/examples.json?no-cache=${Date.now()}`,
     }).then(createNavigation);
 
     $refresh.on('click', () => {

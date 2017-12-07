@@ -19,7 +19,7 @@ export default class ParticleShader extends Shader {
         this.setFragmentSource(readFileSync(join(__dirname, './glsl/particle.frag'), 'utf8'));
 
         this.setAttribute('a_position', ATTRIBUTE_TYPE.FLOAT, 2, false);
-        this.setAttribute('a_texcoord', ATTRIBUTE_TYPE.FLOAT, 2, false);
+        this.setAttribute('a_texcoord', ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
         this.setAttribute('a_translation', ATTRIBUTE_TYPE.FLOAT, 2, false);
         this.setAttribute('a_scale', ATTRIBUTE_TYPE.FLOAT, 2, false);
         this.setAttribute('a_rotation', ATTRIBUTE_TYPE.FLOAT, 1, false);

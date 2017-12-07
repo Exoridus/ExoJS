@@ -108,9 +108,9 @@ export default class ParticleEmitter extends Drawable {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @type {Uint32Array}
          */
-        this._textureCoords = new Rectangle();
+        this._texCoordData = new Uint32Array(4);
 
         /**
          * @private
@@ -333,29 +333,34 @@ export default class ParticleEmitter extends Drawable {
 
     /**
      * @public
-     * @member {Rectangle}
+     * @readonly
+     * @member {Uint32Array}
      */
-    get textureCoords() {
+    get texCoordData() {
         if (this._updateTexCoords) {
-            const frame = this._textureFrame,
-                texture = this._texture;
+            const { width, height } = this._texture,
+                { left, top, right, bottom } = this._textureFrame,
+                minX = ((left / width) * 65535 & 65535),
+                minY = ((top / height) * 65535 & 65535) << 16,
+                maxX = ((right / width) * 65535 & 65535),
+                maxY = ((bottom / height) * 65535 & 65535) << 16;
 
-            this._textureCoords.set(
-                (frame.left / texture.width),
-                (frame.top / texture.height),
-                (frame.right / texture.width),
-                (frame.bottom / texture.height)
-            );
+            if (this._texture.flipY) {
+                this._texCoordData[0] = (maxY | minX);
+                this._texCoordData[1] = (maxY | maxX);
+                this._texCoordData[2] = (minY | maxX);
+                this._texCoordData[3] = (minY | minX);
+            } else {
+                this._texCoordData[0] = (minY | minX);
+                this._texCoordData[1] = (minY | maxX);
+                this._texCoordData[2] = (maxY | maxX);
+                this._texCoordData[3] = (maxY | minX);
+            }
 
             this._updateTexCoords = false;
         }
 
-        return this._textureCoords;
-    }
-
-    set textureCoords(textureCoords) {
-        this._textureCoords.copy(textureCoords);
-        this._updateTexCoords = false;
+        return this._texCoordData;
     }
 
     /**
@@ -647,10 +652,8 @@ export default class ParticleEmitter extends Drawable {
         this._textureFrame.destroy();
         this._textureFrame = null;
 
-        this._textureCoords.destroy();
-        this._textureCoords = null;
-
         this._texture = null;
+        this._texCoordData = null;
         this._blendMode = null;
         this._emissionRate = null;
         this._emissionDelta = null;

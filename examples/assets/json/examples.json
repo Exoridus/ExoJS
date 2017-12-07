@@ -15,47 +15,47 @@
                 "path": "spritesheet.js"
             },
             {
-                "title": "Display Text",
-                "path": "text.js"
-            },
-            {
-                "title": "Transform View",
-                "path": "view.js"
-            },
-            {
-                "title": "Collision Detection",
-                "path": "collisions.js"
-            },
-            {
                 "title": "Blendmodes",
                 "path": "blendmodes.js"
             },
             {
-                "title": "Tinting",
+                "title": "Tinted Sprites",
                 "path": "tinting.js"
             },
             {
+                "title": "Camera Handling",
+                "path": "camera.js"
+            },
+            {
                 "title": "Render to Texture",
-                "path": "rendertexture.js"
+                "path": "render-to-texture.js"
             }
         ]
     },
     {
-        "title": "Audio / Video",
+        "title": "Media",
         "examples": [
+            {
+                "title": "Display Text",
+                "path": "text.js"
+            },
             {
                 "title": "Display Video",
                 "path": "video.js"
             },
             {
-                "title": "Audio Visualisation",
-                "path": "audio.js"
+                "title": "Audio Analysis",
+                "path": "audio-analysis.js"
             }
         ]
     },
     {
-        "title": "Performance",
+        "title": "Extras",
         "examples": [
+            {
+                "title": "Collision Detection",
+                "path": "collision-detection.js"
+            },
             {
                 "title": "Particles",
                 "path": "particles.js"

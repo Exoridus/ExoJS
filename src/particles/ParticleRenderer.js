@@ -29,9 +29,9 @@ export default class ParticleRenderer extends Renderer {
         this._batchIndex = 0;
 
         /**
-         * 4 x 10 Properties:
+         * 4 x 9 Properties:
          * 2 = vertexPos     (x, y) +
-         * 2 = textureCoords (x, y) +
+         * 1 = texCoord (packed uv) +
          * 2 = position      (x, y) +
          * 2 = scale         (x, y) +
          * 1 = rotation      (x, y) +
@@ -40,7 +40,7 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._attributeCount = 40;
+        this._attributeCount = 36;
 
         /**
          * @private
@@ -187,7 +187,7 @@ export default class ParticleRenderer extends Renderer {
      * @param {ParticleEmitter} emitter
      */
     render(emitter) {
-        const { texture, textureFrame, textureCoords, particles, blendMode } = emitter,
+        const { texture, textureFrame, texCoordData, particles, blendMode } = emitter,
             textureChanged = (texture !== this._currentTexture),
             blendModeChanged = (blendMode !== this._currentBlendMode),
             float32View = this._float32View,
@@ -217,52 +217,50 @@ export default class ParticleRenderer extends Renderer {
             const { position, scale, rotation, tint } = particle,
                 index = (this._batchIndex * this._attributeCount);
 
-            float32View[index + 0] = float32View[index + 11] = textureFrame.x;
-            float32View[index + 1] = float32View[index + 20] = textureFrame.y;
+            float32View[index + 0] = float32View[index + 27] = textureFrame.x;
+            float32View[index + 1] = float32View[index + 10] = textureFrame.y;
+            float32View[index + 9] = float32View[index + 18] = textureFrame.width;
+            float32View[index + 19] = float32View[index + 28] = textureFrame.height;
 
-            float32View[index + 2] = float32View[index + 22] = textureCoords.x;
-            float32View[index + 3] = float32View[index + 13] = textureCoords.y;
+            uint32View[index + 2] = texCoordData[0];
+            uint32View[index + 11] = texCoordData[1];
+            uint32View[index + 20] = texCoordData[2];
+            uint32View[index + 29] = texCoordData[3];
 
-            float32View[index + 10] = float32View[index + 30] = textureFrame.width;
-            float32View[index + 21] = float32View[index + 31] = textureFrame.height;
-
-            float32View[index + 12] = float32View[index + 32] = textureCoords.width;
-            float32View[index + 23] = float32View[index + 33] = textureCoords.height;
-
-            float32View[index + 4]
-                = float32View[index + 14]
-                = float32View[index + 24]
-                = float32View[index + 34]
+            float32View[index + 3]
+                = float32View[index + 12]
+                = float32View[index + 21]
+                = float32View[index + 30]
                 = position.x;
 
-            float32View[index + 5]
-                = float32View[index + 15]
-                = float32View[index + 25]
-                = float32View[index + 35]
+            float32View[index + 4]
+                = float32View[index + 13]
+                = float32View[index + 22]
+                = float32View[index + 31]
                 = position.y;
 
-            float32View[index + 6]
-                = float32View[index + 16]
-                = float32View[index + 26]
-                = float32View[index + 36]
+            float32View[index + 5]
+                = float32View[index + 14]
+                = float32View[index + 23]
+                = float32View[index + 32]
                 = scale.x;
 
-            float32View[index + 7]
-                = float32View[index + 17]
-                = float32View[index + 27]
-                = float32View[index + 37]
+            float32View[index + 6]
+                = float32View[index + 15]
+                = float32View[index + 24]
+                = float32View[index + 33]
                 = scale.y;
 
-            float32View[index + 8]
-                = float32View[index + 18]
-                = float32View[index + 28]
-                = float32View[index + 38]
+            float32View[index + 7]
+                = float32View[index + 16]
+                = float32View[index + 25]
+                = float32View[index + 34]
                 = degreesToRadians(rotation);
 
-            uint32View[index + 9]
-                = uint32View[index + 19]
-                = uint32View[index + 29]
-                = uint32View[index + 39]
+            uint32View[index + 8]
+                = uint32View[index + 17]
+                = uint32View[index + 26]
+                = uint32View[index + 35]
                 = tint.getRGBA();
 
             this._batchIndex++;
@@ -328,12 +326,12 @@ export default class ParticleRenderer extends Renderer {
         const len = data.length;
 
         for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
-            data[i] = offset;
+            data[i + 0] = offset + 0;
             data[i + 1] = offset + 1;
-            data[i + 2] = offset + 3;
-            data[i + 3] = offset;
-            data[i + 4] = offset + 2;
-            data[i + 5] = offset + 3;
+            data[i + 2] = offset + 2;
+            data[i + 3] = offset + 0;
+            data[i + 4] = offset + 3;
+            data[i + 5] = offset + 2;
         }
 
         return this;

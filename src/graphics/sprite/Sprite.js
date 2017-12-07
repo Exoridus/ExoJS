@@ -106,11 +106,11 @@ export default class Sprite extends Container {
         this._vertexData[2] = (right * a) + (top * b) + x;
         this._vertexData[3] = (right * c) + (top * d) + y;
 
-        this._vertexData[4] = (left * a) + (bottom * b) + x;
-        this._vertexData[5] = (left * c) + (bottom * d) + y;
+        this._vertexData[4] = (right * a) + (bottom * b) + x;
+        this._vertexData[5] = (right * c) + (bottom * d) + y;
 
-        this._vertexData[6] = (right * a) + (bottom * b) + x;
-        this._vertexData[7] = (right * c) + (bottom * d) + y;
+        this._vertexData[6] = (left * a) + (bottom * b) + x;
+        this._vertexData[7] = (left * c) + (bottom * d) + y;
 
         return this._vertexData;
     }
@@ -132,13 +132,13 @@ export default class Sprite extends Container {
             if (this._texture.flipY) {
                 this._texCoordData[0] = (maxY | minX);
                 this._texCoordData[1] = (maxY | maxX);
-                this._texCoordData[2] = (minY | minX);
-                this._texCoordData[3] = (minY | maxX);
+                this._texCoordData[2] = (minY | maxX);
+                this._texCoordData[3] = (minY | minX);
             } else {
                 this._texCoordData[0] = (minY | minX);
                 this._texCoordData[1] = (minY | maxX);
-                this._texCoordData[2] = (maxY | minX);
-                this._texCoordData[3] = (maxY | maxX);
+                this._texCoordData[2] = (maxY | maxX);
+                this._texCoordData[3] = (maxY | minX);
             }
 
             this._updateTexCoords = false;

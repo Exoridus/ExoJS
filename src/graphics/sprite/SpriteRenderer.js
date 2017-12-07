@@ -301,12 +301,12 @@ export default class SpriteRenderer extends Renderer {
         const len = data.length;
 
         for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
-            data[i] = offset;
+            data[i + 0] = offset + 0;
             data[i + 1] = offset + 1;
-            data[i + 2] = offset + 3;
-            data[i + 3] = offset;
-            data[i + 4] = offset + 2;
-            data[i + 5] = offset + 3;
+            data[i + 2] = offset + 2;
+            data[i + 3] = offset + 0;
+            data[i + 4] = offset + 3;
+            data[i + 5] = offset + 2;
         }
 
         return this;

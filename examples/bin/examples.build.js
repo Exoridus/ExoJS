@@ -12441,7 +12441,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
         loader.loadItem({
             type: 'text',
             name: activePath,
-            path: 'src/js/examples/' + activePath
+            path: 'src/js/examples/' + activePath + '?no-cache=' + Date.now()
         }).then(createExample);
     },
         createNavigation = function createNavigation(entries) {
@@ -12515,7 +12515,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
     loader.loadItem({
         type: 'json',
         name: 'examples',
-        path: 'assets/json/examples.json'
+        path: 'assets/json/examples.json?no-cache=' + Date.now()
     }).then(createNavigation);
 
     $refresh.on('click', function () {

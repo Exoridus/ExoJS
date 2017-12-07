@@ -11,8 +11,8 @@ out vec2 v_texcoord;
 out vec4 v_color;
 
 void main(void) {
+    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+
     v_texcoord = a_texcoord;
     v_color = a_color;
-
-    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);
 }

@@ -912,7 +912,7 @@ window.addEventListener('load', function () {
         width: 1280,
         height: 720,
         canvas: document.querySelector('#game-canvas'),
-        database: new _exojs.Database('game', 3)
+        database: new _exojs.IDBDatabase('game', 3)
     });
 
     app.loader.cache = 'no-cache';
@@ -1031,11 +1031,13 @@ var LauncherScene = function (_Scene) {
             });
 
             loader.add('music', {
-                'title': 'audio/title.ogg',
-                'overworld': 'audio/overworld.ogg'
+                title: 'audio/title.ogg',
+                overworld: 'audio/overworld.ogg'
             });
 
-            loader.addItem('font', 'menu', 'font/AndyBold/AndyBold.woff2', {
+            loader.add('font', {
+                menu: 'font/AndyBold/AndyBold.woff2'
+            }, {
                 family: 'AndyBold'
             });
 

@@ -7487,11 +7487,11 @@ var Sprite = function (_Container) {
             this._vertexData[2] = right * a + top * b + x;
             this._vertexData[3] = right * c + top * d + y;
 
-            this._vertexData[4] = left * a + bottom * b + x;
-            this._vertexData[5] = left * c + bottom * d + y;
+            this._vertexData[4] = right * a + bottom * b + x;
+            this._vertexData[5] = right * c + bottom * d + y;
 
-            this._vertexData[6] = right * a + bottom * b + x;
-            this._vertexData[7] = right * c + bottom * d + y;
+            this._vertexData[6] = left * a + bottom * b + x;
+            this._vertexData[7] = left * c + bottom * d + y;
 
             return this._vertexData;
         }
@@ -7523,13 +7523,13 @@ var Sprite = function (_Container) {
                 if (this._texture.flipY) {
                     this._texCoordData[0] = maxY | minX;
                     this._texCoordData[1] = maxY | maxX;
-                    this._texCoordData[2] = minY | minX;
-                    this._texCoordData[3] = minY | maxX;
+                    this._texCoordData[2] = minY | maxX;
+                    this._texCoordData[3] = minY | minX;
                 } else {
                     this._texCoordData[0] = minY | minX;
                     this._texCoordData[1] = minY | maxX;
-                    this._texCoordData[2] = maxY | minX;
-                    this._texCoordData[3] = maxY | maxX;
+                    this._texCoordData[2] = maxY | maxX;
+                    this._texCoordData[3] = maxY | minX;
                 }
 
                 this._updateTexCoords = false;
@@ -11319,7 +11319,7 @@ var Shader = function () {
                 var location = this._context.getUniformLocation(this._program, uniform);
 
                 if (!location) {
-                    throw new Error('Uniform "' + this._name + '" is not available.');
+                    throw new Error('Uniform "' + uniform + '" is not available.');
                 }
 
                 this._uniformLocations.set(uniform, location);
@@ -11341,7 +11341,7 @@ var Shader = function () {
                 var location = this._context.getAttribLocation(this._program, attribute);
 
                 if (location === -1) {
-                    throw new Error('Attribute "' + this._name + '" is not available.');
+                    throw new Error('Attribute "' + attribute + '" is not available.');
                 }
 
                 this._attributeLocations.set(attribute, location);
@@ -17623,12 +17623,12 @@ var SpriteRenderer = function (_Renderer) {
                         var len = data.length;
 
                         for (var i = 0, offset = 0; i < len; i += 6, offset += 4) {
-                                data[i] = offset;
+                                data[i + 0] = offset + 0;
                                 data[i + 1] = offset + 1;
-                                data[i + 2] = offset + 3;
-                                data[i + 3] = offset;
-                                data[i + 4] = offset + 2;
-                                data[i + 5] = offset + 3;
+                                data[i + 2] = offset + 2;
+                                data[i + 3] = offset + 0;
+                                data[i + 4] = offset + 3;
+                                data[i + 5] = offset + 2;
                         }
 
                         return this;
@@ -17684,7 +17684,7 @@ var SpriteShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (SpriteShader.__proto__ || Object.getPrototypeOf(SpriteShader)).call(this));
 
-        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = vec4(a_color.rgb * a_color.a, a_color.a);\r\n\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
+        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);\r\n\r\n    v_texcoord = a_texcoord;\r\n    v_color = a_color;\r\n}\r\n');
         _this.setFragmentSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform sampler2D u_texture;\r\n\r\nin vec2 v_texcoord;\r\nin vec4 v_color;\r\n\r\nlayout(location = 0) out vec4 o_fragColor;\r\n\r\nvoid main(void) {\r\n    o_fragColor = texture(u_texture, v_texcoord) * v_color;\r\n}\r\n');
 
         _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
@@ -18696,9 +18696,9 @@ var ParticleRenderer = function (_Renderer) {
         _this._batchIndex = 0;
 
         /**
-         * 4 x 10 Properties:
+         * 4 x 9 Properties:
          * 2 = vertexPos     (x, y) +
-         * 2 = textureCoords (x, y) +
+         * 1 = texCoord (packed uv) +
          * 2 = position      (x, y) +
          * 2 = scale         (x, y) +
          * 1 = rotation      (x, y) +
@@ -18707,7 +18707,7 @@ var ParticleRenderer = function (_Renderer) {
          * @private
          * @member {Number}
          */
-        _this._attributeCount = 40;
+        _this._attributeCount = 36;
 
         /**
          * @private
@@ -18873,7 +18873,7 @@ var ParticleRenderer = function (_Renderer) {
         value: function render(emitter) {
             var texture = emitter.texture,
                 textureFrame = emitter.textureFrame,
-                textureCoords = emitter.textureCoords,
+                texCoordData = emitter.texCoordData,
                 particles = emitter.particles,
                 blendMode = emitter.blendMode,
                 textureChanged = texture !== this._currentTexture,
@@ -18917,29 +18917,27 @@ var ParticleRenderer = function (_Renderer) {
                         index = this._batchIndex * this._attributeCount;
 
 
-                    float32View[index + 0] = float32View[index + 11] = textureFrame.x;
-                    float32View[index + 1] = float32View[index + 20] = textureFrame.y;
+                    float32View[index + 0] = float32View[index + 27] = textureFrame.x;
+                    float32View[index + 1] = float32View[index + 10] = textureFrame.y;
+                    float32View[index + 9] = float32View[index + 18] = textureFrame.width;
+                    float32View[index + 19] = float32View[index + 28] = textureFrame.height;
 
-                    float32View[index + 2] = float32View[index + 22] = textureCoords.x;
-                    float32View[index + 3] = float32View[index + 13] = textureCoords.y;
+                    uint32View[index + 2] = texCoordData[0];
+                    uint32View[index + 11] = texCoordData[1];
+                    uint32View[index + 20] = texCoordData[2];
+                    uint32View[index + 29] = texCoordData[3];
 
-                    float32View[index + 10] = float32View[index + 30] = textureFrame.width;
-                    float32View[index + 21] = float32View[index + 31] = textureFrame.height;
+                    float32View[index + 3] = float32View[index + 12] = float32View[index + 21] = float32View[index + 30] = position.x;
 
-                    float32View[index + 12] = float32View[index + 32] = textureCoords.width;
-                    float32View[index + 23] = float32View[index + 33] = textureCoords.height;
+                    float32View[index + 4] = float32View[index + 13] = float32View[index + 22] = float32View[index + 31] = position.y;
 
-                    float32View[index + 4] = float32View[index + 14] = float32View[index + 24] = float32View[index + 34] = position.x;
+                    float32View[index + 5] = float32View[index + 14] = float32View[index + 23] = float32View[index + 32] = scale.x;
 
-                    float32View[index + 5] = float32View[index + 15] = float32View[index + 25] = float32View[index + 35] = position.y;
+                    float32View[index + 6] = float32View[index + 15] = float32View[index + 24] = float32View[index + 33] = scale.y;
 
-                    float32View[index + 6] = float32View[index + 16] = float32View[index + 26] = float32View[index + 36] = scale.x;
+                    float32View[index + 7] = float32View[index + 16] = float32View[index + 25] = float32View[index + 34] = (0, _utils.degreesToRadians)(rotation);
 
-                    float32View[index + 7] = float32View[index + 17] = float32View[index + 27] = float32View[index + 37] = scale.y;
-
-                    float32View[index + 8] = float32View[index + 18] = float32View[index + 28] = float32View[index + 38] = (0, _utils.degreesToRadians)(rotation);
-
-                    uint32View[index + 9] = uint32View[index + 19] = uint32View[index + 29] = uint32View[index + 39] = tint.getRGBA();
+                    uint32View[index + 8] = uint32View[index + 17] = uint32View[index + 26] = uint32View[index + 35] = tint.getRGBA();
 
                     this._batchIndex++;
                 }
@@ -19027,12 +19025,12 @@ var ParticleRenderer = function (_Renderer) {
             var len = data.length;
 
             for (var i = 0, offset = 0; i < len; i += 6, offset += 4) {
-                data[i] = offset;
+                data[i + 0] = offset + 0;
                 data[i + 1] = offset + 1;
-                data[i + 2] = offset + 3;
-                data[i + 3] = offset;
-                data[i + 4] = offset + 2;
-                data[i + 5] = offset + 3;
+                data[i + 2] = offset + 2;
+                data[i + 3] = offset + 0;
+                data[i + 4] = offset + 3;
+                data[i + 5] = offset + 2;
             }
 
             return this;
@@ -19088,11 +19086,11 @@ var ParticleShader = function (_Shader) {
 
         var _this = _possibleConstructorReturn(this, (ParticleShader.__proto__ || Object.getPrototypeOf(ParticleShader)).call(this));
 
-        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec2 a_translation;\r\nlayout(location = 3) in vec2 a_scale;\r\nlayout(location = 4) in float a_rotation;\r\nlayout(location = 5) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    v_texcoord = a_texcoord;\r\n    v_color = vec4(a_color.rgb * a_color.a, a_color.a);\r\n\r\n    vec2 pos = vec2(\r\n        (a_position.x * cos(a_rotation)) - (a_position.y * sin(a_rotation)),\r\n        (a_position.x * sin(a_rotation)) + (a_position.y * cos(a_rotation))\r\n    );\r\n\r\n    gl_Position = vec4((u_projection * vec3((pos * a_scale) + a_translation, 1.0)).xy, 0.0, 1.0);\r\n}\r\n');
+        _this.setVertexSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform mat3 u_projection;\r\n\r\nlayout(location = 0) in vec2 a_position;\r\nlayout(location = 1) in vec2 a_texcoord;\r\nlayout(location = 2) in vec2 a_translation;\r\nlayout(location = 3) in vec2 a_scale;\r\nlayout(location = 4) in float a_rotation;\r\nlayout(location = 5) in vec4 a_color;\r\n\r\nout vec2 v_texcoord;\r\nout vec4 v_color;\r\n\r\nvoid main(void) {\r\n    vec2 v = vec2(\r\n        (a_position.x * (a_scale.x * cos(a_rotation))) + (a_position.y * (a_scale.y * sin(a_rotation))) + a_translation.x,\r\n        (a_position.x * (a_scale.x * -sin(a_rotation))) + (a_position.y * (a_scale.y * cos(a_rotation))) + a_translation.y\r\n    );\r\n\r\n    gl_Position = vec4((u_projection * vec3(v, 1.0)).xy, 0.0, 1.0);\r\n\r\n    v_texcoord = a_texcoord;\r\n    v_color = a_color;\r\n}\r\n');
         _this.setFragmentSource('#version 300 es\r\nprecision lowp float;\r\n\r\nuniform sampler2D u_texture;\r\n\r\nin vec2 v_texcoord;\r\nin vec4 v_color;\r\n\r\nlayout(location = 0) out vec4 o_fragColor;\r\n\r\nvoid main(void) {\r\n    o_fragColor = texture(u_texture, v_texcoord) * v_color;\r\n}\r\n');
 
         _this.setAttribute('a_position', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
-        _this.setAttribute('a_texcoord', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
+        _this.setAttribute('a_texcoord', _const.ATTRIBUTE_TYPE.UNSIGNED_SHORT, 2, true);
         _this.setAttribute('a_translation', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
         _this.setAttribute('a_scale', _const.ATTRIBUTE_TYPE.FLOAT, 2, false);
         _this.setAttribute('a_rotation', _const.ATTRIBUTE_TYPE.FLOAT, 1, false);
@@ -26215,9 +26213,9 @@ var ParticleEmitter = function (_Drawable) {
 
         /**
          * @private
-         * @member {Rectangle}
+         * @type {Uint32Array}
          */
-        _this._textureCoords = new _Rectangle2.default();
+        _this._texCoordData = new Uint32Array(4);
 
         /**
          * @private
@@ -26612,10 +26610,8 @@ var ParticleEmitter = function (_Drawable) {
             this._textureFrame.destroy();
             this._textureFrame = null;
 
-            this._textureCoords.destroy();
-            this._textureCoords = null;
-
             this._texture = null;
+            this._texCoordData = null;
             this._blendMode = null;
             this._emissionRate = null;
             this._emissionDelta = null;
@@ -26884,26 +26880,44 @@ var ParticleEmitter = function (_Drawable) {
 
         /**
          * @public
-         * @member {Rectangle}
+         * @readonly
+         * @member {Uint32Array}
          */
 
     }, {
-        key: 'textureCoords',
+        key: 'texCoordData',
         get: function get() {
             if (this._updateTexCoords) {
-                var frame = this._textureFrame,
-                    texture = this._texture;
+                var _texture = this._texture,
+                    width = _texture.width,
+                    height = _texture.height,
+                    _textureFrame = this._textureFrame,
+                    left = _textureFrame.left,
+                    top = _textureFrame.top,
+                    right = _textureFrame.right,
+                    bottom = _textureFrame.bottom,
+                    minX = left / width * 65535 & 65535,
+                    minY = (top / height * 65535 & 65535) << 16,
+                    maxX = right / width * 65535 & 65535,
+                    maxY = (bottom / height * 65535 & 65535) << 16;
 
-                this._textureCoords.set(frame.left / texture.width, frame.top / texture.height, frame.right / texture.width, frame.bottom / texture.height);
+
+                if (this._texture.flipY) {
+                    this._texCoordData[0] = maxY | minX;
+                    this._texCoordData[1] = maxY | maxX;
+                    this._texCoordData[2] = minY | maxX;
+                    this._texCoordData[3] = minY | minX;
+                } else {
+                    this._texCoordData[0] = minY | minX;
+                    this._texCoordData[1] = minY | maxX;
+                    this._texCoordData[2] = maxY | maxX;
+                    this._texCoordData[3] = maxY | minX;
+                }
 
                 this._updateTexCoords = false;
             }
 
-            return this._textureCoords;
-        },
-        set: function set(textureCoords) {
-            this._textureCoords.copy(textureCoords);
-            this._updateTexCoords = false;
+            return this._texCoordData;
         }
 
         /**

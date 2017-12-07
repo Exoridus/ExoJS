@@ -317,7 +317,7 @@ export default class Shader {
             const location = this._context.getUniformLocation(this._program, uniform);
 
             if (!location) {
-                throw new Error(`Uniform "${this._name}" is not available.`);
+                throw new Error(`Uniform "${uniform}" is not available.`);
             }
 
             this._uniformLocations.set(uniform, location);
@@ -336,7 +336,7 @@ export default class Shader {
             const location = this._context.getAttribLocation(this._program, attribute);
 
             if (location === -1) {
-                throw new Error(`Attribute "${this._name}" is not available.`);
+                throw new Error(`Attribute "${attribute}" is not available.`);
             }
 
             this._attributeLocations.set(attribute, location);

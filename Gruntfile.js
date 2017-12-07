@@ -38,8 +38,8 @@ module.exports = (grunt) => {
                 module: {
                     loaders: [{
                         test: /\.js$/,
-                        exclude: /(node_modules|bower_components)/,
-                        loader: 'babel-loader?cacheDirectory=cache',
+                        exclude: /node_modules/,
+                        loader: 'babel-loader'
                     }],
                 },
             },
@@ -51,6 +51,7 @@ module.exports = (grunt) => {
                     sourceMapFilename: 'exo.build.js.map',
                     library: 'Exo',
                 },
+                cache: false,
                 plugins: [
                     new webpack.DefinePlugin({
                         __VERSION__: JSON.stringify(package.version),
