@@ -14,18 +14,27 @@ import VideoFactory from './factories/VideoFactory';
 import settings from '../settings';
 
 /**
- * @class ResourceLoader
+ * @class Loader
  * @extends EventEmitter
  */
-export default class ResourceLoader extends EventEmitter {
+export default class Loader extends EventEmitter {
 
     /**
      * @constructor
      * @param {Object} [options]
      * @param {String} [options.resourcePath='']
      * @param {Database} [options.database=null]
+     * @param {String} [options.method=settings.REQUEST_METHOD]
+     * @param {String} [options.mode=settings.REQUEST_MODE]
+     * @param {String} [options.cache=settings.REQUEST_CACHE]
      */
-    constructor({ resourcePath = '', database = null } = {}) {
+    constructor({
+        resourcePath = '',
+        database = null,
+        method = settings.REQUEST_METHOD,
+        mode = settings.REQUEST_MODE,
+        cache = settings.REQUEST_CACHE,
+    } = {}) {
         super();
 
         /**
@@ -62,19 +71,19 @@ export default class ResourceLoader extends EventEmitter {
          * @private
          * @member {String}
          */
-        this._method = settings.REQUEST_METHOD;
+        this._method = method;
 
         /**
          * @private
          * @member {String}
          */
-        this._mode = settings.REQUEST_MODE;
+        this._mode = mode;
 
         /**
          * @private
          * @member {String}
          */
-        this._cache = settings.REQUEST_CACHE;
+        this._cache = cache;
 
         this._addFactories();
     }
@@ -171,7 +180,7 @@ export default class ResourceLoader extends EventEmitter {
      * @chainable
      * @param {String} type
      * @param {ResourceFactory} factory
-     * @returns {ResourceLoader}
+     * @returns {Loader}
      */
     addFactory(type, factory) {
         this._factories.set(type, factory);
@@ -200,7 +209,7 @@ export default class ResourceLoader extends EventEmitter {
      * @param {Object<String, String>|String} itemsOrName
      * @param {Object|String} [optionsOrPath]
      * @param {Object} [options]
-     * @returns {ResourceLoader}
+     * @returns {Loader}
      */
     add(type, itemsOrName, optionsOrPath, options) {
         if (!this._factories.has(type)) {
@@ -271,12 +280,12 @@ export default class ResourceLoader extends EventEmitter {
 
         if (this._database) {
             return this._database
-                .loadData(factory.storageType, name)
+                .load(factory.storageType, name)
                 .then((result) => result.data || factory
                     .request(completePath, request)
                     .then((response) => factory.process(response))
                     .then((data) => this._database
-                        .saveData(factory.storageType, name, data)
+                        .save(factory.storageType, name, data)
                         .then((result) => result.data)))
                 .then((source) => factory.create(source, options))
                 .then((resource) => {
@@ -302,7 +311,7 @@ export default class ResourceLoader extends EventEmitter {
      * @param {Boolean} [options.events=true]
      * @param {Boolean} [options.queue=true]
      * @param {Boolean} [options.resources=true]
-     * @returns {ResourceLoader}
+     * @returns {Loader}
      */
     clear({ events = true, queue = true, resources = true } = {}) {
         if (events) {

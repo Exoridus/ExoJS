@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', { bunny: 'image/bunny.png' });
@@ -90,19 +89,5 @@ app.start(new Exo.Scene({
             .draw(this._container)
             .draw(this._renderSprite)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this._container.destroy();
-        this._container = null;
-
-        this._renderTexture.destroy();
-        this._renderTexture = null;
-
-        this._renderSprite.destroy();
-        this._renderSprite = null;
     },
 }));

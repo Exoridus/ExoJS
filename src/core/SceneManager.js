@@ -31,12 +31,6 @@ export default class SceneManager extends EventEmitter {
 
         /**
          * @private
-         * @member {ResourceLoader}
-         */
-        this._loader = app.loader;
-
-        /**
-         * @private
          * @member {Number}
          */
         this._status = STATUS.NONE;
@@ -119,7 +113,6 @@ export default class SceneManager extends EventEmitter {
 
         this._scene = null;
         this._status = null;
-        this._loader = null;
         this._app = null;
     }
 
@@ -128,16 +121,17 @@ export default class SceneManager extends EventEmitter {
      */
     _loadScene() {
         if (this._scene) {
-            this._status = STATUS.LOADING;
+            const loader = this._app.loader;
 
+            this._status = STATUS.LOADING;
             this._scene.app = this._app;
-            this._scene.load(this._loader);
+            this._scene.load(loader);
 
             this.trigger('scene:load');
 
-            this._loader.load().then(() => {
+            loader.load().then(() => {
                 this._status = STATUS.RUNNING;
-                this._scene.init(this._loader.resources);
+                this._scene.init(loader.resources);
 
                 this.trigger('scene:init');
             });
@@ -159,7 +153,7 @@ export default class SceneManager extends EventEmitter {
             this._scene = null;
 
             this._status = STATUS.NONE;
-            this._loader.clear();
+            this._app.loader.clear();
 
             this.trigger('scene:destroy');
         }

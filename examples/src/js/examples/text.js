@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('font', { example: 'font/AndyBold/AndyBold.woff2' }, { family: 'AndyBold' });
@@ -60,16 +59,5 @@ app.start(new Exo.Scene({
         renderManager.clear()
             .draw(this._text)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this._ticker.destroy();
-        this._ticker = null;
-
-        this._text.destroy();
-        this._text = null;
     },
 }));

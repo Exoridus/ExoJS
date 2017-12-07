@@ -9,7 +9,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('music', { example: 'audio/example.ogg' });
@@ -177,35 +177,5 @@ app.start(new Exo.Scene({
             .clear(this._clearColor)
             .draw(this._screen)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this.app.off('pointer:down');
-
-        this._music.destroy();
-        this._music = null;
-
-        this._texture.destroy();
-        this._texture = null;
-
-        this._screen.destroy();
-        this._screen = null;
-
-        this._analyser.destroy();
-        this._analyser = null;
-
-        this._clearColor.destroy();
-        this._clearColor = null;
-
-        this._time.destroy();
-        this._time = null;
-
-        this._progress = null;
-        this._gradient = null;
-        this._context = null;
-        this._canvas = null;
     },
 }));

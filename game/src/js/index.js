@@ -1,4 +1,4 @@
-import { Application, Database } from 'exojs';
+import { Application, IDBDatabase } from 'exojs';
 import LauncherScene from './scene/LauncherScene';
 
 window.addEventListener('load', () => {
@@ -7,7 +7,7 @@ window.addEventListener('load', () => {
         width: 1280,
         height: 720,
         canvas: document.querySelector('#game-canvas'),
-        database: new Database('game', 3),
+        database: new IDBDatabase('game', 3),
     });
 
     app.loader.cache = 'no-cache';

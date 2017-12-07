@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', { example: 'image/uv.png' });
@@ -19,7 +18,7 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const { width, height } = this.app.canvas;
 
         /**
          * @private
@@ -43,7 +42,7 @@ app.start(new Exo.Scene({
          * @private
          * @member {View}
          */
-        this._camera = new Exo.View(0, 0, canvas.width, canvas.height);
+        this._camera = new Exo.View(0, 0, width, height);
 
         /**
          * @private
@@ -68,51 +67,7 @@ app.start(new Exo.Scene({
             padding: 10,
         });
 
-        this.addInputs();
-    },
-
-    /**
-     * @param {RenderManager} renderManager
-     */
-    draw(renderManager) {
-        renderManager.clear();
-
-        renderManager.renderTarget.setView(this._camera);
-        renderManager
-            .draw(this._sprite)
-            .display();
-
-        renderManager.renderTarget.setView(null);
-        renderManager
-            .draw(this._info)
-            .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this.app.inputManager.clear(true);
-        this.app.renderManager.renderTarget.setView(null);
-
-        this._camera.destroy();
-        this._camera = null;
-
-        this._sprite.destroy();
-        this._sprite = null;
-
-        this._info.destroy();
-        this._info = null;
-    },
-
-    /**
-     * @private
-     */
-    addInputs() {
-        const { canvas, inputManager } = this.app,
-            { width, height } = canvas;
-
-        inputManager.add([
+        this.app.inputManager.add([
 
             // Move Up
             new Exo.Input(Exo.KEYBOARD.W, {
@@ -186,5 +141,22 @@ app.start(new Exo.Scene({
                 },
             })
         ]);
+    },
+
+    /**
+     * @param {RenderManager} renderManager
+     */
+    draw(renderManager) {
+        renderManager.clear();
+
+        renderManager.renderTarget.setView(this._camera);
+        renderManager
+            .draw(this._sprite)
+            .display();
+
+        renderManager.renderTarget.setView(null);
+        renderManager
+            .draw(this._info)
+            .display();
     },
 }));

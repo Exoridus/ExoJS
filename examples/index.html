@@ -15,16 +15,28 @@
         <div class="page-wrap">
             <nav class="navigation">
                 <div class="navigation-content">
-                    <div class="navigation-header">ExoJS Examples</div>
+                    <h1 class="navigation-header">ExoJS Examples</h1>
                     <div class="navigation-list"></div>
                 </div>
             </nav>
             <main class="main">
-                <div class="main-content"></div>
+                <div class="main-content">
+                    <div class="example-preview"></div>
+                    <div class="example-editor">
+                        <div class="editor-header">
+                            <div class="editor-title">Example Code</div>
+                            <div class="refresh-button">
+                                <div class="button-content">REFRESH</div>
+                            </div>
+                        </div>
+                        <div class="editor-content">
+                            <textarea class="editor-code"></textarea>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
 
-        <script src="vendor/jquery.js"></script>
         <script src="../bin/exo.build.js"></script>
         <script src="bin/examples.build.js"></script>
     </body>

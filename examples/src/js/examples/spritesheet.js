@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', { explosion: 'image/explosion.png' });
@@ -62,18 +61,5 @@ app.start(new Exo.Scene({
             .clear()
             .draw(this._spritesheet)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this._spritesheet.destroy();
-        this._spritesheet = null;
-
-        this._frameCount.destroy();
-        this._frameCount = null;
-
-        this._ticker = null;
     },
 }));

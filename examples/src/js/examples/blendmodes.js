@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', {
@@ -142,33 +141,5 @@ app.start(new Exo.Scene({
             .draw(this._rightBunny)
             .draw(this._info)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this.app.off('pointer:down');
-
-        this._background.destroy();
-        this._background = null;
-
-        this._leftBunny.destroy();
-        this._leftBunny = null;
-
-        this._rightBunny.destroy();
-        this._rightBunny = null;
-
-        this._info.destroy();
-        this._info = null;
-
-        this._blendModes.length = 0;
-        this._blendModes = null;
-
-        this._blendModeNames.length = 0;
-        this._blendModeNames = null;
-
-        this._blendModeIndex = null;
-        this._ticker = null;
     },
 }));

@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', { bunny: 'image/bunny.png' });
@@ -100,9 +99,9 @@ app.start(new Exo.Scene({
     createStats() {
         const stats = new Stats();
 
-        stats.dom.style.position; 'absolute';
-        stats.dom.style.top; '0';
-        stats.dom.style.left; '0';
+        stats.dom.style.position = 'absolute';
+        stats.dom.style.top = '0';
+        stats.dom.style.left = '0';
 
         document.body.appendChild(stats.dom);
 

@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', { particle: 'image/particle.png' });
@@ -70,19 +69,5 @@ app.start(new Exo.Scene({
             .clear()
             .draw(this._emitter)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this._random.destroy();
-        this._random = null;
-
-        this._colorModifier.destroy();
-        this._colorModifier = null;
-
-        this._emitter.destroy();
-        this._emitter = null;
     },
 }));

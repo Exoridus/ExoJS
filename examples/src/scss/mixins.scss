@@ -27,7 +27,7 @@
     }
 
     #{$property}: $pxValues;
-    #{$property}: $remValues;
+    //#{$property}: $remValues;
 }
 
 @mixin box-shadow($args...) {
@@ -42,4 +42,23 @@
     -ms-transition: $args;
     -o-transition: $args;
     transition: $args;
+}
+
+@mixin border-radius($radius: $border-radius) {
+    $output: #{strip-unit($radius)}px;
+
+    -webkit-border-radius: $output;
+    border-radius: $output;
+    background-clip: padding-box;  /* stops bg color from leaking outside the border: */
+}
+
+@mixin clearfix() {
+    &:before,
+    &:after {
+        content: "";
+        display: table;
+    }
+    &:after {
+        clear: both;
+    }
 }

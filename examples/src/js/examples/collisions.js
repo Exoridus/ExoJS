@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('texture', { rainbow: 'image/rainbow.png' });
@@ -106,25 +105,5 @@ app.start(new Exo.Scene({
         renderManager.clear()
             .draw(this._container)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this.app.off('pointer:enter');
-        this.app.off('pointer:leave');
-
-        this._container.destroy();
-        this._container = null;
-
-        this._boxL.destroy();
-        this._boxL = null;
-
-        this._boxR.destroy();
-        this._boxR = null;
-
-        this._pointer = null;
-        this._ticker = null;
     },
 }));

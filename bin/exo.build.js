@@ -61,7 +61,7 @@ var Exo =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 71);
+/******/ 	return __webpack_require__(__webpack_require__.s = 72);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -813,7 +813,7 @@ var _Size = __webpack_require__(8);
 
 var _Size2 = _interopRequireDefault(_Size);
 
-var _Random = __webpack_require__(34);
+var _Random = __webpack_require__(35);
 
 var _Random2 = _interopRequireDefault(_Random);
 
@@ -1834,7 +1834,7 @@ var _Color = __webpack_require__(7);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _DefaultGamepadMapping = __webpack_require__(41);
+var _DefaultGamepadMapping = __webpack_require__(42);
 
 var _DefaultGamepadMapping2 = _interopRequireDefault(_DefaultGamepadMapping);
 
@@ -5852,7 +5852,7 @@ var _ArrayBufferFactory2 = __webpack_require__(13);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
-var _MediaSource = __webpack_require__(39);
+var _MediaSource = __webpack_require__(40);
 
 var _MediaSource2 = _interopRequireDefault(_MediaSource);
 
@@ -9168,7 +9168,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _SceneNode2 = __webpack_require__(74);
+var _SceneNode2 = __webpack_require__(75);
 
 var _SceneNode3 = _interopRequireDefault(_SceneNode2);
 
@@ -10385,7 +10385,7 @@ var _Size = __webpack_require__(8);
 
 var _Size2 = _interopRequireDefault(_Size);
 
-var _View = __webpack_require__(53);
+var _View = __webpack_require__(54);
 
 var _View2 = _interopRequireDefault(_View);
 
@@ -10858,11 +10858,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ShaderAttribute = __webpack_require__(57);
+var _ShaderAttribute = __webpack_require__(58);
 
 var _ShaderAttribute2 = _interopRequireDefault(_ShaderAttribute);
 
-var _ShaderUniform = __webpack_require__(58);
+var _ShaderUniform = __webpack_require__(59);
 
 var _ShaderUniform2 = _interopRequireDefault(_ShaderUniform);
 
@@ -11541,6 +11541,206 @@ exports.default = Shader;
 
 
 Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @typedef {Object} DatabaseResult
+ * @property {String} type
+ * @property {String} name
+ * @property {?Object} data
+ */
+
+/**
+ * @class Database
+ */
+var Database = function () {
+
+  /**
+   * @constructor
+   * @param {String} name
+   * @param {Number} version
+   */
+  function Database(name, version) {
+    _classCallCheck(this, Database);
+
+    /**
+     * @private
+     * @member {String}
+     */
+    this._name = name;
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    this._version = version;
+
+    /**
+     * @private
+     * @member {Boolean}
+     */
+    this._connected = false;
+  }
+
+  /**
+   * @public
+   * @readonly
+   * @member {String}
+   */
+
+
+  _createClass(Database, [{
+    key: 'connect',
+
+
+    /**
+     * @public
+     * @returns {Promise}
+     */
+    value: function connect() {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @returns {Promise}
+     */
+
+  }, {
+    key: 'disconnect',
+    value: function disconnect() {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @param {String} type
+     * @param {String} name
+     * @returns {Promise<DatabaseResult>}
+     */
+
+  }, {
+    key: 'load',
+    value: function load(type, name) {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @param {String} type
+     * @param {String} name
+     * @param {Object} data
+     * @returns {Promise<DatabaseResult>}
+     */
+
+  }, {
+    key: 'save',
+    value: function save(type, name, data) {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @param {String} type
+     * @param {String} name
+     * @returns {Promise<DatabaseResult>}
+     */
+
+  }, {
+    key: 'delete',
+    value: function _delete(type, name) {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @param {String} [type='*']
+     * @returns {Promise}
+     */
+
+  }, {
+    key: 'clearStorage',
+    value: function clearStorage() {
+      var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @returns {Promise}
+     */
+
+  }, {
+    key: 'deleteStorage',
+    value: function deleteStorage() {
+      throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     */
+
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      this.disconnect();
+
+      this._name = null;
+      this._version = null;
+      this._connected = null;
+    }
+  }, {
+    key: 'name',
+    get: function get() {
+      return this._name;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+
+  }, {
+    key: 'version',
+    get: function get() {
+      return this._version;
+    }
+
+    /**
+     * @public
+     * @member {Boolean}
+     */
+
+  }, {
+    key: 'connected',
+    get: function get() {
+      return this._connected;
+    },
+    set: function set(connected) {
+      this._connected = connected;
+    }
+  }]);
+
+  return Database;
+}();
+
+exports.default = Database;
+
+/***/ }),
+/* 34 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
@@ -11556,7 +11756,7 @@ var _EventEmitter2 = __webpack_require__(6);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ResourceContainer = __webpack_require__(35);
+var _ResourceContainer = __webpack_require__(36);
 
 var _ResourceContainer2 = _interopRequireDefault(_ResourceContainer);
 
@@ -11568,7 +11768,7 @@ var _BlobFactory = __webpack_require__(21);
 
 var _BlobFactory2 = _interopRequireDefault(_BlobFactory);
 
-var _FontFactory = __webpack_require__(36);
+var _FontFactory = __webpack_require__(37);
 
 var _FontFactory2 = _interopRequireDefault(_FontFactory);
 
@@ -11576,23 +11776,23 @@ var _ImageFactory = __webpack_require__(22);
 
 var _ImageFactory2 = _interopRequireDefault(_ImageFactory);
 
-var _JSONFactory = __webpack_require__(37);
+var _JSONFactory = __webpack_require__(38);
 
 var _JSONFactory2 = _interopRequireDefault(_JSONFactory);
 
-var _MusicFactory = __webpack_require__(38);
+var _MusicFactory = __webpack_require__(39);
 
 var _MusicFactory2 = _interopRequireDefault(_MusicFactory);
 
-var _SoundFactory = __webpack_require__(44);
+var _SoundFactory = __webpack_require__(45);
 
 var _SoundFactory2 = _interopRequireDefault(_SoundFactory);
 
-var _TextFactory = __webpack_require__(46);
+var _TextFactory = __webpack_require__(47);
 
 var _TextFactory2 = _interopRequireDefault(_TextFactory);
 
-var _TextureFactory = __webpack_require__(47);
+var _TextureFactory = __webpack_require__(48);
 
 var _TextureFactory2 = _interopRequireDefault(_TextureFactory);
 
@@ -11600,7 +11800,7 @@ var _MediaSourceFactory = __webpack_require__(14);
 
 var _MediaSourceFactory2 = _interopRequireDefault(_MediaSourceFactory);
 
-var _VideoFactory = __webpack_require__(48);
+var _VideoFactory = __webpack_require__(49);
 
 var _VideoFactory2 = _interopRequireDefault(_VideoFactory);
 
@@ -11619,32 +11819,41 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class ResourceLoader
+ * @class Loader
  * @extends EventEmitter
  */
-var ResourceLoader = function (_EventEmitter) {
-    _inherits(ResourceLoader, _EventEmitter);
+var Loader = function (_EventEmitter) {
+    _inherits(Loader, _EventEmitter);
 
     /**
      * @constructor
      * @param {Object} [options]
      * @param {String} [options.resourcePath='']
      * @param {Database} [options.database=null]
+     * @param {String} [options.method=settings.REQUEST_METHOD]
+     * @param {String} [options.mode=settings.REQUEST_MODE]
+     * @param {String} [options.cache=settings.REQUEST_CACHE]
      */
-    function ResourceLoader() {
+    function Loader() {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref$resourcePath = _ref.resourcePath,
             resourcePath = _ref$resourcePath === undefined ? '' : _ref$resourcePath,
             _ref$database = _ref.database,
-            database = _ref$database === undefined ? null : _ref$database;
+            database = _ref$database === undefined ? null : _ref$database,
+            _ref$method = _ref.method,
+            method = _ref$method === undefined ? _settings2.default.REQUEST_METHOD : _ref$method,
+            _ref$mode = _ref.mode,
+            mode = _ref$mode === undefined ? _settings2.default.REQUEST_MODE : _ref$mode,
+            _ref$cache = _ref.cache,
+            cache = _ref$cache === undefined ? _settings2.default.REQUEST_CACHE : _ref$cache;
 
-        _classCallCheck(this, ResourceLoader);
+        _classCallCheck(this, Loader);
 
         /**
          * @private
          * @member {String}
          */
-        var _this = _possibleConstructorReturn(this, (ResourceLoader.__proto__ || Object.getPrototypeOf(ResourceLoader)).call(this));
+        var _this = _possibleConstructorReturn(this, (Loader.__proto__ || Object.getPrototypeOf(Loader)).call(this));
 
         _this._resourcePath = resourcePath;
 
@@ -11676,19 +11885,19 @@ var ResourceLoader = function (_EventEmitter) {
          * @private
          * @member {String}
          */
-        _this._method = _settings2.default.REQUEST_METHOD;
+        _this._method = method;
 
         /**
          * @private
          * @member {String}
          */
-        _this._mode = _settings2.default.REQUEST_MODE;
+        _this._mode = mode;
 
         /**
          * @private
          * @member {String}
          */
-        _this._cache = _settings2.default.REQUEST_CACHE;
+        _this._cache = cache;
 
         _this._addFactories();
         return _this;
@@ -11701,7 +11910,7 @@ var ResourceLoader = function (_EventEmitter) {
      */
 
 
-    _createClass(ResourceLoader, [{
+    _createClass(Loader, [{
         key: 'addFactory',
 
 
@@ -11710,7 +11919,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @chainable
          * @param {String} type
          * @param {ResourceFactory} factory
-         * @returns {ResourceLoader}
+         * @returns {Loader}
          */
         value: function addFactory(type, factory) {
             this._factories.set(type, factory);
@@ -11740,9 +11949,9 @@ var ResourceLoader = function (_EventEmitter) {
          * @chainable
          * @param {String} type
          * @param {Object<String, String>|String} itemsOrName
-         * @param {Object|String} optionsOrPath
+         * @param {Object|String} [optionsOrPath]
          * @param {Object} [options]
-         * @returns {ResourceLoader}
+         * @returns {Loader}
          */
 
     }, {
@@ -11861,11 +12070,11 @@ var ResourceLoader = function (_EventEmitter) {
             };
 
             if (this._database) {
-                return this._database.loadData(factory.storageType, name).then(function (result) {
+                return this._database.load(factory.storageType, name).then(function (result) {
                     return result.data || factory.request(completePath, request).then(function (response) {
                         return factory.process(response);
                     }).then(function (data) {
-                        return _this3._database.saveData(factory.storageType, name, data).then(function (result) {
+                        return _this3._database.save(factory.storageType, name, data).then(function (result) {
                             return result.data;
                         });
                     });
@@ -11892,7 +12101,7 @@ var ResourceLoader = function (_EventEmitter) {
          * @param {Boolean} [options.events=true]
          * @param {Boolean} [options.queue=true]
          * @param {Boolean} [options.resources=true]
-         * @returns {ResourceLoader}
+         * @returns {Loader}
          */
 
     }, {
@@ -11928,7 +12137,7 @@ var ResourceLoader = function (_EventEmitter) {
     }, {
         key: 'destroy',
         value: function destroy() {
-            _get(ResourceLoader.prototype.__proto__ || Object.getPrototypeOf(ResourceLoader.prototype), 'destroy', this).call(this);
+            _get(Loader.prototype.__proto__ || Object.getPrototypeOf(Loader.prototype), 'destroy', this).call(this);
 
             var _iteratorNormalCompletion2 = true;
             var _didIteratorError2 = false;
@@ -12095,13 +12304,13 @@ var ResourceLoader = function (_EventEmitter) {
         }
     }]);
 
-    return ResourceLoader;
+    return Loader;
 }(_EventEmitter3.default);
 
-exports.default = ResourceLoader;
+exports.default = Loader;
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12306,7 +12515,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12528,7 +12737,7 @@ var ResourceContainer = function () {
 exports.default = ResourceContainer;
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12615,7 +12824,7 @@ var FontFactory = function (_ArrayBufferFactory) {
 exports.default = FontFactory;
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12691,7 +12900,7 @@ var JSONFactory = function (_ResourceFactory) {
 exports.default = JSONFactory;
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12709,7 +12918,7 @@ var _MediaSourceFactory2 = __webpack_require__(14);
 
 var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
 
-var _Music = __webpack_require__(40);
+var _Music = __webpack_require__(41);
 
 var _Music2 = _interopRequireDefault(_Music);
 
@@ -12779,7 +12988,7 @@ var MusicFactory = function (_MediaSourceFactory) {
 exports.default = MusicFactory;
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13049,7 +13258,7 @@ var MediaSource = function () {
 exports.default = MediaSource;
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13232,7 +13441,7 @@ var Music = function (_Media) {
 exports.default = Music;
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13244,11 +13453,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _const = __webpack_require__(0);
 
-var _GamepadMapping2 = __webpack_require__(42);
+var _GamepadMapping2 = __webpack_require__(43);
 
 var _GamepadMapping3 = _interopRequireDefault(_GamepadMapping2);
 
-var _GamepadControl = __webpack_require__(43);
+var _GamepadControl = __webpack_require__(44);
 
 var _GamepadControl2 = _interopRequireDefault(_GamepadControl);
 
@@ -13284,7 +13493,7 @@ var DefaultGamepadMapping = function (_GamepadMapping) {
 exports.default = DefaultGamepadMapping;
 
 /***/ }),
-/* 42 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13446,7 +13655,7 @@ var GamepadMapping = function () {
 exports.default = GamepadMapping;
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13644,7 +13853,7 @@ var GamepadControl = function () {
 exports.default = GamepadControl;
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13662,7 +13871,7 @@ var _MediaSourceFactory2 = __webpack_require__(14);
 
 var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
 
-var _Sound = __webpack_require__(45);
+var _Sound = __webpack_require__(46);
 
 var _Sound2 = _interopRequireDefault(_Sound);
 
@@ -13732,7 +13941,7 @@ var SoundFactory = function (_MediaSourceFactory) {
 exports.default = SoundFactory;
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14083,7 +14292,7 @@ var Sound = function (_Media) {
 exports.default = Sound;
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14159,7 +14368,7 @@ var TextFactory = function (_ResourceFactory) {
 exports.default = TextFactory;
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14239,7 +14448,7 @@ var TextureFactory = function (_ImageFactory) {
 exports.default = TextureFactory;
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14253,7 +14462,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Video = __webpack_require__(49);
+var _Video = __webpack_require__(50);
 
 var _Video2 = _interopRequireDefault(_Video);
 
@@ -14331,7 +14540,7 @@ var VideoFactory = function (_MediaSourceFactory) {
 exports.default = VideoFactory;
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14839,7 +15048,7 @@ var Video = function (_Sprite) {
 exports.default = Video;
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15217,7 +15426,7 @@ var Transformable = function (_EventEmitter) {
 exports.default = Transformable;
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15275,12 +15484,6 @@ var SceneManager = function (_EventEmitter) {
         var _this = _possibleConstructorReturn(this, (SceneManager.__proto__ || Object.getPrototypeOf(SceneManager)).call(this));
 
         _this._app = app;
-
-        /**
-         * @private
-         * @member {ResourceLoader}
-         */
-        _this._loader = app.loader;
 
         /**
          * @private
@@ -15353,7 +15556,6 @@ var SceneManager = function (_EventEmitter) {
 
             this._scene = null;
             this._status = null;
-            this._loader = null;
             this._app = null;
         }
 
@@ -15367,16 +15569,17 @@ var SceneManager = function (_EventEmitter) {
             var _this2 = this;
 
             if (this._scene) {
-                this._status = STATUS.LOADING;
+                var loader = this._app.loader;
 
+                this._status = STATUS.LOADING;
                 this._scene.app = this._app;
-                this._scene.load(this._loader);
+                this._scene.load(loader);
 
                 this.trigger('scene:load');
 
-                this._loader.load().then(function () {
+                loader.load().then(function () {
                     _this2._status = STATUS.RUNNING;
-                    _this2._scene.init(_this2._loader.resources);
+                    _this2._scene.init(loader.resources);
 
                     _this2.trigger('scene:init');
                 });
@@ -15401,7 +15604,7 @@ var SceneManager = function (_EventEmitter) {
                 this._scene = null;
 
                 this._status = STATUS.NONE;
-                this._loader.clear();
+                this._app.loader.clear();
 
                 this.trigger('scene:destroy');
             }
@@ -15446,7 +15649,7 @@ var SceneManager = function (_EventEmitter) {
 exports.default = SceneManager;
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15472,11 +15675,11 @@ var _RenderTarget = __webpack_require__(30);
 
 var _RenderTarget2 = _interopRequireDefault(_RenderTarget);
 
-var _SpriteRenderer = __webpack_require__(55);
+var _SpriteRenderer = __webpack_require__(56);
 
 var _SpriteRenderer2 = _interopRequireDefault(_SpriteRenderer);
 
-var _ParticleRenderer = __webpack_require__(61);
+var _ParticleRenderer = __webpack_require__(62);
 
 var _ParticleRenderer2 = _interopRequireDefault(_ParticleRenderer);
 
@@ -16325,7 +16528,7 @@ var RenderManager = function () {
 exports.default = RenderManager;
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16351,7 +16554,7 @@ var _Matrix2 = _interopRequireDefault(_Matrix);
 
 var _utils = __webpack_require__(1);
 
-var _ObservableSize = __webpack_require__(54);
+var _ObservableSize = __webpack_require__(55);
 
 var _ObservableSize2 = _interopRequireDefault(_ObservableSize);
 
@@ -16852,7 +17055,7 @@ var View = function () {
 exports.default = View;
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17056,7 +17259,7 @@ var ObservableSize = function (_Size) {
 exports.default = ObservableSize;
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17072,7 +17275,7 @@ var _Renderer2 = __webpack_require__(31);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
-var _SpriteShader = __webpack_require__(56);
+var _SpriteShader = __webpack_require__(57);
 
 var _SpriteShader2 = _interopRequireDefault(_SpriteShader);
 
@@ -17080,7 +17283,7 @@ var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _Buffer = __webpack_require__(60);
+var _Buffer = __webpack_require__(61);
 
 var _Buffer2 = _interopRequireDefault(_Buffer);
 
@@ -17438,7 +17641,7 @@ var SpriteRenderer = function (_Renderer) {
 exports.default = SpriteRenderer;
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17456,7 +17659,7 @@ var _Shader2 = __webpack_require__(32);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
-var _path = __webpack_require__(59);
+var _path = __webpack_require__(60);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -17511,7 +17714,7 @@ var SpriteShader = function (_Shader) {
 exports.default = SpriteShader;
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17783,7 +17986,7 @@ var ShaderAttribute = function () {
 exports.default = ShaderAttribute;
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17987,7 +18190,7 @@ var ShaderUniform = function () {
 exports.default = ShaderUniform;
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -18215,10 +18418,10 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(77)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(78)))
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18427,7 +18630,7 @@ var Buffer = function () {
 exports.default = Buffer;
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18443,7 +18646,7 @@ var _Renderer2 = __webpack_require__(31);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
-var _ParticleShader = __webpack_require__(62);
+var _ParticleShader = __webpack_require__(63);
 
 var _ParticleShader2 = _interopRequireDefault(_ParticleShader);
 
@@ -18453,7 +18656,7 @@ var _settings = __webpack_require__(3);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _Buffer = __webpack_require__(60);
+var _Buffer = __webpack_require__(61);
 
 var _Buffer2 = _interopRequireDefault(_Buffer);
 
@@ -18842,7 +19045,7 @@ var ParticleRenderer = function (_Renderer) {
 exports.default = ParticleRenderer;
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18860,7 +19063,7 @@ var _Shader2 = __webpack_require__(32);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
-var _path = __webpack_require__(59);
+var _path = __webpack_require__(60);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18918,7 +19121,7 @@ var ParticleShader = function (_Shader) {
 exports.default = ParticleShader;
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18938,15 +19141,15 @@ var _ChannelManager2 = __webpack_require__(10);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
-var _Keyboard = __webpack_require__(64);
+var _Keyboard = __webpack_require__(65);
 
 var _Keyboard2 = _interopRequireDefault(_Keyboard);
 
-var _GamepadManager = __webpack_require__(65);
+var _GamepadManager = __webpack_require__(66);
 
 var _GamepadManager2 = _interopRequireDefault(_GamepadManager);
 
-var _PointerManager = __webpack_require__(67);
+var _PointerManager = __webpack_require__(68);
 
 var _PointerManager2 = _interopRequireDefault(_PointerManager);
 
@@ -19196,7 +19399,7 @@ var InputManager = function (_ChannelManager) {
 exports.default = InputManager;
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19415,7 +19618,7 @@ var Keyboard = function (_ChannelManager) {
 exports.default = Keyboard;
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19431,7 +19634,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _const = __webpack_require__(0);
 
-var _Gamepad = __webpack_require__(66);
+var _Gamepad = __webpack_require__(67);
 
 var _Gamepad2 = _interopRequireDefault(_Gamepad);
 
@@ -19600,7 +19803,7 @@ var GamepadManager = function (_ChannelManager) {
 exports.default = GamepadManager;
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19816,7 +20019,7 @@ var Gamepad = function (_ChannelManager) {
 exports.default = Gamepad;
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19840,7 +20043,7 @@ var _ChannelManager2 = __webpack_require__(10);
 
 var _ChannelManager3 = _interopRequireDefault(_ChannelManager2);
 
-var _Pointer = __webpack_require__(68);
+var _Pointer = __webpack_require__(69);
 
 var _Pointer2 = _interopRequireDefault(_Pointer);
 
@@ -20423,7 +20626,7 @@ var PointerManager = function (_ChannelManager) {
 exports.default = PointerManager;
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20862,7 +21065,7 @@ var Pointer = function (_ChannelManager) {
 exports.default = Pointer;
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21354,7 +21557,7 @@ var TextStyle = function () {
 exports.default = TextStyle;
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21735,7 +21938,7 @@ var Particle = function () {
 exports.default = Particle;
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21758,7 +21961,7 @@ Object.keys(_const).forEach(function (key) {
     });
 });
 
-var _content = __webpack_require__(72);
+var _content = __webpack_require__(73);
 
 Object.keys(_content).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21770,7 +21973,7 @@ Object.keys(_content).forEach(function (key) {
     });
 });
 
-var _core = __webpack_require__(75);
+var _core = __webpack_require__(76);
 
 Object.keys(_core).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21782,7 +21985,7 @@ Object.keys(_core).forEach(function (key) {
     });
 });
 
-var _graphics = __webpack_require__(81);
+var _graphics = __webpack_require__(82);
 
 Object.keys(_graphics).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21794,7 +21997,7 @@ Object.keys(_graphics).forEach(function (key) {
     });
 });
 
-var _particles = __webpack_require__(86);
+var _particles = __webpack_require__(87);
 
 Object.keys(_particles).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21806,7 +22009,7 @@ Object.keys(_particles).forEach(function (key) {
     });
 });
 
-var _input = __webpack_require__(92);
+var _input = __webpack_require__(93);
 
 Object.keys(_input).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21818,7 +22021,7 @@ Object.keys(_input).forEach(function (key) {
     });
 });
 
-var _math = __webpack_require__(94);
+var _math = __webpack_require__(95);
 
 Object.keys(_math).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21830,7 +22033,7 @@ Object.keys(_math).forEach(function (key) {
     });
 });
 
-var _media = __webpack_require__(95);
+var _media = __webpack_require__(96);
 
 Object.keys(_media).forEach(function (key) {
     if (key === "default" || key === "__esModule") return;
@@ -21863,7 +22066,7 @@ exports.settings = settings; /**
                               */
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21873,7 +22076,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(73);
+var _Database = __webpack_require__(33);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -21882,16 +22085,25 @@ Object.defineProperty(exports, 'Database', {
   }
 });
 
-var _ResourceLoader = __webpack_require__(33);
+var _IDBDatabase = __webpack_require__(74);
 
-Object.defineProperty(exports, 'ResourceLoader', {
+Object.defineProperty(exports, 'IDBDatabase', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_ResourceLoader).default;
+    return _interopRequireDefault(_IDBDatabase).default;
   }
 });
 
-var _ResourceContainer = __webpack_require__(35);
+var _Loader = __webpack_require__(34);
+
+Object.defineProperty(exports, 'Loader', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_Loader).default;
+  }
+});
+
+var _ResourceContainer = __webpack_require__(36);
 
 Object.defineProperty(exports, 'ResourceContainer', {
   enumerable: true,
@@ -21918,7 +22130,7 @@ Object.defineProperty(exports, 'BlobFactory', {
   }
 });
 
-var _FontFactory = __webpack_require__(36);
+var _FontFactory = __webpack_require__(37);
 
 Object.defineProperty(exports, 'FontFactory', {
   enumerable: true,
@@ -21945,7 +22157,7 @@ Object.defineProperty(exports, 'MediaSourceFactory', {
   }
 });
 
-var _MusicFactory = __webpack_require__(38);
+var _MusicFactory = __webpack_require__(39);
 
 Object.defineProperty(exports, 'MusicFactory', {
   enumerable: true,
@@ -21954,7 +22166,7 @@ Object.defineProperty(exports, 'MusicFactory', {
   }
 });
 
-var _SoundFactory = __webpack_require__(44);
+var _SoundFactory = __webpack_require__(45);
 
 Object.defineProperty(exports, 'SoundFactory', {
   enumerable: true,
@@ -21963,7 +22175,7 @@ Object.defineProperty(exports, 'SoundFactory', {
   }
 });
 
-var _VideoFactory = __webpack_require__(48);
+var _VideoFactory = __webpack_require__(49);
 
 Object.defineProperty(exports, 'VideoFactory', {
   enumerable: true,
@@ -21981,7 +22193,7 @@ Object.defineProperty(exports, 'ImageFactory', {
   }
 });
 
-var _TextureFactory = __webpack_require__(47);
+var _TextureFactory = __webpack_require__(48);
 
 Object.defineProperty(exports, 'TextureFactory', {
   enumerable: true,
@@ -21990,7 +22202,7 @@ Object.defineProperty(exports, 'TextureFactory', {
   }
 });
 
-var _JSONFactory = __webpack_require__(37);
+var _JSONFactory = __webpack_require__(38);
 
 Object.defineProperty(exports, 'JSONFactory', {
   enumerable: true,
@@ -21999,7 +22211,7 @@ Object.defineProperty(exports, 'JSONFactory', {
   }
 });
 
-var _TextFactory = __webpack_require__(46);
+var _TextFactory = __webpack_require__(47);
 
 Object.defineProperty(exports, 'TextFactory', {
   enumerable: true,
@@ -22011,7 +22223,7 @@ Object.defineProperty(exports, 'TextFactory', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22023,11 +22235,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
 var _const = __webpack_require__(0);
 
 var _support = __webpack_require__(5);
 
 var _support2 = _interopRequireDefault(_support);
+
+var _Database2 = __webpack_require__(33);
+
+var _Database3 = _interopRequireDefault(_Database2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -22035,25 +22253,24 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/**
- * @typedef {Object} DatabaseResult
- * @property {String} type
- * @property {String} name
- * @property {?Object} data
- */
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
- * @class Database
+ * @class IDBDatabase
+ * @extends Database
  */
-var Database = function () {
+var IDBDatabase = function (_Database) {
+    _inherits(IDBDatabase, _Database);
 
     /**
      * @constructor
      * @param {String} name
      * @param {Number} version
      */
-    function Database(name, version) {
-        _classCallCheck(this, Database);
+    function IDBDatabase(name, version) {
+        _classCallCheck(this, IDBDatabase);
 
         if (!_support2.default.indexedDB) {
             throw new Error('This browser does not support indexedDB!');
@@ -22061,55 +22278,61 @@ var Database = function () {
 
         /**
          * @private
-         * @member {String}
-         */
-        this._name = name;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._version = version;
-
-        /**
-         * @private
          * @member {?IDBDatabase}
          */
-        this._database = null;
+        var _this = _possibleConstructorReturn(this, (IDBDatabase.__proto__ || Object.getPrototypeOf(IDBDatabase)).call(this, name, version));
+
+        _this._database = null;
 
         /**
          * @private
          * @member {?Promise}
          */
-        this._connect = null;
+        _this._connect = null;
 
         /**
          * @private
          * @member {Function}
          */
-        this._onCloseHandler = this._closeConnection.bind(this);
+        _this._onCloseHandler = _this.disconnect.bind(_this);
+        return _this;
     }
 
     /**
      * @public
-     * @readonly
-     * @member {String}
+     * @param {String} type
+     * @param {String} [transactionMode='readonly']
+     * @returns {Promise}
      */
 
 
-    _createClass(Database, [{
-        key: 'open',
+    _createClass(IDBDatabase, [{
+        key: 'getObjectStore',
+        value: function getObjectStore(type) {
+            var _this2 = this;
 
+            var transactionMode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'readonly';
+
+            if (!_const.DATABASE_TYPES.includes(type)) {
+                return Promise.reject(Error('The object store named "' + type + '" could not be found.'));
+            }
+
+            return this.connect().then(function () {
+                return _this2._database.transaction([type], transactionMode).objectStore(type);
+            });
+        }
 
         /**
-         * @public
-         * @returns {Promise}
+         * @override
          */
-        value: function open() {
-            var _this = this;
+
+    }, {
+        key: 'connect',
+        value: function connect() {
+            var _this3 = this;
 
             return this._connect || (this._connect = new Promise(function (resolve, reject) {
-                var request = indexedDB.open(_this._name, _this._version);
+                var request = indexedDB.open(_this3.name, _this3.version);
 
                 request.addEventListener('upgradeneeded', function (event) {
                     var database = event.target.result,
@@ -22117,10 +22340,10 @@ var Database = function () {
                         currentStores = [].concat(_toConsumableArray(transaction.objectStoreNames));
 
                     database.addEventListener('error', function (event) {
-                        return reject(event);
+                        return reject(Error('An error occurred while opening the database.'));
                     });
                     database.addEventListener('abort', function (event) {
-                        return reject(event);
+                        return reject(Error('The database opening was aborted.'));
                     });
 
                     var _iteratorNormalCompletion = true;
@@ -22179,125 +22402,50 @@ var Database = function () {
                 });
 
                 request.addEventListener('success', function (event) {
-                    _this._database = event.target.result;
-                    _this._database.addEventListener('close', _this._onCloseHandler);
-                    _this._database.addEventListener('versionchange', _this._onCloseHandler);
+                    _this3._database = event.target.result;
+                    _this3._database.addEventListener('close', _this3._onCloseHandler);
+                    _this3._database.addEventListener('versionchange', _this3._onCloseHandler);
+                    _this3.connected = true;
 
-                    resolve(_this._database);
+                    resolve();
                 });
 
                 request.addEventListener('error', function (event) {
-                    return reject(event);
+                    return reject(Error('An error occurred while requesting the database connection.'));
                 });
                 request.addEventListener('blocked', function (event) {
-                    return reject(event);
+                    return reject(Error('The request for the database connection has been blocked.'));
                 });
             }));
         }
 
         /**
-         * @public
-         * @returns {Promise}
+         * @override
          */
 
     }, {
-        key: 'close',
-        value: function close() {
-            this._closeConnection();
+        key: 'disconnect',
+        value: function disconnect() {
+            if (this._database) {
+                this._database.removeEventListener('close', this._onCloseHandler);
+                this._database.removeEventListener('versionchange', this._onCloseHandler);
+                this._database.close();
+                this._database = null;
+                this.connected = false;
+            }
+
+            this._connect = null;
 
             return Promise.resolve();
         }
 
         /**
-         * @public
-         * @param {String} type
-         * @param {String} [transactionMode='readonly']
-         * @returns {Promise}
+         * @override
          */
 
     }, {
-        key: 'getObjectStore',
-        value: function getObjectStore(type) {
-            var transactionMode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'readonly';
-
-            if (!_const.DATABASE_TYPES.includes(type)) {
-                return Promise.reject(Error('Could not find ObjectStore named "' + type + '".'));
-            }
-
-            return this.open().then(function (database) {
-                return database.transaction([type], transactionMode).objectStore(type);
-            });
-        }
-
-        /**
-         * @public
-         * @param {String} [type='*']
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'clear',
-        value: function clear() {
-            var _this2 = this;
-
-            var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
-
-            if (type === '*') {
-                return _const.DATABASE_TYPES.reduce(function (promise, type) {
-                    return promise.then(function () {
-                        return _this2.clear(type);
-                    });
-                }, Promise.resolve());
-            }
-
-            return this.getObjectStore(type, 'readwrite').then(function (store) {
-                return new Promise(function (resolve, reject) {
-                    var request = store.clear();
-
-                    request.addEventListener('success', function (event) {
-                        return resolve(event);
-                    });
-                    request.addEventListener('error', function (event) {
-                        return reject(event);
-                    });
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @returns {Promise}
-         */
-
-    }, {
-        key: 'deleteDatabase',
-        value: function deleteDatabase() {
-            var _this3 = this;
-
-            return this.close().then(function () {
-                return new Promise(function (resolve, reject) {
-                    var request = indexedDB.deleteDatabase(_this3._name);
-
-                    request.addEventListener('success', function (event) {
-                        return resolve(event);
-                    });
-                    request.addEventListener('error', function (event) {
-                        return reject(event);
-                    });
-                });
-            });
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @param {String} name
-         * @returns {Promise<DatabaseResult>}
-         */
-
-    }, {
-        key: 'loadData',
-        value: function loadData(type, name) {
+        key: 'load',
+        value: function load(type, name) {
             return this.getObjectStore(type).then(function (store) {
                 return new Promise(function (resolve, reject) {
                     var request = store.get(name);
@@ -22310,23 +22458,19 @@ var Database = function () {
                     });
 
                     request.addEventListener('error', function (event) {
-                        return reject(event);
+                        return reject(Error('An error occurred while loading an item.'));
                     });
                 });
             });
         }
 
         /**
-         * @public
-         * @param {String} type
-         * @param {String} name
-         * @param {Object} data
-         * @returns {Promise<DatabaseResult>}
+         * @override
          */
 
     }, {
-        key: 'saveData',
-        value: function saveData(type, name, data) {
+        key: 'save',
+        value: function save(type, name, data) {
             return this.getObjectStore(type, 'readwrite').then(function (store) {
                 return new Promise(function (resolve, reject) {
                     var request = store.put({ name: name, data: data });
@@ -22335,22 +22479,19 @@ var Database = function () {
                         return resolve({ type: type, name: name, data: data });
                     });
                     request.addEventListener('error', function (event) {
-                        return reject(event);
+                        return reject(Error('An error occurred while saving an item.'));
                     });
                 });
             });
         }
 
         /**
-         * @public
-         * @param {String} type
-         * @param {String} name
-         * @returns {Promise<DatabaseResult>}
+         * @override
          */
 
     }, {
-        key: 'removeData',
-        value: function removeData(type, name) {
+        key: 'delete',
+        value: function _delete(type, name) {
             return this.getObjectStore(type, 'readwrite').then(function (store) {
                 return new Promise(function (resolve, reject) {
                     var request = store.delete(name);
@@ -22359,80 +22500,90 @@ var Database = function () {
                         return resolve({ type: type, name: name, data: null });
                     });
                     request.addEventListener('error', function (event) {
-                        return reject(event);
+                        return reject(Error('An error occurred while deleting an item.'));
                     });
                 });
             });
         }
 
         /**
-         * @public
+         * @override
+         */
+
+    }, {
+        key: 'clearStorage',
+        value: function clearStorage() {
+            var _this4 = this;
+
+            var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '*';
+
+            if (type === '*') {
+                return _const.DATABASE_TYPES.reduce(function (promise, type) {
+                    return promise.then(function () {
+                        return _this4.clearStorage(type);
+                    });
+                }, Promise.resolve());
+            }
+
+            return this.getObjectStore(type, 'readwrite').then(function (store) {
+                return new Promise(function (resolve, reject) {
+                    var request = store.clear();
+
+                    request.addEventListener('success', function (event) {
+                        return resolve();
+                    });
+                    request.addEventListener('error', function (event) {
+                        return reject(Error('An error occurred while clearing a storage.'));
+                    });
+                });
+            });
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'deleteStorage',
+        value: function deleteStorage() {
+            var _this5 = this;
+
+            return this.disconnect().then(function () {
+                return new Promise(function (resolve, reject) {
+                    var request = indexedDB.deleteDatabase(_this5._name);
+
+                    request.addEventListener('success', function (event) {
+                        return resolve(event);
+                    });
+                    request.addEventListener('error', function (event) {
+                        return reject(Error('An error occurred while deleting a storage.'));
+                    });
+                });
+            });
+        }
+
+        /**
+         * @override
          */
 
     }, {
         key: 'destroy',
         value: function destroy() {
-            this._closeConnection();
+            _get(IDBDatabase.prototype.__proto__ || Object.getPrototypeOf(IDBDatabase.prototype), 'destroy', this).call(this);
 
-            this._name = null;
-            this._version = null;
             this._onCloseHandler = null;
-        }
-
-        /**
-         * @private
-         */
-
-    }, {
-        key: '_closeConnection',
-        value: function _closeConnection() {
-            if (this._database) {
-                this._database.removeEventListener('close', this._onCloseHandler);
-                this._database.removeEventListener('versionchange', this._onCloseHandler);
-                this._database.close();
-                this._database = null;
-            }
-
+            this._database = null;
             this._connect = null;
-        }
-    }, {
-        key: 'name',
-        get: function get() {
-            return this._name;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Number}
-         */
-
-    }, {
-        key: 'version',
-        get: function get() {
-            return this._version;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Boolean}
-         */
-
-    }, {
-        key: 'open',
-        get: function get() {
-            return this._database !== null;
         }
     }]);
 
-    return Database;
-}();
+    return IDBDatabase;
+}(_Database3.default);
 
-exports.default = Database;
+exports.default = IDBDatabase;
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22446,7 +22597,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Transformable2 = __webpack_require__(50);
+var _Transformable2 = __webpack_require__(51);
 
 var _Transformable3 = _interopRequireDefault(_Transformable2);
 
@@ -22782,7 +22933,7 @@ var SceneNode = function (_Transformable) {
 exports.default = SceneNode;
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22801,7 +22952,7 @@ Object.defineProperty(exports, 'EventEmitter', {
   }
 });
 
-var _Application = __webpack_require__(76);
+var _Application = __webpack_require__(77);
 
 Object.defineProperty(exports, 'Application', {
   enumerable: true,
@@ -22810,7 +22961,7 @@ Object.defineProperty(exports, 'Application', {
   }
 });
 
-var _Quadtree = __webpack_require__(78);
+var _Quadtree = __webpack_require__(79);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -22819,7 +22970,7 @@ Object.defineProperty(exports, 'Quadtree', {
   }
 });
 
-var _Scene = __webpack_require__(79);
+var _Scene = __webpack_require__(80);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -22828,7 +22979,7 @@ Object.defineProperty(exports, 'Scene', {
   }
 });
 
-var _SceneManager = __webpack_require__(51);
+var _SceneManager = __webpack_require__(52);
 
 Object.defineProperty(exports, 'SceneManager', {
   enumerable: true,
@@ -22864,7 +23015,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(80);
+var _Timer = __webpack_require__(81);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -22894,7 +23045,7 @@ Object.defineProperty(exports, 'Collision', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22916,21 +23067,21 @@ var _Clock = __webpack_require__(29);
 
 var _Clock2 = _interopRequireDefault(_Clock);
 
-var _SceneManager = __webpack_require__(51);
+var _SceneManager = __webpack_require__(52);
 
 var _SceneManager2 = _interopRequireDefault(_SceneManager);
 
-var _RenderManager = __webpack_require__(52);
+var _RenderManager = __webpack_require__(53);
 
 var _RenderManager2 = _interopRequireDefault(_RenderManager);
 
-var _InputManager = __webpack_require__(63);
+var _InputManager = __webpack_require__(64);
 
 var _InputManager2 = _interopRequireDefault(_InputManager);
 
-var _ResourceLoader = __webpack_require__(33);
+var _Loader = __webpack_require__(34);
 
-var _ResourceLoader2 = _interopRequireDefault(_ResourceLoader);
+var _Loader2 = _interopRequireDefault(_Loader);
 
 var _settings = __webpack_require__(3);
 
@@ -22989,9 +23140,9 @@ var Application = function (_EventEmitter) {
 
         /**
          * @private
-         * @member {ResourceLoader}
+         * @member {Loader}
          */
-        _this._loader = new _ResourceLoader2.default({
+        _this._loader = new _Loader2.default({
             resourcePath: config.resourcePath,
             database: config.database
         });
@@ -23067,8 +23218,6 @@ var Application = function (_EventEmitter) {
                 this._sceneManager.setScene(scene);
                 this._updateId = requestAnimationFrame(this._updateHandler);
                 this._delta.restart();
-
-                this.trigger('start', this);
             }
 
             return this;
@@ -23086,8 +23235,6 @@ var Application = function (_EventEmitter) {
             if (this._running) {
                 this._inputManager.update();
                 this._sceneManager.update(this._delta.elapsedTime);
-
-                this.trigger('update', this);
 
                 this._updateId = requestAnimationFrame(this._updateHandler);
                 this._delta.restart();
@@ -23111,8 +23258,6 @@ var Application = function (_EventEmitter) {
                 this._sceneManager.setScene(null);
                 this._delta.stop();
                 this._running = false;
-
-                this.trigger('stop', this);
             }
 
             return this;
@@ -23194,7 +23339,7 @@ var Application = function (_EventEmitter) {
         /**
          * @public
          * @readonly
-         * @member {ResourceLoader}
+         * @member {Loader}
          */
 
     }, {
@@ -23270,7 +23415,7 @@ var Application = function (_EventEmitter) {
 exports.default = Application;
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -23460,7 +23605,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23779,7 +23924,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23851,7 +23996,7 @@ var Scene = function (_EventEmitter) {
 
         /**
          * @public
-         * @param {ResourceLoader} loader
+         * @param {Loader} loader
          */
         value: function load(loader) {} // eslint-disable-line
         // do nothing
@@ -23927,7 +24072,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24109,7 +24254,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24119,7 +24264,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _RenderManager = __webpack_require__(52);
+var _RenderManager = __webpack_require__(53);
 
 Object.defineProperty(exports, 'RenderManager', {
   enumerable: true,
@@ -24137,7 +24282,7 @@ Object.defineProperty(exports, 'RenderTarget', {
   }
 });
 
-var _RenderTexture = __webpack_require__(82);
+var _RenderTexture = __webpack_require__(83);
 
 Object.defineProperty(exports, 'RenderTexture', {
   enumerable: true,
@@ -24155,7 +24300,7 @@ Object.defineProperty(exports, 'Texture', {
   }
 });
 
-var _View = __webpack_require__(53);
+var _View = __webpack_require__(54);
 
 Object.defineProperty(exports, 'View', {
   enumerable: true,
@@ -24182,7 +24327,7 @@ Object.defineProperty(exports, 'Drawable', {
   }
 });
 
-var _Drawing = __webpack_require__(83);
+var _Drawing = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Drawing', {
   enumerable: true,
@@ -24200,7 +24345,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Text = __webpack_require__(84);
+var _Text = __webpack_require__(85);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -24209,7 +24354,7 @@ Object.defineProperty(exports, 'Text', {
   }
 });
 
-var _TextStyle = __webpack_require__(69);
+var _TextStyle = __webpack_require__(70);
 
 Object.defineProperty(exports, 'TextStyle', {
   enumerable: true,
@@ -24227,7 +24372,7 @@ Object.defineProperty(exports, 'Shader', {
   }
 });
 
-var _ShaderAttribute = __webpack_require__(57);
+var _ShaderAttribute = __webpack_require__(58);
 
 Object.defineProperty(exports, 'ShaderAttribute', {
   enumerable: true,
@@ -24236,7 +24381,7 @@ Object.defineProperty(exports, 'ShaderAttribute', {
   }
 });
 
-var _ShaderUniform = __webpack_require__(58);
+var _ShaderUniform = __webpack_require__(59);
 
 Object.defineProperty(exports, 'ShaderUniform', {
   enumerable: true,
@@ -24254,7 +24399,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Spritesheet = __webpack_require__(85);
+var _Spritesheet = __webpack_require__(86);
 
 Object.defineProperty(exports, 'Spritesheet', {
   enumerable: true,
@@ -24263,7 +24408,7 @@ Object.defineProperty(exports, 'Spritesheet', {
   }
 });
 
-var _SpriteRenderer = __webpack_require__(55);
+var _SpriteRenderer = __webpack_require__(56);
 
 Object.defineProperty(exports, 'SpriteRenderer', {
   enumerable: true,
@@ -24272,7 +24417,7 @@ Object.defineProperty(exports, 'SpriteRenderer', {
   }
 });
 
-var _SpriteShader = __webpack_require__(56);
+var _SpriteShader = __webpack_require__(57);
 
 Object.defineProperty(exports, 'SpriteShader', {
   enumerable: true,
@@ -24284,7 +24429,7 @@ Object.defineProperty(exports, 'SpriteShader', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24775,7 +24920,7 @@ var RenderTexture = function (_RenderTarget) {
 exports.default = RenderTexture;
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25176,7 +25321,7 @@ var Drawing = function (_Container) {
 exports.default = Drawing;
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25200,7 +25345,7 @@ var _Texture = __webpack_require__(11);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
-var _TextStyle = __webpack_require__(69);
+var _TextStyle = __webpack_require__(70);
 
 var _TextStyle2 = _interopRequireDefault(_TextStyle);
 
@@ -25545,7 +25690,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25813,7 +25958,7 @@ var Spritesheet = function (_Sprite) {
 exports.default = Spritesheet;
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25823,7 +25968,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Particle = __webpack_require__(70);
+var _Particle = __webpack_require__(71);
 
 Object.defineProperty(exports, 'Particle', {
   enumerable: true,
@@ -25832,7 +25977,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(87);
+var _ParticleEmitter = __webpack_require__(88);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -25841,7 +25986,7 @@ Object.defineProperty(exports, 'ParticleEmitter', {
   }
 });
 
-var _ParticleShader = __webpack_require__(62);
+var _ParticleShader = __webpack_require__(63);
 
 Object.defineProperty(exports, 'ParticleShader', {
   enumerable: true,
@@ -25850,7 +25995,7 @@ Object.defineProperty(exports, 'ParticleShader', {
   }
 });
 
-var _ParticleRenderer = __webpack_require__(61);
+var _ParticleRenderer = __webpack_require__(62);
 
 Object.defineProperty(exports, 'ParticleRenderer', {
   enumerable: true,
@@ -25868,7 +26013,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(88);
+var _ForceModifier = __webpack_require__(89);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -25877,7 +26022,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(89);
+var _ScaleModifier = __webpack_require__(90);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -25886,7 +26031,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(90);
+var _TorqueModifier = __webpack_require__(91);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -25895,7 +26040,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
   }
 });
 
-var _ColorModifier = __webpack_require__(91);
+var _ColorModifier = __webpack_require__(92);
 
 Object.defineProperty(exports, 'ColorModifier', {
   enumerable: true,
@@ -25907,7 +26052,7 @@ Object.defineProperty(exports, 'ColorModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25927,7 +26072,7 @@ var _Drawable2 = __webpack_require__(25);
 
 var _Drawable3 = _interopRequireDefault(_Drawable2);
 
-var _Particle = __webpack_require__(70);
+var _Particle = __webpack_require__(71);
 
 var _Particle2 = _interopRequireDefault(_Particle);
 
@@ -26810,7 +26955,7 @@ var ParticleEmitter = function (_Drawable) {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26939,7 +27084,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27066,7 +27211,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27185,7 +27330,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27363,7 +27508,7 @@ var ColorModifier = function (_ParticleModifier) {
 exports.default = ColorModifier;
 
 /***/ }),
-/* 92 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27382,7 +27527,7 @@ Object.defineProperty(exports, 'ChannelManager', {
   }
 });
 
-var _Input = __webpack_require__(93);
+var _Input = __webpack_require__(94);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -27391,7 +27536,7 @@ Object.defineProperty(exports, 'Input', {
   }
 });
 
-var _InputManager = __webpack_require__(63);
+var _InputManager = __webpack_require__(64);
 
 Object.defineProperty(exports, 'InputManager', {
   enumerable: true,
@@ -27400,7 +27545,7 @@ Object.defineProperty(exports, 'InputManager', {
   }
 });
 
-var _Keyboard = __webpack_require__(64);
+var _Keyboard = __webpack_require__(65);
 
 Object.defineProperty(exports, 'Keyboard', {
   enumerable: true,
@@ -27409,7 +27554,7 @@ Object.defineProperty(exports, 'Keyboard', {
   }
 });
 
-var _GamepadControl = __webpack_require__(43);
+var _GamepadControl = __webpack_require__(44);
 
 Object.defineProperty(exports, 'GamepadControl', {
   enumerable: true,
@@ -27418,7 +27563,7 @@ Object.defineProperty(exports, 'GamepadControl', {
   }
 });
 
-var _GamepadMapping = __webpack_require__(42);
+var _GamepadMapping = __webpack_require__(43);
 
 Object.defineProperty(exports, 'GamepadMapping', {
   enumerable: true,
@@ -27427,7 +27572,7 @@ Object.defineProperty(exports, 'GamepadMapping', {
   }
 });
 
-var _DefaultGamepadMapping = __webpack_require__(41);
+var _DefaultGamepadMapping = __webpack_require__(42);
 
 Object.defineProperty(exports, 'DefaultGamepadMapping', {
   enumerable: true,
@@ -27436,7 +27581,7 @@ Object.defineProperty(exports, 'DefaultGamepadMapping', {
   }
 });
 
-var _Gamepad = __webpack_require__(66);
+var _Gamepad = __webpack_require__(67);
 
 Object.defineProperty(exports, 'Gamepad', {
   enumerable: true,
@@ -27445,7 +27590,7 @@ Object.defineProperty(exports, 'Gamepad', {
   }
 });
 
-var _GamepadManager = __webpack_require__(65);
+var _GamepadManager = __webpack_require__(66);
 
 Object.defineProperty(exports, 'GamepadManager', {
   enumerable: true,
@@ -27454,7 +27599,7 @@ Object.defineProperty(exports, 'GamepadManager', {
   }
 });
 
-var _Pointer = __webpack_require__(68);
+var _Pointer = __webpack_require__(69);
 
 Object.defineProperty(exports, 'Pointer', {
   enumerable: true,
@@ -27463,7 +27608,7 @@ Object.defineProperty(exports, 'Pointer', {
   }
 });
 
-var _PointerManager = __webpack_require__(67);
+var _PointerManager = __webpack_require__(68);
 
 Object.defineProperty(exports, 'PointerManager', {
   enumerable: true,
@@ -27475,7 +27620,7 @@ Object.defineProperty(exports, 'PointerManager', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 93 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27814,7 +27959,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 94 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27851,7 +27996,7 @@ Object.defineProperty(exports, 'Matrix', {
   }
 });
 
-var _Transformable = __webpack_require__(50);
+var _Transformable = __webpack_require__(51);
 
 Object.defineProperty(exports, 'Transformable', {
   enumerable: true,
@@ -27905,7 +28050,7 @@ Object.defineProperty(exports, 'Size', {
   }
 });
 
-var _Random = __webpack_require__(34);
+var _Random = __webpack_require__(35);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -27914,7 +28059,7 @@ Object.defineProperty(exports, 'Random', {
   }
 });
 
-var _ObservableSize = __webpack_require__(54);
+var _ObservableSize = __webpack_require__(55);
 
 Object.defineProperty(exports, 'ObservableSize', {
   enumerable: true,
@@ -27926,7 +28071,7 @@ Object.defineProperty(exports, 'ObservableSize', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 95 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27945,7 +28090,7 @@ Object.defineProperty(exports, 'Media', {
   }
 });
 
-var _Sound = __webpack_require__(45);
+var _Sound = __webpack_require__(46);
 
 Object.defineProperty(exports, 'Sound', {
   enumerable: true,
@@ -27954,7 +28099,7 @@ Object.defineProperty(exports, 'Sound', {
   }
 });
 
-var _Music = __webpack_require__(40);
+var _Music = __webpack_require__(41);
 
 Object.defineProperty(exports, 'Music', {
   enumerable: true,
@@ -27963,7 +28108,7 @@ Object.defineProperty(exports, 'Music', {
   }
 });
 
-var _Video = __webpack_require__(49);
+var _Video = __webpack_require__(50);
 
 Object.defineProperty(exports, 'Video', {
   enumerable: true,
@@ -27972,7 +28117,7 @@ Object.defineProperty(exports, 'Video', {
   }
 });
 
-var _MediaSource = __webpack_require__(39);
+var _MediaSource = __webpack_require__(40);
 
 Object.defineProperty(exports, 'MediaSource', {
   enumerable: true,
@@ -27981,7 +28126,7 @@ Object.defineProperty(exports, 'MediaSource', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(96);
+var _AudioAnalyser = __webpack_require__(97);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -27993,7 +28138,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 96 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

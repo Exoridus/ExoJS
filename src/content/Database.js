@@ -1,6 +1,3 @@
-import { DATABASE_TYPES } from '../const';
-import support from '../support';
-
 /**
  * @typedef {Object} DatabaseResult
  * @property {String} type
@@ -19,9 +16,6 @@ export default class Database {
      * @param {Number} version
      */
     constructor(name, version) {
-        if (!support.indexedDB) {
-            throw new Error('This browser does not support indexedDB!');
-        }
 
         /**
          * @private
@@ -37,21 +31,9 @@ export default class Database {
 
         /**
          * @private
-         * @member {?IDBDatabase}
+         * @member {Boolean}
          */
-        this._database = null;
-
-        /**
-         * @private
-         * @member {?Promise}
-         */
-        this._connect = null;
-
-        /**
-         * @private
-         * @member {Function}
-         */
-        this._onCloseHandler = this._closeConnection.bind(this);
+        this._connected = false;
     }
 
     /**
@@ -74,114 +56,30 @@ export default class Database {
 
     /**
      * @public
-     * @readonly
      * @member {Boolean}
      */
-    get open() {
-        return this._database !== null;
+    get connected() {
+        return this._connected;
+    }
+
+    set connected(connected) {
+        this._connected = connected;
     }
 
     /**
      * @public
      * @returns {Promise}
      */
-    open() {
-        return this._connect || (this._connect = new Promise((resolve, reject) => {
-            const request = indexedDB.open(this._name, this._version);
-
-            request.addEventListener('upgradeneeded', (event) => {
-                const database = event.target.result,
-                    transaction = event.target.transaction,
-                    currentStores = [...transaction.objectStoreNames];
-
-                database.addEventListener('error', (event) => reject(event));
-                database.addEventListener('abort', (event) => reject(event));
-
-                for (const store of currentStores) {
-                    if (!DATABASE_TYPES.includes(store)) {
-                        database.deleteObjectStore(store);
-                    }
-                }
-
-                for (const type of DATABASE_TYPES) {
-                    if (!currentStores.includes(type)) {
-                        database.createObjectStore(type, { keyPath: 'name' });
-                    }
-                }
-            });
-
-            request.addEventListener('success', (event) => {
-                this._database = event.target.result;
-                this._database.addEventListener('close', this._onCloseHandler);
-                this._database.addEventListener('versionchange', this._onCloseHandler);
-
-                resolve(this._database);
-            });
-
-            request.addEventListener('error', (event) => reject(event));
-            request.addEventListener('blocked', (event) => reject(event));
-        }));
+    connect() {
+        throw new Error('Method not implemented!');
     }
 
     /**
      * @public
      * @returns {Promise}
      */
-    close() {
-        this._closeConnection();
-
-        return Promise.resolve();
-    }
-
-    /**
-     * @public
-     * @param {String} type
-     * @param {String} [transactionMode='readonly']
-     * @returns {Promise}
-     */
-    getObjectStore(type, transactionMode = 'readonly') {
-        if (!DATABASE_TYPES.includes(type)) {
-            return Promise.reject(Error(`Could not find ObjectStore named "${type}".`));
-        }
-
-        return this.open()
-            .then((database) => database
-                .transaction([type], transactionMode)
-                .objectStore(type));
-    }
-
-    /**
-     * @public
-     * @param {String} [type='*']
-     * @returns {Promise}
-     */
-    clear(type = '*') {
-        if (type === '*') {
-            return DATABASE_TYPES.reduce((promise, type) => promise.then(() => this.clear(type)), Promise.resolve());
-        }
-
-        return this
-            .getObjectStore(type, 'readwrite')
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.clear();
-
-                request.addEventListener('success', (event) => resolve(event));
-                request.addEventListener('error', (event) => reject(event));
-            }));
-    }
-
-    /**
-     * @public
-     * @returns {Promise}
-     */
-    deleteDatabase() {
-        return this.close()
-            .then(() => new Promise((resolve, reject) => {
-                const request = indexedDB.deleteDatabase(this._name);
-
-                request.addEventListener('success', (event) => resolve(event));
-                request.addEventListener('error', (event) => reject(event));
-            }));
+    disconnect() {
+        throw new Error('Method not implemented!');
     }
 
     /**
@@ -190,21 +88,8 @@ export default class Database {
      * @param {String} name
      * @returns {Promise<DatabaseResult>}
      */
-    loadData(type, name) {
-        return this
-            .getObjectStore(type)
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.get(name);
-
-                request.addEventListener('success', (event) => {
-                    const result = event.target.result,
-                        data = (result && result.data) || null;
-
-                    resolve({ type, name, data });
-                });
-
-                request.addEventListener('error', (event) => reject(event));
-            }));
+    load(type, name) {
+        throw new Error('Method not implemented!');
     }
 
     /**
@@ -214,15 +99,8 @@ export default class Database {
      * @param {Object} data
      * @returns {Promise<DatabaseResult>}
      */
-    saveData(type, name, data) {
-        return this
-            .getObjectStore(type, 'readwrite')
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.put({ name, data });
-
-                request.addEventListener('success', () => resolve({ type, name, data }));
-                request.addEventListener('error', (event) => reject(event));
-            }));
+    save(type, name, data) {
+        throw new Error('Method not implemented!');
     }
 
     /**
@@ -231,39 +109,35 @@ export default class Database {
      * @param {String} name
      * @returns {Promise<DatabaseResult>}
      */
-    removeData(type, name) {
-        return this
-            .getObjectStore(type, 'readwrite')
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.delete(name);
+    delete(type, name) {
+        throw new Error('Method not implemented!');
+    }
 
-                request.addEventListener('success', () => resolve({ type, name, data: null }));
-                request.addEventListener('error', (event) => reject(event));
-            }));
+    /**
+     * @public
+     * @param {String} [type='*']
+     * @returns {Promise}
+     */
+    clearStorage(type = '*') {
+        throw new Error('Method not implemented!');
+    }
+
+    /**
+     * @public
+     * @returns {Promise}
+     */
+    deleteStorage() {
+        throw new Error('Method not implemented!');
     }
 
     /**
      * @public
      */
     destroy() {
-        this._closeConnection();
+        this.disconnect();
 
         this._name = null;
         this._version = null;
-        this._onCloseHandler = null;
-    }
-
-    /**
-     * @private
-     */
-    _closeConnection() {
-        if (this._database) {
-            this._database.removeEventListener('close', this._onCloseHandler);
-            this._database.removeEventListener('versionchange', this._onCloseHandler);
-            this._database.close();
-            this._database = null;
-        }
-
-        this._connect = null;
+        this._connected = null;
     }
 }

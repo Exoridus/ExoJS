@@ -1,29 +1,66 @@
+import $ from './vendor/jquery';
+import CodeMirror from './vendor/codemirror/lib/codemirror';
+import './vendor/codemirror/mode/javascript/javascript';
+import './vendor/codemirror/addon/edit/matchbrackets';
+import './vendor/codemirror/addon/selection/active-line';
+import { Loader } from 'exojs';
+
 $(() => {
-    const loader = new Exo.ResourceLoader(),
+    let loader = new Loader({ cache: 'no-cache' }),
         $navigation = $('.navigation-list'),
-        $content = $('.main-content'),
-        template = '<!DOCTYPE html><html><head><style>body,html{margin:0px;height:100%;overflow:hidden;}canvas{width:100%;height:100%;}</style></head><body>' +
-            '<script src="vendor/stats.js"></script>' +
-            '<script src="vendor/jquery.js"></script>' +
-            '<script src="../bin/exo.build.js"></script>' +
-            '<script>window.onload = function(){__CODE__}</script></body></html>',
+        $preview = $('.example-preview'),
+        $title = $('.editor-title'),
+        $code = $('.editor-code'),
+        $refresh= $('.refresh-button'),
+        activeExample = null,
+        activeEditor = null,
+        activePath = location.hash.slice(1),
 
-        createExample = (code) => {
-            $content.html('<iframe class="example" src="blank.html">');
+        createExample = (html) => {
+            const $frame = $('<iframe>', {
+                'class': 'preview-frame',
+                'src': 'preview.html',
+            });
 
-            const example = document.querySelector('.example'),
-                content = example.contentDocument ||  example.contentWindow.document;
+            $preview.html($frame);
 
-            content.open();
-            content.write(template.replace('__CODE__', code));
-            content.close();
+            $frame.contents()
+                .find('body')
+                .append($('<script>window.onload = function(){' + html + '}</script>'))
+
+            $code.html(html);
+
+            if (activeEditor) {
+                $(activeEditor.getWrapperElement()).remove();
+            }
+
+            activeEditor = CodeMirror.fromTextArea($code[0], {
+                mode: 'javascript',
+                theme: 'monokai-sublime',
+                lineNumbers: true,
+                styleActiveLine: true,
+                matchBrackets: true,
+                viewportMargin: Infinity,
+                lineWrapping: true,
+            });
         },
 
         loadExample = (example) => {
+            if (activeExample === example) {
+                return;
+            }
+
+            activeExample = example;
+            activePath = example.path;
+            window.location.hash = activePath;
+            document.title = `${example.title} - ExoJS Examples`;
+            $title.html(`Example Code: ${example.title}`);
+
+            loader.clear();
             loader.loadItem({
                 type: 'text',
-                name: example.path,
-                path: `src/js/examples/${example.path}?no-cache=${Date.now()}`,
+                name: activePath,
+                path: `src/js/examples/${activePath}`,
             }).then(createExample);
         },
 
@@ -39,6 +76,10 @@ $(() => {
                         'class': 'navigation-item',
                         'html': example.title
                     }).on('click', () => loadExample(example)));
+
+                    if (!activePath || activePath === example.path) {
+                        loadExample(example);
+                    }
                 }
             }
         };
@@ -48,4 +89,10 @@ $(() => {
         name: 'examples',
         path: 'assets/json/examples.json',
     }).then(createNavigation);
+
+    $refresh.on('click', () => {
+        if (activeEditor) {
+            createExample(activeEditor.getValue());
+        }
+    })
 });

@@ -1,6 +1,5 @@
 const app = new Exo.Application({
     resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -9,7 +8,7 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceLoader} loader
+     * @param {Loader} loader
      */
     load(loader) {
         loader.add('video', { example: 'video/example.webm' });
@@ -47,16 +46,5 @@ app.start(new Exo.Scene({
         renderManager.clear()
             .draw(this._video)
             .display();
-    },
-
-    /**
-     * @override
-     */
-    destroy() {
-        this.app.off('pointer:down');
-        this.app.off('resize');
-
-        this._video.destroy();
-        this._video = null;
     },
 }));

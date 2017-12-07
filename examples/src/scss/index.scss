@@ -1,116 +1,261 @@
 @import "variables";
 @import "mixins";
-@import "global";
+@import "vendor";
+@import "base";
 
 .page-wrap {
     @include unitize(min-width, 1120);
     @include transition(transform 350ms ease);
     @include unitize(padding-left, 320);
-    width: 100%;
     position: absolute;
     display: block;
+    width: 100%;
     left: 0;
     top: 0;
     bottom: 0;
 
     .main {
-        @include unitize(padding-top, 64);
         position: relative;
         overflow: auto;
         overflow-x: hidden;
         height: 100%;
 
         .main-content {
+            @include unitize(padding, 64, 0);
             @include unitize(width, 800);
-            @include unitize(height, 600);
-            position: absolute;
-            margin: auto;
-            left: 0;
-            right: 0;
+            margin: 0 auto;
 
-            .example {
-                position: absolute;
-                left: 0px;
-                top: 0px;
+            .example-preview {
+                @include unitize(width, 800);
+                @include unitize(height, 600);
+                @include unitize(margin-bottom, 64);
+
+                .preview-frame {
+                    width: 100%;
+                    height: 100%;
+                    border: 0;
+                }
+            }
+
+            .example-editor {
+                @include box-shadow(0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12));
+                @include border-radius(2);
+                background: $color-card;
+                position: relative;
+                height: auto;
                 width: 100%;
-                height: 100%;
-                border: 0;
+
+                .editor-header {
+                    @include unitize(padding, 16);
+                    @include unitize(line-height, 16);
+                    @include clearfix();
+                    border-bottom: 1px solid $color-divider;
+
+                    .editor-title {
+                        font-weight: $font-weight-medium;
+                    }
+                }
+
+                .editor-content {
+                    padding: 0;
+
+                    .editor-code {
+                        background: transparent;
+                        resize: none;
+                        border: 0;
+                    }
+                }
+            }
+
+            .refresh-button {
+                @include unitize(height, 48);
+                @include unitize(padding, 6, 4);
+                -webkit-tap-highlight-color: $color-transparent;
+                background: $color-transparent;
+                border: 0 none;
+                display: inline-block;
+                outline: none;
+                cursor: pointer;
+                text-decoration: none;
+                position: absolute;
+                right: 0;
+                top: 0;
+
+                .button-content {
+                    @include transition(background-color 0.3s linear);
+                    @include unitize(height, 36);
+                    @include unitize(min-width, 64);
+                    @include unitize(line-height, 36);
+                    @include unitize(padding, 0, 8);
+                    @include unitize(letter-spacing, 0.5);
+                    @include border-radius();
+                    display: block;
+                    text-transform: uppercase;
+                    text-align: center;
+                    font-weight: $font-weight-medium;
+                    position: relative;
+                    border: 0 none;
+                    outline: none;
+                    background-color: $color-transparent;
+                    color: $color-accent;
+                }
+
+                &:hover,
+                &:focus {
+                    .button-content {
+                        background-color: rgba($color-white, 0.12);
+                    }
+                }
+
+                &:active {
+                    .button-content {
+                        background-color: rgba(#CCCCCC, 0.25);
+                    }
+                }
             }
         }
     }
+}
 
-    .navigation {
-        @include transition(all 350ms ease);
-        @include unitize(width, 320);
-        @include box-shadow(0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12));
-        background: $color-navigation;
+.navigation {
+    @include transition(all 350ms ease);
+    @include unitize(width, 320);
+    @include box-shadow(0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12));
+    background: $color-navigation;
+    position: absolute;
+    overflow: visible;
+    outline: none;
+    height: 100%;
+    bottom: 0;
+    left: 0;
+    top: 0;
+
+    .navigation-content {
         position: absolute;
-        overflow: visible;
-        outline: none;
-        height: 100%;
+        overflow: auto;
+        width: 100%;
         bottom: 0;
         left: 0;
         top: 0;
 
-        .navigation-content {
-            position: absolute;
-            overflow: auto;
+        .navigation-header {
+            @include unitize(height, 64);
+            @include unitize(padding, 8, 16);
+            @include unitize(line-height, 48);
+            @include unitize(font-size, 20);
+            font-weight: $font-weight-medium;
+            color: $color-white;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+            margin: 0;
+        }
+
+        .navigation-sub-header {
+            @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
+            @include unitize(padding, 0, 16);
+            @include unitize(height, 48);
+            @include unitize(font-size, 14);
+            @include unitize(line-height, 48);
+            -webkit-tap-highlight-color: $color-transparent;
+            font-weight: $font-weight-medium;
+            color: $color-accent;
+            text-decoration: none;
+            position: relative;
+            cursor: default;
+            display: block;
             width: 100%;
-            bottom: 0;
-            left: 0;
-            top: 0;
+        }
 
-            .navigation-header {
-                @include unitize(height, 64);
-                @include unitize(padding, 8, 16);
-                @include unitize(line-height, 48);
-                @include unitize(font-size, 20);
-                font-weight: $font-weight-medium;
-                color: $color-white;
-                position: relative;
-                overflow: hidden;
-                cursor: default;
+        .navigation-item {
+            @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
+            @include unitize(padding, 0, 16);
+            @include unitize(height, 48);
+            @include unitize(font-size, 16);
+            @include unitize(line-height, 48);
+            -webkit-tap-highlight-color: $color-transparent;
+            font-weight: $font-weight-regular;
+            color: $color-text;
+            text-decoration: none;
+            position: relative;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+
+            &:hover {
+                background-color: rgba($color-white, 0.12);
             }
 
-            .navigation-sub-header {
-                @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
-                @include unitize(padding, 0, 16);
-                @include unitize(height, 48);
-                @include unitize(font-size, 14);
-                @include unitize(line-height, 48);
-                -webkit-tap-highlight-color: $color-transparent;
-                font-weight: $font-weight-medium;
-                color: $color-accent;
-                text-decoration: none;
-                position: relative;
-                cursor: default;
-                display: block;
-                width: 100%;
-            }
-
-            .navigation-item {
-                @include transition(background-color 120ms cubic-bezier(0, 0, 0.2, 1));
-                @include unitize(padding, 0, 16);
-                @include unitize(height, 48);
-                @include unitize(font-size, 16);
-                @include unitize(line-height, 48);
-                -webkit-tap-highlight-color: $color-transparent;
-                font-weight: $font-weight-regular;
-                color: $color-text;
-                text-decoration: none;
-                position: relative;
-                cursor: pointer;
-                display: block;
-                width: 100%;
-
-                &:hover {
-                    background-color: rgba($color-white, 0.12);
-                }
-
-                &:active {
-                    background-color: rgba($color-white, 0.18);
-                }
+            &:active {
+                background-color: rgba($color-white, 0.18);
             }
         }
+    }
+}
+
+.CodeMirror {
+    background: $color-navigation;
+    color: $color-text;
+    height: auto;
+
+    .CodeMirror-cursor {
+        border-left: 2px solid $color-white;
+    }
+
+    .CodeMirror-activeline-background {
+        background: lighten($color-navigation, 5%);
+    }
+
+    .CodeMirror-selected {
+        background: lighten($color-navigation, 10%);
+    }
+
+    .CodeMirror-gutters {
+        background: $color-navigation;
+    }
+
+    .CodeMirror-linenumber {
+        color: $color-text-secondary;
+    }
+
+    .cm-comment {
+        color: $color-text-disabled;
+    }
+
+    .cm-string {
+        color: #e6db74;
+    }
+
+    .cm-number {
+        color: #66d9ef;
+    }
+
+    .cm-atom {
+        color: #66d9ef;
+    }
+
+    .cm-keyword {
+        color: #f92672;
+    }
+
+    .cm-variable {
+        color: #a6e22e;
+    }
+
+    .cm-def {
+        font-style: italic;
+        color: #FD971F;
+    }
+
+    .cm-variable-2 {
+        color: #f92672;
+    }
+
+    .cm-property {
+        color: #66d9ef;
+    }
+
+    .cm-operator {
+        color: #A6A5A5;
     }
 }

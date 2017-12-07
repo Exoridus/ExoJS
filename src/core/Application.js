@@ -3,7 +3,7 @@ import Clock from './time/Clock';
 import SceneManager from './SceneManager';
 import RenderManager from '../graphics/RenderManager';
 import InputManager from '../input/InputManager';
-import ResourceLoader from '../content/ResourceLoader';
+import Loader from '../content/Loader';
 import settings from '../settings';
 
 /**
@@ -48,9 +48,9 @@ export default class Application extends EventEmitter {
 
         /**
          * @private
-         * @member {ResourceLoader}
+         * @member {Loader}
          */
-        this._loader = new ResourceLoader({
+        this._loader = new Loader({
             resourcePath: config.resourcePath,
             database: config.database,
         });
@@ -123,7 +123,7 @@ export default class Application extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {ResourceLoader}
+     * @member {Loader}
      */
     get loader() {
         return this._loader;
@@ -186,8 +186,6 @@ export default class Application extends EventEmitter {
             this._sceneManager.setScene(scene);
             this._updateId = requestAnimationFrame(this._updateHandler);
             this._delta.restart();
-
-            this.trigger('start', this);
         }
 
         return this;
@@ -202,8 +200,6 @@ export default class Application extends EventEmitter {
         if (this._running) {
             this._inputManager.update();
             this._sceneManager.update(this._delta.elapsedTime);
-
-            this.trigger('update', this);
 
             this._updateId = requestAnimationFrame(this._updateHandler);
             this._delta.restart();
@@ -224,8 +220,6 @@ export default class Application extends EventEmitter {
             this._sceneManager.setScene(null);
             this._delta.stop();
             this._running = false;
-
-            this.trigger('stop', this);
         }
 
         return this;
