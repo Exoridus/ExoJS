@@ -1,5 +1,5 @@
 import support from '../support';
-import { audioContext } from '../utils';
+import { audioContext } from '../utils/media';
 
 /**
  * @class AudioAnalyser

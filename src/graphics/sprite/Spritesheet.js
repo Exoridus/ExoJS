@@ -1,7 +1,7 @@
 import Texture from '../Texture';
 import Rectangle from '../../math/Rectangle';
 import Sprite from './Sprite';
-import { removeItems } from '../../utils';
+import { removeArrayItems } from '../../utils/array';
 
 /**
  * @class Spritesheet
@@ -69,7 +69,7 @@ export default class Spritesheet extends Sprite {
      * @param {Number} [frame.y]
      * @param {Number} [frame.width]
      * @param {Number} [frame.height]
-     * @return {SpriteSheet}
+     * @return {Spritesheet}
      */
     addFrame(name, { x, y, width, height } = {}) {
         this._frames.set(name, new Rectangle(x, y, width, height));
@@ -82,14 +82,14 @@ export default class Spritesheet extends Sprite {
      * @public
      * @chainable
      * @param {String} name
-     * @returns {SpriteSheet}
+     * @returns {Spritesheet}
      */
     removeFrame(name) {
         const frame = this.getFrame(name),
             index = this._frameNames.indexOf(name);
 
         this._frames.delete(name);
-        removeItems(this._frameNames, index, 1);
+        removeArrayItems(this._frameNames, index, 1);
         frame.destroy();
 
         return this;
@@ -112,7 +112,7 @@ export default class Spritesheet extends Sprite {
      * @public
      * @chainable
      * @param {String} name
-     * @returns {SpriteSheet}
+     * @returns {Spritesheet}
      */
     setFrame(name) {
         if (this._currentFrame !== name) {
@@ -126,7 +126,7 @@ export default class Spritesheet extends Sprite {
     /**
      * @public
      * @chainable
-     * @returns {SpriteSheet}
+     * @returns {Spritesheet}
      */
     clearFrames() {
         for (const frame of this._frames.values()) {

@@ -1,6 +1,6 @@
-import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET_GAMEPAD } from '../../const';
 import Gamepad from './Gamepad';
 import ChannelManager from '../ChannelManager';
+import { INPUT_CHANNELS_HANDLER } from '../../const';
 
 const navigator = window.navigator;
 
@@ -14,9 +14,11 @@ export default class GamepadManager extends ChannelManager {
      * @constructor
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
+     * @param {Number} offset
+     * @param {Number} length
      */
-    constructor(app, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET_GAMEPAD, INPUT_CHANNELS_DEVICE);
+    constructor(app, channelBuffer, offset, length) {
+        super(channelBuffer, offset, length);
 
         /**
          * @private
@@ -50,12 +52,19 @@ export default class GamepadManager extends ChannelManager {
             length = fetchedGamepads.length;
 
         for (let i = 0; i < length; i++) {
-            if (!!fetchedGamepads[i] === currentGamepads.has(i)) {
+            const fetchedGamepad = fetchedGamepads[i];
+
+            if (!!fetchedGamepad === currentGamepads.has(i)) {
                 continue;
             }
 
-            if (fetchedGamepads[i]) {
-                const gamepad = new Gamepad(fetchedGamepads[i], this.channelBuffer);
+            if (fetchedGamepad) {
+                const gamepad = new Gamepad(
+                    fetchedGamepad,
+                    this.channelBuffer,
+                    this.offset + (fetchedGamepad.index * INPUT_CHANNELS_HANDLER),
+                    INPUT_CHANNELS_HANDLER
+                );
 
                 currentGamepads.set(i, gamepad);
                 app.trigger('gamepad:add', gamepad, currentGamepads);

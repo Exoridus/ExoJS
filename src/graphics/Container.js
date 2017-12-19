@@ -1,5 +1,5 @@
 import Drawable from './Drawable';
-import { removeItems } from '../utils';
+import { removeArrayItems } from '../utils/array';
 
 /**
  * @class Container
@@ -169,7 +169,7 @@ export default class Container extends Drawable {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
 
-        removeItems(this._children, this.getChildIndex(child), 1);
+        removeArrayItems(this._children, this.getChildIndex(child), 1);
 
         this._children.splice(index, 0, child);
 
@@ -212,7 +212,7 @@ export default class Container extends Drawable {
      * @returns {Container}
      */
     removeChildAt(index) {
-        removeItems(this._children, index, 1);
+        removeArrayItems(this._children, index, 1);
 
         return this;
     }
@@ -231,7 +231,7 @@ export default class Container extends Drawable {
             throw new Error('Values are outside the acceptable range.');
         }
 
-        removeItems(this._children, begin, range);
+        removeArrayItems(this._children, begin, range);
 
         return this;
     }

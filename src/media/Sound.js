@@ -1,4 +1,5 @@
-import { audioContext, clamp } from '../utils';
+import { audioContext } from '../utils/media';
+import { clamp } from '../utils/math';
 import support from '../support';
 import Media from './Media';
 import settings from '../settings';
@@ -64,22 +65,19 @@ export default class Sound extends Media {
          */
         this._currentTime = 0;
 
-        if (support.webAudio) {
+        /**
+         * @private
+         * @member {?AudioBufferSourceNode}
+         */
+        this._sourceNode = null;
 
-            /**
-             * @private
-             * @member {?AudioBufferSourceNode}
-             */
-            this._sourceNode = null;
-
-            /**
-             * @private
-             * @member {?GainNode}
-             */
-            this._gainNode = audioContext.createGain();
-            this._gainNode.gain.value = this.volume;
-            this._gainNode.connect(audioContext.destination);
-        }
+        /**
+         * @private
+         * @member {?GainNode}
+         */
+        this._gainNode = audioContext.createGain();
+        this._gainNode.gain.setTargetAtTime(this.volume, audioContext.currentTime, 10);
+        this._gainNode.connect(audioContext.destination);
     }
 
     /**
@@ -96,7 +94,7 @@ export default class Sound extends Media {
             this._volume = volume;
 
             if (this._gainNode) {
-                this._gainNode.gain.value = this.muted ? 0 : volume;
+                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
             }
         }
     }
@@ -158,7 +156,7 @@ export default class Sound extends Media {
             this._muted = muted;
 
             if (this._gainNode) {
-                this._gainNode.gain.value = muted ? 0 : this.volume;
+                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
             }
         }
     }
@@ -252,13 +250,11 @@ export default class Sound extends Media {
     destroy() {
         super.destroy();
 
-        if (support.webAudio) {
-            this._sourceNode.disconnect();
-            this._sourceNode = null;
+        this._sourceNode.disconnect();
+        this._sourceNode = null;
 
-            this._gainNode.disconnect();
-            this._gainNode = null;
-        }
+        this._gainNode.disconnect();
+        this._gainNode = null;
 
         this._audioBuffer = null;
         this._paused = null;

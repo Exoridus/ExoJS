@@ -153,7 +153,6 @@ export default class SceneManager extends EventEmitter {
             this._scene = null;
 
             this._status = STATUS.NONE;
-            this._app.loader.clear();
 
             this.trigger('scene:destroy');
         }

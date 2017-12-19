@@ -1,4 +1,5 @@
-import { decodeAudioBuffer, determineMimeType } from '../utils';
+import { decodeAudioBuffer } from '../utils/media';
+import { determineMimeType } from '../utils/mime';
 import support from '../support';
 
 /**

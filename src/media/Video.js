@@ -1,4 +1,5 @@
-import { audioContext, clamp } from '../utils';
+import { audioContext } from '../utils/media';
+import { clamp } from '../utils/math';
 import Sprite from '../graphics/sprite/Sprite';
 import Texture from '../graphics/Texture';
 import support from '../support';
@@ -86,7 +87,7 @@ export default class Video extends Sprite {
          * @member {?GainNode}
          */
         this._gainNode = audioContext.createGain();
-        this._gainNode.gain.value = this.volume;
+        this._gainNode.gain.setTargetAtTime(this.volume, audioContext.currentTime, 10);
         this._gainNode.connect(audioContext.destination);
 
         /**
@@ -153,7 +154,7 @@ export default class Video extends Sprite {
             this._volume = volume;
 
             if (this._gainNode) {
-                this._gainNode.gain.value = this.muted ? 0 : volume;
+                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
             }
         }
     }
@@ -216,7 +217,7 @@ export default class Video extends Sprite {
             this._muted = muted;
 
             if (this._gainNode) {
-                this._gainNode.gain.value = muted ? 0 : this.volume;
+                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
             }
         }
     }
@@ -380,13 +381,11 @@ export default class Video extends Sprite {
 
         this.stop();
 
-        if (support.webAudio) {
-            this._sourceNode.disconnect();
-            this._sourceNode = null;
+        this._sourceNode.disconnect();
+        this._sourceNode = null;
 
-            this._gainNode.disconnect();
-            this._gainNode = null;
-        }
+        this._gainNode.disconnect();
+        this._gainNode = null;
 
         this._mediaSource = null;
         this._mediaElement = null;

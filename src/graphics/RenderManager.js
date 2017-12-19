@@ -5,7 +5,7 @@ import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
-import { imageToBase64 } from '../utils';
+import { imageToBase64 } from '../utils/media';
 import Texture from './Texture';
 
 /**
@@ -18,8 +18,8 @@ export default class RenderManager {
      * @param {Application} app
      */
     constructor(app) {
-        if (!support.webGL) {
-            throw new Error('This browser or hardware does not support WebGL.');
+        if (!support.webGL2) {
+            throw new Error('This browser or hardware does not support WebGL v2!');
         }
 
         const { width, height, clearColor } = app.config;
@@ -32,7 +32,7 @@ export default class RenderManager {
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {?WebGL2RenderingContext}
          */
         this._context = this._createContext();
 
@@ -100,6 +100,12 @@ export default class RenderManager {
 
         /**
          * @private
+         * @member {?VertexArray}
+         */
+        this._vao = null;
+
+        /**
+         * @private
          * @member {Color}
          */
         this._clearColor = (clearColor && clearColor.clone()) || new Color();
@@ -130,7 +136,7 @@ export default class RenderManager {
 
     /**
      * @public
-     * @member {WebGLRenderingContext}
+     * @member {WebGL2RenderingContext}
      */
     get context() {
         return this._context;
@@ -152,6 +158,18 @@ export default class RenderManager {
      */
     get texture() {
         return this._texture;
+    }
+
+    /**
+     * @public
+     * @member {?VertexArray}
+     */
+    get vao() {
+        return this._vao;
+    }
+
+    set vao(vao) {
+        this.setVAO(vao);
     }
 
     /**
@@ -259,6 +277,30 @@ export default class RenderManager {
             }
 
             this._renderTarget = renderTarget;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {VertexArray} vao
+     * @returns {RenderManager}
+     */
+    setVAO(vao) {
+        const newVao = vao || null;
+
+        if (this._vao !== newVao) {
+            if (newVao) {
+                newVao.bind();
+            }
+
+            if (this._vao) {
+                this._vao.unbind();
+            }
+
+            this._vao = newVao;
         }
 
         return this;
@@ -591,6 +633,7 @@ export default class RenderManager {
 
         this.setRenderTarget(null);
         this.setRenderer(null);
+        this.setVAO(null);
         this.setShader(null);
         this.setBuffer(null);
         this.setTexture(null);
@@ -608,6 +651,7 @@ export default class RenderManager {
         this._rootRenderTarget.destroy();
         this._rootRenderTarget = null;
 
+        this._vao = null;
         this._canvas = null;
         this._context = null;
         this._contextLost = null;
@@ -623,7 +667,7 @@ export default class RenderManager {
 
     /**
      * @private
-     * @returns {?WebGLRenderingContext|?WebGL2RenderingContext}
+     * @returns {?WebGL2RenderingContext|?WebGL2RenderingContext}
      */
     _createContext(options = settings.CONTEXT_OPTIONS) {
         try {

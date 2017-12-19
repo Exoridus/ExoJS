@@ -315,7 +315,7 @@ export default class Loader extends EventEmitter {
      */
     clear({ events = true, queue = true, resources = true } = {}) {
         if (events) {
-            this.off();
+            this.off('*');
         }
 
         if (queue) {

@@ -1,6 +1,7 @@
 import { SCALE_MODES, WRAP_MODES, TEXTURE_FLAGS } from '../const';
 import settings from '../settings';
-import { addFlag, hasFlag, powerOfTwo, removeFlag } from '../utils';
+import { hasFlag, addFlag, removeFlag } from '../utils/flags';
+import { isPowerOfTwo } from '../utils/math';
 import RenderTarget from './RenderTarget';
 
 /**
@@ -159,7 +160,7 @@ export default class RenderTexture extends RenderTarget {
      * @member {Boolean}
      */
     get powerOfTwo() {
-        return powerOfTwo(this.width) && powerOfTwo(this.height);
+        return isPowerOfTwo(this.width) && isPowerOfTwo(this.height);
     }
 
     /**

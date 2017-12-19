@@ -1,4 +1,10 @@
-import { removeItems } from '../utils';
+import { removeArrayItems } from '../utils/array';
+
+/**
+ * @typedef {Object} EventHandler
+ * @property {Function} callback
+ * @property {*} context
+ */
 
 /**
  * @class EventEmitter
@@ -12,15 +18,15 @@ export default class EventEmitter {
 
         /**
          * @private
-         * @member {Map<String, Object[]>}
+         * @member {Object<String, EventHandler[]>}
          */
-        this._events = new Map();
+        this._events = {};
     }
 
     /**
      * @public
      * @readonly
-     * @member {Map<String, Object[]>}
+     * @member {Object<String, EventHandler[]>}
      */
     get events() {
         return this._events;
@@ -35,22 +41,14 @@ export default class EventEmitter {
      * @returns {EventEmitter}
      */
     on(event, callback, context = this) {
-        if (!this._events) {
-            return this;
-        }
+        if (this._events) {
+            const events = this._events[event];
 
-        const events = this._events.get(event);
-
-        if (!events) {
-            this._events.set(event, [{
-                callback,
-                context,
-            }]);
-        } else {
-            events.push({
-                callback,
-                context,
-            });
+            if (!events) {
+                this._events[event] = [{ callback, context }];
+            } else {
+                events.push({ callback, context });
+            }
         }
 
         return this;
@@ -65,12 +63,16 @@ export default class EventEmitter {
      * @returns {EventEmitter}
      */
     once(event, callback, context = this) {
-        const once = (...args) => {
-            this.off(event, once, context);
-            callback.call(context, ...args);
-        };
+        if (this._events) {
+            const once = (...args) => {
+                this.off(event, once, context);
+                callback.call(context, ...args);
+            };
 
-        return this.on(event, once, context);
+            return this.on(event, once, context);
+        }
+
+        return this;
     }
 
     /**
@@ -86,47 +88,54 @@ export default class EventEmitter {
             return this;
         }
 
-        const mapping = this._events,
-            names = (event === '*') ? Object.keys(mapping) : [event],
-            lenNames = names.length;
+        const names = (event === '*') ? Object.keys(this._events) : [event];
 
-        for (let i = 0; i < lenNames; i++) {
-            const name = names[i],
-                events = mapping.get(name);
+        for (const name of names) {
+            const handlers = this._events[name];
 
             /**
              * Break for loop because only the one passed
              * event name can be wrong / not available.
              */
-            if (!events) {
+            if (!handlers) {
                 break;
             }
 
-            if (!events.length) {
-                mapping.delete(name);
+            if (!handlers.length) {
+                delete this._events[name];
+
                 continue;
             }
 
             if (!callback && !context) {
-                removeItems(events, 0, events.length);
-                mapping.delete(name);
+                for (const handler of handlers) {
+                    handler.callback = null;
+                    handler.context = null;
+                }
+                handlers.length = 0;
+
+                delete this._events[name];
+
                 continue;
             }
 
-            for (let j = events.length - 1; j >= 0; j--) {
-                if (callback && (callback !== events[j].callback)) {
+            for (let j = handlers.length - 1; j >= 0; j--) {
+                if (callback && (callback !== handlers[j].callback)) {
                     continue;
                 }
 
-                if (context && (context !== events[j].context)) {
+                if (context && (context !== handlers[j].context)) {
                     continue;
                 }
 
-                removeItems(events, j, 1);
+                handlers[j].callback = null;
+                handlers[j].context = null;
+
+                removeArrayItems(handlers, j, 1);
             }
 
-            if (!events.length) {
-                mapping.delete(name);
+            if (!handlers.length) {
+                delete this._events[name];
             }
         }
 
@@ -141,15 +150,9 @@ export default class EventEmitter {
      * @returns {EventEmitter}
      */
     trigger(event, ...args) {
-        if (!this._events) {
-            return this;
-        }
-
-        const events = this._events.get(event);
-
-        if (events) {
-            for (const event of events) {
-                event.callback.call(event.context, ...args);
+        if (this._events && this._events[event]) {
+            for (const handler of this._events[event]) {
+                handler.callback.call(handler.context, ...args);
             }
         }
 
@@ -160,18 +163,8 @@ export default class EventEmitter {
      * @public
      */
     destroy() {
-        if (this._events.size) {
-            for (const events of this._events.values()) {
-                for (const event of events) {
-                    event.callback = null;
-                    event.context = null;
-                }
+        this.off();
 
-                events.length = 0;
-            }
-        }
-
-        this._events.clear();
         this._events = null;
     }
 }

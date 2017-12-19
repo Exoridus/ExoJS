@@ -1,7 +1,7 @@
 import { Application, IDBDatabase } from 'exojs';
 import LauncherScene from './scene/LauncherScene';
 
-window.addEventListener('load', () => {
+$(() => {
     const app = new Application({
         resourcePath: 'assets/',
         width: 1280,
@@ -15,4 +15,4 @@ window.addEventListener('load', () => {
     app.start(new LauncherScene());
 
     window.app = app;
-}, false);
+});

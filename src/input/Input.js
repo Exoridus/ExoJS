@@ -187,9 +187,7 @@ export default class Input extends EventEmitter {
         this._value = 0;
 
         for (const channel of this._channels) {
-            const offset = (channel >= INPUT_OFFSET_GAMEPAD) ? this._gamepadOffset : (channel >= INPUT_OFFSET_POINTER && this._pointerOffset) || 0;
-
-            this._value = Math.max(channels[channel + offset], this._value);
+            this._value = Math.max(channels[channel], this._value);
         }
 
         if (this._value) {

@@ -1,8 +1,9 @@
 import Renderer from '../graphics/Renderer';
 import ParticleShader from './ParticleShader';
-import { degreesToRadians } from '../utils';
+import { degreesToRadians } from '../utils/math';
 import settings from '../settings';
 import Buffer from '../graphics/Buffer';
+import VertexArray from '../graphics/VertexArray';
 
 /**
  * @class ParticleRenderer
@@ -68,12 +69,6 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {Buffer}
-         */
-        this._buffer = new Buffer(this._vertexData, this._indexData);
-
-        /**
-         * @private
          * @member {ParticleShader}
          */
         this._shader = new ParticleShader();
@@ -86,7 +81,7 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {?WebGL2RenderingContext}
          */
         this._context = null;
 
@@ -114,6 +109,12 @@ export default class ParticleRenderer extends Renderer {
          */
         this._viewId = -1;
 
+        /**
+         * @private
+         * @member {?VertexArray}
+         */
+        this._vao = null;
+
         this._fillIndexData(this._indexData);
     }
 
@@ -122,12 +123,23 @@ export default class ParticleRenderer extends Renderer {
      */
     connect(renderManager) {
         if (!this._context) {
-            const context = renderManager.context;
+            const gl = renderManager.context;
 
-            this._context = context;
+            this._context = gl;
             this._renderManager = renderManager;
-            this._buffer.connect(context);
-            this._shader.connect(context);
+
+            this._shader.connect(gl);
+            this._indexBuffer = Buffer.createIndexBuffer(gl, this._indexData, gl.STATIC_DRAW);
+            this._vertexBuffer = Buffer.createVertexBuffer(gl, this._vertexData, gl.DYNAMIC_DRAW);
+
+            this._vao = new VertexArray(gl)
+                .addIndex(this._indexBuffer)
+                .addAttribute(this._vertexBuffer, this._shader.attributes['a_position'], gl.FLOAT, false, this._attributeCount, 0)
+                .addAttribute(this._vertexBuffer, this._shader.attributes['a_texcoord'], gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
+                .addAttribute(this._vertexBuffer, this._shader.attributes['a_translation'], gl.FLOAT, false, this._attributeCount, 12)
+                .addAttribute(this._vertexBuffer, this._shader.attributes['a_scale'], gl.FLOAT, false, this._attributeCount, 20)
+                .addAttribute(this._vertexBuffer, this._shader.attributes['a_rotation'], gl.FLOAT, false, this._attributeCount, 28)
+                .addAttribute(this._vertexBuffer, this._shader.attributes['a_color'], gl.UNSIGNED_BYTE, true, this._attributeCount, 32);
         }
 
         return this;
@@ -141,7 +153,10 @@ export default class ParticleRenderer extends Renderer {
             this.unbind();
 
             this._shader.disconnect();
-            this._buffer.disconnect();
+
+            this._vao.destroy();
+            this._vao = null;
+
             this._renderManager = null;
             this._context = null;
         }
@@ -157,7 +172,7 @@ export default class ParticleRenderer extends Renderer {
             throw new Error('Renderer has to be connected first!')
         }
 
-        this._renderManager.setBuffer(this._buffer);
+        this._renderManager.setVAO(this._vao);
         this._renderManager.setShader(this._shader);
 
         return this;
@@ -171,7 +186,7 @@ export default class ParticleRenderer extends Renderer {
             this.flush();
 
             this._renderManager.setShader(null);
-            this._renderManager.setBuffer(null);
+            this._renderManager.setVAO(null);
 
             this._currentTexture = null;
             this._currentBlendMode = null;
@@ -274,18 +289,20 @@ export default class ParticleRenderer extends Renderer {
      */
     flush() {
         if (this._batchIndex > 0) {
-            const view = this._renderManager.renderTarget.view,
+            const gl = this._context,
+                view = this._renderManager.renderTarget.view,
                 viewId = view.updateId;
 
             if (this._currentView !== view || this._viewId !== viewId) {
                 this._currentView = view;
                 this._viewId = viewId;
-
-                this._shader.setProjection(view.getTransform());
+                this._shader.getUniform('u_projection')
+                    .setValue(view.getTransform().toArray(false));
             }
 
-            this._buffer.uploadVertexData(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-            this._renderManager.drawElements(this._batchIndex * 6);
+            this._renderManager.setVAO(this._vao);
+            this._vertexBuffer.upload(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
+            this._vao.draw(gl.TRIANGLES, this._batchIndex * 6, 0);
             this._batchIndex = 0;
         }
 
@@ -297,9 +314,6 @@ export default class ParticleRenderer extends Renderer {
      */
     destroy() {
         this.disconnect();
-
-        this._buffer.destroy();
-        this._buffer = null;
 
         this._shader.destroy();
         this._shader = null;
@@ -313,8 +327,8 @@ export default class ParticleRenderer extends Renderer {
         this._currentTexture = null;
         this._currentBlendMode = null;
         this._currentView = null;
-        this._context = null;
         this._renderManager = null;
+        this._context = null;
     }
 
     /**

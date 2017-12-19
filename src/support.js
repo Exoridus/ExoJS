@@ -1,55 +1,69 @@
-export default {
+const
+
+    /**
+     * @inner
+     * @type {HTMLCanvasElement}
+     */
+    canvas = document.createElement('canvas'),
+
+    /**
+     * @inner
+     * @type {String}
+     */
+    supportsContext = ('probablySupportsContext' in canvas) ? 'probablySupportsContext' : 'supportsContext',
 
     /**
      * @public
      * @constant
      * @type {Boolean}
      */
-    webAudio: ('AudioContext' in window),
+    webAudio = ('AudioContext' in window),
 
     /**
      * @public
      * @constant
      * @type {Boolean}
      */
-    indexedDB: ('indexedDB' in window),
+    indexedDB = ('indexedDB' in window),
 
     /**
      * @public
      * @constant
      * @type {Boolean}
      */
-    webGL: (() => {
-        const canvas = document.createElement('canvas'),
-            supports = ('probablySupportsContext' in canvas) ? 'probablySupportsContext' : 'supportsContext';
-
-        if (supports in canvas) {
-            return canvas[supports]('webgl') || canvas[supports]('experimental-webgl');
-        }
-
-        return ('WebGLRenderingContext' in window);
-    })(),
+    webGL = (supportsContext in canvas)
+        ? (canvas[supportsContext]('webgl') || canvas[supportsContext]('experimental-webgl'))
+        : ('WebGLRenderingContext' in window),
 
     /**
      * @public
      * @constant
      * @type {Boolean}
      */
-    touchEvents: ('ontouchstart' in window),
+    webGL2 = (supportsContext in canvas)
+        ? canvas[supportsContext]('webgl2')
+        : ('WebGL2RenderingContext' in window),
 
     /**
      * @public
      * @constant
      * @type {Boolean}
      */
-    pointerEvents: ('PointerEvent' in window),
+    touchEvents = ('ontouchstart' in window),
 
     /**
      * @public
      * @constant
      * @type {Boolean}
      */
-    eventOptions: (() => {
+    pointerEvents = ('PointerEvent' in window),
+
+    /**
+     * @public
+     * @constant
+     * @type {Boolean}
+     */
+    eventOptions = (() => {
         let supportsPassive = false;
 
         try {
@@ -61,5 +75,14 @@ export default {
         } catch (e) {}
 
         return supportsPassive;
-    })(),
+    })();
+
+export default {
+    webAudio,
+    indexedDB,
+    webGL,
+    webGL2,
+    touchEvents,
+    pointerEvents,
+    eventOptions,
 };

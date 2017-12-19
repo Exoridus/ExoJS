@@ -1,4 +1,4 @@
-import { INPUT_CHANNELS_GLOBAL } from '../const';
+import { INPUT_CHANNELS_DEVICE, INPUT_CHANNELS_GLOBAL, INPUT_OFFSET_GAMEPAD, INPUT_OFFSET_KEYBOARD, INPUT_OFFSET_POINTER } from '../const';
 import ChannelManager from './ChannelManager';
 import Keyboard from './Keyboard';
 import GamepadManager from './gamepad/GamepadManager';
@@ -13,9 +13,12 @@ export default class InputManager extends ChannelManager {
     /**
      * @constructor
      * @param {Application} app
+     * @param {ArrayBuffer} [channelBuffer=new ArrayBuffer(INPUT_CHANNELS_GLOBAL * 4)]
+     * @param {Number} [offset=0]
+     * @param {Number} [length=INPUT_CHANNELS_GLOBAL]
      */
-    constructor(app) {
-        super(new ArrayBuffer(INPUT_CHANNELS_GLOBAL * 4), 0, INPUT_CHANNELS_GLOBAL);
+    constructor(app, channelBuffer = new ArrayBuffer(INPUT_CHANNELS_GLOBAL * 4), offset = 0, length = INPUT_CHANNELS_GLOBAL) {
+        super(channelBuffer, offset, length);
 
         /**
          * @private
@@ -33,56 +36,62 @@ export default class InputManager extends ChannelManager {
          * @private
          * @member {Keyboard}
          */
-        this._keyboard = new Keyboard(app, this.channelBuffer);
+        this._keyboard = new Keyboard(app, channelBuffer, INPUT_OFFSET_KEYBOARD, INPUT_CHANNELS_DEVICE);
 
         /**
          * @private
          * @member {PointerManager}
          */
-        this._pointerManager = new PointerManager(app, this.channelBuffer);
+        this._pointerManager = new PointerManager(app, channelBuffer, INPUT_OFFSET_POINTER, INPUT_CHANNELS_DEVICE);
 
         /**
          * @private
          * @member {GamepadManager}
          */
-        this._gamepadManager = new GamepadManager(app, this.channelBuffer);
+        this._gamepadManager = new GamepadManager(app, channelBuffer, INPUT_OFFSET_GAMEPAD, INPUT_CHANNELS_DEVICE);
     }
 
     /**
      * @public
+     * @chainable
      * @param {Input|Input[]} inputs
+     * @returns {InputManager}
      */
     add(inputs) {
         if (Array.isArray(inputs)) {
-            for (const input of inputs) {
-                this.add(input);
-            }
+            inputs.forEach(this.add, this);
 
-            return;
+            return this;
         }
 
         this._inputs.add(inputs);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Input|Input[]} inputs
+     * @returns {InputManager}
      */
     remove(inputs) {
         if (Array.isArray(inputs)) {
-            for (const input of inputs) {
-                this.remove(input);
-            }
+            inputs.forEach(this.remove, this);
 
-            return;
+            return this;
         }
 
         this._inputs.delete(inputs);
+
+        return this;
     }
 
     /**
      * @public
+     * @chainable
      * @param {Boolean} [destroyInputs=false]
+     * @returns {InputManager}
      */
     clear(destroyInputs = false) {
         if (destroyInputs) {
@@ -92,6 +101,8 @@ export default class InputManager extends ChannelManager {
         }
 
         this._inputs.clear();
+
+        return this;
     }
 
     /**

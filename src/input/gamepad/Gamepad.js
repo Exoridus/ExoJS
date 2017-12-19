@@ -1,4 +1,3 @@
-import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_GAMEPAD } from '../../const';
 import settings from '../../settings';
 import ChannelManager from '../ChannelManager';
 
@@ -12,9 +11,11 @@ export default class Gamepad extends ChannelManager {
      * @constructor
      * @param {Gamepad} gamepad
      * @param {ArrayBuffer} channelBuffer
+     * @param {Number} offset
+     * @param {Number} length
      */
-    constructor(gamepad, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET_GAMEPAD + (gamepad.index * INPUT_CHANNELS_HANDLER), INPUT_CHANNELS_HANDLER);
+    constructor(gamepad, channelBuffer, offset, length) {
+        super(channelBuffer, offset, length);
 
         /**
          * @private

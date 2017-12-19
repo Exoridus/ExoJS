@@ -39,7 +39,7 @@ module.exports = (grunt) => {
                     loaders: [{
                         test: /\.js$/,
                         exclude: /node_modules/,
-                        loader: 'babel-loader'
+                        loader: 'babel-loader?cacheDirectory=cache',
                     }],
                 },
             },
@@ -57,6 +57,28 @@ module.exports = (grunt) => {
                         __VERSION__: JSON.stringify(package.version),
                     }),
                 ],
+            },
+            'no-cache': {
+                entry: '<%= dirs.src %>/index.js',
+                output: {
+                    path: __dirname + '/bin',
+                    filename: 'exo.build.js',
+                    sourceMapFilename: 'exo.build.js.map',
+                    library: 'Exo',
+                },
+                cache: false,
+                plugins: [
+                    new webpack.DefinePlugin({
+                        __VERSION__: JSON.stringify(package.version),
+                    }),
+                ],
+                module: {
+                    loaders: [{
+                        test: /\.js$/,
+                        exclude: /node_modules/,
+                        loader: 'babel-loader',
+                    }],
+                },
             },
             examples: {
                 entry: '<%= dirs.examples %>/src/js/index.js',
@@ -123,6 +145,10 @@ module.exports = (grunt) => {
 
     grunt.registerTask('build', [
         'webpack:dist',
+    ]);
+
+    grunt.registerTask('no-cache', [
+        'webpack:no-cache',
     ]);
 
     grunt.registerTask('examples', [

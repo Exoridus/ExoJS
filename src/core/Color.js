@@ -1,4 +1,4 @@
-import { clamp, rgbToHex } from '../utils';
+import { clamp } from '../utils/math';
 
 /**
  * @class Color
@@ -121,7 +121,7 @@ export default class Color {
      * @member {String}
      */
     get hex() {
-        return rgbToHex(this._r, this._g, this._b);
+        return `#${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
     }
 
     /**

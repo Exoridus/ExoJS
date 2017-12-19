@@ -74,6 +74,7 @@ app.start(new Exo.Scene({
                 context: this,
                 active(value) {
                     this._camera.move(0, value * -this._moveSpeed);
+                    console.log('W - active');
                 },
             }),
 

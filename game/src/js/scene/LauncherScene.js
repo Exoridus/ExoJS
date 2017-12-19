@@ -1,4 +1,4 @@
-import { KEYBOARD, GAMEPAD, SCALE_MODES, utils, Scene, Input } from 'exojs';
+import { KEYBOARD, GAMEPAD, SCALE_MODES, degreesToRadians, Scene, Input } from 'exojs';
 import TitleScene from './TitleScene';
 
 /**
@@ -16,7 +16,7 @@ export default class LauncherScene extends Scene {
          * @private
          * @member {jQuery}
          */
-        this._$launcher = jQuery('.launcher');
+        this._$launcher = $('.launcher');
         this._$launcher.removeClass('hidden');
 
         /**
@@ -119,6 +119,8 @@ export default class LauncherScene extends Scene {
      * @override
      */
     destroy() {
+        this.app.loader.clear({ resources: false });
+
         super.destroy();
 
         this._$launcher.addClass('hidden');
@@ -154,8 +156,8 @@ export default class LauncherScene extends Scene {
             centerX,
             centerY,
             radius,
-            utils.degreesToRadians(offsetAngle),
-            utils.degreesToRadians((percentage * 3.6) + offsetAngle),
+            degreesToRadians(offsetAngle),
+            degreesToRadians((percentage * 3.6) + offsetAngle),
             true,
         );
         context.clip();

@@ -30,7 +30,7 @@ export default class RenderTarget {
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {?WebGL2RenderingContext}
          */
         this._context = null;
 
@@ -110,7 +110,7 @@ export default class RenderTarget {
     /**
      * @public
      * @chainable
-     * @param {WebGLRenderingContext} context
+     * @param {WebGL2RenderingContext} context
      * @returns {RenderTarget}
      */
     connect(context) {

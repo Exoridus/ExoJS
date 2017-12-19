@@ -1,8 +1,8 @@
 import Vector from '../math/Vector';
 import Interval from '../math/Interval';
 import Polygon from '../math/Polygon';
-import { VORONOI } from '../const';
-import { getVornoiRegion } from '../utils';
+import { VORONOI_REGION } from '../const';
+import { getVoronoiRegion } from '../utils/math';
 
 /**
  * @class Collision
@@ -365,30 +365,30 @@ export default class Collision {
             edgeB = new Vector(),
             len = points.length;
 
-        for (var i = 0; i < len; i++) {
+        for (let i = 0; i < len; i++) {
             const pointA = points[i],
                 pointB = points[(i + 1) % len],
-                region = getVornoiRegion(
+                region = getVoronoiRegion(
                     edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y),
                     positionA.set(x - pointA.x, y - pointA.y)
                 );
 
-            if (region === VORONOI.LEFT) {
+            if (region === VORONOI_REGION.LEFT) {
                 const prev = points[(i === 0 ? len - 1 : i - 1)];
 
                 edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
                 positionB.set(x - prev.x, y - prev.y);
 
-                if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT) && (positionA.len > circle.radius)) {
+                if ((getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.RIGHT) && (positionA.len > circle.radius)) {
                     return false;
                 }
-            } else if (region === VORONOI.RIGHT) {
+            } else if (region === VORONOI_REGION.RIGHT) {
                 const next = points[(i + 2) % len]; // pointB ?
 
                 edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
                 positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
-                if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT && (positionB.len > circle.radius)) {
+                if (getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.LEFT && (positionB.len > circle.radius)) {
                     return false;
                 }
             } else {
@@ -499,10 +499,10 @@ export default class Collision {
             containsB = true,
             overlap = 0;
 
-        for (var i = 0; i < len; i++) {
+        for (let i = 0; i < len; i++) {
             const pointA = points[i],
                 pointB = points[(i + 1) % len],
-                region = getVornoiRegion(
+                region = getVoronoiRegion(
                     edgeA.set(pointB.x - pointA.x, pointB.y - pointA.y),
                     positionA.set(x - pointA.x, y - pointA.y)
                 );
@@ -511,13 +511,13 @@ export default class Collision {
                 containsA = false;
             }
 
-            if (region === VORONOI.LEFT) {
+            if (region === VORONOI_REGION.LEFT) {
                 const prev = points[(i === 0 ? len - 1 : i - 1)];
 
                 edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
                 positionB.set(x - prev.x, y - prev.y);
 
-                if ((getVornoiRegion(edgeB, positionB) === VORONOI.RIGHT)) {
+                if ((getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.RIGHT)) {
                     const distance = positionA.len;
 
                     if (distance > radius) {
@@ -531,13 +531,13 @@ export default class Collision {
 
                     containsB = false;
                 }
-            } else if (region === VORONOI.RIGHT) {
+            } else if (region === VORONOI_REGION.RIGHT) {
                 const next = points[(i + 2) % len]; // pointB ?
 
                 edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
                 positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
-                if (getVornoiRegion(edgeB, positionB) === VORONOI.LEFT) {
+                if (getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.LEFT) {
                     const distance = positionB.len;
 
                     if (distance > radius) {

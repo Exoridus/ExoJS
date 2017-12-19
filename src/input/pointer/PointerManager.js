@@ -1,9 +1,10 @@
-import { INPUT_CHANNELS_DEVICE, INPUT_OFFSET_POINTER } from '../../const';
 import support from '../../support';
 import ChannelManager from '../ChannelManager';
 import Pointer from './Pointer';
 import Vector from '../../math/Vector';
-import { addFlag, hasFlag, removeFlag, stopEvent } from '../../utils';
+import { hasFlag, addFlag, removeFlag } from '../../utils/flags';
+import { stopEvent } from '../../utils/events';
+import { INPUT_CHANNELS_HANDLER } from '../../const';
 
 const FLAGS = {
         NONE: 0,
@@ -48,9 +49,11 @@ export default class PointerManager extends ChannelManager {
      * @constructor
      * @param {Application} app
      * @param {ArrayBuffer} channelBuffer
+     * @param {Number} offset
+     * @param {Number} length
      */
-    constructor(app, channelBuffer) {
-        super(channelBuffer, INPUT_OFFSET_POINTER, INPUT_CHANNELS_DEVICE);
+    constructor(app, channelBuffer, offset, length) {
+        super(channelBuffer, offset, length);
 
         /**
          * @private
@@ -294,7 +297,7 @@ export default class PointerManager extends ChannelManager {
      * @param {PointerEvent} event
      */
     _onEnter(event) {
-        const pointer = new Pointer(event, this.channelBuffer);
+        const pointer = new Pointer(event, this.channelBuffer, this.offset, INPUT_CHANNELS_HANDLER);
 
         this._pointers.set(pointer.id, pointer);
         this._pointersEntered.add(pointer);

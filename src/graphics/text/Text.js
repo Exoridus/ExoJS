@@ -1,10 +1,21 @@
-import { NEWLINE } from '../../const';
 import Sprite from '../sprite/Sprite';
 import Texture from '../Texture';
 import TextStyle from './TextStyle';
 import Rectangle from '../../math/Rectangle';
 
-const heightCache = new Map();
+const
+
+    /**
+     * @inner
+     * @type {Map<String, Number>}
+     */
+    heightCache = new Map(),
+
+    /**
+     * @inner
+     * @type {RegExp}
+     */
+    NEWLINE = /(?:\r\n|\r|\n)/;
 
 /**
  * @class Text

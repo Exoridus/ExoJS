@@ -1,4 +1,4 @@
-import { KEYBOARD, GAMEPAD, utils, Scene, View, Vector, Rectangle, Input } from 'exojs';
+import { KEYBOARD, GAMEPAD, clamp, Scene, View, Vector, Rectangle, Input } from 'exojs';
 import WorldMap from '../map/WorldMap';
 import Player from '../entity/Player';
 import Tileset from '../map/Tileset';
@@ -110,8 +110,8 @@ export default class GameScene extends Scene {
             centerY = this._camera.height / 2;
 
         renderManager.renderTarget.setView(this._camera.setCenter(
-            utils.clamp(x, centerX, maxX - centerX),
-            utils.clamp(y, centerY, maxY - centerY)
+            clamp(x, centerX, maxX - centerX),
+            clamp(y, centerY, maxY - centerY)
         ));
     }
 

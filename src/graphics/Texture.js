@@ -1,5 +1,7 @@
 import { SCALE_MODES, WRAP_MODES, TEXTURE_FLAGS } from '../const';
-import { getMediaHeight, getMediaWidth, powerOfTwo, addFlag, hasFlag, removeFlag } from '../utils';
+import { hasFlag, addFlag, removeFlag } from '../utils/flags';
+import { getMediaHeight, getMediaWidth } from '../utils/media';
+import { isPowerOfTwo } from '../utils/math';
 import settings from '../settings';
 import Size from '../math/Size';
 
@@ -34,11 +36,11 @@ export default class Texture {
          * @private
          * @member {Size}
          */
-        this._size = new Size(-1, -1);
+        this._size = new Size(0, 0);
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {?WebGL2RenderingContext}
          */
         this._context = null;
 
@@ -211,13 +213,13 @@ export default class Texture {
      * @member {Boolean}
      */
     get powerOfTwo() {
-        return powerOfTwo(this.width) && powerOfTwo(this.height);
+        return isPowerOfTwo(this.width) && isPowerOfTwo(this.height);
     }
 
     /**
      * @public
      * @chainable
-     * @param {WebGLRenderingContext} gl
+     * @param {WebGL2RenderingContext} gl
      * @returns {Texture}
      */
     connect(gl) {

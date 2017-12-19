@@ -775,7 +775,7 @@ var GameScene = function (_Scene) {
                 centerX = this._camera.width / 2,
                 centerY = this._camera.height / 2;
 
-            renderManager.renderTarget.setView(this._camera.setCenter(_exojs.utils.clamp(x, centerX, maxX - centerX), _exojs.utils.clamp(y, centerY, maxY - centerY)));
+            renderManager.renderTarget.setView(this._camera.setCenter((0, _exojs.clamp)(x, centerX, maxX - centerX), (0, _exojs.clamp)(y, centerY, maxY - centerY)));
         }
 
         /**
@@ -906,7 +906,7 @@ var _LauncherScene2 = _interopRequireDefault(_LauncherScene);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-window.addEventListener('load', function () {
+$(function () {
     var app = new _exojs.Application({
         resourcePath: 'assets/',
         width: 1280,
@@ -920,7 +920,7 @@ window.addEventListener('load', function () {
     app.start(new _LauncherScene2.default());
 
     window.app = app;
-}, false);
+});
 
 /***/ }),
 /* 5 */
@@ -978,7 +978,7 @@ var LauncherScene = function (_Scene) {
              * @private
              * @member {jQuery}
              */
-            this._$launcher = jQuery('.launcher');
+            this._$launcher = $('.launcher');
             this._$launcher.removeClass('hidden');
 
             /**
@@ -1088,6 +1088,8 @@ var LauncherScene = function (_Scene) {
     }, {
         key: 'destroy',
         value: function destroy() {
+            this.app.loader.clear({ resources: false });
+
             _get(LauncherScene.prototype.__proto__ || Object.getPrototypeOf(LauncherScene.prototype), 'destroy', this).call(this);
 
             this._$launcher.addClass('hidden');
@@ -1122,7 +1124,7 @@ var LauncherScene = function (_Scene) {
             context.drawImage(this._indicatorProgress, 0, 0, width, height);
             context.beginPath();
             context.moveTo(centerX, centerY);
-            context.arc(centerX, centerY, radius, _exojs.utils.degreesToRadians(offsetAngle), _exojs.utils.degreesToRadians(percentage * 3.6 + offsetAngle), true);
+            context.arc(centerX, centerY, radius, (0, _exojs.degreesToRadians)(offsetAngle), (0, _exojs.degreesToRadians)(percentage * 3.6 + offsetAngle), true);
             context.clip();
             context.clearRect(0, 0, width, height);
         }
@@ -2331,8 +2333,8 @@ var WorldMap = function () {
           tileHeight = this._tileSize.height,
           tilesHorizontal = viewport.width / tileWidth + 2 | 0,
           tilesVertical = viewport.height / tileHeight + 2 | 0,
-          startTileX = _exojs.utils.clamp(viewport.x / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-          startTileY = _exojs.utils.clamp(viewport.y / tileHeight, 0, tilesY - tilesVertical) | 0,
+          startTileX = (0, _exojs.clamp)(viewport.x / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+          startTileY = (0, _exojs.clamp)(viewport.y / tileHeight, 0, tilesY - tilesVertical) | 0,
           startTileIndex = startTileY * tilesX + startTileX,
           tilesTotal = tilesHorizontal * tilesVertical;
 
@@ -2938,7 +2940,7 @@ var Player = function (_Sprite) {
     }, {
         key: 'setPosition',
         value: function setPosition(x, y) {
-            this.position.set(_exojs.utils.clamp(x, this._worldBounds.left, this._worldBounds.right), _exojs.utils.clamp(y, this._worldBounds.top, this._worldBounds.bottom));
+            this.position.set((0, _exojs.clamp)(x, this._worldBounds.left, this._worldBounds.right), (0, _exojs.clamp)(y, this._worldBounds.top, this._worldBounds.bottom));
 
             return this;
         }

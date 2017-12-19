@@ -1,4 +1,4 @@
-import { utils, Size, Sprite, Rectangle, Vector } from 'exojs';
+import { clamp, Size, Sprite, Rectangle, Vector } from 'exojs';
 import MapGenerator from './MapGenerator';
 
 /**
@@ -108,8 +108,8 @@ export default class WorldMap {
             tileHeight = this._tileSize.height,
             tilesHorizontal = ((viewport.width / tileWidth) + 2) | 0,
             tilesVertical = ((viewport.height / tileHeight) + 2) | 0,
-            startTileX = utils.clamp(viewport.x / tileWidth, 0, tilesX - tilesHorizontal) | 0,
-            startTileY = utils.clamp(viewport.y / tileHeight, 0, tilesY - tilesVertical) | 0,
+            startTileX = clamp(viewport.x / tileWidth, 0, tilesX - tilesHorizontal) | 0,
+            startTileY = clamp(viewport.y / tileHeight, 0, tilesY - tilesVertical) | 0,
             startTileIndex = (startTileY * tilesX) + startTileX,
             tilesTotal = tilesHorizontal * tilesVertical;
 

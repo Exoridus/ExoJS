@@ -1,7 +1,7 @@
 import EventEmitter from '../core/EventEmitter';
 import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
-import { degreesToRadians } from '../utils';
+import { degreesToRadians } from '../utils/math';
 
 /**
  * @class Transformable

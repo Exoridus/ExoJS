@@ -1,4 +1,4 @@
-import { inRange } from '../utils';
+import { inRange } from '../utils/math';
 import Vector from './Vector';
 import Size from './Size';
 import Circle from './Circle';

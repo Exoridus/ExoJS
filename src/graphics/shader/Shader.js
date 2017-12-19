@@ -1,25 +1,7 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
-import { ATTRIBUTE_TYPE, UNIFORM_TYPE } from '../../const';
-
-var GLSL_TO_SIZE = {
-    [UNIFORM_TYPE.FLOAT]: 1,
-    [UNIFORM_TYPE.FLOAT_VEC2]: 2,
-    [UNIFORM_TYPE.FLOAT_VEC3]: 3,
-    [UNIFORM_TYPE.FLOAT_VEC4]: 4,
-    [UNIFORM_TYPE.INT]: 1,
-    [UNIFORM_TYPE.INT_VEC2]: 2,
-    [UNIFORM_TYPE.INT_VEC3]: 3,
-    [UNIFORM_TYPE.INT_VEC4]: 4,
-    [UNIFORM_TYPE.BOOL]: 1,
-    [UNIFORM_TYPE.BOOL_VEC2]: 2,
-    [UNIFORM_TYPE.BOOL_VEC3]: 3,
-    [UNIFORM_TYPE.BOOL_VEC4]: 4,
-    [UNIFORM_TYPE.FLOAT_MAT2]: 4,
-    [UNIFORM_TYPE.FLOAT_MAT3]: 9,
-    [UNIFORM_TYPE.FLOAT_MAT4]: 16,
-    [UNIFORM_TYPE.SAMPLER_2D]: 1,
-};
+import { TYPE_SIZES, UNIFORM_TYPE } from '../../const';
+import ShaderBlock from './ShaderBlock';
 
 /**
  * @class Shader
@@ -28,24 +10,26 @@ export default class Shader {
 
     /**
      * @constructor
+     * @param {String} vertexSource
+     * @param {String} fragmentSource
      */
-    constructor(vertexSource, fragmentSource, options = {}) {
+    constructor(vertexSource, fragmentSource) {
 
         /**
          * @private
          * @member {String}
          */
-        this._vertexSource = Array.isArray(vertexSource) ? vertexSource.join('\n') : vertexSource;
+        this._vertexSource = vertexSource;
 
         /**
          * @private
          * @member {String}
          */
-        this._fragmentSource = Array.isArray(fragmentSource) ? fragmentSource.join('\n') : fragmentSource;
+        this._fragmentSource = fragmentSource;
 
         /**
          * @private
-         * @member {?WebGLRenderingContext}
+         * @member {?WebGL2RenderingContext}
          */
         this._context = null;
 
@@ -69,27 +53,48 @@ export default class Shader {
 
         /**
          * @private
-         * @member {Object}
+         * @member {Object<String, ShaderAttribute>}
          */
-        this._options = options || {};
+        this._attributes = {};
 
         /**
          * @private
-         * @member {Map<String, ShaderUniform>}
+         * @member {Object<String, ShaderUniform>}
          */
-        this._uniforms = new Map();
+        this._uniforms = {};
 
         /**
          * @private
-         * @member {Map<String, ShaderAttribute>}
+         * @member {Object<String, ShaderBlock>}
          */
-        this._attributes = new Map();
+        this._blocks = {};
+    }
 
-        /**
-         * @private
-         * @member {Map<String, Number>}
-         */
-        this._attributeLocations = new Map();
+    /**
+     * @public
+     * @readonly
+     * @member {Object<String, ShaderAttribute>}
+     */
+    get attributes() {
+        return this._attributes;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Object<String, ShaderUniform>}
+     */
+    get uniforms() {
+        return this._uniforms;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Object<String, ShaderBlock>}
+     */
+    get blocks() {
+        return this._blocks;
     }
 
     /**
@@ -151,7 +156,7 @@ export default class Shader {
     /**
      * @public
      * @chainable
-     * @param {WebGLRenderingContext} gl
+     * @param {WebGL2RenderingContext} gl
      * @returns {Shader}
      */
     connect(gl) {
@@ -160,33 +165,11 @@ export default class Shader {
             this._vertexShader = this.createShader(gl.VERTEX_SHADER, this._vertexSource);
             this._fragmentShader = this.createShader(gl.FRAGMENT_SHADER, this._fragmentSource);
             this._program = this.createProgram(this._vertexShader, this._fragmentShader);
-            this.extractUniforms();
+            this._extractAttributes();
+            this._extractUniforms();
         }
 
         return this;
-    }
-
-    /**
-     * @public
-     */
-    extractUniforms() {
-        const gl = this._context,
-            program = this._program,
-            len = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS),
-            opts = this._options['uniforms'] || {};
-
-        for (var i = 0; i < len; i++) {
-            const uniform = gl.getActiveUniform(program, i),
-                name = uniform.name.replace(/\[.*?\]/, ''),
-                options = Object.assign({}, {
-                    name: name,
-                    type: uniform.type,
-                    size: GLSL_TO_SIZE[uniform.type],
-                    location: gl.getUniformLocation(program, name),
-                }, (opts[name] || {}));
-
-            this._uniforms.set(name, new ShaderUniform(options));
-        }
     }
 
     /**
@@ -204,6 +187,24 @@ export default class Shader {
             gl.deleteShader(this._fragmentShader);
             gl.deleteProgram(this._program);
 
+            for (const name of Object.keys(this._attributes)) {
+                this._attributes[name].destroy();
+                delete this._attributes[name];
+            }
+
+            for (const name of Object.keys(this._uniforms)) {
+                this._uniforms[name].destroy();
+                delete this._uniforms[name];
+            }
+
+            for (const name of Object.keys(this._blocks)) {
+                this._blocks[name].destroy();
+                delete this._blocks[name];
+            }
+
+            this._attributes = null;
+            this._uniforms = null;
+            this._blocks = null;
             this._vertexShader = null;
             this._fragmentShader = null;
             this._program = null;
@@ -227,38 +228,12 @@ export default class Shader {
 
         gl.useProgram(this._program);
 
-        this.bindAttributes();
-
-        for (const uniform of this._uniforms.values()) {
-            this.setUniform(uniform.name, uniform.value);
+        for (const uniform of Object.values(this._uniforms)) {
+            uniform.setValue(uniform.value);
         }
 
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Shader}
-     */
-    bindAttributes() {
-        const gl = this._context,
-            stride = [...this._attributes.values()].reduce((stride, attribute) => stride + attribute.byteSize, 0);
-
-        let offset = 0;
-
-        for (const attribute of this._attributes.values()) {
-            const location = this.getAttributeLocation(attribute.name);
-
-            gl.vertexAttribPointer(location, attribute.size, attribute.type, attribute.normalized, stride, offset);
-
-            if (attribute.enabled) {
-                gl.enableVertexAttribArray(location);
-            } else {
-                gl.disableVertexAttribArray(location);
-            }
-
-            offset += attribute.byteSize;
+        for (const block of Object.values(this._blocks)) {
+            block.setValue(block.value);
         }
 
         return this;
@@ -279,88 +254,15 @@ export default class Shader {
 
     /**
      * @public
-     * @chainable
      * @param {String} name
-     * @param {Number} type
-     * @param {Number} size
-     * @param {Boolean} [normalized=false]
-     * @param {Boolean} [enabled=true]
-     * @returns {Shader}
+     * @returns {ShaderUniform}
      */
-    addAttribute(name, type, size, normalized = false, enabled = true) {
-        if (this._attributes.has(name)) {
-            throw new Error(`Attribute "${name}" has already been defined.`);
-        }
-
-        this._attributes.set(name, new ShaderAttribute(name, type, size, normalized, enabled));
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {String} attribute
-     * @returns {Number}
-     */
-    getAttributeLocation(attribute) {
-        if (!this._attributeLocations.has(attribute)) {
-            const location = this._context.getAttribLocation(this._program, attribute);
-
-            if (location === -1) {
-                throw new Error(`Attribute "${attribute}" is not available.`);
-            }
-
-            this._attributeLocations.set(attribute, location);
-        }
-
-        return this._attributeLocations.get(attribute);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {String} uniform
-     * @param {Number|Number[]|ArrayBufferView|Texture} value
-     * @param {Number} type
-     * @returns {Shader}
-     */
-    setUniform(name, value) {
-        if (!this._uniforms.has(name)) {
+    getUniform(name) {
+        if (!(name in this._uniforms)) {
             throw new Error(`Uniform "${name}" is not available.`);
         }
 
-        if (value === undefined) {
-            throw new Error(`Invalid uniform value!`);
-        }
-
-        const gl = this._context,
-            uniform = this._uniforms.get(name) || null,
-            location = uniform.location;
-
-        uniform.value = value;
-
-        switch (uniform.type) {
-            case UNIFORM_TYPE.INT: gl.uniform1i(location, value); break;
-            case UNIFORM_TYPE.FLOAT: gl.uniform1f(location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC2: gl.uniform2fv(location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC3: gl.uniform3fv(location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC4: gl.uniform4fv(location, value); break;
-            case UNIFORM_TYPE.INT_VEC2: gl.uniform2iv(location, value); break;
-            case UNIFORM_TYPE.INT_VEC3: gl.uniform3iv(location, value); break;
-            case UNIFORM_TYPE.INT_VEC4: gl.uniform4iv(location, value); break;
-            case UNIFORM_TYPE.BOOL: gl.uniform1i(location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC2: gl.uniform2iv(location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC3: gl.uniform3iv(location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC4: gl.uniform4iv(location, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT2: gl.uniformMatrix2fv(location, false, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT3: gl.uniformMatrix3fv(location, false, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT4: gl.uniformMatrix4fv(location, false, value); break;
-            case UNIFORM_TYPE.SAMPLER_2D: gl.uniform1i(location, value); break;
-            default:
-                throw new Error(`Unknown uniform type "${uniform.type}".`);
-        }
-
-        return this;
+        return this._uniforms[name];
     }
 
     /**
@@ -369,25 +271,78 @@ export default class Shader {
     destroy() {
         this.disconnect();
 
-        for (const attribute of this._attributes.values()) {
-            attribute.destroy();
-        }
-
-        for (const uniform of this._uniforms.values()) {
-            uniform.destroy();
-        }
-
-        this._attributes.clear();
-        this._attributes = null;
-
-        this._uniforms.clear();
-        this._uniforms = null;
-
-        this._attributeLocations.clear();
-        this._attributeLocations = null;
-
         this._vertexSource = null;
         this._fragmentSource = null;
         this._context = null;
+    }
+
+    /**
+     * @private
+     */
+    _extractAttributes() {
+        const gl = this._context,
+            program = this._program,
+            totalAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
+
+        for (let i = 0; i < totalAttributes; i++) {
+            const { name, type } = gl.getActiveAttrib(program, i);
+
+            this._attributes[name] = new ShaderAttribute(Object.assign({}, {
+                name: name,
+                type: type,
+                size: TYPE_SIZES[type],
+                location: gl.getAttribLocation(program, name),
+            }));
+        }
+    }
+
+    /**
+     * @private
+     */
+    _extractUniforms() {
+        const gl = this._context,
+            program = this._program,
+            activeUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS),
+            indices = new Uint8Array(activeUniforms).map((value, index) => index),
+            blockIndices = gl.getActiveUniforms(program, indices, gl.UNIFORM_BLOCK_INDEX),
+            offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET),
+            blocks = {};
+
+        for (const index of indices) {
+            const { name, type, size } = gl.getActiveUniform(program, index),
+                location = gl.getUniformLocation(program, name),
+                block = blockIndices[index],
+                offset = offsets[index],
+                uniform = new ShaderUniform({ context: gl, index, name, type, size, location, block, offset });
+
+            if (block !== -1) {
+                if (!(block in blocks)) {
+                    blocks[block] = new ShaderBlock({
+                        context: gl,
+                        index: block,
+                        name: gl.getActiveUniformBlockName(program, block),
+                        size: gl.getActiveUniformBlockParameter(program, block, gl.UNIFORM_BLOCK_DATA_SIZE),
+                        usedByVertexShader: gl.getActiveUniformBlockParameter(program, block, gl.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
+                        usedByFragmentShader: gl.getActiveUniformBlockParameter(program, block, gl.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
+                    });
+                }
+
+                blocks[block].addUniform(uniform);
+
+                continue;
+            }
+
+            this._uniforms[name] = uniform;
+        }
+
+        for (const block of Object.values(blocks)) {
+            const transformBuffer = gl.createBuffer();
+
+            this._blocks[block.name] = block;
+
+            gl.bindBuffer(gl.UNIFORM_BUFFER, transformBuffer);
+            gl.bufferData(gl.UNIFORM_BUFFER, new ArrayBuffer(block.size), gl.STATIC_DRAW);
+            gl.bindBufferBase(gl.UNIFORM_BUFFER, block.index, transformBuffer);
+        }
     }
 }

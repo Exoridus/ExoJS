@@ -1,4 +1,4 @@
-import { KEYBOARD, GAMEPAD, utils, Sprite, Vector, Rectangle, Size, Timer, Input } from 'exojs';
+import { KEYBOARD, GAMEPAD, clamp, Sprite, Vector, Rectangle, Size, Timer, Input } from 'exojs';
 
 const
 
@@ -153,8 +153,8 @@ export default class Player extends Sprite {
      */
     setPosition(x, y) {
         this.position.set(
-            utils.clamp(x, this._worldBounds.left, this._worldBounds.right),
-            utils.clamp(y, this._worldBounds.top, this._worldBounds.bottom)
+            clamp(x, this._worldBounds.left, this._worldBounds.right),
+            clamp(y, this._worldBounds.top, this._worldBounds.bottom)
         );
 
         return this;

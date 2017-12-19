@@ -13,8 +13,15 @@ export default class ShaderAttribute {
      * @param {Number} options.size
      * @param {Boolean} [options.normalized=false]
      * @param {Boolean} [options.enabled=true]
+     * @param {Number} [options.location=null]
      */
-    constructor(name, type, size, normalized = false, enabled = true) {
+    constructor({ name, type, size, normalized = false, enabled = true, location = null } = {}) {
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._location = location;
 
         /**
          * @private
@@ -45,6 +52,18 @@ export default class ShaderAttribute {
          * @member {Boolean}
          */
         this._enabled = enabled;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get location() {
+        return this._location;
+    }
+
+    set location(location) {
+        this._location = location;
     }
 
     /**
@@ -142,6 +161,7 @@ export default class ShaderAttribute {
      * @public
      */
     destroy() {
+        this._location = null;
         this._name = null;
         this._type = null;
         this._size = null;
