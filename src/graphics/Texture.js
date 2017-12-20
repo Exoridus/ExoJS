@@ -1,9 +1,9 @@
 import { SCALE_MODES, WRAP_MODES, TEXTURE_FLAGS } from '../const';
-import { hasFlag, addFlag, removeFlag } from '../utils/flags';
 import { getMediaHeight, getMediaWidth } from '../utils/media';
 import { isPowerOfTwo } from '../utils/math';
 import settings from '../settings';
 import Size from '../math/Size';
+import Flags from '../math/Flags';
 
 /**
  * @class Texture
@@ -82,9 +82,9 @@ export default class Texture {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Flags}
          */
-        this._flags = TEXTURE_FLAGS.NONE;
+        this._flags = new Flags();
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
@@ -179,7 +179,7 @@ export default class Texture {
     set premultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags = addFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+            this._flags.add(TEXTURE_FLAGS.PREMULTIPLY_ALPHA);
         }
     }
 
@@ -297,7 +297,7 @@ export default class Texture {
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags = addFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
+            this._flags.add(TEXTURE_FLAGS.SCALE_MODE);
         }
 
         return this;
@@ -312,7 +312,7 @@ export default class Texture {
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags = addFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
+            this._flags.add(TEXTURE_FLAGS.WRAP_MODE);
         }
 
         return this;
@@ -339,7 +339,7 @@ export default class Texture {
      * @returns {Texture}
      */
     updateSource() {
-        this._flags = addFlag(TEXTURE_FLAGS.SOURCE, this._flags);
+        this._flags.add(TEXTURE_FLAGS.SOURCE);
 
         this.setSize(
             getMediaWidth(this._source),
@@ -359,7 +359,7 @@ export default class Texture {
     setSize(width, height) {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
-            this._flags = addFlag(TEXTURE_FLAGS.SIZE, this._flags);
+            this._flags.add(TEXTURE_FLAGS.SIZE);
         }
 
         return this;
@@ -371,19 +371,19 @@ export default class Texture {
      * @returns {Texture}
      */
     update() {
-        if (this._flags && this._context) {
+        if (this._flags.value && this._context) {
             const gl = this._context;
 
-            if (hasFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.SCALE_MODE)) {
                 const scaleMode = (this._scaleMode === SCALE_MODES.LINEAR) ? gl.LINEAR : gl.NEAREST;
 
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
-                this._flags = removeFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
+                this._flags.remove(TEXTURE_FLAGS.SCALE_MODE);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.WRAP_MODE)) {
                 const clamp = (this._wrapMode === WRAP_MODES.CLAMP_TO_EDGE) && gl.CLAMP_TO_EDGE,
                     repeat = (this._wrapMode === WRAP_MODES.REPEAT) && gl.REPEAT,
                     wrapMode = clamp || repeat || gl.MIRRORED_REPEAT;
@@ -391,17 +391,17 @@ export default class Texture {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
-                this._flags = removeFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
+                this._flags.remove(TEXTURE_FLAGS.WRAP_MODE);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.PREMULTIPLY_ALPHA)) {
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
 
-                this._flags = removeFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+                this._flags.remove(TEXTURE_FLAGS.PREMULTIPLY_ALPHA);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.SOURCE, this._flags) && this._source) {
-                if (hasFlag(TEXTURE_FLAGS.SIZE, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.SOURCE) && this._source) {
+                if (this._flags.has(TEXTURE_FLAGS.SIZE)) {
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 } else {
                     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
@@ -411,7 +411,7 @@ export default class Texture {
                     gl.generateMipmap(gl.TEXTURE_2D);
                 }
 
-                this._flags = removeFlag((TEXTURE_FLAGS.SOURCE | TEXTURE_FLAGS.SIZE), this._flags);
+                this._flags.remove(TEXTURE_FLAGS.SOURCE, TEXTURE_FLAGS.SIZE);
             }
         }
 
@@ -427,12 +427,14 @@ export default class Texture {
         this._size.destroy();
         this._size = null;
 
+        this._flags.destroy();
+        this._flags = null;
+
         this._source = null;
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
         this._generateMipMap = null;
-        this._flags = null;
         this._context = null;
         this._texture = null;
         this._flipY = null;

@@ -139,7 +139,18 @@ const
         } else {
             return VORONOI_REGION.MIDDLE;
         }
-    };
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
+     * @param {Number} fromValue
+     * @param {Number} toValue
+     * @param {Number} ratio
+     * @returns {Number}
+     */
+    lerp = (startValue, endValue, ratio) => ((1 - ratio) * startValue + ratio * endValue);
 
 /**
  * @namespace Exo
@@ -149,6 +160,7 @@ export {
     radiansToDegrees,
     clamp,
     sign,
+    lerp,
     isPowerOfTwo,
     inRange,
     random,

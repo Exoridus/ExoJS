@@ -1,7 +1,7 @@
-import ChannelManager from '../ChannelManager';
-import Vector from '../../math/Vector';
-import Size from '../../math/Size';
-import { hasFlag, addFlag, removeFlag } from '../../utils/flags';
+import Vector from '../math/Vector';
+import Size from '../math/Size';
+import Flags from '../math/Flags';
+import EventEmitter from '../core/EventEmitter';
 
 /**
  * @private
@@ -26,19 +26,16 @@ const FLAGS = {
 
 /**
  * @class Pointer
- * @extends ChannelManager
+ * @extends EventEmitter
  */
-export default class Pointer extends ChannelManager {
+export default class Pointer extends EventEmitter {
 
     /**
      * @constructor
      * @param {PointerEvent} event
-     * @param {ArrayBuffer} channelBuffer
-     * @param {Number} offset
-     * @param {Number} length
      */
-    constructor(event, channelBuffer, offset, length) {
-        super(channelBuffer, offset, length);
+    constructor(event) {
+        super();
 
         const bounds = event.target.getBoundingClientRect();
 
@@ -98,9 +95,9 @@ export default class Pointer extends ChannelManager {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Flags}
          */
-        this._flags = FLAGS.NONE;
+        this._flags = new Flags();
     }
 
     /**
@@ -233,38 +230,32 @@ export default class Pointer extends ChannelManager {
 
         if ((this._position.x !== x) || (this._position.y !== y)) {
             this._position.set(x, y);
-
-            this._flags = addFlag(FLAGS.POSITION, this._flags);
+            this._flags.add(FLAGS.POSITION);
         }
 
         if ((this._size.width !== event.width) || (this._size.height !== event.height)) {
             this._size.set(event.width, event.height);
-
-            this._flags = addFlag(FLAGS.SIZE, this._flags);
+            this._flags.add(FLAGS.SIZE);
         }
 
         if ((this._tilt.x !== event.tiltX) || (this._tilt.y !== event.tiltY)) {
             this._tilt.set(event.tiltX, event.tiltY);
-
-            this._flags = addFlag(FLAGS.TILT, this._flags);
+            this._flags.add(FLAGS.TILT);
         }
 
         if (this._buttons !== event.buttons) {
             this._buttons = event.buttons;
-
-            this._flags = addFlag(FLAGS.BUTTONS, this._flags);
+            this._flags.add(FLAGS.BUTTONS);
         }
 
         if (this._pressure !== event.pressure) {
             this._pressure = event.pressure;
-
-            this._flags = addFlag(FLAGS.PRESSURE, this._flags);
+            this._flags.add(FLAGS.PRESSURE);
         }
 
         if (this._rotation !== event.twist) {
             this._rotation = event.twist;
-
-            this._flags = addFlag(FLAGS.ROTATION, this._flags);
+            this._flags.add(FLAGS.ROTATION);
         }
 
         return this;
@@ -276,44 +267,36 @@ export default class Pointer extends ChannelManager {
      * @returns {Pointer}
      */
     update() {
-        if (!this._flags) {
-            return this;
-        }
+        if (this._flags.value) {
+            if (this._flags.has(FLAGS.POSITION)) {
+                this.trigger('move', this._position, this);
+                this._flags.remove(FLAGS.POSITION);
+            }
 
-        if (hasFlag(FLAGS.POSITION, this._flags)) {
-            this.trigger('move', this._position, this);
+            if (this._flags.has(FLAGS.SIZE)) {
+                this.trigger('resize', this._size, this);
+                this._flags.remove(FLAGS.SIZE);
+            }
 
-            this._flags = removeFlag(FLAGS.POSITION, this._flags);
-        }
+            if (this._flags.has(FLAGS.TILT)) {
+                this.trigger('tilt', this._tilt, this);
+                this._flags.remove(FLAGS.TILT);
+            }
 
-        if (hasFlag(FLAGS.SIZE, this._flags)) {
-            this.trigger('resize', this._size, this);
+            if (this._flags.has(FLAGS.ROTATION)) {
+                this.trigger('rotate', this._rotation, this);
+                this._flags.remove(FLAGS.ROTATION);
+            }
 
-            this._flags = removeFlag(FLAGS.SIZE, this._flags);
-        }
+            if (this._flags.has(FLAGS.BUTTONS)) {
+                this.trigger('buttonsChanged', this._buttons, this);
+                this._flags.remove(FLAGS.BUTTONS);
+            }
 
-        if (hasFlag(FLAGS.TILT, this._flags)) {
-            this.trigger('tilt', this._tilt, this);
-
-            this._flags = removeFlag(FLAGS.TILT, this._flags);
-        }
-
-        if (hasFlag(FLAGS.ROTATION, this._flags)) {
-            this.trigger('rotate', this._rotation, this);
-
-            this._flags = removeFlag(FLAGS.ROTATION, this._flags);
-        }
-
-        if (hasFlag(FLAGS.BUTTONS, this._flags)) {
-            this.trigger('buttonsChanged', this._buttons, this);
-
-            this._flags = removeFlag(FLAGS.BUTTONS, this._flags);
-        }
-
-        if (hasFlag(FLAGS.PRESSURE, this._flags)) {
-            this.trigger('pressureChanged', this._pressure, this);
-
-            this._flags = removeFlag(FLAGS.PRESSURE, this._flags);
+            if (this._flags.has(FLAGS.PRESSURE)) {
+                this.trigger('pressureChanged', this._pressure, this);
+                this._flags.remove(FLAGS.PRESSURE);
+            }
         }
 
         return this;
@@ -337,11 +320,13 @@ export default class Pointer extends ChannelManager {
         this._tilt.destroy();
         this._tilt = null;
 
+        this._flags.destroy();
+        this._flags = null;
+
         this._id = null;
         this._type = null;
         this._buttons = null;
         this._pressure = null;
         this._rotation = null;
-        this._flags = null;
     }
 }

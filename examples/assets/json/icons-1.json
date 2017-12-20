@@ -1,0 +1,632 @@
+{
+    "arrowDown": {
+        "x": 50,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "arrowLeft": {
+        "x": 50,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "arrowRight": {
+        "x": 0,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "arrowUp": {
+        "x": 0,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "audioOff": {
+        "x": 0,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "audioOn": {
+        "x": 0,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "backward": {
+        "x": 0,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "barsHorizontal": {
+        "x": 0,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "barsVertical": {
+        "x": 0,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "basket": {
+        "x": 0,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "button1": {
+        "x": 0,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "button2": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "button3": {
+        "x": 250,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "buttonA": {
+        "x": 500,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "buttonB": {
+        "x": 500,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "buttonL": {
+        "x": 500,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "buttonL1": {
+        "x": 500,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "buttonL2": {
+        "x": 450,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "buttonR": {
+        "x": 450,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "buttonR1": {
+        "x": 450,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "buttonR2": {
+        "x": 450,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "buttonSelect": {
+        "x": 450,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "buttonStart": {
+        "x": 450,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "buttonX": {
+        "x": 450,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "buttonY": {
+        "x": 450,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "cart": {
+        "x": 450,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "checkmark": {
+        "x": 450,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "contrast": {
+        "x": 400,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "cross": {
+        "x": 400,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "door": {
+        "x": 400,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "down": {
+        "x": 400,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "downLeft": {
+        "x": 400,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "downRight": {
+        "x": 400,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "exclamation": {
+        "x": 400,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "exitLeft": {
+        "x": 400,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "exitRight": {
+        "x": 400,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "export": {
+        "x": 400,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "fastForward": {
+        "x": 350,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "film": {
+        "x": 350,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "forward": {
+        "x": 350,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "gamepad": {
+        "x": 350,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "gamepad1": {
+        "x": 350,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "gamepad2": {
+        "x": 350,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "gamepad3": {
+        "x": 350,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "gamepad4": {
+        "x": 350,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "gear": {
+        "x": 350,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "home": {
+        "x": 350,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "import": {
+        "x": 300,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "information": {
+        "x": 300,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "joystick": {
+        "x": 300,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "joystickLeft": {
+        "x": 300,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "joystickRight": {
+        "x": 300,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "joystickUp": {
+        "x": 300,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "larger": {
+        "x": 300,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "leaderboardsComplex": {
+        "x": 300,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "leaderboardsSimple": {
+        "x": 300,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "locked": {
+        "x": 300,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "massiveMultiplayer": {
+        "x": 250,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "medal1": {
+        "x": 250,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "medal2": {
+        "x": 250,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "menuGrid": {
+        "x": 250,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "menuList": {
+        "x": 250,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "minus": {
+        "x": 250,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "mouse": {
+        "x": 250,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "multiplayer": {
+        "x": 500,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "musicOff": {
+        "x": 250,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "musicOn": {
+        "x": 250,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "next": {
+        "x": 200,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "open": {
+        "x": 200,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "pause": {
+        "x": 200,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "phone": {
+        "x": 200,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "plus": {
+        "x": 200,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "power": {
+        "x": 200,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "previous": {
+        "x": 200,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "question": {
+        "x": 200,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "return": {
+        "x": 200,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "rewind": {
+        "x": 200,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "save": {
+        "x": 150,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "scrollHorizontal": {
+        "x": 150,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "scrollVertical": {
+        "x": 150,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "share1": {
+        "x": 150,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "share2": {
+        "x": 150,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "signal1": {
+        "x": 150,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "signal2": {
+        "x": 150,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "signal3": {
+        "x": 150,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "singleplayer": {
+        "x": 150,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "smaller": {
+        "x": 150,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "star": {
+        "x": 100,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "stop": {
+        "x": 100,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "tablet": {
+        "x": 100,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "target": {
+        "x": 100,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "trashcan": {
+        "x": 100,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "trashcanOpen": {
+        "x": 100,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "trophy": {
+        "x": 100,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "unlocked": {
+        "x": 100,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "up": {
+        "x": 100,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "upLeft": {
+        "x": 100,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "upRight": {
+        "x": 50,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "video": {
+        "x": 50,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "warning": {
+        "x": 50,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "wrench": {
+        "x": 50,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "zoom": {
+        "x": 50,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "zoomDefault": {
+        "x": 50,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "zoomIn": {
+        "x": 50,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "zoomOut": {
+        "x": 50,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    }
+}

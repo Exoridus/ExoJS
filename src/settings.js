@@ -1,6 +1,6 @@
 import { SCALE_MODES, WRAP_MODES } from './const';
 import Color from './core/Color';
-import DefaultGamepadMapping from './input/gamepad/DefaultGamepadMapping';
+import GamepadMapping from './input/GamepadMapping';
 
 export default {
 
@@ -202,7 +202,7 @@ export default {
      * @public
      * @static
      * @type {GamepadMapping}
-     * @default {DefaultGamepadMapping}
+     * @default {GamepadMapping}
      */
-    GAMEPAD_MAPPING: new DefaultGamepadMapping(),
+    GAMEPAD_MAPPING: new GamepadMapping(),
 };

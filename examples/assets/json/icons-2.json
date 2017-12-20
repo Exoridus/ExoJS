@@ -1,0 +1,488 @@
+{
+    "DPAD": {
+        "x": 350,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "DPAD_all": {
+        "x": 350,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "DPAD_down": {
+        "x": 350,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "DPAD_left": {
+        "x": 350,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "DPAD_right": {
+        "x": 300,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "DPAD_up": {
+        "x": 300,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "car": {
+        "x": 0,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "cloud": {
+        "x": 0,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "cloudUpload": {
+        "x": 0,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "coin": {
+        "x": 0,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "controllerTilt": {
+        "x": 0,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "controllerTilt_left": {
+        "x": 0,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "controllerTilt_right": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "cpu": {
+        "x": 200,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "cursor": {
+        "x": 350,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "deviceTilt": {
+        "x": 350,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "deviceTilt_left": {
+        "x": 350,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "deviceTilt_right": {
+        "x": 350,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "diamond": {
+        "x": 350,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "download": {
+        "x": 350,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "fightFist": {
+        "x": 300,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "fightFist_circle": {
+        "x": 300,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "fightJ": {
+        "x": 300,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_00": {
+        "x": 300,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_01": {
+        "x": 300,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_02": {
+        "x": 300,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_03": {
+        "x": 300,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_04": {
+        "x": 300,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_05": {
+        "x": 250,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_06": {
+        "x": 250,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_07": {
+        "x": 250,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_08": {
+        "x": 250,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_09": {
+        "x": 250,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_10": {
+        "x": 250,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_11": {
+        "x": 250,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_12": {
+        "x": 250,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_13": {
+        "x": 250,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_14": {
+        "x": 250,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_15": {
+        "x": 200,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_16": {
+        "x": 200,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_17": {
+        "x": 200,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_18": {
+        "x": 200,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_19": {
+        "x": 200,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_20": {
+        "x": 200,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_21": {
+        "x": 200,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_22": {
+        "x": 200,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_23": {
+        "x": 200,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_24": {
+        "x": 400,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_25": {
+        "x": 150,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_26": {
+        "x": 150,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_27": {
+        "x": 150,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_28": {
+        "x": 150,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_29": {
+        "x": 150,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_30": {
+        "x": 150,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "fightJoy_31": {
+        "x": 150,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "figurine": {
+        "x": 150,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "fistPlus": {
+        "x": 150,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "flag": {
+        "x": 150,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "joystick": {
+        "x": 100,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "joystickL_side": {
+        "x": 100,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "joystickL_top": {
+        "x": 100,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "joystickLeft": {
+        "x": 100,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "joystickR_side": {
+        "x": 100,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "joystickR_top": {
+        "x": 100,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "joystickRight": {
+        "x": 100,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "key": {
+        "x": 100,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "keyLarge": {
+        "x": 100,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "keyLarge_3d": {
+        "x": 100,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "keySmall": {
+        "x": 50,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "keySmall_3d": {
+        "x": 50,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "mouse": {
+        "x": 50,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    },
+    "mouseLeft": {
+        "x": 50,
+        "y": 300,
+        "width": 50,
+        "height": 50
+    },
+    "mouseMiddle": {
+        "x": 50,
+        "y": 250,
+        "width": 50,
+        "height": 50
+    },
+    "mouseRight": {
+        "x": 50,
+        "y": 200,
+        "width": 50,
+        "height": 50
+    },
+    "pointer": {
+        "x": 50,
+        "y": 150,
+        "width": 50,
+        "height": 50
+    },
+    "toolBrush": {
+        "x": 50,
+        "y": 100,
+        "width": 50,
+        "height": 50
+    },
+    "toolEraser": {
+        "x": 50,
+        "y": 50,
+        "width": 50,
+        "height": 50
+    },
+    "toolFill": {
+        "x": 50,
+        "y": 0,
+        "width": 50,
+        "height": 50
+    },
+    "toolPencil": {
+        "x": 0,
+        "y": 450,
+        "width": 50,
+        "height": 50
+    },
+    "upload": {
+        "x": 0,
+        "y": 400,
+        "width": 50,
+        "height": 50
+    },
+    "userRobot": {
+        "x": 0,
+        "y": 350,
+        "width": 50,
+        "height": 50
+    }
+}

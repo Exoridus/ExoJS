@@ -1,5 +1,3 @@
-import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_GAMEPAD } from '../../const';
-
 /**
  * @class GamepadControl
  */
@@ -31,12 +29,6 @@ export default class GamepadControl {
          * @member {Number}
          */
         this._channel = channel;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._key = (channel % INPUT_CHANNELS_HANDLER);
 
         /**
          * Transform value range from {-1..1} to {1..-1}.
@@ -83,20 +75,6 @@ export default class GamepadControl {
 
     set channel(channel) {
         this._channel = channel;
-        this._key = this._channel % INPUT_CHANNELS_HANDLER;
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get key() {
-        return this._key;
-    }
-
-    set key(key) {
-        this._key = key % INPUT_CHANNELS_HANDLER;
-        this._channel = INPUT_OFFSET_GAMEPAD + this._key;
     }
 
     /**
@@ -152,5 +130,16 @@ export default class GamepadControl {
         }
 
         return (result > this._threshold) ? result : 0;
+    }
+
+    /**
+     * @public
+     */
+    destroy() {
+        this._index = null;
+        this._channel = null;
+        this._invert = null;
+        this._normalize = null;
+        this._threshold = null;
     }
 }

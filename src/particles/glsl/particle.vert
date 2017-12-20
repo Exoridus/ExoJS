@@ -22,5 +22,5 @@ void main(void) {
     gl_Position = vec4((u_projection * vec3(v, 1.0)).xy, 0.0, 1.0);
 
     v_texcoord = a_texcoord;
-    v_color = a_color;
+    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
 }

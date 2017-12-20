@@ -1,4 +1,3 @@
-import { INPUT_CHANNELS_HANDLER, INPUT_OFFSET_POINTER, INPUT_OFFSET_GAMEPAD } from '../const';
 import settings from '../settings';
 import EventEmitter from '../core/EventEmitter';
 
@@ -17,20 +16,9 @@ export default class Input extends EventEmitter {
      * @param {Function} [options.active]
      * @param {Function} [options.trigger]
      * @param {*} [options.context]
-     * @param {Number} [options.gamepadIndex=0]
-     * @param {Number} [options.pointerIndex=0]
      * @param {Number} [options.threshold=settings.INPUT_THRESHOLD]
      */
-    constructor(channels, {
-        start,
-        stop,
-        active,
-        trigger,
-        context,
-        gamepadIndex = 0,
-        pointerIndex = 0,
-        threshold = settings.INPUT_THRESHOLD,
-    } = {}) {
+    constructor(channels, { start, stop, active, trigger, context, threshold = settings.INPUT_THRESHOLD } = {}) {
         super();
 
         /**
@@ -44,30 +32,6 @@ export default class Input extends EventEmitter {
          * @member {Number}
          */
         this._threshold = threshold;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._pointerIndex = pointerIndex;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._pointerOffset = (pointerIndex * INPUT_CHANNELS_HANDLER);
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._gamepadIndex = gamepadIndex;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._gamepadOffset = (gamepadIndex * INPUT_CHANNELS_HANDLER);
 
         /**
          * @private
@@ -128,50 +92,6 @@ export default class Input extends EventEmitter {
 
     /**
      * @public
-     * @member {Number}
-     */
-    get pointerIndex() {
-        return this._pointerIndex;
-    }
-
-    set pointerIndex(index) {
-        this._pointerIndex = index;
-        this._pointerOffset = (index * INPUT_CHANNELS_HANDLER);
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get gamepadIndex() {
-        return this._gamepadIndex;
-    }
-
-    set gamepadIndex(index) {
-        this._gamepadIndex = index;
-        this._gamepadOffset = (index * INPUT_CHANNELS_HANDLER);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get pointerOffset() {
-        return this._pointerOffset;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get gamepadOffset() {
-        return this._gamepadOffset;
-    }
-
-    /**
-     * @public
      * @readonly
      * @member {Number}
      */
@@ -181,7 +101,9 @@ export default class Input extends EventEmitter {
 
     /**
      * @public
+     * @chainable
      * @param {Float32Array} channels
+     * @returns {Input}
      */
     update(channels) {
         this._value = 0;
@@ -206,10 +128,12 @@ export default class Input extends EventEmitter {
 
             this._triggered = 0;
         }
+
+        return this;
     }
 
     /**
-     * @public
+     * @override
      */
     destroy() {
         super.destroy();
@@ -218,10 +142,6 @@ export default class Input extends EventEmitter {
         this._channels = null;
 
         this._threshold = null;
-        this._pointerIndex = null;
-        this._pointerOffset = null;
-        this._gamepadIndex = null;
-        this._gamepadOffset = null;
         this._triggered = null;
         this._value = null;
     }

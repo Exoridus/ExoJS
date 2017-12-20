@@ -12,3 +12,4 @@ export { default as Polygon } from './Polygon';
 export { default as Size } from './Size';
 export { default as Random } from './Random';
 export { default as ObservableSize } from './ObservableSize';
+export { default as Flags } from './Flags';

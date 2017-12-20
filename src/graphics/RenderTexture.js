@@ -1,8 +1,8 @@
 import { SCALE_MODES, WRAP_MODES, TEXTURE_FLAGS } from '../const';
 import settings from '../settings';
-import { hasFlag, addFlag, removeFlag } from '../utils/flags';
 import { isPowerOfTwo } from '../utils/math';
 import RenderTarget from './RenderTarget';
+import Flags from '../math/Flags';
 
 /**
  * @class RenderTexture
@@ -72,9 +72,9 @@ export default class RenderTexture extends RenderTarget {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Flags}
          */
-        this._flags = (TEXTURE_FLAGS.SOURCE | TEXTURE_FLAGS.SIZE);
+        this._flags = new Flags(TEXTURE_FLAGS.SOURCE, TEXTURE_FLAGS.SIZE);
 
         this.setScaleMode(scaleMode);
         this.setWrapMode(wrapMode);
@@ -250,7 +250,7 @@ export default class RenderTexture extends RenderTarget {
     setScaleMode(scaleMode) {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags = addFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
+            this._flags.add(TEXTURE_FLAGS.SCALE_MODE);
         }
 
         return this;
@@ -265,7 +265,7 @@ export default class RenderTexture extends RenderTarget {
     setWrapMode(wrapMode) {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags = addFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
+            this._flags.add(TEXTURE_FLAGS.WRAP_MODE);
         }
 
         return this;
@@ -280,7 +280,7 @@ export default class RenderTexture extends RenderTarget {
     setPremultiplyAlpha(premultiplyAlpha) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags = addFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+            this._flags.add(TEXTURE_FLAGS.PREMULTIPLY_ALPHA);
         }
 
         return this;
@@ -319,7 +319,7 @@ export default class RenderTexture extends RenderTarget {
             this._defaultView.resize(width, height);
             this.updateViewport();
 
-            this._flags = addFlag(TEXTURE_FLAGS.SIZE, this._flags);
+            this._flags.add(TEXTURE_FLAGS.SIZE);
         }
 
         return this;
@@ -331,19 +331,19 @@ export default class RenderTexture extends RenderTarget {
      * @returns {RenderTexture}
      */
     update() {
-        if (this._flags && this._context) {
+        if (this._flags.value && this._context) {
             const gl = this._context;
 
-            if (hasFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.SCALE_MODE)) {
                 const scaleMode = (this._scaleMode === SCALE_MODES.LINEAR) ? gl.LINEAR : gl.NEAREST;
 
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, scaleMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, scaleMode);
 
-                this._flags = removeFlag(TEXTURE_FLAGS.SCALE_MODE, this._flags);
+                this._flags.remove(TEXTURE_FLAGS.SCALE_MODE);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.WRAP_MODE)) {
                 const clamp = (this._wrapMode === WRAP_MODES.CLAMP_TO_EDGE) && gl.CLAMP_TO_EDGE,
                     repeat = (this._wrapMode === WRAP_MODES.REPEAT) && gl.REPEAT,
                     wrapMode = clamp || repeat || gl.MIRRORED_REPEAT;
@@ -351,17 +351,17 @@ export default class RenderTexture extends RenderTarget {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
-                this._flags = removeFlag(TEXTURE_FLAGS.WRAP_MODE, this._flags);
+                this._flags.remove(TEXTURE_FLAGS.WRAP_MODE);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags)) {
+            if (this._flags.has(TEXTURE_FLAGS.PREMULTIPLY_ALPHA)) {
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
 
-                this._flags = removeFlag(TEXTURE_FLAGS.PREMULTIPLY_ALPHA, this._flags);
+                this._flags.remove(TEXTURE_FLAGS.PREMULTIPLY_ALPHA);
             }
 
-            if (hasFlag(TEXTURE_FLAGS.SOURCE, this._flags)) {
-                if (hasFlag(TEXTURE_FLAGS.SIZE, this._flags) || !this._source) {
+            if (this._flags.has(TEXTURE_FLAGS.SOURCE)) {
+                if (this._flags.has(TEXTURE_FLAGS.SIZE) || !this._source) {
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 } else {
                     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
@@ -371,7 +371,7 @@ export default class RenderTexture extends RenderTarget {
                     gl.generateMipmap(gl.TEXTURE_2D);
                 }
 
-                this._flags = removeFlag((TEXTURE_FLAGS.SOURCE | TEXTURE_FLAGS.SIZE), this._flags);
+                this._flags.remove(TEXTURE_FLAGS.SOURCE, TEXTURE_FLAGS.SIZE);
             }
         }
 
@@ -384,12 +384,14 @@ export default class RenderTexture extends RenderTarget {
     destroy() {
         super.destroy();
 
+        this._flags.destroy();
+        this._flags = null;
+
         this._source = null;
         this._texture = null;
         this._scaleMode = null;
         this._wrapMode = null;
         this._premultiplyAlpha = null;
-        this._flags = null;
         this._flipY = null;
     }
 }
