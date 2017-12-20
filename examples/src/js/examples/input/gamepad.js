@@ -12,11 +12,11 @@ app.start(new Exo.Scene({
      */
     load(loader) {
         loader.add('texture', {
-            icons: 'image/icons.png',
+            buttons: 'image/buttons.png',
         });
 
         loader.add('json', {
-            icons: 'json/icons.json',
+            buttons: 'json/buttons.json',
         });
     },
 
@@ -35,7 +35,10 @@ app.start(new Exo.Scene({
          * @private
          * @member {Spritesheet}
          */
-        this._icons = new Exo.Spritesheet(resources.get('texture', 'icons'), resources.get('json', 'icons'));
+        this._buttons = new Exo.Spritesheet(
+            resources.get('texture', 'buttons'),
+            resources.get('json', 'buttons')
+        );
 
         /**
          * @private
@@ -100,8 +103,7 @@ app.start(new Exo.Scene({
      */
     createStatus() {
         const { width, height } = this.app.canvas,
-            inputManager = this.app.inputManager,
-            status = this._icons.sprites['gamepad'];
+            status = this._buttons.sprites['status'];
 
         status.setOrigin(0.5);
         status.setPosition(width / 2, height / 5);
@@ -137,16 +139,29 @@ app.start(new Exo.Scene({
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            playfield = this._icons.sprites['DPAD_all'];
+            dpad = this._buttons.sprites['dpad'],
+            dpadUp = this._buttons.sprites['DPadUp'],
+            dpadDown = this._buttons.sprites['DPadDown'],
+            dpadLeft = this._buttons.sprites['DPadLeft'],
+            dpadRight = this._buttons.sprites['DPadRight'];
 
-        mappedButtons.set(Exo.GAMEPAD.DPadUp, playfield);
-        mappedButtons.set(Exo.GAMEPAD.DPadDown, playfield);
-        mappedButtons.set(Exo.GAMEPAD.DPadLeft, playfield);
-        mappedButtons.set(Exo.GAMEPAD.DPadRight, playfield);
+        mappedButtons.set(Exo.GAMEPAD.DPadUp, dpadUp);
+        mappedButtons.set(Exo.GAMEPAD.DPadDown, dpadDown);
+        mappedButtons.set(Exo.GAMEPAD.DPadLeft, dpadLeft);
+        mappedButtons.set(Exo.GAMEPAD.DPadRight, dpadRight);
 
-        playfield.setScale(1.75);
+        dpad.setTint(this._buttonColor);
+        dpad.setScale(1.75);
+        dpadUp.setScale(1.75);
+        dpadDown.setScale(1.75);
+        dpadLeft.setScale(1.75);
+        dpadRight.setScale(1.75);
 
-        container.addChild(playfield);
+        container.addChild(dpad);
+        container.addChild(dpadUp);
+        container.addChild(dpadDown);
+        container.addChild(dpadLeft);
+        container.addChild(dpadRight);
 
         container.setOrigin(0.5);
         container.setPosition(width / 5, height / 2);
@@ -162,10 +177,10 @@ app.start(new Exo.Scene({
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            buttonTop = this._icons.sprites['buttonY'],
-            buttonLeft = this._icons.sprites['buttonX'],
-            buttonRight = this._icons.sprites['buttonB'],
-            buttonBottom = this._icons.sprites['buttonA'];
+            buttonTop = this._buttons.sprites['FaceTop'],
+            buttonLeft = this._buttons.sprites['FaceLeft'],
+            buttonRight = this._buttons.sprites['FaceRight'],
+            buttonBottom = this._buttons.sprites['FaceBottom'];
 
         mappedButtons.set(Exo.GAMEPAD.FaceTop, buttonTop);
         mappedButtons.set(Exo.GAMEPAD.FaceLeft, buttonLeft);
@@ -203,10 +218,10 @@ app.start(new Exo.Scene({
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            leftButton = this._icons.sprites['buttonL1'],
-            rightButton = this._icons.sprites['buttonR1'],
-            leftTrigger = this._icons.sprites['buttonL2'],
-            rightTrigger = this._icons.sprites['buttonR2'];
+            leftButton = this._buttons.sprites['ShoulderLeftBottom'],
+            rightButton = this._buttons.sprites['ShoulderRightBottom'],
+            leftTrigger = this._buttons.sprites['ShoulderLeftTop'],
+            rightTrigger = this._buttons.sprites['ShoulderRightTop'];
 
         mappedButtons.set(Exo.GAMEPAD.ShoulderLeftBottom, leftButton);
         mappedButtons.set(Exo.GAMEPAD.ShoulderRightBottom, rightButton);
@@ -240,8 +255,8 @@ app.start(new Exo.Scene({
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            selectButton = this._icons.sprites['buttonSelect'],
-            startButton = this._icons.sprites['buttonStart'];
+            selectButton = this._buttons.sprites['Select'],
+            startButton = this._buttons.sprites['Start'];
 
         mappedButtons.set(Exo.GAMEPAD.Select, selectButton);
         mappedButtons.set(Exo.GAMEPAD.Start, startButton);
@@ -267,8 +282,8 @@ app.start(new Exo.Scene({
             mappedButtons = this._mappingButtons,
             mappingFunctions = this._mappingFunctions,
             container = new Exo.Container(),
-            leftStick = this._icons.sprites['joystickL'],
-            rightStick = this._icons.sprites['joystickR'],
+            leftStick = this._buttons.sprites['LeftStick'],
+            rightStick = this._buttons.sprites['RightStick'],
             startLeft = new Exo.Vector(0, 0),
             startRight = new Exo.Vector(width * 0.3, 0),
             range = 35;
