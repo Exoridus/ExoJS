@@ -29,14 +29,9 @@ app.start(new Exo.Scene({
         this._video.height = canvas.height;
         this._video.play({ loop: true, volume: 0.5 });
 
-        this.app.on('pointer:down', () => {
+        this.app.inputManager.on('pointer:down', () => {
             this._video.toggle();
         });
-
-        this.app.on('resize', (width, height) => {
-            this._video.width = width;
-            this._video.height = height;
-        })
     },
 
     /**

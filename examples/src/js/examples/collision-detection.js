@@ -51,8 +51,8 @@ app.start(new Exo.Scene({
          */
         this._pointer = null;
 
-        this.app.on('pointer:enter', (pointer) => (this._pointer = pointer));
-        this.app.on('pointer:leave', () => (this._pointer = null));
+        this.app.inputManager.on('pointer:enter', (pointer) => (this._pointer = pointer));
+        this.app.inputManager.on('pointer:leave', () => (this._pointer = null));
     },
 
     /**

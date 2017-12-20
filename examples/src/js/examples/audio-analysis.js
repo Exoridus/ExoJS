@@ -98,7 +98,7 @@ app.start(new Exo.Scene({
             volume: 0.5
         });
 
-        this.app.on('pointer:down', () => {
+        this.app.inputManager.on('pointer:down', () => {
             this._music.toggle();
         });
     },

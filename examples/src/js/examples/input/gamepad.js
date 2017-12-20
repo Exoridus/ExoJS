@@ -1,5 +1,5 @@
 const app = new Exo.Application({
-    resourcePath: 'assets/image/icons/',
+    resourcePath: 'assets/',
     canvasParent: document.body,
     width: 800,
     height: 600,
@@ -12,21 +12,11 @@ app.start(new Exo.Scene({
      */
     load(loader) {
         loader.add('texture', {
-            faceBottom: 'buttonA.png',
-            faceRight: 'buttonB.png',
-            faceLeft: 'buttonX.png',
-            faceTop: 'buttonY.png',
-            shoulderLeftBottom: 'buttonL1.png',
-            shoulderRightBottom: 'buttonR1.png',
-            shoulderLeftTop: 'buttonL2.png',
-            shoulderRightTop: 'buttonR2.png',
-            select: 'buttonSelect.png',
-            start: 'buttonStart.png',
-            leftStick: 'joystickL_top.png',
-            rightStick: 'joystickR_top.png',
-            DPadField: 'DPAD_all.png',
-            home: 'home.png',
-            gamepad: 'gamepad.png',
+            icons: 'image/icons.png',
+        });
+
+        loader.add('json', {
+            icons: 'json/icons.json',
         });
     },
 
@@ -34,25 +24,24 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const gamepad = this.app.inputManager.gamepads[0];
+
+        /**
+         * @private
+         * @member {Gamepad}
+         */
+        this._gamepad = this.app.inputManager.gamepads[0];
+
+        /**
+         * @private
+         * @member {Spritesheet}
+         */
+        this._icons = new Exo.Spritesheet(resources.get('texture', 'icons'), resources.get('json', 'icons'));
 
         /**
          * @private
          * @member {Color}
          */
         this._buttonColor = new Exo.Color(255, 255, 255, 0.25);
-
-        /**
-         * @private
-         * @member {Color}
-         */
-        this._connectedColor = new Exo.Color(0, 255, 0, 0.65);
-
-        /**
-         * @private
-         * @member {Color}
-         */
-        this._disconnectedColor = new Exo.Color(255, 0, 0, 0.65);
 
         /**
          * @private
@@ -70,21 +59,21 @@ app.start(new Exo.Scene({
          * @private
          * @member {Sprite}
          */
-        this._status = this.createStatus(resources);
+        this._status = this.createStatus();
 
         /**
          * @private
          * @member {Container}
          */
-        this._container = this.createGamepad(resources);
+        this._container = this.createGamepad();
 
         for (const sprite of this._mappingButtons.values()) {
             sprite.setTint(this._buttonColor);
         }
 
-        gamepad.on('connect', (channel, value) => this._status.setTint(this._connectedColor));
-        gamepad.on('disconnect', (channel, value) => this._status.setTint(this._disconnectedColor));
-        gamepad.on('update', (channel, value) => {
+        this._gamepad.on('connect', (channel, value) => this._status.setTint(Exo.Color.White));
+        this._gamepad.on('disconnect', (channel, value) => this._status.setTint(this._buttonColor));
+        this._gamepad.on('update', (channel, value) => {
             if (this._mappingButtons.has(channel)) {
                 this._mappingButtons.get(channel).tint.a = Exo.lerp(0.25, 1, value);
             }
@@ -107,48 +96,48 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createStatus(resources) {
+    createStatus() {
         const { width, height } = this.app.canvas,
             inputManager = this.app.inputManager,
-            status = new Exo.Sprite(resources.get('texture', 'gamepad'));
+            status = this._icons.sprites['gamepad'];
 
         status.setOrigin(0.5);
         status.setPosition(width / 2, height / 5);
-        status.setTint(inputManager.gamepads[0].connected ? this._connectedColor : this._disconnectedColor);
+
+        if (!this._gamepad.connected) {
+            status.setTint(this._buttonColor);
+        }
 
         return status;
     },
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createGamepad(resources) {
+    createGamepad() {
         const container = new Exo.Container();
 
-        container.addChild(this.createDPadField(resources));
-        container.addChild(this.createFaceButtons(resources));
-        container.addChild(this.createShoulderButtons(resources));
-        container.addChild(this.createMenuButtons(resources));
-        container.addChild(this.createJoysticks(resources));
+        container.addChild(this.createDPadField());
+        container.addChild(this.createFaceButtons());
+        container.addChild(this.createShoulderButtons());
+        container.addChild(this.createMenuButtons());
+        container.addChild(this.createJoysticks());
 
         return container;
     },
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createDPadField(resources) {
+    createDPadField() {
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            playfield = new Exo.Sprite(resources.get('texture', 'DPadField'));
+            playfield = this._icons.sprites['DPAD_all'];
 
         mappedButtons.set(Exo.GAMEPAD.DPadUp, playfield);
         mappedButtons.set(Exo.GAMEPAD.DPadDown, playfield);
@@ -158,6 +147,7 @@ app.start(new Exo.Scene({
         playfield.setScale(1.75);
 
         container.addChild(playfield);
+
         container.setOrigin(0.5);
         container.setPosition(width / 5, height / 2);
 
@@ -166,17 +156,16 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createFaceButtons(resources) {
+    createFaceButtons() {
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            buttonTop = new Exo.Sprite(resources.get('texture', 'faceTop')),
-            buttonLeft = new Exo.Sprite(resources.get('texture', 'faceLeft')),
-            buttonRight = new Exo.Sprite(resources.get('texture', 'faceRight')),
-            buttonBottom = new Exo.Sprite(resources.get('texture', 'faceBottom'));
+            buttonTop = this._icons.sprites['buttonY'],
+            buttonLeft = this._icons.sprites['buttonX'],
+            buttonRight = this._icons.sprites['buttonB'],
+            buttonBottom = this._icons.sprites['buttonA'];
 
         mappedButtons.set(Exo.GAMEPAD.FaceTop, buttonTop);
         mappedButtons.set(Exo.GAMEPAD.FaceLeft, buttonLeft);
@@ -199,6 +188,7 @@ app.start(new Exo.Scene({
         container.addChild(buttonLeft);
         container.addChild(buttonRight);
         container.addChild(buttonBottom);
+
         container.setOrigin(0.5);
         container.setPosition(width * 0.8, height / 2);
 
@@ -207,17 +197,16 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createShoulderButtons(resources) {
+    createShoulderButtons() {
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            leftButton = new Exo.Sprite(resources.get('texture', 'shoulderLeftBottom')),
-            rightButton = new Exo.Sprite(resources.get('texture', 'shoulderRightBottom')),
-            leftTrigger = new Exo.Sprite(resources.get('texture', 'shoulderLeftTop')),
-            rightTrigger = new Exo.Sprite(resources.get('texture', 'shoulderRightTop'));
+            leftButton = this._icons.sprites['buttonL1'],
+            rightButton = this._icons.sprites['buttonR1'],
+            leftTrigger = this._icons.sprites['buttonL2'],
+            rightTrigger = this._icons.sprites['buttonR2'];
 
         mappedButtons.set(Exo.GAMEPAD.ShoulderLeftBottom, leftButton);
         mappedButtons.set(Exo.GAMEPAD.ShoulderRightBottom, rightButton);
@@ -236,6 +225,7 @@ app.start(new Exo.Scene({
         container.addChild(rightButton);
         container.addChild(leftTrigger);
         container.addChild(rightTrigger);
+
         container.setOrigin(0.5);
         container.setPosition(width / 2, height / 5);
 
@@ -244,30 +234,24 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createMenuButtons(resources) {
+    createMenuButtons() {
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             container = new Exo.Container(),
-            selectButton = new Exo.Sprite(resources.get('texture', 'select')),
-            startButton = new Exo.Sprite(resources.get('texture', 'start')),
-            homeButton = new Exo.Sprite(resources.get('texture', 'home'));
+            selectButton = this._icons.sprites['buttonSelect'],
+            startButton = this._icons.sprites['buttonStart'];
 
         mappedButtons.set(Exo.GAMEPAD.Select, selectButton);
         mappedButtons.set(Exo.GAMEPAD.Start, startButton);
-        mappedButtons.set(Exo.GAMEPAD.Home, homeButton);
-
-        homeButton.setOrigin(0.5);
-        homeButton.setPosition(width * 0.175, 50);
 
         startButton.setOrigin(1, 0);
-        startButton.setPosition(width * 0.35, 0);
+        startButton.setPosition(width * 0.3, 0);
 
         container.addChild(selectButton);
         container.addChild(startButton);
-        container.addChild(homeButton);
+
         container.setOrigin(0.5);
         container.setPosition(width / 2, height / 2);
 
@@ -276,16 +260,15 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @param {ResourceContainer} resources
      * @returns {Container}
      */
-    createJoysticks(resources) {
+    createJoysticks() {
         const { width, height } = this.app.canvas,
             mappedButtons = this._mappingButtons,
             mappingFunctions = this._mappingFunctions,
             container = new Exo.Container(),
-            leftStick = new Exo.Sprite(resources.get('texture', 'leftStick')),
-            rightStick = new Exo.Sprite(resources.get('texture', 'rightStick')),
+            leftStick = this._icons.sprites['joystickL'],
+            rightStick = this._icons.sprites['joystickR'],
             startLeft = new Exo.Vector(0, 0),
             startRight = new Exo.Vector(width * 0.3, 0),
             range = 35;
@@ -308,6 +291,7 @@ app.start(new Exo.Scene({
 
         container.addChild(leftStick);
         container.addChild(rightStick);
+
         container.setOrigin(0.5, 0);
         container.setPosition(width / 2, height * 0.65);
 

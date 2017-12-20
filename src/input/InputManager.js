@@ -511,7 +511,7 @@ export default class InputManager extends EventEmitter {
      * @param {WheelEvent} event
      */
     _onMouseScroll(event) {
-        this._scrollDelta.push(event.deltaX, event.deltaY);
+        this._scrollDelta.set(event.deltaX, event.deltaY);
         this._flags.add(FLAGS.MOUSE_SCROLL);
     }
 

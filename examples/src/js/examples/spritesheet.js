@@ -12,45 +12,57 @@ app.start(new Exo.Scene({
      */
     load(loader) {
         loader.add('texture', { explosion: 'image/explosion.png' });
-        loader.add('json', { spritesheet: 'json/spritesheet.json' });
+        loader.add('json', { explosion: 'json/explosion.json' });
     },
 
     /**
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas,
+        const { width, height } = this.app.canvas,
             texture = resources.get('texture', 'explosion'),
-            frames = resources.get('json', 'spritesheet');
+            data = resources.get('json', 'explosion');
 
         /**
          * @type {Spritesheet}
          */
-        this._spritesheet = new Exo.Spritesheet(texture, frames);
-        this._spritesheet.setPosition(canvas.width / 2, canvas.height / 2);
-        this._spritesheet.setOrigin(0.5, 0.5);
+        this._spritesheet = new Exo.Spritesheet(texture, data);
 
         /**
-         * @type {Vector}
+         * @type {Sprite}
          */
-        this._frameCount = new Exo.Vector(8, 8);
+        this._sprite = this._spritesheet.sprites['explosion-0'];
+
+        /**
+         * @type {Timer}
+         */
+        this._timer = new Exo.Timer(true, 10);
 
         /**
          * @type {Number}
          */
-        this._ticker = 0;
+        this._frame = 0;
+
+        /**
+         * @type {Number}
+         */
+        this._frames = 64;
+
+        for (const sprite of Object.values(this._spritesheet.sprites)) {
+            sprite.setOrigin(0.5);
+            sprite.setPosition(width / 2, height / 2);
+        }
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        const x = (this._ticker % this._frameCount.x),
-            y = ((this._ticker / this._frameCount.x | 0) % this._frameCount.y);
-
-        this._spritesheet.setFrame(`explosion ${x}-${y}`);
-
-        this._ticker++;
+        if (this._timer.expired) {
+            this._frame = (this._frame + 1) % this._frames;
+            this._sprite = this._spritesheet.sprites[`explosion-${this._frame}`];
+            this._timer.restart();
+        }
     },
 
     /**
@@ -59,7 +71,7 @@ app.start(new Exo.Scene({
     draw(renderManager) {
         renderManager
             .clear()
-            .draw(this._spritesheet)
+            .draw(this._sprite)
             .display();
     },
 }));
