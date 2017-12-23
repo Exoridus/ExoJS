@@ -1,9 +1,9 @@
-import Renderer from '../graphics/Renderer';
+import Renderer from '../rendering/Renderer';
 import ParticleShader from './ParticleShader';
 import { degreesToRadians } from '../utils/math';
 import settings from '../settings';
-import Buffer from '../graphics/Buffer';
-import VertexArray from '../graphics/VertexArray';
+import Buffer from '../rendering/Buffer';
+import VertexArray from '../rendering/VertexArray';
 
 /**
  * @class ParticleRenderer

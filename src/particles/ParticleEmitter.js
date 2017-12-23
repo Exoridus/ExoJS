@@ -1,5 +1,5 @@
 import { TIME } from '../const/core';
-import Drawable from '../graphics/Drawable';
+import Drawable from '../rendering/Drawable';
 import Particle from './Particle';
 import Rectangle from '../math/Rectangle';
 import Time from '../core/time/Time';

@@ -1,5 +1,5 @@
 import ImageFactory from './ImageFactory';
-import Texture from '../../graphics/texture/Texture';
+import Texture from '../../rendering/texture/Texture';
 
 /**
  * @class TextureFactory
