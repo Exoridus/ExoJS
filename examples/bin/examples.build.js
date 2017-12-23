@@ -12514,8 +12514,8 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
     loader.loadItem({
         type: 'json',
-        name: 'examples',
-        path: 'assets/json/examples.json?no-cache=' + Date.now()
+        name: 'config',
+        path: 'config.json?no-cache=' + Date.now()
     }).then(createNavigation);
 
     $refresh.on('click', function () {

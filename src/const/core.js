@@ -45,6 +45,7 @@ export const
         'texture',
         'text',
         'json',
+        'svg',
     ],
 
     /**

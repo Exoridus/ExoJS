@@ -77,11 +77,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _graphics = __webpack_require__(5);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _GamepadMapping = __webpack_require__(49);
+var _GamepadMapping = __webpack_require__(44);
 
 var _GamepadMapping2 = _interopRequireDefault(_GamepadMapping);
 
@@ -760,7 +760,7 @@ exports.getVoronoiRegion = exports.bezierCurveTo = exports.random = exports.inRa
 
 var _math = __webpack_require__(23);
 
-var _Random = __webpack_require__(48);
+var _Random = __webpack_require__(43);
 
 var _Random2 = _interopRequireDefault(_Random);
 
@@ -973,7 +973,7 @@ var _Size = __webpack_require__(12);
 
 var _Size2 = _interopRequireDefault(_Size);
 
-var _Circle = __webpack_require__(33);
+var _Circle = __webpack_require__(34);
 
 var _Circle2 = _interopRequireDefault(_Circle);
 
@@ -2115,7 +2115,7 @@ TIME = exports.TIME = {
  * @name DATABASE_TYPES
  * @type {String[]}
  */
-DATABASE_TYPES = exports.DATABASE_TYPES = ['arrayBuffer', 'blob', 'font', 'media', 'audio', 'video', 'music', 'sound', 'image', 'texture', 'text', 'json'],
+DATABASE_TYPES = exports.DATABASE_TYPES = ['arrayBuffer', 'blob', 'font', 'media', 'audio', 'video', 'music', 'sound', 'image', 'texture', 'text', 'json', 'svg'],
 
 
 /**
@@ -2128,170 +2128,6 @@ EMPTY_ARRAY_BUFFER = exports.EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
 
 /***/ }),
 /* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.imageToBase64 = exports.getMediaHeight = exports.getMediaWidth = exports.decodeAudioBuffer = exports.supportsCodec = exports.audioContext = undefined;
-
-var _support = __webpack_require__(6);
-
-var _support2 = _interopRequireDefault(_support);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var
-
-/**
- * @inner
- * @constant
- * @type {Audio}
- */
-audio = new Audio(),
-
-
-/**
- * @public
- * @constant
- * @name audioContext
- * @type {AudioContext}
- */
-audioContext = _support2.default.webAudio ? new AudioContext() : null,
-
-
-/**
- * @inner
- * @type {HTMLCanvasElement}
- */
-canvas = document.createElement('canvas'),
-
-
-/**
- * @inner
- * @type {CanvasRenderingContext2D}
- */
-canvasContext = canvas.getContext('2d'),
-
-
-/**
- * @inner
- * @type {RegExp}
- */
-CODEC_NOT_SUPPORTED = /^no$/,
-
-
-/**
- * @public
- * @param {...String} codecs
- * @returns {Boolean}
- */
-supportsCodec = function supportsCodec() {
-  for (var _len = arguments.length, codecs = Array(_len), _key = 0; _key < _len; _key++) {
-    codecs[_key] = arguments[_key];
-  }
-
-  var _iteratorNormalCompletion = true;
-  var _didIteratorError = false;
-  var _iteratorError = undefined;
-
-  try {
-    for (var _iterator = codecs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-      var codec = _step.value;
-
-      if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
-        return true;
-      }
-    }
-  } catch (err) {
-    _didIteratorError = true;
-    _iteratorError = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion && _iterator.return) {
-        _iterator.return();
-      }
-    } finally {
-      if (_didIteratorError) {
-        throw _iteratorError;
-      }
-    }
-  }
-
-  return false;
-},
-
-
-/**
- * @public
- * @param {ArrayBuffer} arrayBuffer
- * @returns {Promise<AudioBuffer>}
- */
-decodeAudioBuffer = function decodeAudioBuffer(arrayBuffer) {
-  if (!_support2.default.webAudio) {
-    return Promise.reject(Error('Web Audio is not supported!'));
-  }
-
-  return new Promise(function (resolve, reject) {
-    audioContext.decodeAudioData(arrayBuffer, resolve, reject);
-  });
-},
-
-
-/**
- * @public
- * @constant
- * @type {Function}
- * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
- * @returns {Number}
- */
-getMediaWidth = function getMediaWidth(element) {
-  return element && (element.naturalWidth || element.videoWidth || element.width) || 0;
-},
-
-
-/**
- * @public
- * @constant
- * @type {Function}
- * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
- * @returns {Number}
- */
-getMediaHeight = function getMediaHeight(element) {
-  return element && (element.naturalHeight || element.videoHeight || element.height) || 0;
-},
-
-
-/**
- * @public
- * @constant
- * @type {Function}
- * @param {HTMLImageElement} image
- * @return {String}
- */
-imageToBase64 = function imageToBase64(image) {
-  canvas.width = image.width;
-  canvas.height = image.height;
-  canvasContext.drawImage(image, 0, 0);
-
-  return canvas.toDataURL();
-};
-
-/**
- * @namespace Exo
- */
-exports.audioContext = audioContext;
-exports.supportsCodec = supportsCodec;
-exports.decodeAudioBuffer = decodeAudioBuffer;
-exports.getMediaWidth = getMediaWidth;
-exports.getMediaHeight = getMediaHeight;
-exports.imageToBase64 = imageToBase64;
-
-/***/ }),
-/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3608,6 +3444,170 @@ Color.Yellow = new Color(255, 255, 0, 1);
 Color.YellowGreen = new Color(154, 205, 50, 1);
 
 /***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.imageToBase64 = exports.getMediaHeight = exports.getMediaWidth = exports.decodeAudioBuffer = exports.supportsCodec = exports.audioContext = undefined;
+
+var _support = __webpack_require__(6);
+
+var _support2 = _interopRequireDefault(_support);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var
+
+/**
+ * @inner
+ * @constant
+ * @type {Audio}
+ */
+audio = new Audio(),
+
+
+/**
+ * @public
+ * @constant
+ * @name audioContext
+ * @type {AudioContext}
+ */
+audioContext = _support2.default.webAudio ? new AudioContext() : null,
+
+
+/**
+ * @inner
+ * @type {HTMLCanvasElement}
+ */
+canvas = document.createElement('canvas'),
+
+
+/**
+ * @inner
+ * @type {CanvasRenderingContext2D}
+ */
+canvasContext = canvas.getContext('2d'),
+
+
+/**
+ * @inner
+ * @type {RegExp}
+ */
+CODEC_NOT_SUPPORTED = /^no$/,
+
+
+/**
+ * @public
+ * @param {...String} codecs
+ * @returns {Boolean}
+ */
+supportsCodec = function supportsCodec() {
+  for (var _len = arguments.length, codecs = Array(_len), _key = 0; _key < _len; _key++) {
+    codecs[_key] = arguments[_key];
+  }
+
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    for (var _iterator = codecs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var codec = _step.value;
+
+      if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
+        return true;
+      }
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+
+  return false;
+},
+
+
+/**
+ * @public
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Promise<AudioBuffer>}
+ */
+decodeAudioBuffer = function decodeAudioBuffer(arrayBuffer) {
+  if (!_support2.default.webAudio) {
+    return Promise.reject(Error('Web Audio is not supported!'));
+  }
+
+  return new Promise(function (resolve, reject) {
+    audioContext.decodeAudioData(arrayBuffer, resolve, reject);
+  });
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+ * @returns {Number}
+ */
+getMediaWidth = function getMediaWidth(element) {
+  return element && (element.naturalWidth || element.videoWidth || element.width) || 0;
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLMediaElement|HTMLVideoElement|HTMLImageElement|HTMLCanvasElement} element
+ * @returns {Number}
+ */
+getMediaHeight = function getMediaHeight(element) {
+  return element && (element.naturalHeight || element.videoHeight || element.height) || 0;
+},
+
+
+/**
+ * @public
+ * @constant
+ * @type {Function}
+ * @param {HTMLImageElement} image
+ * @return {String}
+ */
+imageToBase64 = function imageToBase64(image) {
+  canvas.width = image.width;
+  canvas.height = image.height;
+  canvasContext.drawImage(image, 0, 0);
+
+  return canvas.toDataURL();
+};
+
+/**
+ * @namespace Exo
+ */
+exports.audioContext = audioContext;
+exports.supportsCodec = supportsCodec;
+exports.decodeAudioBuffer = decodeAudioBuffer;
+exports.getMediaWidth = getMediaWidth;
+exports.getMediaHeight = getMediaHeight;
+exports.imageToBase64 = imageToBase64;
+
+/***/ }),
 /* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3822,7 +3822,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _graphics = __webpack_require__(5);
 
-var _media = __webpack_require__(8);
+var _media = __webpack_require__(9);
 
 var _math = __webpack_require__(2);
 
@@ -3849,7 +3849,7 @@ var Texture = function () {
 
     /**
      * @constructor
-     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
+     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement} source
      * @param {Object} [options]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
@@ -3871,7 +3871,7 @@ var Texture = function () {
 
         /**
          * @private
-         * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+         * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement}
          */
         this._source = null;
 
@@ -3947,7 +3947,7 @@ var Texture = function () {
 
     /**
      * @public
-     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement}
      */
 
 
@@ -4075,7 +4075,7 @@ var Texture = function () {
         /**
          * @public
          * @chainable
-         * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
+         * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement} source
          * @returns {Texture}
          */
 
@@ -4683,7 +4683,7 @@ var _ArrayBufferFactory2 = __webpack_require__(13);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
-var _MediaSource = __webpack_require__(46);
+var _MediaSource = __webpack_require__(50);
 
 var _MediaSource2 = _interopRequireDefault(_MediaSource);
 
@@ -6162,7 +6162,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Container2 = __webpack_require__(30);
+var _Container2 = __webpack_require__(31);
 
 var _Container3 = _interopRequireDefault(_Container2);
 
@@ -6673,7 +6673,7 @@ var _Collision = __webpack_require__(17);
 
 var _Collision2 = _interopRequireDefault(_Collision);
 
-var _Circle = __webpack_require__(33);
+var _Circle = __webpack_require__(34);
 
 var _Circle2 = _interopRequireDefault(_Circle);
 
@@ -7895,7 +7895,7 @@ var _ArrayBufferFactory2 = __webpack_require__(13);
 
 var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
 
-var _mime = __webpack_require__(27);
+var _resources = __webpack_require__(27);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7928,7 +7928,7 @@ var BlobFactory = function (_ArrayBufferFactory) {
     value: function create(source) {
       var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
           _ref$mimeType = _ref.mimeType,
-          mimeType = _ref$mimeType === undefined ? (0, _mime.determineMimeType)(source) : _ref$mimeType;
+          mimeType = _ref$mimeType === undefined ? (0, _resources.determineMimeType)(source) : _ref$mimeType;
 
       return _get(BlobFactory.prototype.__proto__ || Object.getPrototypeOf(BlobFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
         return new Blob([arrayBuffer], { type: mimeType });
@@ -8753,6 +8753,82 @@ exports.default = Media;
 
 
 Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _ResourceFactory2 = __webpack_require__(19);
+
+var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class TextFactory
+ * @extends ResourceFactory
+ */
+var TextFactory = function (_ResourceFactory) {
+  _inherits(TextFactory, _ResourceFactory);
+
+  function TextFactory() {
+    _classCallCheck(this, TextFactory);
+
+    return _possibleConstructorReturn(this, (TextFactory.__proto__ || Object.getPrototypeOf(TextFactory)).apply(this, arguments));
+  }
+
+  _createClass(TextFactory, [{
+    key: 'process',
+
+
+    /**
+     * @override
+     */
+    value: function process(response) {
+      return response.text();
+    }
+
+    /**
+     * @override
+     */
+
+  }, {
+    key: 'create',
+    value: function create(source, options) {
+      // eslint-disable-line
+      return Promise.resolve(source);
+    }
+  }, {
+    key: 'storageType',
+
+
+    /**
+     * @override
+     */
+    get: function get() {
+      return 'text';
+    }
+  }]);
+
+  return TextFactory;
+}(_ResourceFactory3.default);
+
+exports.default = TextFactory;
+
+/***/ }),
+/* 31 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
@@ -8760,7 +8836,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Drawable2 = __webpack_require__(31);
+var _Drawable2 = __webpack_require__(32);
 
 var _Drawable3 = _interopRequireDefault(_Drawable2);
 
@@ -9159,7 +9235,7 @@ var Container = function (_Drawable) {
 exports.default = Container;
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9177,7 +9253,7 @@ var _SceneNode2 = __webpack_require__(81);
 
 var _SceneNode3 = _interopRequireDefault(_SceneNode2);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -9335,7 +9411,7 @@ var Drawable = function (_SceneNode) {
 exports.default = Drawable;
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9549,7 +9625,7 @@ var ObservableVector = function (_Vector) {
 exports.default = ObservableVector;
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9913,7 +9989,7 @@ Circle.Empty = new Circle(0, 0, 0);
 Circle.Temp = new Circle();
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10134,7 +10210,7 @@ var Bounds = function () {
 exports.default = Bounds;
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10374,7 +10450,7 @@ var Clock = function () {
 exports.default = Clock;
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10736,7 +10812,7 @@ var RenderTarget = function () {
 exports.default = RenderTarget;
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10851,7 +10927,7 @@ var Renderer = function () {
 exports.default = Renderer;
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11426,7 +11502,7 @@ var Shader = function () {
 exports.default = Shader;
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11644,7 +11720,7 @@ var VertexArray = function () {
 exports.default = VertexArray;
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11844,7 +11920,7 @@ var Database = function () {
 exports.default = Database;
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11862,11 +11938,15 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
+var _settings = __webpack_require__(0);
+
+var _settings2 = _interopRequireDefault(_settings);
+
 var _EventEmitter2 = __webpack_require__(4);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ResourceContainer = __webpack_require__(42);
+var _ResourceContainer = __webpack_require__(46);
 
 var _ResourceContainer2 = _interopRequireDefault(_ResourceContainer);
 
@@ -11878,7 +11958,7 @@ var _BlobFactory = __webpack_require__(26);
 
 var _BlobFactory2 = _interopRequireDefault(_BlobFactory);
 
-var _FontFactory = __webpack_require__(43);
+var _FontFactory = __webpack_require__(47);
 
 var _FontFactory2 = _interopRequireDefault(_FontFactory);
 
@@ -11886,19 +11966,19 @@ var _ImageFactory = __webpack_require__(28);
 
 var _ImageFactory2 = _interopRequireDefault(_ImageFactory);
 
-var _JSONFactory = __webpack_require__(44);
+var _JSONFactory = __webpack_require__(48);
 
 var _JSONFactory2 = _interopRequireDefault(_JSONFactory);
 
-var _MusicFactory = __webpack_require__(45);
+var _MusicFactory = __webpack_require__(49);
 
 var _MusicFactory2 = _interopRequireDefault(_MusicFactory);
 
-var _SoundFactory = __webpack_require__(51);
+var _SoundFactory = __webpack_require__(52);
 
 var _SoundFactory2 = _interopRequireDefault(_SoundFactory);
 
-var _TextFactory = __webpack_require__(53);
+var _TextFactory = __webpack_require__(30);
 
 var _TextFactory2 = _interopRequireDefault(_TextFactory);
 
@@ -11914,9 +11994,9 @@ var _VideoFactory = __webpack_require__(55);
 
 var _VideoFactory2 = _interopRequireDefault(_VideoFactory);
 
-var _settings = __webpack_require__(0);
+var _SVGFactory = __webpack_require__(82);
 
-var _settings2 = _interopRequireDefault(_settings);
+var _SVGFactory2 = _interopRequireDefault(_SVGFactory);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -12312,6 +12392,7 @@ var Loader = function (_EventEmitter) {
             this.addFactory('texture', new _TextureFactory2.default());
             this.addFactory('text', new _TextFactory2.default());
             this.addFactory('json', new _JSONFactory2.default());
+            this.addFactory('svg', new _SVGFactory2.default());
         }
     }, {
         key: 'factories',
@@ -12420,928 +12501,7 @@ var Loader = function (_EventEmitter) {
 exports.default = Loader;
 
 /***/ }),
-/* 42 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class ResourceContainer
- */
-var ResourceContainer = function () {
-
-    /**
-     * @constructor
-     */
-    function ResourceContainer() {
-        _classCallCheck(this, ResourceContainer);
-
-        /**
-         * @private
-         * @member {Map<String, Map<String, *>>}
-         */
-        this._resources = new Map();
-
-        /**
-         * @private
-         * @member {Set<String>}
-         */
-        this._types = new Set();
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Map<String, Map<String, *>>}
-     */
-
-
-    _createClass(ResourceContainer, [{
-        key: "addType",
-
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} type
-         * @returns {ResourceContainer}
-         */
-        value: function addType(type) {
-            if (!this._types.has(type)) {
-                this._resources.set(type, new Map());
-                this._types.add(type);
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @returns {Map<String, *>}
-         */
-
-    }, {
-        key: "getResources",
-        value: function getResources(type) {
-            if (!this._types.has(type)) {
-                throw new Error("Unknown type \"" + type + "\".");
-            }
-
-            return this._resources.get(type);
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @param {String} name
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: "has",
-        value: function has(type, name) {
-            return this.getResources(type).has(name);
-        }
-
-        /**
-         * @public
-         * @param {String} type
-         * @param {String} name
-         * @returns {*}
-         */
-
-    }, {
-        key: "get",
-        value: function get(type, name) {
-            var resources = this.getResources(type);
-
-            if (!resources.has(name)) {
-                throw new Error("Missing resource \"" + name + "\" with type \"" + type + "\".");
-            }
-
-            return resources.get(name);
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} type
-         * @param {String} name
-         * @param {*} resource
-         * @returns {ResourceContainer}
-         */
-
-    }, {
-        key: "set",
-        value: function set(type, name, resource) {
-            this.getResources(type).set(name, resource);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @param {String} type
-         * @param {String} name
-         * @returns {ResourceContainer}
-         */
-
-    }, {
-        key: "remove",
-        value: function remove(type, name) {
-            this.getResources(type).delete(name);
-
-            return this;
-        }
-
-        /**
-         * @public
-         * @chainable
-         * @returns {ResourceContainer}
-         */
-
-    }, {
-        key: "clear",
-        value: function clear() {
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = this._resources.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var container = _step.value;
-
-                    container.clear();
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            return this;
-        }
-
-        /**
-         * @public
-         */
-
-    }, {
-        key: "destroy",
-        value: function destroy() {
-            this.clear();
-
-            this._resources.clear();
-            this._resources = null;
-
-            this._types.clear();
-            this._types = null;
-        }
-    }, {
-        key: "resources",
-        get: function get() {
-            return this._resources;
-        }
-
-        /**
-         * @public
-         * @readonly
-         * @member {Set<String>}
-         */
-
-    }, {
-        key: "types",
-        get: function get() {
-            return this._types;
-        }
-    }]);
-
-    return ResourceContainer;
-}();
-
-exports.default = ResourceContainer;
-
-/***/ }),
 /* 43 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _ArrayBufferFactory2 = __webpack_require__(13);
-
-var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class FontFactory
- * @extends ArrayBufferFactory
- */
-var FontFactory = function (_ArrayBufferFactory) {
-    _inherits(FontFactory, _ArrayBufferFactory);
-
-    function FontFactory() {
-        _classCallCheck(this, FontFactory);
-
-        return _possibleConstructorReturn(this, (FontFactory.__proto__ || Object.getPrototypeOf(FontFactory)).apply(this, arguments));
-    }
-
-    _createClass(FontFactory, [{
-        key: 'create',
-
-
-        /**
-         * @override
-         */
-        value: function create(source) {
-            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                family = _ref.family,
-                destriptors = _ref.destriptors,
-                _ref$addToDocument = _ref.addToDocument,
-                addToDocument = _ref$addToDocument === undefined ? true : _ref$addToDocument;
-
-            return _get(FontFactory.prototype.__proto__ || Object.getPrototypeOf(FontFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
-                return new Promise(function (resolve, reject) {
-                    var fontFace = new FontFace(family, arrayBuffer, destriptors);
-
-                    fontFace.load().then(function () {
-                        if (addToDocument) {
-                            document.fonts.add(fontFace);
-                        }
-
-                        resolve(fontFace);
-                    }).catch(function () {
-                        return reject(fontFace);
-                    });
-                });
-            });
-        }
-    }, {
-        key: 'storageType',
-
-
-        /**
-         * @override
-         */
-        get: function get() {
-            return 'font';
-        }
-    }]);
-
-    return FontFactory;
-}(_ArrayBufferFactory3.default);
-
-exports.default = FontFactory;
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _ResourceFactory2 = __webpack_require__(19);
-
-var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class JSONFactory
- * @extends ResourceFactory
- */
-var JSONFactory = function (_ResourceFactory) {
-  _inherits(JSONFactory, _ResourceFactory);
-
-  function JSONFactory() {
-    _classCallCheck(this, JSONFactory);
-
-    return _possibleConstructorReturn(this, (JSONFactory.__proto__ || Object.getPrototypeOf(JSONFactory)).apply(this, arguments));
-  }
-
-  _createClass(JSONFactory, [{
-    key: 'process',
-
-
-    /**
-     * @override
-     */
-    value: function process(response) {
-      return response.json();
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
-    key: 'create',
-    value: function create(source, options) {
-      // eslint-disable-line
-      return Promise.resolve(source);
-    }
-  }, {
-    key: 'storageType',
-
-
-    /**
-     * @override
-     */
-    get: function get() {
-      return 'json';
-    }
-  }]);
-
-  return JSONFactory;
-}(_ResourceFactory3.default);
-
-exports.default = JSONFactory;
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _MediaSourceFactory2 = __webpack_require__(14);
-
-var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
-
-var _Music = __webpack_require__(47);
-
-var _Music2 = _interopRequireDefault(_Music);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class MusicFactory
- * @extends MediaSourceFactory
- */
-var MusicFactory = function (_MediaSourceFactory) {
-  _inherits(MusicFactory, _MediaSourceFactory);
-
-  function MusicFactory() {
-    _classCallCheck(this, MusicFactory);
-
-    return _possibleConstructorReturn(this, (MusicFactory.__proto__ || Object.getPrototypeOf(MusicFactory)).apply(this, arguments));
-  }
-
-  _createClass(MusicFactory, [{
-    key: 'create',
-
-
-    /**
-     * @override
-     */
-    value: function create(source) {
-      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-          _ref$type = _ref.type,
-          type = _ref$type === undefined ? 'audio' : _ref$type,
-          _ref$createMediaEleme = _ref.createMediaElement,
-          createMediaElement = _ref$createMediaEleme === undefined ? true : _ref$createMediaEleme,
-          _ref$decodeAudioBuffe = _ref.decodeAudioBuffer,
-          decodeAudioBuffer = _ref$decodeAudioBuffe === undefined ? false : _ref$decodeAudioBuffe,
-          mimeType = _ref.mimeType,
-          loadEvent = _ref.loadEvent,
-          volume = _ref.volume,
-          loop = _ref.loop,
-          speed = _ref.speed,
-          time = _ref.time,
-          muted = _ref.muted;
-
-      return _get(MusicFactory.prototype.__proto__ || Object.getPrototypeOf(MusicFactory.prototype), 'create', this).call(this, source, { type: type, createMediaElement: createMediaElement, decodeAudioBuffer: decodeAudioBuffer, mimeType: mimeType, loadEvent: loadEvent }).then(function (audioSource) {
-        return new _Music2.default(audioSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted });
-      });
-    }
-  }, {
-    key: 'storageType',
-
-
-    /**
-     * @override
-     */
-    get: function get() {
-      return 'sound';
-    }
-  }]);
-
-  return MusicFactory;
-}(_MediaSourceFactory3.default);
-
-exports.default = MusicFactory;
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _media = __webpack_require__(8);
-
-var _mime = __webpack_require__(27);
-
-var _support = __webpack_require__(6);
-
-var _support2 = _interopRequireDefault(_support);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @class MediaSource
- */
-var MediaSource = function () {
-
-  /**
-   * @constructor
-   * @param {String} type
-   * @param {ArrayBuffer} arrayBuffer
-   * @param {Object} [options]
-   * @param {String} [options.mimeType=determineMimeType(arrayBuffer)]
-   * @param {String} [options.loadEvent='canplaythrough']
-   */
-  function MediaSource(type, arrayBuffer) {
-    var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
-        _ref$mimeType = _ref.mimeType,
-        mimeType = _ref$mimeType === undefined ? (0, _mime.determineMimeType)(arrayBuffer) : _ref$mimeType,
-        _ref$loadEvent = _ref.loadEvent,
-        loadEvent = _ref$loadEvent === undefined ? 'canplaythrough' : _ref$loadEvent;
-
-    _classCallCheck(this, MediaSource);
-
-    /**
-     * @private
-     * @member {String}
-     */
-    this._type = type;
-
-    /**
-     * @private
-     * @member {ArrayBuffer}
-     */
-    this._arrayBuffer = arrayBuffer;
-
-    /**
-     * @private
-     * @member {String}
-     */
-    this._mimeType = mimeType;
-
-    /**
-     * @private
-     * @member {Blob}
-     */
-    this._blob = new Blob([arrayBuffer], { type: mimeType });
-
-    /**
-     * @private
-     * @member {String}
-     */
-    this._blobURL = URL.createObjectURL(this._blob);
-
-    /**
-     * @private
-     * @member {String}
-     */
-    this._loadEvent = loadEvent;
-
-    /**
-     * @private
-     * @member {?HTMLMediaElement}
-     */
-    this._mediaElement = null;
-
-    /**
-     * @private
-     * @member {?AudioBuffer}
-     */
-    this._audioBuffer = null;
-  }
-
-  /**
-   * @public
-   * @readonly
-   * @member {String}
-   */
-
-
-  _createClass(MediaSource, [{
-    key: 'createMediaElement',
-
-
-    /**
-     * @public
-     * @returns {Promise<HTMLMediaElement>}
-     */
-    value: function createMediaElement() {
-      var _this = this;
-
-      if (!this._mediaElement) {
-        return new Promise(function (resolve, reject) {
-          var mediaElement = document.createElement(_this._type);
-
-          mediaElement.addEventListener(_this._loadEvent, function () {
-            return resolve(_this._mediaElement = mediaElement);
-          });
-          mediaElement.addEventListener('error', function () {
-            return reject(Error('Error loading audio source.'));
-          });
-          mediaElement.addEventListener('abort', function () {
-            return reject(Error('Audio loading was canceled.'));
-          });
-
-          mediaElement.src = _this._blobURL;
-        });
-      }
-
-      return Promise.resolve(this._mediaElement);
-    }
-
-    /**
-     * @public
-     * @returns {Promise<?AudioBuffer>}
-     */
-
-  }, {
-    key: 'decodeAudioBuffer',
-    value: function decodeAudioBuffer() {
-      var _this2 = this;
-
-      if (!this._audioBuffer && _support2.default.webAudio) {
-        return (0, _media.decodeAudioBuffer)(this._arrayBuffer).then(function (audioBuffer) {
-          _this2._audioBuffer = audioBuffer;
-        });
-      }
-
-      return Promise.resolve(this._audioBuffer);
-    }
-
-    /**
-     * @public
-     */
-
-  }, {
-    key: 'destroy',
-    value: function destroy() {
-      _get(MediaSource.prototype.__proto__ || Object.getPrototypeOf(MediaSource.prototype), 'destroy', this).call(this);
-
-      URL.revokeObjectURL(this._blobURL);
-
-      this._type = null;
-      this._arrayBuffer = null;
-      this._mimeType = null;
-      this._blob = null;
-      this._blobURL = null;
-      this._loadEvent = null;
-      this._mediaElement = null;
-      this._audioBuffer = null;
-    }
-  }, {
-    key: 'type',
-    get: function get() {
-      return this._type;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {ArrayBuffer}
-     */
-
-  }, {
-    key: 'arrayBuffer',
-    get: function get() {
-      return this._arrayBuffer;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {String}
-     */
-
-  }, {
-    key: 'mimeType',
-    get: function get() {
-      return this._mimeType;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Blob}
-     */
-
-  }, {
-    key: 'blob',
-    get: function get() {
-      return this._blob;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {String}
-     */
-
-  }, {
-    key: 'blobURL',
-    get: function get() {
-      return this._blobURL;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {String}
-     */
-
-  }, {
-    key: 'loadEvent',
-    get: function get() {
-      return this._loadEvent;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {?HTMLMediaElement}
-     */
-
-  }, {
-    key: 'mediaElement',
-    get: function get() {
-      return this._mediaElement;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {?AudioBuffer}
-     */
-
-  }, {
-    key: 'audioBuffer',
-    get: function get() {
-      return this._audioBuffer;
-    }
-  }]);
-
-  return MediaSource;
-}();
-
-exports.default = MediaSource;
-
-/***/ }),
-/* 47 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _media = __webpack_require__(8);
-
-var _math = __webpack_require__(2);
-
-var _Media2 = __webpack_require__(29);
-
-var _Media3 = _interopRequireDefault(_Media2);
-
-var _settings = __webpack_require__(0);
-
-var _settings2 = _interopRequireDefault(_settings);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class Music
- * @extends Media
- */
-var Music = function (_Media) {
-  _inherits(Music, _Media);
-
-  /**
-   * @constructor
-   * @param {MediaSource} mediaSource
-   * @param {Object} [options]
-   * @property {Number} [options.volume=settings.VOLUME_MUSIC]
-   * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
-   * @property {Number} [options.speed=settings.MEDIA_SPEED]
-   * @property {Number} [options.time=settings.MEDIA_TIME]
-   * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
-   */
-  function Music(mediaSource) {
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$volume = _ref.volume,
-        volume = _ref$volume === undefined ? _settings2.default.VOLUME_MUSIC : _ref$volume,
-        _ref$loop = _ref.loop,
-        loop = _ref$loop === undefined ? _settings2.default.MEDIA_LOOP : _ref$loop,
-        _ref$speed = _ref.speed,
-        speed = _ref$speed === undefined ? _settings2.default.MEDIA_SPEED : _ref$speed,
-        _ref$time = _ref.time,
-        time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time,
-        _ref$muted = _ref.muted,
-        muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted;
-
-    _classCallCheck(this, Music);
-
-    var _this = _possibleConstructorReturn(this, (Music.__proto__ || Object.getPrototypeOf(Music)).call(this, mediaSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted }));
-
-    var mediaElement = _this.mediaElement;
-
-    if (!mediaElement) {
-      throw new Error('MediaElement is missing in MediaSource');
-    }
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._duration = mediaElement.duration;
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._volume = mediaElement.volume;
-
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._speed = mediaElement.playbackRate;
-
-    /**
-     * @private
-     * @member {Boolean}
-     */
-    _this._loop = mediaElement.loop;
-
-    /**
-     * @private
-     * @member {Boolean}
-     */
-    _this._muted = mediaElement.muted;
-
-    /**
-     * @private
-     * @member {?GainNode}
-     */
-    _this._gainNode = _media.audioContext.createGain();
-    _this._gainNode.gain.setTargetAtTime(_this.volume, _media.audioContext.currentTime, 10);
-    _this._gainNode.connect(_media.audioContext.destination);
-
-    /**
-     * @private
-     * @member {?MediaElementAudioSourceNode}
-     */
-    _this._sourceNode = _media.audioContext.createMediaElementSource(_this.mediaElement);
-    _this._sourceNode.connect(_this._gainNode);
-    return _this;
-  }
-
-  /**
-   * @override
-   */
-
-
-  _createClass(Music, [{
-    key: 'destroy',
-
-
-    /**
-     * @override
-     */
-    value: function destroy() {
-      _get(Music.prototype.__proto__ || Object.getPrototypeOf(Music.prototype), 'destroy', this).call(this);
-
-      this._sourceNode.disconnect();
-      this._sourceNode = null;
-
-      this._gainNode.disconnect();
-      this._gainNode = null;
-    }
-  }, {
-    key: 'volume',
-    get: function get() {
-      return this._volume;
-    },
-    set: function set(value) {
-      var volume = (0, _math.clamp)(value, 0, 2);
-
-      if (this._volume !== volume) {
-        this._volume = volume;
-
-        if (this._gainNode) {
-          this._gainNode.gain.setTargetAtTime(volume, _media.audioContext.currentTime, 10);
-        }
-      }
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
-    key: 'analyserTarget',
-    get: function get() {
-      return this._gainNode;
-    }
-  }]);
-
-  return Music;
-}(_Media3.default);
-
-exports.default = Music;
-
-/***/ }),
-/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13546,7 +12706,7 @@ var Random = function () {
 exports.default = Random;
 
 /***/ }),
-/* 49 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13558,7 +12718,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _GamepadControl = __webpack_require__(50);
+var _GamepadControl = __webpack_require__(45);
 
 var _GamepadControl2 = _interopRequireDefault(_GamepadControl);
 
@@ -13834,7 +12994,7 @@ var GamepadMapping = function () {
 exports.default = GamepadMapping;
 
 /***/ }),
-/* 50 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14022,7 +13182,392 @@ var GamepadControl = function () {
 exports.default = GamepadControl;
 
 /***/ }),
-/* 51 */
+/* 46 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class ResourceContainer
+ */
+var ResourceContainer = function () {
+
+    /**
+     * @constructor
+     */
+    function ResourceContainer() {
+        _classCallCheck(this, ResourceContainer);
+
+        /**
+         * @private
+         * @member {Map<String, Map<String, *>>}
+         */
+        this._resources = new Map();
+
+        /**
+         * @private
+         * @member {Set<String>}
+         */
+        this._types = new Set();
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Map<String, Map<String, *>>}
+     */
+
+
+    _createClass(ResourceContainer, [{
+        key: "addType",
+
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} type
+         * @returns {ResourceContainer}
+         */
+        value: function addType(type) {
+            if (!this._types.has(type)) {
+                this._resources.set(type, new Map());
+                this._types.add(type);
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @returns {Map<String, *>}
+         */
+
+    }, {
+        key: "getResources",
+        value: function getResources(type) {
+            if (!this._types.has(type)) {
+                throw new Error("Unknown type \"" + type + "\".");
+            }
+
+            return this._resources.get(type);
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @param {String} name
+         * @returns {Boolean}
+         */
+
+    }, {
+        key: "has",
+        value: function has(type, name) {
+            return this.getResources(type).has(name);
+        }
+
+        /**
+         * @public
+         * @param {String} type
+         * @param {String} name
+         * @returns {*}
+         */
+
+    }, {
+        key: "get",
+        value: function get(type, name) {
+            var resources = this.getResources(type);
+
+            if (!resources.has(name)) {
+                throw new Error("Missing resource \"" + name + "\" with type \"" + type + "\".");
+            }
+
+            return resources.get(name);
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} type
+         * @param {String} name
+         * @param {*} resource
+         * @returns {ResourceContainer}
+         */
+
+    }, {
+        key: "set",
+        value: function set(type, name, resource) {
+            this.getResources(type).set(name, resource);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @param {String} type
+         * @param {String} name
+         * @returns {ResourceContainer}
+         */
+
+    }, {
+        key: "remove",
+        value: function remove(type, name) {
+            this.getResources(type).delete(name);
+
+            return this;
+        }
+
+        /**
+         * @public
+         * @chainable
+         * @returns {ResourceContainer}
+         */
+
+    }, {
+        key: "clear",
+        value: function clear() {
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._resources.values()[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var container = _step.value;
+
+                    container.clear();
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            return this;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: "destroy",
+        value: function destroy() {
+            this.clear();
+
+            this._resources.clear();
+            this._resources = null;
+
+            this._types.clear();
+            this._types = null;
+        }
+    }, {
+        key: "resources",
+        get: function get() {
+            return this._resources;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Set<String>}
+         */
+
+    }, {
+        key: "types",
+        get: function get() {
+            return this._types;
+        }
+    }]);
+
+    return ResourceContainer;
+}();
+
+exports.default = ResourceContainer;
+
+/***/ }),
+/* 47 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _ArrayBufferFactory2 = __webpack_require__(13);
+
+var _ArrayBufferFactory3 = _interopRequireDefault(_ArrayBufferFactory2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class FontFactory
+ * @extends ArrayBufferFactory
+ */
+var FontFactory = function (_ArrayBufferFactory) {
+    _inherits(FontFactory, _ArrayBufferFactory);
+
+    function FontFactory() {
+        _classCallCheck(this, FontFactory);
+
+        return _possibleConstructorReturn(this, (FontFactory.__proto__ || Object.getPrototypeOf(FontFactory)).apply(this, arguments));
+    }
+
+    _createClass(FontFactory, [{
+        key: 'create',
+
+
+        /**
+         * @override
+         */
+        value: function create(source) {
+            var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                family = _ref.family,
+                destriptors = _ref.destriptors,
+                _ref$addToDocument = _ref.addToDocument,
+                addToDocument = _ref$addToDocument === undefined ? true : _ref$addToDocument;
+
+            return _get(FontFactory.prototype.__proto__ || Object.getPrototypeOf(FontFactory.prototype), 'create', this).call(this, source, null).then(function (arrayBuffer) {
+                return new Promise(function (resolve, reject) {
+                    var fontFace = new FontFace(family, arrayBuffer, destriptors);
+
+                    fontFace.load().then(function () {
+                        if (addToDocument) {
+                            document.fonts.add(fontFace);
+                        }
+
+                        resolve(fontFace);
+                    }).catch(function () {
+                        return reject(fontFace);
+                    });
+                });
+            });
+        }
+    }, {
+        key: 'storageType',
+
+
+        /**
+         * @override
+         */
+        get: function get() {
+            return 'font';
+        }
+    }]);
+
+    return FontFactory;
+}(_ArrayBufferFactory3.default);
+
+exports.default = FontFactory;
+
+/***/ }),
+/* 48 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _ResourceFactory2 = __webpack_require__(19);
+
+var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class JSONFactory
+ * @extends ResourceFactory
+ */
+var JSONFactory = function (_ResourceFactory) {
+  _inherits(JSONFactory, _ResourceFactory);
+
+  function JSONFactory() {
+    _classCallCheck(this, JSONFactory);
+
+    return _possibleConstructorReturn(this, (JSONFactory.__proto__ || Object.getPrototypeOf(JSONFactory)).apply(this, arguments));
+  }
+
+  _createClass(JSONFactory, [{
+    key: 'process',
+
+
+    /**
+     * @override
+     */
+    value: function process(response) {
+      return response.json();
+    }
+
+    /**
+     * @override
+     */
+
+  }, {
+    key: 'create',
+    value: function create(source, options) {
+      // eslint-disable-line
+      return Promise.resolve(source);
+    }
+  }, {
+    key: 'storageType',
+
+
+    /**
+     * @override
+     */
+    get: function get() {
+      return 'json';
+    }
+  }]);
+
+  return JSONFactory;
+}(_ResourceFactory3.default);
+
+exports.default = JSONFactory;
+
+/***/ }),
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14040,7 +13585,543 @@ var _MediaSourceFactory2 = __webpack_require__(14);
 
 var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
 
-var _Sound = __webpack_require__(52);
+var _Music = __webpack_require__(51);
+
+var _Music2 = _interopRequireDefault(_Music);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class MusicFactory
+ * @extends MediaSourceFactory
+ */
+var MusicFactory = function (_MediaSourceFactory) {
+  _inherits(MusicFactory, _MediaSourceFactory);
+
+  function MusicFactory() {
+    _classCallCheck(this, MusicFactory);
+
+    return _possibleConstructorReturn(this, (MusicFactory.__proto__ || Object.getPrototypeOf(MusicFactory)).apply(this, arguments));
+  }
+
+  _createClass(MusicFactory, [{
+    key: 'create',
+
+
+    /**
+     * @override
+     */
+    value: function create(source) {
+      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+          _ref$type = _ref.type,
+          type = _ref$type === undefined ? 'audio' : _ref$type,
+          _ref$createMediaEleme = _ref.createMediaElement,
+          createMediaElement = _ref$createMediaEleme === undefined ? true : _ref$createMediaEleme,
+          _ref$decodeAudioBuffe = _ref.decodeAudioBuffer,
+          decodeAudioBuffer = _ref$decodeAudioBuffe === undefined ? false : _ref$decodeAudioBuffe,
+          mimeType = _ref.mimeType,
+          loadEvent = _ref.loadEvent,
+          volume = _ref.volume,
+          loop = _ref.loop,
+          speed = _ref.speed,
+          time = _ref.time,
+          muted = _ref.muted;
+
+      return _get(MusicFactory.prototype.__proto__ || Object.getPrototypeOf(MusicFactory.prototype), 'create', this).call(this, source, { type: type, createMediaElement: createMediaElement, decodeAudioBuffer: decodeAudioBuffer, mimeType: mimeType, loadEvent: loadEvent }).then(function (audioSource) {
+        return new _Music2.default(audioSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted });
+      });
+    }
+  }, {
+    key: 'storageType',
+
+
+    /**
+     * @override
+     */
+    get: function get() {
+      return 'sound';
+    }
+  }]);
+
+  return MusicFactory;
+}(_MediaSourceFactory3.default);
+
+exports.default = MusicFactory;
+
+/***/ }),
+/* 50 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _media = __webpack_require__(9);
+
+var _resources = __webpack_require__(27);
+
+var _support = __webpack_require__(6);
+
+var _support2 = _interopRequireDefault(_support);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @class MediaSource
+ */
+var MediaSource = function () {
+
+  /**
+   * @constructor
+   * @param {String} type
+   * @param {ArrayBuffer} arrayBuffer
+   * @param {Object} [options]
+   * @param {String} [options.mimeType=determineMimeType(arrayBuffer)]
+   * @param {String} [options.loadEvent='canplaythrough']
+   */
+  function MediaSource(type, arrayBuffer) {
+    var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+        _ref$mimeType = _ref.mimeType,
+        mimeType = _ref$mimeType === undefined ? (0, _resources.determineMimeType)(arrayBuffer) : _ref$mimeType,
+        _ref$loadEvent = _ref.loadEvent,
+        loadEvent = _ref$loadEvent === undefined ? 'canplaythrough' : _ref$loadEvent;
+
+    _classCallCheck(this, MediaSource);
+
+    /**
+     * @private
+     * @member {String}
+     */
+    this._type = type;
+
+    /**
+     * @private
+     * @member {ArrayBuffer}
+     */
+    this._arrayBuffer = arrayBuffer;
+
+    /**
+     * @private
+     * @member {String}
+     */
+    this._mimeType = mimeType;
+
+    /**
+     * @private
+     * @member {Blob}
+     */
+    this._blob = new Blob([arrayBuffer], { type: mimeType });
+
+    /**
+     * @private
+     * @member {String}
+     */
+    this._blobURL = URL.createObjectURL(this._blob);
+
+    /**
+     * @private
+     * @member {String}
+     */
+    this._loadEvent = loadEvent;
+
+    /**
+     * @private
+     * @member {?HTMLMediaElement}
+     */
+    this._mediaElement = null;
+
+    /**
+     * @private
+     * @member {?AudioBuffer}
+     */
+    this._audioBuffer = null;
+  }
+
+  /**
+   * @public
+   * @readonly
+   * @member {String}
+   */
+
+
+  _createClass(MediaSource, [{
+    key: 'createMediaElement',
+
+
+    /**
+     * @public
+     * @returns {Promise<HTMLMediaElement>}
+     */
+    value: function createMediaElement() {
+      var _this = this;
+
+      if (!this._mediaElement) {
+        return new Promise(function (resolve, reject) {
+          var mediaElement = document.createElement(_this._type);
+
+          mediaElement.addEventListener(_this._loadEvent, function () {
+            return resolve(_this._mediaElement = mediaElement);
+          });
+          mediaElement.addEventListener('error', function () {
+            return reject(Error('Error loading audio source.'));
+          });
+          mediaElement.addEventListener('abort', function () {
+            return reject(Error('Audio loading was canceled.'));
+          });
+
+          mediaElement.src = _this._blobURL;
+        });
+      }
+
+      return Promise.resolve(this._mediaElement);
+    }
+
+    /**
+     * @public
+     * @returns {Promise<?AudioBuffer>}
+     */
+
+  }, {
+    key: 'decodeAudioBuffer',
+    value: function decodeAudioBuffer() {
+      var _this2 = this;
+
+      if (!this._audioBuffer && _support2.default.webAudio) {
+        return (0, _media.decodeAudioBuffer)(this._arrayBuffer).then(function (audioBuffer) {
+          _this2._audioBuffer = audioBuffer;
+        });
+      }
+
+      return Promise.resolve(this._audioBuffer);
+    }
+
+    /**
+     * @public
+     */
+
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      _get(MediaSource.prototype.__proto__ || Object.getPrototypeOf(MediaSource.prototype), 'destroy', this).call(this);
+
+      URL.revokeObjectURL(this._blobURL);
+
+      this._type = null;
+      this._arrayBuffer = null;
+      this._mimeType = null;
+      this._blob = null;
+      this._blobURL = null;
+      this._loadEvent = null;
+      this._mediaElement = null;
+      this._audioBuffer = null;
+    }
+  }, {
+    key: 'type',
+    get: function get() {
+      return this._type;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {ArrayBuffer}
+     */
+
+  }, {
+    key: 'arrayBuffer',
+    get: function get() {
+      return this._arrayBuffer;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {String}
+     */
+
+  }, {
+    key: 'mimeType',
+    get: function get() {
+      return this._mimeType;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Blob}
+     */
+
+  }, {
+    key: 'blob',
+    get: function get() {
+      return this._blob;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {String}
+     */
+
+  }, {
+    key: 'blobURL',
+    get: function get() {
+      return this._blobURL;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {String}
+     */
+
+  }, {
+    key: 'loadEvent',
+    get: function get() {
+      return this._loadEvent;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?HTMLMediaElement}
+     */
+
+  }, {
+    key: 'mediaElement',
+    get: function get() {
+      return this._mediaElement;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?AudioBuffer}
+     */
+
+  }, {
+    key: 'audioBuffer',
+    get: function get() {
+      return this._audioBuffer;
+    }
+  }]);
+
+  return MediaSource;
+}();
+
+exports.default = MediaSource;
+
+/***/ }),
+/* 51 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _media = __webpack_require__(9);
+
+var _math = __webpack_require__(2);
+
+var _Media2 = __webpack_require__(29);
+
+var _Media3 = _interopRequireDefault(_Media2);
+
+var _settings = __webpack_require__(0);
+
+var _settings2 = _interopRequireDefault(_settings);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class Music
+ * @extends Media
+ */
+var Music = function (_Media) {
+  _inherits(Music, _Media);
+
+  /**
+   * @constructor
+   * @param {MediaSource} mediaSource
+   * @param {Object} [options]
+   * @property {Number} [options.volume=settings.VOLUME_MUSIC]
+   * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
+   * @property {Number} [options.speed=settings.MEDIA_SPEED]
+   * @property {Number} [options.time=settings.MEDIA_TIME]
+   * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
+   */
+  function Music(mediaSource) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$volume = _ref.volume,
+        volume = _ref$volume === undefined ? _settings2.default.VOLUME_MUSIC : _ref$volume,
+        _ref$loop = _ref.loop,
+        loop = _ref$loop === undefined ? _settings2.default.MEDIA_LOOP : _ref$loop,
+        _ref$speed = _ref.speed,
+        speed = _ref$speed === undefined ? _settings2.default.MEDIA_SPEED : _ref$speed,
+        _ref$time = _ref.time,
+        time = _ref$time === undefined ? _settings2.default.MEDIA_TIME : _ref$time,
+        _ref$muted = _ref.muted,
+        muted = _ref$muted === undefined ? _settings2.default.MEDIA_MUTED : _ref$muted;
+
+    _classCallCheck(this, Music);
+
+    var _this = _possibleConstructorReturn(this, (Music.__proto__ || Object.getPrototypeOf(Music)).call(this, mediaSource, { volume: volume, loop: loop, speed: speed, time: time, muted: muted }));
+
+    var mediaElement = _this.mediaElement;
+
+    if (!mediaElement) {
+      throw new Error('MediaElement is missing in MediaSource');
+    }
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._duration = mediaElement.duration;
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._volume = mediaElement.volume;
+
+    /**
+     * @private
+     * @member {Number}
+     */
+    _this._speed = mediaElement.playbackRate;
+
+    /**
+     * @private
+     * @member {Boolean}
+     */
+    _this._loop = mediaElement.loop;
+
+    /**
+     * @private
+     * @member {Boolean}
+     */
+    _this._muted = mediaElement.muted;
+
+    /**
+     * @private
+     * @member {?GainNode}
+     */
+    _this._gainNode = _media.audioContext.createGain();
+    _this._gainNode.gain.setTargetAtTime(_this.volume, _media.audioContext.currentTime, 10);
+    _this._gainNode.connect(_media.audioContext.destination);
+
+    /**
+     * @private
+     * @member {?MediaElementAudioSourceNode}
+     */
+    _this._sourceNode = _media.audioContext.createMediaElementSource(_this.mediaElement);
+    _this._sourceNode.connect(_this._gainNode);
+    return _this;
+  }
+
+  /**
+   * @override
+   */
+
+
+  _createClass(Music, [{
+    key: 'destroy',
+
+
+    /**
+     * @override
+     */
+    value: function destroy() {
+      _get(Music.prototype.__proto__ || Object.getPrototypeOf(Music.prototype), 'destroy', this).call(this);
+
+      this._sourceNode.disconnect();
+      this._sourceNode = null;
+
+      this._gainNode.disconnect();
+      this._gainNode = null;
+    }
+  }, {
+    key: 'volume',
+    get: function get() {
+      return this._volume;
+    },
+    set: function set(value) {
+      var volume = (0, _math.clamp)(value, 0, 2);
+
+      if (this._volume !== volume) {
+        this._volume = volume;
+
+        if (this._gainNode) {
+          this._gainNode.gain.setTargetAtTime(volume, _media.audioContext.currentTime, 10);
+        }
+      }
+    }
+
+    /**
+     * @override
+     */
+
+  }, {
+    key: 'analyserTarget',
+    get: function get() {
+      return this._gainNode;
+    }
+  }]);
+
+  return Music;
+}(_Media3.default);
+
+exports.default = Music;
+
+/***/ }),
+/* 52 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _MediaSourceFactory2 = __webpack_require__(14);
+
+var _MediaSourceFactory3 = _interopRequireDefault(_MediaSourceFactory2);
+
+var _Sound = __webpack_require__(53);
 
 var _Sound2 = _interopRequireDefault(_Sound);
 
@@ -14110,7 +14191,7 @@ var SoundFactory = function (_MediaSourceFactory) {
 exports.default = SoundFactory;
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14124,7 +14205,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _media = __webpack_require__(8);
+var _media = __webpack_require__(9);
 
 var _math = __webpack_require__(2);
 
@@ -14458,82 +14539,6 @@ var Sound = function (_Media) {
 exports.default = Sound;
 
 /***/ }),
-/* 53 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _ResourceFactory2 = __webpack_require__(19);
-
-var _ResourceFactory3 = _interopRequireDefault(_ResourceFactory2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * @class TextFactory
- * @extends ResourceFactory
- */
-var TextFactory = function (_ResourceFactory) {
-  _inherits(TextFactory, _ResourceFactory);
-
-  function TextFactory() {
-    _classCallCheck(this, TextFactory);
-
-    return _possibleConstructorReturn(this, (TextFactory.__proto__ || Object.getPrototypeOf(TextFactory)).apply(this, arguments));
-  }
-
-  _createClass(TextFactory, [{
-    key: 'process',
-
-
-    /**
-     * @override
-     */
-    value: function process(response) {
-      return response.text();
-    }
-
-    /**
-     * @override
-     */
-
-  }, {
-    key: 'create',
-    value: function create(source, options) {
-      // eslint-disable-line
-      return Promise.resolve(source);
-    }
-  }, {
-    key: 'storageType',
-
-
-    /**
-     * @override
-     */
-    get: function get() {
-      return 'text';
-    }
-  }]);
-
-  return TextFactory;
-}(_ResourceFactory3.default);
-
-exports.default = TextFactory;
-
-/***/ }),
 /* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -14720,7 +14725,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _media = __webpack_require__(8);
+var _media = __webpack_require__(9);
 
 var _math = __webpack_require__(2);
 
@@ -15232,7 +15237,7 @@ var _EventEmitter2 = __webpack_require__(4);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _ObservableVector = __webpack_require__(32);
+var _ObservableVector = __webpack_require__(33);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -15836,7 +15841,7 @@ var _settings = __webpack_require__(0);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _RenderTarget = __webpack_require__(36);
+var _RenderTarget = __webpack_require__(37);
 
 var _RenderTarget2 = _interopRequireDefault(_RenderTarget);
 
@@ -15848,17 +15853,17 @@ var _ParticleRenderer = __webpack_require__(69);
 
 var _ParticleRenderer2 = _interopRequireDefault(_ParticleRenderer);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
-var _media = __webpack_require__(8);
+var _media = __webpack_require__(9);
 
 var _Texture = __webpack_require__(11);
 
 var _Texture2 = _interopRequireDefault(_Texture);
 
-var _Sampler = __webpack_require__(85);
+var _Sampler = __webpack_require__(86);
 
 var _Sampler2 = _interopRequireDefault(_Sampler);
 
@@ -16767,7 +16772,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _ObservableVector = __webpack_require__(32);
+var _ObservableVector = __webpack_require__(33);
 
 var _ObservableVector2 = _interopRequireDefault(_ObservableVector);
 
@@ -16785,7 +16790,7 @@ var _ObservableSize = __webpack_require__(61);
 
 var _ObservableSize2 = _interopRequireDefault(_ObservableSize);
 
-var _Bounds = __webpack_require__(34);
+var _Bounds = __webpack_require__(35);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
@@ -17498,7 +17503,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Renderer2 = __webpack_require__(37);
+var _Renderer2 = __webpack_require__(38);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -17510,7 +17515,7 @@ var _settings = __webpack_require__(0);
 
 var _settings2 = _interopRequireDefault(_settings);
 
-var _VertexArray = __webpack_require__(39);
+var _VertexArray = __webpack_require__(40);
 
 var _VertexArray2 = _interopRequireDefault(_VertexArray);
 
@@ -17887,7 +17892,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Shader2 = __webpack_require__(38);
+var _Shader2 = __webpack_require__(39);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -19023,7 +19028,7 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(84)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(85)))
 
 /***/ }),
 /* 68 */
@@ -19163,7 +19168,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Renderer2 = __webpack_require__(37);
+var _Renderer2 = __webpack_require__(38);
 
 var _Renderer3 = _interopRequireDefault(_Renderer2);
 
@@ -19181,7 +19186,7 @@ var _Buffer = __webpack_require__(68);
 
 var _Buffer2 = _interopRequireDefault(_Buffer);
 
-var _VertexArray = __webpack_require__(39);
+var _VertexArray = __webpack_require__(40);
 
 var _VertexArray2 = _interopRequireDefault(_VertexArray);
 
@@ -19583,7 +19588,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Shader2 = __webpack_require__(38);
+var _Shader2 = __webpack_require__(39);
 
 var _Shader3 = _interopRequireDefault(_Shader2);
 
@@ -21830,7 +21835,7 @@ var _Vector = __webpack_require__(1);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -22216,19 +22221,19 @@ Object.keys(_const).forEach(function (key) {
   });
 });
 
-var _content = __webpack_require__(79);
+var _resources = __webpack_require__(79);
 
-Object.keys(_content).forEach(function (key) {
+Object.keys(_resources).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _content[key];
+      return _resources[key];
     }
   });
 });
 
-var _core = __webpack_require__(82);
+var _core = __webpack_require__(83);
 
 Object.keys(_core).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22240,7 +22245,7 @@ Object.keys(_core).forEach(function (key) {
   });
 });
 
-var _graphics = __webpack_require__(89);
+var _graphics = __webpack_require__(90);
 
 Object.keys(_graphics).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22252,7 +22257,7 @@ Object.keys(_graphics).forEach(function (key) {
   });
 });
 
-var _particles = __webpack_require__(94);
+var _particles = __webpack_require__(95);
 
 Object.keys(_particles).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22264,7 +22269,7 @@ Object.keys(_particles).forEach(function (key) {
   });
 });
 
-var _input = __webpack_require__(100);
+var _input = __webpack_require__(101);
 
 Object.keys(_input).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22276,7 +22281,7 @@ Object.keys(_input).forEach(function (key) {
   });
 });
 
-var _math = __webpack_require__(102);
+var _math = __webpack_require__(103);
 
 Object.keys(_math).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22288,7 +22293,7 @@ Object.keys(_math).forEach(function (key) {
   });
 });
 
-var _media = __webpack_require__(103);
+var _media = __webpack_require__(104);
 
 Object.keys(_media).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22300,7 +22305,7 @@ Object.keys(_media).forEach(function (key) {
   });
 });
 
-var _utils = __webpack_require__(105);
+var _utils = __webpack_require__(106);
 
 Object.keys(_utils).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -22397,7 +22402,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Database = __webpack_require__(40);
+var _Database = __webpack_require__(41);
 
 Object.defineProperty(exports, 'Database', {
   enumerable: true,
@@ -22415,7 +22420,7 @@ Object.defineProperty(exports, 'IDBDatabase', {
   }
 });
 
-var _Loader = __webpack_require__(41);
+var _Loader = __webpack_require__(42);
 
 Object.defineProperty(exports, 'Loader', {
   enumerable: true,
@@ -22424,7 +22429,7 @@ Object.defineProperty(exports, 'Loader', {
   }
 });
 
-var _ResourceContainer = __webpack_require__(42);
+var _ResourceContainer = __webpack_require__(46);
 
 Object.defineProperty(exports, 'ResourceContainer', {
   enumerable: true,
@@ -22451,7 +22456,7 @@ Object.defineProperty(exports, 'BlobFactory', {
   }
 });
 
-var _FontFactory = __webpack_require__(43);
+var _FontFactory = __webpack_require__(47);
 
 Object.defineProperty(exports, 'FontFactory', {
   enumerable: true,
@@ -22478,7 +22483,7 @@ Object.defineProperty(exports, 'MediaSourceFactory', {
   }
 });
 
-var _MusicFactory = __webpack_require__(45);
+var _MusicFactory = __webpack_require__(49);
 
 Object.defineProperty(exports, 'MusicFactory', {
   enumerable: true,
@@ -22487,7 +22492,7 @@ Object.defineProperty(exports, 'MusicFactory', {
   }
 });
 
-var _SoundFactory = __webpack_require__(51);
+var _SoundFactory = __webpack_require__(52);
 
 Object.defineProperty(exports, 'SoundFactory', {
   enumerable: true,
@@ -22523,7 +22528,7 @@ Object.defineProperty(exports, 'TextureFactory', {
   }
 });
 
-var _JSONFactory = __webpack_require__(44);
+var _JSONFactory = __webpack_require__(48);
 
 Object.defineProperty(exports, 'JSONFactory', {
   enumerable: true,
@@ -22532,7 +22537,7 @@ Object.defineProperty(exports, 'JSONFactory', {
   }
 });
 
-var _TextFactory = __webpack_require__(53);
+var _TextFactory = __webpack_require__(30);
 
 Object.defineProperty(exports, 'TextFactory', {
   enumerable: true,
@@ -22564,7 +22569,7 @@ var _support = __webpack_require__(6);
 
 var _support2 = _interopRequireDefault(_support);
 
-var _Database2 = __webpack_require__(40);
+var _Database2 = __webpack_require__(41);
 
 var _Database3 = _interopRequireDefault(_Database2);
 
@@ -22930,7 +22935,7 @@ var _Rectangle = __webpack_require__(3);
 
 var _Rectangle2 = _interopRequireDefault(_Rectangle);
 
-var _Bounds = __webpack_require__(34);
+var _Bounds = __webpack_require__(35);
 
 var _Bounds2 = _interopRequireDefault(_Bounds);
 
@@ -23261,6 +23266,153 @@ exports.default = SceneNode;
 
 
 Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _TextFactory2 = __webpack_require__(30);
+
+var _TextFactory3 = _interopRequireDefault(_TextFactory2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * @class SVGFactory
+ * @extends TextFactory
+ */
+var SVGFactory = function (_TextFactory) {
+    _inherits(SVGFactory, _TextFactory);
+
+    /**
+     * @constructor
+     */
+    function SVGFactory() {
+        _classCallCheck(this, SVGFactory);
+
+        /**
+         * @private
+         * @member {Set<String>}
+         */
+        var _this = _possibleConstructorReturn(this, (SVGFactory.__proto__ || Object.getPrototypeOf(SVGFactory)).call(this));
+
+        _this._objectURLs = new Set();
+        return _this;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Set<String>}
+     */
+
+
+    _createClass(SVGFactory, [{
+        key: 'create',
+
+
+        /**
+         * @override
+         */
+        value: function create(source, options) {
+            var _this2 = this;
+
+            return _get(SVGFactory.prototype.__proto__ || Object.getPrototypeOf(SVGFactory.prototype), 'create', this).call(this, source, options).then(function (text) {
+                return new Promise(function (resolve, reject) {
+                    var blob = new Blob([text], { type: 'image/svg+xml' }),
+                        objectURL = URL.createObjectURL(blob),
+                        image = new Image();
+
+                    _this2._objectURLs.add(objectURL);
+
+                    image.addEventListener('load', function () {
+                        return resolve(image);
+                    });
+                    image.addEventListener('error', function () {
+                        return reject(Error('Error loading image source.'));
+                    });
+                    image.addEventListener('abort', function () {
+                        return reject(Error('Image loading was canceled.'));
+                    });
+
+                    image.src = objectURL;
+                });
+            });
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'destroy',
+        value: function destroy() {
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = this._objectURLs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var objectURL = _step.value;
+
+                    URL.revokeObjectURL(objectURL);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            this._objectURLs.clear();
+            this._objectURLs = null;
+        }
+    }, {
+        key: 'objectURLs',
+        get: function get() {
+            return this._objectURLs;
+        }
+
+        /**
+         * @override
+         */
+
+    }, {
+        key: 'storageType',
+        get: function get() {
+            return 'svg';
+        }
+    }]);
+
+    return SVGFactory;
+}(_TextFactory3.default);
+
+exports.default = SVGFactory;
+
+/***/ }),
+/* 83 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
@@ -23273,7 +23425,7 @@ Object.defineProperty(exports, 'EventEmitter', {
   }
 });
 
-var _Application = __webpack_require__(83);
+var _Application = __webpack_require__(84);
 
 Object.defineProperty(exports, 'Application', {
   enumerable: true,
@@ -23282,7 +23434,7 @@ Object.defineProperty(exports, 'Application', {
   }
 });
 
-var _Quadtree = __webpack_require__(86);
+var _Quadtree = __webpack_require__(87);
 
 Object.defineProperty(exports, 'Quadtree', {
   enumerable: true,
@@ -23291,7 +23443,7 @@ Object.defineProperty(exports, 'Quadtree', {
   }
 });
 
-var _Scene = __webpack_require__(87);
+var _Scene = __webpack_require__(88);
 
 Object.defineProperty(exports, 'Scene', {
   enumerable: true,
@@ -23309,7 +23461,7 @@ Object.defineProperty(exports, 'SceneManager', {
   }
 });
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 Object.defineProperty(exports, 'Color', {
   enumerable: true,
@@ -23327,7 +23479,7 @@ Object.defineProperty(exports, 'Time', {
   }
 });
 
-var _Clock = __webpack_require__(35);
+var _Clock = __webpack_require__(36);
 
 Object.defineProperty(exports, 'Clock', {
   enumerable: true,
@@ -23336,7 +23488,7 @@ Object.defineProperty(exports, 'Clock', {
   }
 });
 
-var _Timer = __webpack_require__(88);
+var _Timer = __webpack_require__(89);
 
 Object.defineProperty(exports, 'Timer', {
   enumerable: true,
@@ -23345,7 +23497,7 @@ Object.defineProperty(exports, 'Timer', {
   }
 });
 
-var _Bounds = __webpack_require__(34);
+var _Bounds = __webpack_require__(35);
 
 Object.defineProperty(exports, 'Bounds', {
   enumerable: true,
@@ -23366,7 +23518,7 @@ Object.defineProperty(exports, 'Collision', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23384,7 +23536,7 @@ var _EventEmitter2 = __webpack_require__(4);
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _Clock = __webpack_require__(35);
+var _Clock = __webpack_require__(36);
 
 var _Clock2 = _interopRequireDefault(_Clock);
 
@@ -23400,7 +23552,7 @@ var _InputManager = __webpack_require__(71);
 
 var _InputManager2 = _interopRequireDefault(_InputManager);
 
-var _Loader = __webpack_require__(41);
+var _Loader = __webpack_require__(42);
 
 var _Loader2 = _interopRequireDefault(_Loader);
 
@@ -23736,7 +23888,7 @@ var Application = function (_EventEmitter) {
 exports.default = Application;
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -23926,7 +24078,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24118,7 +24270,7 @@ var Sampler = function () {
 exports.default = Sampler;
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24437,7 +24589,7 @@ var Quadtree = function () {
 exports.default = Quadtree;
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24585,7 +24737,7 @@ var Scene = function (_EventEmitter) {
 exports.default = Scene;
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24599,7 +24751,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _core = __webpack_require__(7);
 
-var _Clock2 = __webpack_require__(35);
+var _Clock2 = __webpack_require__(36);
 
 var _Clock3 = _interopRequireDefault(_Clock2);
 
@@ -24763,7 +24915,7 @@ var Timer = function (_Clock) {
 exports.default = Timer;
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24782,7 +24934,7 @@ Object.defineProperty(exports, 'RenderManager', {
   }
 });
 
-var _RenderTarget = __webpack_require__(36);
+var _RenderTarget = __webpack_require__(37);
 
 Object.defineProperty(exports, 'RenderTarget', {
   enumerable: true,
@@ -24791,7 +24943,7 @@ Object.defineProperty(exports, 'RenderTarget', {
   }
 });
 
-var _RenderTexture = __webpack_require__(90);
+var _RenderTexture = __webpack_require__(91);
 
 Object.defineProperty(exports, 'RenderTexture', {
   enumerable: true,
@@ -24800,7 +24952,7 @@ Object.defineProperty(exports, 'RenderTexture', {
   }
 });
 
-var _VertexArray = __webpack_require__(39);
+var _VertexArray = __webpack_require__(40);
 
 Object.defineProperty(exports, 'VertexArray', {
   enumerable: true,
@@ -24827,7 +24979,7 @@ Object.defineProperty(exports, 'View', {
   }
 });
 
-var _Renderer = __webpack_require__(37);
+var _Renderer = __webpack_require__(38);
 
 Object.defineProperty(exports, 'Renderer', {
   enumerable: true,
@@ -24836,7 +24988,7 @@ Object.defineProperty(exports, 'Renderer', {
   }
 });
 
-var _Drawable = __webpack_require__(31);
+var _Drawable = __webpack_require__(32);
 
 Object.defineProperty(exports, 'Drawable', {
   enumerable: true,
@@ -24845,7 +24997,7 @@ Object.defineProperty(exports, 'Drawable', {
   }
 });
 
-var _Drawing = __webpack_require__(91);
+var _Drawing = __webpack_require__(92);
 
 Object.defineProperty(exports, 'Drawing', {
   enumerable: true,
@@ -24854,7 +25006,7 @@ Object.defineProperty(exports, 'Drawing', {
   }
 });
 
-var _Container = __webpack_require__(30);
+var _Container = __webpack_require__(31);
 
 Object.defineProperty(exports, 'Container', {
   enumerable: true,
@@ -24863,7 +25015,7 @@ Object.defineProperty(exports, 'Container', {
   }
 });
 
-var _Text = __webpack_require__(92);
+var _Text = __webpack_require__(93);
 
 Object.defineProperty(exports, 'Text', {
   enumerable: true,
@@ -24881,7 +25033,7 @@ Object.defineProperty(exports, 'TextStyle', {
   }
 });
 
-var _Shader = __webpack_require__(38);
+var _Shader = __webpack_require__(39);
 
 Object.defineProperty(exports, 'Shader', {
   enumerable: true,
@@ -24926,7 +25078,7 @@ Object.defineProperty(exports, 'Sprite', {
   }
 });
 
-var _Spritesheet = __webpack_require__(93);
+var _Spritesheet = __webpack_require__(94);
 
 Object.defineProperty(exports, 'Spritesheet', {
   enumerable: true,
@@ -24956,7 +25108,7 @@ Object.defineProperty(exports, 'SpriteShader', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24978,7 +25130,7 @@ var _settings2 = _interopRequireDefault(_settings);
 
 var _math = __webpack_require__(2);
 
-var _RenderTarget2 = __webpack_require__(36);
+var _RenderTarget2 = __webpack_require__(37);
 
 var _RenderTarget3 = _interopRequireDefault(_RenderTarget2);
 
@@ -25447,7 +25599,7 @@ var RenderTexture = function (_RenderTarget) {
 exports.default = RenderTexture;
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25461,11 +25613,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 
-var _Container2 = __webpack_require__(30);
+var _Container2 = __webpack_require__(31);
 
 var _Container3 = _interopRequireDefault(_Container2);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -25848,7 +26000,7 @@ var Drawing = function (_Container) {
 exports.default = Drawing;
 
 /***/ }),
-/* 92 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26228,7 +26380,7 @@ var Text = function (_Sprite) {
 exports.default = Text;
 
 /***/ }),
-/* 93 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26502,7 +26654,7 @@ var Spritesheet = function () {
 exports.default = Spritesheet;
 
 /***/ }),
-/* 94 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26521,7 +26673,7 @@ Object.defineProperty(exports, 'Particle', {
   }
 });
 
-var _ParticleEmitter = __webpack_require__(95);
+var _ParticleEmitter = __webpack_require__(96);
 
 Object.defineProperty(exports, 'ParticleEmitter', {
   enumerable: true,
@@ -26557,7 +26709,7 @@ Object.defineProperty(exports, 'ParticleModifier', {
   }
 });
 
-var _ForceModifier = __webpack_require__(96);
+var _ForceModifier = __webpack_require__(97);
 
 Object.defineProperty(exports, 'ForceModifier', {
   enumerable: true,
@@ -26566,7 +26718,7 @@ Object.defineProperty(exports, 'ForceModifier', {
   }
 });
 
-var _ScaleModifier = __webpack_require__(97);
+var _ScaleModifier = __webpack_require__(98);
 
 Object.defineProperty(exports, 'ScaleModifier', {
   enumerable: true,
@@ -26575,7 +26727,7 @@ Object.defineProperty(exports, 'ScaleModifier', {
   }
 });
 
-var _TorqueModifier = __webpack_require__(98);
+var _TorqueModifier = __webpack_require__(99);
 
 Object.defineProperty(exports, 'TorqueModifier', {
   enumerable: true,
@@ -26584,7 +26736,7 @@ Object.defineProperty(exports, 'TorqueModifier', {
   }
 });
 
-var _ColorModifier = __webpack_require__(99);
+var _ColorModifier = __webpack_require__(100);
 
 Object.defineProperty(exports, 'ColorModifier', {
   enumerable: true,
@@ -26596,7 +26748,7 @@ Object.defineProperty(exports, 'ColorModifier', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 95 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26612,7 +26764,7 @@ var _get = function get(object, property, receiver) { if (object === null) objec
 
 var _core = __webpack_require__(7);
 
-var _Drawable2 = __webpack_require__(31);
+var _Drawable2 = __webpack_require__(32);
 
 var _Drawable3 = _interopRequireDefault(_Drawable2);
 
@@ -26632,7 +26784,7 @@ var _Vector = __webpack_require__(1);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -27515,7 +27667,7 @@ var ParticleEmitter = function (_Drawable) {
 exports.default = ParticleEmitter;
 
 /***/ }),
-/* 96 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27644,7 +27796,7 @@ var ForceModifier = function (_ParticleModifier) {
 exports.default = ForceModifier;
 
 /***/ }),
-/* 97 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27771,7 +27923,7 @@ var ScaleModifier = function (_ParticleModifier) {
 exports.default = ScaleModifier;
 
 /***/ }),
-/* 98 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27890,7 +28042,7 @@ var TorqueModifier = function (_ParticleModifier) {
 exports.default = TorqueModifier;
 
 /***/ }),
-/* 99 */
+/* 100 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27910,7 +28062,7 @@ var _Vector = __webpack_require__(1);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Color = __webpack_require__(9);
+var _Color = __webpack_require__(8);
 
 var _Color2 = _interopRequireDefault(_Color);
 
@@ -28068,7 +28220,7 @@ var ColorModifier = function (_ParticleModifier) {
 exports.default = ColorModifier;
 
 /***/ }),
-/* 100 */
+/* 101 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28078,7 +28230,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Input = __webpack_require__(101);
+var _Input = __webpack_require__(102);
 
 Object.defineProperty(exports, 'Input', {
   enumerable: true,
@@ -28114,7 +28266,7 @@ Object.defineProperty(exports, 'Gamepad', {
   }
 });
 
-var _GamepadControl = __webpack_require__(50);
+var _GamepadControl = __webpack_require__(45);
 
 Object.defineProperty(exports, 'GamepadControl', {
   enumerable: true,
@@ -28123,7 +28275,7 @@ Object.defineProperty(exports, 'GamepadControl', {
   }
 });
 
-var _GamepadMapping = __webpack_require__(49);
+var _GamepadMapping = __webpack_require__(44);
 
 Object.defineProperty(exports, 'GamepadMapping', {
   enumerable: true,
@@ -28135,7 +28287,7 @@ Object.defineProperty(exports, 'GamepadMapping', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 101 */
+/* 102 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28386,7 +28538,7 @@ var Input = function (_EventEmitter) {
 exports.default = Input;
 
 /***/ }),
-/* 102 */
+/* 103 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28405,7 +28557,7 @@ Object.defineProperty(exports, 'Vector', {
   }
 });
 
-var _ObservableVector = __webpack_require__(32);
+var _ObservableVector = __webpack_require__(33);
 
 Object.defineProperty(exports, 'ObservableVector', {
   enumerable: true,
@@ -28450,7 +28602,7 @@ Object.defineProperty(exports, 'Rectangle', {
   }
 });
 
-var _Circle = __webpack_require__(33);
+var _Circle = __webpack_require__(34);
 
 Object.defineProperty(exports, 'Circle', {
   enumerable: true,
@@ -28477,7 +28629,7 @@ Object.defineProperty(exports, 'Size', {
   }
 });
 
-var _Random = __webpack_require__(48);
+var _Random = __webpack_require__(43);
 
 Object.defineProperty(exports, 'Random', {
   enumerable: true,
@@ -28507,7 +28659,7 @@ Object.defineProperty(exports, 'Flags', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 103 */
+/* 104 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28526,7 +28678,7 @@ Object.defineProperty(exports, 'Media', {
   }
 });
 
-var _Sound = __webpack_require__(52);
+var _Sound = __webpack_require__(53);
 
 Object.defineProperty(exports, 'Sound', {
   enumerable: true,
@@ -28535,7 +28687,7 @@ Object.defineProperty(exports, 'Sound', {
   }
 });
 
-var _Music = __webpack_require__(47);
+var _Music = __webpack_require__(51);
 
 Object.defineProperty(exports, 'Music', {
   enumerable: true,
@@ -28553,7 +28705,7 @@ Object.defineProperty(exports, 'Video', {
   }
 });
 
-var _MediaSource = __webpack_require__(46);
+var _MediaSource = __webpack_require__(50);
 
 Object.defineProperty(exports, 'MediaSource', {
   enumerable: true,
@@ -28562,7 +28714,7 @@ Object.defineProperty(exports, 'MediaSource', {
   }
 });
 
-var _AudioAnalyser = __webpack_require__(104);
+var _AudioAnalyser = __webpack_require__(105);
 
 Object.defineProperty(exports, 'AudioAnalyser', {
   enumerable: true,
@@ -28574,7 +28726,7 @@ Object.defineProperty(exports, 'AudioAnalyser', {
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
-/* 104 */
+/* 105 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28590,7 +28742,7 @@ var _support = __webpack_require__(6);
 
 var _support2 = _interopRequireDefault(_support);
 
-var _media = __webpack_require__(8);
+var _media = __webpack_require__(9);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -28805,7 +28957,7 @@ var AudioAnalyser = function () {
 exports.default = AudioAnalyser;
 
 /***/ }),
-/* 105 */
+/* 106 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28839,19 +28991,19 @@ Object.keys(_math).forEach(function (key) {
   });
 });
 
-var _mime = __webpack_require__(27);
+var _resources = __webpack_require__(27);
 
-Object.keys(_mime).forEach(function (key) {
+Object.keys(_resources).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _mime[key];
+      return _resources[key];
     }
   });
 });
 
-var _media = __webpack_require__(8);
+var _media = __webpack_require__(9);
 
 Object.keys(_media).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;

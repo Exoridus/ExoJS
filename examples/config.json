@@ -4,69 +4,68 @@
         "examples": [
             {
                 "title": "Sprite",
-                "path": "sprite.js"
+                "path": "rendering/sprite.js"
             },
             {
                 "title": "Container",
-                "path": "container.js"
+                "path": "rendering/container.js"
             },
             {
                 "title": "Spritesheet",
-                "path": "spritesheet.js"
+                "path": "rendering/spritesheet.js"
             },
             {
                 "title": "Blendmodes",
-                "path": "blendmodes.js"
+                "path": "rendering/blendmodes.js"
             },
             {
                 "title": "Tinted Sprites",
-                "path": "tinting.js"
+                "path": "rendering/tinting.js"
             },
             {
                 "title": "Camera Handling",
-                "path": "camera.js"
+                "path": "rendering/camera.js"
             },
             {
                 "title": "Render to Texture",
-                "path": "render-to-texture.js"
-            }
-        ]
-    },
-    {
-        "title": "Media",
-        "examples": [
+                "path": "rendering/render-to-texture.js"
+            },
             {
                 "title": "Display Text",
-                "path": "text.js"
+                "path": "rendering/text.js"
             },
             {
                 "title": "Display Video",
-                "path": "video.js"
+                "path": "rendering/video.js"
             },
             {
-                "title": "Audio Analysis",
-                "path": "audio-analysis.js"
+                "title": "Display SVG",
+                "path": "rendering/svg.js"
             }
         ]
     },
     {
-        "title": "Other",
+        "title": "Misc",
         "examples": [
             {
-                "title": "Gamepad",
-                "path": "gamepad.js"
+                "title": "Collision Detection",
+                "path": "misc/collision-detection.js"
             },
             {
                 "title": "Particles",
-                "path": "particles.js"
+                "path": "misc/particles.js"
             },
             {
-                "title": "Collision Detection",
-                "path": "collision-detection.js"
+                "title": "Gamepad",
+                "path": "misc/gamepad.js"
+            },
+            {
+                "title": "Audio Analysis",
+                "path": "misc/audio-analysis.js"
             },
             {
                 "title": "Benchmark",
-                "path": "benchmark.js"
+                "path": "misc/benchmark.js"
             }
         ]
     }

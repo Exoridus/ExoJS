@@ -2,7 +2,7 @@
  * @namespace Exo
  */
 export * from './const';
-export * from './content';
+export * from './resources';
 export * from './core';
 export * from './graphics';
 export * from './particles';

@@ -12,7 +12,7 @@ export default class Texture {
 
     /**
      * @constructor
-     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
+     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement} source
      * @param {Object} [options]
      * @param {Number} [options.scaleMode=settings.SCALE_MODE]
      * @param {Number} [options.wrapMode=settings.WRAP_MODE]
@@ -28,7 +28,7 @@ export default class Texture {
 
         /**
          * @private
-         * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+         * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement}
          */
         this._source = null;
 
@@ -104,7 +104,7 @@ export default class Texture {
 
     /**
      * @public
-     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement}
+     * @member {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement}
      */
     get source() {
         return this._source;
@@ -328,7 +328,7 @@ export default class Texture {
     /**
      * @public
      * @chainable
-     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement} source
+     * @param {?HTMLImageElement|?HTMLCanvasElement|?HTMLVideoElement|?SVGElement} source
      * @returns {Texture}
      */
     setSource(source) {

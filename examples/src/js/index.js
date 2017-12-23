@@ -86,8 +86,8 @@ $(() => {
 
     loader.loadItem({
         type: 'json',
-        name: 'examples',
-        path: `assets/json/examples.json?no-cache=${Date.now()}`,
+        name: 'config',
+        path: `config.json?no-cache=${Date.now()}`,
     }).then(createNavigation);
 
     $refresh.on('click', () => {

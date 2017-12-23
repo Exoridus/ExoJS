@@ -1,5 +1,5 @@
 import ArrayBufferFactory from './ArrayBufferFactory';
-import { determineMimeType } from '../../utils/mime';
+import { determineMimeType } from '../../utils/resources';
 
 /**
  * @class BlobFactory

@@ -3,7 +3,7 @@ import Clock from './time/Clock';
 import SceneManager from './SceneManager';
 import RenderManager from '../graphics/RenderManager';
 import InputManager from '../input/InputManager';
-import Loader from '../content/Loader';
+import Loader from '../resources/Loader';
 import settings from '../settings';
 
 /**

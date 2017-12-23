@@ -1,3 +1,4 @@
+import settings from '../settings';
 import EventEmitter from '../core/EventEmitter';
 import ResourceContainer from './ResourceContainer';
 import ArrayBufferFactory from './factories/ArrayBufferFactory';
@@ -11,7 +12,7 @@ import TextFactory from './factories/TextFactory';
 import TextureFactory from './factories/TextureFactory';
 import MediaSourceFactory from './factories/MediaSourceFactory';
 import VideoFactory from './factories/VideoFactory';
-import settings from '../settings';
+import SVGFactory from './factories/SVGFactory';
 
 /**
  * @class Loader
@@ -374,5 +375,6 @@ export default class Loader extends EventEmitter {
         this.addFactory('texture', new TextureFactory());
         this.addFactory('text', new TextFactory());
         this.addFactory('json', new JSONFactory());
+        this.addFactory('svg', new SVGFactory());
     }
 }
