@@ -1,4 +1,4 @@
-import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const';
+import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const/input';
 import Flags from '../math/Flags';
 import support from '../support';
 import { stopEvent } from '../utils/events';

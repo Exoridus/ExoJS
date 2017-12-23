@@ -151,6 +151,7 @@ app.start(new Exo.Scene({
         mappedButtons.set(Exo.GAMEPAD.DPadRight, dpadRight);
 
         dpad.setTint(this._buttonColor);
+
         dpad.setScale(1.75);
         dpadUp.setScale(1.75);
         dpadDown.setScale(1.75);

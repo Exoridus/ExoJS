@@ -1428,9 +1428,6 @@ var MenuManager = function () {
                 }
             }
         })];
-
-        app.on('pointer:move', this._onPointerMove, this);
-        app.on('pointer:tap', this._onPointerTap, this);
     }
 
     /**
@@ -1453,6 +1450,8 @@ var MenuManager = function () {
             if (!this._active) {
                 this._active = true;
                 this._app.inputManager.add(this._inputs);
+                this._app.inputManager.on('pointer:move', this._onPointerMove, this);
+                this._app.inputManager.on('pointer:tap', this._onPointerTap, this);
 
                 this.openMenu(startMenu);
             }
@@ -1472,6 +1471,8 @@ var MenuManager = function () {
             if (this._active) {
                 this._active = false;
                 this._app.inputManager.remove(this._inputs);
+                this._app.inputManager.off('pointer:move', this._onPointerMove, this);
+                this._app.inputManager.off('pointer:tap', this._onPointerTap, this);
 
                 if (this._currentMenu) {
                     this._currentMenu.disable();

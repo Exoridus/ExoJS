@@ -1,4 +1,4 @@
-import { SCALE_MODES, WRAP_MODES } from './const';
+import { SCALE_MODES, WRAP_MODES } from './const/graphics';
 import Color from './core/Color';
 import GamepadMapping from './input/GamepadMapping';
 

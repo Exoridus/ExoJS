@@ -1,4 +1,4 @@
-import { BLEND_MODES } from '../const';
+import { BLEND_MODES } from '../const/graphics';
 import support from '../support';
 import settings from '../settings';
 import RenderTarget from './RenderTarget';
@@ -6,7 +6,8 @@ import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
 import { imageToBase64 } from '../utils/media';
-import Texture from './Texture';
+import Texture from './texture/Texture';
+import Sampler from './texture/Sampler';
 
 /**
  * @class RenderManager
@@ -97,6 +98,12 @@ export default class RenderManager {
          * @member {?Texture}
          */
         this._texture = null;
+
+        /**
+         * @private
+         * @member {Sampler}
+         */
+        this._sampler = new Sampler(this._context);
 
         /**
          * @private
@@ -644,6 +651,9 @@ export default class RenderManager {
 
         this._renderers.clear();
         this._renderers = null;
+
+        this._sampler.destroy();
+        this._sampler = null;
 
         this._clearColor.destroy();
         this._clearColor = null;

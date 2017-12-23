@@ -1,5 +1,5 @@
 import Sprite from '../sprite/Sprite';
-import Texture from '../Texture';
+import Texture from '../texture/Texture';
 import TextStyle from './TextStyle';
 import Rectangle from '../../math/Rectangle';
 

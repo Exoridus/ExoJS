@@ -1,4 +1,4 @@
-import { TIME } from '../const';
+import { TIME } from '../const/core';
 import Vector from '../math/Vector';
 import Color from '../core/Color';
 import Time from '../core/time/Time';

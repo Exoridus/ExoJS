@@ -50,24 +50,19 @@
         ]
     },
     {
-        "title": "Input",
+        "title": "Other",
         "examples": [
             {
                 "title": "Gamepad",
-                "path": "input/gamepad.js"
-            }
-        ]
-    },
-    {
-        "title": "Extras",
-        "examples": [
-            {
-                "title": "Collision Detection",
-                "path": "collision-detection.js"
+                "path": "gamepad.js"
             },
             {
                 "title": "Particles",
                 "path": "particles.js"
+            },
+            {
+                "title": "Collision Detection",
+                "path": "collision-detection.js"
             },
             {
                 "title": "Benchmark",

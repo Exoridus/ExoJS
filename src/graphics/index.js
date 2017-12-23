@@ -3,9 +3,9 @@
  */
 export { default as RenderManager } from './RenderManager';
 export { default as RenderTarget } from './RenderTarget';
-export { default as RenderTexture } from './RenderTexture';
+export { default as RenderTexture } from './texture/RenderTexture';
 export { default as VertexArray } from './VertexArray';
-export { default as Texture } from './Texture';
+export { default as Texture } from './texture/Texture';
 export { default as View } from './View';
 export { default as Renderer } from './Renderer';
 export { default as Drawable } from './Drawable';

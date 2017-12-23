@@ -1,7 +1,7 @@
 import Vector from '../math/Vector';
 import Interval from '../math/Interval';
 import Polygon from '../math/Polygon';
-import { VORONOI_REGION } from '../const';
+import { VORONOI_REGION } from '../const/math';
 import { getVoronoiRegion } from '../utils/math';
 
 /**

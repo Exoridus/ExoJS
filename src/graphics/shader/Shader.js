@@ -1,6 +1,6 @@
 import ShaderAttribute from './ShaderAttribute';
 import ShaderUniform from './ShaderUniform';
-import { TYPE_SIZES, UNIFORM_TYPE } from '../../const';
+import { TYPE_SIZES } from '../../const/graphics';
 import ShaderBlock from './ShaderBlock';
 
 /**

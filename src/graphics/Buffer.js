@@ -1,8 +1,8 @@
+import { EMPTY_ARRAY_BUFFER } from '../const/core';
+
 /**
  * @class Buffer
  */
-import { EMPTY_ARRAY_BUFFER } from '../const';
-
 export default class Buffer {
 
     /**

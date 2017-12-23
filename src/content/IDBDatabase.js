@@ -1,4 +1,4 @@
-import { DATABASE_TYPES } from '../const';
+import { DATABASE_TYPES } from '../const/core';
 import support from '../support';
 import Database from './Database';
 

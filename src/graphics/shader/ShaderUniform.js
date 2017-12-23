@@ -1,4 +1,4 @@
-import { UNIFORM_TYPE } from '../../const';
+import { UNIFORM_TYPE } from '../../const/graphics';
 
 /**
  * @class ShaderUniform

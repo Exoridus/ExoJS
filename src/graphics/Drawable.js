@@ -1,6 +1,6 @@
 import SceneNode from '../core/SceneNode';
 import Color from '../core/Color';
-import { BLEND_MODES } from '../const';
+import { BLEND_MODES } from '../const/graphics';
 
 /**
  * @class Drawable
