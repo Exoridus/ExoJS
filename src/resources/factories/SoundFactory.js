@@ -1,11 +1,12 @@
-import MediaSourceFactory from './MediaSourceFactory';
+import ArrayBufferFactory from './ArrayBufferFactory';
 import Sound from '../../media/Sound';
+import { AUDIO_CONTEXT } from '../../const/core';
 
 /**
  * @class SoundFactory
- * @extends MediaSourceFactory
+ * @extends ArrayBufferFactory
  */
-export default class SoundFactory extends MediaSourceFactory {
+export default class SoundFactory extends ArrayBufferFactory {
 
     /**
      * @override
@@ -17,9 +18,10 @@ export default class SoundFactory extends MediaSourceFactory {
     /**
      * @override
      */
-    create(source, { type = 'audio', createMediaElement = false, decodeAudioBuffer = true, mimeType, loadEvent, volume, loop, speed, time, muted } = {}) {
-        return super
-            .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
-            .then((audioSource) => new Sound(audioSource, { volume, loop, speed, time, muted }));
+    async create(source, { options } = {}) {
+        const arrayBuffer = await super.create(source, null),
+            audioBuffer = await AUDIO_CONTEXT.decodeAudioData(arrayBuffer);
+
+        return new Sound(audioBuffer, options);
     }
 }

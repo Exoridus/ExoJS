@@ -4,6 +4,18 @@
 export default class ResourceFactory {
 
     /**
+     * @constructor
+     */
+    constructor() {
+
+        /**
+         * @private
+         * @member {String[]}
+         */
+        this._objectURLs = [];
+    }
+
+    /**
      * @public
      * @readonly
      * @member {String}
@@ -14,12 +26,21 @@ export default class ResourceFactory {
 
     /**
      * @public
+     * @readonly
+     * @member {String[]}
+     */
+    get objectURLs() {
+        return this._objectURLs;
+    }
+
+    /**
+     * @public
      * @param {String} path
      * @param {Object} [options]
      * @returns {Promise<Response>}
      */
-    request(path, options) {
-        return fetch(path, options);
+    async request(path, options) {
+        return await fetch(path, options);
     }
 
     /**
@@ -27,38 +48,42 @@ export default class ResourceFactory {
      * @param {Response} response
      * @returns {Promise<*>}
      */
-    process(response) { // eslint-disable-line
-        return Promise.resolve(null);
+    async process(response) { // eslint-disable-line
+        return null;
     }
 
     /**
      * @public
-     * @param {Response} source
+     * @param {*} source
      * @param {Object} [options]
      * @returns {Promise<*>}
      */
-    create(source, options) { // eslint-disable-line
-        return Promise.resolve(source);
+    async create(source, options) { // eslint-disable-line
+        return source;
     }
 
     /**
      * @public
-     * @param {String} path
-     * @param {Object} [request]
-     * @param {Object} [options]
-     * @returns {Promise<*>}
+     * @param {Blob} blob
+     * @returns {String}
      */
-    load(path, request, options) {
-        return this
-            .request(path, request)
-            .then((response) => this.process(response))
-            .then((source) => this.create(source, options));
+    createObjectURL(blob) {
+        const objectURL = URL.createObjectURL(blob);
+
+        this._objectURLs.push(objectURL);
+
+        return objectURL;
     }
 
     /**
      * @public
      */
     destroy() {
-        // do nothing
+        for (const objectURL of this._objectURLs) {
+            URL.revokeObjectURL(objectURL);
+        }
+
+        this._objectURLs.length = 0;
+        this._objectURLs = null;
     }
 }

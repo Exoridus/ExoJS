@@ -4,6 +4,10 @@
  */
 import EventEmitter from './EventEmitter';
 
+/**
+ * @inner
+ * @type {Object<String, Number>}
+ */
 const STATUS = {
     NONE: 0,
     LOADING: 1,
@@ -76,13 +80,27 @@ export default class SceneManager extends EventEmitter {
      * @public
      * @chainable
      * @param {?Scene} scene
-     * @returns {SceneManager}
+     * @returns {Promise<SceneManager>}
      */
-    setScene(scene) {
+    async setScene(scene) {
         if (scene !== this._scene) {
             this._unloadScene();
+
             this._scene = scene;
-            this._loadScene();
+
+            if (scene) {
+                this._status = STATUS.LOADING;
+
+                this.trigger('scene:load');
+
+                scene.app = this._app;
+                scene.load(this._app.loader);
+                scene.init(await this._app.loader.load());
+
+                this._status = STATUS.RUNNING;
+
+                this.trigger('scene:start');
+            }
         }
 
         return this;
@@ -119,42 +137,19 @@ export default class SceneManager extends EventEmitter {
     /**
      * @private
      */
-    _loadScene() {
-        if (this._scene) {
-            const loader = this._app.loader;
-
-            this._status = STATUS.LOADING;
-            this._scene.app = this._app;
-            this._scene.load(loader);
-
-            this.trigger('scene:load');
-
-            loader.load().then(() => {
-                this._status = STATUS.RUNNING;
-                this._scene.init(loader.resources);
-
-                this.trigger('scene:init');
-            });
-        }
-    }
-
-    /**
-     * @private
-     */
     _unloadScene() {
         if (this._scene) {
             if (this.sceneRunning) {
                 this._scene.unload();
 
-                this.trigger('scene:unload');
+                this.trigger('scene:unloaded');
             }
 
             this._scene.destroy();
             this._scene = null;
-
             this._status = STATUS.NONE;
 
-            this.trigger('scene:destroy');
+            this.trigger('scene:destroyed');
         }
     }
 }

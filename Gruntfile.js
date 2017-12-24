@@ -23,7 +23,7 @@ module.exports = (grunt) => {
                 moduleRoot: '<%= dirs.src %>',
                 sourceMap: false,
                 minified: false,
-                presets: ['es2015'],
+                presets: ['es2015', 'stage-0'],
             },
             dist: {
                 files: {
@@ -39,12 +39,12 @@ module.exports = (grunt) => {
                     loaders: [{
                         test: /\.js$/,
                         exclude: /node_modules/,
-                        loader: 'babel-loader?cacheDirectory=cache',
+                        loader: 'babel-loader?cacheDirectory=.babel-cache',
                     }],
                 },
             },
             dist: {
-                entry: '<%= dirs.src %>/index.js',
+                entry: ['babel-polyfill', '<%= dirs.src %>/index.js'],
                 output: {
                     path: __dirname + '/bin',
                     filename: 'exo.build.js',
@@ -57,28 +57,6 @@ module.exports = (grunt) => {
                         __VERSION__: JSON.stringify(package.version),
                     }),
                 ],
-            },
-            'no-cache': {
-                entry: '<%= dirs.src %>/index.js',
-                output: {
-                    path: __dirname + '/bin',
-                    filename: 'exo.build.js',
-                    sourceMapFilename: 'exo.build.js.map',
-                    library: 'Exo',
-                },
-                cache: false,
-                plugins: [
-                    new webpack.DefinePlugin({
-                        __VERSION__: JSON.stringify(package.version),
-                    }),
-                ],
-                module: {
-                    loaders: [{
-                        test: /\.js$/,
-                        exclude: /node_modules/,
-                        loader: 'babel-loader',
-                    }],
-                },
             },
             examples: {
                 entry: '<%= dirs.examples %>/src/js/index.js',

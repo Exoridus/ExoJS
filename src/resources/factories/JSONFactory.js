@@ -16,14 +16,7 @@ export default class JSONFactory extends ResourceFactory {
     /**
      * @override
      */
-    process(response) {
-        return response.json();
-    }
-
-    /**
-     * @override
-     */
-    create(source, options) { // eslint-disable-line
-        return Promise.resolve(source);
+    async process(response) {
+        return await response.json();
     }
 }

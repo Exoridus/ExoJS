@@ -16,14 +16,7 @@ export default class TextFactory extends ResourceFactory {
     /**
      * @override
      */
-    process(response) {
-        return response.text();
-    }
-
-    /**
-     * @override
-     */
-    create(source, options) { // eslint-disable-line
-        return Promise.resolve(source);
+    async process(response) {
+        return await response.text();
     }
 }

@@ -1,69 +1,6 @@
-import support from '../support';
+import { AUDIO_ELEMENT, CANVAS_ELEMENT, CANVAS_CONTEXT, CODEC_NOT_SUPPORTED } from '../const/core';
 
 const
-
-    /**
-     * @inner
-     * @constant
-     * @type {Audio}
-     */
-    audio = new Audio(),
-
-    /**
-     * @public
-     * @constant
-     * @name audioContext
-     * @type {AudioContext}
-     */
-    audioContext = support.webAudio ? new AudioContext() : null,
-
-    /**
-     * @inner
-     * @type {HTMLCanvasElement}
-     */
-    canvas = document.createElement('canvas'),
-
-    /**
-     * @inner
-     * @type {CanvasRenderingContext2D}
-     */
-    canvasContext = canvas.getContext('2d'),
-
-    /**
-     * @inner
-     * @type {RegExp}
-     */
-    CODEC_NOT_SUPPORTED = /^no$/,
-
-    /**
-     * @public
-     * @param {...String} codecs
-     * @returns {Boolean}
-     */
-    supportsCodec = (...codecs) => {
-        for (const codec of codecs) {
-            if (audio.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, '')) {
-                return true;
-            }
-        }
-
-        return false;
-    },
-
-    /**
-     * @public
-     * @param {ArrayBuffer} arrayBuffer
-     * @returns {Promise<AudioBuffer>}
-     */
-    decodeAudioBuffer = (arrayBuffer) => {
-        if (!support.webAudio) {
-            return Promise.reject(Error('Web Audio is not supported!'));
-        }
-
-        return new Promise((resolve, reject) => {
-            audioContext.decodeAudioData(arrayBuffer, resolve, reject);
-        });
-    },
 
     /**
      * @public
@@ -91,21 +28,29 @@ const
      * @return {String}
      */
     imageToBase64 = (image) => {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        canvasContext.drawImage(image, 0,0);
+        const { width, height } = image;
 
-        return canvas.toDataURL();
-    };
+        CANVAS_ELEMENT.width = width;
+        CANVAS_ELEMENT.height = height;
+
+        CANVAS_CONTEXT.drawImage(image, 0, 0, width, height);
+
+        return CANVAS_ELEMENT.toDataURL();
+    },
+
+    /**
+     * @public
+     * @param {...String} codecs
+     * @returns {Boolean}
+     */
+    supportsCodec = (...codecs) => codecs.some((codec) => AUDIO_ELEMENT.canPlayType(codec).replace(CODEC_NOT_SUPPORTED, ''));
 
 /**
  * @namespace Exo
  */
 export {
-    audioContext,
-    supportsCodec,
-    decodeAudioBuffer,
     getMediaWidth,
     getMediaHeight,
     imageToBase64,
+    supportsCodec,
 };

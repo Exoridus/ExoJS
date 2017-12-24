@@ -10,7 +10,6 @@ import MusicFactory from './factories/MusicFactory';
 import SoundFactory from './factories/SoundFactory';
 import TextFactory from './factories/TextFactory';
 import TextureFactory from './factories/TextureFactory';
-import MediaSourceFactory from './factories/MediaSourceFactory';
 import VideoFactory from './factories/VideoFactory';
 import SVGFactory from './factories/SVGFactory';
 
@@ -46,7 +45,7 @@ export default class Loader extends EventEmitter {
 
         /**
          * @private
-         * @member {?Database}
+         * @member {?Database|?IDBDatabase}
          */
         this._database = database;
 
@@ -58,9 +57,15 @@ export default class Loader extends EventEmitter {
 
         /**
          * @private
-         * @member {Set<Object>}
+         * @member {Object[]}
          */
-        this._queue = new Set();
+        this._queue = [];
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._loaded = 0;
 
         /**
          * @private
@@ -101,10 +106,19 @@ export default class Loader extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Set<Object>}
+     * @member {Object[]}
      */
     get queue() {
         return this._queue;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get loaded() {
+        return this._loaded;
     }
 
     /**
@@ -219,13 +233,13 @@ export default class Loader extends EventEmitter {
 
         if (typeof itemsOrName === 'object') {
             for (const [name, path] of Object.entries(itemsOrName)) {
-                this._queue.add({ type, name, path, options: optionsOrPath });
+                this._queue.push({ type, name, path, options: optionsOrPath });
             }
 
             return this;
         }
 
-        this._queue.add({ type, name: itemsOrName, path: optionsOrPath, options });
+        this._queue.push({ type, name: itemsOrName, path: optionsOrPath, options });
 
         return this;
     }
@@ -233,28 +247,26 @@ export default class Loader extends EventEmitter {
     /**
      * @public
      * @param {Function} [callback]
-     * @returns {Promise}
+     * @returns {Promise<ResourceContainer>}
      */
-    load(callback) {
-        const items = [...this._queue];
-
-        let loaded = 0;
+    async load(callback) {
+        this._loaded = 0;
 
         if (callback) {
             this.once('complete', callback, this);
         }
 
-        this._queue.clear();
+        this.trigger('start', this._queue.length, this._loaded, this._queue);
 
-        this.trigger('start', items.length, loaded, items);
+        for (const item of this._queue) {
+            this.trigger('progress', this._queue.length, ++this._loaded, await this.loadItem(item));
+        }
 
-        return items
-            .map((item) => this.loadItem(item))
-            .reduce((sequence, promise) => sequence
-                .then(() => promise)
-                .then((resource) => this.trigger('progress', items.length, ++loaded, items, resource)),
-            Promise.resolve())
-            .then(() => this.trigger('complete', items.length, loaded, items, this._resources));
+        this.trigger('complete', this._queue.length, this._loaded, this._resources);
+
+        this._queue.length = 0;
+
+        return this._resources;
     }
 
     /**
@@ -266,43 +278,31 @@ export default class Loader extends EventEmitter {
      * @param {Object} [item.options]
      * @returns {Promise<*>}
      */
-    loadItem({ type, name, path, options } = {}) {
-        if (this._resources.has(type, name)) {
-            return Promise.resolve(this._resources.get(type, name));
+    async loadItem({ type, name, path, options } = {}) {
+        if (!this._resources.has(type, name)) {
+            const factory = this.getFactory(type);
+
+            let source = this._database ? (await this._database.load(factory.storageType, name)) : null;
+
+            if (!source) {
+                source = await factory.process(await factory.request((this._resourcePath + path), {
+                    method: this._method,
+                    mode: this._mode,
+                    cache: this._cache,
+                }));
+
+                if (this._database) {
+                    await this._database.save(factory.storageType, name, source);
+                }
+
+                console.log('database', this._database);
+            }
+
+            console.log(source, options);
+            this._resources.set(type, name, await factory.create(source, options));
         }
 
-        const factory = this.getFactory(type),
-            completePath = this._resourcePath + path,
-            request = {
-                method: this._method,
-                mode: this._mode,
-                cache: this._cache,
-            };
-
-        if (this._database) {
-            return this._database
-                .load(factory.storageType, name)
-                .then((result) => result.data || factory
-                    .request(completePath, request)
-                    .then((response) => factory.process(response))
-                    .then((data) => this._database
-                        .save(factory.storageType, name, data)
-                        .then((result) => result.data)))
-                .then((source) => factory.create(source, options))
-                .then((resource) => {
-                    this._resources.set(type, name, resource);
-
-                    return resource;
-                });
-        }
-
-        return factory
-            .load(completePath, request, options)
-            .then((resource) => {
-                this._resources.set(type, name, resource);
-
-                return resource;
-            });
+        return this._resources.get(type, name);
     }
 
     /**
@@ -320,7 +320,7 @@ export default class Loader extends EventEmitter {
         }
 
         if (queue) {
-            this._queue.clear();
+            this._queue.length = 0;
         }
 
         if (resources) {
@@ -348,7 +348,7 @@ export default class Loader extends EventEmitter {
         this._factories.clear();
         this._factories = null;
 
-        this._queue.clear();
+        this._queue.length = 0;
         this._queue = null;
 
         this._resources.destroy();
@@ -365,7 +365,6 @@ export default class Loader extends EventEmitter {
      */
     _addFactories() {
         this.addFactory('arrayBuffer', new ArrayBufferFactory());
-        this.addFactory('mediaSource', new MediaSourceFactory());
         this.addFactory('blob', new BlobFactory());
         this.addFactory('font', new FontFactory());
         this.addFactory('music', new MusicFactory());

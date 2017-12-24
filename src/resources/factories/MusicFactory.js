@@ -1,25 +1,33 @@
-import MediaSourceFactory from './MediaSourceFactory';
 import Music from '../../media/Music';
+import BlobFactory from './BlobFactory';
 
 /**
  * @class MusicFactory
- * @extends MediaSourceFactory
+ * @extends BlobFactory
  */
-export default class MusicFactory extends MediaSourceFactory {
+export default class MusicFactory extends BlobFactory {
 
     /**
      * @override
      */
     get storageType() {
-        return 'sound';
+        return 'music';
     }
 
     /**
      * @override
      */
-    create(source, { type = 'audio', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent, volume, loop, speed, time, muted } = {}) {
-        return super
-            .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
-            .then((audioSource) => new Music(audioSource, { volume, loop, speed, time, muted }));
+    async create(source, { options, mimeType, loadEvent = 'canplaythrough' } = {}) {
+        const blob = await super.create(source, { mimeType });
+
+        return new Promise((resolve, reject) => {
+            const audio = document.createElement('audio');
+
+            audio.addEventListener(loadEvent, () => resolve(new Music(audio, options)));
+            audio.addEventListener('error', () => reject(Error('Error loading audio source.')));
+            audio.addEventListener('abort', () => reject(Error('Audio loading was canceled.')));
+
+            audio.src = this.createObjectURL(blob);
+        });
     }
 }

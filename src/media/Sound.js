@@ -1,18 +1,16 @@
-import { audioContext } from '../utils/media';
 import { clamp } from '../utils/math';
-import support from '../support';
-import Media from './Media';
-import settings from '../settings';
+import { AUDIO_CONTEXT } from '../const/core';
+import EventEmitter from '../core/EventEmitter';
 
 /**
  * @class Sound
- * @extends Media
+ * @extends EventEmitter
  */
-export default class Sound extends Media {
+export default class Sound extends EventEmitter {
 
     /**
      * @constructor
-     * @param {MediaSource} mediaSource
+     * @param {AudioBuffer} audioBuffer
      * @param {Object} [options]
      * @property {Number} [options.volume=settings.VOLUME_SOUND]
      * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
@@ -20,20 +18,8 @@ export default class Sound extends Media {
      * @property {Number} [options.time=settings.MEDIA_TIME]
      * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
-    constructor(mediaSource, {
-        volume = settings.VOLUME_SOUND,
-        loop = settings.MEDIA_LOOP,
-        speed = settings.MEDIA_SPEED,
-        time = settings.MEDIA_TIME,
-        muted = settings.MEDIA_MUTED,
-    } = {}) {
-        super(mediaSource, { volume, loop, speed, time, muted });
-
-        const audioBuffer = this.audioBuffer;
-
-        if (!audioBuffer) {
-            throw new Error('AudioBuffer is missing in MediaSource');
-        }
+    constructor(audioBuffer, options) {
+        super();
 
         /**
          * @private
@@ -46,6 +32,30 @@ export default class Sound extends Media {
          * @member {Number}
          */
         this._duration = audioBuffer.duration;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._volume = 1;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._speed = 1;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._loop = false;
+
+        /**
+         * @private
+         * @member {Boolean}
+         */
+        this._muted = false;
 
         /**
          * @private
@@ -75,13 +85,39 @@ export default class Sound extends Media {
          * @private
          * @member {?GainNode}
          */
-        this._gainNode = audioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this.volume, audioContext.currentTime, 10);
-        this._gainNode.connect(audioContext.destination);
+        this._gainNode = AUDIO_CONTEXT.createGain();
+        this._gainNode.gain.setTargetAtTime(this.volume, AUDIO_CONTEXT.currentTime, 10);
+        this._gainNode.connect(AUDIO_CONTEXT.destination);
+
+        if (options) {
+            this.applyOptions(options);
+        }
     }
 
     /**
-     * @override
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get duration() {
+        return this._duration;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get progress() {
+        const elapsed = this.currentTime,
+            duration = this.duration;
+
+        return ((elapsed % duration) / duration);
+    }
+
+    /**
+     * @public
+     * @member {Number}
      */
     get volume() {
         return this._volume;
@@ -94,14 +130,19 @@ export default class Sound extends Media {
             this._volume = volume;
 
             if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
+                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, AUDIO_CONTEXT.currentTime, 10);
             }
         }
     }
 
     /**
-     * @override
+     * @public
+     * @member {Boolean}
      */
+    get loop() {
+        return this._loop;
+    }
+
     set loop(value) {
         const loop = !!value;
 
@@ -115,8 +156,13 @@ export default class Sound extends Media {
     }
 
     /**
-     * @override
+     * @public
+     * @member {Number}
      */
+    get speed() {
+        return this._speed;
+    }
+
     set speed(value) {
         const speed = Math.max(0, value);
 
@@ -130,14 +176,15 @@ export default class Sound extends Media {
     }
 
     /**
-     * @override
+     * @public
+     * @member {Number}
      */
     get currentTime() {
-        if (!this._startTime || !audioContext) {
+        if (!this._startTime || !AUDIO_CONTEXT) {
             return 0;
         }
 
-        return (this._currentTime + audioContext.currentTime - this._startTime);
+        return (this._currentTime + AUDIO_CONTEXT.currentTime - this._startTime);
     }
 
     set currentTime(currentTime) {
@@ -147,8 +194,13 @@ export default class Sound extends Media {
     }
 
     /**
-     * @override
+     * @public
+     * @member {Boolean}
      */
+    get muted() {
+        return this._muted;
+    }
+
     set muted(value) {
         const muted = !!value;
 
@@ -156,13 +208,14 @@ export default class Sound extends Media {
             this._muted = muted;
 
             if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
+                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, AUDIO_CONTEXT.currentTime, 10);
             }
         }
     }
 
     /**
-     * @override
+     * @public
+     * @member {Boolean}
      */
     get paused() {
         if (!this._paused || this._loop) {
@@ -172,29 +225,64 @@ export default class Sound extends Media {
         return (this.currentTime >= this.duration);
     }
 
+    set paused(paused) {
+        if (paused) {
+            this.pause();
+        } else {
+            this.play();
+        }
+    }
+
     /**
-     * @override
+     * @public
+     * @member {Boolean}
      */
     get playing() {
         return !this._paused;
     }
 
+    set playing(playing) {
+        if (playing) {
+            this.play();
+        } else {
+            this.pause();
+        }
+    }
+
     /**
-     * @override
+     * @public
+     * @readonly
+     * @member {?AudioNode}
      */
     get analyserTarget() {
         return this._gainNode || null;
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {Object} [options]
+     * @property {Boolean} [options.loop]
+     * @property {Number} [options.speed]
+     * @property {Number} [options.volume]
+     * @property {Number} [options.time]
+     * @property {Boolean} [options.muted]
+     * @returns {Sound}
      */
     play(options) {
-        if (this._paused) {
+        if (options) {
             this.applyOptions(options);
+        }
 
-            this._sourceNode = this.createSourceNode();
-            this._startTime = audioContext.currentTime;
+        if (this._paused) {
+            this._sourceNode = AUDIO_CONTEXT.createBufferSource();
+            this._sourceNode.buffer = this._audioBuffer;
+            this._sourceNode.loop = this.loop;
+            this._sourceNode.playbackRate.value = this.speed;
+            this._sourceNode.connect(this._gainNode);
+            this._sourceNode.start(0, this._currentTime);
+
+            this._startTime = AUDIO_CONTEXT.currentTime;
             this._paused = false;
 
             this.trigger('start');
@@ -205,22 +293,8 @@ export default class Sound extends Media {
 
     /**
      * @public
-     * @returns {AudioBufferSourceNode}
-     */
-    createSourceNode() {
-        const sourceNode = audioContext.createBufferSource();
-
-        sourceNode.buffer = this.mediaSource.audioBuffer;
-        sourceNode.loop = this.loop;
-        sourceNode.playbackRate.value = this.speed;
-        sourceNode.connect(this._gainNode);
-        sourceNode.start(0, this._currentTime);
-
-        return sourceNode;
-    }
-
-    /**
-     * @override
+     * @chainable
+     * @returns {Sound}
      */
     pause() {
         if (!this._paused) {
@@ -245,13 +319,79 @@ export default class Sound extends Media {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @returns {Sound}
+     */
+    stop() {
+        this.pause();
+        this.currentTime = 0;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Object} [options]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
+     * @returns {Sound}
+     */
+    toggle(options) {
+        return this.paused ? this.play(options) : this.pause();
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Object} [options]
+     * @param {Number} [options.volume]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
+     * @returns {Sound}
+     */
+    applyOptions({ volume, loop, speed, time, muted } = {}) {
+        if (volume !== undefined) {
+            this.volume = volume;
+        }
+
+        if (loop !== undefined) {
+            this.loop = loop;
+        }
+
+        if (speed !== undefined) {
+            this.speed = speed;
+        }
+
+        if (time !== undefined) {
+            this.currentTime = time;
+        }
+
+        if (muted !== undefined) {
+            this.muted = muted;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
      */
     destroy() {
         super.destroy();
 
-        this._sourceNode.disconnect();
-        this._sourceNode = null;
+        this.stop();
+
+        if (this._sourceNode) {
+            this._sourceNode.disconnect();
+            this._sourceNode = null;
+        }
 
         this._gainNode.disconnect();
         this._gainNode = null;
@@ -260,5 +400,10 @@ export default class Sound extends Media {
         this._paused = null;
         this._startTime = null;
         this._currentTime = null;
+        this._duration = null;
+        this._volume = null;
+        this._speed = null;
+        this._loop = null;
+        this._muted = null;
     }
 }

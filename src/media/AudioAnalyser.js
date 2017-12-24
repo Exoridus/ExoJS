@@ -1,5 +1,5 @@
 import support from '../support';
-import { audioContext } from '../utils/media';
+import { AUDIO_CONTEXT } from '../const/core';
 
 /**
  * @class AudioAnalyser
@@ -8,7 +8,7 @@ export default class AudioAnalyser {
 
     /**
      * @constructor
-     * @param {Media|Sound|Music|Video} media
+     * @param {Sound|Music|Video} media
      * @param {Object} [options]
      * @param {Number} [options.fftSize=2048]
      * @param {Number} [options.minDecibels=-100]
@@ -29,7 +29,7 @@ export default class AudioAnalyser {
          * @private
          * @member {?AnalyserNode}
          */
-        this._analyser = audioContext.createAnalyser();
+        this._analyser = AUDIO_CONTEXT.createAnalyser();
         this._analyser.fftSize = fftSize;
         this._analyser.minDecibels = minDecibels;
         this._analyser.maxDecibels = maxDecibels;
@@ -43,7 +43,7 @@ export default class AudioAnalyser {
 
         /**
          * @private
-         * @member {Media|Sound|Music|Video}
+         * @member {Sound|Music|Video}
          */
         this._media = media;
 

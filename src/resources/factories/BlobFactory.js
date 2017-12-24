@@ -17,9 +17,9 @@ export default class BlobFactory extends ArrayBufferFactory {
     /**
      * @override
      */
-    create(source, { mimeType = determineMimeType(source) } = {}) {
-        return super
-            .create(source, null)
-            .then((arrayBuffer) => new Blob([arrayBuffer], { type: mimeType }));
+    async create(source, { mimeType = determineMimeType(source) } = {}) {
+        const arrayBuffer = await super.create(source, null);
+
+        return new Blob([arrayBuffer], { type: mimeType });
     }
 }

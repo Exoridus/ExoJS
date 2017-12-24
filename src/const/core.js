@@ -11,8 +11,55 @@ export const
 
     /**
      * @public
+     * @static
+     * @readonly
      * @constant
-     * @name TIME
+     * @type {Window}
+     */
+    GLOBAL = (global.parent || global),
+
+    /**
+     * @inner
+     * @constant
+     * @type {Audio}
+     */
+    AUDIO_ELEMENT = document.createElement('audio'),
+
+    /**
+     * @public
+     * @type {HTMLCanvasElement}
+     */
+    CANVAS_ELEMENT = document.createElement('canvas'),
+
+    /**
+     * @public
+     * @constant
+     * @type {AudioContext}
+     */
+    AUDIO_CONTEXT = ('AudioContext' in window) ? new AudioContext() : null,
+
+    /**
+     * @public
+     * @type {CanvasRenderingContext2D}
+     */
+    CANVAS_CONTEXT = CANVAS_ELEMENT.getContext('2d'),
+
+    /**
+     * @public
+     * @type {RegExp}
+     */
+    CODEC_NOT_SUPPORTED = /^no$/,
+
+    /**
+     * @public
+     * @constant
+     * @type {ArrayBuffer}
+     */
+    EMPTY_ARRAY_BUFFER = new ArrayBuffer(0),
+
+    /**
+     * @public
+     * @constant
      * @type {Object<String, Number>}
      * @property {Number} MILLISECONDS
      * @property {Number} SECONDS
@@ -29,7 +76,6 @@ export const
     /**
      * @public
      * @constant
-     * @name DATABASE_TYPES
      * @type {String[]}
      */
     DATABASE_TYPES = [
@@ -46,12 +92,4 @@ export const
         'text',
         'json',
         'svg',
-    ],
-
-    /**
-     * @public
-     * @constant
-     * @name EMPTY_ARRAY_BUFFER
-     * @type {ArrayBuffer}
-     */
-    EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
+    ];

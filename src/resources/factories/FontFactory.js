@@ -16,22 +16,14 @@ export default class FontFactory extends ArrayBufferFactory {
     /**
      * @override
      */
-    create(source, { family, destriptors, addToDocument = true } = {}) {
-        return super
-            .create(source, null)
-            .then((arrayBuffer) => new Promise((resolve, reject) => {
-                const fontFace = new FontFace(family, arrayBuffer, destriptors);
+    async create(source, { family, destriptors, addToDocument = true } = {}) {
+        const arrayBuffer = await super.create(source, null),
+            fontFace = await new FontFace(family, arrayBuffer, destriptors).load();
 
-                fontFace
-                    .load()
-                    .then(() => {
-                        if (addToDocument) {
-                            document.fonts.add(fontFace);
-                        }
+        if (addToDocument) {
+            document.fonts.add(fontFace);
+        }
 
-                        resolve(fontFace);
-                    })
-                    .catch(() => reject(fontFace));
-            }));
+        return fontFace;
     }
 }

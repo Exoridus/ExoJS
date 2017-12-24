@@ -9,7 +9,6 @@ export { default as ResourceFactory } from './ResourceFactory';
 export { default as BlobFactory } from './factories/BlobFactory';
 export { default as FontFactory } from './factories/FontFactory';
 export { default as ArrayBufferFactory } from './factories/ArrayBufferFactory';
-export { default as MediaSourceFactory } from './factories/MediaSourceFactory';
 export { default as MusicFactory } from './factories/MusicFactory';
 export { default as SoundFactory } from './factories/SoundFactory';
 export { default as VideoFactory } from './factories/VideoFactory';

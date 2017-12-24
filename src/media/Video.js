@@ -1,9 +1,8 @@
-import { audioContext } from '../utils/media';
 import { clamp } from '../utils/math';
 import Sprite from '../rendering/sprite/Sprite';
 import Texture from '../rendering/texture/Texture';
-import support from '../support';
 import settings from '../settings';
+import { AUDIO_CONTEXT } from '../const/core';
 
 /**
  * @class Video
@@ -13,7 +12,7 @@ export default class Video extends Sprite {
 
     /**
      * @constructor
-     * @param {MediaSource} mediaSource
+     * @param {HTMLMediaElement|HTMLVideoElement} videoElement
      * @param {Object} [options]
      * @param {Number} [options.volume=settings.VOLUME_VIDEO]
      * @param {Boolean} [options.loop=settings.MEDIA_LOOP]
@@ -25,7 +24,7 @@ export default class Video extends Sprite {
      * @param {Boolean} [options.premultiplyAlpha]
      * @param {Boolean} [options.generateMipMap]
      */
-    constructor(mediaSource, {
+    constructor(videoElement, {
         volume = settings.VOLUME_VIDEO,
         loop = settings.MEDIA_LOOP,
         speed = settings.MEDIA_SPEED,
@@ -36,65 +35,57 @@ export default class Video extends Sprite {
         premultiplyAlpha,
         generateMipMap,
     } = {}) {
-        super(new Texture(mediaSource.mediaElement, { scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
-
-        const mediaElement = mediaSource.mediaElement;
+        super(new Texture(videoElement, { scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
 
         /**
          * @private
-         * @member {MediaSource}
+         * @member {HTMLMediaElement|HTMLVideoElement}
          */
-        this._mediaSource = mediaSource;
-
-        /**
-         * @private
-         * @member {?HTMLMediaElement}
-         */
-        this._mediaElement = mediaElement;
+        this._videoElement = videoElement;
 
         /**
          * @private
          * @member {Number}
          */
-        this._duration = mediaElement ? mediaElement.duration : 0;
+        this._duration = videoElement.duration;
 
         /**
          * @private
          * @member {Number}
          */
-        this._volume = mediaElement ? mediaElement.volume : 1;
+        this._volume = videoElement.volume;
 
         /**
          * @private
          * @member {Number}
          */
-        this._speed = mediaElement ? mediaElement.playbackRate : 1;
+        this._speed = videoElement.playbackRate;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._loop = mediaElement ? mediaElement.loop : false;
+        this._loop = videoElement.loop;
 
         /**
          * @private
          * @member {Boolean}
          */
-        this._muted = mediaElement ? mediaElement.muted : false;
+        this._muted = videoElement.muted;
 
         /**
          * @private
-         * @member {?GainNode}
+         * @member {GainNode}
          */
-        this._gainNode = audioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this.volume, audioContext.currentTime, 10);
-        this._gainNode.connect(audioContext.destination);
+        this._gainNode = AUDIO_CONTEXT.createGain();
+        this._gainNode.gain.setTargetAtTime(this.volume, AUDIO_CONTEXT.currentTime, 10);
+        this._gainNode.connect(AUDIO_CONTEXT.destination);
 
         /**
          * @private
-         * @member {?MediaElementAudioSourceNode}
+         * @member {MediaElementAudioSourceNode}
          */
-        this._sourceNode = audioContext.createMediaElementSource(this._mediaElement);
+        this._sourceNode = AUDIO_CONTEXT.createMediaElementSource(videoElement);
         this._sourceNode.connect(this._gainNode);
 
         this.applyOptions({ volume, loop, speed, time, muted });
@@ -103,19 +94,10 @@ export default class Video extends Sprite {
     /**
      * @public
      * @readonly
-     * @member {MediaSource}
+     * @member {HTMLMediaElement|HTMLVideoElement}
      */
-    get mediaSource() {
-        return this._mediaSource;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {?HTMLMediaElement}
-     */
-    get mediaElement() {
-        return this._mediaElement;
+    get videoElement() {
+        return this._videoElement;
     }
 
     /**
@@ -154,7 +136,7 @@ export default class Video extends Sprite {
             this._volume = volume;
 
             if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
+                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, AUDIO_CONTEXT.currentTime, 10);
             }
         }
     }
@@ -170,7 +152,7 @@ export default class Video extends Sprite {
         const loop = !!value;
 
         if (this._loop !== loop) {
-            this._mediaElement.loop = this._loop = loop;
+            this._videoElement.loop = this._loop = loop;
         }
     }
 
@@ -186,7 +168,7 @@ export default class Video extends Sprite {
         const speed = Math.max(0, value);
 
         if (this._speed !== speed) {
-            this._mediaElement.playbackRate = this._speed = speed;
+            this._videoElement.playbackRate = this._speed = speed;
         }
     }
 
@@ -195,11 +177,11 @@ export default class Video extends Sprite {
      * @member {Number}
      */
     get currentTime() {
-        return this._mediaElement.currentTime;
+        return this._videoElement.currentTime;
     }
 
     set currentTime(currentTime) {
-        this._mediaElement.currentTime = Math.max(0, currentTime);
+        this._videoElement.currentTime = Math.max(0, currentTime);
     }
 
     /**
@@ -217,7 +199,7 @@ export default class Video extends Sprite {
             this._muted = muted;
 
             if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
+                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, AUDIO_CONTEXT.currentTime, 10);
             }
         }
     }
@@ -227,7 +209,7 @@ export default class Video extends Sprite {
      * @member {Boolean}
      */
     get paused() {
-        return this._mediaElement.paused;
+        return this._videoElement.paused;
     }
 
     set paused(paused) {
@@ -277,7 +259,7 @@ export default class Video extends Sprite {
     play(options) {
         if (this.paused) {
             this.applyOptions(options);
-            this._mediaElement.play();
+            this._videoElement.play();
             this.trigger('start');
         }
 
@@ -291,7 +273,7 @@ export default class Video extends Sprite {
      */
     pause() {
         if (this.playing) {
-            this._mediaElement.pause();
+            this._videoElement.pause();
             this.trigger('stop');
         }
 
@@ -366,7 +348,6 @@ export default class Video extends Sprite {
     render(renderManager) {
         if (this.visible) {
             this.texture.updateSource();
-
             super.render(renderManager);
         }
 
@@ -387,8 +368,7 @@ export default class Video extends Sprite {
         this._gainNode.disconnect();
         this._gainNode = null;
 
-        this._mediaSource = null;
-        this._mediaElement = null;
+        this._videoElement = null;
         this._duration = null;
         this._volume = null;
         this._speed = null;

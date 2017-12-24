@@ -1,11 +1,11 @@
 import Video from '../../media/Video';
-import MediaSourceFactory from './MediaSourceFactory';
+import BlobFactory from './BlobFactory';
 
 /**
  * @class VideoFactory
- * @extends MediaSourceFactory
+ * @extends BlobFactory
  */
-export default class VideoFactory extends MediaSourceFactory {
+export default class VideoFactory extends BlobFactory {
 
     /**
      * @override
@@ -17,9 +17,17 @@ export default class VideoFactory extends MediaSourceFactory {
     /**
      * @override
      */
-    create(source, { type = 'video', createMediaElement = true, decodeAudioBuffer = false, mimeType, loadEvent, volume, loop, speed, time, muted, scaleMode, wrapMode, premultiplyAlpha, generateMipMap } = {}) {
-        return super
-            .create(source, { type, createMediaElement, decodeAudioBuffer, mimeType, loadEvent })
-            .then((audioSource) => new Video(audioSource, { volume, loop, speed, time, muted, scaleMode, wrapMode, premultiplyAlpha, generateMipMap }));
+    async create(source, { options, mimeType, loadEvent = 'canplaythrough' } = {}) {
+        const blob = await super.create(source, { mimeType });
+
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+
+            video.addEventListener(loadEvent, () => resolve(new Video(video, options)));
+            video.addEventListener('error', () => reject(Error('Error loading audio source.')));
+            video.addEventListener('abort', () => reject(Error('Audio loading was canceled.')));
+
+            video.src = this.createObjectURL(blob);
+        });
     }
 }

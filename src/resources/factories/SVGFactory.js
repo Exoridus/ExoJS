@@ -7,28 +7,6 @@ import TextFactory from './TextFactory';
 export default class SVGFactory extends TextFactory {
 
     /**
-     * @constructor
-     */
-    constructor() {
-        super();
-
-        /**
-         * @private
-         * @member {Set<String>}
-         */
-        this._objectURLs = new Set();
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Set<String>}
-     */
-    get objectURLs() {
-        return this._objectURLs;
-    }
-
-    /**
      * @override
      */
     get storageType() {
@@ -38,33 +16,18 @@ export default class SVGFactory extends TextFactory {
     /**
      * @override
      */
-    create(source, options) {
-        return super
-            .create(source, options)
-            .then((text) => new Promise((resolve, reject) => {
-                const blob = new Blob([text], { type: 'image/svg+xml' }),
-                    objectURL = URL.createObjectURL(blob),
-                    image = new Image();
+    async create(source, options) {
+        const text = await super.create(source, null),
+            blob = new Blob([text], { type: 'image/svg+xml' });
 
-                this._objectURLs.add(objectURL);
+        return new Promise((resolve, reject) => {
+            const image = new Image();
 
-                image.addEventListener('load', () => resolve(image));
-                image.addEventListener('error', () => reject(Error('Error loading image source.')));
-                image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
+            image.addEventListener('load', () => resolve(image));
+            image.addEventListener('error', () => reject(Error('Error loading image source.')));
+            image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
 
-                image.src = objectURL;
-            }));
-    }
-
-    /**
-     * @override
-     */
-    destroy() {
-        for (const objectURL of this._objectURLs) {
-            URL.revokeObjectURL(objectURL);
-        }
-
-        this._objectURLs.clear();
-        this._objectURLs = null;
+            image.src = this.createObjectURL(blob);
+        });
     }
 }

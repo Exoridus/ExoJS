@@ -46,7 +46,7 @@ export default class Scene extends EventEmitter {
      * @public
      * @param {Loader} loader
      */
-    load(loader) { // eslint-disable-line
+    async load(loader) { // eslint-disable-line
         // do nothing
     }
 

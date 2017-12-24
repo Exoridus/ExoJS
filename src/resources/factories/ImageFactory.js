@@ -6,27 +6,6 @@ import BlobFactory from './BlobFactory';
  */
 export default class ImageFactory extends BlobFactory {
 
-    /**
-     * @constructor
-     */
-    constructor() {
-        super();
-
-        /**
-         * @private
-         * @member {Set<String>}
-         */
-        this._objectURLs = new Set();
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Set<String>}
-     */
-    get objectURLs() {
-        return this._objectURLs;
-    }
 
     /**
      * @override
@@ -38,32 +17,17 @@ export default class ImageFactory extends BlobFactory {
     /**
      * @override
      */
-    create(source, { mimeType } = {}) {
-        return super
-            .create(source, { mimeType })
-            .then((blob) => new Promise((resolve, reject) => {
-                const image = new Image(),
-                    objectURL = URL.createObjectURL(blob);
+    async create(source, { mimeType } = {}) {
+        const blob = await super.create(source, { mimeType });
 
-                this._objectURLs.add(objectURL);
+        return new Promise((resolve, reject) => {
+            const image = new Image();
 
-                image.addEventListener('load', () => resolve(image));
-                image.addEventListener('error', () => reject(Error('Error loading image source.')));
-                image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
+            image.addEventListener('load', () => resolve(image));
+            image.addEventListener('error', () => reject(Error('Error loading image source.')));
+            image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
 
-                image.src = objectURL;
-            }));
-    }
-
-    /**
-     * @override
-     */
-    destroy() {
-        for (const objectURL of this._objectURLs) {
-            URL.revokeObjectURL(objectURL);
-        }
-
-        this._objectURLs.clear();
-        this._objectURLs = null;
+            image.src = this.createObjectURL(blob);
+        });
     }
 }

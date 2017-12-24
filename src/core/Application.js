@@ -178,14 +178,14 @@ export default class Application extends EventEmitter {
      * @public
      * @chainable
      * @param {Scene} scene
-     * @returns {Application}
+     * @returns {Promise<Application>}
      */
-    start(scene) {
+    async start(scene) {
         if (!this._running) {
-            this._running = true;
-            this._sceneManager.setScene(scene);
+            await this._sceneManager.setScene(scene);
             this._updateId = requestAnimationFrame(this._updateHandler);
             this._delta.restart();
+            this._running = true;
         }
 
         return this;

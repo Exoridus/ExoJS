@@ -70,7 +70,7 @@ export default class Database {
      * @public
      * @returns {Promise}
      */
-    connect() {
+    async connect() {
         throw new Error('Method not implemented!');
     }
 
@@ -78,7 +78,7 @@ export default class Database {
      * @public
      * @returns {Promise}
      */
-    disconnect() {
+    async disconnect() {
         throw new Error('Method not implemented!');
     }
 
@@ -86,9 +86,9 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Promise<DatabaseResult>}
+     * @returns {Promise<*>}
      */
-    load(type, name) {
+    async load(type, name) {
         throw new Error('Method not implemented!');
     }
 
@@ -97,9 +97,9 @@ export default class Database {
      * @param {String} type
      * @param {String} name
      * @param {Object} data
-     * @returns {Promise<DatabaseResult>}
+     * @returns {Promise<Event>}
      */
-    save(type, name, data) {
+    async save(type, name, data) {
         throw new Error('Method not implemented!');
     }
 
@@ -107,9 +107,9 @@ export default class Database {
      * @public
      * @param {String} type
      * @param {String} name
-     * @returns {Promise<DatabaseResult>}
+     * @returns {Promise<Event>}
      */
-    delete(type, name) {
+    async delete(type, name) {
         throw new Error('Method not implemented!');
     }
 
@@ -118,7 +118,7 @@ export default class Database {
      * @param {String} [type='*']
      * @returns {Promise}
      */
-    clearStorage(type = '*') {
+    async clearStorage(type = '*') {
         throw new Error('Method not implemented!');
     }
 
@@ -126,7 +126,7 @@ export default class Database {
      * @public
      * @returns {Promise}
      */
-    deleteStorage() {
+    async deleteStorage() {
         throw new Error('Method not implemented!');
     }
 

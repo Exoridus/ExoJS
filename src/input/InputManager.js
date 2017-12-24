@@ -6,14 +6,9 @@ import Vector from '../math/Vector';
 import Pointer from './Pointer';
 import EventEmitter from '../core/EventEmitter';
 import Gamepad from './Gamepad';
+import { GLOBAL } from '../const/core';
 
 const
-
-    /**
-     * @inner
-     * @type {Window}
-     */
-    global = (window.parent || window),
 
     /**
      * @inner
@@ -48,13 +43,7 @@ const
     active = (support.eventOptions ? {
         capture: true,
         passive: false,
-    } : true),
-
-    /**
-     * @inner
-     * @type {Navigator}
-     */
-    navigator = global.navigator;
+    } : true);
 
 /**
  * @typedef {MouseEvent} PointerEvent
@@ -355,8 +344,8 @@ export default class InputManager extends EventEmitter {
         this._onPointerCancelHandler = this._onPointerCancel.bind(this);
         this._onMouseScrollHandler = this._onMouseScroll.bind(this);
 
-        global.addEventListener('keydown', this._onKeyDownHandler, true);
-        global.addEventListener('keyup', this._onKeyUpHandler, true);
+        GLOBAL.addEventListener('keydown', this._onKeyDownHandler, true);
+        GLOBAL.addEventListener('keyup', this._onKeyUpHandler, true);
 
         canvas.addEventListener('pointerover', this._onPointerEnterHandler, passive);
         canvas.addEventListener('pointerleave', this._onPointerLeaveHandler, passive);
@@ -375,8 +364,8 @@ export default class InputManager extends EventEmitter {
     _removeEventListeners() {
         const canvas = this._app.canvas;
 
-        global.removeEventListener('keydown', this._onKeyDownHandler, true);
-        global.removeEventListener('keyup', this._onKeyUpHandler, true);
+        GLOBAL.removeEventListener('keydown', this._onKeyDownHandler, true);
+        GLOBAL.removeEventListener('keyup', this._onKeyUpHandler, true);
 
         canvas.removeEventListener('pointerover', this._onPointerEnterHandler, passive);
         canvas.removeEventListener('pointerleave', this._onPointerLeaveHandler, passive);
@@ -557,7 +546,7 @@ export default class InputManager extends EventEmitter {
      * @private
      */
     _updateGamepads() {
-        const activeGamepads = navigator.getGamepads();
+        const activeGamepads = GLOBAL.navigator.getGamepads();
 
         for (const gamepad of this._gamepads) {
             const activGamepad = activeGamepads[gamepad.index];

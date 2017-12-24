@@ -1,7 +1,7 @@
 .idea
 .vscode
 .sass-cache
+.babel-cache
 node_modules
-cache/*
 !.gitignore
 !.gitkeep

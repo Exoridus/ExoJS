@@ -28,12 +28,6 @@ export default class IDBDatabase extends Database {
 
         /**
          * @private
-         * @member {?Promise}
-         */
-        this._connect = null;
-
-        /**
-         * @private
          * @member {Function}
          */
         this._onCloseHandler = this.disconnect.bind(this);
@@ -45,22 +39,23 @@ export default class IDBDatabase extends Database {
      * @param {String} [transactionMode='readonly']
      * @returns {Promise}
      */
-    getObjectStore(type, transactionMode = 'readonly') {
+    async getObjectStore(type, transactionMode = 'readonly') {
         if (!DATABASE_TYPES.includes(type)) {
-            return Promise.reject(Error(`The object store named "${type}" could not be found.`));
+            throw new Error(`The object store named "${type}" could not be found.`);
         }
 
-        return this.connect()
-            .then(() => this._database
-                .transaction([type], transactionMode)
-                .objectStore(type));
+        await this.connect();
+
+        return this._database
+            .transaction([type], transactionMode)
+            .objectStore(type);
     }
 
     /**
      * @override
      */
-    connect() {
-        return this._connect || (this._connect = new Promise((resolve, reject) => {
+    async connect() {
+        return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.name, this.version);
 
             request.addEventListener('upgradeneeded', (event) => {
@@ -95,13 +90,13 @@ export default class IDBDatabase extends Database {
 
             request.addEventListener('error', (event) => reject(Error('An error occurred while requesting the database connection.')));
             request.addEventListener('blocked', (event) => reject(Error('The request for the database connection has been blocked.')));
-        }));
+        });
     }
 
     /**
      * @override
      */
-    disconnect() {
+    async disconnect() {
         if (this._database) {
             this._database.removeEventListener('close', this._onCloseHandler);
             this._database.removeEventListener('versionchange', this._onCloseHandler);
@@ -110,84 +105,82 @@ export default class IDBDatabase extends Database {
             this.connected = false;
         }
 
-        this._connect = null;
-
-        return Promise.resolve();
+        return this;
     }
 
     /**
      * @override
      */
-    load(type, name) {
-        return this.getObjectStore(type)
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.get(name);
+    async load(type, name) {
+        const store = await this.getObjectStore(type);
 
-                request.addEventListener('success', (event) => {
-                    const result = event.target.result,
-                        data = (result && result.data) || null;
+        return new Promise((resolve, reject) => {
+            const request = store.get(name);
 
-                    resolve({ type, name, data });
-                });
+            request.addEventListener('success', (event) => {
+                const result = event.target.result;
 
-                request.addEventListener('error', (event) => reject(Error('An error occurred while loading an item.')));
-            }));
+                resolve((result && result.data) || null);
+            });
+
+            request.addEventListener('error', (event) => reject(Error('An error occurred while loading an item.')));
+        });
     }
 
     /**
      * @override
      */
-    save(type, name, data) {
-        return this.getObjectStore(type, 'readwrite')
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.put({ name, data });
+    async save(type, name, data) {
+        const store = await this.getObjectStore(type, 'readwrite');
 
-                request.addEventListener('success', () => resolve({ type, name, data }));
-                request.addEventListener('error', (event) => reject(Error('An error occurred while saving an item.')));
-            }));
+        return new Promise((resolve, reject) => {
+            const request = store.put({ name, data });
+
+            request.addEventListener('success', (event) => resolve(event));
+            request.addEventListener('error', (event) => reject(Error('An error occurred while saving an item.')));
+        });
     }
 
     /**
      * @override
      */
-    delete(type, name) {
-        return this.getObjectStore(type, 'readwrite')
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.delete(name);
+    async delete(type, name) {
+        const store = await this.getObjectStore(type, 'readwrite');
 
-                request.addEventListener('success', () => resolve({ type, name, data: null }));
-                request.addEventListener('error', (event) => reject(Error('An error occurred while deleting an item.')));
-            }));
+        return new Promise((resolve, reject) => {
+            const request = store.delete(name);
+
+            request.addEventListener('success', (event) => resolve(event));
+            request.addEventListener('error', (event) => reject(Error('An error occurred while deleting an item.')));
+        });
     }
 
     /**
      * @override
      */
-    clearStorage(type = '*') {
-        if (type === '*') {
-            return DATABASE_TYPES.reduce((promise, type) => promise.then(() => this.clearStorage(type)), Promise.resolve());
-        }
+    async clearStorage(type) {
+        const store = await this.getObjectStore(type, 'readwrite');
 
-        return this.getObjectStore(type, 'readwrite')
-            .then((store) => new Promise((resolve, reject) => {
-                const request = store.clear();
+        return new Promise((resolve, reject) => {
+            const request = store.clear();
 
-                request.addEventListener('success', (event) => resolve());
-                request.addEventListener('error', (event) => reject(Error('An error occurred while clearing a storage.')));
-            }));
+            request.addEventListener('success', (event) => resolve(event));
+            request.addEventListener('error', (event) => reject(Error('An error occurred while clearing a storage.')));
+        });
     }
 
     /**
      * @override
      */
-    deleteStorage() {
-        return this.disconnect()
-            .then(() => new Promise((resolve, reject) => {
-                const request = indexedDB.deleteDatabase(this._name);
+    async deleteStorage() {
+        await this.disconnect();
 
-                request.addEventListener('success', (event) => resolve(event));
-                request.addEventListener('error', (event) => reject(Error('An error occurred while deleting a storage.')));
-            }));
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.deleteDatabase(this._name);
+
+            request.addEventListener('success', (event) => resolve(event));
+            request.addEventListener('error', (event) => reject(Error('An error occurred while deleting a storage.')));
+        });
     }
 
     /**
@@ -198,6 +191,5 @@ export default class IDBDatabase extends Database {
 
         this._onCloseHandler = null;
         this._database = null;
-        this._connect = null;
     }
 }
