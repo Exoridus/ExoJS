@@ -1,8 +1,11 @@
 import Renderer from '../Renderer';
-import SpriteShader from './SpriteShader';
+import Shader from '../shader/Shader';
 import settings from '../../settings';
 import VertexArray from '../VertexArray';
 import Buffer from '../Buffer';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { setQuadIndices } from '../../utils/rendering';
 
 /**
  * @class SpriteRenderer
@@ -47,12 +50,6 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {Uint16Array}
-         */
-        this._indexData = new Uint16Array(this._batchSize * 6);
-
-        /**
-         * @private
          * @member {Float32Array}
          */
         this._float32View = new Float32Array(this._vertexData);
@@ -65,9 +62,18 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {SpriteShader}
+         * @member {Uint16Array}
          */
-        this._shader = new SpriteShader();
+        this._indexData = setQuadIndices(new Uint16Array(this._batchSize * 6));
+
+        /**
+         * @private
+         * @member {Shader}
+         */
+        this._shader = new Shader(
+            readFileSync(join(__dirname, './glsl/sprite.vert'), 'utf8'),
+            readFileSync(join(__dirname, './glsl/sprite.frag'), 'utf8')
+        );
 
         /**
          * @private
@@ -110,8 +116,6 @@ export default class SpriteRenderer extends Renderer {
          * @member {?VertexArray}
          */
         this._vao = null;
-
-        this._fillIndexData(this._indexData);
     }
 
     /**
@@ -301,25 +305,5 @@ export default class SpriteRenderer extends Renderer {
         this._currentView = null;
         this._renderManager = null;
         this._context = null;
-    }
-
-    /**
-     * @private
-     * @param {Uint16Array} data
-     * @returns {SpriteRenderer}
-     */
-    _fillIndexData(data) {
-        const len = data.length;
-
-        for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
-            data[i + 0] = offset + 0;
-            data[i + 1] = offset + 1;
-            data[i + 2] = offset + 2;
-            data[i + 3] = offset + 0;
-            data[i + 4] = offset + 3;
-            data[i + 5] = offset + 2;
-        }
-
-        return this;
     }
 }

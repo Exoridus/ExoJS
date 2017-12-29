@@ -1,4 +1,4 @@
-import Music from '../../media/Music';
+import Music from '../../audio/Music';
 import BlobFactory from './BlobFactory';
 
 /**

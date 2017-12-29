@@ -1,4 +1,4 @@
-import { ATTRIBUTE_TYPE } from '../../const/graphics';
+import { ATTRIBUTE_TYPES } from '../../const/rendering';
 
 /**
  * @class ShaderAttribute
@@ -142,15 +142,15 @@ export default class ShaderAttribute {
      */
     get bytesType() {
         switch (this._type) {
-            case ATTRIBUTE_TYPE.BYTE:
-            case ATTRIBUTE_TYPE.UNSIGNED_BYTE:
+            case ATTRIBUTE_TYPES.BYTE:
+            case ATTRIBUTE_TYPES.UNSIGNED_BYTE:
                 return 1;
-            case ATTRIBUTE_TYPE.SHORT:
-            case ATTRIBUTE_TYPE.UNSIGNED_SHORT:
+            case ATTRIBUTE_TYPES.SHORT:
+            case ATTRIBUTE_TYPES.UNSIGNED_SHORT:
                 return 2;
-            case ATTRIBUTE_TYPE.INT:
-            case ATTRIBUTE_TYPE.UNSIGNED_INT:
-            case ATTRIBUTE_TYPE.FLOAT:
+            case ATTRIBUTE_TYPES.INT:
+            case ATTRIBUTE_TYPES.UNSIGNED_INT:
+            case ATTRIBUTE_TYPES.FLOAT:
                 return 4;
         }
 

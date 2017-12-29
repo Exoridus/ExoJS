@@ -46,7 +46,7 @@ export default class Renderer {
     /**
      * @public
      * @chainable
-     * @param {*} drawable
+     * @param drawable
      * @returns {Renderer}
      */
     render(drawable) { // eslint-disable-line

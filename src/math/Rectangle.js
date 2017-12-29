@@ -149,7 +149,7 @@ export default class Rectangle {
      * @returns {Rectangle}
      */
     setPosition(x, y) {
-        this.position.set(x, y);
+        this._position.set(x, y);
 
         return this;
     }

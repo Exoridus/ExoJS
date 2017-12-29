@@ -42,6 +42,8 @@ export default class ShaderBlock {
          */
         this._size = size;
 
+        console.log(size);
+
         /**
          * @private
          * @member {ArrayBuffer}

@@ -1,4 +1,4 @@
-import Video from '../../media/Video';
+import Video from '../../rendering/Video';
 import BlobFactory from './BlobFactory';
 
 /**

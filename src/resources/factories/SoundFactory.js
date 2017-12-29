@@ -1,5 +1,5 @@
 import ArrayBufferFactory from './ArrayBufferFactory';
-import Sound from '../../media/Sound';
+import Sound from '../../audio/Sound';
 import { AUDIO_CONTEXT } from '../../const/core';
 
 /**

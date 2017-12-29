@@ -58,7 +58,7 @@ export const
     /**
      * @public
      * @constant
-     * @name ATTRIBUTE_TYPE
+     * @name ATTRIBUTE_TYPES
      * @type {Object<String, Number>}
      * @property {Number} BYTE
      * @property {Number} UNSIGNED_BYTE
@@ -68,7 +68,7 @@ export const
      * @property {Number} UNSIGNED_INT
      * @property {Number} FLOAT
      */
-    ATTRIBUTE_TYPE = {
+    ATTRIBUTE_TYPES = {
         BYTE: 0x1400,
         SHORT: 0x1402,
         INT: 0x1404,
@@ -81,7 +81,7 @@ export const
     /**
      * @public
      * @constant
-     * @name UNIFORM_TYPE
+     * @name UNIFORM_TYPES
      * @type {Object<String, Number>}
      * @property {Number} INT
      * @property {Number} INT_VEC2
@@ -104,7 +104,7 @@ export const
      *
      * @property {Number} SAMPLER_2D
      */
-    UNIFORM_TYPE = {
+    UNIFORM_TYPES = {
         INT: 0x1404,
         INT_VEC2: 0x8B53,
         INT_VEC3: 0x8B54,
@@ -130,26 +130,49 @@ export const
     /**
      * @public
      * @constant
+     * @name PRIMITIVE_TYPES
+     * @type {Object<String, Number>}
+     * @property {Number} POINTS
+     * @property {Number} LINES
+     * @property {Number} LINE_LOOP
+     * @property {Number} LINE_STRIP
+     * @property {Number} TRIANGLES
+     * @property {Number} TRIANGLE_STRIP
+     * @property {Number} TRIANGLE_FAN
+     */
+    PRIMITIVE_TYPES = {
+        POINTS: 0x0000,
+        LINES: 0x0001,
+        LINE_LOOP: 0x0002,
+        LINE_STRIP: 0x0003,
+        TRIANGLES: 0x0004,
+        TRIANGLE_STRIP: 0x0005,
+        TRIANGLE_FAN: 0x0006,
+    },
+
+    /**
+     * @public
+     * @constant
      * @name TYPE_SIZES
      * @type {Object<Number, Number>}
      */
     TYPE_SIZES = {
-        [UNIFORM_TYPE.FLOAT]: 1,
-        [UNIFORM_TYPE.FLOAT_VEC2]: 2,
-        [UNIFORM_TYPE.FLOAT_VEC3]: 3,
-        [UNIFORM_TYPE.FLOAT_VEC4]: 4,
-        [UNIFORM_TYPE.INT]: 1,
-        [UNIFORM_TYPE.INT_VEC2]: 2,
-        [UNIFORM_TYPE.INT_VEC3]: 3,
-        [UNIFORM_TYPE.INT_VEC4]: 4,
-        [UNIFORM_TYPE.BOOL]: 1,
-        [UNIFORM_TYPE.BOOL_VEC2]: 2,
-        [UNIFORM_TYPE.BOOL_VEC3]: 3,
-        [UNIFORM_TYPE.BOOL_VEC4]: 4,
-        [UNIFORM_TYPE.FLOAT_MAT2]: 4,
-        [UNIFORM_TYPE.FLOAT_MAT3]: 9,
-        [UNIFORM_TYPE.FLOAT_MAT4]: 16,
-        [UNIFORM_TYPE.SAMPLER_2D]: 1,
+        [UNIFORM_TYPES.FLOAT]: 1,
+        [UNIFORM_TYPES.FLOAT_VEC2]: 2,
+        [UNIFORM_TYPES.FLOAT_VEC3]: 3,
+        [UNIFORM_TYPES.FLOAT_VEC4]: 4,
+        [UNIFORM_TYPES.INT]: 1,
+        [UNIFORM_TYPES.INT_VEC2]: 2,
+        [UNIFORM_TYPES.INT_VEC3]: 3,
+        [UNIFORM_TYPES.INT_VEC4]: 4,
+        [UNIFORM_TYPES.BOOL]: 1,
+        [UNIFORM_TYPES.BOOL_VEC2]: 2,
+        [UNIFORM_TYPES.BOOL_VEC3]: 3,
+        [UNIFORM_TYPES.BOOL_VEC4]: 4,
+        [UNIFORM_TYPES.FLOAT_MAT2]: 4,
+        [UNIFORM_TYPES.FLOAT_MAT3]: 9,
+        [UNIFORM_TYPES.FLOAT_MAT4]: 16,
+        [UNIFORM_TYPES.SAMPLER_2D]: 1,
     },
 
     /**

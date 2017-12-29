@@ -1,9 +1,11 @@
 import Renderer from '../rendering/Renderer';
-import ParticleShader from './ParticleShader';
-import { degreesToRadians } from '../utils/math';
+import Shader from '../rendering/shader/Shader';
+import { setQuadIndices } from '../utils/rendering';
 import settings from '../settings';
 import Buffer from '../rendering/Buffer';
 import VertexArray from '../rendering/VertexArray';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 /**
  * @class ParticleRenderer
@@ -51,12 +53,6 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {Uint16Array}
-         */
-        this._indexData = new Uint16Array(this._batchSize * 6);
-
-        /**
-         * @private
          * @member {Float32Array}
          */
         this._float32View = new Float32Array(this._vertexData);
@@ -69,9 +65,18 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {ParticleShader}
+         * @member {Uint16Array}
          */
-        this._shader = new ParticleShader();
+        this._indexData = setQuadIndices(new Uint16Array(this._batchSize * 6));
+
+        /**
+         * @private
+         * @member {Shader}
+         */
+        this._shader = new Shader(
+            readFileSync(join(__dirname, './glsl/particle.vert'), 'utf8'),
+            readFileSync(join(__dirname, './glsl/particle.frag'), 'utf8')
+        );
 
         /**
          * @private
@@ -114,8 +119,6 @@ export default class ParticleRenderer extends Renderer {
          * @member {?VertexArray}
          */
         this._vao = null;
-
-        this._fillIndexData(this._indexData);
     }
 
     /**
@@ -270,7 +273,7 @@ export default class ParticleRenderer extends Renderer {
                 = float32View[index + 16]
                 = float32View[index + 25]
                 = float32View[index + 34]
-                = degreesToRadians(rotation);
+                = rotation;
 
             uint32View[index + 8]
                 = uint32View[index + 17]
@@ -329,25 +332,5 @@ export default class ParticleRenderer extends Renderer {
         this._currentView = null;
         this._renderManager = null;
         this._context = null;
-    }
-
-    /**
-     * @private
-     * @param {Uint16Array} data
-     * @returns {ParticleRenderer}
-     */
-    _fillIndexData(data) {
-        const len = data.length;
-
-        for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
-            data[i + 0] = offset + 0;
-            data[i + 1] = offset + 1;
-            data[i + 2] = offset + 2;
-            data[i + 3] = offset + 0;
-            data[i + 4] = offset + 3;
-            data[i + 5] = offset + 2;
-        }
-
-        return this;
     }
 }

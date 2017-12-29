@@ -1,4 +1,4 @@
-import { TEXTURE_FLAGS } from '../../const/graphics';
+import { TEXTURE_FLAGS } from '../../const/rendering';
 import settings from '../../settings';
 import { isPowerOfTwo } from '../../utils/math';
 import RenderTarget from '../RenderTarget';

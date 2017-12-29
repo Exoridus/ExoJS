@@ -1,6 +1,6 @@
 import { clamp } from '../utils/math';
-import Sprite from '../rendering/sprite/Sprite';
-import Texture from '../rendering/texture/Texture';
+import Sprite from './sprite/Sprite';
+import Texture from './texture/Texture';
 import settings from '../settings';
 import { AUDIO_CONTEXT } from '../const/core';
 

@@ -294,11 +294,8 @@ export default class Loader extends EventEmitter {
                 if (this._database) {
                     await this._database.save(factory.storageType, name, source);
                 }
-
-                console.log('database', this._database);
             }
 
-            console.log(source, options);
             this._resources.set(type, name, await factory.create(source, options));
         }
 

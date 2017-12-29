@@ -1,4 +1,4 @@
-import { BLEND_MODES } from '../const/graphics';
+import { BLEND_MODES } from '../const/rendering';
 import support from '../support';
 import settings from '../settings';
 import RenderTarget from './RenderTarget';
@@ -19,11 +19,11 @@ export default class RenderManager {
      * @param {Application} app
      */
     constructor(app) {
+        const { width, height, clearColor } = app.config;
+
         if (!support.webGL2) {
             throw new Error('This browser or hardware does not support WebGL v2!');
         }
-
-        const { width, height, clearColor } = app.config;
 
         /**
          * @private
@@ -705,9 +705,11 @@ export default class RenderManager {
         const gl = this._context,
             { r, g, b, a } = this._clearColor;
 
-        gl.enable(gl.BLEND);
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
+
+        gl.enable(gl.BLEND);
+        gl.enable(gl.STENCIL_TEST);
 
         gl.blendEquation(gl.FUNC_ADD);
         gl.clearColor(r / 255, g / 255, b / 255, a);

@@ -124,7 +124,7 @@ export default class VertexArray {
     }
 
     /**
-     * @param buffer   {PIXI.gl.Buffer}
+     * @param {Buffer} buffer
      */
     addIndex(buffer) {
         this._indexBuffer = buffer;

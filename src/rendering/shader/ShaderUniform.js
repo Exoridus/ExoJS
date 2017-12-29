@@ -1,4 +1,4 @@
-import { UNIFORM_TYPE } from '../../const/graphics';
+import { UNIFORM_TYPES } from '../../const/rendering';
 
 /**
  * @class ShaderUniform
@@ -187,26 +187,26 @@ export default class ShaderUniform {
         this._value = value;
 
         switch (this._type) {
-            case UNIFORM_TYPE.FLOAT: gl.uniform1f(this._location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC2: gl.uniform2fv(this._location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC3: gl.uniform3fv(this._location, value); break;
-            case UNIFORM_TYPE.FLOAT_VEC4: gl.uniform4fv(this._location, value); break;
+            case UNIFORM_TYPES.FLOAT: gl.uniform1f(this._location, value); break;
+            case UNIFORM_TYPES.FLOAT_VEC2: gl.uniform2fv(this._location, value); break;
+            case UNIFORM_TYPES.FLOAT_VEC3: gl.uniform3fv(this._location, value); break;
+            case UNIFORM_TYPES.FLOAT_VEC4: gl.uniform4fv(this._location, value); break;
 
-            case UNIFORM_TYPE.INT: gl.uniform1i(this._location, value); break;
-            case UNIFORM_TYPE.INT_VEC2: gl.uniform2iv(this._location, value); break;
-            case UNIFORM_TYPE.INT_VEC3: gl.uniform3iv(this._location, value); break;
-            case UNIFORM_TYPE.INT_VEC4: gl.uniform4iv(this._location, value); break;
+            case UNIFORM_TYPES.INT: gl.uniform1i(this._location, value); break;
+            case UNIFORM_TYPES.INT_VEC2: gl.uniform2iv(this._location, value); break;
+            case UNIFORM_TYPES.INT_VEC3: gl.uniform3iv(this._location, value); break;
+            case UNIFORM_TYPES.INT_VEC4: gl.uniform4iv(this._location, value); break;
 
-            case UNIFORM_TYPE.BOOL: gl.uniform1i(this._location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC2: gl.uniform2iv(this._location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC3: gl.uniform3iv(this._location, value); break;
-            case UNIFORM_TYPE.BOOL_VEC4: gl.uniform4iv(this._location, value); break;
+            case UNIFORM_TYPES.BOOL: gl.uniform1i(this._location, value); break;
+            case UNIFORM_TYPES.BOOL_VEC2: gl.uniform2iv(this._location, value); break;
+            case UNIFORM_TYPES.BOOL_VEC3: gl.uniform3iv(this._location, value); break;
+            case UNIFORM_TYPES.BOOL_VEC4: gl.uniform4iv(this._location, value); break;
 
-            case UNIFORM_TYPE.FLOAT_MAT2: gl.uniformMatrix2fv(this._location, false, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT3: gl.uniformMatrix3fv(this._location, false, value); break;
-            case UNIFORM_TYPE.FLOAT_MAT4: gl.uniformMatrix4fv(this._location, false, value); break;
+            case UNIFORM_TYPES.FLOAT_MAT2: gl.uniformMatrix2fv(this._location, false, value); break;
+            case UNIFORM_TYPES.FLOAT_MAT3: gl.uniformMatrix3fv(this._location, false, value); break;
+            case UNIFORM_TYPES.FLOAT_MAT4: gl.uniformMatrix4fv(this._location, false, value); break;
 
-            case UNIFORM_TYPE.SAMPLER_2D: gl.uniform1i(this._location, value); break;
+            case UNIFORM_TYPES.SAMPLER_2D: gl.uniform1i(this._location, value); break;
 
             default:
                 throw new Error(`Unknown uniform type "${this._type}".`);
@@ -238,35 +238,35 @@ export default class ShaderUniform {
      */
     _getDefaultValue(type, size) {
         switch (type) {
-            case UNIFORM_TYPE.FLOAT: return 0;
-            case UNIFORM_TYPE.FLOAT_VEC2: return new Float32Array(2 * size);
-            case UNIFORM_TYPE.FLOAT_VEC3: return new Float32Array(3 * size);
-            case UNIFORM_TYPE.FLOAT_VEC4: return new Float32Array(4 * size);
+            case UNIFORM_TYPES.FLOAT: return 0;
+            case UNIFORM_TYPES.FLOAT_VEC2: return new Float32Array(2 * size);
+            case UNIFORM_TYPES.FLOAT_VEC3: return new Float32Array(3 * size);
+            case UNIFORM_TYPES.FLOAT_VEC4: return new Float32Array(4 * size);
 
-            case UNIFORM_TYPE.INT: return 0;
-            case UNIFORM_TYPE.INT_VEC2: return new Int32Array(2 * size);
-            case UNIFORM_TYPE.INT_VEC3: return new Int32Array(3 * size);
-            case UNIFORM_TYPE.INT_VEC4: return new Int32Array(4 * size);
+            case UNIFORM_TYPES.INT: return 0;
+            case UNIFORM_TYPES.INT_VEC2: return new Int32Array(2 * size);
+            case UNIFORM_TYPES.INT_VEC3: return new Int32Array(3 * size);
+            case UNIFORM_TYPES.INT_VEC4: return new Int32Array(4 * size);
 
-            case UNIFORM_TYPE.BOOL: return false;
-            case UNIFORM_TYPE.BOOL_VEC2: return [ false, false ];
-            case UNIFORM_TYPE.BOOL_VEC3: return [ false, false, false ];
-            case UNIFORM_TYPE.BOOL_VEC4: return [ false, false, false, false ];
+            case UNIFORM_TYPES.BOOL: return false;
+            case UNIFORM_TYPES.BOOL_VEC2: return [ false, false ];
+            case UNIFORM_TYPES.BOOL_VEC3: return [ false, false, false ];
+            case UNIFORM_TYPES.BOOL_VEC4: return [ false, false, false, false ];
 
-            case UNIFORM_TYPE.FLOAT_MAT2:
+            case UNIFORM_TYPES.FLOAT_MAT2:
                 return new Float32Array([
                     1, 0,
                     0, 1
                 ]);
 
-            case UNIFORM_TYPE.FLOAT_MAT3:
+            case UNIFORM_TYPES.FLOAT_MAT3:
                 return new Float32Array([
                     1, 0, 0,
                     0, 1, 0,
                     0, 0, 1
                 ]);
 
-            case UNIFORM_TYPE.FLOAT_MAT4:
+            case UNIFORM_TYPES.FLOAT_MAT4:
                 return new Float32Array([
                     1, 0, 0, 0,
                     0, 1, 0, 0,
@@ -274,7 +274,7 @@ export default class ShaderUniform {
                     0, 0, 0, 1
                 ]);
 
-            case UNIFORM_TYPE.SAMPLER_2D: return 0;
+            case UNIFORM_TYPES.SAMPLER_2D: return 0;
         }
     }
 }

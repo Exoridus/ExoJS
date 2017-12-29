@@ -1,14 +1,6 @@
 import { RAD_PER_DEG, DEG_PER_RAD, VORONOI_REGION } from '../const/math';
-import Random from '../math/Random';
 
 const
-
-    /**
-     * @inner
-     * @constant
-     * @type {Random}
-     */
-    rng = new Random(),
 
     /**
      * @public
@@ -73,16 +65,6 @@ const
     inRange = (value, min, max) => (
         (value >= Math.min(min, max)) && (value <= Math.max(min, max))
     ),
-
-    /**
-     * @public
-     * @constant
-     * @type {Function}
-     * @param {Number} [min]
-     * @param {Number} [max]
-     * @return {Number}
-     */
-    random = (min, max) => rng.next(min, max),
 
     /**
      * @public
@@ -163,7 +145,6 @@ export {
     lerp,
     isPowerOfTwo,
     inRange,
-    random,
     bezierCurveTo,
     getVoronoiRegion,
 };

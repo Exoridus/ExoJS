@@ -1,4 +1,4 @@
-import { SCALE_MODES, WRAP_MODES } from './const/graphics';
+import { SCALE_MODES, WRAP_MODES } from './const/rendering';
 import Color from './core/Color';
 import GamepadMapping from './input/GamepadMapping';
 
@@ -178,17 +178,25 @@ export default {
      * @public
      * @static
      * @type {Number}
-     * @default 2500
+     * @default 4096
      */
-    BATCH_SIZE_SPRITES: 2500, // ~ 160kb
+    BATCH_SIZE_SPRITES: 4096, // ~ 262kb
 
     /**
      * @public
      * @static
      * @type {Number}
-     * @default 5000
+     * @default 8192
      */
-    BATCH_SIZE_PARTICLES: 5000, // ~ 800kb
+    BATCH_SIZE_PARTICLES: 8192, // ~ 1.18mb
+
+    /**
+     * @public
+     * @static
+     * @type {Number}
+     * @default 65536
+     */
+    BATCH_SIZE_PRIMITIVES: 65536, // ~ 786kb
 
     /**
      * @public
