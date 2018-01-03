@@ -318,23 +318,25 @@ TIME = exports.TIME = {
  * @constant
  * @type {Object<String, Number>}
  * @property {Number} NONE
- * @property {Number} POSITION
+ * @property {Number} TRANSLATION
  * @property {Number} ROTATION
  * @property {Number} SCALING
  * @property {Number} ORIGIN
  * @property {Number} TRANSFORM
  * @property {Number} TRANSFORM_INV
  * @property {Number} TEXTURE_COORDS
+ * @property {Number} POSITIONS
  */
 FLAGS = exports.FLAGS = {
     NONE: 0x00,
-    POSITION: 0x01,
+    TRANSLATION: 0x01,
     ROTATION: 0x02,
     SCALING: 0x04,
     ORIGIN: 0x08,
     TRANSFORM: 0x0F,
     TRANSFORM_INV: 0x10,
-    TEXTURE_COORDS: 0x20
+    BOUNDING_BOX: 0x20,
+    TEXTURE_COORDS: 0x40
 },
 
 
@@ -9206,7 +9208,6 @@ var Sprite = function (_Container) {
          * X/Y Top-Right
          * X/Y Bottom-Left
          * X/Y Bottom-Right
-         *
          * U/V Top-Left (Packed)
          * U/V Bottom-Right (Packed)
          *
@@ -9507,11 +9508,13 @@ var Sprite = function (_Container) {
                 x3 = _positionData[4],
                 y3 = _positionData[5],
                 vecA = _Vector2.default.Temp.set(x2 - x1, y2 - y1),
-                vecB = _Vector2.default.Temp.set(x3 - x2, y3 - y2),
                 dotA = vecA.dot(x - x1, y - y1),
-                dotB = vecB.dot(x - x2, y - y2);
+                lenA = vecA.len2,
+                vecB = _Vector2.default.Temp.set(x3 - x2, y3 - y2),
+                dotB = vecB.dot(x - x2, y - y2),
+                lenB = vecB.len2;
 
-            return dotA > 0 && dotA <= vecA.len2 && dotB > 0 && dotB <= vecB.len2;
+            return dotA > 0 && dotA <= lenA && dotB > 0 && dotB <= lenB;
         }
 
         /**
@@ -16385,7 +16388,7 @@ var View = function () {
          * @private
          * @member {Flags}
          */
-        this._flags = new _Flags2.default(_core.FLAGS.TRANSFORM);
+        this._flags = new _Flags2.default(_core.FLAGS.TRANSFORM | _core.FLAGS.TRANSFORM_INV | _core.FLAGS.BOUNDING_BOX);
 
         /**
          * @private
@@ -16533,7 +16536,10 @@ var View = function () {
     }, {
         key: 'getTransform',
         value: function getTransform() {
-            this.updateTransform();
+            if (this._flags.has(_core.FLAGS.TRANSFORM)) {
+                this.updateTransform();
+                this._flags.remove(_core.FLAGS.TRANSFORM);
+            }
 
             return this._transform;
         }
@@ -16547,30 +16553,26 @@ var View = function () {
     }, {
         key: 'updateTransform',
         value: function updateTransform() {
-            if (this._flags.has(_core.FLAGS.TRANSFORM)) {
-                var x = 2 / this.width,
-                    y = -2 / this.height;
+            var x = 2 / this.width,
+                y = -2 / this.height;
 
-                if (this._flags.has(_core.FLAGS.ROTATION)) {
-                    var radians = (0, _math.degreesToRadians)(this._rotation);
+            if (this._flags.has(_core.FLAGS.ROTATION)) {
+                var radians = (0, _math.degreesToRadians)(this._rotation);
 
-                    this._cos = Math.cos(radians);
-                    this._sin = Math.sin(radians);
-                }
-
-                if (this._flags.has(_core.FLAGS.ROTATION | _core.FLAGS.SCALING)) {
-                    this._transform.a = x * this._cos;
-                    this._transform.b = x * this._sin;
-
-                    this._transform.c = -y * this._sin;
-                    this._transform.d = y * this._cos;
-                }
-
-                this._transform.x = x * -this._transform.a - y * this._transform.b + -x * this._center.x;
-                this._transform.y = x * -this._transform.c - y * this._transform.d + -y * this._center.y;
-
-                this._flags.remove(_core.FLAGS.TRANSFORM);
+                this._cos = Math.cos(radians);
+                this._sin = Math.sin(radians);
             }
+
+            if (this._flags.has(_core.FLAGS.ROTATION | _core.FLAGS.SCALING)) {
+                this._transform.a = x * this._cos;
+                this._transform.b = x * this._sin;
+
+                this._transform.c = -y * this._sin;
+                this._transform.d = y * this._cos;
+            }
+
+            this._transform.x = x * -this._transform.a - y * this._transform.b + -x * this._center.x;
+            this._transform.y = x * -this._transform.c - y * this._transform.d + -y * this._center.y;
 
             return this;
         }
@@ -16600,7 +16602,10 @@ var View = function () {
     }, {
         key: 'getBounds',
         value: function getBounds() {
-            this.updateBounds(); // todo - cache
+            if (this._flags.has(_core.FLAGS.BOUNDING_BOX)) {
+                this.updateBounds();
+                this._flags.remove(_core.FLAGS.BOUNDING_BOX);
+            }
 
             return this._bounds.getRect();
         }
@@ -16662,10 +16667,21 @@ var View = function () {
          */
 
     }, {
+        key: '_setDirty',
+        value: function _setDirty() {
+            this._flags.add(_core.FLAGS.TRANSFORM_INV | _core.FLAGS.BOUNDING_BOX);
+            this._updateId++;
+        }
+
+        /**
+         * @private
+         */
+
+    }, {
         key: '_setPositionDirty',
         value: function _setPositionDirty() {
-            this._flags.add(_core.FLAGS.POSITION | _core.FLAGS.TRANSFORM_INV);
-            this._updateId++;
+            this._flags.add(_core.FLAGS.TRANSLATION);
+            this._setDirty();
         }
 
         /**
@@ -16675,8 +16691,8 @@ var View = function () {
     }, {
         key: '_setRotationDirty',
         value: function _setRotationDirty() {
-            this._flags.add(_core.FLAGS.ROTATION | _core.FLAGS.TRANSFORM_INV);
-            this._updateId++;
+            this._flags.add(_core.FLAGS.ROTATION);
+            this._setDirty();
         }
 
         /**
@@ -16686,8 +16702,8 @@ var View = function () {
     }, {
         key: '_setScalingDirty',
         value: function _setScalingDirty() {
-            this._flags.add(_core.FLAGS.SCALING | _core.FLAGS.TRANSFORM_INV);
-            this._updateId++;
+            this._flags.add(_core.FLAGS.SCALING);
+            this._setDirty();
         }
     }, {
         key: 'center',
@@ -16767,7 +16783,7 @@ var View = function () {
         set: function set(viewport) {
             if (!this._viewport.equals(viewport)) {
                 this._viewport.copy(viewport);
-                this._updateId++;
+                this._transformId++;
             }
         }
 
@@ -16790,9 +16806,9 @@ var View = function () {
          */
 
     }, {
-        key: 'updateId',
+        key: 'transformId',
         get: function get() {
-            return this._updateId;
+            return this._transformId;
         }
     }]);
 
@@ -24397,7 +24413,7 @@ var Transformable = function (_EventEmitter) {
     }, {
         key: '_setPositionDirty',
         value: function _setPositionDirty() {
-            this._flags.add(_core.FLAGS.POSITION);
+            this._flags.add(_core.FLAGS.TRANSLATION);
         }
 
         /**

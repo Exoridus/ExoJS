@@ -79,7 +79,7 @@ export default class View {
          * @private
          * @member {Flags}
          */
-        this._flags = new Flags(FLAGS.TRANSFORM);
+        this._flags = new Flags(FLAGS.TRANSFORM | FLAGS.TRANSFORM_INV | FLAGS.BOUNDING_BOX);
 
         /**
          * @private
@@ -159,7 +159,7 @@ export default class View {
     set viewport(viewport) {
         if (!this._viewport.equals(viewport)) {
             this._viewport.copy(viewport);
-            this._updateId++;
+            this._transformId++;
         }
     }
 
@@ -177,8 +177,8 @@ export default class View {
      * @readonly
      * @member {Number}
      */
-    get updateId() {
-        return this._updateId;
+    get transformId() {
+        return this._transformId;
     }
 
     /**
@@ -289,7 +289,10 @@ export default class View {
      * @returns {Matrix}
      */
     getTransform() {
-        this.updateTransform();
+        if (this._flags.has(FLAGS.TRANSFORM)) {
+            this.updateTransform();
+            this._flags.remove(FLAGS.TRANSFORM);
+        }
 
         return this._transform;
     }
@@ -300,30 +303,26 @@ export default class View {
      * @returns {View}
      */
     updateTransform() {
-        if (this._flags.has(FLAGS.TRANSFORM)) {
-            const x = 2 / this.width,
-                y = -2 / this.height;
+        const x = 2 / this.width,
+            y = -2 / this.height;
 
-            if (this._flags.has(FLAGS.ROTATION)) {
-                const radians = degreesToRadians(this._rotation);
+        if (this._flags.has(FLAGS.ROTATION)) {
+            const radians = degreesToRadians(this._rotation);
 
-                this._cos = Math.cos(radians);
-                this._sin = Math.sin(radians);
-            }
-
-            if (this._flags.has(FLAGS.ROTATION | FLAGS.SCALING)) {
-                this._transform.a = x * this._cos;
-                this._transform.b = x * this._sin;
-
-                this._transform.c = -y * this._sin;
-                this._transform.d =  y * this._cos;
-            }
-
-            this._transform.x = (x * -this._transform.a) - (y * this._transform.b) + (-x * this._center.x);
-            this._transform.y = (x * -this._transform.c) - (y * this._transform.d) + (-y * this._center.y);
-
-            this._flags.remove(FLAGS.TRANSFORM);
+            this._cos = Math.cos(radians);
+            this._sin = Math.sin(radians);
         }
+
+        if (this._flags.has(FLAGS.ROTATION | FLAGS.SCALING)) {
+            this._transform.a = x * this._cos;
+            this._transform.b = x * this._sin;
+
+            this._transform.c = -y * this._sin;
+            this._transform.d =  y * this._cos;
+        }
+
+        this._transform.x = (x * -this._transform.a) - (y * this._transform.b) + (-x * this._center.x);
+        this._transform.y = (x * -this._transform.c) - (y * this._transform.d) + (-y * this._center.y);
 
         return this;
     }
@@ -348,7 +347,10 @@ export default class View {
      * @returns {Rectangle}
      */
     getBounds() {
-        this.updateBounds(); // todo - cache
+        if (this._flags.has(FLAGS.BOUNDING_BOX)) {
+            this.updateBounds();
+            this._flags.remove(FLAGS.BOUNDING_BOX);
+        }
 
         return this._bounds.getRect();
     }
@@ -404,24 +406,32 @@ export default class View {
     /**
      * @private
      */
-    _setPositionDirty() {
-        this._flags.add(FLAGS.POSITION | FLAGS.TRANSFORM_INV);
+    _setDirty() {
+        this._flags.add(FLAGS.TRANSFORM_INV | FLAGS.BOUNDING_BOX);
         this._updateId++;
+    }
+
+    /**
+     * @private
+     */
+    _setPositionDirty() {
+        this._flags.add(FLAGS.TRANSLATION);
+        this._setDirty();
     }
 
     /**
      * @private
      */
     _setRotationDirty() {
-        this._flags.add(FLAGS.ROTATION | FLAGS.TRANSFORM_INV);
-        this._updateId++;
+        this._flags.add(FLAGS.ROTATION);
+        this._setDirty();
     }
 
     /**
      * @private
      */
     _setScalingDirty() {
-        this._flags.add(FLAGS.SCALING | FLAGS.TRANSFORM_INV);
-        this._updateId++;
+        this._flags.add(FLAGS.SCALING);
+        this._setDirty();
     }
 }

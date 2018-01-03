@@ -78,23 +78,25 @@ export const
      * @constant
      * @type {Object<String, Number>}
      * @property {Number} NONE
-     * @property {Number} POSITION
+     * @property {Number} TRANSLATION
      * @property {Number} ROTATION
      * @property {Number} SCALING
      * @property {Number} ORIGIN
      * @property {Number} TRANSFORM
      * @property {Number} TRANSFORM_INV
      * @property {Number} TEXTURE_COORDS
+     * @property {Number} POSITIONS
      */
     FLAGS = {
         NONE:           0x00,
-        POSITION:       0x01,
+        TRANSLATION:    0x01,
         ROTATION:       0x02,
         SCALING:        0x04,
         ORIGIN:         0x08,
         TRANSFORM:      0x0F,
         TRANSFORM_INV:  0x10,
-        TEXTURE_COORDS: 0x20,
+        BOUNDING_BOX:   0x20,
+        TEXTURE_COORDS: 0x40,
     },
 
     /**

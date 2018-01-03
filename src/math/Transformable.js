@@ -230,7 +230,10 @@ export default class Transformable extends EventEmitter {
      * @returns {Matrix}
      */
     getTransform() {
-        this.updateTransform();
+        if (this._flags.has(FLAGS.TRANSFORM)) {
+            this.updateTransform();
+            this._flags.remove(FLAGS.TRANSFORM);
+        }
 
         return this._transform;
     }
@@ -241,35 +244,31 @@ export default class Transformable extends EventEmitter {
      * @returns {Transformable}
      */
     updateTransform() {
-        if (this._flags.has(FLAGS.TRANSFORM)) {
-            if (this._flags.has(FLAGS.ROTATION)) {
-                const radians = degreesToRadians(this._rotation);
+        if (this._flags.has(FLAGS.ROTATION)) {
+            const radians = degreesToRadians(this._rotation);
 
-                this._cos = Math.cos(radians);
-                this._sin = Math.sin(radians);
-            }
+            this._cos = Math.cos(radians);
+            this._sin = Math.sin(radians);
+        }
 
-            if (this._flags.has(FLAGS.ROTATION | FLAGS.SCALING)) {
-                const { x, y } = this._scale;
+        if (this._flags.has(FLAGS.ROTATION | FLAGS.SCALING)) {
+            const { x, y } = this._scale;
 
-                this._transform.a = x * this._cos;
-                this._transform.b = y * this._sin;
+            this._transform.a = x * this._cos;
+            this._transform.b = y * this._sin;
 
-                this._transform.c = -x * this._sin;
-                this._transform.d =  y * this._cos;
-            }
+            this._transform.c = -x * this._sin;
+            this._transform.d =  y * this._cos;
+        }
 
-            if (this._rotation) {
-                const { x, y } = this._origin;
+        if (this._rotation) {
+            const { x, y } = this._origin;
 
-                this._transform.x = (x * -this._transform.a) - (y * this._transform.b) + this._position.x;
-                this._transform.y = (x * -this._transform.c) - (y * this._transform.d) + this._position.y;
-            } else {
-                this._transform.x = (this._origin.x * -this._scale.x) + this._position.x;
-                this._transform.y = (this._origin.y * -this._scale.y) + this._position.y;
-            }
-
-            this._flags.remove(FLAGS.TRANSFORM);
+            this._transform.x = (x * -this._transform.a) - (y * this._transform.b) + this._position.x;
+            this._transform.y = (x * -this._transform.c) - (y * this._transform.d) + this._position.y;
+        } else {
+            this._transform.x = (this._origin.x * -this._scale.x) + this._position.x;
+            this._transform.y = (this._origin.y * -this._scale.y) + this._position.y;
         }
 
         return this;
@@ -305,7 +304,7 @@ export default class Transformable extends EventEmitter {
      * @private
      */
     _setPositionDirty() {
-        this._flags.add(FLAGS.POSITION);
+        this._flags.add(FLAGS.TRANSLATION);
     }
 
     /**
