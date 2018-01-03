@@ -31,20 +31,20 @@ app.start(new Exo.Scene({
          */
         this._background = new Exo.Sprite(resources.get('texture', 'background'));
         this._background.setPosition(canvas.width / 2, canvas.height / 2);
-        this._background.setOrigin(0.5, 0.5);
+        this._background.setAnchor(0.5, 0.5);
 
         /**
          * @type {Sprite}
          */
         this._leftBunny = new Exo.Sprite(resources.get('texture', 'bunny'));
-        this._leftBunny.setOrigin(0.5, 0.5);
+        this._leftBunny.setAnchor(0.5, 0.5);
         this._leftBunny.setScale(5);
 
         /**
          * @type {Sprite}
          */
         this._rightBunny = new Exo.Sprite(resources.get('texture', 'bunny'));
-        this._rightBunny.setOrigin(0.5, 0.5);
+        this._rightBunny.setAnchor(0.5, 0.5);
         this._rightBunny.setScale(5);
 
         /**
@@ -95,7 +95,7 @@ app.start(new Exo.Scene({
         });
 
         this._info.setPosition(canvas.width / 2, 0);
-        this._info.setOrigin(0.5, 0);
+        this._info.setAnchor(0.5, 0);
 
         this.app.inputManager.on('pointer:down', this.updateBlendMode, this);
 

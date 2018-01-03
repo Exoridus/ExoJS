@@ -38,7 +38,7 @@ export default class MenuItem extends Text {
          */
         this._scalingSpeed = 2;
 
-        this.setOrigin(0.5, 0.5);
+        this.setAnchor(0.5, 0.5);
     }
 
     /**

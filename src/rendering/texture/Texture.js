@@ -1,5 +1,5 @@
 import { TEXTURE_FLAGS } from '../../const/rendering';
-import { getMediaHeight, getMediaWidth } from '../../utils/media';
+import { getMediaHeight, getMediaWidth } from '../../utils/core';
 import { isPowerOfTwo } from '../../utils/math';
 import settings from '../../settings';
 import Size from '../../math/Size';

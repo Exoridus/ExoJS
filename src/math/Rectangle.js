@@ -250,7 +250,7 @@ export default class Rectangle {
                         ((i % 3) === 0) ? this.left : this.right,
                         ((i / 2 | 0) === 0) ? this.top : this.bottom
                     )
-                    .perp()
+                    .perpLeft()
                     .normalize()
             );
         }

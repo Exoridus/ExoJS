@@ -199,7 +199,7 @@ export default class SpriteRenderer extends Renderer {
      * @param {Sprite} sprite
      */
     render(sprite) {
-        const { texture, blendMode, tint, vertexData, texCoordData } = sprite,
+        const { texture, blendMode, tint, positionData, texCoordData } = sprite,
             batchFull = (this._batchIndex >= this._batchSize),
             textureChanged = (texture !== this._currentTexture),
             blendModeChanged = (blendMode !== this._currentBlendMode),
@@ -225,20 +225,20 @@ export default class SpriteRenderer extends Renderer {
         texture.update();
 
         // X / Y
-        float32View[index + 0] = vertexData[0];
-        float32View[index + 1] = vertexData[1];
+        float32View[index + 0] = positionData[0];
+        float32View[index + 1] = positionData[1];
 
         // X / Y
-        float32View[index + 4] = vertexData[2];
-        float32View[index + 5] = vertexData[3];
+        float32View[index + 4] = positionData[2];
+        float32View[index + 5] = positionData[3];
 
         // X / Y
-        float32View[index + 8] = vertexData[4];
-        float32View[index + 9] = vertexData[5];
+        float32View[index + 8] = positionData[4];
+        float32View[index + 9] = positionData[5];
 
         // X / Y
-        float32View[index + 12] = vertexData[6];
-        float32View[index + 13] = vertexData[7];
+        float32View[index + 12] = positionData[6];
+        float32View[index + 13] = positionData[7];
 
         // U / V
         uint32View[index + 2] = texCoordData[0];
@@ -266,7 +266,7 @@ export default class SpriteRenderer extends Renderer {
     flush() {
         if (this._batchIndex > 0) {
             const gl = this._context,
-                view = this._renderManager.renderTarget.view,
+                view = this._renderManager.view,
                 viewId = view.updateId;
 
             if (this._currentView !== view || this._viewId !== viewId) {

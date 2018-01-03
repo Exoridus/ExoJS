@@ -4,6 +4,9 @@ import Rectangle from '../math/Rectangle';
 import Bounds from './Bounds';
 import Collision from './Collision';
 import Interval from '../math/Interval';
+import Vector from '../math/Vector';
+import ObservableVector from '../math/ObservableVector';
+import { FLAGS } from '../const/core';
 
 /**
  * @class SceneNode
@@ -40,6 +43,12 @@ export default class SceneNode extends Transformable {
          * @member {Bounds}
          */
         this._bounds = new Bounds();
+
+        /**
+         * @private
+         * @member {ObservableVector}
+         */
+        this._anchor = new ObservableVector(this._updateOrigin, this, 0, 0);
     }
 
     /**
@@ -64,6 +73,18 @@ export default class SceneNode extends Transformable {
 
     set parent(parent) {
         this._parent = parent;
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get anchor() {
+        return this._anchor;
+    }
+
+    set anchor(anchor) {
+        this._anchor.copy(anchor);
     }
 
     /**
@@ -134,10 +155,7 @@ export default class SceneNode extends Transformable {
             this._parent.updateParentTransforms();
         }
 
-        if (this._updateTransform) {
-            this.updateTransform();
-            this._updateTransform = false;
-        }
+        this.updateTransform();
 
         return this;
     }
@@ -211,17 +229,14 @@ export default class SceneNode extends Transformable {
     }
 
     /**
-     * @override
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} [y=x]
+     * @returns {SceneNode}
      */
-    setOrigin(x, y = x, relative = true) {
-        if (relative) {
-            const bounds = this.getBounds();
-
-            x *= bounds.width;
-            y *= bounds.height;
-        }
-
-        this.origin.set(x, y);
+    setAnchor(x, y = x)  {
+        this._anchor.set(x, y);
 
         return this;
     }
@@ -241,6 +256,19 @@ export default class SceneNode extends Transformable {
         this._bounds.destroy();
         this._bounds = null;
 
+        this._anchor.destroy();
+        this._anchor = null;
+
         this._parent = null;
+    }
+
+    /**
+     * @private
+     */
+    _updateOrigin() {
+        const { x, y } = this._anchor,
+            { width, height } = this.getBounds();
+
+        this.setOrigin(width * x, height * y);
     }
 }

@@ -49,7 +49,7 @@ app.start(new Exo.Scene({
         this._frames = 64;
 
         for (const sprite of Object.values(this._spritesheet.sprites)) {
-            sprite.setOrigin(0.5);
+            sprite.setAnchor(0.5);
             sprite.setPosition(width / 2, height / 2);
         }
     },

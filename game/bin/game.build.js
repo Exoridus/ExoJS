@@ -77,7 +77,7 @@ module.exports = Exo;
 
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -95,94 +95,94 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @extends Text
  */
 var MenuItem = function (_Text) {
-  _inherits(MenuItem, _Text);
-
-  /**
-   * @constructor
-   * @param {String} text
-   * @param {Object} [style]
-   */
-  function MenuItem(text) {
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$fill = _ref.fill,
-        fill = _ref$fill === undefined ? 'white' : _ref$fill,
-        _ref$fontSize = _ref.fontSize,
-        fontSize = _ref$fontSize === undefined ? 45 : _ref$fontSize,
-        _ref$fontFamily = _ref.fontFamily,
-        fontFamily = _ref$fontFamily === undefined ? 'AndyBold' : _ref$fontFamily,
-        _ref$stroke = _ref.stroke,
-        stroke = _ref$stroke === undefined ? 'black' : _ref$stroke,
-        _ref$strokeThickness = _ref.strokeThickness,
-        strokeThickness = _ref$strokeThickness === undefined ? 5 : _ref$strokeThickness;
-
-    _classCallCheck(this, MenuItem);
+    _inherits(MenuItem, _Text);
 
     /**
-     * @private
-     * @member {Number}
+     * @constructor
+     * @param {String} text
+     * @param {Object} [style]
      */
-    var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, { fill: fill, fontSize: fontSize, fontFamily: fontFamily, stroke: stroke, strokeThickness: strokeThickness }));
+    function MenuItem(text) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            _ref$fill = _ref.fill,
+            fill = _ref$fill === undefined ? 'white' : _ref$fill,
+            _ref$fontSize = _ref.fontSize,
+            fontSize = _ref$fontSize === undefined ? 45 : _ref$fontSize,
+            _ref$fontFamily = _ref.fontFamily,
+            fontFamily = _ref$fontFamily === undefined ? 'AndyBold' : _ref$fontFamily,
+            _ref$stroke = _ref.stroke,
+            stroke = _ref$stroke === undefined ? 'black' : _ref$stroke,
+            _ref$strokeThickness = _ref.strokeThickness,
+            strokeThickness = _ref$strokeThickness === undefined ? 5 : _ref$strokeThickness;
 
-    _this._ticker = 0;
+        _classCallCheck(this, MenuItem);
 
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._scalingFactor = 1.2;
+        /**
+         * @private
+         * @member {Number}
+         */
+        var _this = _possibleConstructorReturn(this, (MenuItem.__proto__ || Object.getPrototypeOf(MenuItem)).call(this, text, { fill: fill, fontSize: fontSize, fontFamily: fontFamily, stroke: stroke, strokeThickness: strokeThickness }));
 
-    /**
-     * @private
-     * @member {Number}
-     */
-    _this._scalingSpeed = 2;
+        _this._ticker = 0;
 
-    _this.setOrigin(0.5, 0.5);
-    return _this;
-  }
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._scalingFactor = 1.2;
 
-  /**
-   * @public
-   */
+        /**
+         * @private
+         * @member {Number}
+         */
+        _this._scalingSpeed = 2;
 
-
-  _createClass(MenuItem, [{
-    key: 'activate',
-    value: function activate() {
-      this.setTint(_exojs.Color.Yellow);
-      this._ticker = 0;
-    }
-
-    /**
-     * @public
-     * @param {Time} delta
-     */
-
-  }, {
-    key: 'update',
-    value: function update(delta) {
-      var time = this._ticker * this._scalingSpeed,
-          scalingCenter = (this._scalingFactor - 1) / 2,
-          scale = 1 + Math.sin(time * Math.PI) * scalingCenter + scalingCenter;
-
-      this.setScale(scale, scale);
-      this._ticker += delta.seconds;
+        _this.setAnchor(0.5, 0.5);
+        return _this;
     }
 
     /**
      * @public
      */
 
-  }, {
-    key: 'reset',
-    value: function reset() {
-      this.setTint(_exojs.Color.White);
-      this.setScale(1);
-      this._ticker = 0;
-    }
-  }]);
 
-  return MenuItem;
+    _createClass(MenuItem, [{
+        key: 'activate',
+        value: function activate() {
+            this.setTint(_exojs.Color.Yellow);
+            this._ticker = 0;
+        }
+
+        /**
+         * @public
+         * @param {Time} delta
+         */
+
+    }, {
+        key: 'update',
+        value: function update(delta) {
+            var time = this._ticker * this._scalingSpeed,
+                scalingCenter = (this._scalingFactor - 1) / 2,
+                scale = 1 + Math.sin(time * Math.PI) * scalingCenter + scalingCenter;
+
+            this.setScale(scale, scale);
+            this._ticker += delta.seconds;
+        }
+
+        /**
+         * @public
+         */
+
+    }, {
+        key: 'reset',
+        value: function reset() {
+            this.setTint(_exojs.Color.White);
+            this.setScale(1);
+            this._ticker = 0;
+        }
+    }]);
+
+    return MenuItem;
 }(_exojs.Text);
 
 exports.default = MenuItem;
@@ -1721,7 +1721,7 @@ var MainMenu = function (_Menu) {
          * @member {Sprite}
          */
         _this._gameLogo = new _exojs.Sprite(resources.get('texture', 'title/logo'));
-        _this._gameLogo.setOrigin(0.5, 0.8);
+        _this._gameLogo.setAnchor(0.5, 0.8);
         _this._gameLogo.setPosition(centerX, 50 + _this._gameLogo.height * 0.8);
 
         /**
@@ -1751,7 +1751,7 @@ var MainMenu = function (_Menu) {
          */
         _this._versionText = new _MenuItem2.default('Ver. 0.0.1', { fontSize: 25, strokeThickness: 3 });
         _this._versionText.setPosition(canvas.width - 10, canvas.height);
-        _this._versionText.setOrigin(1, 1);
+        _this._versionText.setAnchor(1, 1);
 
         /**
          * @private
@@ -2323,7 +2323,7 @@ var WorldMap = function () {
   }, {
     key: 'render',
     value: function render(renderManager) {
-      var camera = renderManager.renderTarget.view,
+      var camera = renderManager.view,
           viewport = camera.getBounds(),
           mapData = this._mapData,
           tile = this._tile,
@@ -2910,7 +2910,7 @@ var Player = function (_Sprite) {
 
         _this._addInputs();
         _this._updateFrame();
-        _this.setOrigin(0.5, 1);
+        _this.setAnchor(0.5, 1);
         _this.setPosition(_this._spawnPoint.x, _this._spawnPoint.y);
         return _this;
     }

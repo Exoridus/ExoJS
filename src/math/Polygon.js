@@ -211,7 +211,7 @@ export default class Polygon {
             normals.push(
                 nextPoint.clone()
                 .subtract(point.x, point.y)
-                .perp()
+                .perpLeft()
                 .normalize()
             );
         }

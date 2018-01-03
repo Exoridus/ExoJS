@@ -25,14 +25,14 @@ app.start(new Exo.Scene({
          */
         this._boxL = new Exo.Sprite(resources.get('texture', 'rainbow'));
         this._boxL.setPosition((canvas.width / 2) - 100, canvas.height / 2);
-        this._boxL.setOrigin(0.5, 0.5);
+        this._boxL.setAnchor(0.5, 0.5);
 
         /**
          * @type {Sprite}
          */
         this._boxR = new Exo.Sprite(resources.get('texture', 'rainbow'));
         this._boxR.setPosition((canvas.width / 2) + 100, canvas.height / 2);
-        this._boxR.setOrigin(0.5, 0.5);
+        this._boxR.setAnchor(0.5, 0.5);
 
         /**
          * @type {Container}

@@ -31,7 +31,7 @@ app.start(new Exo.Scene({
          * @member {Sprite}
          */
         this._tiger = new Exo.Sprite(this._texture);
-        this._tiger.setOrigin(0.5);
+        this._tiger.setAnchor(0.5);
         this._tiger.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
     },
 

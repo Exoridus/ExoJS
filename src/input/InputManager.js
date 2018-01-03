@@ -1,7 +1,7 @@
 import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const/input';
 import Flags from '../math/Flags';
 import support from '../support';
-import { stopEvent } from '../utils/events';
+import { stopEvent } from '../utils/core';
 import Vector from '../math/Vector';
 import Pointer from './Pointer';
 import EventEmitter from '../core/EventEmitter';

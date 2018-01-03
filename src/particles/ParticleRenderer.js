@@ -293,7 +293,7 @@ export default class ParticleRenderer extends Renderer {
     flush() {
         if (this._batchIndex > 0) {
             const gl = this._context,
-                view = this._renderManager.renderTarget.view,
+                view = this._renderManager.view,
                 viewId = view.updateId;
 
             if (this._currentView !== view || this._viewId !== viewId) {

@@ -249,8 +249,17 @@ export default class Vector {
      * @param {Vector} [result=this]
      * @returns {Vector}
      */
-    perp(result = this) {
-        return result.set(this._y, this._x * -1);
+    perpLeft(result = this) {
+        return result.set(this._y, -this._x);
+    }
+
+    /**
+     * @public
+     * @param {Vector} [result=this]
+     * @returns {Vector}
+     */
+    perpRight(result = this) {
+        return result.set(-this._y, this._x);
     }
 
     /**

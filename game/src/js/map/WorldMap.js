@@ -97,7 +97,7 @@ export default class WorldMap {
      * @param {RenderManager} renderManager
      */
     render(renderManager) {
-        const camera = renderManager.renderTarget.view,
+        const camera = renderManager.view,
             viewport = camera.getBounds(),
             mapData = this._mapData,
             tile = this._tile,

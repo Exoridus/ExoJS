@@ -129,7 +129,7 @@ export default class Player extends Sprite {
 
         this._addInputs();
         this._updateFrame();
-        this.setOrigin(0.5, 1);
+        this.setAnchor(0.5, 1);
         this.setPosition(this._spawnPoint.x, this._spawnPoint.y);
     }
 

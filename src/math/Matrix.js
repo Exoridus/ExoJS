@@ -84,12 +84,6 @@ export default class Matrix {
          * @member {?Float32Array} _array
          */
         this._array = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._updateId = 0;
     }
 
     /**
@@ -118,8 +112,6 @@ export default class Matrix {
         this.a = a; this.b = b; this.x = x;
         this.c = c; this.d = d; this.y = y;
         this.e = e; this.f = f; this.z = z;
-
-        this._updateId++;
 
         return this;
     }

@@ -1,5 +1,5 @@
 import Drawable from './Drawable';
-import { removeArrayItems } from '../utils/array';
+import { removeArrayItems } from '../utils/core';
 
 /**
  * @class Container
@@ -240,7 +240,7 @@ export default class Container extends Drawable {
      * @override
      */
     render(renderManager) {
-        if (this.visible) {
+        if (this.visible && this.inView(renderManager.view)) {
             for (const child of this._children) {
                 child.render(renderManager);
             }

@@ -105,7 +105,7 @@ app.start(new Exo.Scene({
         const { width, height } = this.app.canvas,
             status = this._buttons.sprites['status'];
 
-        status.setOrigin(0.5);
+        status.setAnchor(0.5);
         status.setPosition(width / 2, height / 5);
 
         if (!this._gamepad.connected) {
@@ -164,7 +164,7 @@ app.start(new Exo.Scene({
         container.addChild(dpadLeft);
         container.addChild(dpadRight);
 
-        container.setOrigin(0.5);
+        container.setAnchor(0.5);
         container.setPosition(width / 5, height / 2);
 
         return container;
@@ -205,7 +205,7 @@ app.start(new Exo.Scene({
         container.addChild(buttonRight);
         container.addChild(buttonBottom);
 
-        container.setOrigin(0.5);
+        container.setAnchor(0.5);
         container.setPosition(width * 0.8, height / 2);
 
         return container;
@@ -231,10 +231,10 @@ app.start(new Exo.Scene({
 
         leftButton.setPosition(0, 75);
 
-        rightButton.setOrigin(0.5, 0);
+        rightButton.setAnchor(0.5, 0);
         rightButton.setPosition(width * 0.65, 75);
 
-        rightTrigger.setOrigin(0.5, 0);
+        rightTrigger.setAnchor(0.5, 0);
         rightTrigger.setPosition(width * 0.65, 0);
 
         container.addChild(leftButton);
@@ -242,7 +242,7 @@ app.start(new Exo.Scene({
         container.addChild(leftTrigger);
         container.addChild(rightTrigger);
 
-        container.setOrigin(0.5);
+        container.setAnchor(0.5);
         container.setPosition(width / 2, height / 5);
 
         return container;
@@ -262,13 +262,13 @@ app.start(new Exo.Scene({
         mappedButtons.set(Exo.GAMEPAD.Select, selectButton);
         mappedButtons.set(Exo.GAMEPAD.Start, startButton);
 
-        startButton.setOrigin(1, 0);
+        startButton.setAnchor(1, 0);
         startButton.setPosition(width * 0.3, 0);
 
         container.addChild(selectButton);
         container.addChild(startButton);
 
-        container.setOrigin(0.5);
+        container.setAnchor(0.5);
         container.setPosition(width / 2, height / 2);
 
         return container;
@@ -308,7 +308,7 @@ app.start(new Exo.Scene({
         container.addChild(leftStick);
         container.addChild(rightStick);
 
-        container.setOrigin(0.5, 0);
+        container.setAnchor(0.5, 0);
         container.setPosition(width / 2, height * 0.65);
 
         return container;

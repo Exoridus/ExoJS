@@ -42,7 +42,7 @@ app.start(new Exo.Scene({
             this._bunnies.addChild(bunny);
         }
 
-        this._bunnies.setOrigin(0.5);
+        this._bunnies.setAnchor(0.5);
     },
 
     /**

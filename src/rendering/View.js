@@ -4,6 +4,8 @@ import Matrix from '../math/Matrix';
 import { degreesToRadians } from '../utils/math';
 import ObservableSize from '../math/ObservableSize';
 import Bounds from '../core/Bounds';
+import { FLAGS } from '../const/core';
+import Flags from '../math/Flags';
 
 /**
  * @class View
@@ -23,13 +25,13 @@ export default class View {
          * @private
          * @member {ObservableVector}
          */
-        this._center = new ObservableVector(this._setDirty, this, centerX, centerY);
+        this._center = new ObservableVector(this._setPositionDirty, this, centerX, centerY);
 
         /**
          * @private
          * @member {ObservableSize}
          */
-        this._size = new ObservableSize(this._setDirty, this, width, height);
+        this._size = new ObservableSize(this._setScalingDirty, this, width, height);
 
         /**
          * @private
@@ -75,21 +77,9 @@ export default class View {
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {Flags}
          */
-        this._updateTransform = true;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._updateInverseTransform = true;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._updateBounds = true;
+        this._flags = new Flags(FLAGS.TRANSFORM);
 
         /**
          * @private
@@ -167,8 +157,19 @@ export default class View {
     }
 
     set viewport(viewport) {
-        this._viewport.copy(viewport);
-        this._setDirty();
+        if (!this._viewport.equals(viewport)) {
+            this._viewport.copy(viewport);
+            this._updateId++;
+        }
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Flags}
+     */
+    get flags() {
+        return this._flags;
     }
 
     /**
@@ -214,14 +215,12 @@ export default class View {
      */
     setRotation(degrees) {
         const trimmed = degrees % 360,
-            rotation = trimmed < 0 ? trimmed + 360 : trimmed,
-            radians = degreesToRadians(rotation);
+            rotation = trimmed < 0 ? trimmed + 360 : trimmed;
 
-        this._rotation = (rotation < 0) ? rotation + 360 : rotation;
-        this._cos = Math.cos(radians);
-        this._sin = Math.sin(radians);
-
-        this._setDirty();
+        if (this._rotation !== rotation) {
+            this._rotation = rotation;
+            this._setRotationDirty();
+        }
 
         return this;
     }
@@ -280,7 +279,7 @@ export default class View {
         this._sin = 0;
         this._cos = 1;
 
-        this._setDirty();
+        this._flags.add(FLAGS.TRANSFORM);
 
         return this;
     }
@@ -290,10 +289,7 @@ export default class View {
      * @returns {Matrix}
      */
     getTransform() {
-        if (this._updateTransform) {
-            this.updateTransform();
-            this._updateTransform = false;
-        }
+        this.updateTransform();
 
         return this._transform;
     }
@@ -304,25 +300,30 @@ export default class View {
      * @returns {View}
      */
     updateTransform() {
-        const transform = this._transform,
-            centerX = this._center.x,
-            centerY = this._center.y,
-            sin = this._sin,
-            cos = this._cos,
-            a =  2 / this._size.width,
-            b = -2 / this._size.height,
-            c = -a * centerX,
-            d = -b * centerY,
-            x = (-centerX * cos) - (centerY * sin) + centerX,
-            y = (centerX * sin) - (centerY * cos) + centerY;
+        if (this._flags.has(FLAGS.TRANSFORM)) {
+            const x = 2 / this.width,
+                y = -2 / this.height;
 
-        transform.a = a * cos;
-        transform.b = a * sin;
-        transform.x = (a * x) + c;
+            if (this._flags.has(FLAGS.ROTATION)) {
+                const radians = degreesToRadians(this._rotation);
 
-        transform.c = -b * sin;
-        transform.d =  b * cos;
-        transform.y = (b * y) + d;
+                this._cos = Math.cos(radians);
+                this._sin = Math.sin(radians);
+            }
+
+            if (this._flags.has(FLAGS.ROTATION | FLAGS.SCALING)) {
+                this._transform.a = x * this._cos;
+                this._transform.b = x * this._sin;
+
+                this._transform.c = -y * this._sin;
+                this._transform.d =  y * this._cos;
+            }
+
+            this._transform.x = (x * -this._transform.a) - (y * this._transform.b) + (-x * this._center.x);
+            this._transform.y = (x * -this._transform.c) - (y * this._transform.d) + (-y * this._center.y);
+
+            this._flags.remove(FLAGS.TRANSFORM);
+        }
 
         return this;
     }
@@ -332,11 +333,11 @@ export default class View {
      * @returns {Matrix}
      */
     getInverseTransform() {
-        if (this._updateInverseTransform) {
+        if (this._flags.has(FLAGS.TRANSFORM_INV)) {
             this.getTransform()
                 .getInverse(this._inverseTransform);
 
-            this._updateInverseTransform = false;
+            this._flags.remove(FLAGS.TRANSFORM_INV);
         }
 
         return this._inverseTransform;
@@ -347,10 +348,7 @@ export default class View {
      * @returns {Rectangle}
      */
     getBounds() {
-        if (this._updateBounds) {
-            this.updateBounds();
-            this._updateBounds = false;
-        }
+        this.updateBounds(); // todo - cache
 
         return this._bounds.getRect();
     }
@@ -367,21 +365,6 @@ export default class View {
         this._bounds.reset()
             .addCoords(this._center.x - offsetX, this._center.y - offsetY)
             .addCoords(this._center.x + offsetX, this._center.y + offsetY);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {View} view
-     * @returns {View}
-     */
-    copy(view) {
-        this.center = view.center;
-        this.size = view.size;
-        this.rotation = view.rotation;
-        this.viewport = view.viewport;
 
         return this;
     }
@@ -408,23 +391,37 @@ export default class View {
         this._bounds.destroy();
         this._bounds = null;
 
+        this._flags.destroy();
+        this._flags = null;
+
         this._rotation = null;
         this._cos = null;
         this._sin = null;
 
-        this._updateTransform = null;
-        this._updateInverseTransform = null;
-        this._updateBounds = null;
         this._updateId = null;
     }
 
     /**
      * @private
      */
-    _setDirty() {
-        this._updateTransform = true;
-        this._updateInverseTransform = true;
-        this._updateBounds = true;
+    _setPositionDirty() {
+        this._flags.add(FLAGS.POSITION | FLAGS.TRANSFORM_INV);
+        this._updateId++;
+    }
+
+    /**
+     * @private
+     */
+    _setRotationDirty() {
+        this._flags.add(FLAGS.ROTATION | FLAGS.TRANSFORM_INV);
+        this._updateId++;
+    }
+
+    /**
+     * @private
+     */
+    _setScalingDirty() {
+        this._flags.add(FLAGS.SCALING | FLAGS.TRANSFORM_INV);
         this._updateId++;
     }
 }

@@ -40,7 +40,7 @@ app.start(new Exo.Scene({
         });
 
         this._text.setPosition(canvas.width / 2, canvas.height / 2);
-        this._text.setOrigin(0.5, 0.5);
+        this._text.setAnchor(0.5, 0.5);
     },
 
     /**

@@ -26,7 +26,7 @@ export default class MainMenu extends Menu {
          * @member {Sprite}
          */
         this._gameLogo = new Sprite(resources.get('texture', 'title/logo'));
-        this._gameLogo.setOrigin(0.5, 0.8);
+        this._gameLogo.setAnchor(0.5, 0.8);
         this._gameLogo.setPosition(centerX, 50 + (this._gameLogo.height * 0.8));
 
         /**
@@ -56,7 +56,7 @@ export default class MainMenu extends Menu {
          */
         this._versionText = new MenuItem('Ver. 0.0.1', { fontSize: 25, strokeThickness: 3 });
         this._versionText.setPosition(canvas.width - 10, canvas.height);
-        this._versionText.setOrigin(1, 1);
+        this._versionText.setAnchor(1, 1);
 
         /**
          * @private

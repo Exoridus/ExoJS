@@ -392,7 +392,7 @@ export default class Collision {
                     return false;
                 }
             } else {
-                const normal = edgeA.perp().normalize(),
+                const normal = edgeA.perpLeft().normalize(),
                     distance = positionA.dot(normal.x, normal.y);
 
                 if (distance > 0 && (Math.abs(distance) > circle.radius)) {
@@ -552,7 +552,7 @@ export default class Collision {
                     containsB = false;
                 }
             } else {
-                const normal = edgeA.perp().normalize(),
+                const normal = edgeA.perpLeft().normalize(),
                     distance = positionA.dot(normal.x, normal.y);
 
                 if (distance > 0 && (Math.abs(distance) > radius)) {

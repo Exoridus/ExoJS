@@ -2,6 +2,11 @@ import { TIME } from '../../const/core';
 import Time from './Time';
 
 /**
+ * @inner
+ */
+const timing = (performance || Date);
+
+/**
  * @class Clock
  */
 export default class Clock {
@@ -64,6 +69,15 @@ export default class Clock {
      * @readonly
      * @member {Number}
      */
+    get startTime() {
+        return this._startTime;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
     get elapsedTime() {
         return this._time.setMilliseconds(this.elapsedMilliseconds);
     }
@@ -78,7 +92,7 @@ export default class Clock {
             return this._timeBuffer;
         }
 
-        return this._timeBuffer + (Date.now() - this._startTime);
+        return this._timeBuffer + (timing.now() - this._startTime);
     }
 
     /**
@@ -115,7 +129,7 @@ export default class Clock {
      */
     start() {
         if (!this._running) {
-            this._startTime = Date.now();
+            this._startTime = timing.now();
             this._running = true;
         }
 
@@ -129,7 +143,7 @@ export default class Clock {
      */
     stop() {
         if (this._running) {
-            this._timeBuffer += (Date.now() - this._startTime);
+            this._timeBuffer += (timing.now() - this._startTime);
             this._running = false;
         }
 

@@ -1,4 +1,4 @@
-import { removeArrayItems } from '../utils/array';
+import { removeArrayItems } from '../utils/core';
 
 /**
  * @typedef {Object} EventHandler

@@ -171,7 +171,7 @@ export default class Application extends EventEmitter {
      * @member {Number}
      */
     get FPS() {
-        return (1000 / this._delta.elapsedTime.milliseconds);
+        return (1000 / this._delta.elapsedMilliseconds);
     }
 
     /**
@@ -200,7 +200,6 @@ export default class Application extends EventEmitter {
         if (this._running) {
             this._inputManager.update();
             this._sceneManager.update(this._delta.elapsedTime);
-
             this._updateId = requestAnimationFrame(this._updateHandler);
             this._delta.restart();
         }

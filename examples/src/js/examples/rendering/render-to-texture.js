@@ -38,7 +38,7 @@ app.start(new Exo.Scene({
          */
         this._renderSprite = new Exo.Sprite(this._renderTexture);
         this._renderSprite.setPosition(canvas.width, canvas.height);
-        this._renderSprite.setOrigin(1, 1);
+        this._renderSprite.setAnchor(1, 1);
     },
 
     /**
@@ -51,7 +51,7 @@ app.start(new Exo.Scene({
         for (let i = 0; i < 25; i++) {
             const bunny = new Exo.Sprite(texture);
 
-            bunny.setOrigin(0.5, 0.5);
+            bunny.setAnchor(0.5, 0.5);
             bunny.setPosition(25 + (i % 5) * 30, 25 + Math.floor(i / 5) * 30);
             bunny.setRotation(Math.random() * 360);
 

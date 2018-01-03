@@ -49,7 +49,7 @@ app.start(new Exo.Scene({
          * @member {Sprite}
          */
         this._sprite = new Exo.Sprite(resources.get('texture', 'example'));
-        this._sprite.setOrigin(0.5, 0.5);
+        this._sprite.setAnchor(0.5, 0.5);
 
         /**
          * @private

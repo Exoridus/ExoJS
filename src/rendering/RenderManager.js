@@ -5,7 +5,7 @@ import RenderTarget from './RenderTarget';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../core/Color';
-import { imageToBase64 } from '../utils/media';
+import { imageToBase64 } from '../utils/core';
 import Texture from './texture/Texture';
 import Sampler from './texture/Sampler';
 
@@ -156,6 +156,15 @@ export default class RenderManager {
      */
     get renderTarget() {
         return this._renderTarget;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {?View}
+     */
+    get view() {
+        return this._renderTarget ? this._renderTarget.view : null;
     }
 
     /**
@@ -606,30 +615,6 @@ export default class RenderManager {
         }
 
         return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} count
-     * @returns {RenderManager}
-     */
-    drawElements(count) {
-        const gl = this._context;
-
-        gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @param {Drawable} drawable
-     * @param {View} [view=this._renderTarget.view]
-     * @returns {Boolean}
-     */
-    insideViewport(drawable, view = this._renderTarget.view) {
-        return view.getBounds().intersets(drawable.getBounds());
     }
 
     /**

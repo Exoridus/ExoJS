@@ -104,6 +104,15 @@ export default class Drawable extends SceneNode {
     }
 
     /**
+     * @public
+     * @param {View} view
+     * @returns {Boolean}
+     */
+    inView(view) {
+        return view.getBounds().intersets(this.getBounds());
+    }
+
+    /**
      * @override
      */
     destroy() {
