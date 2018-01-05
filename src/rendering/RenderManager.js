@@ -107,7 +107,7 @@ export default class RenderManager {
 
         /**
          * @private
-         * @member {?VertexArray}
+         * @member {?VertexArrayObject}
          */
         this._vao = null;
 
@@ -301,7 +301,7 @@ export default class RenderManager {
     /**
      * @public
      * @chainable
-     * @param {VertexArray} vao
+     * @param {VertexArrayObject} vao
      * @returns {RenderManager}
      */
     setVAO(vao) {
@@ -691,10 +691,10 @@ export default class RenderManager {
             { r, g, b, a } = this._clearColor;
 
         gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.STENCIL_TEST);
         gl.disable(gl.CULL_FACE);
 
         gl.enable(gl.BLEND);
-        gl.enable(gl.STENCIL_TEST);
 
         gl.blendEquation(gl.FUNC_ADD);
         gl.clearColor(r / 255, g / 255, b / 255, a);

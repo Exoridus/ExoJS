@@ -19,5 +19,4 @@ export { default as Shader } from './shader/Shader';
 export { default as ShaderAttribute } from './shader/ShaderAttribute';
 export { default as ShaderUniform } from './shader/ShaderUniform';
 export { default as ShaderBlock } from './shader/ShaderBlock';
-export { default as VertexArray } from './VertexArray';
-export { default as UniformBuffer } from './UniformBuffer';
+export { default as VertexArrayObject } from './VertexArrayObject';

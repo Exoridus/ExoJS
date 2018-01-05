@@ -3,12 +3,27 @@ const
     /**
      * @public
      * @constant
+     * @type {GeneratorFunction}
+     * @param {ArrayBufferView|Number[]} pattern
+     * @param {Number} size
+     * @returns {Generator}
+     */
+    patternIterator = function* (pattern, size = Infinity) {
+        for (let i = 0, len = pattern.length * size; i < len; i++) {
+            yield pattern[i % pattern.length];
+        }
+    },
+
+    /**
+     * @public
+     * @constant
      * @type {Function}
-     * @param {Uint16Array} data
+     * @param {Number} size
      * @returns {ArrayBufferView}
      */
-    setQuadIndices = (data) => {
-        const len = data.length;
+    createQuadIndices = (size) => {
+        const data = new Uint16Array(size * 6),
+            len = data.length;
 
         for (let i = 0, offset = 0; i < len; i += 6, offset += 4) {
             data[i + 0] = offset + 0;
@@ -26,5 +41,5 @@ const
  * @namespace Exo
  */
 export {
-    setQuadIndices,
+    createQuadIndices,
 };

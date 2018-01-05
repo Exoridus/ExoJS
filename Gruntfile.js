@@ -6,6 +6,7 @@ module.exports = (grunt) => {
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-cssmin');
     grunt.loadNpmTasks('grunt-contrib-sass');
+    grunt.loadNpmTasks('grunt-contrib-clean');
     grunt.loadNpmTasks('grunt-webpack');
     grunt.loadNpmTasks('grunt-babel');
 
@@ -115,6 +116,9 @@ module.exports = (grunt) => {
                 dest: '<%= dirs.examples %>/bin/examples.min.css',
             },
         },
+        clean: {
+            cache: ['./.babel-cache'],
+        },
     });
 
     grunt.registerTask('default', [
@@ -126,7 +130,8 @@ module.exports = (grunt) => {
     ]);
 
     grunt.registerTask('no-cache', [
-        'webpack:no-cache',
+        'clean:cache',
+        'webpack:dist',
     ]);
 
     grunt.registerTask('examples', [

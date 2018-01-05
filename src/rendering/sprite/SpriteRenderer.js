@@ -1,11 +1,11 @@
 import Renderer from '../Renderer';
 import Shader from '../shader/Shader';
 import settings from '../../settings';
-import VertexArray from '../VertexArray';
+import VertexArrayObject from '../VertexArrayObject';
 import Buffer from '../Buffer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { setQuadIndices } from '../../utils/rendering';
+import { createQuadIndices } from '../../utils/rendering';
 
 /**
  * @class SpriteRenderer
@@ -64,7 +64,7 @@ export default class SpriteRenderer extends Renderer {
          * @private
          * @member {Uint16Array}
          */
-        this._indexData = setQuadIndices(new Uint16Array(this._batchSize * 6));
+        this._indexData = createQuadIndices(this._batchSize);
 
         /**
          * @private
@@ -113,7 +113,7 @@ export default class SpriteRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?VertexArray}
+         * @member {?VertexArrayObject}
          */
         this._vao = null;
     }
@@ -129,14 +129,14 @@ export default class SpriteRenderer extends Renderer {
             this._renderManager = renderManager;
 
             this._shader.connect(gl);
-            this._indexBuffer = Buffer.createIndexBuffer(gl, this._indexData, gl.STATIC_DRAW);
-            this._vertexBuffer = Buffer.createVertexBuffer(gl, this._vertexData, gl.DYNAMIC_DRAW);
+            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
 
-            this._vao = new VertexArray(gl)
+            this._vao = new VertexArrayObject(gl)
                 .addIndex(this._indexBuffer)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_position'], gl.FLOAT, false, this._attributeCount, 0)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_texcoord'], gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_color'], gl.UNSIGNED_BYTE, true, this._attributeCount, 12);
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, this._attributeCount, 0)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this._attributeCount, 12);
         }
 
         return this;
@@ -272,8 +272,12 @@ export default class SpriteRenderer extends Renderer {
             if (this._currentView !== view || this._viewId !== viewId) {
                 this._currentView = view;
                 this._viewId = viewId;
+
                 this._shader.getUniform('u_projection')
                     .setValue(view.getTransform().toArray(false));
+
+                // this._shader.getUniformBlock('Transform')
+                //     .setUniformValue('projection', view.getTransform().toArray(false));
             }
 
             this._renderManager.setVAO(this._vao);

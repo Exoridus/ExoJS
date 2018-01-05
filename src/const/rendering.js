@@ -161,18 +161,109 @@ export const
         [UNIFORM_TYPES.FLOAT_VEC2]: 2,
         [UNIFORM_TYPES.FLOAT_VEC3]: 3,
         [UNIFORM_TYPES.FLOAT_VEC4]: 4,
+
         [UNIFORM_TYPES.INT]: 1,
         [UNIFORM_TYPES.INT_VEC2]: 2,
         [UNIFORM_TYPES.INT_VEC3]: 3,
         [UNIFORM_TYPES.INT_VEC4]: 4,
+
         [UNIFORM_TYPES.BOOL]: 1,
         [UNIFORM_TYPES.BOOL_VEC2]: 2,
         [UNIFORM_TYPES.BOOL_VEC3]: 3,
         [UNIFORM_TYPES.BOOL_VEC4]: 4,
+
         [UNIFORM_TYPES.FLOAT_MAT2]: 4,
         [UNIFORM_TYPES.FLOAT_MAT3]: 9,
         [UNIFORM_TYPES.FLOAT_MAT4]: 16,
+
         [UNIFORM_TYPES.SAMPLER_2D]: 1,
+    },
+
+    /**
+     * @public
+     * @constant
+     * @name TYPE_CLASSES
+     * @type {Object<Number, Function>}
+     */
+    TYPE_CLASSES = {
+        [UNIFORM_TYPES.FLOAT]: Float32Array,
+        [UNIFORM_TYPES.FLOAT_VEC2]: Float32Array,
+        [UNIFORM_TYPES.FLOAT_VEC3]: Float32Array,
+        [UNIFORM_TYPES.FLOAT_VEC4]: Float32Array,
+
+        [UNIFORM_TYPES.INT]: Int32Array,
+        [UNIFORM_TYPES.INT_VEC2]: Int32Array,
+        [UNIFORM_TYPES.INT_VEC3]: Int32Array,
+        [UNIFORM_TYPES.INT_VEC4]: Int32Array,
+
+        [UNIFORM_TYPES.BOOL]: Uint8Array,
+        [UNIFORM_TYPES.BOOL_VEC2]: Uint8Array,
+        [UNIFORM_TYPES.BOOL_VEC3]: Uint8Array,
+        [UNIFORM_TYPES.BOOL_VEC4]: Uint8Array,
+
+        [UNIFORM_TYPES.FLOAT_MAT2]: Float32Array,
+        [UNIFORM_TYPES.FLOAT_MAT3]: Float32Array,
+        [UNIFORM_TYPES.FLOAT_MAT4]: Float32Array,
+
+        [UNIFORM_TYPES.SAMPLER_2D]: Uint8Array,
+    },
+
+    /**
+     * @public
+     * @constant
+     * @name TYPE_UPLOADS
+     * @type {Object<Number, Function>}
+     */
+    TYPE_UPLOADS = {
+        [UNIFORM_TYPES.FLOAT]: (gl, location, value) => gl.uniform1f(location, value[0]),
+        [UNIFORM_TYPES.FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, value),
+        [UNIFORM_TYPES.FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, value),
+        [UNIFORM_TYPES.FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, value),
+
+        [UNIFORM_TYPES.INT]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [UNIFORM_TYPES.INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
+        [UNIFORM_TYPES.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
+        [UNIFORM_TYPES.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
+
+        [UNIFORM_TYPES.BOOL]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [UNIFORM_TYPES.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
+        [UNIFORM_TYPES.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
+        [UNIFORM_TYPES.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
+
+        [UNIFORM_TYPES.FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, value),
+        [UNIFORM_TYPES.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, value),
+        [UNIFORM_TYPES.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, value),
+
+        [UNIFORM_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value[0]),
+    },
+
+    /**
+     * @public
+     * @constant
+     * @name TYPE_NAMES
+     * @type {Object<Number, String>}
+     */
+    TYPE_NAMES = {
+        [UNIFORM_TYPES.FLOAT]: 'FLOAT',
+        [UNIFORM_TYPES.FLOAT_VEC2]: 'FLOAT_VEC2',
+        [UNIFORM_TYPES.FLOAT_VEC3]: 'FLOAT_VEC3',
+        [UNIFORM_TYPES.FLOAT_VEC4]: 'FLOAT_VEC4',
+
+        [UNIFORM_TYPES.INT]: 'INT',
+        [UNIFORM_TYPES.INT_VEC2]: 'INT_VEC2',
+        [UNIFORM_TYPES.INT_VEC3]: 'INT_VEC3',
+        [UNIFORM_TYPES.INT_VEC4]: 'INT_VEC4',
+
+        [UNIFORM_TYPES.BOOL]: 'BOOL',
+        [UNIFORM_TYPES.BOOL_VEC2]: 'BOOL_VEC2',
+        [UNIFORM_TYPES.BOOL_VEC3]: 'BOOL_VEC3',
+        [UNIFORM_TYPES.BOOL_VEC4]: 'BOOL_VEC4',
+
+        [UNIFORM_TYPES.FLOAT_MAT2]: 'FLOAT_MAT2',
+        [UNIFORM_TYPES.FLOAT_MAT3]: 'FLOAT_MAT3',
+        [UNIFORM_TYPES.FLOAT_MAT4]: 'FLOAT_MAT4',
+
+        [UNIFORM_TYPES.SAMPLER_2D]: 'SAMPLER_2D',
     },
 
     /**
@@ -192,4 +283,40 @@ export const
         PREMULTIPLY_ALPHA: 0x004,
         SOURCE: 0x008,
         SIZE: 0x010,
-    };
+    },
+
+    /**
+     * @public
+     * @constant
+     * @name TEXTURE_FLAGS
+     * @type {Float32Array}
+     */
+    MAT2_PATTERN = new Float32Array([
+        1, 0,
+        0, 1,
+    ]),
+
+    /**
+     * @public
+     * @constant
+     * @name TEXTURE_FLAGS
+     * @type {Float32Array}
+     */
+    MAT3_PATTERN = new Float32Array([
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1,
+    ]),
+
+    /**
+     * @public
+     * @constant
+     * @name TEXTURE_FLAGS
+     * @type {Float32Array}
+     */
+    MAT4_PATTERN = new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    ]);

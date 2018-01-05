@@ -1,9 +1,9 @@
 import Renderer from '../rendering/Renderer';
 import Shader from '../rendering/shader/Shader';
-import { setQuadIndices } from '../utils/rendering';
+import { createQuadIndices } from '../utils/rendering';
 import settings from '../settings';
 import Buffer from '../rendering/Buffer';
-import VertexArray from '../rendering/VertexArray';
+import VertexArrayObject from '../rendering/VertexArrayObject';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -67,7 +67,7 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Uint16Array}
          */
-        this._indexData = setQuadIndices(new Uint16Array(this._batchSize * 6));
+        this._indexData = createQuadIndices(this._batchSize);
 
         /**
          * @private
@@ -116,7 +116,7 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?VertexArray}
+         * @member {?VertexArrayObject}
          */
         this._vao = null;
     }
@@ -132,17 +132,17 @@ export default class ParticleRenderer extends Renderer {
             this._renderManager = renderManager;
 
             this._shader.connect(gl);
-            this._indexBuffer = Buffer.createIndexBuffer(gl, this._indexData, gl.STATIC_DRAW);
-            this._vertexBuffer = Buffer.createVertexBuffer(gl, this._vertexData, gl.DYNAMIC_DRAW);
+            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
+            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
 
-            this._vao = new VertexArray(gl)
+            this._vao = new VertexArrayObject(gl)
                 .addIndex(this._indexBuffer)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_position'], gl.FLOAT, false, this._attributeCount, 0)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_texcoord'], gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_translation'], gl.FLOAT, false, this._attributeCount, 12)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_scale'], gl.FLOAT, false, this._attributeCount, 20)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_rotation'], gl.FLOAT, false, this._attributeCount, 28)
-                .addAttribute(this._vertexBuffer, this._shader.attributes['a_color'], gl.UNSIGNED_BYTE, true, this._attributeCount, 32);
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, this._attributeCount, 0)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_translation'), gl.FLOAT, false, this._attributeCount, 12)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_scale'), gl.FLOAT, false, this._attributeCount, 20)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_rotation'), gl.FLOAT, false, this._attributeCount, 28)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this._attributeCount, 32);
         }
 
         return this;

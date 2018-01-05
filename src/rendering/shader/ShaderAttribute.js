@@ -1,4 +1,4 @@
-import { ATTRIBUTE_TYPES } from '../../const/rendering';
+import { TYPE_SIZES } from '../../const/rendering';
 
 /**
  * @class ShaderAttribute
@@ -7,21 +7,37 @@ export default class ShaderAttribute {
 
     /**
      * @constructor
-     * @param {Object} options
-     * @param {String} options.name
-     * @param {Number} options.type
-     * @param {Number} options.size
-     * @param {Boolean} [options.normalized=false]
-     * @param {Boolean} [options.enabled=true]
-     * @param {Number} [options.location=null]
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLProgram} program
+     * @param {Number} index
      */
-    constructor({ name, type, size, normalized = false, enabled = true, location = null } = {}) {
+    constructor(gl, program, index) {
+        const { name, type } = gl.getActiveAttrib(program, index),
+            location = gl.getAttribLocation(program, name);
+
+        /**
+         * @private
+         * @member {WebGL2RenderingContext}
+         */
+        this._context = gl;
+
+        /**
+         * @private
+         * @member {WebGLProgram}
+         */
+        this._program = program;
 
         /**
          * @private
          * @member {Number}
          */
         this._location = location;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._index = index;
 
         /**
          * @private
@@ -39,133 +55,64 @@ export default class ShaderAttribute {
          * @private
          * @member {Number}
          */
-        this._size = size;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._normalized = normalized;
-
-        /**
-         * @private
-         * @member {Boolean}
-         */
-        this._enabled = enabled;
+        this._size = TYPE_SIZES[type];
     }
 
     /**
      * @public
+     * @readonly
      * @member {Number}
      */
     get location() {
         return this._location;
     }
 
-    set location(location) {
-        this._location = location;
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get index() {
+        return this._index;
     }
 
     /**
      * @public
+     * @readonly
      * @member {String}
      */
     get name() {
         return this._name;
     }
 
-    set name(name) {
-        this._name = name;
-    }
-
     /**
      * @public
+     * @readonly
      * @member {Number}
      */
     get type() {
         return this._type;
     }
 
-    set type(type) {
-        this._type = type;
-    }
-
     /**
      * @public
+     * @readonly
      * @member {Number}
      */
     get size() {
         return this._size;
     }
 
-    set size(size) {
-        this._size = size;
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get normalized() {
-        return this._normalized;
-    }
-
-    set normalized(normalized) {
-        this._normalized = normalized;
-    }
-
-    /**
-     * @public
-     * @member {Boolean}
-     */
-    get enabled() {
-        return this._enabled;
-    }
-
-    set enabled(enabled) {
-        this._enabled = enabled;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get byteSize() {
-        return this.bytesType * this._size;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get bytesType() {
-        switch (this._type) {
-            case ATTRIBUTE_TYPES.BYTE:
-            case ATTRIBUTE_TYPES.UNSIGNED_BYTE:
-                return 1;
-            case ATTRIBUTE_TYPES.SHORT:
-            case ATTRIBUTE_TYPES.UNSIGNED_SHORT:
-                return 2;
-            case ATTRIBUTE_TYPES.INT:
-            case ATTRIBUTE_TYPES.UNSIGNED_INT:
-            case ATTRIBUTE_TYPES.FLOAT:
-                return 4;
-        }
-
-        return 0;
-    }
-
     /**
      * @public
      */
     destroy() {
+        this._context = null;
+        this._program = null;
         this._location = null;
+        this._index = null;
         this._name = null;
         this._type = null;
         this._size = null;
-        this._normalized = null;
-        this._enabled = null;
     }
 }

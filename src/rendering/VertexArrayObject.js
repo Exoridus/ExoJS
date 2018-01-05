@@ -1,7 +1,9 @@
+import { ATTRIBUTE_TYPES } from '../const/rendering';
+
 /**
- * @class VertexArray
+ * @class VertexArrayObject
  */
-export default class VertexArray {
+export default class VertexArrayObject {
 
     /**
      * @constructor
@@ -72,23 +74,14 @@ export default class VertexArray {
 
         let lastBuffer = null;
 
-        for (let i = 0; i < this._attributes.length; i++) {
-            const attrib = this._attributes[i];
-
-            if (lastBuffer !== attrib.buffer) {
-                attrib.buffer.bind();
-                lastBuffer = attrib.buffer;
+        for (const attribute of this._attributes) {
+            if (lastBuffer !== attribute.buffer) {
+                attribute.buffer.bind();
+                lastBuffer = attribute.buffer;
             }
 
-            gl.vertexAttribPointer(
-                attrib.attribute.location,
-                attrib.attribute.size,
-                attrib.type || gl.FLOAT,
-                attrib.normalized || false,
-                attrib.stride || 0,
-                attrib.start || 0);
-
-            gl.enableVertexAttribArray(attrib.attribute.location);
+            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            gl.enableVertexAttribArray(attribute.location);
         }
 
         if (this._indexBuffer) {
@@ -99,25 +92,17 @@ export default class VertexArray {
     }
 
     /**
-     * @param buffer     {Buffer}
-     * @param attribute  {*}
-     * @param type       {Number}
-     * @param normalized {Boolean}
-     * @param stride     {Number}
-     * @param start      {Number}
+     * @param {Buffer} buffer
+     * @param {ShaderAttribute} attribute
+     * @param {Number} [type=ATTRIBUTE_TYPES.FLOAT]
+     * @param {Boolean} [normalized=false]
+     * @param {Number} [stride=0]
+     * @param {Number} [start=0]
      */
-    addAttribute(buffer, attribute, type, normalized, stride, start) {
-        this._attributes.push({
-            buffer: buffer,
-            attribute: attribute,
+    addAttribute(buffer, attribute, type = ATTRIBUTE_TYPES.FLOAT, normalized = false, stride = 0, start = 0) {
+        const { location, size } = attribute;
 
-            location: attribute.location,
-            type: type || this._context.FLOAT,
-            normalized: normalized || false,
-            stride: stride || 0,
-            start: start || 0
-        });
-
+        this._attributes.push({ buffer, location, size, type, normalized, stride, start });
         this._dirty = true;
 
         return this;
@@ -137,7 +122,7 @@ export default class VertexArray {
      * Unbinds this vao and disables it
      */
     clear() {
-        this._context.bindVertexArray(this._vao);
+        this.unbind();
 
         this._attributes.length = 0;
         this._indexBuffer = null;

@@ -177,8 +177,8 @@ export default class View {
      * @readonly
      * @member {Number}
      */
-    get transformId() {
-        return this._transformId;
+    get updateId() {
+        return this._updateId;
     }
 
     /**
