@@ -323,29 +323,21 @@ export default class Collision {
      * @returns {Boolean}
      */
     static intersectionCircleRect(circle, rect) {
-        const centerWidth = rect.width / 2,
+        const { position, radius } = circle,
+            centerWidth = rect.width / 2,
             centerHeight = rect.height / 2,
-            radius = circle.radius,
-            distanceX = Math.abs(circle.x - rect.x),
-            distanceY = Math.abs(circle.y - rect.y);
+            distanceX = Math.abs(position.x - rect.x),
+            distanceY = Math.abs(position.y - rect.y);
 
-        if (distanceX > (centerWidth + radius)) {
+        if ((distanceX > (centerWidth + radius)) || (distanceY > (centerHeight + radius))) {
             return false;
         }
 
-        if (distanceY > (centerHeight + radius)) {
-            return false;
-        }
-
-        if (distanceX <= centerWidth) {
+        if ((distanceX <= centerWidth) || (distanceY <= centerHeight)) {
             return true;
         }
 
-        if (distanceY <= centerHeight) {
-            return true;
-        }
-
-        return circle.position.distanceTo(rect.x - centerWidth, rect.y - centerHeight) <= radius;
+        return position.distanceTo(rect.x - centerWidth, rect.y - centerHeight) <= radius;
     }
 
     /**

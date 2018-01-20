@@ -3,5 +3,6 @@
 .sass-cache
 .babel-cache
 node_modules
+dist
 !.gitignore
 !.gitkeep

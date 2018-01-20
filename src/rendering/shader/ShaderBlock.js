@@ -66,7 +66,9 @@ export default class ShaderBlock {
          * @private
          * @member {Map<String, ShaderUniform>}
          */
-        this._uniforms = this._extractUniforms();
+        this._uniforms = new Map();
+
+        this._extractUniforms();
 
         gl.bindBuffer(gl.UNIFORM_BUFFER, this._uniformBuffer);
         gl.bufferData(gl.UNIFORM_BUFFER, this._blockData, gl.DYNAMIC_DRAW);
@@ -164,20 +166,16 @@ export default class ShaderBlock {
         const gl = this._context,
             program = this._program,
             blockData = this._blockData,
-            uniformIndices = gl.getActiveUniformBlockParameter(program, this._index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
-            uniformOffsets = gl.getActiveUniforms(program, uniformIndices, gl.UNIFORM_OFFSET),
-            uniformCount = uniformIndices.length,
-            uniforms = new Map();
+            indices = gl.getActiveUniformBlockParameter(program, this._index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
+            offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET),
+            len = indices.length;
 
-        for (let i = 0; i < uniformCount; i++) {
-            const index = uniformIndices[i],
-                { type, size, name } = gl.getActiveUniform(program, index),
-                data = new TYPE_CLASSES[type](blockData, uniformOffsets[i], TYPE_SIZES[type] * size),
-                uniform = new ShaderUniform(gl, program, index, type, size, name, data);
+        for (let i = 0; i < len; i++) {
+            const { type, size, name } = gl.getActiveUniform(program, indices[i]),
+                data = new TYPE_CLASSES[type](blockData, offsets[i], TYPE_SIZES[type] * size),
+                uniform = new ShaderUniform(gl, program, indices[i], type, size, name, data);
 
-            uniforms.set(uniform.propName, uniform);
+            this._uniforms.set(uniform.propName, uniform);
         }
-
-        return uniforms;
     }
 }

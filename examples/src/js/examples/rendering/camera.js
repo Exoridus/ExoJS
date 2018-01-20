@@ -150,13 +150,9 @@ app.start(new Exo.Scene({
         renderManager.clear();
 
         renderManager.renderTarget.setView(this._camera);
-        renderManager
-            .draw(this._sprite)
-            .display();
+        renderManager.draw(this._sprite).display();
 
         renderManager.renderTarget.setView(null);
-        renderManager
-            .draw(this._info)
-            .display();
+        renderManager.draw(this._info).display();
     },
 }));

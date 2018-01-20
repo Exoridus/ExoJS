@@ -199,7 +199,7 @@ export default class SpriteRenderer extends Renderer {
      * @param {Sprite} sprite
      */
     render(sprite) {
-        const { texture, blendMode, tint, positionData, texCoordData } = sprite,
+        const { texture, blendMode, tint, vertexPos, vertexUvs } = sprite,
             batchFull = (this._batchIndex >= this._batchSize),
             textureChanged = (texture !== this._currentTexture),
             blendModeChanged = (blendMode !== this._currentBlendMode),
@@ -225,28 +225,28 @@ export default class SpriteRenderer extends Renderer {
         texture.update();
 
         // X / Y
-        float32View[index + 0] = positionData[0];
-        float32View[index + 1] = positionData[1];
+        float32View[index + 0] = vertexPos[0];
+        float32View[index + 1] = vertexPos[1];
 
         // X / Y
-        float32View[index + 4] = positionData[2];
-        float32View[index + 5] = positionData[3];
+        float32View[index + 4] = vertexPos[2];
+        float32View[index + 5] = vertexPos[3];
 
         // X / Y
-        float32View[index + 8] = positionData[4];
-        float32View[index + 9] = positionData[5];
+        float32View[index + 8] = vertexPos[4];
+        float32View[index + 9] = vertexPos[5];
 
         // X / Y
-        float32View[index + 12] = positionData[6];
-        float32View[index + 13] = positionData[7];
+        float32View[index + 12] = vertexPos[6];
+        float32View[index + 13] = vertexPos[7];
 
         // U / V
-        uint32View[index + 2] = texCoordData[0];
-        uint32View[index + 6] = texCoordData[1];
+        uint32View[index + 2] = vertexUvs[0];
+        uint32View[index + 6] = vertexUvs[1];
 
         // U / V
-        uint32View[index + 10] = texCoordData[2];
-        uint32View[index + 14] = texCoordData[3];
+        uint32View[index + 10] = vertexUvs[2];
+        uint32View[index + 14] = vertexUvs[3];
 
         // Tint
         uint32View[index + 3]
@@ -265,24 +265,17 @@ export default class SpriteRenderer extends Renderer {
      */
     flush() {
         if (this._batchIndex > 0) {
-            const gl = this._context,
-                view = this._renderManager.view,
-                viewId = view.updateId;
+            const view = this._renderManager.view;
 
-            if (this._currentView !== view || this._viewId !== viewId) {
+            if (this._currentView !== view || this._viewId !== view.updateId) {
                 this._currentView = view;
-                this._viewId = viewId;
-
-                this._shader.getUniform('u_projection')
-                    .setValue(view.getTransform().toArray(false));
-
-                // this._shader.getUniformBlock('Transform')
-                //     .setUniformValue('projection', view.getTransform().toArray(false));
+                this._viewId = view.updateId;
+                this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
             }
 
             this._renderManager.setVAO(this._vao);
             this._vertexBuffer.upload(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-            this._vao.draw(gl.TRIANGLES, this._batchIndex * 6, 0);
+            this._vao.draw(this._batchIndex * 6, 0);
             this._batchIndex = 0;
         }
 

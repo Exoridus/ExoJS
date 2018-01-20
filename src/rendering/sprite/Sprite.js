@@ -30,31 +30,16 @@ export default class Sprite extends Container {
         this._textureFrame = new Rectangle();
 
         /**
-         * 48 Bytes for 12 4-Byte Properties:
-         *
-         * X/Y Top-Left
-         * X/Y Top-Right
-         * X/Y Bottom-Left
-         * X/Y Bottom-Right
-         * U/V Top-Left (Packed)
-         * U/V Bottom-Right (Packed)
-         *
-         * @private
-         * @type {ArrayBuffer}
-         */
-        this._spriteData = new ArrayBuffer(48);
-
-        /**
          * @private
          * @type {Float32Array}
          */
-        this._positionData = new Float32Array(this._spriteData);
+        this._vertexPos = new Float32Array(8);
 
         /**
          * @private
          * @type {Uint32Array}
          */
-        this._texCoordData = new Uint32Array(this._spriteData, 32, 4);
+        this._vertexUvs = new Uint32Array(4);
 
         if (texture) {
             this.setTexture(texture);
@@ -90,10 +75,23 @@ export default class Sprite extends Container {
      * @readonly
      * @member {Float32Array}
      */
-    get positionData() {
-        this.updatePositions();
+    get vertexPos() {
+        const { left, top, right, bottom } = this.getLocalBounds(),
+            { a, b, x, c, d, y } = this.getGlobalTransform();
 
-        return this._positionData;
+        this._vertexPos[0] = (left * a) + (top * b) + x;
+        this._vertexPos[1] = (left * c) + (top * d) + y;
+
+        this._vertexPos[2] = (right * a) + (top * b) + x;
+        this._vertexPos[3] = (right * c) + (top * d) + y;
+
+        this._vertexPos[4] = (right * a) + (bottom * b) + x;
+        this._vertexPos[5] = (right * c) + (bottom * d) + y;
+
+        this._vertexPos[6] = (left * a) + (bottom * b) + x;
+        this._vertexPos[7] = (left * c) + (bottom * d) + y;
+
+        return this._vertexPos;
     }
 
     /**
@@ -101,10 +99,31 @@ export default class Sprite extends Container {
      * @readonly
      * @member {Uint32Array}
      */
-    get texCoordData() {
-        this.updateTexCoords();
+    get vertexUvs() {
+        if (this.flags.has(FLAGS.TEXTURE_COORDS)) {
+            const { width, height } = this._texture,
+                { left, top, right, bottom } = this._textureFrame,
+                minX = ((left / width) * 65535 & 65535),
+                minY = ((top / height) * 65535 & 65535) << 16,
+                maxX = ((right / width) * 65535 & 65535),
+                maxY = ((bottom / height) * 65535 & 65535) << 16;
 
-        return this._texCoordData;
+            if (this._texture.flipY) {
+                this._vertexUvs[0] = (maxY | minX);
+                this._vertexUvs[1] = (maxY | maxX);
+                this._vertexUvs[2] = (minY | maxX);
+                this._vertexUvs[3] = (minY | minX);
+            } else {
+                this._vertexUvs[0] = (minY | minX);
+                this._vertexUvs[1] = (minY | maxX);
+                this._vertexUvs[2] = (maxY | maxX);
+                this._vertexUvs[3] = (maxY | minX);
+            }
+
+            this.flags.remove(FLAGS.TEXTURE_COORDS);
+        }
+
+        return this._vertexUvs;
     }
 
     /**
@@ -116,11 +135,7 @@ export default class Sprite extends Container {
     }
 
     set width(value) {
-        const scaleX = (value / this._textureFrame.width);
-
-        if (this.scale.x !== scaleX) {
-            this.scale.x = scaleX;
-        }
+        this.scale.x = (value / this._textureFrame.width);
     }
 
     /**
@@ -132,11 +147,7 @@ export default class Sprite extends Container {
     }
 
     set height(value) {
-        const scaleY = (value / this._textureFrame.height);
-
-        if (this.scale.y !== scaleY) {
-            this.scale.y = scaleY;
-        }
+        this.scale.y = (value / this._textureFrame.height);
     }
 
     /**
@@ -222,62 +233,6 @@ export default class Sprite extends Container {
     }
 
     /**
-     * @public
-     * @chainable
-     * @returns {Sprite}
-     */
-    updatePositions() {
-        const { left, top, right, bottom } = this.getLocalBounds(),
-            { a, b, c, d, x, y } = this.getGlobalTransform();
-
-        this._positionData[0] = (left * a) + (top * b) + x;
-        this._positionData[1] = (left * c) + (top * d) + y;
-
-        this._positionData[2] = (right * a) + (top * b) + x;
-        this._positionData[3] = (right * c) + (top * d) + y;
-
-        this._positionData[4] = (right * a) + (bottom * b) + x;
-        this._positionData[5] = (right * c) + (bottom * d) + y;
-
-        this._positionData[6] = (left * a) + (bottom * b) + x;
-        this._positionData[7] = (left * c) + (bottom * d) + y;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Sprite}
-     */
-    updateTexCoords() {
-        if (this.flags.has(FLAGS.TEXTURE_COORDS)) {
-            const { width, height } = this._texture,
-                { left, top, right, bottom } = this._textureFrame,
-                minX = ((left / width) * 65535 & 65535),
-                minY = ((top / height) * 65535 & 65535) << 16,
-                maxX = ((right / width) * 65535 & 65535),
-                maxY = ((bottom / height) * 65535 & 65535) << 16;
-
-            if (this._texture.flipY) {
-                this._texCoordData[0] = (maxY | minX);
-                this._texCoordData[1] = (maxY | maxX);
-                this._texCoordData[2] = (minY | maxX);
-                this._texCoordData[3] = (minY | minX);
-            } else {
-                this._texCoordData[0] = (minY | minX);
-                this._texCoordData[1] = (minY | maxX);
-                this._texCoordData[2] = (maxY | maxX);
-                this._texCoordData[3] = (maxY | minX);
-            }
-
-            this.flags.remove(FLAGS.TEXTURE_COORDS);
-        }
-
-        return this;
-    }
-
-    /**
      * todo - cache this
      *
      * @public
@@ -285,7 +240,7 @@ export default class Sprite extends Container {
      */
     getNormals() {
         const normals = [],
-            positions = this.positionData,
+            positions = this.vertexPos,
             len = positions.length;
 
         for (let i = 0; i < len; i += 2) {
@@ -307,7 +262,7 @@ export default class Sprite extends Container {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        const positions = this.positionData,
+        const positions = this.vertexPos,
             len = positions.length;
 
         let min = axis.dot(positions[0], positions[1]),
@@ -331,11 +286,12 @@ export default class Sprite extends Container {
             return this.getBounds().contains(x, y);
         }
 
-        const [x1, y1, x2, y2, x3, y3] = this.positionData,
-            vecA = Vector.Temp.set(x2 - x1, y2 - y1),
+        const [x1, y1, x2, y2, x3, y3] = this.vertexPos,
+            temp = Vector.Temp,
+            vecA = temp.set(x2 - x1, y2 - y1),
             dotA = vecA.dot(x - x1, y - y1),
             lenA = vecA.len2,
-            vecB = Vector.Temp.set(x3 - x2, y3 - y2),
+            vecB = temp.set(x3 - x2, y3 - y2),
             dotB = vecB.dot(x - x2, y - y2),
             lenB = vecB.len2;
 
@@ -354,7 +310,7 @@ export default class Sprite extends Container {
 
         this._texture = null;
         this._spriteData = null;
-        this._positionData = null;
-        this._texCoordData = null;
+        this._vertexPos = null;
+        this._vertexUvs = null;
     }
 }

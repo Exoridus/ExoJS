@@ -58,30 +58,7 @@ export const
     /**
      * @public
      * @constant
-     * @name ATTRIBUTE_TYPES
-     * @type {Object<String, Number>}
-     * @property {Number} BYTE
-     * @property {Number} UNSIGNED_BYTE
-     * @property {Number} SHORT
-     * @property {Number} UNSIGNED_SHORT
-     * @property {Number} INT
-     * @property {Number} UNSIGNED_INT
-     * @property {Number} FLOAT
-     */
-    ATTRIBUTE_TYPES = {
-        BYTE: 0x1400,
-        SHORT: 0x1402,
-        INT: 0x1404,
-        FLOAT: 0x1406,
-        UNSIGNED_BYTE: 0x1401,
-        UNSIGNED_SHORT: 0x1403,
-        UNSIGNED_INT: 0x1405,
-    },
-
-    /**
-     * @public
-     * @constant
-     * @name UNIFORM_TYPES
+     * @name SHADER_TYPES
      * @type {Object<String, Number>}
      * @property {Number} INT
      * @property {Number} INT_VEC2
@@ -104,7 +81,7 @@ export const
      *
      * @property {Number} SAMPLER_2D
      */
-    UNIFORM_TYPES = {
+    SHADER_TYPES = {
         INT: 0x1404,
         INT_VEC2: 0x8B53,
         INT_VEC3: 0x8B54,
@@ -157,26 +134,26 @@ export const
      * @type {Object<Number, Number>}
      */
     TYPE_SIZES = {
-        [UNIFORM_TYPES.FLOAT]: 1,
-        [UNIFORM_TYPES.FLOAT_VEC2]: 2,
-        [UNIFORM_TYPES.FLOAT_VEC3]: 3,
-        [UNIFORM_TYPES.FLOAT_VEC4]: 4,
+        [SHADER_TYPES.FLOAT]: 1,
+        [SHADER_TYPES.FLOAT_VEC2]: 2,
+        [SHADER_TYPES.FLOAT_VEC3]: 3,
+        [SHADER_TYPES.FLOAT_VEC4]: 4,
 
-        [UNIFORM_TYPES.INT]: 1,
-        [UNIFORM_TYPES.INT_VEC2]: 2,
-        [UNIFORM_TYPES.INT_VEC3]: 3,
-        [UNIFORM_TYPES.INT_VEC4]: 4,
+        [SHADER_TYPES.INT]: 1,
+        [SHADER_TYPES.INT_VEC2]: 2,
+        [SHADER_TYPES.INT_VEC3]: 3,
+        [SHADER_TYPES.INT_VEC4]: 4,
 
-        [UNIFORM_TYPES.BOOL]: 1,
-        [UNIFORM_TYPES.BOOL_VEC2]: 2,
-        [UNIFORM_TYPES.BOOL_VEC3]: 3,
-        [UNIFORM_TYPES.BOOL_VEC4]: 4,
+        [SHADER_TYPES.BOOL]: 1,
+        [SHADER_TYPES.BOOL_VEC2]: 2,
+        [SHADER_TYPES.BOOL_VEC3]: 3,
+        [SHADER_TYPES.BOOL_VEC4]: 4,
 
-        [UNIFORM_TYPES.FLOAT_MAT2]: 4,
-        [UNIFORM_TYPES.FLOAT_MAT3]: 9,
-        [UNIFORM_TYPES.FLOAT_MAT4]: 16,
+        [SHADER_TYPES.FLOAT_MAT2]: 4,
+        [SHADER_TYPES.FLOAT_MAT3]: 9,
+        [SHADER_TYPES.FLOAT_MAT4]: 16,
 
-        [UNIFORM_TYPES.SAMPLER_2D]: 1,
+        [SHADER_TYPES.SAMPLER_2D]: 1,
     },
 
     /**
@@ -186,26 +163,26 @@ export const
      * @type {Object<Number, Function>}
      */
     TYPE_CLASSES = {
-        [UNIFORM_TYPES.FLOAT]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_VEC2]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_VEC3]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_VEC4]: Float32Array,
+        [SHADER_TYPES.FLOAT]: Float32Array,
+        [SHADER_TYPES.FLOAT_VEC2]: Float32Array,
+        [SHADER_TYPES.FLOAT_VEC3]: Float32Array,
+        [SHADER_TYPES.FLOAT_VEC4]: Float32Array,
 
-        [UNIFORM_TYPES.INT]: Int32Array,
-        [UNIFORM_TYPES.INT_VEC2]: Int32Array,
-        [UNIFORM_TYPES.INT_VEC3]: Int32Array,
-        [UNIFORM_TYPES.INT_VEC4]: Int32Array,
+        [SHADER_TYPES.INT]: Int32Array,
+        [SHADER_TYPES.INT_VEC2]: Int32Array,
+        [SHADER_TYPES.INT_VEC3]: Int32Array,
+        [SHADER_TYPES.INT_VEC4]: Int32Array,
 
-        [UNIFORM_TYPES.BOOL]: Uint8Array,
-        [UNIFORM_TYPES.BOOL_VEC2]: Uint8Array,
-        [UNIFORM_TYPES.BOOL_VEC3]: Uint8Array,
-        [UNIFORM_TYPES.BOOL_VEC4]: Uint8Array,
+        [SHADER_TYPES.BOOL]: Uint8Array,
+        [SHADER_TYPES.BOOL_VEC2]: Uint8Array,
+        [SHADER_TYPES.BOOL_VEC3]: Uint8Array,
+        [SHADER_TYPES.BOOL_VEC4]: Uint8Array,
 
-        [UNIFORM_TYPES.FLOAT_MAT2]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_MAT3]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_MAT4]: Float32Array,
+        [SHADER_TYPES.FLOAT_MAT2]: Float32Array,
+        [SHADER_TYPES.FLOAT_MAT3]: Float32Array,
+        [SHADER_TYPES.FLOAT_MAT4]: Float32Array,
 
-        [UNIFORM_TYPES.SAMPLER_2D]: Uint8Array,
+        [SHADER_TYPES.SAMPLER_2D]: Uint8Array,
     },
 
     /**
@@ -215,26 +192,26 @@ export const
      * @type {Object<Number, Function>}
      */
     TYPE_UPLOADS = {
-        [UNIFORM_TYPES.FLOAT]: (gl, location, value) => gl.uniform1f(location, value[0]),
-        [UNIFORM_TYPES.FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, value),
-        [UNIFORM_TYPES.FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, value),
-        [UNIFORM_TYPES.FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, value),
+        [SHADER_TYPES.FLOAT]: (gl, location, value) => gl.uniform1f(location, value[0]),
+        [SHADER_TYPES.FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, value),
+        [SHADER_TYPES.FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, value),
+        [SHADER_TYPES.FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, value),
 
-        [UNIFORM_TYPES.INT]: (gl, location, value) => gl.uniform1i(location, value[0]),
-        [UNIFORM_TYPES.INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
-        [UNIFORM_TYPES.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
-        [UNIFORM_TYPES.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
+        [SHADER_TYPES.INT]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [SHADER_TYPES.INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
+        [SHADER_TYPES.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
+        [SHADER_TYPES.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
 
-        [UNIFORM_TYPES.BOOL]: (gl, location, value) => gl.uniform1i(location, value[0]),
-        [UNIFORM_TYPES.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
-        [UNIFORM_TYPES.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
-        [UNIFORM_TYPES.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
+        [SHADER_TYPES.BOOL]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [SHADER_TYPES.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
+        [SHADER_TYPES.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
+        [SHADER_TYPES.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
 
-        [UNIFORM_TYPES.FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, value),
-        [UNIFORM_TYPES.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, value),
-        [UNIFORM_TYPES.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, value),
+        [SHADER_TYPES.FLOAT_MAT2]: (gl, location, value) => gl.uniformMatrix2fv(location, false, value),
+        [SHADER_TYPES.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, value),
+        [SHADER_TYPES.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, value),
 
-        [UNIFORM_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [SHADER_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value[0]),
     },
 
     /**
@@ -244,26 +221,26 @@ export const
      * @type {Object<Number, String>}
      */
     TYPE_NAMES = {
-        [UNIFORM_TYPES.FLOAT]: 'FLOAT',
-        [UNIFORM_TYPES.FLOAT_VEC2]: 'FLOAT_VEC2',
-        [UNIFORM_TYPES.FLOAT_VEC3]: 'FLOAT_VEC3',
-        [UNIFORM_TYPES.FLOAT_VEC4]: 'FLOAT_VEC4',
+        [SHADER_TYPES.FLOAT]: 'FLOAT',
+        [SHADER_TYPES.FLOAT_VEC2]: 'FLOAT_VEC2',
+        [SHADER_TYPES.FLOAT_VEC3]: 'FLOAT_VEC3',
+        [SHADER_TYPES.FLOAT_VEC4]: 'FLOAT_VEC4',
 
-        [UNIFORM_TYPES.INT]: 'INT',
-        [UNIFORM_TYPES.INT_VEC2]: 'INT_VEC2',
-        [UNIFORM_TYPES.INT_VEC3]: 'INT_VEC3',
-        [UNIFORM_TYPES.INT_VEC4]: 'INT_VEC4',
+        [SHADER_TYPES.INT]: 'INT',
+        [SHADER_TYPES.INT_VEC2]: 'INT_VEC2',
+        [SHADER_TYPES.INT_VEC3]: 'INT_VEC3',
+        [SHADER_TYPES.INT_VEC4]: 'INT_VEC4',
 
-        [UNIFORM_TYPES.BOOL]: 'BOOL',
-        [UNIFORM_TYPES.BOOL_VEC2]: 'BOOL_VEC2',
-        [UNIFORM_TYPES.BOOL_VEC3]: 'BOOL_VEC3',
-        [UNIFORM_TYPES.BOOL_VEC4]: 'BOOL_VEC4',
+        [SHADER_TYPES.BOOL]: 'BOOL',
+        [SHADER_TYPES.BOOL_VEC2]: 'BOOL_VEC2',
+        [SHADER_TYPES.BOOL_VEC3]: 'BOOL_VEC3',
+        [SHADER_TYPES.BOOL_VEC4]: 'BOOL_VEC4',
 
-        [UNIFORM_TYPES.FLOAT_MAT2]: 'FLOAT_MAT2',
-        [UNIFORM_TYPES.FLOAT_MAT3]: 'FLOAT_MAT3',
-        [UNIFORM_TYPES.FLOAT_MAT4]: 'FLOAT_MAT4',
+        [SHADER_TYPES.FLOAT_MAT2]: 'FLOAT_MAT2',
+        [SHADER_TYPES.FLOAT_MAT3]: 'FLOAT_MAT3',
+        [SHADER_TYPES.FLOAT_MAT4]: 'FLOAT_MAT4',
 
-        [UNIFORM_TYPES.SAMPLER_2D]: 'SAMPLER_2D',
+        [SHADER_TYPES.SAMPLER_2D]: 'SAMPLER_2D',
     },
 
     /**

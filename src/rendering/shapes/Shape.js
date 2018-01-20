@@ -1,42 +1,31 @@
 import Color from '../../core/Color';
-import Polygon from '../../math/Polygon';
-import GraphicsShape from './GraphicsShape';
-import Rectangle from '../../math/Rectangle';
-import Segment from '../../math/Segment';
-import Vector from '../../math/Vector';
 import Drawable from '../Drawable';
-import { buildLine } from '../../utils/rendering';
 
 /**
- * @class LineShape
+ * @class Shape
  * @extends Drawable
  */
-export default class LineShape extends Drawable {
+export default class Shape extends Drawable {
 
     /**
      * @constructor
-     * @param {Number[]} points
-     * @param {Number} width
-     * @param {Color} [color=Color.Black]
+     * @param {Float32Array} vertices
+     * @param {Uint16Array} indices
+     * @param {Color} [color=Color.White]
      */
-    constructor(points, width, color = Color.Black) {
+    constructor(vertices, indices, color = Color.White) {
         super();
-
-        /**
-         * @member {Number}
-         */
-        this._attributeCount = 2;
 
         /**
          * @member {Float32Array}
          */
-        this._vertexData = this.getVertices(points, width);
+        this._vertices = vertices;
 
         /**
          * @private
          * @member {Uint16Array}
          */
-        this._indexData = this.getIndices(this._vertexData);
+        this._indices = indices;
 
         /**
          * @private

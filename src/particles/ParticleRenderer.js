@@ -292,20 +292,17 @@ export default class ParticleRenderer extends Renderer {
      */
     flush() {
         if (this._batchIndex > 0) {
-            const gl = this._context,
-                view = this._renderManager.view,
-                viewId = view.updateId;
+            const view = this._renderManager.view;
 
-            if (this._currentView !== view || this._viewId !== viewId) {
+            if (this._currentView !== view || this._viewId !== view.updateId) {
                 this._currentView = view;
-                this._viewId = viewId;
-                this._shader.getUniform('u_projection')
-                    .setValue(view.getTransform().toArray(false));
+                this._viewId = view.updateId;
+                this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
             }
 
             this._renderManager.setVAO(this._vao);
             this._vertexBuffer.upload(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-            this._vao.draw(gl.TRIANGLES, this._batchIndex * 6, 0);
+            this._vao.draw(this._batchIndex * 6, 0);
             this._batchIndex = 0;
         }
 

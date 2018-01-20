@@ -25,15 +25,6 @@ export default class EventEmitter {
 
     /**
      * @public
-     * @readonly
-     * @member {Object<String, EventHandler[]>}
-     */
-    get events() {
-        return this._events;
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {String} event
      * @param {Function} callback

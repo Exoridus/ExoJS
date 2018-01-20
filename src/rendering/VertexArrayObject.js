@@ -1,4 +1,4 @@
-import { ATTRIBUTE_TYPES } from '../const/rendering';
+import { PRIMITIVE_TYPES, SHADER_TYPES } from '../const/rendering';
 
 /**
  * @class VertexArrayObject
@@ -7,9 +7,10 @@ export default class VertexArrayObject {
 
     /**
      * @constructor
-     * @param context {WebGL2RenderingContext}
+     * @param {WebGL2RenderingContext} context
+     * @param {Number} [primitiveType=PRIMITIVE_TYPES.TRIANGLES]
      */
-    constructor(context) {
+    constructor(context, primitiveType = PRIMITIVE_TYPES.TRIANGLES) {
 
         /**
          * @member {WebGL2RenderingContext}
@@ -32,6 +33,11 @@ export default class VertexArrayObject {
         this._indexBuffer = null;
 
         /**
+         * @member {Number}
+         */
+        this._primitiveType = primitiveType;
+
+        /**
          * @member {Boolean}
          */
         this._dirty = false;
@@ -41,13 +47,24 @@ export default class VertexArrayObject {
      * Binds the buffer
      */
     bind() {
+        const gl = this._context;
+
         this._context.bindVertexArray(this._vao);
 
         if (this._dirty) {
-            this._dirty = false;
-            this.activate();
+            let lastBuffer = null;
 
-            return this;
+            for (const attribute of this._attributes) {
+                if (lastBuffer !== attribute.buffer) {
+                    attribute.buffer.bind();
+                    lastBuffer = attribute.buffer;
+                }
+
+                gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+                gl.enableVertexAttribArray(attribute.location);
+            }
+
+            this._dirty = false;
         }
 
         if (this._indexBuffer) {
@@ -67,31 +84,6 @@ export default class VertexArrayObject {
     }
 
     /**
-     * Uses this vao
-     */
-    activate() {
-        const gl = this._context;
-
-        let lastBuffer = null;
-
-        for (const attribute of this._attributes) {
-            if (lastBuffer !== attribute.buffer) {
-                attribute.buffer.bind();
-                lastBuffer = attribute.buffer;
-            }
-
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
-            gl.enableVertexAttribArray(attribute.location);
-        }
-
-        if (this._indexBuffer) {
-            this._indexBuffer.bind();
-        }
-
-        return this;
-    }
-
-    /**
      * @param {Buffer} buffer
      * @param {ShaderAttribute} attribute
      * @param {Number} [type=ATTRIBUTE_TYPES.FLOAT]
@@ -99,7 +91,7 @@ export default class VertexArrayObject {
      * @param {Number} [stride=0]
      * @param {Number} [start=0]
      */
-    addAttribute(buffer, attribute, type = ATTRIBUTE_TYPES.FLOAT, normalized = false, stride = 0, start = 0) {
+    addAttribute(buffer, attribute, type = SHADER_TYPES.FLOAT, normalized = false, stride = 0, start = 0) {
         const { location, size } = attribute;
 
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });
@@ -131,15 +123,15 @@ export default class VertexArrayObject {
     }
 
     /**
-     * @param {Number} type
      * @param {Number} size
      * @param {Number} start
+     * @param {Number} [type=this._primitiveType]
      */
-    draw(type, size, start) {
+    draw(size, start, type = this._primitiveType) {
         const gl = this._context;
 
         if (this._indexBuffer) {
-            gl.drawElements(type, size, gl.UNSIGNED_SHORT, (start || 0) * 2);
+            gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
         } else {
             gl.drawArrays(type, start, size);
         }

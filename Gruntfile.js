@@ -13,7 +13,7 @@ module.exports = (grunt) => {
     grunt.initConfig({
         pkg: package,
         dirs: {
-            build: './bin',
+            dist: './dist',
             src: './src',
             examples: './examples',
             game: './game',
@@ -28,7 +28,7 @@ module.exports = (grunt) => {
             },
             dist: {
                 files: {
-                    '<%= dirs.build %>/exo.build.js': '<%= dirs.src %>/index.js',
+                    '<%= dirs.dist %>/exo.js': '<%= dirs.src %>/index.js',
                 },
             },
         },
@@ -47,9 +47,9 @@ module.exports = (grunt) => {
             dist: {
                 entry: ['babel-polyfill', '<%= dirs.src %>/index.js'],
                 output: {
-                    path: __dirname + '/bin',
-                    filename: 'exo.build.js',
-                    sourceMapFilename: 'exo.build.js.map',
+                    path: __dirname + '/dist',
+                    filename: 'exo.js',
+                    sourceMapFilename: 'exo.js.map',
                     library: 'Exo',
                 },
                 cache: false,
@@ -102,8 +102,8 @@ module.exports = (grunt) => {
                 mangle: true,
             },
             dist: {
-                src: '<%= dirs.build %>/exo.build.js',
-                dest: '<%= dirs.build %>/exo.min.js',
+                src: '<%= dirs.dist %>/exo.js',
+                dest: '<%= dirs.dist %>/exo.min.js',
             },
             examples: {
                 src: '<%= dirs.examples %>/bin/examples.build.js',

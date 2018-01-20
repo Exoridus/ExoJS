@@ -97,6 +97,7 @@ export const
         TRANSFORM_INV:  0x10,
         BOUNDING_BOX:   0x20,
         TEXTURE_COORDS: 0x40,
+        VERTEX_TINT:    0x80,
     },
 
     /**
