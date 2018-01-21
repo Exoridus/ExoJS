@@ -46,7 +46,7 @@ app.start(new Exo.Scene({
          */
         this._ticker = 0;
 
-        this.app.inputManager.on('pointer:move', (pointer) => (this._boxB.position = pointer.position));
+        this.app.inputManager.onPointerMove.add((pointer) => (this._boxB.position = pointer.position));
     },
 
     /**

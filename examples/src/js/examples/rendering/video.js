@@ -29,7 +29,7 @@ app.start(new Exo.Scene({
         this._video.height = canvas.height;
         this._video.play({ loop: true, volume: 0.5 });
 
-        this.app.inputManager.on('pointer:down', () => {
+        this.app.inputManager.onPointerTap.add(() => {
             this._video.toggle();
         });
     },

@@ -1,25 +1,24 @@
 import settings from '../settings';
-import EventEmitter from '../core/EventEmitter';
+import Signal from '../core/Signal';
+import Timer from '../core/time/Timer';
 
 /**
  * @class Input
- * @extends EventEmitter
  */
-export default class Input extends EventEmitter {
+export default class Input {
 
     /**
      * @constructor
      * @param {Set<Number>|Number[]|Number} channels
      * @param {Object} [options]
-     * @param {Function} [options.start]
-     * @param {Function} [options.stop]
-     * @param {Function} [options.active]
-     * @param {Function} [options.trigger]
-     * @param {*} [options.context]
+     * @param {Function} [options.onStart]
+     * @param {Function} [options.onStop]
+     * @param {Function} [options.onActive]
+     * @param {Function} [options.onTrigger]
+     * @param {Object} [options.context]
      * @param {Number} [options.threshold=settings.INPUT_THRESHOLD]
      */
-    constructor(channels, { start, stop, active, trigger, context, threshold = settings.INPUT_THRESHOLD } = {}) {
-        super();
+    constructor(channels, { onStart, onStop, onActive, onTrigger, context, threshold = settings.INPUT_THRESHOLD } = {}) {
 
         /**
          * @private
@@ -29,15 +28,33 @@ export default class Input extends EventEmitter {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Timer}
          */
-        this._threshold = threshold;
+        this._triggerTimer = new Timer(threshold);
 
         /**
          * @private
-         * @member {Number}
+         * @member {Signal}
          */
-        this._triggered = 0;
+        this._onStart = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStop = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onActive = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onTrigger = new Signal();
 
         /**
          * @private
@@ -45,49 +62,30 @@ export default class Input extends EventEmitter {
          */
         this._value = 0;
 
-        if (start) {
-            this.on('start', start, context);
+        if (onStart) {
+            this._onStart.add(onStart, context);
         }
 
-        if (stop) {
-            this.on('stop', stop, context);
+        if (onStop) {
+            this._onStop.add(onStop, context);
         }
 
-        if (active) {
-            this.on('active', active, context);
+        if (onActive) {
+            this._onActive.add(onActive, context);
         }
 
-        if (trigger) {
-            this.on('trigger', trigger, context);
+        if (onTrigger) {
+            this._onTrigger.add(onTrigger, context);
         }
     }
 
     /**
      * @public
+     * @readonly
      * @member {Set<Number>}
      */
     get channels() {
         return this._channels;
-    }
-
-    set channels(channels) {
-        this._channels.clear();
-
-        for (const channel of channels) {
-            this._channels.add(channel);
-        }
-    }
-
-    /**
-     * @public
-     * @member {Number}
-     */
-    get threshold() {
-        return this._threshold;
-    }
-
-    set threshold(threshold) {
-        this._threshold = threshold;
     }
 
     /**
@@ -97,6 +95,42 @@ export default class Input extends EventEmitter {
      */
     get value() {
         return this._value;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStart() {
+        return this._onStart;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStop() {
+        return this._onStop;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onActive() {
+        return this._onActive;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onTrigger() {
+        return this._onTrigger;
     }
 
     /**
@@ -113,36 +147,47 @@ export default class Input extends EventEmitter {
         }
 
         if (this._value) {
-            if (!this._triggered) {
-                this._triggered = Date.now();
-                this.trigger('start', this._value);
+            if (!this._triggerTimer.running) {
+                this._triggerTimer.restart();
+                this._onStart.dispatch(this._value);
             }
 
-            this.trigger('active', this._value);
-        } else if (this._triggered) {
-            this.trigger('stop', this._value);
+            this._onActive.dispatch(this._value);
+        } else if (this._triggerTimer.running) {
+            this._onStop.dispatch(this._value);
 
-            if ((Date.now() - this._triggered) < this._threshold) {
-                this.trigger('trigger', this._value);
+            if (this._triggerTimer.expired) {
+                this._onTrigger.dispatch(this._value);
             }
 
-            this._triggered = 0;
+            this._triggerTimer.stop();
         }
 
         return this;
     }
 
     /**
-     * @override
+     * @public
      */
     destroy() {
-        super.destroy();
-
         this._channels.clear();
         this._channels = null;
 
-        this._threshold = null;
-        this._triggered = null;
+        this._triggerTimer.destroy();
+        this._triggerTimer = null;
+
+        this._onStart.destroy();
+        this._onStart = null;
+
+        this._onStop.destroy();
+        this._onStop = null;
+
+        this._onActive.destroy();
+        this._onActive = null;
+
+        this._onTrigger.destroy();
+        this._onTrigger = null;
+
         this._value = null;
     }
 }

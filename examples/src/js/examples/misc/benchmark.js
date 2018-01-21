@@ -68,11 +68,11 @@ app.start(new Exo.Scene({
          */
         this._stats = this.createStats();
 
-        this.app.inputManager.on('pointer:down', () => {
+        this.app.inputManager.onPointerDown.add(() => {
             this._addBunnies = true;
         });
 
-        this.app.inputManager.on('pointer:up', () => {
+        this.app.inputManager.onPointerUp.add(() => {
             this._addBunnies = false;
         });
 

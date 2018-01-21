@@ -9,11 +9,11 @@ export default class ObservableVector extends Vector {
     /**
      * @constructor
      * @param {Function} callback
-     * @param {*} scope
+     * @param {?Object} context
      * @param {Number} [x=0]
      * @param {Number} [y=0]
      */
-    constructor(callback, scope, x = 0, y = 0) {
+    constructor(callback, context, x = 0, y = 0) {
         super(x, y);
 
         /**
@@ -24,9 +24,9 @@ export default class ObservableVector extends Vector {
 
         /**
          * @private
-         * @member {*}
+         * @member {?Object}
          */
-        this._scope = scope || this;
+        this._context = context || this;
     }
 
     /**
@@ -40,7 +40,7 @@ export default class ObservableVector extends Vector {
     set x(x) {
         if (this._x !== x) {
             this._x = x;
-            this._callback.call(this._scope);
+            this._callback.call(this._context);
         }
     }
 
@@ -55,7 +55,7 @@ export default class ObservableVector extends Vector {
     set y(y) {
         if (this._y !== y) {
             this._y = y;
-            this._callback.call(this._scope);
+            this._callback.call(this._context);
         }
     }
 
@@ -66,7 +66,7 @@ export default class ObservableVector extends Vector {
         if (this._x !== x || this._y !== y) {
             this._x = x;
             this._y = y;
-            this._callback.call(this._scope);
+            this._callback.call(this._context);
         }
 
         return this;
@@ -118,7 +118,7 @@ export default class ObservableVector extends Vector {
      * @override
      */
     clone() {
-        return new ObservableVector(this._callback, this._scope, this._x, this._y);
+        return new ObservableVector(this._callback, this._context, this._x, this._y);
     }
 
     /**
@@ -128,6 +128,6 @@ export default class ObservableVector extends Vector {
         super.destroy();
 
         this._callback = null;
-        this._scope = null;
+        this._context = null;
     }
 }

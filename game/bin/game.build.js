@@ -278,6 +278,18 @@ var Menu = function (_Container) {
          * @member {?String}
          */
         _this._previousMenu = previousMenu;
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        _this._onOpenMenu = new _exojs.Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        _this._onOpenPrevMenu = new _exojs.Signal();
         return _this;
     }
 
@@ -516,7 +528,7 @@ var Menu = function (_Container) {
     }, {
         key: 'openMenu',
         value: function openMenu(menu) {
-            this.trigger('openMenu', menu);
+            this._onOpenMenu.dispatch(menu);
         }
 
         /**
@@ -526,7 +538,7 @@ var Menu = function (_Container) {
     }, {
         key: 'openPreviousMenu',
         value: function openPreviousMenu() {
-            this.trigger('openPreviousMenu');
+            this._onOpenPrevMenu.dispatch(this._previousMenu);
         }
 
         /**
@@ -595,6 +607,12 @@ var Menu = function (_Container) {
             this._actions.length = 0;
             this._actions = null;
 
+            this._onOpenMenu.destroy();
+            this._onOpenMenu = null;
+
+            this._onOpenPrevMenu.destroy();
+            this._onOpenPrevMenu = null;
+
             this._previousMenu = null;
             this._startChild = null;
             this._activeChild = null;
@@ -607,6 +625,30 @@ var Menu = function (_Container) {
         },
         set: function set(value) {
             this._previousMenu = value || null;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Signal}
+         */
+
+    }, {
+        key: 'onOpenMenu',
+        get: function get() {
+            return this._onOpenMenu;
+        }
+
+        /**
+         * @public
+         * @readonly
+         * @member {Signal}
+         */
+
+    }, {
+        key: 'onOpenPrevMenu',
+        get: function get() {
+            return this._onOpenPrevMenu;
         }
     }]);
 
@@ -833,7 +875,7 @@ var GameScene = function (_Scene) {
     }, {
         key: '_addEvents',
         value: function _addEvents() {
-            this._player.on('move', this._updateCamera, this);
+            this._player.onMove.add(this._updateCamera, this);
         }
 
         /**
@@ -843,7 +885,7 @@ var GameScene = function (_Scene) {
     }, {
         key: '_removeEvents',
         value: function _removeEvents() {
-            this._player.off('move', this._updateCamera, this);
+            this._player.onMove.remove(this._updateCamera, this);
         }
 
         /**
@@ -860,7 +902,7 @@ var GameScene = function (_Scene) {
              */
             this._toggleMenuInput = new _exojs.Input([_exojs.KEYBOARD.Escape, _exojs.GAMEPAD.Start], {
                 context: this,
-                trigger: function trigger() {
+                onTrigger: function onTrigger() {
                     if (this._paused) {
                         this._resumeGame();
                     } else {
@@ -970,6 +1012,7 @@ var LauncherScene = function (_Scene) {
 
         /**
          * @override
+         * @param {Loader} loader
          */
         value: function load(loader) {
             var _this2 = this;
@@ -1012,7 +1055,7 @@ var LauncherScene = function (_Scene) {
              */
             this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
-            loader.on('progress', function (length, index, resource) {
+            loader.onLoadResource.add(function (length, index, resource) {
                 return _this2._renderProgress(index / length * 100);
             });
 
@@ -1064,7 +1107,7 @@ var LauncherScene = function (_Scene) {
 
             this.app.inputManager.add(new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.Start, _exojs.GAMEPAD.FaceBottom], {
                 context: this,
-                trigger: this._openTitleHandler
+                onTrigger: this._openTitleHandler
             }));
         }
 
@@ -1379,7 +1422,7 @@ var MenuManager = function () {
          * @private
          * @member {Boolean}
          */
-        this._active = false;
+        this._enabled = false;
 
         /**
          * @private
@@ -1387,42 +1430,42 @@ var MenuManager = function () {
          */
         this._inputs = [new _exojs.Input([_exojs.KEYBOARD.Up, _exojs.GAMEPAD.DPadUp, _exojs.GAMEPAD.LeftStickUp], {
             context: this,
-            start: function start() {
+            onStart: function onStart() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputUp();
                 }
             }
         }), new _exojs.Input([_exojs.KEYBOARD.Down, _exojs.GAMEPAD.LeftStickDown, _exojs.GAMEPAD.DPadDown], {
             context: this,
-            start: function start() {
+            onStart: function onStart() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputDown();
                 }
             }
         }), new _exojs.Input([_exojs.KEYBOARD.Left, _exojs.GAMEPAD.LeftStickLeft, _exojs.GAMEPAD.DPadLeft], {
             context: this,
-            start: function start() {
+            onStart: function onStart() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputLeft();
                 }
             }
         }), new _exojs.Input([_exojs.KEYBOARD.Right, _exojs.GAMEPAD.LeftStickRight, _exojs.GAMEPAD.DPadRight], {
             context: this,
-            start: function start() {
+            onStart: function onStart() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputRight();
                 }
             }
         }), new _exojs.Input([_exojs.KEYBOARD.Enter, _exojs.GAMEPAD.FaceBottom], {
             context: this,
-            start: function start() {
+            onStart: function onStart() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputSelect();
                 }
             }
         }), new _exojs.Input([_exojs.KEYBOARD.Backspace, _exojs.GAMEPAD.FaceRight], {
             context: this,
-            start: function start() {
+            onStart: function onStart() {
                 if (this._currentMenu) {
                     this._currentMenu.onInputBack();
                 }
@@ -1447,8 +1490,8 @@ var MenuManager = function () {
          * @returns {MenuManager}
          */
         value: function enable(startMenu) {
-            if (!this._active) {
-                this._active = true;
+            if (!this._enabled) {
+                this._enabled = true;
                 this._app.inputManager.add(this._inputs);
                 this._app.inputManager.on('pointer:move', this._onPointerMove, this);
                 this._app.inputManager.on('pointer:tap', this._onPointerTap, this);
@@ -1468,8 +1511,8 @@ var MenuManager = function () {
     }, {
         key: 'disable',
         value: function disable() {
-            if (this._active) {
-                this._active = false;
+            if (this._enabled) {
+                this._enabled = false;
                 this._app.inputManager.remove(this._inputs);
                 this._app.inputManager.off('pointer:move', this._onPointerMove, this);
                 this._app.inputManager.off('pointer:tap', this._onPointerTap, this);
@@ -1501,8 +1544,8 @@ var MenuManager = function () {
 
             this._menus.set(name, menu);
 
-            menu.on('openMenu', this.openMenu, this);
-            menu.on('openPreviousMenu', this.openPreviousMenu, this);
+            menu.onOpenMenu.add(this.openMenu, this);
+            menu.onOpenPrevMenu.add(this.openPreviousMenu, this);
 
             return this;
         }
@@ -1592,7 +1635,7 @@ var MenuManager = function () {
             this._app.off('pointer:move', this._onPointerMove, this);
             this._app.off('pointer:tap', this._onPointerTap, this);
 
-            if (this._active) {
+            if (this._enabled) {
                 this.disable();
             }
 
@@ -1645,12 +1688,12 @@ var MenuManager = function () {
             }
         }
     }, {
-        key: 'active',
+        key: 'enabled',
         get: function get() {
-            return this._active;
+            return this._enabled;
         },
-        set: function set(active) {
-            this._active = active;
+        set: function set(enabled) {
+            this._enabled = enabled;
         }
     }]);
 
@@ -2908,6 +2951,12 @@ var Player = function (_Sprite) {
          */
         _this._speed = _this._walkingSpeed;
 
+        /**
+         * @private
+         * @member {Signal}
+         */
+        _this._onMove = new _exojs.Signal();
+
         _this._addInputs();
         _this._updateFrame();
         _this.setAnchor(0.5, 1);
@@ -2917,12 +2966,19 @@ var Player = function (_Sprite) {
 
     /**
      * @public
-     * @param {Time} delta
+     * @readonly
+     * @member {Signal}
      */
 
 
     _createClass(Player, [{
         key: 'update',
+
+
+        /**
+         * @public
+         * @param {Time} delta
+         */
         value: function update(delta) {
             this._updatePosition(delta);
 
@@ -2971,6 +3027,9 @@ var Player = function (_Sprite) {
 
             this._frameTimer.destroy();
             this._frameTimer = null;
+
+            this._onMove.destroy();
+            this._onMove = null;
 
             this._frameIndex = null;
             this._frameCount = null;
@@ -3082,7 +3141,7 @@ var Player = function (_Sprite) {
                     this._setFrameIndex(1);
                 }
 
-                this.trigger('move', this.x, this.y, this);
+                this._onMove.dispatch(this.x, this.y, this);
             } else if (this._moving) {
                 this._moving = false;
                 this._frameTimer.stop();
@@ -3116,38 +3175,38 @@ var Player = function (_Sprite) {
         value: function _addInputs() {
             this._moveUpInput = new _exojs.Input([_exojs.KEYBOARD.Up, _exojs.KEYBOARD.W, _exojs.GAMEPAD.LeftStickUp, _exojs.GAMEPAD.DPadUp], {
                 context: this,
-                active: function active(value) {
+                onActive: function onActive(value) {
                     this._velocity.add(0, value * -1);
                 }
             });
 
             this._moveDownInput = new _exojs.Input([_exojs.KEYBOARD.Down, _exojs.KEYBOARD.S, _exojs.GAMEPAD.LeftStickDown, _exojs.GAMEPAD.DPadDown], {
                 context: this,
-                active: function active(value) {
+                onActive: function onActive(value) {
                     this._velocity.add(0, value);
                 }
             });
 
             this._moveLeftInput = new _exojs.Input([_exojs.KEYBOARD.Left, _exojs.KEYBOARD.A, _exojs.GAMEPAD.LeftStickLeft, _exojs.GAMEPAD.DPadLeft], {
                 context: this,
-                active: function active(value) {
+                onActive: function onActive(value) {
                     this._velocity.add(value * -1, 0);
                 }
             });
 
             this._moveRightInput = new _exojs.Input([_exojs.KEYBOARD.Right, _exojs.KEYBOARD.D, _exojs.GAMEPAD.LeftStickRight, _exojs.GAMEPAD.DPadRight], {
                 context: this,
-                active: function active(value) {
+                onActive: function onActive(value) {
                     this._velocity.add(value, 0);
                 }
             });
 
             this._toggleRunInput = new _exojs.Input([_exojs.KEYBOARD.Shift, _exojs.GAMEPAD.FaceLeft], {
                 context: this,
-                start: function start() {
+                onStart: function onStart() {
                     this._speed = this._runningSpeed;
                 },
-                stop: function stop() {
+                onStop: function onStop() {
                     this._speed = this._walkingSpeed;
                 }
             });
@@ -3178,6 +3237,11 @@ var Player = function (_Sprite) {
 
             this._toggleRunInput.destroy();
             this._toggleRunInput = null;
+        }
+    }, {
+        key: 'onMove',
+        get: function get() {
+            return this._onMove;
         }
     }]);
 

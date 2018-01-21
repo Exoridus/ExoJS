@@ -47,7 +47,7 @@ app.start(new Exo.Scene({
         /**
          * @type {Timer}
          */
-        this._timer = new Exo.Timer(true, 500, Exo.TIME.MILLISECONDS);
+        this._timer = new Exo.Timer(500, Exo.TIME.MILLISECONDS, true);
 
         /**
          * @type {Random}

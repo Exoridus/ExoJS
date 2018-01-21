@@ -1,10 +1,7 @@
-import EventEmitter from './EventEmitter';
-
 /**
  * @class Scene
- * @extends EventEmitter
  */
-export default class Scene extends EventEmitter {
+export default class Scene {
 
     /**
      * @constructor
@@ -17,7 +14,6 @@ export default class Scene extends EventEmitter {
      * @param {Function} [prototype.destroy]
      */
     constructor(prototype) {
-        super();
 
         /**
          * @private
@@ -85,8 +81,6 @@ export default class Scene extends EventEmitter {
      * @public
      */
     destroy() {
-        super.destroy();
-
         this._app = null;
     }
 }

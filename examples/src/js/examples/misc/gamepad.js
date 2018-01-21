@@ -74,9 +74,9 @@ app.start(new Exo.Scene({
             sprite.setTint(this._buttonColor);
         }
 
-        this._gamepad.on('connect', (channel, value) => this._status.setTint(Exo.Color.White));
-        this._gamepad.on('disconnect', (channel, value) => this._status.setTint(this._buttonColor));
-        this._gamepad.on('update', (channel, value) => {
+        this._gamepad.onConnect.add((channel, value) => this._status.setTint(Exo.Color.White));
+        this._gamepad.onDisconnect.add((channel, value) => this._status.setTint(this._buttonColor));
+        this._gamepad.onUpdate.add((channel, value) => {
             if (this._mappingButtons.has(channel)) {
                 this._mappingButtons.get(channel).tint.a = Exo.lerp(0.25, 1, value);
             }

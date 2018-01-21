@@ -34,7 +34,7 @@ export default class MenuManager {
          * @private
          * @member {Boolean}
          */
-        this._active = false;
+        this._enabled = false;
 
         /**
          * @private
@@ -47,7 +47,7 @@ export default class MenuManager {
                 GAMEPAD.LeftStickUp,
             ], {
                 context: this,
-                start() {
+                onStart() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputUp();
                     }
@@ -59,7 +59,7 @@ export default class MenuManager {
                 GAMEPAD.DPadDown,
             ], {
                 context: this,
-                start() {
+                onStart() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputDown();
                     }
@@ -71,7 +71,7 @@ export default class MenuManager {
                 GAMEPAD.DPadLeft,
             ], {
                 context: this,
-                start() {
+                onStart() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputLeft();
                     }
@@ -83,7 +83,7 @@ export default class MenuManager {
                 GAMEPAD.DPadRight,
             ], {
                 context: this,
-                start() {
+                onStart() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputRight();
                     }
@@ -94,7 +94,7 @@ export default class MenuManager {
                 GAMEPAD.FaceBottom,
             ], {
                 context: this,
-                start() {
+                onStart() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputSelect();
                     }
@@ -105,7 +105,7 @@ export default class MenuManager {
                 GAMEPAD.FaceRight,
             ], {
                 context: this,
-                start() {
+                onStart() {
                     if (this._currentMenu) {
                         this._currentMenu.onInputBack();
                     }
@@ -118,12 +118,12 @@ export default class MenuManager {
      * @public
      * @member {Boolean}
      */
-    get active() {
-        return this._active;
+    get enabled() {
+        return this._enabled;
     }
 
-    set active(active) {
-        this._active = active;
+    set enabled(enabled) {
+        this._enabled = enabled;
     }
 
     /**
@@ -133,11 +133,11 @@ export default class MenuManager {
      * @returns {MenuManager}
      */
     enable(startMenu) {
-        if (!this._active) {
-            this._active = true;
+        if (!this._enabled) {
+            this._enabled = true;
             this._app.inputManager.add(this._inputs);
-            this._app.inputManager.on('pointer:move', this._onPointerMove, this);
-            this._app.inputManager.on('pointer:tap', this._onPointerTap, this);
+            this._app.inputManager.onPointerMove.add(this._onPointerMove, this);
+            this._app.inputManager.onPointerTap.add(this._onPointerTap, this);
 
             this.openMenu(startMenu);
         }
@@ -151,11 +151,11 @@ export default class MenuManager {
      * @returns {MenuManager}
      */
     disable() {
-        if (this._active) {
-            this._active = false;
+        if (this._enabled) {
+            this._enabled = false;
             this._app.inputManager.remove(this._inputs);
-            this._app.inputManager.off('pointer:move', this._onPointerMove, this);
-            this._app.inputManager.off('pointer:tap', this._onPointerTap, this);
+            this._app.inputManager.onPointerMove.remove(this._onPointerMove, this);
+            this._app.inputManager.onPointerTap.remove(this._onPointerTap, this);
 
             if (this._currentMenu) {
                 this._currentMenu.disable();
@@ -181,8 +181,8 @@ export default class MenuManager {
 
         this._menus.set(name, menu);
 
-        menu.on('openMenu', this.openMenu, this);
-        menu.on('openPreviousMenu', this.openPreviousMenu, this);
+        menu.onOpenMenu.add(this.openMenu, this);
+        menu.onOpenPrevMenu.add(this.openPreviousMenu, this);
 
         return this;
     }
@@ -254,10 +254,10 @@ export default class MenuManager {
      * @public
      */
     destroy() {
-        this._app.off('pointer:move', this._onPointerMove, this);
-        this._app.off('pointer:tap', this._onPointerTap, this);
+        this._app.onPointerMove.remove(this._onPointerMove, this);
+        this._app.onPointerTap.remove(this._onPointerTap, this);
 
-        if (this._active) {
+        if (this._enabled) {
             this.disable();
         }
 

@@ -34,11 +34,6 @@ app.start(new Exo.Scene({
         this._sprite = this._spritesheet.sprites['explosion-0'];
 
         /**
-         * @type {Timer}
-         */
-        this._timer = new Exo.Timer(true, 10);
-
-        /**
          * @type {Number}
          */
         this._frame = 0;
@@ -58,11 +53,8 @@ app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        if (this._timer.expired) {
-            this._frame = (this._frame + 1) % this._frames;
-            this._sprite = this._spritesheet.sprites[`explosion-${this._frame}`];
-            this._timer.restart();
-        }
+        this._frame = (this._frame + 1) % this._frames;
+        this._sprite = this._spritesheet.sprites[`explosion-${this._frame}`];
     },
 
     /**

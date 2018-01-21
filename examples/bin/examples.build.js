@@ -12437,7 +12437,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
         document.title = example.title + ' - ExoJS Examples';
         $title.html('Example Code: ' + example.title);
 
-        loader.clear();
+        loader.reset();
         loader.loadItem({
             type: 'text',
             name: activePath,

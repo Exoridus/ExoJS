@@ -97,7 +97,7 @@ app.start(new Exo.Scene({
         this._info.setPosition(canvas.width / 2, 0);
         this._info.setAnchor(0.5, 0);
 
-        this.app.inputManager.on('pointer:down', this.updateBlendMode, this);
+        this.app.inputManager.onPointerDown.add(this.updateBlendMode, this);
 
         this.updateBlendMode();
     },

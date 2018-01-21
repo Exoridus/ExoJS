@@ -1,4 +1,4 @@
-import { Container } from 'exojs';
+import { Container, Signal } from 'exojs';
 import MenuPath from './MenuPath';
 import MenuAction from './MenuAction';
 import MenuItem from './MenuItem';
@@ -52,6 +52,18 @@ export default class Menu extends Container {
          * @member {?String}
          */
         this._previousMenu = previousMenu;
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onOpenMenu = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onOpenPrevMenu = new Signal();
     }
 
     /**
@@ -64,6 +76,24 @@ export default class Menu extends Container {
 
     set previousMenu(value) {
         this._previousMenu = value || null;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onOpenMenu() {
+        return this._onOpenMenu;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onOpenPrevMenu() {
+        return this._onOpenPrevMenu;
     }
 
     /**
@@ -249,14 +279,14 @@ export default class Menu extends Container {
      * @param {String} menu
      */
     openMenu(menu) {
-        this.trigger('openMenu', menu);
+        this._onOpenMenu.dispatch(menu);
     }
 
     /**
      * @public
      */
     openPreviousMenu() {
-        this.trigger('openPreviousMenu');
+        this._onOpenPrevMenu.dispatch(this._previousMenu);
     }
 
     /**
@@ -297,6 +327,12 @@ export default class Menu extends Container {
 
         this._actions.length = 0;
         this._actions = null;
+
+        this._onOpenMenu.destroy();
+        this._onOpenMenu = null;
+
+        this._onOpenPrevMenu.destroy();
+        this._onOpenPrevMenu = null;
 
         this._previousMenu = null;
         this._startChild = null;

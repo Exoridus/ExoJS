@@ -1,16 +1,15 @@
-import EventEmitter from './EventEmitter';
 import Clock from './time/Clock';
 import SceneManager from './SceneManager';
 import RenderManager from '../rendering/RenderManager';
 import InputManager from '../input/InputManager';
 import Loader from '../resources/Loader';
 import settings from '../settings';
+import Signal from './Signal';
 
 /**
  * @class Application
- * @extends EventEmitter
  */
-export default class Application extends EventEmitter {
+export default class Application {
 
     /**
      * @constructor
@@ -24,8 +23,6 @@ export default class Application extends EventEmitter {
      * @param {?Database} [options.database=null]
      */
     constructor(options) {
-        super();
-
         const config = Object.assign({}, settings.APP_OPTIONS, options);
 
         /**
@@ -89,13 +86,19 @@ export default class Application extends EventEmitter {
          * @private
          * @member {Clock}
          */
-        this._delta = new Clock(false);
+        this._delta = new Clock();
 
         /**
          * @private
          * @member {Boolean}
          */
         this._running = false;
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onResize = new Signal();
 
         if (this._canvasParent) {
             this._canvasParent.appendChild(this._canvas);
@@ -168,6 +171,15 @@ export default class Application extends EventEmitter {
     /**
      * @public
      * @readonly
+     * @member {Signal}
+     */
+    get onResize() {
+        return this._onResize;
+    }
+
+    /**
+     * @public
+     * @readonly
      * @member {Number}
      */
     get FPS() {
@@ -233,8 +245,7 @@ export default class Application extends EventEmitter {
      */
     resize(width, height) {
         this._renderManager.resize(width, height);
-
-        this.trigger('resize', width, height, this);
+        this._onResize.dispatch(width, height, this);
 
         return this;
     }
@@ -243,8 +254,6 @@ export default class Application extends EventEmitter {
      * @public
      */
     destroy() {
-        super.destroy();
-
         this.stop();
 
         if (this._canvasParent) {
@@ -265,6 +274,9 @@ export default class Application extends EventEmitter {
 
         this._delta.destroy();
         this._delta = null;
+
+        this._onResize.destroy();
+        this._onResize = null;
 
         this._config = null;
         this._canvas = null;

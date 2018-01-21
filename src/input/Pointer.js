@@ -1,7 +1,7 @@
 import Vector from '../math/Vector';
 import Size from '../math/Size';
 import Flags from '../math/Flags';
-import EventEmitter from '../core/EventEmitter';
+import Signal from '../core/Signal';
 
 /**
  * @private
@@ -26,17 +26,14 @@ const FLAGS = {
 
 /**
  * @class Pointer
- * @extends EventEmitter
  */
-export default class Pointer extends EventEmitter {
+export default class Pointer {
 
     /**
      * @constructor
      * @param {PointerEvent} event
      */
     constructor(event) {
-        super();
-
         const bounds = event.target.getBoundingClientRect();
 
         /**
@@ -55,13 +52,16 @@ export default class Pointer extends EventEmitter {
          * @private
          * @member {Vector}
          */
-        this._position = new Vector(event.clientX - bounds.left, event.clientY - bounds.top);
+        this._position = new Vector(
+            event.clientX - bounds.left,
+            event.clientY - bounds.top
+        );
 
         /**
          * @private
          * @member {Vector}
          */
-        this._downPosition = new Vector(-1, -1);
+        this._startPos = new Vector(-1, -1);
 
         /**
          * @private
@@ -98,6 +98,42 @@ export default class Pointer extends EventEmitter {
          * @member {Flags}
          */
         this._flags = new Flags();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdatePosition = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdateTilt = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdateRotation = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdateSize = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdateButtons = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdatePressure = new Signal();
     }
 
     /**
@@ -125,15 +161,6 @@ export default class Pointer extends EventEmitter {
      */
     get position() {
         return this._position;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Vector}
-     */
-    get downPosition() {
-        return this._downPosition;
     }
 
     /**
@@ -219,14 +246,77 @@ export default class Pointer extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Vector}
+     */
+    get startPos() {
+        return this._startPos;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdatePosition() {
+        return this._onUpdatePosition;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdateTilt() {
+        return this._onUpdateTilt;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdateRotation() {
+        return this._onUpdateRotation;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdateSize() {
+        return this._onUpdateSize;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdateButtons() {
+        return this._onUpdateButtons;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdatePressure() {
+        return this._onUpdatePressure;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {PointerEvent} event
      * @returns {Pointer}
      */
-    setEventData(event) {
+    update(event) {
         const bounds = event.target.getBoundingClientRect(),
-            x = event.clientX - bounds.left,
-            y = event.clientY - bounds.top;
+            x = (event.clientX - bounds.left),
+            y = (event.clientY - bounds.top);
 
         if ((this._position.x !== x) || (this._position.y !== y)) {
             this._position.set(x, y);
@@ -266,53 +356,53 @@ export default class Pointer extends EventEmitter {
      * @chainable
      * @returns {Pointer}
      */
-    update() {
-        if (this._flags.value) {
-            if (this._flags.has(FLAGS.POSITION)) {
-                this.trigger('move', this._position, this);
-                this._flags.remove(FLAGS.POSITION);
-            }
+    updateEvents() {
+        if (!this._flags.value) {
+            return this;
+        }
 
-            if (this._flags.has(FLAGS.SIZE)) {
-                this.trigger('resize', this._size, this);
-                this._flags.remove(FLAGS.SIZE);
-            }
+        if (this._flags.has(FLAGS.POSITION)) {
+            this._onUpdatePosition.dispatch(this._position);
+            this._flags.remove(FLAGS.POSITION);
+        }
 
-            if (this._flags.has(FLAGS.TILT)) {
-                this.trigger('tilt', this._tilt, this);
-                this._flags.remove(FLAGS.TILT);
-            }
+        if (this._flags.has(FLAGS.TILT)) {
+            this._onUpdateTilt.dispatch(this._tilt);
+            this._flags.remove(FLAGS.TILT);
+        }
 
-            if (this._flags.has(FLAGS.ROTATION)) {
-                this.trigger('rotate', this._rotation, this);
-                this._flags.remove(FLAGS.ROTATION);
-            }
+        if (this._flags.has(FLAGS.ROTATION)) {
+            this._onUpdateRotation.dispatch(this._rotation, this);
+            this._flags.remove(FLAGS.ROTATION);
+        }
 
-            if (this._flags.has(FLAGS.BUTTONS)) {
-                this.trigger('buttonsChanged', this._buttons, this);
-                this._flags.remove(FLAGS.BUTTONS);
-            }
+        if (this._flags.has(FLAGS.SIZE)) {
+            this._onUpdateSize.dispatch(this._size, this);
+            this._flags.remove(FLAGS.SIZE);
+        }
 
-            if (this._flags.has(FLAGS.PRESSURE)) {
-                this.trigger('pressureChanged', this._pressure, this);
-                this._flags.remove(FLAGS.PRESSURE);
-            }
+        if (this._flags.has(FLAGS.BUTTONS)) {
+            this._onUpdateButtons.dispatch(this._buttons, this);
+            this._flags.remove(FLAGS.BUTTONS);
+        }
+
+        if (this._flags.has(FLAGS.PRESSURE)) {
+            this._onUpdatePressure.dispatch(this._pressure, this);
+            this._flags.remove(FLAGS.PRESSURE);
         }
 
         return this;
     }
 
     /**
-     * @override
+     * @public
      */
     destroy() {
-        super.destroy();
-
         this._position.destroy();
         this._position = null;
 
-        this._downPosition.destroy();
-        this._downPosition = null;
+        this._startPos.destroy();
+        this._startPos = null;
 
         this._size.destroy();
         this._size = null;
@@ -322,6 +412,24 @@ export default class Pointer extends EventEmitter {
 
         this._flags.destroy();
         this._flags = null;
+
+        this._onUpdatePosition.destroy();
+        this._onUpdatePosition = null;
+
+        this._onUpdateTilt.destroy();
+        this._onUpdateTilt = null;
+
+        this._onUpdateRotation.destroy();
+        this._onUpdateRotation = null;
+
+        this._onUpdateSize.destroy();
+        this._onUpdateSize = null;
+
+        this._onUpdateButtons.destroy();
+        this._onUpdateButtons = null;
+
+        this._onUpdatePressure.destroy();
+        this._onUpdatePressure = null;
 
         this._id = null;
         this._type = null;

@@ -1,5 +1,5 @@
 import settings from '../settings';
-import EventEmitter from '../core/EventEmitter';
+import Signal from '../core/Signal';
 import ResourceContainer from './ResourceContainer';
 import ArrayBufferFactory from './factories/ArrayBufferFactory';
 import BlobFactory from './factories/BlobFactory';
@@ -15,9 +15,8 @@ import SVGFactory from './factories/SVGFactory';
 
 /**
  * @class Loader
- * @extends EventEmitter
  */
-export default class Loader extends EventEmitter {
+export default class Loader {
 
     /**
      * @constructor
@@ -35,7 +34,6 @@ export default class Loader extends EventEmitter {
         mode = settings.REQUEST_MODE,
         cache = settings.REQUEST_CACHE,
     } = {}) {
-        super();
 
         /**
          * @private
@@ -63,12 +61,6 @@ export default class Loader extends EventEmitter {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._loaded = 0;
-
-        /**
-         * @private
          * @member {ResourceContainer}
          */
         this._resources = new ResourceContainer();
@@ -91,6 +83,30 @@ export default class Loader extends EventEmitter {
          */
         this._cache = cache;
 
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onQueueResource = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStartLoading = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onLoadResource = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onFinishLoading = new Signal();
+
         this._addFactories();
     }
 
@@ -110,15 +126,6 @@ export default class Loader extends EventEmitter {
      */
     get queue() {
         return this._queue;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get loaded() {
-        return this._loaded;
     }
 
     /**
@@ -192,6 +199,42 @@ export default class Loader extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onQueueResource() {
+        return this._onQueueResource;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onLoadResource() {
+        return this._onLoadResource;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStartLoading() {
+        return this._onStartLoading;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onFinishLoading() {
+        return this._onFinishLoading;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {String} type
      * @param {ResourceFactory} factory
@@ -234,12 +277,14 @@ export default class Loader extends EventEmitter {
         if (typeof itemsOrName === 'object') {
             for (const [name, path] of Object.entries(itemsOrName)) {
                 this._queue.push({ type, name, path, options: optionsOrPath });
+                this._onQueueResource.dispatch(this._queue[this._queue.length - 1]);
             }
 
             return this;
         }
 
         this._queue.push({ type, name: itemsOrName, path: optionsOrPath, options });
+        this._onQueueResource.dispatch(this._queue[this._queue.length - 1]);
 
         return this;
     }
@@ -250,21 +295,22 @@ export default class Loader extends EventEmitter {
      * @returns {Promise<ResourceContainer>}
      */
     async load(callback) {
-        this._loaded = 0;
+        const queue = this._queue.splice(0),
+            length = queue.length;
+
+        let itemsLoaded = 0;
 
         if (callback) {
-            this.once('complete', callback, this);
+            this._onFinishLoading.once(callback, this);
         }
 
-        this.trigger('start', this._queue.length, this._loaded, this._queue);
+        this._onStartLoading.dispatch(length, itemsLoaded, queue);
 
-        for (const item of this._queue) {
-            this.trigger('progress', this._queue.length, ++this._loaded, await this.loadItem(item));
+        for (const item of queue) {
+            this._onLoadResource.dispatch(length, ++itemsLoaded, await this.loadItem(item));
         }
 
-        this.trigger('complete', this._queue.length, this._loaded, this._resources);
-
-        this._queue.length = 0;
+        this._onFinishLoading.dispatch(length, itemsLoaded, this._resources);
 
         return this._resources;
     }
@@ -306,14 +352,17 @@ export default class Loader extends EventEmitter {
      * @public
      * @chainable
      * @param {Object} [options]
-     * @param {Boolean} [options.events=true]
+     * @param {Boolean} [options.signals=true]
      * @param {Boolean} [options.queue=true]
      * @param {Boolean} [options.resources=true]
      * @returns {Loader}
      */
-    clear({ events = true, queue = true, resources = true } = {}) {
-        if (events) {
-            this.off('*');
+    reset({ signals = true, queue = true, resources = true } = {}) {
+        if (signals) {
+            this._onQueueResource.clear();
+            this._onStartLoading.clear();
+            this._onLoadResource.clear();
+            this._onFinishLoading.clear();
         }
 
         if (queue) {
@@ -331,8 +380,6 @@ export default class Loader extends EventEmitter {
      * @public
      */
     destroy() {
-        super.destroy();
-
         for (const factory of this._factories.values()) {
             factory.destroy();
         }
@@ -350,6 +397,18 @@ export default class Loader extends EventEmitter {
 
         this._resources.destroy();
         this._resources = null;
+
+        this._onQueueResource.destroy();
+        this._onQueueResource = null;
+
+        this._onStartLoading.destroy();
+        this._onStartLoading = null;
+
+        this._onLoadResource.destroy();
+        this._onLoadResource = null;
+
+        this._onFinishLoading.destroy();
+        this._onFinishLoading = null;
 
         this._resourcePath = null;
         this._method = null;

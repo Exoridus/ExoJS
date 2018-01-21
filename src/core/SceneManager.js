@@ -1,8 +1,4 @@
-/**
- * @inner
- * @type {Object<String, Number>}
- */
-import EventEmitter from './EventEmitter';
+import Signal from './Signal';
 
 /**
  * @inner
@@ -16,16 +12,14 @@ const STATUS = {
 
 /**
  * @class SceneManager
- * @extends EventEmitter
  */
-export default class SceneManager extends EventEmitter {
+export default class SceneManager {
 
     /**
      * @constructor
      * @param {Application} app
      */
     constructor(app) {
-        super();
 
         /**
          * @private
@@ -35,15 +29,39 @@ export default class SceneManager extends EventEmitter {
 
         /**
          * @private
+         * @member {?Scene}
+         */
+        this._scene = null;
+
+        /**
+         * @private
          * @member {Number}
          */
         this._status = STATUS.NONE;
 
         /**
          * @private
-         * @member {?Scene}
+         * @member {Signal}
          */
-        this._scene = null;
+        this._onChangeScene = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStartScene = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdateScene = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStopScene = new Signal();
     }
 
     /**
@@ -78,6 +96,42 @@ export default class SceneManager extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onChangeScene() {
+        return this._onChangeScene;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStartScene() {
+        return this._onStartScene;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdateScene() {
+        return this._onUpdateScene;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStopScene() {
+        return this._onStopScene;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {?Scene} scene
      * @returns {Promise<SceneManager>}
@@ -87,19 +141,17 @@ export default class SceneManager extends EventEmitter {
             this._unloadScene();
 
             this._scene = scene;
+            this._onChangeScene.dispatch(scene);
 
             if (scene) {
                 this._status = STATUS.LOADING;
-
-                this.trigger('scene:load');
 
                 scene.app = this._app;
                 scene.load(this._app.loader);
                 scene.init(await this._app.loader.load());
 
                 this._status = STATUS.RUNNING;
-
-                this.trigger('scene:start');
+                this._onStartScene.dispatch(scene);
             }
         }
 
@@ -116,6 +168,7 @@ export default class SceneManager extends EventEmitter {
         if (this.sceneRunning) {
             this._scene.update(delta);
             this._scene.draw(this._app.renderManager);
+            this._onUpdateScene.dispatch(this._scene);
         }
 
         return this;
@@ -125,12 +178,22 @@ export default class SceneManager extends EventEmitter {
      * @public
      */
     destroy() {
-        super.destroy();
-
         this._unloadScene();
 
-        this._scene = null;
+        this._onChangeScene.destroy();
+        this._onChangeScene = null;
+
+        this._onStartScene.destroy();
+        this._onStartScene = null;
+
+        this._onUpdateScene.destroy();
+        this._onUpdateScene = null;
+
+        this._onStopScene.destroy();
+        this._onStopScene = null;
+
         this._status = null;
+        this._scene = null;
         this._app = null;
     }
 
@@ -141,15 +204,13 @@ export default class SceneManager extends EventEmitter {
         if (this._scene) {
             if (this.sceneRunning) {
                 this._scene.unload();
-
-                this.trigger('scene:unloaded');
+                this._onStopScene.dispatch();
             }
 
             this._scene.destroy();
             this._scene = null;
-            this._status = STATUS.NONE;
 
-            this.trigger('scene:destroyed');
+            this._status = STATUS.NONE;
         }
     }
 }

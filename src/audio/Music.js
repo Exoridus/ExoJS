@@ -1,12 +1,11 @@
 import { clamp } from '../utils/math';
 import { AUDIO_CONTEXT } from '../const/core';
-import EventEmitter from '../core/EventEmitter';
+import Signal from '../core/Signal';
 
 /**
  * @class Music
- * @extends EventEmitter
  */
-export default class Music extends EventEmitter {
+export default class Music {
 
     /**
      * @constructor
@@ -19,7 +18,6 @@ export default class Music extends EventEmitter {
      * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     constructor(audioElement, options) {
-        super();
 
         /**
          * @private
@@ -71,6 +69,18 @@ export default class Music extends EventEmitter {
          */
         this._sourceNode = AUDIO_CONTEXT.createMediaElementSource(audioElement);
         this._sourceNode.connect(this._gainNode);
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStart = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStop = new Signal();
 
         if (options) {
             this.applyOptions(options);
@@ -221,6 +231,24 @@ export default class Music extends EventEmitter {
 
     /**
      * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStart() {
+        return this._onStart;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStop() {
+        return this._onStop;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Object} [options]
      * @property {Boolean} [options.loop]
@@ -237,7 +265,7 @@ export default class Music extends EventEmitter {
 
         if (this.paused) {
             this._audioElement.play();
-            this.trigger('start');
+            this._onStart.dispatch();
         }
 
         return this;
@@ -251,7 +279,7 @@ export default class Music extends EventEmitter {
     pause() {
         if (this.playing) {
             this._audioElement.pause();
-            this.trigger('stop');
+            this._onStop.dispatch();
         }
 
         return this;
@@ -323,8 +351,6 @@ export default class Music extends EventEmitter {
      * @public
      */
     destroy() {
-        super.destroy();
-
         this.stop();
 
         this._sourceNode.disconnect();
@@ -332,6 +358,12 @@ export default class Music extends EventEmitter {
 
         this._gainNode.disconnect();
         this._gainNode = null;
+
+        this._onStart.destroy();
+        this._onStart = null;
+
+        this._onStop.destroy();
+        this._onStop = null;
 
         this._audioElement = null;
         this._duration = null;

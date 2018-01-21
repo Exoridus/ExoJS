@@ -159,14 +159,14 @@ export default class GameScene extends Scene {
      * @private
      */
     _addEvents() {
-        this._player.on('move', this._updateCamera, this);
+        this._player.onMove.add(this._updateCamera, this);
     }
 
     /**
      * @private
      */
     _removeEvents() {
-        this._player.off('move', this._updateCamera, this);
+        this._player.onMove.remove(this._updateCamera, this);
     }
 
     /**
@@ -183,7 +183,7 @@ export default class GameScene extends Scene {
             GAMEPAD.Start,
         ], {
             context: this,
-            trigger() {
+            onTrigger() {
                 if (this._paused) {
                     this._resumeGame();
                 } else {

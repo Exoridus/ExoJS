@@ -4,17 +4,16 @@ import support from '../support';
 import { stopEvent } from '../utils/core';
 import Vector from '../math/Vector';
 import Pointer from './Pointer';
-import EventEmitter from '../core/EventEmitter';
 import Gamepad from './Gamepad';
 import { GLOBAL } from '../const/core';
+import Signal from '../core/Signal';
+import { getDistance } from '../utils/math';
 
-const
-
-    /**
-     * @inner
-     * @type {Object<String, Number>}
-     */
-    FLAGS = {
+/**
+ * @inner
+ * @type {Object<String, Number>}
+ */
+const FLAGS = {
         NONE:           0x000,
         KEY_DOWN:       0x001,
         KEY_UP:         0x002,
@@ -24,7 +23,7 @@ const
         POINTER_DOWN:   0x020,
         POINTER_UP:     0x040,
         POINTER_CANCEL: 0x080,
-        MOUSE_SCROLL:   0x100,
+        MOUSE_WHEEL:   0x100,
     },
 
     /**
@@ -61,16 +60,14 @@ const
 
 /**
  * @class InputManager
- * @extends EventEmitter
  */
-export default class InputManager extends EventEmitter {
+export default class InputManager {
 
     /**
      * @constructor
      * @param {Application} app
      */
     constructor(app) {
-        super();
 
         /**
          * @private
@@ -92,21 +89,44 @@ export default class InputManager extends EventEmitter {
 
         /**
          * @private
-         * @member {Number[]}
+         * @member {Object<Number, Pointer>}
          */
-        this._keyDownChannels = [];
+        this._pointers = {};
+
+        /**
+         * @private
+         * @member {Object<Number, Gamepad>}
+         */
+        this._gamepads = {
+            0: new Gamepad(0, this._channels),
+            1: new Gamepad(1, this._channels),
+            2: new Gamepad(2, this._channels),
+            3: new Gamepad(3, this._channels),
+        };
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._wheelOffset = new Vector();
+
+        /**
+         * @private
+         * @member {Flags}
+         */
+        this._flags = new Flags();
 
         /**
          * @private
          * @member {Number[]}
          */
-        this._keyUpChannels = [];
+        this._channelsPressed = [];
 
         /**
          * @private
-         * @member {Map<Number, Pointer>}
+         * @member {Number[]}
          */
-        this._pointers = new Map();
+        this._channelsReleased = [];
 
         /**
          * @private
@@ -124,19 +144,19 @@ export default class InputManager extends EventEmitter {
          * @private
          * @member {Pointer[]}
          */
+        this._pointersPressed = [];
+
+        /**
+         * @private
+         * @member {Pointer[]}
+         */
         this._pointersMoved = [];
 
         /**
          * @private
          * @member {Pointer[]}
          */
-        this._pointersDown = [];
-
-        /**
-         * @private
-         * @member {Pointer[]}
-         */
-        this._pointersUp = [];
+        this._pointersReleased = [];
 
         /**
          * @private
@@ -146,26 +166,87 @@ export default class InputManager extends EventEmitter {
 
         /**
          * @private
-         * @member {Vector}
+         * @member {Signal}
          */
-        this._scrollDelta = new Vector();
+        this._onPointerEnter = new Signal();
 
         /**
          * @private
-         * @member {Gamepad[]}
+         * @member {Signal}
          */
-        this._gamepads = [
-            new Gamepad(0, this._channels),
-            new Gamepad(1, this._channels),
-            new Gamepad(2, this._channels),
-            new Gamepad(3, this._channels),
-        ];
+        this._onPointerLeave = new Signal();
 
         /**
          * @private
-         * @member {Flags}
+         * @member {Signal}
          */
-        this._flags = new Flags();
+        this._onPointerDown = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onPointerMove = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onPointerUp = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onPointerTap = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onPointerSwipe = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onPointerCancel = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onMouseWheel = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onKeyDown = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onKeyUp = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onGamepadConnected = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onGamepadDisconnected = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onGamepadUpdated = new Signal();
 
         this._addEventListeners();
     }
@@ -182,7 +263,7 @@ export default class InputManager extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Map<Number, Pointer>}
+     * @member {Object<Number, Pointer>}
      */
     get pointers() {
         return this._pointers;
@@ -191,10 +272,136 @@ export default class InputManager extends EventEmitter {
     /**
      * @public
      * @readonly
-     * @member {Gamepad[]}
+     * @member {Object<Number, Gamepad>}
      */
     get gamepads() {
         return this._gamepads;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerEnter() {
+        return this._onPointerEnter;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerLeave() {
+        return this._onPointerLeave;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerDown() {
+        return this._onPointerDown;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerMove() {
+        return this._onPointerMove;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerUp() {
+        return this._onPointerUp;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerTap() {
+        return this._onPointerTap;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerSwipe() {
+        return this._onPointerSwipe;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onPointerCancel() {
+        return this._onPointerCancel;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onMouseWheel() {
+        return this._onMouseWheel;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onKeyDown() {
+        return this._onKeyDown;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onKeyUp() {
+        return this._onKeyUp;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onGamepadConnected() {
+        return this._onGamepadConnected;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onGamepadDisconnected() {
+        return this._onGamepadDisconnected;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onGamepadUpdated() {
+        return this._onGamepadUpdated;
     }
 
     /**
@@ -263,42 +470,39 @@ export default class InputManager extends EventEmitter {
             input.update(this._channels);
         }
 
-        this._updateState();
+        this._updateEvents();
 
-        for (const pointer of this._pointers.values()) {
-            pointer.update();
+        for (const pointer of Object.values(this._pointers)) {
+            pointer.updateEvents();
         }
 
         return this;
     }
 
     /**
-     * @override
+     * @public
      */
     destroy() {
-        super.destroy();
-
         this._removeEventListeners();
 
-        for (const pointer of this._pointers.values()) {
-            pointer.destroy();
+        for (const key of Object.keys(this._pointers)) {
+            this._pointers[key].destroy();
+            delete this._pointers[key];
         }
 
-        for (const gamepad of this._gamepads) {
-            gamepad.destroy();
+        for (const key of Object.keys(this._gamepads)) {
+            this._gamepads[key].destroy();
+            delete this._gamepads[key];
         }
 
         this._inputs.clear();
         this._inputs = null;
 
-        this._keyDownChannels.length = 0;
-        this._keyDownChannels = null;
+        this._channelsPressed.length = 0;
+        this._channelsPressed = null;
 
-        this._keyUpChannels.length = 0;
-        this._keyUpChannels = null;
-
-        this._pointers.clear();
-        this._pointers = null;
+        this._channelsReleased.length = 0;
+        this._channelsReleased = null;
 
         this._pointersEntered.length = 0;
         this._pointersEntered = null;
@@ -306,24 +510,68 @@ export default class InputManager extends EventEmitter {
         this._pointersLeft.length = 0;
         this._pointersLeft = null;
 
-        this._pointersDown.length = 0;
-        this._pointersDown = null;
+        this._pointersPressed.length = 0;
+        this._pointersPressed = null;
 
-        this._pointersUp.length = 0;
-        this._pointersUp = null;
+        this._pointersMoved.length = 0;
+        this._pointersMoved = null;
+
+        this._pointersReleased.length = 0;
+        this._pointersReleased = null;
 
         this._pointersCancelled.length = 0;
         this._pointersCancelled = null;
 
-        this._scrollDelta.destroy();
-        this._scrollDelta = null;
-
-        this._gamepads.length = 0;
-        this._gamepads = null;
+        this._wheelOffset.destroy();
+        this._wheelOffset = null;
 
         this._flags.destroy();
         this._flags = null;
 
+        this._onPointerEnter.destroy();
+        this._onPointerEnter = null;
+
+        this._onPointerLeave.destroy();
+        this._onPointerLeave = null;
+
+        this._onPointerDown.destroy();
+        this._onPointerDown = null;
+
+        this._onPointerMove.destroy();
+        this._onPointerMove = null;
+
+        this._onPointerUp.destroy();
+        this._onPointerUp = null;
+
+        this._onPointerTap.destroy();
+        this._onPointerTap = null;
+
+        this._onPointerSwipe.destroy();
+        this._onPointerSwipe = null;
+
+        this._onPointerCancel.destroy();
+        this._onPointerCancel = null;
+
+        this._onMouseWheel.destroy();
+        this._onMouseWheel = null;
+
+        this._onKeyDown.destroy();
+        this._onKeyDown = null;
+
+        this._onKeyUp.destroy();
+        this._onKeyUp = null;
+
+        this._onGamepadConnected.destroy();
+        this._onGamepadConnected = null;
+
+        this._onGamepadDisconnected.destroy();
+        this._onGamepadDisconnected = null;
+
+        this._onGamepadUpdated.destroy();
+        this._onGamepadUpdated = null;
+
+        this._gamepads = null;
+        this._pointers = null;
         this._channels = null;
         this._app = null;
     }
@@ -334,25 +582,25 @@ export default class InputManager extends EventEmitter {
     _addEventListeners() {
         const canvas = this._app.canvas;
 
-        this._onKeyDownHandler = this._onKeyDown.bind(this);
-        this._onKeyUpHandler = this._onKeyUp.bind(this);
-        this._onPointerEnterHandler = this._onPointerEnter.bind(this);
-        this._onPointerLeaveHandler = this._onPointerLeave.bind(this);
-        this._onPointerMoveHandler = this._onPointerMove.bind(this);
-        this._onPointerDownHandler = this._onPointerDown.bind(this);
-        this._onPointerUpHandler = this._onPointerUp.bind(this);
-        this._onPointerCancelHandler = this._onPointerCancel.bind(this);
-        this._onMouseScrollHandler = this._onMouseScroll.bind(this);
+        this._keyDownHandler = this._keyDown.bind(this);
+        this._keyUpHandler = this._keyUp.bind(this);
+        this._mouseWheelHandler = this._mouseWheel.bind(this);
+        this._pointerEnterHandler = this._pointerEnter.bind(this);
+        this._pointerLeaveHandler = this._pointerLeave.bind(this);
+        this._pointerDownHandler = this._pointerDown.bind(this);
+        this._pointerMoveHandler = this._pointerMove.bind(this);
+        this._pointerUpHandler = this._pointerUp.bind(this);
+        this._pointerCancelHandler = this._pointerCancel.bind(this);
 
-        GLOBAL.addEventListener('keydown', this._onKeyDownHandler, true);
-        GLOBAL.addEventListener('keyup', this._onKeyUpHandler, true);
-        canvas.addEventListener('pointerover', this._onPointerEnterHandler, passive);
-        canvas.addEventListener('pointerleave', this._onPointerLeaveHandler, passive);
-        canvas.addEventListener('pointercancel', this._onPointerCancelHandler, passive);
-        canvas.addEventListener('pointermove', this._onPointerMoveHandler, passive);
-        canvas.addEventListener('pointerdown', this._onPointerDownHandler, active);
-        canvas.addEventListener('pointerup', this._onPointerUpHandler, active);
-        canvas.addEventListener('wheel', this._onMouseScrollHandler, active);
+        GLOBAL.addEventListener('keydown', this._keyDownHandler, true);
+        GLOBAL.addEventListener('keyup', this._keyUpHandler, true);
+        canvas.addEventListener('wheel', this._mouseWheelHandler, active);
+        canvas.addEventListener('pointerover', this._pointerEnterHandler, passive);
+        canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passive);
+        canvas.addEventListener('pointerdown', this._pointerDownHandler, active);
+        canvas.addEventListener('pointermove', this._pointerMoveHandler, passive);
+        canvas.addEventListener('pointerup', this._pointerUpHandler, active);
+        canvas.addEventListener('pointercancel', this._pointerCancelHandler, passive);
         canvas.addEventListener('contextmenu', stopEvent, active);
         canvas.addEventListener('selectstart', stopEvent, active);
     }
@@ -363,38 +611,38 @@ export default class InputManager extends EventEmitter {
     _removeEventListeners() {
         const canvas = this._app.canvas;
 
-        GLOBAL.removeEventListener('keydown', this._onKeyDownHandler, true);
-        GLOBAL.removeEventListener('keyup', this._onKeyUpHandler, true);
-        canvas.removeEventListener('pointerover', this._onPointerEnterHandler, passive);
-        canvas.removeEventListener('pointerleave', this._onPointerLeaveHandler, passive);
-        canvas.removeEventListener('pointercancel', this._onPointerCancelHandler, passive);
-        canvas.removeEventListener('pointermove', this._onPointerMoveHandler, passive);
-        canvas.removeEventListener('pointerdown', this._onPointerDownHandler, active);
-        canvas.removeEventListener('pointerup', this._onPointerUpHandler, active);
-        canvas.removeEventListener('wheel', this._onMouseScrollHandler, active);
+        GLOBAL.removeEventListener('keydown', this._keyDownHandler, true);
+        GLOBAL.removeEventListener('keyup', this._keyUpHandler, true);
+        canvas.removeEventListener('wheel', this._mouseWheelHandler, active);
+        canvas.removeEventListener('pointerover', this._pointerEnterHandler, passive);
+        canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passive);
+        canvas.removeEventListener('pointerdown', this._pointerDownHandler, active);
+        canvas.removeEventListener('pointermove', this._pointerMoveHandler, passive);
+        canvas.removeEventListener('pointerup', this._pointerUpHandler, active);
+        canvas.removeEventListener('pointercancel', this._pointerCancelHandler, passive);
         canvas.removeEventListener('contextmenu', stopEvent, active);
         canvas.removeEventListener('selectstart', stopEvent, active);
 
-        this._onKeyDownHandler = null;
-        this._onKeyUpHandler = null;
-        this._onPointerEnterHandler = null;
-        this._onPointerLeaveHandler = null;
-        this._onPointerMoveHandler = null;
-        this._onPointerDownHandler = null;
-        this._onPointerUpHandler = null;
-        this._onPointerCancelHandler = null;
-        this._onMouseScrollHandler = null;
+        this._keyDownHandler = null;
+        this._keyUpHandler = null;
+        this._mouseWheelHandler = null;
+        this._pointerEnterHandler = null;
+        this._pointerLeaveHandler = null;
+        this._pointerDownHandler = null;
+        this._pointerMoveHandler = null;
+        this._pointerUpHandler = null;
+        this._pointerCancelHandler = null;
     }
 
     /**
      * @private
      * @param {Event} event
      */
-    _onKeyDown(event) {
+    _keyDown(event) {
         const channel = (CHANNEL_OFFSET.KEYBOARD + event.keyCode);
 
         this._channels[channel] = 1;
-        this._keyDownChannels.push(channel);
+        this._channelsPressed.push(channel);
         this._flags.add(FLAGS.KEY_DOWN);
     }
 
@@ -402,11 +650,11 @@ export default class InputManager extends EventEmitter {
      * @private
      * @param {Event} event
      */
-    _onKeyUp(event) {
+    _keyUp(event) {
         const channel = (CHANNEL_OFFSET.KEYBOARD + event.keyCode);
 
         this._channels[channel] = 0;
-        this._keyUpChannels.push(channel);
+        this._channelsReleased.push(channel);
         this._flags.add(FLAGS.KEY_UP);
     }
 
@@ -414,10 +662,10 @@ export default class InputManager extends EventEmitter {
      * @private
      * @param {PointerEvent} event
      */
-    _onPointerEnter(event) {
+    _pointerEnter(event) {
         const pointer = new Pointer(event);
 
-        this._pointers.set(pointer.id, pointer);
+        this._pointers[pointer.id] = pointer;
         this._pointersEntered.push(pointer);
         this._flags.add(FLAGS.POINTER_ENTER);
     }
@@ -426,12 +674,10 @@ export default class InputManager extends EventEmitter {
      * @private
      * @param {PointerEvent} event
      */
-    _onPointerLeave(event) {
-        const pointer = this._pointers
-            .get(event.pointerId)
-            .setEventData(event);
+    _pointerLeave(event) {
+        const pointer = this._pointers[event.pointerId].update(event);
 
-        this._pointers.delete(pointer.id);
+        delete this._pointers[pointer.id];
         this._pointersLeft.push(pointer);
         this._flags.add(FLAGS.POINTER_LEAVE);
     }
@@ -440,13 +686,11 @@ export default class InputManager extends EventEmitter {
      * @private
      * @param {PointerEvent} event
      */
-    _onPointerDown(event) {
-        const pointer = this._pointers.get(event.pointerId);
+    _pointerDown(event) {
+        const pointer = this._pointers[event.pointerId].update(event);
 
-        pointer.setEventData(event);
-        pointer.downPosition.set(pointer.x, pointer.y);
-
-        this._pointersDown.push(pointer);
+        pointer.startPos.copy(pointer.position);
+        this._pointersPressed.push(pointer);
         this._flags.add(FLAGS.POINTER_DOWN);
 
         event.preventDefault();
@@ -456,12 +700,21 @@ export default class InputManager extends EventEmitter {
      * @private
      * @param {PointerEvent} event
      */
-    _onPointerUp(event) {
-        const pointer = this._pointers
-            .get(event.pointerId)
-            .setEventData(event);
+    _pointerMove(event) {
+        const pointer = this._pointers[event.pointerId].update(event);
 
-        this._pointersUp.push(pointer);
+        this._pointersMoved.push(pointer);
+        this._flags.add(FLAGS.POINTER_MOVE);
+    }
+
+    /**
+     * @private
+     * @param {PointerEvent} event
+     */
+    _pointerUp(event) {
+        const pointer = this._pointers[event.pointerId].update(event);
+
+        this._pointersReleased.push(pointer);
         this._flags.add(FLAGS.POINTER_UP);
 
         event.preventDefault();
@@ -471,10 +724,8 @@ export default class InputManager extends EventEmitter {
      * @private
      * @param {PointerEvent} event
      */
-    _onPointerCancel(event) {
-        const pointer = this._pointers
-            .get(event.pointerId)
-            .setEventData(event);
+    _pointerCancel(event) {
+        const pointer = this._pointers[event.pointerId].update(event);
 
         this._pointersCancelled.push(pointer);
         this._flags.add(FLAGS.POINTER_CANCEL);
@@ -482,162 +733,132 @@ export default class InputManager extends EventEmitter {
 
     /**
      * @private
-     * @param {PointerEvent} event
-     */
-    _onPointerMove(event) {
-        const pointer = this._pointers
-            .get(event.pointerId)
-            .setEventData(event);
-
-        this._pointersMoved.push(pointer);
-        this._flags.add(FLAGS.POINTER_MOVE);
-    }
-
-    /**
-     * @private
      * @param {WheelEvent} event
      */
-    _onMouseScroll(event) {
-        this._scrollDelta.set(event.deltaX, event.deltaY);
-        this._flags.add(FLAGS.MOUSE_SCROLL);
+    _mouseWheel(event) {
+        this._wheelOffset.set(event.deltaX, event.deltaY);
+        this._flags.add(FLAGS.MOUSE_WHEEL);
     }
 
     /**
      * @private
-     * @param {String} event
-     * @param {Pointer[]} pointers
-     * @param {Object} [overrides]
-     * @param {String} [overrides.pointerEvent]
-     * @param {String} [overrides.mouseEvent]
-     * @param {String} [overrides.touchEvent]
-     * @param {String} [overrides.penEvent]
-     */
-    _triggerPointerEvents(event, pointers, overrides) {
-        for (const pointer of pointers) {
-            this._triggerPointerEvent(event, pointer, overrides);
-        }
-    }
-
-    /**
-     * @private
-     * @param {String} event
-     * @param {Pointer} pointer
-     * @param {Object} [overrides]
-     * @param {String} [overrides.pointerEvent]
-     * @param {String} [overrides.mouseEvent]
-     * @param {String} [overrides.touchEvent]
-     * @param {String} [overrides.penEvent]
-     */
-    _triggerPointerEvent(event, pointer, { pointerEvent, mouseEvent, touchEvent, penEvent } = {}) {
-        this.trigger(`pointer:${pointerEvent || event}`, pointer, this._pointers);
-
-        if (pointer.type === 'mouse') {
-            this.trigger(`mouse:${mouseEvent || event}`, pointer, this._pointers);
-        } else if (pointer.type === 'touch') {
-            this.trigger(`touch:${touchEvent || event}`, pointer, this._pointers);
-        } else if (pointer.type === 'pen') {
-            this.trigger(`pen:${penEvent || event}`, pointer, this._pointers);
-        }
-    }
-
-    /**
-     * @private
+     * @chainable
+     * @returns {InputManager}
      */
     _updateGamepads() {
         const activeGamepads = GLOBAL.navigator.getGamepads();
 
-        for (const gamepad of this._gamepads) {
-            const activGamepad = activeGamepads[gamepad.index];
+        for (const gamepad of Object.values(this._gamepads)) {
+            const activeGamepad = activeGamepads[gamepad.index];
 
-            if (!!activGamepad !== gamepad.connected) {
-                if (activGamepad) {
-                    gamepad.connect(activGamepad);
-                    this.trigger('gamepad:connected', gamepad, this._gamepads);
+            if (!!activeGamepad !== gamepad.connected) {
+                if (activeGamepad) {
+                    this._onGamepadConnected.dispatch(gamepad.connect(activeGamepad), this._gamepads);
                 } else {
-                    gamepad.disconnect();
-                    this.trigger('gamepad:disconnected', gamepad, this._gamepads);
+                    this._onGamepadDisconnected.dispatch(gamepad.disconnect(), this._gamepads);
                 }
-
-                this.trigger('gamepad:updated', gamepad, this._gamepads);
             }
 
-            gamepad.update();
+            this._onGamepadUpdated.dispatch(gamepad.update(), this._gamepads);
         }
+
+        return this;
     }
 
     /**
      * @private
+     * @chainable
+     * @returns {InputManager}
      */
-    _updateState() {
+    _updateEvents() {
         if (!this._flags.value) {
-            return;
+            return this;
         }
 
         if (this._flags.has(FLAGS.KEY_DOWN)) {
-            this.trigger('key:down', this._keyDownChannels, this);
-            this._keyDownChannels.length = 0;
+            while (this._channelsPressed.length > 0) {
+                this._onKeyDown.dispatch(this._channelsPressed.pop());
+            }
+
             this._flags.remove(FLAGS.KEY_DOWN);
         }
 
         if (this._flags.has(FLAGS.KEY_UP)) {
-            this.trigger('key:up', this._keyUpChannels, this);
-            this._keyUpChannels.length = 0;
+            while (this._channelsReleased.length > 0) {
+                this._onKeyUp.dispatch(this._channelsReleased.pop());
+            }
+
             this._flags.remove(FLAGS.KEY_UP);
         }
 
         if (this._flags.has(FLAGS.POINTER_ENTER)) {
-            this._triggerPointerEvents('enter', this._pointersEntered);
-            this._pointersEntered.length = 0;
+            while (this._pointersEntered.length > 0) {
+                this._onPointerEnter.dispatch(this._pointersEntered.pop());
+            }
+
             this._flags.remove(FLAGS.POINTER_ENTER);
         }
 
         if (this._flags.has(FLAGS.POINTER_LEAVE)) {
-            this._triggerPointerEvents('leave', this._pointersLeft);
-            this._pointersLeft.length = 0;
+            while (this._pointersLeft.length > 0) {
+                this._onPointerLeave.dispatch(this._pointersLeft.pop());
+            }
+
             this._flags.remove(FLAGS.POINTER_LEAVE);
         }
 
-        if (this._flags.has(FLAGS.POINTER_MOVE)) {
-            this._triggerPointerEvents('move', this._pointersMoved);
-            this._pointersMoved.length = 0;
-            this._flags.remove(FLAGS.POINTER_MOVE);
-        }
-
         if (this._flags.has(FLAGS.POINTER_DOWN)) {
-            this._triggerPointerEvents('down', this._pointersDown, { touchEvent: 'start' });
-            this._pointersDown.length = 0;
+            while (this._pointersPressed.length > 0) {
+                this._onPointerDown.dispatch(this._pointersPressed.pop());
+            }
+
             this._flags.remove(FLAGS.POINTER_DOWN);
         }
 
-        if (this._flags.has(FLAGS.POINTER_UP)) {
-            for (const pointer of this._pointersUp) {
-                const { x, y } = pointer.downPosition;
-
-                this._triggerPointerEvent('up', pointer, { touchEvent: 'end' });
-
-                if (x > 0 && y > 0 && pointer.position.distanceTo(x, y) < 10) {
-                    this._triggerPointerEvent('tap', pointer, { mouseEvent: 'click' });
-                } else {
-                    this._triggerPointerEvent('tapoutside', pointer, { mouseEvent: 'clickoutside' });
-                }
-
-                pointer.downPosition.set(-1, -1);
+        if (this._flags.has(FLAGS.POINTER_MOVE)) {
+            while (this._pointersMoved.length > 0) {
+                this._onPointerMove.dispatch(this._pointersMoved.pop());
             }
 
-            this._pointersUp.length = 0;
+            this._flags.remove(FLAGS.POINTER_MOVE);
+        }
+
+        if (this._flags.has(FLAGS.POINTER_UP)) {
+            while (this._pointersReleased.length > 0) {
+                const pointer = this._pointersReleased.pop(),
+                    { x: startX, y: startY } = pointer.startPos;
+
+                this._onPointerUp.dispatch(pointer);
+
+                if (startX > 0 && startY > 0) {
+                    if (getDistance(startX, startY, pointer.x, pointer.y) < 10) {
+                        this._onPointerTap.dispatch(pointer);
+                    } else {
+                        this._onPointerSwipe.dispatch(pointer);
+                    }
+                }
+
+                pointer.startPos.set(-1, -1);
+            }
+
             this._flags.remove(FLAGS.POINTER_UP);
         }
 
         if (this._flags.has(FLAGS.POINTER_CANCEL)) {
-            this._triggerPointerEvents('cancel', this._pointersCancelled);
-            this._pointersCancelled.length = 0;
+            while (this._pointersCancelled.length > 0) {
+                this._onPointerCancel.dispatch(this._pointersCancelled.pop());
+            }
+
             this._flags.remove(FLAGS.POINTER_CANCEL);
         }
 
-        if (this._flags.has(FLAGS.MOUSE_SCROLL)) {
-            this.trigger('mouse:scroll', this._scrollDelta, this._pointers);
-            this._scrollDelta.set(0, 0);
-            this._flags.remove(FLAGS.MOUSE_SCROLL);
+        if (this._flags.has(FLAGS.MOUSE_WHEEL)) {
+            this._onMouseWheel.dispatch(this._wheelOffset);
+            this._wheelOffset.set(0, 0);
+
+            this._flags.remove(FLAGS.MOUSE_WHEEL);
         }
+
+        return this;
     }
 }

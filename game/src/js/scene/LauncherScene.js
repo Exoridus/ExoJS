@@ -9,6 +9,7 @@ export default class LauncherScene extends Scene {
 
     /**
      * @override
+     * @param {Loader} loader
      */
     load(loader) {
 
@@ -50,7 +51,7 @@ export default class LauncherScene extends Scene {
          */
         this._indicatorContext = this._indicatorCanvas.getContext('2d');
 
-        loader.on('progress', (length, index, resource) => this._renderProgress(index / length * 100));
+        loader.onLoadResource.add((length, index, resource) => this._renderProgress(index / length * 100));
 
         loader.add('texture', {
             'title/logo': 'image/title/logo.png',
@@ -101,7 +102,7 @@ export default class LauncherScene extends Scene {
             GAMEPAD.FaceBottom,
         ], {
             context: this,
-            trigger: this._openTitleHandler
+            onTrigger: this._openTitleHandler
         }));
     }
 

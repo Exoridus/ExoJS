@@ -1,11 +1,10 @@
 import settings from '../settings';
-import EventEmitter from '../core/EventEmitter';
+import Signal from '../core/Signal';
 
 /**
  * @class Gamepad
- * @extends EventEmitter
  */
-export default class Gamepad extends EventEmitter {
+export default class Gamepad {
 
     /**
      * @constructor
@@ -13,7 +12,6 @@ export default class Gamepad extends EventEmitter {
      * @param {Float32Array} channels
      */
     constructor(index, channels) {
-        super();
 
         /**
          * @private
@@ -44,6 +42,18 @@ export default class Gamepad extends EventEmitter {
          * @member {GamepadMapping}
          */
         this._mapping = settings.GAMEPAD_MAPPING;
+    }
+
+    /**
+     * @public
+     * @member {GamepadMapping}
+     */
+    get mapping() {
+        return this._mapping;
+    }
+
+    set mapping(mapping) {
+        this._mapping = mapping;
     }
 
     /**
@@ -84,18 +94,6 @@ export default class Gamepad extends EventEmitter {
 
     /**
      * @public
-     * @member {GamepadMapping}
-     */
-    get mapping() {
-        return this._mapping;
-    }
-
-    set mapping(mapping) {
-        this._mapping = mapping;
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {Gamepad} gamepad
      * @returns {Gamepad}
@@ -104,8 +102,6 @@ export default class Gamepad extends EventEmitter {
         if (!this._connected) {
             this._gamepad = gamepad;
             this._connected = true;
-
-            this.trigger('connect', this);
         }
 
         return this;
@@ -121,8 +117,6 @@ export default class Gamepad extends EventEmitter {
         if (this._connected) {
             this._gamepad = null;
             this._connected = false;
-
-            this.trigger('disconnect', this);
         }
 
         return this;
@@ -149,8 +143,6 @@ export default class Gamepad extends EventEmitter {
 
                     if (channels[channel] !== value) {
                         channels[channel] = value;
-
-                        this.trigger('update', channel, value, this);
                     }
                 }
             }
@@ -163,8 +155,6 @@ export default class Gamepad extends EventEmitter {
 
                     if (channels[channel] !== value) {
                         channels[channel] = value;
-
-                        this.trigger('update', channel, value, this);
                     }
                 }
             }
@@ -174,11 +164,9 @@ export default class Gamepad extends EventEmitter {
     }
 
     /**
-     * @override
+     * @public
      */
     destroy() {
-        super.destroy();
-
         this.disconnect();
 
         this._mapping.destroy();

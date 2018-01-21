@@ -3,6 +3,7 @@ import Sprite from './sprite/Sprite';
 import Texture from './texture/Texture';
 import settings from '../settings';
 import { AUDIO_CONTEXT } from '../const/core';
+import Signal from '../core/Signal';
 
 /**
  * @class Video
@@ -87,6 +88,18 @@ export default class Video extends Sprite {
          */
         this._sourceNode = AUDIO_CONTEXT.createMediaElementSource(videoElement);
         this._sourceNode.connect(this._gainNode);
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStart = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onStop = new Signal();
 
         this.applyOptions({ volume, loop, speed, time, muted });
     }
@@ -247,6 +260,24 @@ export default class Video extends Sprite {
 
     /**
      * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStart() {
+        return this._onStart;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onStop() {
+        return this._onStop;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Object} [options]
      * @property {Boolean} [options.loop]
@@ -260,7 +291,7 @@ export default class Video extends Sprite {
         if (this.paused) {
             this.applyOptions(options);
             this._videoElement.play();
-            this.trigger('start');
+            this._onStart.dispatch();
         }
 
         return this;
@@ -274,7 +305,7 @@ export default class Video extends Sprite {
     pause() {
         if (this.playing) {
             this._videoElement.pause();
-            this.trigger('stop');
+            this._onStop.dispatch();
         }
 
         return this;
@@ -367,6 +398,12 @@ export default class Video extends Sprite {
 
         this._gainNode.disconnect();
         this._gainNode = null;
+
+        this._onStart.destroy();
+        this._onStart = null;
+
+        this._onStop.destroy();
+        this._onStop = null;
 
         this._videoElement = null;
         this._duration = null;

@@ -12,24 +12,25 @@ export default class Collision {
     /**
      * @constructor
      * @param {Object} options
-     * @param {*} options.shapeA
-     * @param {*} options.shapeB
-     * @param {Number} options.distance
-     * @param {Vector} options.separation
+     * @param {Polygon|Circle|Rectangle|SceneNode} options.shapeA
+     * @param {Polygon|Circle|Rectangle|SceneNode} options.shapeB
+     * @param {Number} options.overlap
      * @param {Boolean} options.shapeAInB
      * @param {Boolean} options.shapeBInA
+     * @param {Vector} options.projectionN
+     * @param {Vector} options.projectionV
      */
-    constructor({ shapeA, shapeB, distance = 0, separation = new Vector(), shapeAInB = false, shapeBInA = false } = {}) {
+    constructor({ shapeA, shapeB, overlap, shapeAInB, shapeBInA, projectionN, projectionV } = {}) {
 
         /**
          * @private
-         * @member {*}
+         * @member {Polygon|Circle|Rectangle|SceneNode}
          */
         this._shapeA = shapeA;
 
         /**
          * @private
-         * @member {*}
+         * @member {Polygon|Circle|Rectangle|SceneNode}
          */
         this._shapeB = shapeB;
 
@@ -37,13 +38,7 @@ export default class Collision {
          * @private
          * @member {Number}
          */
-        this._distance = distance;
-
-        /**
-         * @private
-         * @member {Vector}
-         */
-        this._separation = separation;
+        this._overlap = overlap;
 
         /**
          * @private
@@ -56,88 +51,96 @@ export default class Collision {
          * @member {Boolean}
          */
         this._shapeBInA = shapeBInA;
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._projectionN = projectionN;
+
+        /**
+         * @private
+         * @member {Vector}
+         */
+        this._projectionV = projectionV;
     }
 
     /**
      * @public
-     * @member {*}
+     * @readonly
+     * @member {Polygon|Circle|Rectangle|SceneNode}
      */
     get shapeA() {
         return this._shapeA;
     }
 
-    set shapeA(value) {
-        this._shapeA = value;
-    }
-
     /**
      * @public
-     * @member {*}
+     * @readonly
+     * @member {Polygon|Circle|Rectangle|SceneNode}
      */
     get shapeB() {
         return this._shapeB;
     }
 
-    set shapeB(value) {
-        this._shapeB = value;
-    }
-
     /**
      * @public
+     * @readonly
      * @member {Number}
      */
-    get distance() {
-        return this._distance;
-    }
-
-    set distance(value) {
-        this._distance = value;
+    get overlap() {
+        return this._overlap;
     }
 
     /**
      * @public
-     * @member {Vector}
-     */
-    get separation() {
-        return this._separation;
-    }
-
-    set separation(value) {
-        this._separation.copy(value);
-    }
-
-    /**
-     * @public
+     * @readonly
      * @member {Boolean}
      */
     get shapeAInB() {
         return this._shapeAInB;
     }
 
-    set shapeAInB(value) {
-        this._shapeAInB = value;
-    }
-
     /**
      * @public
+     * @readonly
      * @member {Boolean}
      */
     get shapeBInA() {
         return this._shapeBInA;
     }
 
-    set shapeBInA(value) {
-        this._shapeBInA = value;
+    /**
+     * @public
+     * @readonly
+     * @member {Vector}
+     */
+    get projectionN() {
+        return this._projectionN;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Vector}
+     */
+    get projectionV() {
+        return this._projectionV;
     }
 
     /**
      * @public
      */
     destroy() {
+        this._projectionN.destroy();
+        this._projectionN = null;
+
+        this._projectionV.destroy();
+        this._projectionV = null;
+
         this._shapeA = null;
         this._shapeB = null;
-        this._distance = null;
-        this._separation = null;
+        this._overlap = null;
         this._shapeAInB = null;
         this._shapeBInA = null;
     }
@@ -145,8 +148,8 @@ export default class Collision {
     /**
      * @public
      * @static
-     * @param {*} shapeA
-     * @param {*} shapeB
+     * @param {Polygon|Circle|Rectangle|SceneNode} shapeA
+     * @param {Polygon|Circle|Rectangle|SceneNode} shapeB
      * @returns {Boolean}
      */
     static intersectionSAT(shapeA, shapeB) {
@@ -179,8 +182,8 @@ export default class Collision {
     /**
      * @public
      * @static
-     * @param {*} shapeA
-     * @param {*} shapeB
+     * @param {Polygon|Circle|Rectangle|SceneNode} shapeA
+     * @param {Polygon|Circle|Rectangle|SceneNode} shapeB
      * @returns {?Collision}
      */
     static collisionSAT(shapeA, shapeB) {

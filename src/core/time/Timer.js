@@ -9,29 +9,22 @@ export default class Timer extends Clock {
 
     /**
      * @constructor
-     * @param {Boolean} autoStart
-     * @param {Number} [timeLimit=0]
+     * @param {Number} timeLimit
      * @param {Number} [factor=TIME.MILLISECONDS]
+     * @param {Boolean} [autoStart=false]
      */
-    constructor(autoStart, timeLimit = 0, factor = TIME.MILLISECONDS) {
-        super(false);
+    constructor(timeLimit, factor = TIME.MILLISECONDS, autoStart = false) {
+        super();
 
         /**
          * @private
          * @member {Number}
          */
-        this._limit = timeLimit;
+        this._limit = (timeLimit * factor);
 
         if (autoStart) {
-            this.restart(timeLimit, factor);
+            this.restart();
         }
-    }
-
-    /**
-     * @override
-     */
-    get running() {
-        return this._running && !this.expired;
     }
 
     /**
@@ -77,34 +70,5 @@ export default class Timer extends Clock {
      */
     get remainingHours() {
         return this.remainingMilliseconds / TIME.HOURS;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} [timeLimit=this._limit]
-     * @param {Number} [factor=TIME.MILLISECONDS]
-     * @returns {Timer}
-     */
-    reset(timeLimit = this._limit, factor = TIME.MILLISECONDS) {
-        this._limit = (timeLimit * factor);
-        this._timeBuffer = 0;
-        this._running = false;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Number} [timeLimit=this._limit]
-     * @param {Number} [factor=TIME.MILLISECONDS]
-     * @returns {Timer}
-     */
-    restart(timeLimit = this._limit, factor = TIME.MILLISECONDS) {
-        this.reset(timeLimit, factor);
-        this.start();
-
-        return this;
     }
 }

@@ -1,5 +1,4 @@
 import { FLAGS } from '../const/core';
-import EventEmitter from '../core/EventEmitter';
 import ObservableVector from './ObservableVector';
 import Matrix from './Matrix';
 import { degreesToRadians } from '../utils/math';
@@ -7,15 +6,13 @@ import Flags from './Flags';
 
 /**
  * @class Transformable
- * @extends EventEmitter
  */
-export default class Transformable extends EventEmitter {
+export default class Transformable {
 
     /**
      * @constructor
      */
     constructor() {
-        super();
 
         /**
          * @private
@@ -278,8 +275,6 @@ export default class Transformable extends EventEmitter {
      * @public
      */
     destroy() {
-        super.destroy();
-
         this._transform.destroy();
         this._transform = null;
 

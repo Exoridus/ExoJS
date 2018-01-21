@@ -60,8 +60,8 @@
                 "path": "misc/gamepad.js"
             },
             {
-                "title": "Audio Analysis",
-                "path": "misc/audio-analysis.js"
+                "title": "Audio Visualisation",
+                "path": "misc/audio-visualisation.js"
             },
             {
                 "title": "Benchmark",

@@ -72,7 +72,7 @@ app.start(new Exo.Scene({
             // Move Up
             new Exo.Input(Exo.KEYBOARD.W, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.move(0, value * -this._moveSpeed);
                 },
             }),
@@ -80,7 +80,7 @@ app.start(new Exo.Scene({
             // Move Down
             new Exo.Input(Exo.KEYBOARD.S, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.move(0, value * this._moveSpeed);
                 },
             }),
@@ -88,7 +88,7 @@ app.start(new Exo.Scene({
             // Move Left
             new Exo.Input(Exo.KEYBOARD.A, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.move(value * -this._moveSpeed, 0);
                 },
             }),
@@ -96,7 +96,7 @@ app.start(new Exo.Scene({
             // Move Right
             new Exo.Input(Exo.KEYBOARD.D, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.move(value * this._moveSpeed, 0);
                 },
             }),
@@ -104,7 +104,7 @@ app.start(new Exo.Scene({
             // Zoom In
             new Exo.Input(Exo.KEYBOARD.Up, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.zoom(1 + (value * -this._zoomSpeed));
                 },
             }),
@@ -112,7 +112,7 @@ app.start(new Exo.Scene({
             // Zoom Out
             new Exo.Input(Exo.KEYBOARD.Down, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.zoom(1 + (value * this._zoomSpeed));
                 },
             }),
@@ -120,7 +120,7 @@ app.start(new Exo.Scene({
             // Rotate Left
             new Exo.Input(Exo.KEYBOARD.Left, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.rotate(value * -this._rotationSpeed);
                 },
             }),
@@ -128,7 +128,7 @@ app.start(new Exo.Scene({
             // Rotate Right
             new Exo.Input(Exo.KEYBOARD.Right, {
                 context: this,
-                active(value) {
+                onActive(value) {
                     this._camera.rotate(value * this._rotationSpeed);
                 },
             }),
@@ -136,7 +136,7 @@ app.start(new Exo.Scene({
             // Reset
             new Exo.Input(Exo.KEYBOARD.R, {
                 context: this,
-                trigger(value) {
+                onTrigger(value) {
                     this._camera.reset(0, 0, width, height);
                 },
             })

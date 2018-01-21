@@ -9,11 +9,11 @@ export default class ObservableSize extends Size {
     /**
      * @constructor
      * @param {Function} callback
-     * @param {*} scope
+     * @param {?Object} context
      * @param {Number} [width=0]
      * @param {Number} [height=0]
      */
-    constructor(callback, scope, width = 0, height = 0) {
+    constructor(callback, context, width = 0, height = 0) {
         super(width, height);
 
         /**
@@ -24,9 +24,9 @@ export default class ObservableSize extends Size {
 
         /**
          * @private
-         * @member {*}
+         * @member {?Object}
          */
-        this._scope = scope || this;
+        this._context = context || this;
     }
 
     /**
@@ -40,7 +40,7 @@ export default class ObservableSize extends Size {
     set width(width) {
         if (this._width !== width) {
             this._width = width;
-            this._callback.call(this._scope);
+            this._callback.call(this._context);
         }
     }
 
@@ -55,7 +55,7 @@ export default class ObservableSize extends Size {
     set height(height) {
         if (this._height !== height) {
             this._height = height;
-            this._callback.call(this._scope);
+            this._callback.call(this._context);
         }
     }
 
@@ -66,7 +66,7 @@ export default class ObservableSize extends Size {
         if (this._width !== width || this._height !== height) {
             this._width = width;
             this._height = height;
-            this._callback.call(this._scope);
+            this._callback.call(this._context);
         }
 
         return this;
@@ -111,7 +111,7 @@ export default class ObservableSize extends Size {
      * @override
      */
     clone() {
-        return new ObservableSize(this._callback, this._scope, this._width, this._height);
+        return new ObservableSize(this._callback, this._context, this._width, this._height);
     }
 
     /**
@@ -121,6 +121,6 @@ export default class ObservableSize extends Size {
         super.destroy();
 
         this._callback = null;
-        this._scope = null;
+        this._context = null;
     }
 }

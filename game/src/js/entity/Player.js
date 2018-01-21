@@ -1,4 +1,4 @@
-import { KEYBOARD, GAMEPAD, clamp, Sprite, Vector, Rectangle, Size, Timer, Input } from 'exojs';
+import { KEYBOARD, GAMEPAD, clamp, Sprite, Vector, Rectangle, Size, Timer, Input, Signal } from 'exojs';
 
 const
 
@@ -127,10 +127,25 @@ export default class Player extends Sprite {
          */
         this._speed = this._walkingSpeed;
 
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onMove = new Signal();
+
         this._addInputs();
         this._updateFrame();
         this.setAnchor(0.5, 1);
         this.setPosition(this._spawnPoint.x, this._spawnPoint.y);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onMove() {
+        return this._onMove;
     }
 
     /**
@@ -182,6 +197,9 @@ export default class Player extends Sprite {
 
         this._frameTimer.destroy();
         this._frameTimer = null;
+
+        this._onMove.destroy();
+        this._onMove = null;
 
         this._frameIndex = null;
         this._frameCount = null;
@@ -275,7 +293,7 @@ export default class Player extends Sprite {
                 this._setFrameIndex(1);
             }
 
-            this.trigger('move', this.x, this.y, this);
+            this._onMove.dispatch(this.x, this.y, this);
         } else if (this._moving) {
             this._moving = false;
             this._frameTimer.stop();
@@ -311,7 +329,7 @@ export default class Player extends Sprite {
             GAMEPAD.DPadUp,
         ], {
             context: this,
-            active(value) {
+            onActive(value) {
                 this._velocity.add(0, value * -1);
             },
         });
@@ -323,7 +341,7 @@ export default class Player extends Sprite {
             GAMEPAD.DPadDown,
         ], {
             context: this,
-            active(value) {
+            onActive(value) {
                 this._velocity.add(0, value);
             },
         });
@@ -335,7 +353,7 @@ export default class Player extends Sprite {
             GAMEPAD.DPadLeft,
         ], {
             context: this,
-            active(value) {
+            onActive(value) {
                 this._velocity.add(value * -1, 0);
             },
         });
@@ -347,7 +365,7 @@ export default class Player extends Sprite {
             GAMEPAD.DPadRight,
         ], {
             context: this,
-            active(value) {
+            onActive(value) {
                 this._velocity.add(value, 0);
             },
         });
@@ -357,10 +375,10 @@ export default class Player extends Sprite {
             GAMEPAD.FaceLeft,
         ], {
             context: this,
-            start() {
+            onStart() {
                 this._speed = this._runningSpeed;
             },
-            stop() {
+            onStop() {
                 this._speed = this._walkingSpeed;
             }
         });

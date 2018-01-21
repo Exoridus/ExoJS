@@ -1,7 +1,7 @@
 /**
  * @namespace Exo
  */
-export { default as EventEmitter } from './EventEmitter';
+export { default as Signal } from './Signal';
 export { default as Application } from './Application';
 export { default as Quadtree } from './Quadtree';
 export { default as Scene } from './Scene';
