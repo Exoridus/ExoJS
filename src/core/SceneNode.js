@@ -22,12 +22,6 @@ export default class SceneNode extends Transformable {
 
         /**
          * @private
-         * @member {?SceneNode}
-         */
-        this._parent = null;
-
-        /**
-         * @private
          * @member {Matrix}
          */
         this._globalTransform = new Matrix();
@@ -49,18 +43,30 @@ export default class SceneNode extends Transformable {
          * @member {ObservableVector}
          */
         this._anchor = new ObservableVector(this._updateOrigin, this, 0, 0);
+
+        /**
+         * @private
+         * @member {?SceneNode}
+         */
+        this._parent = null;
+
+        /**
+         * @private
+         * @member {?Circle|?Rectangle|?Polygon}
+         */
+        this._hitbox = null;
     }
 
     /**
      * @public
-     * @member {?Scene}
+     * @member {Vector}
      */
-    get scene() {
-        return this._scene;
+    get anchor() {
+        return this._anchor;
     }
 
-    set scene(scene) {
-        this._scene = scene;
+    set anchor(anchor) {
+        this._anchor.copy(anchor);
     }
 
     /**
@@ -77,14 +83,14 @@ export default class SceneNode extends Transformable {
 
     /**
      * @public
-     * @member {Vector}
+     * @member {?Circle|?Rectangle|?Polygon}
      */
-    get anchor() {
-        return this._anchor;
+    get hitbox() {
+        return this._hitbox;
     }
 
-    set anchor(anchor) {
-        this._anchor.copy(anchor);
+    set hitbox(hitbox) {
+        this._hitbox = hitbox;
     }
 
     /**
@@ -127,7 +133,7 @@ export default class SceneNode extends Transformable {
      * @returns {Rectangle}
      */
     getBounds() {
-        this.updateParentTransforms();
+        this.updateParentTransform();
         this.updateBounds();
 
         return this._bounds.getRect();
@@ -150,9 +156,9 @@ export default class SceneNode extends Transformable {
      * @chainable
      * @returns {SceneNode}
      */
-    updateParentTransforms() {
+    updateParentTransform() {
         if (this._parent) {
-            this._parent.updateParentTransforms();
+            this._parent.updateParentTransform();
         }
 
         this.updateTransform();
@@ -204,28 +210,36 @@ export default class SceneNode extends Transformable {
 
     /**
      * @public
-     * @param {SceneNode} node
+     * @param {SceneNode} target
      * @returns {Boolean}
      */
-    intersects(node) {
-        if ((this.rotation % 90 === 0) && (node.rotation % 90 === 0)) {
-            return Collision.intersectionRectRect(this.getBounds(), node.getBounds());
+    intersects(target) {
+        if (!target) {
+            throw new Error('No collision target provided.');
         }
 
-        return Collision.intersectionSAT(this, node);
+        if ((this._rotation % 90 === 0) && (target.rotation % 90 === 0)) {
+            return Collision.intersectionRectRect(this.getBounds(), target.getBounds());
+        }
+
+        return Collision.intersectionSAT(this, target);
     }
 
     /**
      * @public
-     * @param {SceneNode} node
+     * @param {SceneNode} target
      * @returns {?Collision}
      */
-    getCollision(node) {
-        if ((this.rotation % 90 === 0) && (node.rotation % 90 === 0)) {
-            return Collision.collisionRectRect(this.getBounds(), node.getBounds());
+    getCollision(target) {
+        if (!target) {
+            throw new Error('No collision target provided.');
         }
 
-        return Collision.collisionSAT(this, node);
+        if ((this._rotation % 90 === 0) && (target.rotation % 90 === 0)) {
+            return Collision.collisionRectRect(this.getBounds(), target.getBounds());
+        }
+
+        return Collision.collisionSAT(this, target);
     }
 
     /**
@@ -260,6 +274,7 @@ export default class SceneNode extends Transformable {
         this._anchor = null;
 
         this._parent = null;
+        this._hitbox = null;
     }
 
     /**

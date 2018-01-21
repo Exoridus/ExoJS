@@ -235,27 +235,12 @@ export default class Rectangle {
      * @returns {Vector[]}
      */
     getNormals() {
-        const point = Vector.Temp,
-            normals = [];
-
-        for (let i = 0; i < 4; i++) {
-            point.set(
-                (((i + 1) % 3) === 0) ? this.left : this.right,
-                (((i + 1) / 2 | 0) === 0) ? this.top : this.bottom,
-            );
-
-            normals.push(
-                point.clone()
-                    .subtract(
-                        ((i % 3) === 0) ? this.left : this.right,
-                        ((i / 2 | 0) === 0) ? this.top : this.bottom
-                    )
-                    .perpLeft()
-                    .normalize()
-            );
-        }
-
-        return normals;
+        return [
+            new Vector(this.right - this.left, 0).perpLeft().normalize(),
+            new Vector(0, this.bottom - this.top).perpLeft().normalize(),
+            new Vector(this.left - this.right, 0).perpLeft().normalize(),
+            new Vector(0, this.top - this.bottom).perpLeft().normalize(),
+        ];
     }
 
     /**
@@ -265,26 +250,15 @@ export default class Rectangle {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        let min = axis.dot(this.left, this.top),
-            max = min,
-            projection;
+        const proj1 = axis.dot(this.left, this.top),
+            proj2 = axis.dot(this.right, this.top),
+            proj3 = axis.dot(this.right, this.bottom),
+            proj4 = axis.dot(this.left, this.bottom);
 
-        projection = axis.dot(this.right, this.top);
-
-        min = Math.min(min, projection);
-        max = Math.max(max, projection);
-
-        projection = axis.dot(this.right, this.bottom);
-
-        min = Math.min(min, projection);
-        max = Math.max(max, projection);
-
-        projection = axis.dot(this.left, this.bottom);
-
-        min = Math.min(min, projection);
-        max = Math.max(max, projection);
-
-        return result.set(min, max);
+        return result.set(
+            Math.min(proj1, proj2, proj3, proj4),
+            Math.max(proj1, proj2, proj3, proj4)
+        );
     }
 
     /**
@@ -295,66 +269,46 @@ export default class Rectangle {
      * @returns {Rectangle}
      */
     transform(matrix, result = this) {
-        const point = Vector.Temp;
+        const point = Vector.Temp.set(this.left, this.top).transform(matrix);
 
-        let minX, minY, maxX, maxY;
+        let minX = point.x,
+            maxX = point.x,
+            minY = point.y,
+            maxY = point.y;
 
-        point.set(this.left, this.top)
-            .transform(matrix);
-
-        minX = maxX = point.x;
-        minY = maxY = point.y;
-
-        point.set(this.left, this.bottom)
-            .transform(matrix);
+        point.set(this.left, this.bottom).transform(matrix);
 
         minX = Math.min(minX, point.x);
         minY = Math.min(minY, point.y);
         maxX = Math.max(maxX, point.x);
         maxY = Math.max(maxY, point.y);
 
-        point.set(this.right, this.top)
-            .transform(matrix);
+        point.set(this.right, this.top).transform(matrix);
 
         minX = Math.min(minX, point.x);
         minY = Math.min(minY, point.y);
         maxX = Math.max(maxX, point.x);
         maxY = Math.max(maxY, point.y);
 
-        point.set(this.right, this.bottom)
-            .transform(matrix);
+        point.set(this.right, this.bottom).transform(matrix);
 
         minX = Math.min(minX, point.x);
         minY = Math.min(minY, point.y);
         maxX = Math.max(maxX, point.x);
         maxY = Math.max(maxY, point.y);
 
-        return result.set(
-            minX,
-            minY,
-            maxX - minX,
-            maxY - minY
-        );
+        return result.set(minX, minY, maxX - minX, maxY - minY);
     }
 
     /**
      * @public
      * @param {Number} x
      * @param {Number} y
-     * @param {Matrix} [transform]
      * @returns {Boolean}
      */
-    contains(x, y, transform) {
-        let min = new Vector(this.left, this.top),
-            max = new Vector(this.right, this.bottom);
-
-        if (transform) {
-            min.transform(transform);
-            max.transform(transform);
-        }
-
-        return inRange(x, min.x, max.x)
-            && inRange(y, min.y, max.y);
+    contains(x, y) {
+        return inRange(x, this.left, this.right)
+            && inRange(y, this.top, this.bottom);
     }
 
     /**

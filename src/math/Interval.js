@@ -112,11 +112,7 @@ export default class Interval {
      * @returns {Number}
      */
     getOverlap(interval) {
-        if (!this.overlaps(interval)) {
-            return 0;
-        }
-
-        return Math.min(this._max, interval.max) - Math.max(this._min, interval.min);
+        return this._max < interval.max ? this._max - interval.min : interval.max - this._min;
     }
 
     /**

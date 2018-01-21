@@ -62,7 +62,7 @@ export default class Vector {
      * @member {Number}
      */
     get magnitude() {
-        return this.len;
+        return this.length;
     }
 
     /**
@@ -70,8 +70,8 @@ export default class Vector {
      * @readonly
      * @member {Number}
      */
-    get len() {
-        return Math.sqrt(this.len2);
+    get length() {
+        return Math.sqrt(this.lengthSquared);
     }
 
     /**
@@ -79,7 +79,7 @@ export default class Vector {
      * @readonly
      * @member {Number}
      */
-    get len2() {
+    get lengthSquared() {
         return (this._x * this._x) + (this._y * this._y);
     }
 
@@ -295,40 +295,23 @@ export default class Vector {
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Vector} vector
-     * @param {Vector} [result=this]
-     * @returns {Vector}
-     */
-    project(vector, result = this) {
-        const amt = this.dot(vector.x, vector.y) / vector.len2;
-
-        return result.set(amt * vector.x, amt * vector.y);
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {Vector} axis
-     * @returns {Vector}
-     */
-    reflect(axis, result = this) {
-        const x = this._x,
-            y = this._y;
-
-        return this
-            .project(axis, result)
-            .scale(2)
-            .subtract(x, y);
-    }
-
-    /**
      * @override
      */
     destroy() {
         this._x = null;
         this._y = null;
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Vector} vecA
+     * @param {Vector} vecB
+     * @param {Vector} [result=new Vector()]
+     * @returns {Vector}
+     */
+    static subtract(vecA, vecB, result = new Vector()) {
+        return result.copy(vecA).subtract(vecB.x, vecB.y);
     }
 }
 

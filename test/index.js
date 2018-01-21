@@ -1,9 +1,9 @@
 'use strict';
 
-require('../dist/exo');
+const Exo = require('../dist/exo.js');
 
 describe('Exo', function () {
-    it('should exist as a global object', function () {
+    it('should exist', function () {
         expect(Exo).to.be.an('object');
     });
 });

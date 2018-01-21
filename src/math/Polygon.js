@@ -201,22 +201,7 @@ export default class Polygon {
      * @returns {Vector[]}
      */
     getNormals() {
-        const normals = [],
-            len = this._points.length;
-
-        for (let i = 0; i < len; i++) {
-            const point = this._points[i],
-                nextPoint = this._points[(i + 1) % len];
-
-            normals.push(
-                nextPoint.clone()
-                .subtract(point.x, point.y)
-                .perpLeft()
-                .normalize()
-            );
-        }
-
-        return normals;
+        return this._points.map((point, i, points) => Vector.subtract(points[(i + 1) % points.length], point).perpLeft().normalize());
     }
 
     /**
@@ -226,22 +211,13 @@ export default class Polygon {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        const points = this._points,
-            len = points.length,
-            { x, y } = points[0];
+        const normal = axis.clone().normalize(),
+            projections = this._points.map((point) => normal.dot(point.x, point.y));
 
-        let min = axis.dot(x, y),
-            max = min;
-
-        for (let i = 1; i < len; i++) {
-            const { x, y } = points[i],
-                projection = axis.dot(x, y);
-
-            min = Math.min(min, projection);
-            max = Math.max(max, projection);
-        }
-
-        return result.set(min, max);
+        return result.set(
+            Math.min(...projections),
+            Math.max(...projections),
+        );
     }
 
     /**
@@ -251,27 +227,17 @@ export default class Polygon {
      * @param {Matrix} [transform]
      * @returns {Boolean}
      */
-    contains(x, y, transform) {
+    contains(x, y) {
         const points = this._points,
             len = points.length;
 
         let inside = false;
 
         for (let i = 0, j = len - 1; i < len; j = i++) {
-            const pointA = points[i],
-                pointB = points[j];
+            const { aX, aY } = points[i],
+                { bX, bY } = points[j];
 
-            let { x: x1, y: y1 } = pointA,
-                { x: x2, y: y2 } = pointB;
-
-            if (transform) {
-                x1 = (pointA.x * transform.a) + (pointA.y * transform.b) + transform.x;
-                y1 = (pointA.x * transform.c) + (pointA.y * transform.d) + transform.y;
-                x2 = (pointB.x * transform.a) + (pointB.y * transform.b) + transform.x;
-                y2 = (pointB.x * transform.c) + (pointB.y * transform.d) + transform.y;
-            }
-
-            if (((y1 <= y && y < y2) || (y2 <= y && y < y1)) && x < ((x2 - x1) / (y2 - y1) * (y - y1) + x1)) {
+            if (((aY <= y && y < bY) || (bY <= y && y < aY)) && x < ((bX - aX) / (bY - aY) * (y - aY) + aX)) {
                 inside = !inside;
             };
         }

@@ -239,20 +239,14 @@ export default class Sprite extends Container {
      * @returns {Vector[]}
      */
     getNormals() {
-        const normals = [],
-            positions = this.vertexPos,
-            len = positions.length;
+        const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertexPos;
 
-        for (let i = 0; i < len; i += 2) {
-            normals.push(
-                new Vector(
-                    positions[(i + 2) % len] - positions[i + 0],
-                    positions[(i + 3) % len] - positions[i + 1]
-                ).perpLeft().normalize()
-            );
-        }
-
-        return normals;
+        return [
+            new Vector(x2 - x1, y2 - y1).perpLeft().normalize(),
+            new Vector(x3 - x2, y3 - y2).perpLeft().normalize(),
+            new Vector(x4 - x3, y4 - y3).perpLeft().normalize(),
+            new Vector(x1 - x4, y1 - y4).perpLeft().normalize(),
+        ];
     }
 
     /**
@@ -262,20 +256,16 @@ export default class Sprite extends Container {
      * @returns {Interval}
      */
     project(axis, result = new Interval()) {
-        const positions = this.vertexPos,
-            len = positions.length;
+        const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertexPos,
+            proj1 = axis.dot(x1, y1),
+            proj2 = axis.dot(x2, y2),
+            proj3 = axis.dot(x3, y3),
+            proj4 = axis.dot(x4, y4);
 
-        let min = axis.dot(positions[0], positions[1]),
-            max = min;
-
-        for (let i = 2; i < len; i += 2) {
-            const projection = axis.dot(positions[i], positions[i + 1]);
-
-            min = Math.min(min, projection);
-            max = Math.max(max, projection);
-        }
-
-        return result.set(min, max);
+        return result.set(
+            Math.min(proj1, proj2, proj3, proj4),
+            Math.max(proj1, proj2, proj3, proj4)
+        );
     }
 
     /**
@@ -290,10 +280,10 @@ export default class Sprite extends Container {
             temp = Vector.Temp,
             vecA = temp.set(x2 - x1, y2 - y1),
             dotA = vecA.dot(x - x1, y - y1),
-            lenA = vecA.len2,
+            lenA = vecA.lengthSquared,
             vecB = temp.set(x3 - x2, y3 - y2),
             dotB = vecB.dot(x - x2, y - y2),
-            lenB = vecB.len2;
+            lenB = vecB.lengthSquared;
 
         return (dotA > 0) && (dotA <= lenA)
             && (dotB > 0) && (dotB <= lenB);
@@ -309,7 +299,6 @@ export default class Sprite extends Container {
         this._textureFrame = null;
 
         this._texture = null;
-        this._spriteData = null;
         this._vertexPos = null;
         this._vertexUvs = null;
     }

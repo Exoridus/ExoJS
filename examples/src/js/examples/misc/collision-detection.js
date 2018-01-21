@@ -23,50 +23,39 @@ app.start(new Exo.Scene({
         /**
          * @type {Sprite}
          */
-        this._boxL = new Exo.Sprite(resources.get('texture', 'rainbow'));
-        this._boxL.setPosition((canvas.width / 2) - 100, canvas.height / 2);
-        this._boxL.setAnchor(0.5, 0.5);
+        this._boxA = new Exo.Sprite(resources.get('texture', 'rainbow'));
+        this._boxA.setPosition(canvas.width / 2, canvas.height / 2);
+        this._boxA.setAnchor(0.5, 0.5);
 
         /**
          * @type {Sprite}
          */
-        this._boxR = new Exo.Sprite(resources.get('texture', 'rainbow'));
-        this._boxR.setPosition((canvas.width / 2) + 100, canvas.height / 2);
-        this._boxR.setAnchor(0.5, 0.5);
+        this._boxB = new Exo.Sprite(resources.get('texture', 'rainbow'));
+        this._boxB.setAnchor(0.5, 0.5);
+        this._boxB.setScale(0.5, 0.5);
 
         /**
          * @type {Container}
          */
         this._container = new Exo.Container();
-        this._container.addChild(this._boxL);
-        this._container.addChild(this._boxR);
+        this._container.addChild(this._boxA);
+        this._container.addChild(this._boxB);
 
         /**
          * @type {Number}
          */
         this._ticker = 0;
 
-        /**
-         * @type {?Pointer}
-         */
-        this._pointer = null;
-
-        this.app.inputManager.on('pointer:enter', (pointer) => (this._pointer = pointer));
-        this.app.inputManager.on('pointer:leave', () => (this._pointer = null));
+        this.app.inputManager.on('pointer:move', (pointer) => (this._boxB.position = pointer.position));
     },
 
     /**
      * @param {Time} delta
      */
     update(delta) {
-        const rotation = this._ticker * 10,
-            scale = 0.5 + (Math.sin(this._ticker) * 0.25 + 0.25);
-
-        this._boxL.setRotation(rotation);
-        this._boxL.setScale(scale);
-
-        this._boxR.setRotation(rotation * -1);
-        this._boxR.setScale(scale);
+        this._boxA.setScale(0.5 + (Math.cos(this._ticker) * 0.25 + 0.25));
+        this._boxA.setRotation(this._ticker * 25);
+        this._boxB.setRotation(this._ticker * -100);
 
         for (const child of this._container.children) {
             child.setTint(Exo.Color.White);
@@ -74,23 +63,15 @@ app.start(new Exo.Scene({
 
         for (const childA of this._container.children) {
             for (const childB of this._container.children) {
-                if (childB === childA) {
+                if (childA === childB) {
                     continue;
                 }
 
-                if (childB.intersects(childA)) {
-                    childA.setTint(Exo.Color.Red);
-                    childB.setTint(Exo.Color.Red);
-                }
+                const collision = childA.getCollision(childB);
 
-                if (this._pointer) {
-                    if (childA.contains(this._pointer.x, this._pointer.y)) {
-                        childA.setTint(Exo.Color.Green);
-                    }
-
-                    if (childB.contains(this._pointer.x, this._pointer.y)) {
-                        childB.setTint(Exo.Color.Green);
-                    }
+                if (collision !== null) {
+                    childA.setTint(collision.shapeAInB ? Exo.Color.Green : Exo.Color.Red);
+                    childB.setTint(collision.shapeBInA ? Exo.Color.Green : Exo.Color.Red);
                 }
             }
         }

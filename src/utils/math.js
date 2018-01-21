@@ -70,6 +70,23 @@ const
      * @public
      * @constant
      * @type {Function}
+     * @param {Number} x1
+     * @param {Number} x2
+     * @param {Number} y1
+     * @param {Number} y2
+     * @returns {Number}
+     */
+    getDistance = (x1, y1, x2, y2) => {
+        const offsetX = x1 - x2,
+            offsetY = y1 - y2;
+
+        return Math.sqrt((offsetX * offsetX) + (offsetY * offsetY));
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Function}
      * @param {Number} fromX
      * @param {Number} fromY
      * @param {Number} cpX1
@@ -145,6 +162,7 @@ export {
     lerp,
     isPowerOfTwo,
     inRange,
+    getDistance,
     bezierCurveTo,
     getVoronoiRegion,
 };

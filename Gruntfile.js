@@ -51,6 +51,7 @@ module.exports = (grunt) => {
                     filename: 'exo.js',
                     sourceMapFilename: 'exo.js.map',
                     library: 'Exo',
+                    libraryTarget: 'umd',
                 },
                 cache: false,
                 plugins: [

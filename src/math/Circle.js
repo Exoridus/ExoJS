@@ -3,6 +3,7 @@ import Rectangle from './Rectangle';
 import Polygon from './Polygon';
 import Collision from '../core/Collision';
 import Interval from './Interval';
+import { getDistance } from '../utils/math';
 
 /**
  * @class Circle
@@ -193,14 +194,8 @@ export default class Circle {
      * @param {Matrix} [transform]
      * @returns {Boolean}
      */
-    contains(x, y, transform) {
-        let position = this._position;
-
-        if (transform) {
-            position = position.transform(transform, Vector.Temp);
-        }
-
-        return (position.distanceTo(x, y) <= this._radius);
+    contains(x, y) {
+        return getDistance(this.x, this.y, x, y) <= this._radius;
     }
 
     /**
