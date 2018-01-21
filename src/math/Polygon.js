@@ -201,7 +201,7 @@ export default class Polygon {
      * @returns {Vector[]}
      */
     getNormals() {
-        return this._points.map((point, i, points) => Vector.subtract(points[(i + 1) % points.length], point).perpLeft().normalize());
+        return this._points.map((point, i, points) => Vector.subtract(points[(i + 1) % points.length], point).rperp().normalize());
     }
 
     /**

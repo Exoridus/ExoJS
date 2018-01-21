@@ -22,12 +22,12 @@ export const
      * @type {Object<String, Number>}
      * @property {Number} GAMEPAD
      * @property {Number} CATEGORY
-     * @property {Number} OVERALL
+     * @property {Number} GLOBAL
      */
     CHANNEL_RANGE = {
         GAMEPAD:    0x020,
         CATEGORY:   0x100,
-        OVERALL:    0x300,
+        GLOBAL:     0x300,
     },
 
     /**

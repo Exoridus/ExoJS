@@ -199,7 +199,7 @@ export default class SpriteRenderer extends Renderer {
      * @param {Sprite} sprite
      */
     render(sprite) {
-        const { texture, blendMode, tint, vertexPos, vertexUvs } = sprite,
+        const { texture, blendMode, tint, vertices, texCoords } = sprite,
             batchFull = (this._batchIndex >= this._batchSize),
             textureChanged = (texture !== this._currentTexture),
             blendModeChanged = (blendMode !== this._currentBlendMode),
@@ -225,35 +225,35 @@ export default class SpriteRenderer extends Renderer {
         texture.update();
 
         // X / Y
-        float32View[index + 0] = vertexPos[0];
-        float32View[index + 1] = vertexPos[1];
+        float32View[index + 0] = vertices[0];
+        float32View[index + 1] = vertices[1];
 
         // X / Y
-        float32View[index + 4] = vertexPos[2];
-        float32View[index + 5] = vertexPos[3];
+        float32View[index + 4] = vertices[2];
+        float32View[index + 5] = vertices[3];
 
         // X / Y
-        float32View[index + 8] = vertexPos[4];
-        float32View[index + 9] = vertexPos[5];
+        float32View[index + 8] = vertices[4];
+        float32View[index + 9] = vertices[5];
 
         // X / Y
-        float32View[index + 12] = vertexPos[6];
-        float32View[index + 13] = vertexPos[7];
+        float32View[index + 12] = vertices[6];
+        float32View[index + 13] = vertices[7];
 
         // U / V
-        uint32View[index + 2] = vertexUvs[0];
-        uint32View[index + 6] = vertexUvs[1];
+        uint32View[index + 2] = texCoords[0];
+        uint32View[index + 6] = texCoords[1];
 
         // U / V
-        uint32View[index + 10] = vertexUvs[2];
-        uint32View[index + 14] = vertexUvs[3];
+        uint32View[index + 10] = texCoords[2];
+        uint32View[index + 14] = texCoords[3];
 
         // Tint
         uint32View[index + 3]
             = uint32View[index + 7]
             = uint32View[index + 11]
             = uint32View[index + 15]
-            = tint.getRGBA();
+            = tint.toRGBA();
 
         this._batchIndex++;
 

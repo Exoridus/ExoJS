@@ -279,7 +279,7 @@ export default class ParticleRenderer extends Renderer {
                 = uint32View[index + 17]
                 = uint32View[index + 26]
                 = uint32View[index + 35]
-                = tint.getRGBA();
+                = tint.toRGBA();
 
             this._batchIndex++;
         }

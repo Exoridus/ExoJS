@@ -236,10 +236,10 @@ export default class Rectangle {
      */
     getNormals() {
         return [
-            new Vector(this.right - this.left, 0).perpLeft().normalize(),
-            new Vector(0, this.bottom - this.top).perpLeft().normalize(),
-            new Vector(this.left - this.right, 0).perpLeft().normalize(),
-            new Vector(0, this.top - this.bottom).perpLeft().normalize(),
+            new Vector(this.right - this.left, 0).rperp().normalize(),
+            new Vector(0, this.bottom - this.top).rperp().normalize(),
+            new Vector(this.left - this.right, 0).rperp().normalize(),
+            new Vector(0, this.top - this.bottom).rperp().normalize(),
         ];
     }
 

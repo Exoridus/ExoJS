@@ -82,7 +82,7 @@ export default class InputManager extends EventEmitter {
          * @private
          * @member {Float32Array}
          */
-        this._channels = new Float32Array(CHANNEL_RANGE.OVERALL);
+        this._channels = new Float32Array(CHANNEL_RANGE.GLOBAL);
 
         /**
          * @private
@@ -346,7 +346,6 @@ export default class InputManager extends EventEmitter {
 
         GLOBAL.addEventListener('keydown', this._onKeyDownHandler, true);
         GLOBAL.addEventListener('keyup', this._onKeyUpHandler, true);
-
         canvas.addEventListener('pointerover', this._onPointerEnterHandler, passive);
         canvas.addEventListener('pointerleave', this._onPointerLeaveHandler, passive);
         canvas.addEventListener('pointercancel', this._onPointerCancelHandler, passive);
@@ -366,7 +365,6 @@ export default class InputManager extends EventEmitter {
 
         GLOBAL.removeEventListener('keydown', this._onKeyDownHandler, true);
         GLOBAL.removeEventListener('keyup', this._onKeyUpHandler, true);
-
         canvas.removeEventListener('pointerover', this._onPointerEnterHandler, passive);
         canvas.removeEventListener('pointerleave', this._onPointerLeaveHandler, passive);
         canvas.removeEventListener('pointercancel', this._onPointerCancelHandler, passive);

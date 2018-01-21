@@ -1,5 +1,15 @@
 import Video from '../../rendering/Video';
 import BlobFactory from './BlobFactory';
+import support from '../../support';
+
+/**
+ * @inner
+ * @type {Object<String, Boolean>|Boolean}
+ */
+const once = (support.eventOptions ? {
+    capture: false,
+    once: true,
+} : false);
 
 /**
  * @class VideoFactory
@@ -23,10 +33,13 @@ export default class VideoFactory extends BlobFactory {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
 
-            video.addEventListener(loadEvent, () => resolve(new Video(video, options)));
-            video.addEventListener('error', () => reject(Error('Error loading audio source.')));
-            video.addEventListener('abort', () => reject(Error('Audio loading was canceled.')));
+            video.addEventListener('error', () => reject(Error('Video loading error.')), once);
+            video.addEventListener('abort', () => reject(Error('Video loading error: cancelled.')), once);
+            video.addEventListener('emptied', () => reject(Error('Video loading error: emptied.')), once);
+            video.addEventListener('stalled', () => reject(Error('Video loading error: stalled.')), once);
+            video.addEventListener(loadEvent, () => resolve(new Video(video, options)), once);
 
+            video.preload = 'auto'
             video.src = this.createObjectURL(blob);
         });
     }

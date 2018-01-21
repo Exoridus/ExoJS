@@ -105,27 +105,6 @@ export default class Color {
 
     /**
      * @public
-     * @member {Number}
-     */
-    get rgba() {
-        return this.getRGBA();
-    }
-
-    set rgba(rgba) {
-        this.setRGBA(rgba);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {String}
-     */
-    get hex() {
-        return `#${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {Number} [r=this._r]
      * @param {Number} [g=this._g]
@@ -142,34 +121,6 @@ export default class Color {
         this._rgba = null;
 
         return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Color}
-     */
-    setRGBA(rgba) {
-        this._a = ((rgba >> 24) & 255) / 255;
-        this._r = (rgba >> 16) & 255;
-        this._g = (rgba >> 8) & 255;
-        this._b = rgba & 255;
-
-        this._rgba = rgba;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @returns {Number}
-     */
-    getRGBA() {
-        if (this._rgba === null) {
-            this._rgba = this._a && (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
-        }
-
-        return this._rgba;
     }
 
     /**
@@ -212,21 +163,44 @@ export default class Color {
      * @returns {Float32Array}
      */
     toArray(normalized = false) {
-        const array = this._array || (this._array = new Float32Array(4));
-
-        if (normalized) {
-            array[0] = this._r / 255;
-            array[1] = this._g / 255;
-            array[2] = this._b / 255;
-        } else {
-            array[0] = this._r;
-            array[1] = this._g;
-            array[2] = this._b;
+        if (!this._array) {
+            this._array = new Float32Array(4);
         }
 
-        array[3] = this._a;
+        if (normalized) {
+            this._array[0] = this._r / 255;
+            this._array[1] = this._g / 255;
+            this._array[2] = this._b / 255;
+            this._array[3] = this._a;
+        } else {
+            this._array[0] = this._r;
+            this._array[1] = this._g;
+            this._array[2] = this._b;
+            this._array[3] = this._a;
+        }
 
-        return array;
+        return this._array;
+    }
+
+    /**
+     * @public
+     * @param {Boolean} [prefixed=true]
+     * @returns {String}
+     */
+    toHexString(prefixed = true) {
+        return `${prefixed ? '#' : ''}${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
+    }
+
+    /**
+     * @public
+     * @returns {Number}
+     */
+    toRGBA() {
+        if (this._rgba === null) {
+            this._rgba = this._a && (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;
+        }
+
+        return this._rgba;
     }
 
     /**

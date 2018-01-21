@@ -1,5 +1,15 @@
 import Music from '../../audio/Music';
 import BlobFactory from './BlobFactory';
+import support from '../../support';
+
+/**
+ * @inner
+ * @type {Object<String, Boolean>|Boolean}
+ */
+const once = (support.eventOptions ? {
+    capture: false,
+    once: true,
+} : false);
 
 /**
  * @class MusicFactory
@@ -23,10 +33,11 @@ export default class MusicFactory extends BlobFactory {
         return new Promise((resolve, reject) => {
             const audio = document.createElement('audio');
 
-            audio.addEventListener(loadEvent, () => resolve(new Music(audio, options)));
-            audio.addEventListener('error', () => reject(Error('Error loading audio source.')));
-            audio.addEventListener('abort', () => reject(Error('Audio loading was canceled.')));
+            audio.addEventListener('error', () => reject(Error('Error loading audio source.')), once);
+            audio.addEventListener('abort', () => reject(Error('Audio loading was canceled.')), once);
+            audio.addEventListener(loadEvent, () => resolve(new Music(audio, options)), once);
 
+            audio.preload = 'auto'
             audio.src = this.createObjectURL(blob);
         });
     }
