@@ -9,18 +9,19 @@ export default class Timer extends Clock {
 
     /**
      * @constructor
-     * @param {Number} timeLimit
-     * @param {Number} [factor=TIME.MILLISECONDS]
-     * @param {Boolean} [autoStart=false]
+     * @param {Object} [options]
+     * @param {Number} [options.timeLimit=0]
+     * @param {Number} [options.factor=TIME.MILLISECONDS]
+     * @param {Boolean} [options.autoStart=false]
      */
-    constructor(timeLimit, factor = TIME.MILLISECONDS, autoStart = false) {
+    constructor({ limit = 0, factor = TIME.MILLISECONDS, autoStart = false } = {}) {
         super();
 
         /**
          * @private
          * @member {Number}
          */
-        this._limit = (timeLimit * factor);
+        this._limit = (limit * factor);
 
         if (autoStart) {
             this.restart();

@@ -30,7 +30,7 @@ export default class Input {
          * @private
          * @member {Timer}
          */
-        this._triggerTimer = new Timer(threshold);
+        this._triggerTimer = new Timer({ limit: threshold });
 
         /**
          * @private

@@ -40,7 +40,7 @@ export default class Interval {
      * @member {Number}
      */
     get max() {
-        return this._y;
+        return this._max;
     }
 
     set max(max) {
@@ -55,8 +55,8 @@ export default class Interval {
      * @returns {Interval}
      */
     set(min, max) {
-        this.min = min;
-        this.max = max;
+        this._min = min;
+        this._max = max;
 
         return this;
     }
@@ -76,7 +76,7 @@ export default class Interval {
      * @returns {Interval}
      */
     clone() {
-        return new Interval(this.min, this.max);
+        return new Interval(this._min, this._max);
     }
 
     /**

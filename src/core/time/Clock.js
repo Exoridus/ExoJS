@@ -13,17 +13,18 @@ export default class Clock {
 
     /**
      * @constructor
-     * @param {Number} [startTime=0]
-     * @param {Number} [factor=TIME.MILLISECONDS]
-     * @param {Boolean} [autoStart=false]
+     * @param {Object} [options]
+     * @param {Number} [options.start=0]
+     * @param {Number} [options.factor=TIME.MILLISECONDS]
+     * @param {Boolean} [options.autoStart=false]
      */
-    constructor(startTime = 0, factor = TIME.MILLISECONDS, autoStart = false) {
+    constructor({ start = 0, factor = TIME.MILLISECONDS, autoStart = false } = {}) {
 
         /**
          * @private
          * @member {Number}
          */
-        this._startTime = (startTime * factor);
+        this._startTime = (start * factor);
 
         /**
          * @private
