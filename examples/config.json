@@ -4,68 +4,68 @@
         "examples": [
             {
                 "title": "Sprite",
-                "path": "rendering/sprite.js"
+                "path": "sprite.js"
             },
             {
                 "title": "Container",
-                "path": "rendering/container.js"
+                "path": "container.js"
             },
             {
                 "title": "Spritesheet",
-                "path": "rendering/spritesheet.js"
+                "path": "spritesheet.js"
             },
             {
                 "title": "Blendmodes",
-                "path": "rendering/blendmodes.js"
+                "path": "blendmodes.js"
             },
             {
                 "title": "Tinted Sprites",
-                "path": "rendering/tinting.js"
+                "path": "tinted-sprites.js"
             },
             {
                 "title": "Camera Handling",
-                "path": "rendering/camera.js"
+                "path": "camera-handling.js"
             },
             {
                 "title": "Render to Texture",
-                "path": "rendering/render-to-texture.js"
+                "path": "render-to-texture.js"
             },
             {
                 "title": "Display Text",
-                "path": "rendering/text.js"
+                "path": "display-text.js"
             },
             {
                 "title": "Display Video",
-                "path": "rendering/video.js"
+                "path": "display-video.js"
             },
             {
                 "title": "Display SVG",
-                "path": "rendering/svg.js"
+                "path": "display-svg.js"
             }
         ]
     },
     {
-        "title": "Misc",
+        "title": "Extras",
         "examples": [
             {
                 "title": "Collision Detection",
-                "path": "misc/collision-detection.js"
+                "path": "collision-detection.js"
             },
             {
-                "title": "Particles",
-                "path": "misc/particles.js"
+                "title": "Particle System",
+                "path": "particle-system.js"
             },
             {
-                "title": "Gamepad",
-                "path": "misc/gamepad.js"
+                "title": "Gamepad Tester",
+                "path": "gamepad-tester.js"
             },
             {
                 "title": "Audio Visualisation",
-                "path": "misc/audio-visualisation.js"
+                "path": "audio-visualisation.js"
             },
             {
                 "title": "Benchmark",
-                "path": "misc/benchmark.js"
+                "path": "benchmark.js"
             }
         ]
     }

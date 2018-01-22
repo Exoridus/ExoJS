@@ -63,7 +63,7 @@ module.exports = (grunt) => {
             examples: {
                 entry: '<%= dirs.examples %>/src/js/index.js',
                 output: {
-                    path: __dirname + '/examples/bin',
+                    path: __dirname + '/examples/dist',
                     filename: 'examples.build.js',
                     sourceMapFilename: 'examples.build.js.map',
                 },
@@ -74,7 +74,7 @@ module.exports = (grunt) => {
             game: {
                 entry: '<%= dirs.game %>/src/js/index.js',
                 output: {
-                    path: __dirname + '/game/bin',
+                    path: __dirname + '/game/dist',
                     filename: 'game.build.js',
                     sourceMapFilename: 'game.build.js.map',
                 },
@@ -90,11 +90,11 @@ module.exports = (grunt) => {
             },
             examples: {
                 src: '<%= dirs.examples %>/src/scss/index.scss',
-                dest: '<%= dirs.examples %>/bin/examples.build.css',
+                dest: '<%= dirs.examples %>/dist/examples.build.css',
             },
             game: {
                 src: '<%= dirs.game %>/src/scss/index.scss',
-                dest: '<%= dirs.game %>/bin/game.build.css',
+                dest: '<%= dirs.game %>/dist/game.build.css',
             },
         },
         uglify: {
@@ -107,14 +107,14 @@ module.exports = (grunt) => {
                 dest: '<%= dirs.dist %>/exo.min.js',
             },
             examples: {
-                src: '<%= dirs.examples %>/bin/examples.build.js',
-                dest: '<%= dirs.examples %>/bin/examples.min.js',
+                src: '<%= dirs.examples %>/dist/examples.build.js',
+                dest: '<%= dirs.examples %>/dist/examples.min.js',
             },
         },
         cssmin: {
             examples: {
-                src: '<%= dirs.examples %>/bin/examples.build.css',
-                dest: '<%= dirs.examples %>/bin/examples.min.css',
+                src: '<%= dirs.examples %>/dist/examples.build.css',
+                dest: '<%= dirs.examples %>/dist/examples.min.css',
             },
         },
         clean: {

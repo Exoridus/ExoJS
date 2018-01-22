@@ -187,7 +187,7 @@ export default class Color {
      * @param {Boolean} [prefixed=true]
      * @returns {String}
      */
-    toHexString(prefixed = true) {
+    toString(prefixed = true) {
         return `${prefixed ? '#' : ''}${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
     }
 

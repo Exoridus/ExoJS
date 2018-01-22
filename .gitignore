@@ -4,7 +4,6 @@
 .babel-cache
 node_modules
 dist
-bin
 coverage
 !.gitignore
 !.gitkeep
