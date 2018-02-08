@@ -5,14 +5,7 @@ import Signal from '../core/Signal';
 
 /**
  * @private
- * @type {Object<String, Number>}
- * @property {Number} NONE
- * @property {Number} POSITION
- * @property {Number} SIZE
- * @property {Number} TILT
- * @property {Number} BUTTONS
- * @property {Number} PRESSURE
- * @property {Number} ROTATION
+ * @type {Object}
  */
 const FLAGS = {
     NONE: 0,

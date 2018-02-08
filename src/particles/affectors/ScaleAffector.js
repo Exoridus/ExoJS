@@ -1,11 +1,11 @@
-import ParticleModifier from '../ParticleModifier';
+import ParticleAffector from './ParticleAffector';
 import Vector from '../../math/Vector';
 
 /**
- * @class ScaleModifier
- * @extends ParticleModifier
+ * @class ScaleAffector
+ * @extends ParticleAffector
  */
-export default class ScaleModifier extends ParticleModifier {
+export default class ScaleAffector extends ParticleAffector {
 
     /**
      * @constructor
@@ -38,7 +38,7 @@ export default class ScaleModifier extends ParticleModifier {
      * @public
      * @chainable
      * @param {Vector} scaleFactor
-     * @returns {ScaleModifier}
+     * @returns {ScaleAffector}
      */
     setScaleFactor(scaleFactor) {
         this._scaleFactor.copy(scaleFactor);
@@ -50,17 +50,12 @@ export default class ScaleModifier extends ParticleModifier {
      * @override
      */
     apply(particle, delta) {
-        const { x, y } = this._scaleFactor,
-            { seconds } = delta;
+        particle.scale.add(
+            delta.seconds * this._scaleFactor.x,
+            delta.seconds * this._scaleFactor.y
+        );
 
-        particle.scale.add(x * seconds, y * seconds);
-    }
-
-    /**
-     * @override
-     */
-    clone() {
-        return new ScaleModifier(this._scaleFactor.x, this._scaleFactor.y);
+        return this;
     }
 
     /**

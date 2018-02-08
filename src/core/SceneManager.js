@@ -1,16 +1,6 @@
 import Signal from './Signal';
 
 /**
- * @inner
- * @type {Object<String, Number>}
- */
-const STATUS = {
-    NONE: 0,
-    LOADING: 1,
-    RUNNING: 2,
-};
-
-/**
  * @class SceneManager
  */
 export default class SceneManager {
@@ -32,12 +22,6 @@ export default class SceneManager {
          * @member {?Scene}
          */
         this._scene = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._status = STATUS.NONE;
 
         /**
          * @private
@@ -74,24 +58,6 @@ export default class SceneManager {
 
     set scene(scene) {
         this.setScene(scene);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Boolean}
-     */
-    get sceneLoading() {
-        return (this._status === STATUS.LOADING);
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Boolean}
-     */
-    get sceneRunning() {
-        return (this._status === STATUS.RUNNING);
     }
 
     /**
@@ -144,13 +110,10 @@ export default class SceneManager {
             this._onChangeScene.dispatch(scene);
 
             if (scene) {
-                this._status = STATUS.LOADING;
-
                 scene.app = this._app;
                 scene.load(this._app.loader);
                 scene.init(await this._app.loader.load());
 
-                this._status = STATUS.RUNNING;
                 this._onStartScene.dispatch(scene);
             }
         }
@@ -165,7 +128,7 @@ export default class SceneManager {
      * @returns {SceneManager}
      */
     update(delta) {
-        if (this.sceneRunning) {
+        if (this._scene) {
             this._scene.update(delta);
             this._scene.draw(this._app.renderManager);
             this._onUpdateScene.dispatch(this._scene);
@@ -192,7 +155,6 @@ export default class SceneManager {
         this._onStopScene.destroy();
         this._onStopScene = null;
 
-        this._status = null;
         this._scene = null;
         this._app = null;
     }
@@ -202,15 +164,10 @@ export default class SceneManager {
      */
     _unloadScene() {
         if (this._scene) {
-            if (this.sceneRunning) {
-                this._scene.unload();
-                this._onStopScene.dispatch();
-            }
-
+            this._onStopScene.dispatch(this._scene);
+            this._scene.unload();
             this._scene.destroy();
             this._scene = null;
-
-            this._status = STATUS.NONE;
         }
     }
 }

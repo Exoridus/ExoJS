@@ -11,11 +11,11 @@ export default class Polygon {
 
     /**
      * @constructor
+     * @param {Vector[]} [points=[]]
      * @param {Number} [x=0]
      * @param {Number} [y=0]
-     * @param {Vector[]} [points=[]]
      */
-    constructor(x = 0, y = 0, points = []) {
+    constructor(points = [], x = 0, y = 0) {
 
         /**
          * @private
@@ -150,7 +150,7 @@ export default class Polygon {
      * @returns {Polygon}
      */
     clone() {
-        return new Polygon(this.x, this.y, this.points);
+        return new Polygon(this.points, this.x, this.y);
     }
 
     /**
@@ -303,14 +303,6 @@ export default class Polygon {
         this._points = null;
     }
 }
-
-/**
- * @public
- * @static
- * @constant
- * @member {Polygon}
- */
-Polygon.Empty = new Polygon(0, 0, []);
 
 /**
  * @public

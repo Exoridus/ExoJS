@@ -1,24 +1,16 @@
 /**
- * @class ParticleModifier
+ * @class ParticleAffector
  */
-export default class ParticleModifier {
+export default class ParticleAffector {
 
     /**
      * @public
      * @chainable
      * @param {Particle} particle
      * @param {Time} delta
-     * @returns {ParticleModifier}
+     * @returns {ParticleAffector}
      */
     apply(particle, delta) { // eslint-disable-line
-        throw new Error('Method not implemented!');
-    }
-
-    /**
-     * @public
-     * @returns {ParticleModifier}
-     */
-    clone() {
         throw new Error('Method not implemented!');
     }
 

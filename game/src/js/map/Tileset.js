@@ -26,7 +26,7 @@ export default class Tileset {
 
         /**
          * @private
-         * @member {Object.<String, AutoTile>}
+         * @member {Object}
          */
         this._tiles = {
             water: new AutoTile(5, 1, tileSize),

@@ -51,7 +51,7 @@ app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        this._time.add(delta);
+        this._time.addTime(delta);
 
         this._boxA.setScale(0.25 + (Math.cos(this._time.seconds) * 0.5 + 0.5));
         this._boxB.setScale(0.25 + (Math.sin(this._time.seconds - Math.PI / 2) * 0.5 + 0.5));

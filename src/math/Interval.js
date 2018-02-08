@@ -130,7 +130,7 @@ export default class Interval {
  * @constant
  * @member {Interval}
  */
-Interval.Empty = new Interval(0, 0);
+Interval.Zero = new Interval(0, 0);
 
 /**
  * @public

@@ -1,12 +1,12 @@
-import ParticleModifier from '../ParticleModifier';
+import ParticleAffector from './ParticleAffector';
 import Vector from '../../math/Vector';
 import Color from '../../core/Color';
 
 /**
- * @class ColorModifier
- * @extends ParticleModifier
+ * @class ColorAffector
+ * @extends ParticleAffector
  */
-export default class ColorModifier extends ParticleModifier {
+export default class ColorAffector extends ParticleAffector {
 
     /**
      * @constructor
@@ -20,13 +20,13 @@ export default class ColorModifier extends ParticleModifier {
          * @private
          * @member {Color}
          */
-        this._fromColor = (fromColor && fromColor.clone()) || new Color();
+        this._fromColor = (fromColor || Color.Black).clone();
 
         /**
          * @private
          * @member {Color}
          */
-        this._toColor = (toColor && toColor.clone()) || new Color();
+        this._toColor = (toColor || Color.White).clone();
     }
 
     /**
@@ -57,7 +57,7 @@ export default class ColorModifier extends ParticleModifier {
      * @public
      * @chainable
      * @param {Color} color
-     * @returns {ColorModifier}
+     * @returns {ColorAffector}
      */
     setFromColor(color) {
         this._fromColor.copy(color);
@@ -69,7 +69,7 @@ export default class ColorModifier extends ParticleModifier {
      * @public
      * @chainable
      * @param {Color} color
-     * @returns {ColorModifier}
+     * @returns {ColorAffector}
      */
     setToColor(color) {
         this._toColor.copy(color);
@@ -82,24 +82,17 @@ export default class ColorModifier extends ParticleModifier {
      */
     apply(particle, delta) {
         const ratio = particle.elapsedRatio,
-            { r: rA, g: gA, b: bA, a: aA } = this._fromColor,
-            { r: rB, g: gB, b: bB, a: aB } = this._toColor;
+            { r: r1, g: g1, b: b1, a: a1 } = this._fromColor,
+            { r: r2, g: g2, b: b2, a: a2 } = this._toColor;
 
         particle.tint.set(
-            ((rB - rA) * ratio) + rA,
-            ((gB - gA) * ratio) + gA,
-            ((bB - bA) * ratio) + bA,
-            ((aB - aA) * ratio) + aA
+            ((r2 - r1) * ratio) + r1,
+            ((g2 - g1) * ratio) + g1,
+            ((b2 - b1) * ratio) + b1,
+            ((a2 - a1) * ratio) + a1
         );
 
         return this;
-    }
-
-    /**
-     * @override
-     */
-    clone() {
-        return new ColorModifier(this._fromColor, this._toColor);
     }
 
     /**

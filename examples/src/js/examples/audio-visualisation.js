@@ -112,7 +112,7 @@ app.start(new Exo.Scene({
         }
 
         const freqData = this._analyser.frequencyData,
-            seconds = this._time.add(delta).seconds,
+            seconds = this._time.addTime(delta).seconds,
             length = freqData.length,
             redModifier = (Math.cos(seconds) * 0.5) + 0.5,
             greenModifier = (Math.sin(seconds) * 0.5) + 0.5;
@@ -170,7 +170,6 @@ app.start(new Exo.Scene({
         }
 
         this._context.stroke();
-
         this._screen.updateTexture();
 
         renderManager

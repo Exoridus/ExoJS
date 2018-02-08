@@ -1,70 +1,90 @@
-import Vector from '../math/Vector';
-import Color from '../core/Color';
-import Time from '../core/time/Time';
+import Vector from '../../math/Vector';
+import Color from '../../core/Color';
+import Time from '../../core/time/Time';
 
 /**
- * @class Particle
+ * @class ParticleOptions
  */
-export default class Particle {
+export default class ParticleOptions {
 
     /**
      * @constructor
+     * @param {Object} [options]
+     * @param {Time} [options.totalLifetime=Time.OneSecond]
+     * @param {Time} [options.elapsedLifetime=Time.Zero]
+     * @param {Vector} [options.position=Vector.Zero]
+     * @param {Vector} [options.velocity=Vector.Zero]
+     * @param {Vector} [options.scale=Vector.One]
+     * @param {Number} [options.rotation=0]
+     * @param {Number} [options.rotationSpeed=0]
+     * @param {Number} [options.textureIndex=0]
+     * @param {Color} [options.tint=Color.White]
      */
-    constructor() {
+    constructor({
+        totalLifetime = Time.OneSecond,
+        elapsedLifetime = Time.Zero,
+        position = Vector.Zero,
+        velocity = Vector.Zero,
+        scale = Vector.One,
+        rotation = 0,
+        rotationSpeed = 0,
+        textureIndex = 0,
+        tint = Color.White,
+    } = {}) {
 
         /**
          * @private
          * @member {Time}
          */
-        this._totalLifetime = Time.OneSecond.clone();
+        this._totalLifetime = totalLifetime.clone();
 
         /**
          * @private
          * @member {Time}
          */
-        this._elapsedLifetime = Time.Zero.clone();
+        this._elapsedLifetime = elapsedLifetime.clone();
 
         /**
          * @private
          * @member {Vector}
          */
-        this._position = Vector.Zero.clone();
+        this._position = position.clone();
 
         /**
          * @private
          * @member {Vector}
          */
-        this._velocity = Vector.Zero.clone();
+        this._velocity = velocity.clone();
 
         /**
          * @private
          * @member {Vector}
          */
-        this._scale = Vector.One.clone();
+        this._scale = scale.clone();
 
         /**
          * @private
          * @member {Number}
          */
-        this._rotation = 0;
+        this._rotation = rotation;
 
         /**
          * @private
          * @member {Number}
          */
-        this._rotationSpeed = 0;
+        this._rotationSpeed = rotationSpeed;
 
         /**
          * @private
          * @member {Number}
          */
-        this._textureIndex = 0;
+        this._textureIndex = textureIndex;
 
         /**
          * @private
          * @member {Color}
          */
-        this._tint = Color.White.clone();
+        this._tint = tint.clone();
     }
 
     /**
@@ -179,38 +199,22 @@ export default class Particle {
 
     /**
      * @public
-     * @readonly
-     * @member {Time}
+     * @chainable
+     * @param {Particle} particle
+     * @returns {ParticleOptions}
      */
-    get remainingLifetime() {
-        return Time.Temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
-    }
+    apply(particle) {
+        particle.totalLifetime = this.totalLifetime;
+        particle.elapsedLifetime = this.elapsedLifetime;
+        particle.position = this.position;
+        particle.velocity = this.velocity;
+        particle.scale = this.scale;
+        particle.rotation = this.rotation;
+        particle.rotationSpeed = this.rotationSpeed;
+        particle.textureIndex = this.textureIndex;
+        particle.tint = this.tint;
 
-    /**
-     * @public
-     * @readonly
-     * @member {Time}
-     */
-    get elapsedRatio() {
-        return this._elapsedLifetime.milliseconds / this._totalLifetime.milliseconds;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Time}
-     */
-    get remainingRatio() {
-        return this.remainingLifetime.milliseconds / this._totalLifetime.milliseconds;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Boolean}
-     */
-    get expired() {
-        return this._elapsedLifetime.greaterThan(this._totalLifetime);
+        return this;
     }
 
     /**

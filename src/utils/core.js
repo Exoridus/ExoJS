@@ -1,11 +1,10 @@
-import { AUDIO_ELEMENT, CANVAS_ELEMENT, CANVAS_CONTEXT, CODEC_NOT_SUPPORTED } from '../const/core';
+import { AUDIO_ELEMENT, CANVAS_ELEMENT, CANVAS_CONTEXT, CODEC_NOT_SUPPORTED, TIMING } from '../const/core';
 
 const
 
     /**
      * @public
      * @constant
-     * @type {Function}
      * @param {Event} event
      */
     stopEvent = (event) => {
@@ -16,25 +15,33 @@ const
     /**
      * @public
      * @constant
+     * @returns {Number}
+     */
+    getPreciseTime = () => TIMING.now(),
+
+    /**
+     * @public
+     * @constant
      * @type {Function}
      * @param {Array} array
      * @param {Number} startIndex
      * @param {Number} amount
+     * @returns {Array}
      */
     removeArrayItems = (array, startIndex, amount) => {
-        if (startIndex >= array.length || amount <= 0) {
-            return;
+        if (startIndex < array.length && amount > 0) {
+            const length = array.length,
+                removeCount = (startIndex + amount > length) ? (length - startIndex) : amount,
+                newLen = (length - removeCount);
+
+            for (let i = startIndex; i < newLen; i++) {
+                array[i] = array[i + removeCount];
+            }
+
+            array.length = newLen;
         }
 
-        const length = array.length,
-            removeCount = (startIndex + amount > length) ? (length - startIndex) : amount,
-            newLen = (length - removeCount);
-
-        for (let i = startIndex; i < newLen; i++) {
-            array[i] = array[i + removeCount];
-        }
-
-        array.length = newLen;
+        return array;
     },
 
     /**
@@ -85,6 +92,7 @@ const
  */
 export {
     stopEvent,
+    getPreciseTime,
     removeArrayItems,
     getMediaWidth,
     getMediaHeight,

@@ -185,11 +185,12 @@ export default class Time {
     /**
      * @public
      * @chainable
-     * @param {Time} time
+     * @param {Number} [value=0]
+     * @param {Number} [factor=TIME.MILLISECONDS]
      * @returns {Time}
      */
-    add(time) {
-        this._milliseconds += time.milliseconds;
+    add(value = 0, factor = TIME.MILLISECONDS) {
+        this._milliseconds += (value * factor);
 
         return this;
     }
@@ -200,7 +201,32 @@ export default class Time {
      * @param {Time} time
      * @returns {Time}
      */
-    subtract(time) {
+    addTime(time) {
+        this._milliseconds += time.milliseconds;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} [value=0]
+     * @param {Number} [factor=TIME.MILLISECONDS]
+     * @returns {Time}
+     */
+    subtract(value = 0, factor = TIME.MILLISECONDS) {
+        this._milliseconds -= (value * factor);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Time} time
+     * @returns {Time}
+     */
+    subtractTime(time) {
         this._milliseconds -= time.milliseconds;
 
         return this;
@@ -220,7 +246,39 @@ export default class Time {
  * @constant
  * @member {Time}
  */
-Time.Empty = new Time(0);
+Time.Zero = new Time(0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.OneMillisecond = new Time(1);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.OneSecond = new Time(1, TIME.SECONDS);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.OneMinute = new Time(1, TIME.MINUTES);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @member {Time}
+ */
+Time.OneHour = new Time(1, TIME.HOURS);
 
 /**
  * @public

@@ -257,12 +257,4 @@ export default class Circle {
  * @constant
  * @member {Circle}
  */
-Circle.Empty = new Circle(0, 0, 0);
-
-/**
- * @public
- * @static
- * @constant
- * @member {Circle}
- */
 Circle.Temp = new Circle();

@@ -11,11 +11,11 @@ export default class Music {
      * @constructor
      * @param {HTMLMediaElement|HTMLAudioElement} audioElement
      * @param {Object} [options]
-     * @property {Number} [options.volume=settings.VOLUME_MUSIC]
-     * @property {Boolean} [options.loop=settings.MEDIA_LOOP]
-     * @property {Number} [options.speed=settings.MEDIA_SPEED]
-     * @property {Number} [options.time=settings.MEDIA_TIME]
-     * @property {Boolean} [options.muted=settings.MEDIA_MUTED]
+     * @param {Number} [options.volume=settings.VOLUME_MUSIC]
+     * @param {Boolean} [options.loop=settings.MEDIA_LOOP]
+     * @param {Number} [options.speed=settings.MEDIA_SPEED]
+     * @param {Number} [options.time=settings.MEDIA_TIME]
+     * @param {Boolean} [options.muted=settings.MEDIA_MUTED]
      */
     constructor(audioElement, options) {
 
@@ -251,11 +251,11 @@ export default class Music {
      * @public
      * @chainable
      * @param {Object} [options]
-     * @property {Boolean} [options.loop]
-     * @property {Number} [options.speed]
-     * @property {Number} [options.volume]
-     * @property {Number} [options.time]
-     * @property {Boolean} [options.muted]
+     * @param {Boolean} [options.loop]
+     * @param {Number} [options.speed]
+     * @param {Number} [options.volume]
+     * @param {Number} [options.time]
+     * @param {Boolean} [options.muted]
      * @returns {Music}
      */
     play(options) {

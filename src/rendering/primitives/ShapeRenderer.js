@@ -1,17 +1,17 @@
-import Renderer from '../rendering/Renderer';
-import Shader from '../rendering/shader/Shader';
-import { createQuadIndices } from '../utils/rendering';
-import settings from '../settings';
-import Buffer from '../rendering/Buffer';
-import VertexArrayObject from '../rendering/VertexArrayObject';
+import Renderer from '../Renderer';
+import Shader from '../shader/Shader';
+import settings from '../../settings';
+import VertexArrayObject from '../VertexArrayObject';
+import Buffer from '../Buffer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { createQuadIndices } from '../../utils/rendering';
 
 /**
- * @class ParticleRenderer
+ * @class ShapeRenderer
  * @extends Renderer
  */
-export default class ParticleRenderer extends Renderer {
+export default class ShapeRenderer extends Renderer {
 
     /**
      * @constructor
@@ -23,7 +23,7 @@ export default class ParticleRenderer extends Renderer {
          * @private
          * @member {Number}
          */
-        this._batchSize = settings.BATCH_SIZE_PARTICLES;
+        this._batchSize = settings.BATCH_SIZE_SPRITES;
 
         /**
          * @private
@@ -32,18 +32,15 @@ export default class ParticleRenderer extends Renderer {
         this._batchIndex = 0;
 
         /**
-         * 4 x 9 Properties:
-         * 2 = vertexPos     (x, y) +
+         * 4 x 4 Properties:
+         * 2 = position (x, y) +
          * 1 = texCoord (packed uv) +
-         * 2 = position      (x, y) +
-         * 2 = scale         (x, y) +
-         * 1 = rotation      (x, y) +
-         * 1 = color         (ARGB int)
+         * 1 = color    (ARGB int)
          *
          * @private
          * @member {Number}
          */
-        this._attributeCount = 36;
+        this._attributeCount = 16;
 
         /**
          * @private
@@ -74,8 +71,8 @@ export default class ParticleRenderer extends Renderer {
          * @member {Shader}
          */
         this._shader = new Shader(
-            readFileSync(join(__dirname, './glsl/particle.vert'), 'utf8'),
-            readFileSync(join(__dirname, './glsl/particle.frag'), 'utf8')
+            readFileSync(join(__dirname, './glsl/sprite.vert'), 'utf8'),
+            readFileSync(join(__dirname, './glsl/sprite.frag'), 'utf8')
         );
 
         /**
@@ -139,10 +136,7 @@ export default class ParticleRenderer extends Renderer {
                 .addIndex(this._indexBuffer)
                 .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, this._attributeCount, 0)
                 .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_translation'), gl.FLOAT, false, this._attributeCount, 12)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_scale'), gl.FLOAT, false, this._attributeCount, 20)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_rotation'), gl.FLOAT, false, this._attributeCount, 28)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this._attributeCount, 32);
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this._attributeCount, 12);
         }
 
         return this;
@@ -202,16 +196,19 @@ export default class ParticleRenderer extends Renderer {
 
     /**
      * @override
-     * @param {ParticleSystem} system
+     * @param {Shape} shape
      */
-    render(system) {
-        const { texture, textureFrame, texCoordData, particles, blendMode } = system,
+    render(shape) {
+        const { texture, blendMode, tint, vertices, texCoords } = shape,
+            batchFull = (this._batchIndex >= this._batchSize),
             textureChanged = (texture !== this._currentTexture),
             blendModeChanged = (blendMode !== this._currentBlendMode),
+            flush = (batchFull || textureChanged || blendModeChanged),
+            index = flush ? 0 : (this._batchIndex * this._attributeCount),
             float32View = this._float32View,
             uint32View = this._uint32View;
 
-        if (textureChanged || blendModeChanged) {
+        if (flush) {
             this.flush();
 
             if (textureChanged) {
@@ -227,62 +224,38 @@ export default class ParticleRenderer extends Renderer {
 
         texture.update();
 
-        for (const particle of particles) {
-            if (this._batchIndex >= this._batchSize) {
-                this.flush();
-            }
+        // X / Y
+        float32View[index + 0] = vertices[0];
+        float32View[index + 1] = vertices[1];
 
-            const { position, scale, rotation, tint } = particle,
-                index = (this._batchIndex * this._attributeCount);
+        // X / Y
+        float32View[index + 4] = vertices[2];
+        float32View[index + 5] = vertices[3];
 
-            float32View[index + 0] = float32View[index + 27] = textureFrame.x;
-            float32View[index + 1] = float32View[index + 10] = textureFrame.y;
-            float32View[index + 9] = float32View[index + 18] = textureFrame.width;
-            float32View[index + 19] = float32View[index + 28] = textureFrame.height;
+        // X / Y
+        float32View[index + 8] = vertices[4];
+        float32View[index + 9] = vertices[5];
 
-            uint32View[index + 2] = texCoordData[0];
-            uint32View[index + 11] = texCoordData[1];
-            uint32View[index + 20] = texCoordData[2];
-            uint32View[index + 29] = texCoordData[3];
+        // X / Y
+        float32View[index + 12] = vertices[6];
+        float32View[index + 13] = vertices[7];
 
-            float32View[index + 3]
-                = float32View[index + 12]
-                = float32View[index + 21]
-                = float32View[index + 30]
-                = position.x;
+        // U / V
+        uint32View[index + 2] = texCoords[0];
+        uint32View[index + 6] = texCoords[1];
 
-            float32View[index + 4]
-                = float32View[index + 13]
-                = float32View[index + 22]
-                = float32View[index + 31]
-                = position.y;
+        // U / V
+        uint32View[index + 10] = texCoords[2];
+        uint32View[index + 14] = texCoords[3];
 
-            float32View[index + 5]
-                = float32View[index + 14]
-                = float32View[index + 23]
-                = float32View[index + 32]
-                = scale.x;
+        // Tint
+        uint32View[index + 3]
+            = uint32View[index + 7]
+            = uint32View[index + 11]
+            = uint32View[index + 15]
+            = tint.toRGBA();
 
-            float32View[index + 6]
-                = float32View[index + 15]
-                = float32View[index + 24]
-                = float32View[index + 33]
-                = scale.y;
-
-            float32View[index + 7]
-                = float32View[index + 16]
-                = float32View[index + 25]
-                = float32View[index + 34]
-                = rotation;
-
-            uint32View[index + 8]
-                = uint32View[index + 17]
-                = uint32View[index + 26]
-                = uint32View[index + 35]
-                = tint.toRGBA();
-
-            this._batchIndex++;
-        }
+        this._batchIndex++;
 
         return this;
     }

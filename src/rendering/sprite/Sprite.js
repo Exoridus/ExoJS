@@ -280,10 +280,10 @@ export default class Sprite extends Container {
             temp = Vector.Temp,
             vecA = temp.set(x2 - x1, y2 - y1),
             dotA = vecA.dot(x - x1, y - y1),
-            lenA = vecA.lengthSquared,
+            lenA = vecA.lengthSq,
             vecB = temp.set(x3 - x2, y3 - y2),
             dotB = vecB.dot(x - x2, y - y2),
-            lenB = vecB.lengthSquared;
+            lenB = vecB.lengthSq;
 
         return (dotA > 0) && (dotA <= lenA)
             && (dotB > 0) && (dotB <= lenB);

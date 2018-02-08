@@ -2,8 +2,6 @@ export const
 
     /**
      * @public
-     * @static
-     * @readonly
      * @constant
      * @type {String}
      */
@@ -11,15 +9,20 @@ export const
 
     /**
      * @public
-     * @static
-     * @readonly
      * @constant
      * @type {Window}
      */
     GLOBAL = (global.parent || global),
 
     /**
-     * @inner
+     * @public
+     * @constant
+     * @type {Date|Performance}
+     */
+    TIMING = (typeof performance === 'undefined' ? Date : performance),
+
+    /**
+     * @public
      * @constant
      * @type {Audio}
      */
@@ -27,6 +30,7 @@ export const
 
     /**
      * @public
+     * @constant
      * @type {HTMLCanvasElement}
      */
     CANVAS_ELEMENT = document.createElement('canvas'),
@@ -40,12 +44,14 @@ export const
 
     /**
      * @public
+     * @constant
      * @type {CanvasRenderingContext2D}
      */
     CANVAS_CONTEXT = CANVAS_ELEMENT.getContext('2d'),
 
     /**
      * @public
+     * @constant
      * @type {RegExp}
      */
     CODEC_NOT_SUPPORTED = /^no$/,
@@ -60,11 +66,20 @@ export const
     /**
      * @public
      * @constant
-     * @type {Object<String, Number>}
-     * @property {Number} MILLISECONDS
-     * @property {Number} SECONDS
-     * @property {Number} MINUTES
-     * @property {Number} HOURS
+     * @type {Object}
+     */
+    APP_STATUS = {
+        UNKNOWN: 0,
+        LOADING: 1,
+        RUNNING: 2,
+        HALTING: 3,
+        STOPPED: 4,
+    },
+
+    /**
+     * @public
+     * @constant
+     * @type {Object}
      */
     TIME = {
         MILLISECONDS: 1,
@@ -76,16 +91,7 @@ export const
     /**
      * @public
      * @constant
-     * @type {Object<String, Number>}
-     * @property {Number} NONE
-     * @property {Number} TRANSLATION
-     * @property {Number} ROTATION
-     * @property {Number} SCALING
-     * @property {Number} ORIGIN
-     * @property {Number} TRANSFORM
-     * @property {Number} TRANSFORM_INV
-     * @property {Number} TEXTURE_COORDS
-     * @property {Number} POSITIONS
+     * @type {Object}
      */
     FLAGS = {
         NONE:           0x00,

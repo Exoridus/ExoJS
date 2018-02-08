@@ -3,13 +3,7 @@ export const
     /**
      * @public
      * @constant
-     * @name BLEND_MODES
-     * @type {Object<String, Number>}
-     * @property {Number} NORMAL
-     * @property {Number} ADD
-     * @property {Number} SUBTRACT
-     * @property {Number} MULTIPLY
-     * @property {Number} SCREEN
+     * @type {Object}
      */
     BLEND_MODES = {
         NORMAL: 0,
@@ -22,14 +16,7 @@ export const
     /**
      * @public
      * @constant
-     * @name SCALE_MODES
-     * @type {Object<String, Number>}
-     * @property {Number} NEAREST
-     * @property {Number} LINEAR
-     * @property {Number} NEAREST_MIPMAP_NEAREST
-     * @property {Number} LINEAR_MIPMAP_NEAREST
-     * @property {Number} NEAREST_MIPMAP_LINEAR
-     * @property {Number} LINEAR_MIPMAP_LINEAR
+     * @type {Object}
      */
     SCALE_MODES = {
         NEAREST: 0x2600,
@@ -43,11 +30,7 @@ export const
     /**
      * @public
      * @constant
-     * @name WRAP_MODES
-     * @type {Object<String, Number>}
-     * @property {Number} REPEAT
-     * @property {Number} CLAMP_TO_EDGE
-     * @property {Number} MIRRORED_REPEAT
+     * @type {Object}
      */
     WRAP_MODES = {
         REPEAT: 0x2901,
@@ -58,28 +41,7 @@ export const
     /**
      * @public
      * @constant
-     * @name SHADER_TYPES
-     * @type {Object<String, Number>}
-     * @property {Number} INT
-     * @property {Number} INT_VEC2
-     * @property {Number} INT_VEC3
-     * @property {Number} INT_VEC4
-     *
-     * @property {Number} FLOAT
-     * @property {Number} FLOAT_VEC2
-     * @property {Number} FLOAT_VEC3
-     * @property {Number} FLOAT_VEC4
-     *
-     * @property {Number} BOOL
-     * @property {Number} BOOL_VEC2
-     * @property {Number} BOOL_VEC3
-     * @property {Number} BOOL_VEC4
-     *
-     * @property {Number} FLOAT_MAT2
-     * @property {Number} FLOAT_MAT3
-     * @property {Number} FLOAT_MAT4
-     *
-     * @property {Number} SAMPLER_2D
+     * @type {Object}
      */
     SHADER_TYPES = {
         INT: 0x1404,
@@ -107,17 +69,9 @@ export const
     /**
      * @public
      * @constant
-     * @name PRIMITIVE_TYPES
-     * @type {Object<String, Number>}
-     * @property {Number} POINTS
-     * @property {Number} LINES
-     * @property {Number} LINE_LOOP
-     * @property {Number} LINE_STRIP
-     * @property {Number} TRIANGLES
-     * @property {Number} TRIANGLE_STRIP
-     * @property {Number} TRIANGLE_FAN
+     * @type {Object}
      */
-    PRIMITIVE_TYPES = {
+    DRAW_MODES = {
         POINTS: 0x0000,
         LINES: 0x0001,
         LINE_LOOP: 0x0002,
@@ -130,8 +84,7 @@ export const
     /**
      * @public
      * @constant
-     * @name TYPE_SIZES
-     * @type {Object<Number, Number>}
+     * @type {Object}
      */
     TYPE_SIZES = {
         [SHADER_TYPES.FLOAT]: 1,
@@ -159,8 +112,7 @@ export const
     /**
      * @public
      * @constant
-     * @name TYPE_CLASSES
-     * @type {Object<Number, Function>}
+     * @type {Object}
      */
     TYPE_CLASSES = {
         [SHADER_TYPES.FLOAT]: Float32Array,
@@ -188,8 +140,7 @@ export const
     /**
      * @public
      * @constant
-     * @name TYPE_UPLOADS
-     * @type {Object<Number, Function>}
+     * @type {Object}
      */
     TYPE_UPLOADS = {
         [SHADER_TYPES.FLOAT]: (gl, location, value) => gl.uniform1f(location, value[0]),
@@ -211,14 +162,13 @@ export const
         [SHADER_TYPES.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, value),
         [SHADER_TYPES.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, value),
 
-        [SHADER_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [SHADER_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1f(location, value[0]),
     },
 
     /**
      * @public
      * @constant
-     * @name TYPE_NAMES
-     * @type {Object<Number, String>}
+     * @type {Object}
      */
     TYPE_NAMES = {
         [SHADER_TYPES.FLOAT]: 'FLOAT',
@@ -246,13 +196,7 @@ export const
     /**
      * @public
      * @constant
-     * @name TEXTURE_FLAGS
-     * @type {Object<String, Number>}
-     * @property {Number} SCALE_MODE
-     * @property {Number} WRAP_MODE
-     * @property {Number} PREMULTIPLY_ALPHA
-     * @property {Number} SOURCE
-     * @property {Number} SIZE
+     * @type {Object}
      */
     TEXTURE_FLAGS = {
         SCALE_MODE: 0x001,
@@ -260,40 +204,4 @@ export const
         PREMULTIPLY_ALPHA: 0x004,
         SOURCE: 0x008,
         SIZE: 0x010,
-    },
-
-    /**
-     * @public
-     * @constant
-     * @name TEXTURE_FLAGS
-     * @type {Float32Array}
-     */
-    MAT2_PATTERN = new Float32Array([
-        1, 0,
-        0, 1,
-    ]),
-
-    /**
-     * @public
-     * @constant
-     * @name TEXTURE_FLAGS
-     * @type {Float32Array}
-     */
-    MAT3_PATTERN = new Float32Array([
-        1, 0, 0,
-        0, 1, 0,
-        0, 0, 1,
-    ]),
-
-    /**
-     * @public
-     * @constant
-     * @name TEXTURE_FLAGS
-     * @type {Float32Array}
-     */
-    MAT4_PATTERN = new Float32Array([
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1,
-    ]);
+    };

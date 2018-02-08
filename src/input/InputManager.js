@@ -9,11 +9,13 @@ import { GLOBAL } from '../const/core';
 import Signal from '../core/Signal';
 import { getDistance } from '../utils/math';
 
-/**
- * @inner
- * @type {Object<String, Number>}
- */
-const FLAGS = {
+const
+
+    /**
+     * @private
+     * @type {Object}
+     */
+    FLAGS = {
         NONE:           0x000,
         KEY_DOWN:       0x001,
         KEY_UP:         0x002,
@@ -27,8 +29,8 @@ const FLAGS = {
     },
 
     /**
-     * @inner
-     * @type {Object<String, Boolean>|Boolean}
+     * @private
+     * @type {Object|Boolean}
      */
     passive = (support.eventOptions ? {
         capture: true,
@@ -36,8 +38,8 @@ const FLAGS = {
     } : true),
 
     /**
-     * @inner
-     * @type {Object<String, Boolean>|Boolean}
+     * @private
+     * @type {Object|Boolean}
      */
     active = (support.eventOptions ? {
         capture: true,
@@ -89,13 +91,13 @@ export default class InputManager {
 
         /**
          * @private
-         * @member {Object<Number, Pointer>}
+         * @member {Object}
          */
         this._pointers = {};
 
         /**
          * @private
-         * @member {Object<Number, Gamepad>}
+         * @member {Object}
          */
         this._gamepads = {
             0: new Gamepad(0, this._channels),
@@ -263,7 +265,7 @@ export default class InputManager {
     /**
      * @public
      * @readonly
-     * @member {Object<Number, Pointer>}
+     * @member {Object}
      */
     get pointers() {
         return this._pointers;
@@ -272,7 +274,7 @@ export default class InputManager {
     /**
      * @public
      * @readonly
-     * @member {Object<Number, Gamepad>}
+     * @member {Object}
      */
     get gamepads() {
         return this._gamepads;

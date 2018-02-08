@@ -3,11 +3,7 @@ export const
     /**
      * @public
      * @constant
-     * @name CHANNEL_OFFSET
-     * @type {Object<String, Number>}
-     * @property {Number} KEYBOARD
-     * @property {Number} POINTERS
-     * @property {Number} GAMEPADS
+     * @type {Object}
      */
     CHANNEL_OFFSET = {
         KEYBOARD: 0x000,
@@ -18,11 +14,7 @@ export const
     /**
      * @public
      * @constant
-     * @name CHANNEL_RANGE
-     * @type {Object<String, Number>}
-     * @property {Number} GAMEPAD
-     * @property {Number} CATEGORY
-     * @property {Number} GLOBAL
+     * @type {Object}
      */
     CHANNEL_RANGE = {
         GAMEPAD:    0x020,
@@ -33,107 +25,7 @@ export const
     /**
      * @public
      * @constant
-     * @name KEYBOARD
-     * @type {Object<String, Number>}
-     * @property {Number} Backspace
-     * @property {Number} Tab
-     * @property {Number} Clear
-     * @property {Number} Enter
-     * @property {Number} Shift
-     * @property {Number} Control
-     * @property {Number} Alt
-     * @property {Number} Pause
-     * @property {Number} CapsLock
-     * @property {Number} Escape
-     * @property {Number} Space
-     * @property {Number} PageUp
-     * @property {Number} PageDown
-     * @property {Number} End
-     * @property {Number} Home
-     * @property {Number} Left
-     * @property {Number} Up
-     * @property {Number} Right
-     * @property {Number} Down
-     * @property {Number} Insert
-     * @property {Number} Delete
-     * @property {Number} Help
-     * @property {Number} Zero
-     * @property {Number} One
-     * @property {Number} Two
-     * @property {Number} Three
-     * @property {Number} Four
-     * @property {Number} Five
-     * @property {Number} Six
-     * @property {Number} Seven
-     * @property {Number} Eight
-     * @property {Number} Nine
-     * @property {Number} A
-     * @property {Number} B
-     * @property {Number} C
-     * @property {Number} D
-     * @property {Number} E
-     * @property {Number} F
-     * @property {Number} G
-     * @property {Number} H
-     * @property {Number} I
-     * @property {Number} J
-     * @property {Number} K
-     * @property {Number} L
-     * @property {Number} M
-     * @property {Number} N
-     * @property {Number} O
-     * @property {Number} P
-     * @property {Number} Q
-     * @property {Number} R
-     * @property {Number} S
-     * @property {Number} T
-     * @property {Number} U
-     * @property {Number} V
-     * @property {Number} W
-     * @property {Number} X
-     * @property {Number} Y
-     * @property {Number} Z
-     * @property {Number} NumPad0
-     * @property {Number} NumPad1
-     * @property {Number} NumPad2
-     * @property {Number} NumPad3
-     * @property {Number} NumPad4
-     * @property {Number} NumPad5
-     * @property {Number} NumPad6
-     * @property {Number} NumPad7
-     * @property {Number} NumPad8
-     * @property {Number} NumPad9
-     * @property {Number} NumPadMultiply
-     * @property {Number} NumPadAdd
-     * @property {Number} NumPadEnter
-     * @property {Number} NumPadSubtract
-     * @property {Number} NumPadDecimal
-     * @property {Number} NumPadDivide
-     * @property {Number} F1
-     * @property {Number} F2
-     * @property {Number} F3
-     * @property {Number} F4
-     * @property {Number} F5
-     * @property {Number} F6
-     * @property {Number} F7
-     * @property {Number} F8
-     * @property {Number} F9
-     * @property {Number} F10
-     * @property {Number} F11
-     * @property {Number} F12
-     * @property {Number} NumLock
-     * @property {Number} ScrollLock
-     * @property {Number} Colon
-     * @property {Number} Equals
-     * @property {Number} Comma
-     * @property {Number} Dash
-     * @property {Number} Period
-     * @property {Number} QuestionMark
-     * @property {Number} Tilde
-     * @property {Number} OpenBracket
-     * @property {Number} BackwardSlash
-     * @property {Number} ClosedBracket
-     * @property {Number} Quotes
+     * @type {Object}
      */
     KEYBOARD = {
         Backspace: CHANNEL_OFFSET.KEYBOARD + 8,
@@ -240,33 +132,7 @@ export const
     /**
      * @public
      * @constant
-     * @name GAMEPAD
-     * @type {Object<String, Number>}
-     * @property {Number} FaceBottom
-     * @property {Number} FaceLeft
-     * @property {Number} FaceRight
-     * @property {Number} FaceTop
-     * @property {Number} ShoulderLeftBottom
-     * @property {Number} ShoulderRightBottom
-     * @property {Number} ShoulderLeftTop
-     * @property {Number} ShoulderRightTop
-     * @property {Number} Select
-     * @property {Number} Start
-     * @property {Number} LeftStick
-     * @property {Number} RightStick
-     * @property {Number} DPadUp
-     * @property {Number} DPadDown
-     * @property {Number} DPadLeft
-     * @property {Number} DPadRight
-     * @property {Number} Home
-     * @property {Number} LeftStickLeft
-     * @property {Number} LeftStickRight
-     * @property {Number} LeftStickUp
-     * @property {Number} LeftStickDown
-     * @property {Number} RightStickLeft
-     * @property {Number} RightStickRight
-     * @property {Number} RightStickUp
-     * @property {Number} RightStickDown
+     * @type {Object}
      */
     GAMEPAD = {
         FaceBottom: CHANNEL_OFFSET.GAMEPADS + 0,

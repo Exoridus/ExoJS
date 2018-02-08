@@ -1,10 +1,6 @@
 import { TIME } from '../../const/core';
 import Time from './Time';
-
-/**
- * @inner
- */
-const timing = (performance || Date);
+import { getPreciseTime } from '../../utils/core';
 
 /**
  * @class Clock
@@ -28,21 +24,15 @@ export default class Clock {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Time}
          */
-        this._timeBuffer = 0;
+        this._time = new Time();
 
         /**
          * @private
          * @member {Boolean}
          */
         this._running = false;
-
-        /**
-         * @private
-         * @member {Time}
-         */
-        this._time = new Time();
 
         if (autoStart) {
             this.start();
@@ -79,10 +69,17 @@ export default class Clock {
     /**
      * @public
      * @readonly
-     * @member {Number}
+     * @member {Time}
      */
     get elapsedTime() {
-        return this._time.setMilliseconds(this.elapsedMilliseconds);
+        if (this._running) {
+            const now = getPreciseTime();
+
+            this._time.add(now - this._startTime);
+            this._startTime = now;
+        }
+
+        return this._time;
     }
 
     /**
@@ -91,11 +88,7 @@ export default class Clock {
      * @member {Number}
      */
     get elapsedMilliseconds() {
-        if (!this._running) {
-            return this._timeBuffer;
-        }
-
-        return this._timeBuffer + (timing.now() - this._startTime);
+        return this.elapsedTime.milliseconds;
     }
 
     /**
@@ -104,7 +97,7 @@ export default class Clock {
      * @member {Number}
      */
     get elapsedSeconds() {
-        return this.elapsedMilliseconds / TIME.SECONDS;
+        return this.elapsedTime.seconds;
     }
 
     /**
@@ -113,7 +106,7 @@ export default class Clock {
      * @member {Number}
      */
     get elapsedMinutes() {
-        return this.elapsedMilliseconds / TIME.MINUTES;
+        return this.elapsedTime.minutes;
     }
 
     /**
@@ -122,7 +115,7 @@ export default class Clock {
      * @member {Number}
      */
     get elapsedHours() {
-        return this.elapsedMilliseconds / TIME.HOURS;
+        return this.elapsedTime.hours;
     }
 
     /**
@@ -132,8 +125,8 @@ export default class Clock {
      */
     start() {
         if (!this._running) {
-            this._startTime = timing.now();
             this._running = true;
+            this._startTime = getPreciseTime();
         }
 
         return this;
@@ -146,8 +139,8 @@ export default class Clock {
      */
     stop() {
         if (this._running) {
-            this._timeBuffer += (timing.now() - this._startTime);
             this._running = false;
+            this._time.add(getPreciseTime() - this._startTime);
         }
 
         return this;
@@ -159,8 +152,8 @@ export default class Clock {
      * @returns {Clock}
      */
     reset() {
-        this._timeBuffer = 0;
         this._running = false;
+        this._time.setMilliseconds(0);
 
         return this;
     }
@@ -181,11 +174,10 @@ export default class Clock {
      * @public
      */
     destroy() {
-        this._startTime = null;
-        this._timeBuffer = null;
-        this._running = null;
-
         this._time.destroy();
         this._time = null;
+
+        this._startTime = null;
+        this._running = null;
     }
 }

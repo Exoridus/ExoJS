@@ -7,12 +7,12 @@ export default class Segment {
 
     /**
      * @constructor
-     * @param {Number} startX
-     * @param {Number} startY
-     * @param {Number} endX
-     * @param {Number} endY
+     * @param {Number} [startX=0]
+     * @param {Number} [startY=0]
+     * @param {Number} [endX=0]
+     * @param {Number} [endY=0]
      */
-    constructor(startX, startY, endX, endY) {
+    constructor(startX = 0, startY = 0, endX = 0, endY = 0) {
 
         /**
          * @private
@@ -170,12 +170,4 @@ export default class Segment {
  * @constant
  * @member {Segment}
  */
-Segment.Empty = new Segment(0, 0, 0, 0);
-
-/**
- * @public
- * @static
- * @constant
- * @member {Segment}
- */
-Segment.Temp = new Segment(0, 0, 0, 0);
+Segment.Temp = new Segment();

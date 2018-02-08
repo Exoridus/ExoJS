@@ -2,7 +2,7 @@ import GamepadControl from './GamepadControl';
 import { GAMEPAD } from '../const/input';
 
 /**
- * @inner
+ * @private
  * @type {Object}
  */
 const invert = { invert: true };

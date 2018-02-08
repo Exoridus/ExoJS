@@ -220,8 +220,8 @@ export default class Container extends Drawable {
     /**
      * @public
      * @chainable
-     * @param {Number} begin
-     * @param {Number} end
+     * @param {Number} [begin=0]
+     * @param {Number} [end=this._children.length]
      * @returns {Container}
      */
     removeChildren(begin = 0, end = this._children.length) {
@@ -247,6 +247,13 @@ export default class Container extends Drawable {
         }
 
         return this;
+    }
+
+    /**
+     * @override
+     */
+    contains(x, y) {
+        return this._children.some((child) => child.contains(x, y));
     }
 
     /**

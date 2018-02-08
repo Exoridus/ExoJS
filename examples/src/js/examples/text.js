@@ -24,7 +24,7 @@ app.start(new Exo.Scene({
          * @private
          * @member {Time}
          */
-        this._ticker = new Exo.Time();
+        this._time = new Exo.Time();
 
         /**
          * @private
@@ -48,7 +48,7 @@ app.start(new Exo.Scene({
      */
     update(delta) {
         this._text
-            .setText(`Hello World! ${this._ticker.add(delta).seconds | 0}`)
+            .setText(`Hello World! ${this._time.addTime(delta).seconds | 0}`)
             .rotate(delta.seconds * 36);
     },
 

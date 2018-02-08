@@ -6,7 +6,6 @@ import Collision from './Collision';
 import Interval from '../math/Interval';
 import Vector from '../math/Vector';
 import ObservableVector from '../math/ObservableVector';
-import { FLAGS } from '../const/core';
 
 /**
  * @class SceneNode

@@ -1,4 +1,4 @@
-import { PRIMITIVE_TYPES, SHADER_TYPES } from '../const/rendering';
+import { DRAW_MODES, SHADER_TYPES } from '../const/rendering';
 
 /**
  * @class VertexArrayObject
@@ -8,9 +8,9 @@ export default class VertexArrayObject {
     /**
      * @constructor
      * @param {WebGL2RenderingContext} context
-     * @param {Number} [primitiveType=PRIMITIVE_TYPES.TRIANGLES]
+     * @param {Number} [drawMode=DRAW_MODES.TRIANGLES]
      */
-    constructor(context, primitiveType = PRIMITIVE_TYPES.TRIANGLES) {
+    constructor(context, drawMode = DRAW_MODES.TRIANGLES) {
 
         /**
          * @member {WebGL2RenderingContext}
@@ -35,7 +35,7 @@ export default class VertexArrayObject {
         /**
          * @member {Number}
          */
-        this._primitiveType = primitiveType;
+        this._drawMode = drawMode;
 
         /**
          * @member {Boolean}
@@ -125,9 +125,9 @@ export default class VertexArrayObject {
     /**
      * @param {Number} size
      * @param {Number} start
-     * @param {Number} [type=this._primitiveType]
+     * @param {Number} [type=this._drawMode]
      */
-    draw(size, start, type = this._primitiveType) {
+    draw(size, start, type = this._drawMode) {
         const gl = this._context;
 
         if (this._indexBuffer) {

@@ -383,12 +383,4 @@ export default class Rectangle {
  * @constant
  * @member {Rectangle}
  */
-Rectangle.Empty = new Rectangle(0, 0, 0, 0);
-
-/**
- * @public
- * @static
- * @constant
- * @member {Rectangle}
- */
 Rectangle.Temp = new Rectangle();

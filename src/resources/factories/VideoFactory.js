@@ -3,8 +3,8 @@ import BlobFactory from './BlobFactory';
 import support from '../../support';
 
 /**
- * @inner
- * @type {Object<String, Boolean>|Boolean}
+ * @private
+ * @type {Object|Boolean}
  */
 const once = (support.eventOptions ? {
     capture: false,

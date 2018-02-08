@@ -11,13 +11,13 @@ export default class Quadtree {
      * @param {Rectangle} bounds
      * @param {Number} [level=0]
      */
-    constructor(bounds = Rectangle.Empty, level = 0) {
+    constructor(bounds, level = 0) {
 
         /**
          * @private
          * @member {Rectangle}
          */
-        this._bounds = bounds.clone();
+        this._bounds = (bounds && bounds.clone()) || new Rectangle();
 
         /**
          * @private

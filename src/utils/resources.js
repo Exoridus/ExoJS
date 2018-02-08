@@ -8,9 +8,8 @@ const
      */
 
     /**
-     * @inner
+     * @private
      * @constant
-     * @name FILE_TYPES
      * @type {FileType[]}
      */
     FILE_TYPES = [{
@@ -76,7 +75,7 @@ const
     }],
 
     /**
-     * @inner
+     * @private
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer
@@ -95,7 +94,7 @@ const
     },
 
     /**
-     * @inner
+     * @private
      * @constant
      * @type {Function}
      * @param {ArrayBuffer} arrayBuffer

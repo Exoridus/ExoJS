@@ -3,20 +3,6 @@ const
     /**
      * @public
      * @constant
-     * @type {GeneratorFunction}
-     * @param {ArrayBufferView|Number[]} pattern
-     * @param {Number} size
-     * @returns {Generator}
-     */
-    patternIterator = function* (pattern, size = Infinity) {
-        for (let i = 0, len = pattern.length * size; i < len; i++) {
-            yield pattern[i % pattern.length];
-        }
-    },
-
-    /**
-     * @public
-     * @constant
      * @type {Function}
      * @param {Number} size
      * @returns {ArrayBufferView}
@@ -35,6 +21,27 @@ const
         }
 
         return data;
+    },
+
+    /**
+     * @private
+     * @param {String} color
+     * @param {Object} [options]
+     * @param {HTMLCanvasElement} [options.canvas=document.createElement('canvas')]
+     * @param {Number} [options.width=10]
+     * @param {Number} [options.height=10]
+     * @returns {HTMLCanvasElement}
+     */
+    createCanvas = function (color, { canvas = document.createElement('canvas'), width = 10, height = 10 } = {}) {
+        const context = canvas.getContext('2d');
+
+        canvas.width = width;
+        canvas.height = height;
+
+        context.fillStyle = color;
+        context.fillRect(0, 0, width, height);
+
+        return canvas;
     };
 
 /**
@@ -42,4 +49,5 @@ const
  */
 export {
     createQuadIndices,
+    createCanvas,
 };

@@ -3,6 +3,7 @@
  */
 export { default as RenderManager } from './RenderManager';
 export { default as RenderTarget } from './RenderTarget';
+export { default as VertexArrayObject } from './VertexArrayObject';
 export { default as View } from './View';
 export { default as Renderer } from './Renderer';
 export { default as Drawable } from './Drawable';
@@ -19,4 +20,6 @@ export { default as Shader } from './shader/Shader';
 export { default as ShaderAttribute } from './shader/ShaderAttribute';
 export { default as ShaderUniform } from './shader/ShaderUniform';
 export { default as ShaderBlock } from './shader/ShaderBlock';
-export { default as VertexArrayObject } from './VertexArrayObject';
+export { default as Geometry } from './primitives/Geometry';
+export { default as Shape } from './primitives/Shape';
+export { default as ShapeRenderer } from './primitives/ShapeRenderer';

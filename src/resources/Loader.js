@@ -1,4 +1,3 @@
-import settings from '../settings';
 import Signal from '../core/Signal';
 import ResourceContainer from './ResourceContainer';
 import ArrayBufferFactory from './factories/ArrayBufferFactory';
@@ -22,17 +21,17 @@ export default class Loader {
      * @constructor
      * @param {Object} [options]
      * @param {String} [options.resourcePath='']
+     * @param {String} [options.method='GET']
+     * @param {String} [options.mode='cors']
+     * @param {String} [options.cache='default']
      * @param {Database} [options.database=null]
-     * @param {String} [options.method=settings.REQUEST_METHOD]
-     * @param {String} [options.mode=settings.REQUEST_MODE]
-     * @param {String} [options.cache=settings.REQUEST_CACHE]
      */
     constructor({
         resourcePath = '',
+        method = 'GET',
+        mode = 'cors',
+        cache = 'default',
         database = null,
-        method = settings.REQUEST_METHOD,
-        mode = settings.REQUEST_MODE,
-        cache = settings.REQUEST_CACHE,
     } = {}) {
 
         /**
@@ -43,27 +42,21 @@ export default class Loader {
 
         /**
          * @private
-         * @member {?Database|?IDBDatabase}
-         */
-        this._database = database;
-
-        /**
-         * @private
          * @member {Map<String, ResourceFactory>}
          */
         this._factories = new Map();
 
         /**
          * @private
-         * @member {Object[]}
-         */
-        this._queue = [];
-
-        /**
-         * @private
          * @member {ResourceContainer}
          */
         this._resources = new ResourceContainer();
+
+        /**
+         * @private
+         * @member {Object[]}
+         */
+        this._queue = [];
 
         /**
          * @private
@@ -82,6 +75,12 @@ export default class Loader {
          * @member {String}
          */
         this._cache = cache;
+
+        /**
+         * @private
+         * @member {?Database|?IDBDatabase}
+         */
+        this._database = database;
 
         /**
          * @private
@@ -264,7 +263,7 @@ export default class Loader {
      * @public
      * @chainable
      * @param {String} type
-     * @param {Object<String, String>|String} itemsOrName
+     * @param {Object|String} itemsOrName
      * @param {Object|String} [optionsOrPath]
      * @param {Object} [options]
      * @returns {Loader}

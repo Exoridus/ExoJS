@@ -28,13 +28,13 @@ export default class Spritesheet {
 
         /**
          * @private
-         * @type {Object<String, Rectangle>}
+         * @type {Object}
          */
         this._frames = {};
 
         /**
          * @private
-         * @type {Object<String, Sprite>}
+         * @type {Object}
          */
         this._sprites = {};
 
@@ -53,7 +53,7 @@ export default class Spritesheet {
     /**
      * @public
      * @readonly
-     * @member {Object<String, Rectangle>}
+     * @member {Object}
      */
     get frames() {
         return this._frames;
@@ -62,7 +62,7 @@ export default class Spritesheet {
     /**
      * @public
      * @readonly
-     * @member {Object<String, Sprite>}
+     * @member {Object}
      */
     get sprites() {
         return this._sprites;

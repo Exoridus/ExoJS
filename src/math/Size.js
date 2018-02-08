@@ -165,7 +165,7 @@ export default class Size {
  * @constant
  * @type {Size}
  */
-Size.Empty = new Size(0, 0);
+Size.Zero = new Size(0, 0);
 
 /**
  * @public

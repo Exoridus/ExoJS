@@ -4,6 +4,7 @@ import { isPowerOfTwo } from '../../utils/math';
 import settings from '../../settings';
 import Size from '../../math/Size';
 import Flags from '../../math/Flags';
+import { createCanvas } from '../../utils/rendering';
 
 /**
  * @class Texture
@@ -441,3 +442,27 @@ export default class Texture {
         this._flipY = null;
     }
 }
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Texture}
+ */
+Texture.Empty = new Texture(null);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Texture}
+ */
+Texture.Black = new Texture(createCanvas('#000'));
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Texture}
+ */
+Texture.White = new Texture(createCanvas('#fff'));

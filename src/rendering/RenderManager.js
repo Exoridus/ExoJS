@@ -8,6 +8,7 @@ import Color from '../core/Color';
 import { imageToBase64 } from '../utils/core';
 import Texture from './texture/Texture';
 import Sampler from './texture/Sampler';
+import ShapeRenderer from './primitives/ShapeRenderer';
 
 /**
  * @class RenderManager
@@ -19,7 +20,7 @@ export default class RenderManager {
      * @param {Application} app
      */
     constructor(app) {
-        const { width, height, clearColor } = app.config;
+        const { width, height, clearColor, context } = app.config;
 
         if (!support.webGL2) {
             throw new Error('This browser or hardware does not support WebGL v2!');
@@ -35,7 +36,7 @@ export default class RenderManager {
          * @private
          * @member {?WebGL2RenderingContext}
          */
-        this._context = this._createContext();
+        this._context = this._createContext(context);
 
         if (!this._context) {
             throw new Error('This browser or hardware does not support WebGL.');
@@ -134,6 +135,7 @@ export default class RenderManager {
 
         this.addRenderer('sprite', new SpriteRenderer());
         this.addRenderer('particle', new ParticleRenderer());
+        this.addRenderer('shape', new ShapeRenderer());
 
         this.setRenderTarget(this._rootRenderTarget);
         this.setBlendMode(BLEND_MODES.NORMAL);
@@ -662,11 +664,12 @@ export default class RenderManager {
 
     /**
      * @private
-     * @returns {?WebGL2RenderingContext|?WebGL2RenderingContext}
+     * @param {Object} options
+     * @returns {?WebGL2RenderingContext|?WebGLRenderingContext}
      */
-    _createContext(options = settings.CONTEXT_OPTIONS) {
+    _createContext(options) {
         try {
-            return this._canvas.getContext('webgl2', options) || this._canvas.getContext('webgl', options);
+            return this._canvas.getContext('webgl2', options);
         } catch (e) {
             return null;
         }

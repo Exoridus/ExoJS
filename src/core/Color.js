@@ -105,6 +105,54 @@ export default class Color {
 
     /**
      * @public
+     * @member {Number}
+     */
+    get red() {
+        return this.r;
+    }
+
+    set red(red) {
+        this.r = red;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get green() {
+        return this.g;
+    }
+
+    set green(green) {
+        this.g = green;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get blue() {
+        return this.b;
+    }
+
+    set blue(blue) {
+        this.b = blue;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get alpha() {
+        return this.a;
+    }
+
+    set alpha(alpha) {
+        this.a = alpha;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Number} [r=this._r]
      * @param {Number} [g=this._g]

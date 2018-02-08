@@ -1,10 +1,10 @@
-import ParticleModifier from '../ParticleModifier';
+import ParticleAffector from './ParticleAffector';
 
 /**
- * @class TorqueModifier
- * @extends ParticleModifier
+ * @class TorqueAffector
+ * @extends ParticleAffector
  */
-export default class TorqueModifier extends ParticleModifier {
+export default class TorqueAffector extends ParticleAffector {
 
     /**
      * @constructor
@@ -36,7 +36,7 @@ export default class TorqueModifier extends ParticleModifier {
      * @public
      * @chainable
      * @param {Number} angularAcceleration
-     * @returns {TorqueModifier}
+     * @returns {TorqueAffector}
      */
     setAngularAcceleration(angularAcceleration) {
         this._angularAcceleration = angularAcceleration;
@@ -48,16 +48,9 @@ export default class TorqueModifier extends ParticleModifier {
      * @override
      */
     apply(particle, delta) {
-        particle.rotationSpeed = particle.rotationSpeed + (this._angularAcceleration * delta.seconds);
+        particle.rotationSpeed += (delta.seconds * this._angularAcceleration);
 
         return this;
-    }
-
-    /**
-     * @override
-     */
-    clone() {
-        return new TorqueModifier(this._angularAcceleration);
     }
 
     /**

@@ -5,6 +5,7 @@ import InputManager from '../input/InputManager';
 import Loader from '../resources/Loader';
 import settings from '../settings';
 import Signal from './Signal';
+import { APP_STATUS } from '../const/core';
 
 /**
  * @class Application
@@ -14,13 +15,24 @@ export default class Application {
     /**
      * @constructor
      * @param {Object} [options]
-     * @param {String} [options.resourcePath='']
-     * @param {Number} [options.width=800]
-     * @param {Number} [options.height=600]
-     * @param {?HTMLCanvasElement} [options.canvas=null]
-     * @param {?HTMLElement} [options.canvasParent=null]
-     * @param {Color} [options.clearColor=Color.Black]
-     * @param {?Database} [options.database=null]
+     * @param {Number} [options.width]
+     * @param {Number} [options.height]
+     * @param {Color} [options.clearColor]
+     * @param {?HTMLElement} [options.canvasParent]
+     * @param {?HTMLCanvasElement} [options.canvas]
+     * @param {Object} [options.context]
+     * @param {Boolean} [options.context.alpha]
+     * @param {Boolean} [options.context.antialias]
+     * @param {Boolean} [options.context.premultipliedAlpha]
+     * @param {Boolean} [options.context.preserveDrawingBuffer]
+     * @param {Boolean} [options.context.stencil]
+     * @param {Boolean} [options.context.depth]
+     * @param {Object} [options.loader]
+     * @param {?Database} [options.loader.database]
+     * @param {String} [options.loader.resourcePath]
+     * @param {String} [options.loader.method]
+     * @param {String} [options.loader.mode]
+     * @param {String} [options.loader.cache]
      */
     constructor(options) {
         const config = Object.assign({}, settings.APP_OPTIONS, options);
@@ -33,24 +45,27 @@ export default class Application {
 
         /**
          * @private
-         * @member {HTMLCanvasElement}
-         */
-        this._canvas = (config.canvas instanceof HTMLCanvasElement) ? config.canvas : document.createElement('canvas');
-
-        /**
-         * @private
          * @member {HTMLElement}
          */
         this._canvasParent = (config.canvasParent instanceof HTMLElement) ? config.canvasParent : null;
 
         /**
          * @private
+         * @member {HTMLCanvasElement}
+         */
+        this._canvas = (config.canvas instanceof HTMLCanvasElement) ? config.canvas : document.createElement('canvas');
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._status = APP_STATUS.STOPPED;
+
+        /**
+         * @private
          * @member {Loader}
          */
-        this._loader = new Loader({
-            resourcePath: config.resourcePath,
-            database: config.database,
-        });
+        this._loader = new Loader(config.loader);
 
         /**
          * @private
@@ -78,21 +93,33 @@ export default class Application {
 
         /**
          * @private
-         * @member {Number}
+         * @member {Clock}
          */
-        this._updateId = 0;
+        this._startupClock = new Clock({ autoStart: true });
 
         /**
          * @private
          * @member {Clock}
          */
-        this._delta = new Clock();
+        this._activeClock = new Clock();
 
         /**
          * @private
-         * @member {Boolean}
+         * @member {Clock}
          */
-        this._running = false;
+        this._frameClock = new Clock();
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._frameCount = 0;
+
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._frameRequest = 0;
 
         /**
          * @private
@@ -108,6 +135,15 @@ export default class Application {
     /**
      * @public
      * @readonly
+     * @member {Object}
+     */
+    get config() {
+        return this._config;
+    }
+
+    /**
+     * @public
+     * @readonly
      * @member {HTMLCanvasElement}
      */
     get canvas() {
@@ -117,10 +153,10 @@ export default class Application {
     /**
      * @public
      * @readonly
-     * @member {Object}
+     * @member {Number}
      */
-    get config() {
-        return this._config;
+    get status() {
+        return this._status;
     }
 
     /**
@@ -162,10 +198,37 @@ export default class Application {
     /**
      * @public
      * @readonly
-     * @member {Boolean}
+     * @member {Time}
      */
-    get running() {
-        return this._running;
+    get startupTime() {
+        return this._startupClock.elapsedTime;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Time}
+     */
+    get activeTime() {
+        return this._activeClock.elapsedTime;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Time}
+     */
+    get frameTime() {
+        return this._frameClock.elapsedTime;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get frameCount() {
+        return this._frameCount;
     }
 
     /**
@@ -179,25 +242,18 @@ export default class Application {
 
     /**
      * @public
-     * @readonly
-     * @member {Number}
-     */
-    get FPS() {
-        return (1000 / this._delta.elapsedMilliseconds);
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {Scene} scene
      * @returns {Promise<Application>}
      */
     async start(scene) {
-        if (!this._running) {
+        if (this._status === APP_STATUS.STOPPED) {
+            this._status = APP_STATUS.LOADING;
             await this._sceneManager.setScene(scene);
-            this._updateId = requestAnimationFrame(this._updateHandler);
-            this._delta.restart();
-            this._running = true;
+            this._frameRequest = requestAnimationFrame(this._updateHandler);
+            this._frameClock.restart();
+            this._activeClock.start();
+            this._status = APP_STATUS.RUNNING;
         }
 
         return this;
@@ -209,11 +265,12 @@ export default class Application {
      * @returns {Application}
      */
     update() {
-        if (this._running) {
+        if (this._status === APP_STATUS.RUNNING) {
             this._inputManager.update();
-            this._sceneManager.update(this._delta.elapsedTime);
-            this._updateId = requestAnimationFrame(this._updateHandler);
-            this._delta.restart();
+            this._sceneManager.update(this._frameClock.elapsedTime);
+            this._frameRequest = requestAnimationFrame(this._updateHandler);
+            this._frameClock.restart();
+            this._frameCount++;
         }
 
         return this;
@@ -225,12 +282,13 @@ export default class Application {
      * @returns {Application}
      */
     stop() {
-        if (this._running) {
-            cancelAnimationFrame(this._updateId);
-
+        if (this._status === APP_STATUS.RUNNING) {
+            this._status = APP_STATUS.HALTING;
+            cancelAnimationFrame(this._frameRequest);
             this._sceneManager.setScene(null);
-            this._delta.stop();
-            this._running = false;
+            this._activeClock.stop();
+            this._frameClock.stop();
+            this._status = APP_STATUS.STOPPED;
         }
 
         return this;
@@ -272,8 +330,14 @@ export default class Application {
         this._sceneManager.destroy();
         this._sceneManager = null;
 
-        this._delta.destroy();
-        this._delta = null;
+        this._startupClock.destroy();
+        this._startupClock = null;
+
+        this._activeClock.destroy();
+        this._activeClock = null;
+
+        this._frameClock.destroy();
+        this._frameClock = null;
 
         this._onResize.destroy();
         this._onResize = null;
@@ -282,7 +346,8 @@ export default class Application {
         this._canvas = null;
         this._canvasParent = null;
         this._updateHandler = null;
-        this._updateId = null;
-        this._running = null;
+        this._frameRequest = null;
+        this._frameCount = null;
+        this._status = null;
     }
 }

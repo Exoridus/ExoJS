@@ -6,13 +6,13 @@ import Rectangle from '../math/Rectangle';
 const
 
     /**
-     * @inner
+     * @private
      * @type {Map<String, Number>}
      */
     heightCache = new Map(),
 
     /**
-     * @inner
+     * @private
      * @type {RegExp}
      */
     NEWLINE = /(?:\r\n|\r|\n)/;

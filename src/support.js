@@ -1,13 +1,13 @@
 const
 
     /**
-     * @inner
+     * @private
      * @type {HTMLCanvasElement}
      */
     canvas = document.createElement('canvas'),
 
     /**
-     * @inner
+     * @private
      * @type {String}
      */
     supportsContext = ('probablySupportsContext' in canvas) ? 'probablySupportsContext' : 'supportsContext',

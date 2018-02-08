@@ -273,7 +273,7 @@ export default class Collision {
             shapeAInB: shapeAInB,
             shapeBInA: shapeBInA,
             projectionN: projection,
-            projectionV: projection.clone().scale(overlap, overlap),
+            projectionV: projection.clone().multiply(overlap, overlap),
         });
     }
 
@@ -438,7 +438,7 @@ export default class Collision {
             shapeAInB: (circleA.radius <= circleB.radius) && (distance <= (circleB.radius - circleA.radius)),
             shapeBInA: (circleB.radius <= circleA.radius) && (distance <= (circleA.radius - circleB.radius)),
             projectionN: difference.normalize(),
-            projectionV: difference.scale(overlap),
+            projectionV: difference.multiply(overlap),
         });
     }
 
@@ -574,7 +574,7 @@ export default class Collision {
             shapeAInB: swap ? containsB : containsA,
             shapeBInA: swap ? containsA : containsB,
             projectionN: projection,
-            projectionV: projection.scale(overlap),
+            projectionV: projection.multiply(overlap),
         });
     }
 }

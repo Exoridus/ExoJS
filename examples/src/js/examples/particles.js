@@ -22,9 +22,9 @@ app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {ColorModifier}
+         * @member {ColorAffector}
          */
-        this._colorModifier = new Exo.ColorModifier(
+        this._colorAffector = new Exo.ColorAffector(
             new Exo.Color(194, 64, 30, 1),
             new Exo.Color(0, 0, 0, 0)
         );
@@ -36,7 +36,7 @@ app.start(new Exo.Scene({
         this._emitter = new Exo.ParticleEmitter(resources.get('texture', 'particle'));
         this._emitter.setPosition(canvas.width * 0.5, canvas.height * 0.75);
         this._emitter.setBlendMode(Exo.BLEND_MODES.ADD);
-        this._emitter.addModifier(this._colorModifier);
+        this._emitter.addAffector(this._colorAffector);
         this._emitter.setEmissionRate(50);
 
         /**

@@ -5,70 +5,32 @@ import GamepadMapping from './input/GamepadMapping';
 export default {
 
     /**
+     * @public
      * @static
      * @type {Object}
-     * @name APP_OPTIONS
-     * @property {String} resourcePath=''
-     * @property {Number} width=800
-     * @property {Number} height=600
-     * @property {?HTMLCanvasElement} canvas=null
-     * @property {?HTMLElement} canvasParent=null
-     * @property {Color} clearColor=Color.Black
-     * @property {?Database} database=null
      */
     APP_OPTIONS: {
-        resourcePath: '',
         width: 800,
         height: 600,
-        canvas: null,
-        canvasParent: null,
         clearColor: Color.Black,
-        database: null,
+        canvasParent: null,
+        canvas: null,
+        context: {
+            alpha: false,
+            antialias: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            stencil: false,
+            depth: false,
+        },
+        loader: {
+            resourcePath: '',
+            method: 'GET',
+            mode: 'cors',
+            cache: 'default',
+            database: null,
+        }
     },
-
-    /**
-     * @static
-     * @type {Object}
-     * @name CONTEXT_OPTIONS
-     * @property {Boolean} alpha=false
-     * @property {Boolean} antialias=false
-     * @property {Boolean} premultipliedAlpha=false
-     * @property {Boolean} preserveDrawingBuffer=false
-     * @property {Boolean} stencil=false
-     * @property {Boolean} depth=false
-     */
-    CONTEXT_OPTIONS: {
-        alpha: false,
-        antialias: false,
-        premultipliedAlpha: false,
-        preserveDrawingBuffer: false,
-        stencil: false,
-        depth: false,
-    },
-
-    /**
-     * @public
-     * @static
-     * @type {String}
-     * @default 'GET'
-     */
-    REQUEST_METHOD: 'GET',
-
-    /**
-     * @public
-     * @static
-     * @type {String}
-     * @default 'cors'
-     */
-    REQUEST_MODE: 'cors',
-
-    /**
-     * @public
-     * @static
-     * @type {String}
-     * @default 'default'
-     */
-    REQUEST_CACHE: 'default',
 
     /**
      * @public
@@ -210,7 +172,7 @@ export default {
      * @public
      * @static
      * @type {GamepadMapping}
-     * @default {GamepadMapping}
+     * @default new GamepadMapping()
      */
     GAMEPAD_MAPPING: new GamepadMapping(),
 };

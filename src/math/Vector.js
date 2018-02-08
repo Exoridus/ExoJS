@@ -1,3 +1,5 @@
+import { getDistance } from '../utils/math';
+
 /**
  * @class Vector
  */
@@ -49,20 +51,29 @@ export default class Vector {
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
-    get angle() {
+    get direction() {
         return Math.atan2(this._x, this._y);
+    }
+
+    set direction(angle) {
+        const length = this.length;
+
+        this._x = Math.cos(angle) * length;
+        this._y = Math.sin(angle) * length;
     }
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
-    get magnitude() {
-        return this.length;
+    get angle() {
+        return this.direction;
+    }
+
+    set angle(angle) {
+        this.direction = angle;
     }
 
     /**
@@ -71,16 +82,38 @@ export default class Vector {
      * @member {Number}
      */
     get length() {
-        return Math.sqrt(this.lengthSquared);
+        return Math.sqrt((this._x * this._x) + (this._y * this._y));
+    }
+
+    set length(magnitude) {
+        var direction = this.direction;
+
+        this._x = Math.cos(direction) * magnitude;
+        this._y = Math.sin(direction) * magnitude;
     }
 
     /**
      * @public
-     * @readonly
      * @member {Number}
      */
-    get lengthSquared() {
+    get lengthSq() {
         return (this._x * this._x) + (this._y * this._y);
+    }
+
+    set lengthSq(lengthSquared) {
+        this.length = Math.sqrt(lengthSquared);
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get magnitude() {
+        return this.length;
+    }
+
+    set magnitude(magnitude) {
+        this.length = magnitude;
     }
 
     /**
@@ -133,34 +166,6 @@ export default class Vector {
     /**
      * @public
      * @chainable
-     * @returns {Vector}
-     */
-    normalize() {
-        const mag = this.magnitude;
-
-        if (mag > 0) {
-            this._x /= mag;
-            this._y /= mag;
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Vector}
-     */
-    reverse() {
-        this._x *= -1;
-        this._y *= -1;
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
      * @param {Number} x
      * @param {Number} [y=x]
      * @returns {Vector}
@@ -193,7 +198,7 @@ export default class Vector {
      * @param {Number} [y=x]
      * @returns {Vector}
      */
-    scale(x, y = x) {
+    multiply(x, y = x) {
         this._x *= x;
         this._y *= y;
 
@@ -208,10 +213,30 @@ export default class Vector {
      * @returns {Vector}
      */
     divide(x, y = x) {
-        this._x /= x;
-        this._y /= y;
+        if (x !== 0 && y !== 0) {
+            this._x /= x;
+            this._y /= y;
+        }
 
         return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Vector}
+     */
+    normalize() {
+        return this.divide(this.length);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Vector}
+     */
+    invert() {
+        return this.multiply(-1, -1);
     }
 
     /**
@@ -264,15 +289,28 @@ export default class Vector {
 
     /**
      * @public
+     * @returns {Number}
+     */
+    min() {
+        return Math.min(this._x, this._y);
+    }
+
+    /**
+     * @public
+     * @returns {Number}
+     */
+    max() {
+        return Math.max(this._x, this._y);
+    }
+
+    /**
+     * @public
      * @param {Number} x
      * @param {Number} y
      * @returns {Number}
      */
-    distanceTo(x, y) {
-        const offsetX = this._x - x,
-            offsetY = this._y - y;
-
-        return Math.sqrt((offsetX * offsetX) + (offsetY * offsetY));
+    dot(x, y) {
+        return (this._x * x) + (this._y * y);
     }
 
     /**
@@ -286,12 +324,11 @@ export default class Vector {
 
     /**
      * @public
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Vector} vector
      * @returns {Number}
      */
-    dot(x, y) {
-        return (this._x * x) + (this._y * y);
+    distanceTo(vector) {
+        return getDistance(this._x, this._y, vector.x, vector.y);
     }
 
     /**
@@ -310,8 +347,44 @@ export default class Vector {
      * @param {Vector} [result=new Vector()]
      * @returns {Vector}
      */
+    static add(vecA, vecB, result = new Vector()) {
+        return result.copy(vecA).add(vecB.x, vecB.y);
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Vector} vecA
+     * @param {Vector} vecB
+     * @param {Vector} [result=new Vector()]
+     * @returns {Vector}
+     */
     static subtract(vecA, vecB, result = new Vector()) {
         return result.copy(vecA).subtract(vecB.x, vecB.y);
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Vector} vecA
+     * @param {Vector} vecB
+     * @param {Vector} [result=new Vector()]
+     * @returns {Vector}
+     */
+    static multiply(vecA, vecB, result = new Vector()) {
+        return result.copy(vecA).multiply(vecB.x, vecB.y);
+    }
+
+    /**
+     * @public
+     * @static
+     * @param {Vector} vecA
+     * @param {Vector} vecB
+     * @param {Vector} [result=new Vector()]
+     * @returns {Vector}
+     */
+    static divide(vecA, vecB, result = new Vector()) {
+        return result.copy(vecA).divide(vecB.x, vecB.y);
     }
 }
 
@@ -321,7 +394,15 @@ export default class Vector {
  * @constant
  * @type {Vector}
  */
-Vector.Empty = new Vector(0, 0);
+Vector.Zero = new Vector(0, 0);
+
+/**
+ * @public
+ * @static
+ * @constant
+ * @type {Vector}
+ */
+Vector.One = new Vector(1, 1);
 
 /**
  * @public

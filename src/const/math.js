@@ -30,11 +30,7 @@ export const
     /**
      * @public
      * @constant
-     * @name VORONOI_REGION
-     * @type {Object<String, Number>}
-     * @property {Number} LEFT
-     * @property {Number} MIDDLE
-     * @property {Number} RIGHT
+     * @type {Object}
      */
     VORONOI_REGION = {
         LEFT: -1,

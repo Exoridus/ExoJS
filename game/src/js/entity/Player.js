@@ -3,8 +3,8 @@ import { KEYBOARD, GAMEPAD, clamp, Sprite, Vector, Rectangle, Size, Timer, Input
 const
 
     /**
-     * @inner
-     * @member {Object<String, Number>}
+     * @private
+     * @member {Object}
      */
     DIRECTION = {
         UP: 0,
