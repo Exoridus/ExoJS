@@ -1,11 +1,11 @@
-import Clock from './time/Clock';
+import Clock from './Clock';
 import SceneManager from './SceneManager';
-import RenderManager from '../rendering/RenderManager';
+import RenderManager from '../display/RenderManager';
 import InputManager from '../input/InputManager';
-import Loader from '../resources/Loader';
-import settings from '../settings';
+import Loader from '../data/Loader';
 import Signal from './Signal';
-import { APP_STATUS } from '../const/core';
+import { APP_STATUS } from '../const';
+import Screen from '../display/Screen';
 
 /**
  * @class Application
@@ -15,63 +15,31 @@ export default class Application {
     /**
      * @constructor
      * @param {Object} [options]
-     * @param {Number} [options.width]
-     * @param {Number} [options.height]
-     * @param {Color} [options.clearColor]
-     * @param {?HTMLElement} [options.canvasParent]
-     * @param {?HTMLCanvasElement} [options.canvas]
-     * @param {Object} [options.context]
-     * @param {Boolean} [options.context.alpha]
-     * @param {Boolean} [options.context.antialias]
-     * @param {Boolean} [options.context.premultipliedAlpha]
-     * @param {Boolean} [options.context.preserveDrawingBuffer]
-     * @param {Boolean} [options.context.stencil]
-     * @param {Boolean} [options.context.depth]
-     * @param {Object} [options.loader]
-     * @param {?Database} [options.loader.database]
-     * @param {String} [options.loader.resourcePath]
-     * @param {String} [options.loader.method]
-     * @param {String} [options.loader.mode]
-     * @param {String} [options.loader.cache]
+     * @param {Screen} [options.screen=new Screen()]
+     * @param {Loader} [options.loader=new Loader()]
      */
-    constructor(options) {
-        const config = Object.assign({}, settings.APP_OPTIONS, options);
+    constructor({
+        screen = new Screen(),
+        loader = new Loader(),
+    } = {}) {
 
         /**
          * @private
-         * @member {Object}
+         * @member {Screen}
          */
-        this._config = config;
-
-        /**
-         * @private
-         * @member {HTMLElement}
-         */
-        this._canvasParent = (config.canvasParent instanceof HTMLElement) ? config.canvasParent : null;
-
-        /**
-         * @private
-         * @member {HTMLCanvasElement}
-         */
-        this._canvas = (config.canvas instanceof HTMLCanvasElement) ? config.canvas : document.createElement('canvas');
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._status = APP_STATUS.STOPPED;
+        this._screen = screen;
 
         /**
          * @private
          * @member {Loader}
          */
-        this._loader = new Loader(config.loader);
+        this._loader = loader;
 
         /**
          * @private
          * @member {RenderManager}
          */
-        this._renderManager = new RenderManager(this);
+        this._renderManager = new RenderManager(screen);
 
         /**
          * @private
@@ -123,31 +91,18 @@ export default class Application {
 
         /**
          * @private
-         * @member {Signal}
+         * @member {Number}
          */
-        this._onResize = new Signal();
-
-        if (this._canvasParent) {
-            this._canvasParent.appendChild(this._canvas);
-        }
+        this._status = APP_STATUS.STOPPED;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Object}
+     * @member {Screen}
      */
-    get config() {
-        return this._config;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {HTMLCanvasElement}
-     */
-    get canvas() {
-        return this._canvas;
+    get screen() {
+        return this._screen;
     }
 
     /**
@@ -233,15 +188,6 @@ export default class Application {
 
     /**
      * @public
-     * @readonly
-     * @member {Signal}
-     */
-    get onResize() {
-        return this._onResize;
-    }
-
-    /**
-     * @public
      * @chainable
      * @param {Scene} scene
      * @returns {Promise<Application>}
@@ -296,27 +242,12 @@ export default class Application {
 
     /**
      * @public
-     * @chainable
-     * @param {Number} width
-     * @param {Number} height
-     * @returns {Application}
-     */
-    resize(width, height) {
-        this._renderManager.resize(width, height);
-        this._onResize.dispatch(width, height, this);
-
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
         this.stop();
 
-        if (this._canvasParent) {
-            this._canvasParent.removeChild(this._canvas);
-        }
+        this._screen.destroy();
+        this._screen = null;
 
         this._loader.destroy();
         this._loader = null;
@@ -339,12 +270,6 @@ export default class Application {
         this._frameClock.destroy();
         this._frameClock = null;
 
-        this._onResize.destroy();
-        this._onResize = null;
-
-        this._config = null;
-        this._canvas = null;
-        this._canvasParent = null;
         this._updateHandler = null;
         this._frameRequest = null;
         this._frameCount = null;

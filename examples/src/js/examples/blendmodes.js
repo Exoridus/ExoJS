@@ -1,8 +1,7 @@
 const app = new Exo.Application({
-    resourcePath: 'assets/',
-    canvasParent: document.body,
-    width: 800,
-    height: 600,
+    loader: new Exo.Loader({
+        resourcePath: 'assets/'
+    })
 });
 
 app.start(new Exo.Scene({
@@ -23,14 +22,14 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const screen = this.app.screen;
 
         /**
          * @private
          * @member {Sprite}
          */
         this._background = new Exo.Sprite(resources.get('texture', 'background'));
-        this._background.setPosition(canvas.width / 2, canvas.height / 2);
+        this._background.setPosition(screen.width / 2, screen.height / 2);
         this._background.setAnchor(0.5, 0.5);
 
         /**
@@ -94,7 +93,7 @@ app.start(new Exo.Scene({
             align: 'center',
         });
 
-        this._info.setPosition(canvas.width / 2, 0);
+        this._info.setPosition(screen.width / 2, 0);
         this._info.setAnchor(0.5, 0);
 
         this.app.inputManager.onPointerDown.add(this.updateBlendMode, this);
@@ -121,11 +120,11 @@ app.start(new Exo.Scene({
      * @param {Time} delta
      */
     update(delta) {
-        const canvas = this.app.canvas,
-            offset = (Math.cos(this._ticker * 3) * 0.5 + 0.5) * (canvas.width * 0.25);
+        const screen = this.app.screen,
+            offset = (Math.cos(this._ticker * 3) * 0.5 + 0.5) * (screen.width * 0.25);
 
-        this._leftBunny.setPosition((canvas.width / 2) - offset, canvas.height / 2);
-        this._rightBunny.setPosition((canvas.width / 2) + offset, canvas.height / 2);
+        this._leftBunny.setPosition((screen.width / 2) - offset, screen.height / 2);
+        this._rightBunny.setPosition((screen.width / 2) + offset, screen.height / 2);
 
         this._ticker += delta.seconds;
     },

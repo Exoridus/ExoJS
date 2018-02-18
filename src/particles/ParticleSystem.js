@@ -1,7 +1,7 @@
 import Particle from './Particle';
-import Rectangle from '../math/Rectangle';
-import Time from '../core/time/Time';
-import Container from '../rendering/Container';
+import Rectangle from '../types/Rectangle';
+import Time from '../types/Time';
+import Container from '../display/drawable/Container';
 
 /**
  * @class ParticleSystem

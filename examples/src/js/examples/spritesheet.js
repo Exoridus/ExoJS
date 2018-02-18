@@ -1,8 +1,7 @@
 const app = new Exo.Application({
-    resourcePath: 'assets/',
-    canvasParent: document.body,
-    width: 800,
-    height: 600,
+    loader: new Exo.Loader({
+        resourcePath: 'assets/'
+    })
 });
 
 app.start(new Exo.Scene({
@@ -19,7 +18,7 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const { width, height } = this.app.canvas,
+        const { width, height } = this.app.screen,
             texture = resources.get('texture', 'explosion'),
             data = resources.get('json', 'explosion');
 

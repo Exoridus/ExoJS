@@ -1,11 +1,11 @@
-import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const/input';
-import Flags from '../math/Flags';
+import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const';
+import Flags from '../core/Flags';
 import support from '../support';
 import { stopEvent } from '../utils/core';
-import Vector from '../math/Vector';
+import Vector from '../types/Vector';
 import Pointer from './Pointer';
 import Gamepad from './Gamepad';
-import { GLOBAL } from '../const/core';
+import { GLOBAL } from '../const';
 import Signal from '../core/Signal';
 import { getDistance } from '../utils/math';
 
@@ -582,7 +582,7 @@ export default class InputManager {
      * @private
      */
     _addEventListeners() {
-        const canvas = this._app.canvas;
+        const canvas = this._app.screen.canvas;
 
         this._keyDownHandler = this._keyDown.bind(this);
         this._keyUpHandler = this._keyUp.bind(this);
@@ -594,8 +594,6 @@ export default class InputManager {
         this._pointerUpHandler = this._pointerUp.bind(this);
         this._pointerCancelHandler = this._pointerCancel.bind(this);
 
-        GLOBAL.addEventListener('keydown', this._keyDownHandler, true);
-        GLOBAL.addEventListener('keyup', this._keyUpHandler, true);
         canvas.addEventListener('wheel', this._mouseWheelHandler, active);
         canvas.addEventListener('pointerover', this._pointerEnterHandler, passive);
         canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passive);
@@ -605,16 +603,16 @@ export default class InputManager {
         canvas.addEventListener('pointercancel', this._pointerCancelHandler, passive);
         canvas.addEventListener('contextmenu', stopEvent, active);
         canvas.addEventListener('selectstart', stopEvent, active);
+        GLOBAL.addEventListener('keydown', this._keyDownHandler, true);
+        GLOBAL.addEventListener('keyup', this._keyUpHandler, true);
     }
 
     /**
      * @private
      */
     _removeEventListeners() {
-        const canvas = this._app.canvas;
+        const canvas = this._app.screen.canvas;
 
-        GLOBAL.removeEventListener('keydown', this._keyDownHandler, true);
-        GLOBAL.removeEventListener('keyup', this._keyUpHandler, true);
         canvas.removeEventListener('wheel', this._mouseWheelHandler, active);
         canvas.removeEventListener('pointerover', this._pointerEnterHandler, passive);
         canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passive);
@@ -624,6 +622,8 @@ export default class InputManager {
         canvas.removeEventListener('pointercancel', this._pointerCancelHandler, passive);
         canvas.removeEventListener('contextmenu', stopEvent, active);
         canvas.removeEventListener('selectstart', stopEvent, active);
+        GLOBAL.removeEventListener('keydown', this._keyDownHandler, true);
+        GLOBAL.removeEventListener('keyup', this._keyUpHandler, true);
 
         this._keyDownHandler = null;
         this._keyUpHandler = null;

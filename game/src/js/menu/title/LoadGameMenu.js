@@ -16,7 +16,7 @@ export default class LoadGameMenu extends Menu {
     constructor(app, parentMenu) {
         super(app, parentMenu);
 
-        const canvas = app.canvas,
+        const screen = app.screen,
             centerX = canvas.width / 2,
             offsetY = 50;
 
@@ -25,7 +25,7 @@ export default class LoadGameMenu extends Menu {
          * @member {MenuItem}
          */
         this._LoadGameTitle = new MenuItem('Load Game:');
-        this._LoadGameTitle.setPosition(centerX, canvas.height / 3);
+        this._LoadGameTitle.setPosition(centerX, screen.height / 3);
 
         /**
          * @private

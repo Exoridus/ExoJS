@@ -1,5 +1,5 @@
 import { clamp } from '../utils/math';
-import { AUDIO_CONTEXT } from '../const/core';
+import { AUDIO_CONTEXT } from '../const';
 import Signal from '../core/Signal';
 
 /**

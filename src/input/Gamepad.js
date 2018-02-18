@@ -42,6 +42,24 @@ export default class Gamepad {
          * @member {GamepadMapping}
          */
         this._mapping = settings.GAMEPAD_MAPPING;
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onConnect = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onDisconnect = new Signal();
+
+        /**
+         * @private
+         * @member {Signal}
+         */
+        this._onUpdate = new Signal();
     }
 
     /**
@@ -94,6 +112,33 @@ export default class Gamepad {
 
     /**
      * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onConnect() {
+        return this._onConnect;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onDisconnect() {
+        return this._onDisconnect;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Signal}
+     */
+    get onUpdate() {
+        return this._onUpdate;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Gamepad} gamepad
      * @returns {Gamepad}
@@ -102,6 +147,7 @@ export default class Gamepad {
         if (!this._connected) {
             this._gamepad = gamepad;
             this._connected = true;
+            this._onConnect.dispatch();
         }
 
         return this;
@@ -117,6 +163,7 @@ export default class Gamepad {
         if (this._connected) {
             this._gamepad = null;
             this._connected = false;
+            this._onDisconnect.dispatch();
         }
 
         return this;
@@ -143,6 +190,7 @@ export default class Gamepad {
 
                     if (channels[channel] !== value) {
                         channels[channel] = value;
+                        this._onUpdate.dispatch(channel, value, this);
                     }
                 }
             }
@@ -155,6 +203,7 @@ export default class Gamepad {
 
                     if (channels[channel] !== value) {
                         channels[channel] = value;
+                        this._onUpdate.dispatch(channel, value, this);
                     }
                 }
             }
@@ -171,6 +220,15 @@ export default class Gamepad {
 
         this._mapping.destroy();
         this._mapping = null;
+
+        this._onConnect.destroy();
+        this._onConnect = null;
+
+        this._onDisconnect.destroy();
+        this._onDisconnect = null;
+
+        this._onUpdate.destroy();
+        this._onUpdate = null;
 
         this._index = null;
         this._channels = null;

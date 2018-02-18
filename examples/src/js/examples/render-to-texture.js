@@ -1,8 +1,7 @@
 const app = new Exo.Application({
-    resourcePath: 'assets/',
-    canvasParent: document.body,
-    width: 800,
-    height: 600,
+    loader: new Exo.Loader({
+        resourcePath: 'assets/'
+    })
 });
 
 app.start(new Exo.Scene({
@@ -18,7 +17,7 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const screen = this.app.screen;
 
         /**
          * @private
@@ -37,7 +36,7 @@ app.start(new Exo.Scene({
          * @member {Sprite}
          */
         this._renderSprite = new Exo.Sprite(this._renderTexture);
-        this._renderSprite.setPosition(canvas.width, canvas.height);
+        this._renderSprite.setPosition(screen.width, screen.height);
         this._renderSprite.setAnchor(1, 1);
     },
 

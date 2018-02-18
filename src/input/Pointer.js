@@ -1,6 +1,6 @@
-import Vector from '../math/Vector';
-import Size from '../math/Size';
-import Flags from '../math/Flags';
+import Vector from '../types/Vector';
+import Size from '../types/Size';
+import Flags from '../core/Flags';
 import Signal from '../core/Signal';
 
 /**

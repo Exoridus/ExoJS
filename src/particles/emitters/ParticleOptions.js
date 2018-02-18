@@ -1,6 +1,6 @@
-import Vector from '../../math/Vector';
-import Color from '../../core/Color';
-import Time from '../../core/time/Time';
+import Vector from '../../types/Vector';
+import Color from '../../types/Color';
+import Time from '../../types/Time';
 
 /**
  * @class ParticleOptions

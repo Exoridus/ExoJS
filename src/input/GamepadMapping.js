@@ -1,5 +1,5 @@
 import GamepadControl from './GamepadControl';
-import { GAMEPAD } from '../const/input';
+import { GAMEPAD } from '../const';
 
 /**
  * @private

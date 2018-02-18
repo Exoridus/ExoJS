@@ -1,5 +1,5 @@
 import ParticleAffector from './ParticleAffector';
-import Vector from '../../math/Vector';
+import Vector from '../../types/Vector';
 
 /**
  * @class ScaleAffector

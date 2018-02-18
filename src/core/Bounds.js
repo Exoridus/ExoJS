@@ -1,5 +1,6 @@
-import Rectangle from '../math/Rectangle';
-import Matrix from '../math/Matrix';
+import Rectangle from '../types/Rectangle';
+import Matrix from '../types/Matrix';
+import Vector from '../types/Vector';
 
 /**
  * @class Bounds
@@ -8,42 +9,34 @@ export default class Bounds {
 
     /**
      * @constructor
+     * @param {Number} [minX=Infinity]
+     * @param {Number} [minY=Infinity]
+     * @param {Number} [maxX=-Infinity]
+     * @param {Number} [maxY=-Infinity]
      */
-    constructor() {
+    constructor(minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity) {
 
         /**
          * @private
-         * @type {Number}
+         * @member {Vector}
          */
-        this._minX = Infinity;
+        this._min = new Vector(minX, minY);
 
         /**
          * @private
-         * @type {Number}
+         * @member {Vector}
          */
-        this._minY = Infinity;
+        this._max = new Vector(maxX, maxY);
 
         /**
          * @private
-         * @type {Number}
-         */
-        this._maxX = -Infinity;
-
-        /**
-         * @private
-         * @type {Number}
-         */
-        this._maxY = -Infinity;
-
-        /**
-         * @private
-         * @type {Rectangle}
+         * @member {Rectangle}
          */
         this._rect = new Rectangle();
 
         /**
          * @private
-         * @type {Boolean}
+         * @member {Boolean}
          */
         this._dirty = true;
     }
@@ -51,37 +44,36 @@ export default class Bounds {
     /**
      * @public
      * @readonly
-     * @member {Number}
+     * @member {Vector}
      */
-    get minX() {
-        return this._minX;
+    get min() {
+        return this._min;
     }
 
     /**
      * @public
      * @readonly
-     * @member {Number}
+     * @member {Vector}
      */
-    get minY() {
-        return this._minY;
+    get max() {
+        return this._max;
     }
 
     /**
      * @public
-     * @readonly
-     * @member {Number}
+     * @chainable
+     * @param {Number} [minX=Infinity]
+     * @param {Number} [minY=Infinity]
+     * @param {Number} [maxX=-Infinity]
+     * @param {Number} [maxY=-Infinity]
+     * @returns {Bounds}
      */
-    get maxX() {
-        return this._maxX;
-    }
+    reset(minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity) {
+        this._min.set(minX, minY);
+        this._max.set(maxX, maxY);
+        this._dirty = true;
 
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get maxY() {
-        return this._maxY;
+        return this;
     }
 
     /**
@@ -91,12 +83,9 @@ export default class Bounds {
      * @param {Number} y
      * @returns {Bounds}
      */
-    addCoords(x, y) {
-        this._minX = Math.min(this._minX, x);
-        this._minY = Math.min(this._minY, y);
-        this._maxX = Math.max(this._maxX, x);
-        this._maxY = Math.max(this._maxY, y);
-
+    addPoint(x, y) {
+        this._min.min(x, y);
+        this._max.max(x, y);
         this._dirty = true;
 
         return this;
@@ -115,8 +104,8 @@ export default class Bounds {
         }
 
         return this
-            .addCoords(rectangle.left, rectangle.top)
-            .addCoords(rectangle.right, rectangle.bottom);
+            .addPoint(rectangle.left, rectangle.top)
+            .addPoint(rectangle.right, rectangle.bottom);
     }
 
     /**
@@ -126,10 +115,10 @@ export default class Bounds {
     getRect() {
         if (this._dirty) {
             this._rect.set(
-                this._minX,
-                this._minY,
-                this._maxX - this._minX,
-                this._maxY - this._minY
+                this._min.x,
+                this._min.y,
+                this._max.x - this._min.x,
+                this._max.y - this._min.y
             );
 
             this._dirty = false;
@@ -140,31 +129,16 @@ export default class Bounds {
 
     /**
      * @public
-     * @chainable
-     * @returns {Bounds}
-     */
-    reset() {
-        this._minX = Infinity;
-        this._minY = Infinity;
-        this._maxX = -Infinity;
-        this._maxY = -Infinity;
-
-        this._dirty = true;
-
-        return this;
-    }
-
-    /**
-     * @public
      */
     destroy() {
+        this._min.destroy();
+        this._min = null;
+
+        this._max.destroy();
+        this._max = null;
+
         this._rect.destroy();
         this._rect = null;
-
-        this._minX = null;
-        this._minY = null;
-        this._maxX = null;
-        this._maxY = null;
 
         this._dirty = null;
     }

@@ -15,8 +15,8 @@ export default class SettingsMenu extends Menu {
     constructor(app, previousMenu) {
         super(app, previousMenu);
 
-        const canvas = app.canvas,
-            centerX = canvas.width / 2,
+        const screen = app.screen,
+            centerX = screen.width / 2,
             offsetY = 50;
 
         /**
@@ -24,7 +24,7 @@ export default class SettingsMenu extends Menu {
          * @member {MenuItem}
          */
         this._settingsTitle = new MenuItem('Settings:');
-        this._settingsTitle.setPosition(centerX, canvas.height / 3);
+        this._settingsTitle.setPosition(centerX, screen.height / 3);
 
         /**
          * @private

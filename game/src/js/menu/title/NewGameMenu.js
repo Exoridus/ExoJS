@@ -16,7 +16,7 @@ export default class NewGameMenu extends Menu {
     constructor(app, parentMenu) {
         super(app, parentMenu);
 
-        const canvas = app.canvas,
+        const screen = app.screen,
             centerX = canvas.width / 2,
             offsetY = 50;
 
@@ -25,7 +25,7 @@ export default class NewGameMenu extends Menu {
          * @member {MenuItem}
          */
         this._newGameTitle = new MenuItem('New Game:');
-        this._newGameTitle.setPosition(centerX, canvas.height / 3);
+        this._newGameTitle.setPosition(centerX, screen.height / 3);
 
         /**
          * @private

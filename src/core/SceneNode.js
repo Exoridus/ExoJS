@@ -1,11 +1,11 @@
-import Transformable from '../math/Transformable';
-import Matrix from '../math/Matrix';
-import Rectangle from '../math/Rectangle';
+import Transformable from './Transformable';
+import Matrix from '../types/Matrix';
+import Rectangle from '../types/Rectangle';
 import Bounds from './Bounds';
 import Collision from './Collision';
-import Interval from '../math/Interval';
-import Vector from '../math/Vector';
-import ObservableVector from '../math/ObservableVector';
+import Interval from '../types/Interval';
+import Vector from '../types/Vector';
+import ObservableVector from '../types/ObservableVector';
 
 /**
  * @class SceneNode

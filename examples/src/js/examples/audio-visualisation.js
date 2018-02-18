@@ -1,9 +1,7 @@
 const app = new Exo.Application({
-    resourcePath: 'assets/',
-    clearColor: Exo.Color.Black,
-    canvasParent: document.body,
-    width: 800,
-    height: 600,
+    loader: new Exo.Loader({
+        resourcePath: 'assets/'
+    })
 });
 
 app.start(new Exo.Scene({
@@ -19,7 +17,7 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const screen = this.app.screen;
 
         /**
          * @private
@@ -41,8 +39,8 @@ app.start(new Exo.Scene({
         this._canvas.style.position = 'absolute';
         this._canvas.style.top = '12.5%';
         this._canvas.style.left = 0;
-        this._canvas.width = canvas.width;
-        this._canvas.height = canvas.height;
+        this._canvas.width = screen.width;
+        this._canvas.height = screen.height;
 
         /**
          * @private

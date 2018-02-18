@@ -1,4 +1,4 @@
-import { RAD_PER_DEG, DEG_PER_RAD, VORONOI_REGION } from '../const/math';
+import { RAD_PER_DEG, DEG_PER_RAD, VORONOI_REGION } from '../const';
 
 const
 

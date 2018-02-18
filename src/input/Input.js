@@ -1,6 +1,6 @@
 import settings from '../settings';
 import Signal from '../core/Signal';
-import Timer from '../core/time/Timer';
+import Timer from '../core/Timer';
 
 /**
  * @class Input

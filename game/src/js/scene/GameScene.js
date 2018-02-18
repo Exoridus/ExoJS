@@ -13,7 +13,7 @@ export default class GameScene extends Scene {
      * @override
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const screen = this.app.screen;
 
         /**
          * @private
@@ -34,7 +34,7 @@ export default class GameScene extends Scene {
          * @private
          * @member {View}
          */
-        this._camera = new View(0, 0, canvas.width, canvas.height);
+        this._camera = new View(0, 0, screen.width, screen.height);
 
         /**
          * @private

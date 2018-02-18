@@ -1,9 +1,9 @@
-import Renderer from '../rendering/Renderer';
-import Shader from '../rendering/shader/Shader';
+import Renderer from '../display/renderer/Renderer';
+import Shader from '../display/shader/Shader';
 import { createQuadIndices } from '../utils/rendering';
 import settings from '../settings';
-import Buffer from '../rendering/Buffer';
-import VertexArrayObject from '../rendering/VertexArrayObject';
+import Buffer from '../display/Buffer';
+import VertexArrayObject from '../display/VertexArrayObject';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 

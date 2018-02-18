@@ -3,6 +3,42 @@ const
     /**
      * @public
      * @constant
+     * @param {HTMLCanvasElement} canvas
+     * @param {String} context
+     * @param {Object} [options]
+     * @returns {?WebGL2RenderingContext|?WebGLRenderingContext|?CanvasRenderingContext2D}
+     */
+    getCanvasContext = (canvas, context, options) => {
+        try {
+            return canvas.getContext(context, options);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * @private
+     * @param {String} color
+     * @param {Number} [width=10]
+     * @param {Number} [height=10]
+     * @returns {HTMLCanvasElement}
+     */
+    createDummyCanvas = function (color, width = 10, height = 10) {
+        const canvas = document.createElement('canvas'),
+            context = canvas.getContext('2d');
+
+        canvas.width = width;
+        canvas.height = height;
+
+        context.fillStyle = color;
+        context.fillRect(0, 0, width, height);
+
+        return canvas;
+    },
+
+    /**
+     * @public
+     * @constant
      * @type {Function}
      * @param {Number} size
      * @returns {ArrayBufferView}
@@ -21,33 +57,13 @@ const
         }
 
         return data;
-    },
-
-    /**
-     * @private
-     * @param {String} color
-     * @param {Object} [options]
-     * @param {HTMLCanvasElement} [options.canvas=document.createElement('canvas')]
-     * @param {Number} [options.width=10]
-     * @param {Number} [options.height=10]
-     * @returns {HTMLCanvasElement}
-     */
-    createCanvas = function (color, { canvas = document.createElement('canvas'), width = 10, height = 10 } = {}) {
-        const context = canvas.getContext('2d');
-
-        canvas.width = width;
-        canvas.height = height;
-
-        context.fillStyle = color;
-        context.fillRect(0, 0, width, height);
-
-        return canvas;
     };
 
 /**
  * @namespace Exo
  */
 export {
+    getCanvasContext,
+    createDummyCanvas,
     createQuadIndices,
-    createCanvas,
 };

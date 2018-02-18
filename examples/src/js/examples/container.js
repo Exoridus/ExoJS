@@ -1,8 +1,7 @@
 const app = new Exo.Application({
-    resourcePath: 'assets/',
-    canvasParent: document.body,
-    width: 800,
-    height: 600,
+    loader: new Exo.Loader({
+        resourcePath: 'assets/'
+    })
 });
 
 app.start(new Exo.Scene({
@@ -21,7 +20,7 @@ app.start(new Exo.Scene({
      * @param {ResourceContainer} resources
      */
     init(resources) {
-        const canvas = this.app.canvas;
+        const screen = this.app.screen;
 
         /**
          * @type {Sprite}
@@ -32,7 +31,7 @@ app.start(new Exo.Scene({
          * @type {Container}
          */
         this._bunnies = new Exo.Container();
-        this._bunnies.setPosition(canvas.width / 2 | 0, canvas.height / 2 | 0);
+        this._bunnies.setPosition(screen.width / 2 | 0, screen.height / 2 | 0);
 
         for (let i = 0; i < 25; i++) {
             const bunny = new Exo.Sprite(resources.get('texture', 'bunny'));

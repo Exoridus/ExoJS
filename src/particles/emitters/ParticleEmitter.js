@@ -1,4 +1,4 @@
-import Time from '../../core/time/Time';
+import Time from '../../types/Time';
 
 /**
  * @class ParticleEmitter

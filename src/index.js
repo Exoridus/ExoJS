@@ -2,19 +2,20 @@
  * @namespace Exo
  */
 export * from './const';
-export * from './utils';
 export * from './core';
-export * from './math';
+export * from './data';
+export * from './types';
+export * from './utils';
 export * from './audio';
 export * from './input';
-export * from './rendering';
-export * from './resources';
+export * from './display';
+export * from './geometry';
 export * from './particles';
 
-import * as support from './support';
 import * as settings from './settings';
+import * as support from './support';
 
 export {
-    support,
     settings,
+    support,
 };

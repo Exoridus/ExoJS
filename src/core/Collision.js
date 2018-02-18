@@ -1,7 +1,7 @@
-import Vector from '../math/Vector';
-import Interval from '../math/Interval';
-import Polygon from '../math/Polygon';
-import { VORONOI_REGION } from '../const/math';
+import Vector from '../types/Vector';
+import Interval from '../types/Interval';
+import Polygon from '../types/Polygon';
+import { VORONOI_REGION } from '../const';
 import { getDistance, getVoronoiRegion } from '../utils/math';
 
 /**

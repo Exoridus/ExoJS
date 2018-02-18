@@ -16,9 +16,9 @@ export default class MainMenu extends Menu {
     constructor(app, parentMenu = null) {
         super(app, parentMenu);
 
-        const canvas = app.canvas,
+        const screen = app.screen,
             resources = app.loader.resources,
-            centerX = canvas.width / 2,
+            centerX = screen.width / 2,
             offsetY = 50;
 
         /**
@@ -55,7 +55,7 @@ export default class MainMenu extends Menu {
          * @member {MenuItem}
          */
         this._versionText = new MenuItem('Ver. 0.0.1', { fontSize: 25, strokeThickness: 3 });
-        this._versionText.setPosition(canvas.width - 10, canvas.height);
+        this._versionText.setPosition(screen.width - 10, screen.height);
         this._versionText.setAnchor(1, 1);
 
         /**

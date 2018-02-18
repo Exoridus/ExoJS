@@ -1,4 +1,4 @@
-import Rectangle from '../math/Rectangle';
+import Rectangle from '../types/Rectangle';
 import settings from '../settings';
 
 /**

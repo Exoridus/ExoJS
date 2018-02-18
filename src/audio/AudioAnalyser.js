@@ -1,5 +1,5 @@
 import support from '../support';
-import { AUDIO_CONTEXT } from '../const/core';
+import { AUDIO_CONTEXT } from '../const';
 
 /**
  * @class AudioAnalyser

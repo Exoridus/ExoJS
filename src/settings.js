@@ -1,36 +1,7 @@
-import { SCALE_MODES, WRAP_MODES } from './const/rendering';
-import Color from './core/Color';
+import { SCALE_MODES, WRAP_MODES } from './const';
 import GamepadMapping from './input/GamepadMapping';
 
 export default {
-
-    /**
-     * @public
-     * @static
-     * @type {Object}
-     */
-    APP_OPTIONS: {
-        width: 800,
-        height: 600,
-        clearColor: Color.Black,
-        canvasParent: null,
-        canvas: null,
-        context: {
-            alpha: false,
-            antialias: false,
-            premultipliedAlpha: false,
-            preserveDrawingBuffer: false,
-            stencil: false,
-            depth: false,
-        },
-        loader: {
-            resourcePath: '',
-            method: 'GET',
-            mode: 'cors',
-            cache: 'default',
-            database: null,
-        }
-    },
 
     /**
      * @public
@@ -151,14 +122,6 @@ export default {
      * @default 8192
      */
     BATCH_SIZE_PARTICLES: 8192, // ~ 1.18mb
-
-    /**
-     * @public
-     * @static
-     * @type {Number}
-     * @default 65536
-     */
-    BATCH_SIZE_PRIMITIVES: 65536, // ~ 786kb
 
     /**
      * @public

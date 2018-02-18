@@ -1,6 +1,6 @@
 import ParticleAffector from './ParticleAffector';
-import Vector from '../../math/Vector';
-import Color from '../../core/Color';
+import Vector from '../../types/Vector';
+import Color from '../../types/Color';
 
 /**
  * @class ColorAffector
