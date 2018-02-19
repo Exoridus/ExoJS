@@ -3,9 +3,10 @@ import Shader from '../display/shader/Shader';
 import { createQuadIndices } from '../utils/rendering';
 import settings from '../settings';
 import Buffer from '../display/Buffer';
-import VertexArrayObject from '../display/VertexArrayObject';
+import VertexArray from '../display/VertexArray';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { TYPES } from '../const';
 
 /**
  * @class ParticleRenderer
@@ -65,12 +66,6 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {Uint16Array}
-         */
-        this._indexData = createQuadIndices(this._batchSize);
-
-        /**
-         * @private
          * @member {Shader}
          */
         this._shader = new Shader(
@@ -116,9 +111,9 @@ export default class ParticleRenderer extends Renderer {
 
         /**
          * @private
-         * @member {?VertexArrayObject}
+         * @member {?VertexArray}
          */
-        this._vao = null;
+        this._vertexArray = null;
     }
 
     /**
@@ -132,17 +127,16 @@ export default class ParticleRenderer extends Renderer {
             this._renderManager = renderManager;
 
             this._shader.connect(gl);
-            this._indexBuffer = new Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, this._indexData, gl.STATIC_DRAW);
-            this._vertexBuffer = new Buffer(gl, gl.ARRAY_BUFFER, this._vertexData, gl.DYNAMIC_DRAW);
-
-            this._vao = new VertexArrayObject(gl)
-                .addIndex(this._indexBuffer)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, this._attributeCount, 0)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this._attributeCount, 8)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_translation'), gl.FLOAT, false, this._attributeCount, 12)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_scale'), gl.FLOAT, false, this._attributeCount, 20)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_rotation'), gl.FLOAT, false, this._attributeCount, 28)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this._attributeCount, 32);
+            this._vertexBuffer = Buffer.createVertexBuffer(gl,this._vertexData);
+            this._indexBuffer = Buffer.createIndexBuffer(gl, createQuadIndices(this._batchSize));
+            this._vertexArray = new VertexArray(gl)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), TYPES.FLOAT, false, this._attributeCount, 0)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_texcoord'), TYPES.UNSIGNED_SHORT, true, this._attributeCount, 8)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_translation'), TYPES.FLOAT, false, this._attributeCount, 12)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_scale'), TYPES.FLOAT, false, this._attributeCount, 20)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_rotation'), TYPES.FLOAT, false, this._attributeCount, 28)
+                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), TYPES.UNSIGNED_BYTE, true, this._attributeCount, 32)
+                .addIndex(this._indexBuffer);
         }
 
         return this;
@@ -157,8 +151,8 @@ export default class ParticleRenderer extends Renderer {
 
             this._shader.disconnect();
 
-            this._vao.destroy();
-            this._vao = null;
+            this._vertexArray.destroy();
+            this._vertexArray = null;
 
             this._renderManager = null;
             this._context = null;
@@ -175,7 +169,7 @@ export default class ParticleRenderer extends Renderer {
             throw new Error('Renderer has to be connected first!')
         }
 
-        this._renderManager.setVAO(this._vao);
+        this._renderManager.setVAO(this._vertexArray);
         this._renderManager.setShader(this._shader);
 
         return this;
@@ -300,9 +294,9 @@ export default class ParticleRenderer extends Renderer {
                 this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
             }
 
-            this._renderManager.setVAO(this._vao);
+            this._renderManager.setVAO(this._vertexArray);
             this._vertexBuffer.upload(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
-            this._vao.draw(this._batchIndex * 6, 0);
+            this._vertexArray.draw(this._batchIndex * 6, 0);
             this._batchIndex = 0;
         }
 

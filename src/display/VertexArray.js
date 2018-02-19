@@ -1,26 +1,25 @@
-import { DRAW_MODES, SHADER_TYPES } from '../const';
+import { DRAW_MODES, TYPES } from '../const';
 
 /**
- * @class VertexArrayObject
+ * @class VertexArray
  */
-export default class VertexArrayObject {
+export default class VertexArray {
 
     /**
      * @constructor
-     * @param {WebGL2RenderingContext} context
-     * @param {Number} [drawMode=DRAW_MODES.TRIANGLES]
+     * @param {WebGL2RenderingContext} gl
      */
-    constructor(context, drawMode = DRAW_MODES.TRIANGLES) {
+    constructor(gl) {
 
         /**
          * @member {WebGL2RenderingContext}
          */
-        this._context = context;
+        this._context = gl;
 
         /**
          * @member {WebGLVertexArray}
          */
-        this._vao = context.createVertexArray();
+        this._vao = gl.createVertexArray();
 
         /**
          * @member {Array}
@@ -33,23 +32,20 @@ export default class VertexArrayObject {
         this._indexBuffer = null;
 
         /**
-         * @member {Number}
-         */
-        this._drawMode = drawMode;
-
-        /**
          * @member {Boolean}
          */
         this._dirty = false;
     }
 
     /**
-     * Binds the buffer
+     * @public
+     * @chainable
+     * @returns {VertexArray}
      */
     bind() {
         const gl = this._context;
 
-        this._context.bindVertexArray(this._vao);
+        gl.bindVertexArray(this._vao);
 
         if (this._dirty) {
             let lastBuffer = null;
@@ -75,7 +71,9 @@ export default class VertexArrayObject {
     }
 
     /**
-     * Unbinds the buffer
+     * @public
+     * @chainable
+     * @returns {VertexArray}
      */
     unbind() {
         this._context.bindVertexArray(null);
@@ -84,14 +82,17 @@ export default class VertexArrayObject {
     }
 
     /**
+     * @public
+     * @chainable
      * @param {Buffer} buffer
      * @param {ShaderAttribute} attribute
-     * @param {Number} [type=ATTRIBUTE_TYPES.FLOAT]
+     * @param {Number} [type=TYPES.FLOAT]
      * @param {Boolean} [normalized=false]
      * @param {Number} [stride=0]
      * @param {Number} [start=0]
+     * @returns {VertexArray}
      */
-    addAttribute(buffer, attribute, type = SHADER_TYPES.FLOAT, normalized = false, stride = 0, start = 0) {
+    addAttribute(buffer, attribute, type = TYPES.FLOAT, normalized = false, stride = 0, start = 0) {
         const { location, size } = attribute;
 
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });
@@ -101,7 +102,10 @@ export default class VertexArrayObject {
     }
 
     /**
+     * @public
+     * @chainable
      * @param {Buffer} buffer
+     * @returns {VertexArray}
      */
     addIndex(buffer) {
         this._indexBuffer = buffer;
@@ -111,11 +115,11 @@ export default class VertexArrayObject {
     }
 
     /**
-     * Unbinds this vao and disables it
+     * @public
+     * @chainable
+     * @returns {VertexArray}
      */
     clear() {
-        this.unbind();
-
         this._attributes.length = 0;
         this._indexBuffer = null;
 
@@ -123,32 +127,34 @@ export default class VertexArrayObject {
     }
 
     /**
+     * @public
+     * @chainable
      * @param {Number} size
      * @param {Number} start
-     * @param {Number} [type=this._drawMode]
+     * @param {Number} [drawMode=DRAW_MODES.TRIANGLES]
+     * @returns {VertexArray}
      */
-    draw(size, start, type = this._drawMode) {
+    draw(size, start, drawMode = DRAW_MODES.TRIANGLES) {
         const gl = this._context;
 
         if (this._indexBuffer) {
-            gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+            gl.drawElements(drawMode, size, gl.UNSIGNED_SHORT, start);
         } else {
-            gl.drawArrays(type, start, size);
+            gl.drawArrays(drawMode, start, size);
         }
 
         return this;
     }
 
     /**
-     * Destroy this vao
+     * @public
      */
     destroy() {
         this._context.deleteVertexArray(this._vao);
 
-        this._indexBuffer = null;
-        this._attributes = null;
-
         this._vao = null;
         this._context = null;
+        this._attributes = null;
+        this._indexBuffer = null;
     }
 }

@@ -19,9 +19,6 @@ app.start(new Exo.Scene({
     init(resources) {
         const screen = this.app.screen;
 
-        console.log(this.app);
-        console.log(this.app.screen);
-
         /**
          * @private
          * @member {Sprite}

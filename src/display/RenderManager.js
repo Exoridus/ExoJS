@@ -79,7 +79,7 @@ export default class RenderManager {
 
         /**
          * @private
-         * @member {?VertexArrayObject}
+         * @member {?VertexArray}
          */
         this._vao = null;
 
@@ -215,7 +215,7 @@ export default class RenderManager {
     /**
      * @public
      * @chainable
-     * @param {VertexArrayObject} vao
+     * @param {VertexArray} vao
      * @returns {RenderManager}
      */
     setVAO(vao) {

@@ -1,7 +1,7 @@
 import Color from '../../types/Color';
 import Container from './Container';
 import { bezierCurveTo, quadraticCurveTo } from '../../utils/math';
-import Shape from './Shape';
+import Mesh from './Mesh';
 import Vector from '../../types/Vector';
 import CircleGeometry from '../../geometry/CircleGeometry';
 import LineGeometry from '../../geometry/LineGeometry';
@@ -18,27 +18,35 @@ export default class Graphics extends Container {
 
     /**
      * @constructor
+     * @param {Object} [options]
+     * @param {Number} [options.lineWidth=0]
+     * @param {Color} [options.lineColor=Color.Black]
+     * @param {Color} [options.fillColor=Color.Black]
      */
-    constructor() {
+    constructor({
+        lineWidth = 0,
+        lineColor = Color.Black,
+        fillColor = Color.Black,
+    } = {}) {
         super();
 
         /**
          * @private
          * @member {Number}
          */
-        this._lineWidth = 0;
+        this._lineWidth = lineWidth;
 
         /**
          * @private
          * @member {Color}
          */
-        this._lineColor = new Color();
+        this._lineColor = lineColor.clone();
 
         /**
          * @private
          * @member {Color}
          */
-        this._fillColor = new Color();
+        this._fillColor = fillColor.clone();
 
         /**
          * @private
@@ -192,7 +200,7 @@ export default class Graphics extends Container {
      * @returns {Graphics}
      */
     drawLine(startX, startY, endX, endY) {
-        const shape = new Shape(new LineGeometry(startX, startY, endX, endY, this._lineWidth), this._lineColor);
+        const shape = new Mesh(new LineGeometry(startX, startY, endX, endY, this._lineWidth), this._lineColor);
 
         this.addChild(shape);
 
@@ -206,7 +214,7 @@ export default class Graphics extends Container {
      * @returns {Graphics}
      */
     drawPath(path) {
-        const shape = new Shape(new PolylineGeometry(path, this._lineWidth), this._lineColor);
+        const shape = new Mesh(new PolylineGeometry(path, this._lineWidth), this._lineColor);
 
         this.addChild(shape);
 
@@ -220,7 +228,7 @@ export default class Graphics extends Container {
      * @returns {Graphics}
      */
     drawPolygon(path) {
-        const shape = new Shape(new PolygonGeometry(path), this._fillColor);
+        const shape = new Mesh(new PolygonGeometry(path), this._fillColor);
 
         this.addChild(shape);
 
@@ -240,7 +248,7 @@ export default class Graphics extends Container {
      * @returns {Graphics}
      */
     drawCircle(centerX, centerY, radius) {
-        const shape = new Shape(new CircleGeometry(centerX, centerY, radius), this._fillColor);
+        const shape = new Mesh(new CircleGeometry(centerX, centerY, radius), this._fillColor);
 
         this.addChild(shape);
 
@@ -261,7 +269,7 @@ export default class Graphics extends Container {
      * @returns {Graphics}
      */
     drawEllipse(centerX, centerY, radiusX, radiusY) {
-        const shape = new Shape(new EllipseGeometry(centerX, centerY, radiusX, radiusY), this._fillColor);
+        const shape = new Mesh(new EllipseGeometry(centerX, centerY, radiusX, radiusY), this._fillColor);
 
         this.addChild(shape);
 
@@ -282,7 +290,7 @@ export default class Graphics extends Container {
      * @returns {Graphics}
      */
     drawRectangle(x, y, width, height) {
-        const shape = new Shape(new RectangleGeometry(x, y, width, height), this._fillColor);
+        const shape = new Mesh(new RectangleGeometry(x, y, width, height), this._fillColor);
 
         this.addChild(shape);
 

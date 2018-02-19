@@ -41,6 +41,10 @@
             {
                 "title": "Display SVG",
                 "path": "display-svg.js"
+            },
+            {
+                "title": "Primitive Shapes",
+                "path": "primitive-shapes.js"
             }
         ]
     },

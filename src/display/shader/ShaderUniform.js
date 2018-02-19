@@ -1,4 +1,4 @@
-import { TYPE_CLASSES, TYPE_NAMES, TYPE_UPLOADS } from '../../const';
+import { UNIFORM_UPLOADS } from '../../const';
 
 /**
  * @class ShaderUniform
@@ -13,9 +13,9 @@ export default class ShaderUniform {
      * @param {Number} type
      * @param {Number} size
      * @param {String} name
-     * @param {ArrayBufferView} data
+     * @param {ArrayBufferView} value
      */
-    constructor(gl, program, index, type, size, name, data) {
+    constructor(gl, program, index, type, size, name, value) {
 
         /**
          * @private
@@ -55,6 +55,18 @@ export default class ShaderUniform {
 
         /**
          * @private
+         * @member {String}
+         */
+        this._blockName = this._name.substring(0, this._name.lastIndexOf('.'));
+
+        /**
+         * @private
+         * @member {String}
+         */
+        this._uniformName = this._name.substring(this._name.lastIndexOf('.') + 1);
+
+        /**
+         * @private
          * @member {WebGLUniformLocation}
          */
         this._location = gl.getUniformLocation(program, this._name);
@@ -63,13 +75,13 @@ export default class ShaderUniform {
          * @private
          * @member {ArrayBufferView}
          */
-        this._value = data;
+        this._value = value;
 
         /**
          * @private
          * @member {Function}
          */
-        this._uploadFn = TYPE_UPLOADS[type];
+        this._uploadFn = UNIFORM_UPLOADS[type];
     }
 
     /**
@@ -95,8 +107,17 @@ export default class ShaderUniform {
      * @readonly
      * @member {String}
      */
-    get namespace() {
-        return this._name.substr(this._name.lastIndexOf('.') + 1);
+    get blockName() {
+        return this._blockName;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {String}
+     */
+    get uniformName() {
+        return this._uniformName;
     }
 
     /**
@@ -172,6 +193,8 @@ export default class ShaderUniform {
         this._program = null;
         this._index = null;
         this._name = null;
+        this._blockName = null;
+        this._uniformName = null;
         this._type = null;
         this._size = null;
         this._value = null;

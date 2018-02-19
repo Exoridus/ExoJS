@@ -1,12 +1,7 @@
 import Renderer from './Renderer';
 import Shader from '../shader/Shader';
-import settings from '../../settings';
-import VertexArrayObject from '../VertexArrayObject';
-import Buffer from '../Buffer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { createQuadIndices } from '../../utils/rendering';
-import Texture from '../Texture';
 
 /**
  * @class ShapeRenderer
@@ -40,30 +35,6 @@ export default class ShapeRenderer extends Renderer {
          * @member {?WebGL2RenderingContext}
          */
         this._context = null;
-
-        /**
-         * @private
-         * @member {?Texture}
-         */
-        this._currentTexture = null;
-
-        /**
-         * @private
-         * @member {?Number}
-         */
-        this._currentBlendMode = null;
-
-        /**
-         * @private
-         * @member {?View}
-         */
-        this._currentView = null;
-
-        /**
-         * @private
-         * @member {Number}
-         */
-        this._viewId = -1;
     }
 
     /**
@@ -71,9 +42,11 @@ export default class ShapeRenderer extends Renderer {
      */
     connect(renderManager) {
         if (!this._context) {
-            this._context = renderManager.context;
+            const gl = renderManager.context;
+
+            this._context = gl;
             this._renderManager = renderManager;
-            this._shader.connect(this._context);
+            this._shader.connect(gl);
         }
 
         return this;
@@ -112,14 +85,7 @@ export default class ShapeRenderer extends Renderer {
      */
     unbind() {
         if (this._context) {
-            this.flush();
-
             this._renderManager.setShader(null);
-            this._renderManager.setVAO(null);
-
-            this._currentTexture = null;
-            this._currentBlendMode = null;
-            this._currentView = null;
         }
 
         return this;
@@ -127,16 +93,14 @@ export default class ShapeRenderer extends Renderer {
 
     /**
      * @override
-     * @param {Shape} shape
      */
     render(shape) {
-        const { geometry, blendMode } = shape;
+        const { geometry } = shape,
+            vao = geometry.getVAO(this._context, this._shader);
 
-        this._renderManager.setTexture(null);
-        this._renderManager.setBlendMode(blendMode);
-        this._renderManager.setVAO(geometry.vao);
+        this._renderManager.setVAO(vao);
 
-        geometry.vao.draw(geometry.vao.vertices.length, 0);
+        vao.draw(geometry.indices.length, 0)
 
         return this;
     }
@@ -145,14 +109,6 @@ export default class ShapeRenderer extends Renderer {
      * @override
      */
     flush() {
-        const view = this._renderManager.view;
-
-        if (this._currentView !== view || this._viewId !== view.updateId) {
-            this._currentView = view;
-            this._viewId = view.updateId;
-            this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
-        }
-
         return this;
     }
 
@@ -165,15 +121,6 @@ export default class ShapeRenderer extends Renderer {
         this._shader.destroy();
         this._shader = null;
 
-        this._uint32View = null;
-        this._float32View = null;
-        this._viewId = null;
-        this._batchSize = null;
-        this._batchIndex = null;
-        this._attributeCount = null;
-        this._currentTexture = null;
-        this._currentBlendMode = null;
-        this._currentView = null;
         this._renderManager = null;
         this._context = null;
     }

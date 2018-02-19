@@ -1,4 +1,4 @@
-import { TYPE_SIZES } from '../../const';
+import { UNIFORM_SIZES } from '../../const';
 
 /**
  * @class ShaderAttribute
@@ -55,7 +55,7 @@ export default class ShaderAttribute {
          * @private
          * @member {Number}
          */
-        this._size = TYPE_SIZES[type];
+        this._size = UNIFORM_SIZES[type];
     }
 
     /**

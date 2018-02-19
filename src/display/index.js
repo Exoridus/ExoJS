@@ -3,7 +3,7 @@
  */
 export { default as RenderManager } from './RenderManager';
 export { default as RenderTarget } from './RenderTarget';
-export { default as VertexArrayObject } from './VertexArrayObject';
+export { default as VertexArray } from './VertexArray';
 export { default as View } from './View';
 export { default as Spritesheet } from './Spritesheet';
 export { default as Texture } from './Texture';
@@ -17,6 +17,8 @@ export { default as Container } from './drawable/Container';
 export { default as Sprite } from './drawable/Sprite';
 export { default as Text } from './drawable/Text';
 export { default as Video } from './drawable/Video';
+export { default as Mesh } from './drawable/Mesh';
+export { default as Graphics } from './drawable/Graphics';
 export { default as Renderer } from './renderer/Renderer';
 export { default as SpriteRenderer } from './renderer/SpriteRenderer';
 export { default as ShapeRenderer } from './renderer/ShapeRenderer';

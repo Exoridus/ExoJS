@@ -1,5 +1,5 @@
 import ShaderUniform from './ShaderUniform';
-import { TYPE_CLASSES, TYPE_SIZES } from '../../const';
+import { UNIFORM_VALUES, UNIFORM_SIZES } from '../../const';
 
 /**
  * @class ShaderBlock
@@ -22,12 +22,6 @@ export default class ShaderBlock {
 
         /**
          * @private
-         * @member {WebGLProgram}
-         */
-        this._program = program;
-
-        /**
-         * @private
          * @member {Number}
          */
         this._index = index;
@@ -46,34 +40,24 @@ export default class ShaderBlock {
 
         /**
          * @private
-         * @member {Number}
-         */
-        this._dataSize = gl.getActiveUniformBlockParameter(program, index, gl.UNIFORM_BLOCK_DATA_SIZE);
-
-        /**
-         * @private
          * @member {ArrayBuffer}
          */
-        this._blockData = new ArrayBuffer(this._dataSize);
+        this._data = new ArrayBuffer(gl.getActiveUniformBlockParameter(program, index, gl.UNIFORM_BLOCK_DATA_SIZE));
 
         /**
          * @private
-         * @member {WebGLBuffer}
+         * @member {Buffer}
          */
-        this._uniformBuffer = gl.createBuffer();
+        this._buffer = Buffer.createUniformBuffer(gl, this._data);
 
         /**
          * @private
          * @member {Map<String, ShaderUniform>}
          */
-        this._uniforms = new Map();
+        this._uniforms = this.extractUniforms();
 
-        this._extractUniforms();
-
-        gl.bindBuffer(gl.UNIFORM_BUFFER, this._uniformBuffer);
-        gl.bufferData(gl.UNIFORM_BUFFER, this._blockData, gl.DYNAMIC_DRAW);
-        gl.bindBufferBase(gl.UNIFORM_BUFFER, this._binding, this._uniformBuffer);
-        gl.uniformBlockBinding(this._program, this._index, this._binding);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, this._binding, this._buffer.buffer);
+        gl.uniformBlockBinding(program, this._index, this._binding);
     }
 
     /**
@@ -97,10 +81,10 @@ export default class ShaderBlock {
     /**
      * @public
      * @readonly
-     * @member {Number}
+     * @member {ArrayBuffer}
      */
-    get dataSize() {
-        return this._dataSize;
+    get data() {
+        return this._data;
     }
 
     /**
@@ -110,6 +94,29 @@ export default class ShaderBlock {
      */
     get binding() {
         return this._binding;
+    }
+
+    /**
+     * @public
+     * @returns {Map<String, ShaderUniform>}
+     */
+    extractUniforms() {
+        const gl = this._context,
+            program = this._program,
+            indices = gl.getActiveUniformBlockParameter(program, this._index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
+            offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET),
+            length = indices.length,
+            uniforms = new Map();
+
+        for (let i = 0; i < length; i++) {
+            const { type, size, name } = gl.getActiveUniform(program, indices[i]),
+                value = new UNIFORM_VALUES[type](this._data, offsets[i], UNIFORM_SIZES[type] * size),
+                uniform = new ShaderUniform(gl, program, indices[i], type, size, name, value);
+
+            uniforms.set(uniform.uniformName, uniform);
+        }
+
+        return uniforms;
     }
 
     /**
@@ -131,10 +138,9 @@ export default class ShaderBlock {
      * @returns {ShaderBlock}
      */
     upload() {
-        const gl = this._context;
+        this._buffer.upload(this._data);
 
-        gl.bindBuffer(gl.UNIFORM_BUFFER, this._uniformBuffer);
-        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this._blockData);
+        return this;
     }
 
     /**
@@ -148,33 +154,13 @@ export default class ShaderBlock {
         this._uniforms.clear();
         this._uniforms = null;
 
+        this._buffer.destroy();
+        this._buffer = null;
+
         this._context = null;
-        this._program = null;
         this._index = null;
         this._name = null;
+        this._data = null;
         this._binding = null;
-        this._dataSize = null;
-        this._blockData = null;
-        this._uniformBuffer = null;
-    }
-
-    /**
-     * @private
-     * @returns {Map<String, ShaderUniform>}
-     */
-    _extractUniforms() {
-        const gl = this._context,
-            program = this._program,
-            blockData = this._blockData,
-            indices = gl.getActiveUniformBlockParameter(program, this._index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
-            offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET),
-            len = indices.length;
-
-        for (let i = 0; i < len; i++) {
-            const { type, size, name } = gl.getActiveUniform(program, indices[i]),
-                uniform = new ShaderUniform(gl, program, indices[i], type, size, name, new TYPE_CLASSES[type](blockData, offsets[i], TYPE_SIZES[type] * size));
-
-            this._uniforms.set(uniform.namespace, uniform);
-        }
     }
 }

@@ -1,4 +1,6 @@
-import { DRAW_MODES } from '../const';
+import VertexArray from '../display/VertexArray';
+import Buffer from '../display/Buffer';
+import { TYPES } from '../const';
 
 /**
  * @class Geometry
@@ -10,31 +12,29 @@ export default class Geometry {
      * @param {Object} [options]
      * @param {Number[]} [options.vertices=[]]
      * @param {Number[]} [options.indices=[]]
-     * @param {Number} [options.drawMode=DRAW_MODES.TRIANGLES]
      */
     constructor({
         vertices = [],
         indices = [],
-        drawMode = DRAW_MODES.TRIANGLES,
     } = {}) {
 
         /**
          * @private
-         * @member {Vector[]}
+         * @member {Float32Array}
          */
-        this._vertices = vertices;
+        this._vertices = new Float32Array(vertices);
 
         /**
          * @private
-         * @member {Number[]}
+         * @member {Uint16Array}
          */
-        this._indices = indices;
+        this._indices = new Uint16Array(indices);
 
         /**
          * @private
-         * @member {Number}
+         * @member {?VertexArray}
          */
-        this._drawMode = drawMode;
+        this._vao = null;
     }
 
     /**
@@ -57,19 +57,33 @@ export default class Geometry {
 
     /**
      * @public
-     * @readonly
-     * @member {Number}
+     * @param {WebGL2RenderingContext} gl
+     * @param {Shader} shader
      */
-    get drawMode() {
-        return this._drawMode;
+    getVAO(gl, shader) {
+        if (!this._vao) {
+            const vertexBuffer = Buffer.createVertexBuffer(gl,this._vertices),
+                indexBuffer = Buffer.createIndexBuffer(gl, this._indices);
+
+            this._vao = new VertexArray(gl)
+                .addAttribute(vertexBuffer, shader.getAttribute('a_position'), TYPES.FLOAT, false, 12, 0)
+                .addAttribute(vertexBuffer, shader.getAttribute('a_color'), TYPES.UNSIGNED_BYTE, true, 12, 8)
+                .addIndex(indexBuffer);
+        }
+
+        return this._vao;
     }
 
     /**
      * @public
      */
     destroy() {
+        if (this._vao) {
+            this._vao.destroy();
+            this._vao = null;
+        }
+
         this._vertices = null;
         this._indices = null;
-        this._drawMode = null;
     }
 }
