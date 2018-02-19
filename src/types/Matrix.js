@@ -182,7 +182,7 @@ export default class Matrix {
      * @param {Matrix} matrix
      * @returns {Matrix}
      */
-    combine(matrix) {
+    multiply(matrix) {
         return this.set(
             (this.a * matrix.a) + (this.c * matrix.b) + (this.e * matrix.x),
             (this.b * matrix.a) + (this.d * matrix.b) + (this.f * matrix.x),
@@ -237,7 +237,7 @@ export default class Matrix {
      * @returns {Matrix}
      */
     translate(x, y = x) {
-        return this.combine(Matrix.Temp.set(
+        return this.multiply(Matrix.Temp.set(
             1, 0, x,
             0, 1, y,
             0, 0, 1
@@ -257,7 +257,7 @@ export default class Matrix {
             cos = Math.cos(radian),
             sin = Math.sin(radian);
 
-        return this.combine(Matrix.Temp.set(
+        return this.multiply(Matrix.Temp.set(
             cos, -sin, (centerX * (1 - cos)) + (centerY * sin),
             sin,  cos, (centerY * (1 - cos)) - (centerX * sin),
             0, 0, 1
@@ -274,7 +274,7 @@ export default class Matrix {
      * @returns {Matrix}
      */
     scale(scaleX, scaleY = scaleX, centerX = 0, centerY = centerX) {
-        return this.combine(Matrix.Temp.set(
+        return this.multiply(Matrix.Temp.set(
             scaleX, 0, (centerX * (1 - scaleX)),
             0, scaleY, (centerY * (1 - scaleY)),
             0, 0, 1

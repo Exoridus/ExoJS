@@ -4,7 +4,6 @@
 export { default as Scene } from './Scene';
 export { default as SceneNode } from './SceneNode';
 export { default as SceneManager } from './SceneManager';
-export { default as Transformable } from './Transformable';
 export { default as Application } from './Application';
 export { default as Screen } from '../display/Screen';
 export { default as Signal } from './Signal';

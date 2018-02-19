@@ -1,4 +1,3 @@
-import Transformable from './Transformable';
 import Matrix from '../types/Matrix';
 import Rectangle from '../types/Rectangle';
 import Bounds from './Bounds';
@@ -6,24 +5,25 @@ import Collision from './Collision';
 import Interval from '../types/Interval';
 import Vector from '../types/Vector';
 import ObservableVector from '../types/ObservableVector';
+import { FLAGS } from '../const';
+import Flags from './Flags';
+import { degreesToRadians } from '../utils/math';
 
 /**
  * @class SceneNode
- * @extends Transformable
  */
-export default class SceneNode extends Transformable {
+export default class SceneNode {
 
     /**
      * @constructor
      */
     constructor() {
-        super();
 
         /**
          * @private
-         * @member {Matrix}
+         * @member {?SceneNode}
          */
-        this._globalTransform = new Matrix();
+        this._parent = null;
 
         /**
          * @private
@@ -39,33 +39,63 @@ export default class SceneNode extends Transformable {
 
         /**
          * @private
+         * @member {Matrix}
+         */
+        this._localTransform = new Matrix();
+
+        /**
+         * @private
+         * @member {Matrix}
+         */
+        this._globalTransform = new Matrix();
+
+        /**
+         * @private
+         * @member {ObservableVector}
+         */
+        this._position = new ObservableVector(this._setPositionDirty, this, 0, 0);
+
+        /**
+         * @private
+         * @member {ObservableVector}
+         */
+        this._scale = new ObservableVector(this._setScalingDirty, this, 1, 1);
+
+        /**
+         * @private
+         * @member {ObservableVector}
+         */
+        this._origin = new ObservableVector(this._setOriginDirty, this, 0, 0);
+
+        /**
+         * @private
          * @member {ObservableVector}
          */
         this._anchor = new ObservableVector(this._updateOrigin, this, 0, 0);
 
         /**
          * @private
-         * @member {?SceneNode}
+         * @member {Number}
          */
-        this._parent = null;
+        this._rotation = 0;
 
         /**
          * @private
-         * @member {?Circle|?Rectangle|?Polygon}
+         * @member {Number}
          */
-        this._hitbox = null;
-    }
+        this._sin = 0;
 
-    /**
-     * @public
-     * @member {Vector}
-     */
-    get anchor() {
-        return this._anchor;
-    }
+        /**
+         * @private
+         * @member {Number}
+         */
+        this._cos = 1;
 
-    set anchor(anchor) {
-        this._anchor.copy(anchor);
+        /**
+         * @private
+         * @member {Flags}
+         */
+        this._flags = new Flags(FLAGS.TRANSFORM);
     }
 
     /**
@@ -82,23 +112,86 @@ export default class SceneNode extends Transformable {
 
     /**
      * @public
-     * @member {?Circle|?Rectangle|?Polygon}
+     * @member {ObservableVector}
      */
-    get hitbox() {
-        return this._hitbox;
+    get position() {
+        return this._position;
     }
 
-    set hitbox(hitbox) {
-        this._hitbox = hitbox;
+    set position(position) {
+        this._position.copy(position);
     }
 
     /**
      * @public
-     * @readonly
-     * @member {Matrix}
+     * @member {Number}
      */
-    get globalTransform() {
-        return this.getGlobalTransform();
+    get x() {
+        return this._position.x;
+    }
+
+    set x(x) {
+        this._position.x = x;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get y() {
+        return this._position.y;
+    }
+
+    set y(y) {
+        this._position.y = y;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get rotation() {
+        return this._rotation;
+    }
+
+    set rotation(rotation) {
+        this.setRotation(rotation);
+    }
+
+    /**
+     * @public
+     * @member {ObservableVector}
+     */
+    get scale() {
+        return this._scale;
+    }
+
+    set scale(scale) {
+        this._scale.copy(scale);
+    }
+
+    /**
+     * @public
+     * @member {ObservableVector}
+     */
+    get origin() {
+        return this._origin;
+    }
+
+    set origin(origin) {
+        this._origin.copy(origin);
+    }
+
+    /**
+     * @public
+     * @member {Vector}
+     */
+    get anchor() {
+        return this._anchor;
+    }
+
+    set anchor(anchor) {
+        this._anchor.copy(anchor);
     }
 
     /**
@@ -121,6 +214,151 @@ export default class SceneNode extends Transformable {
 
     /**
      * @public
+     * @readonly
+     * @member {Flags}
+     */
+    get flags() {
+        return this._flags;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} [y=x]
+     * @returns {SceneNode}
+     */
+    setPosition(x, y = x) {
+        this._position.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} degrees
+     * @returns {SceneNode}
+     */
+    setRotation(degrees) {
+        const trimmed = degrees % 360,
+            rotation = trimmed < 0 ? trimmed + 360 : trimmed;
+
+        if (this._rotation !== rotation) {
+            this._rotation = rotation;
+            this._setRotationDirty();
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} [y=x]
+     * @returns {SceneNode}
+     */
+    setScale(x, y = x) {
+        this._scale.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} [y=x]
+     * @returns {SceneNode}
+     */
+    setOrigin(x, y = x)  {
+        this._origin.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} [y=x]
+     * @returns {SceneNode}
+     */
+    setAnchor(x, y = x)  {
+        this._anchor.set(x, y);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} x
+     * @param {Number} y
+     * @returns {SceneNode}
+     */
+    move(x, y) {
+        return this.setPosition(this.x + x, this.y + y);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} degrees
+     * @returns {SceneNode}
+     */
+    rotate(degrees) {
+        return this.setRotation(this._rotation + degrees);
+    }
+
+    /**
+     * @public
+     * @returns {Matrix}
+     */
+    getTransform() {
+        if (this._flags.has(FLAGS.TRANSFORM)) {
+            this.updateTransform();
+            this._flags.remove(FLAGS.TRANSFORM);
+        }
+
+        return this._localTransform;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {SceneNode}
+     */
+    updateTransform() {
+        if (this._flags.has(FLAGS.ROTATION)) {
+            const radians = degreesToRadians(this._rotation);
+
+            this._cos = Math.cos(radians);
+            this._sin = Math.sin(radians);
+        }
+
+        if (this._flags.has(FLAGS.ROTATION | FLAGS.SCALING)) {
+            this._localTransform.a = this._scale.x * this._cos;
+            this._localTransform.b = this._scale.y * this._sin;
+
+            this._localTransform.c = -this._scale.x * this._sin;
+            this._localTransform.d =  this._scale.y * this._cos;
+        }
+
+        if (this._rotation) {
+            this._localTransform.x = (this._origin.x * -this._localTransform.a) - (this._origin.y * this._localTransform.b) + this._position.x;
+            this._localTransform.y = (this._origin.x * -this._localTransform.c) - (this._origin.y * this._localTransform.d) + this._position.y;
+        } else {
+            this._localTransform.x = (this._origin.x * -this._scale.x) + this._position.x;
+            this._localTransform.y = (this._origin.y * -this._scale.y) + this._position.y;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
      * @returns {Rectangle}
      */
     getLocalBounds() {
@@ -132,7 +370,7 @@ export default class SceneNode extends Transformable {
      * @returns {Rectangle}
      */
     getBounds() {
-        this.updateParentTransform();
+        this.updateGlobalTransform();
         this.updateBounds();
 
         return this._bounds.getRect();
@@ -155,9 +393,9 @@ export default class SceneNode extends Transformable {
      * @chainable
      * @returns {SceneNode}
      */
-    updateParentTransform() {
+    updateGlobalTransform() {
         if (this._parent) {
-            this._parent.updateParentTransform();
+            this._parent.updateGlobalTransform();
         }
 
         this.updateTransform();
@@ -173,7 +411,7 @@ export default class SceneNode extends Transformable {
         this._globalTransform.copy(this.getTransform());
 
         if (this._parent) {
-            this._globalTransform.combine(this._parent.getGlobalTransform());
+            this._globalTransform.multiply(this._parent.getGlobalTransform());
         }
 
         return this._globalTransform;
@@ -242,26 +480,23 @@ export default class SceneNode extends Transformable {
     }
 
     /**
-     * @public
-     * @chainable
-     * @param {Number} x
-     * @param {Number} [y=x]
-     * @returns {SceneNode}
-     */
-    setAnchor(x, y = x)  {
-        this._anchor.set(x, y);
-
-        return this;
-    }
-
-    /**
      * @override
      */
     destroy() {
-        super.destroy();
+        this._localTransform.destroy();
+        this._localTransform = null;
 
         this._globalTransform.destroy();
         this._globalTransform = null;
+
+        this._position.destroy();
+        this._position = null;
+
+        this._scale.destroy();
+        this._scale = null;
+
+        this._origin.destroy();
+        this._origin = null;
 
         this._localBounds.destroy();
         this._localBounds = null;
@@ -272,17 +507,49 @@ export default class SceneNode extends Transformable {
         this._anchor.destroy();
         this._anchor = null;
 
+        this._flags.destroy();
+        this._flags = null;
+
         this._parent = null;
-        this._hitbox = null;
+        this._rotation = null;
+        this._sin = null;
+        this._cos = null;
     }
 
     /**
      * @private
      */
     _updateOrigin() {
-        const { x, y } = this._anchor,
-            { width, height } = this.getBounds();
+        const { width, height } = this.getBounds();
 
-        this.setOrigin(width * x, height * y);
+        this.setOrigin(width * this._anchor.x, height * this._anchor.y);
+    }
+
+    /**
+     * @private
+     */
+    _setPositionDirty() {
+        this._flags.add(FLAGS.TRANSLATION);
+    }
+
+    /**
+     * @private
+     */
+    _setRotationDirty() {
+        this._flags.add(FLAGS.ROTATION);
+    }
+
+    /**
+     * @private
+     */
+    _setScalingDirty() {
+        this._flags.add(FLAGS.SCALING);
+    }
+
+    /**
+     * @private
+     */
+    _setOriginDirty() {
+        this._flags.add(FLAGS.ORIGIN);
     }
 }

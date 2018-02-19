@@ -103,6 +103,12 @@ export default class Screen {
          */
         this._cursor = this._canvas.style.cursor;
 
+        /**
+         * @private
+         * @member {String}
+         */
+        this._cursorText = this._cursor;
+
         this._setupContext();
         this._addEvents();
     }
@@ -259,15 +265,18 @@ export default class Screen {
      */
     setCursor(cursor) {
         if (cursor !== this._cursor) {
+            this._cursor = cursor;
+            this._cursorText = cursor;
+
             if (cursor instanceof Texture) {
-                cursor = cursor.source;
+                this._cursorText = cursor.source;
             }
 
             if (cursor instanceof HTMLImageElement) {
-                cursor = `url(${imageToBase64(cursor)})`;
+                this._cursorText = `url(${imageToBase64(cursor)})`;
             }
 
-            this._canvas.style.cursor = this._cursor = cursor;
+            this._canvas.style.cursor = this._cursorText;
         }
 
         return this;
@@ -297,6 +306,7 @@ export default class Screen {
         this._context = null;
         this._canvas = null;
         this._cursor = null;
+        this._cursorText = null;
     }
 
     /**
@@ -306,11 +316,11 @@ export default class Screen {
         const gl = this._context,
             { r, g, b, a } = this._background;
 
-        gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.STENCIL_TEST);
 
         gl.enable(gl.BLEND);
-        gl.enable(gl.STENCIL_TEST);
 
         gl.blendEquation(gl.FUNC_ADD);
         gl.clearColor(r / 255, g / 255, b / 255, a);
