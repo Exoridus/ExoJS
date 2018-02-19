@@ -1,10 +1,10 @@
 import { BLEND_MODES } from '../const';
 import RenderTarget from './RenderTarget';
-import SpriteRenderer from './renderer/SpriteRenderer';
-import ParticleRenderer from '../particles/ParticleRenderer';
 import Color from '../types/Color';
 import Texture from './Texture';
-import ShapeRenderer from './renderer/ShapeRenderer';
+import SpriteRenderer from './sprite/SpriteRenderer';
+import ShapeRenderer from './shape/ShapeRenderer';
+import ParticleRenderer from '../particles/ParticleRenderer';
 
 /**
  * @class RenderManager
@@ -84,8 +84,8 @@ export default class RenderManager {
         this._vao = null;
 
         this.addRenderer('sprite', new SpriteRenderer());
-        this.addRenderer('particle', new ParticleRenderer());
         this.addRenderer('shape', new ShapeRenderer());
+        this.addRenderer('particle', new ParticleRenderer());
 
         this.setBlendMode(BLEND_MODES.NORMAL);
         this.setRenderTarget(this._screen.renderTarget);

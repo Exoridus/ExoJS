@@ -21,7 +21,7 @@ app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Container}
+         * @member {Drawable}
          */
         this._container = this.createBunnyContainer(resources.get('texture', 'bunny'));
 
@@ -42,10 +42,10 @@ app.start(new Exo.Scene({
 
     /**
      * @param {Texture} texture
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createBunnyContainer(texture) {
-        const container = new Exo.Container();
+        const container = new Exo.Drawable();
 
         for (let i = 0; i < 25; i++) {
             const bunny = new Exo.Sprite(texture);
@@ -61,7 +61,7 @@ app.start(new Exo.Scene({
     },
 
     /**
-     * @param {Container} container
+     * @param {Drawable} container
      * @returns {RenderTexture}
      */
     createRenderTexture(container) {

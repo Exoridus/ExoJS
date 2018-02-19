@@ -1,4 +1,4 @@
-import Video from '../../display/drawable/Video';
+import Video from '../../display/sprite/Video';
 import BlobFactory from './BlobFactory';
 import support from '../../support';
 

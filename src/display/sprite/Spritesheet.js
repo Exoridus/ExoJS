@@ -1,6 +1,6 @@
-import Texture from './Texture';
-import Rectangle from '../types/Rectangle';
-import Sprite from './drawable/Sprite';
+import Texture from '../Texture';
+import Rectangle from '../../types/Rectangle';
+import Sprite from './Sprite';
 
 /**
  * @class Spritesheet

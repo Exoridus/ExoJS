@@ -1,4 +1,4 @@
-import Renderer from './Renderer';
+import Renderer from '../Renderer';
 import Shader from '../shader/Shader';
 import settings from '../../settings';
 import VertexArray from '../VertexArray';

@@ -1,4 +1,4 @@
-import Container from './Container';
+import Drawable from '../Drawable';
 import Rectangle from '../../types/Rectangle';
 import Vector from '../../types/Vector';
 import Interval from '../../types/Interval';
@@ -6,9 +6,9 @@ import { FLAGS } from '../../const';
 
 /**
  * @class Sprite
- * @extends Container
+ * @extends Drawable
  */
-export default class Sprite extends Container {
+export default class Sprite extends Drawable {
 
     /**
      * @constructor

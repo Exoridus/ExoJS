@@ -27,9 +27,9 @@ app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Container}
+         * @member {Drawable}
          */
-        this._bunnies = new Exo.Container();
+        this._bunnies = new Exo.Drawable();
 
         /**
          * @private

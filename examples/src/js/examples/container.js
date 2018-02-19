@@ -28,9 +28,9 @@ app.start(new Exo.Scene({
         this._rainbow = new Exo.Sprite(resources.get('texture', 'rainbow'));
 
         /**
-         * @type {Container}
+         * @type {Drawable}
          */
-        this._bunnies = new Exo.Container();
+        this._bunnies = new Exo.Drawable();
         this._bunnies.setPosition(screen.width / 2 | 0, screen.height / 2 | 0);
 
         for (let i = 0; i < 25; i++) {

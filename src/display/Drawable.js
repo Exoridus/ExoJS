@@ -1,6 +1,6 @@
-import SceneNode from '../../core/SceneNode';
-import Color from '../../types/Color';
-import { BLEND_MODES } from '../../const';
+import SceneNode from '../core/SceneNode';
+import Color from '../types/Color';
+import { BLEND_MODES } from '../const';
 
 /**
  * @class Drawable
@@ -31,6 +31,66 @@ export default class Drawable extends SceneNode {
          * @member {Number}
          */
         this._blendMode = BLEND_MODES.NORMAL;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get width() {
+        return Math.abs(this.scale.x) * this.bounds.width;
+    }
+
+    set width(value) {
+        this.scale.x = value / this.bounds.width;
+    }
+
+    /**
+     * @public
+     * @member {Number}
+     */
+    get height() {
+        return Math.abs(this.scale.y) * this.bounds.height;
+    }
+
+    set height(value) {
+        this.scale.y = value / this.bounds.height;
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get left() {
+        return this.x - (this.width * this.origin.x);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get top() {
+        return this.y - (this.height * this.origin.y);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get right() {
+        return (this.x + this.width - this.origin.x);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {Number}
+     */
+    get bottom() {
+        return (this.y + this.height - this.origin.y);
     }
 
     /**
@@ -100,7 +160,13 @@ export default class Drawable extends SceneNode {
      * @returns {Drawable}
      */
     render(renderManager) {
-        throw new Error('Method not implemented!');
+        if (this.visible && this.inView(renderManager.view)) {
+            for (const child of this._children) {
+                child.render(renderManager);
+            }
+        }
+
+        return this;
     }
 
     /**

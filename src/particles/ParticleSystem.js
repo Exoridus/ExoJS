@@ -1,13 +1,13 @@
 import Particle from './Particle';
 import Rectangle from '../types/Rectangle';
 import Time from '../types/Time';
-import Container from '../display/drawable/Container';
+import Drawable from '../display/Drawable';
 
 /**
  * @class ParticleSystem
- * @extends Container
+ * @extends Drawable
  */
-export default class ParticleSystem extends Container {
+export default class ParticleSystem extends Drawable {
 
     /**
      * @constructor

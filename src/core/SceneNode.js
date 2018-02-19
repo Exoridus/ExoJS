@@ -8,6 +8,7 @@ import ObservableVector from '../types/ObservableVector';
 import { FLAGS } from '../const';
 import Flags from './Flags';
 import { degreesToRadians } from '../utils/math';
+import { removeArrayItems } from '../utils/core';
 
 /**
  * @class SceneNode
@@ -18,6 +19,12 @@ export default class SceneNode {
      * @constructor
      */
     constructor() {
+
+        /**
+         * @private
+         * @member {SceneNode[]}
+         */
+        this._children = [];
 
         /**
          * @private
@@ -96,6 +103,15 @@ export default class SceneNode {
          * @member {Flags}
          */
         this._flags = new Flags(FLAGS.TRANSFORM);
+    }
+
+    /**
+     * @public
+     * @readonly
+     * @member {SceneNode[]}
+     */
+    get children() {
+        return this._children;
     }
 
     /**
@@ -219,6 +235,153 @@ export default class SceneNode {
      */
     get flags() {
         return this._flags;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Drawable} child
+     * @returns {SceneNode}
+     */
+    addChild(child) {
+        return this.addChildAt(child, this._children.length);
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Drawable} child
+     * @param {Number} index
+     * @returns {SceneNode}
+     */
+    addChildAt(child, index) {
+        if (index < 0 || index > this._children.length) {
+            throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
+        }
+
+        if (child === this) {
+            return this;
+        }
+
+        if (child.parent) {
+            child.parent.removeChild(child);
+        }
+
+        child.parent = this;
+
+        this._children.splice(index, 0, child);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Drawable} firstChild
+     * @param {Drawable} secondChild
+     * @returns {SceneNode}
+     */
+    swapChildren(firstChild, secondChild) {
+        if (firstChild !== secondChild) {
+            this._children[this.getChildIndex(firstChild)] = secondChild;
+            this._children[this.getChildIndex(secondChild)] = firstChild;
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @param {Drawable} child
+     * @returns {Number}
+     */
+    getChildIndex(child) {
+        const index = this._children.indexOf(child);
+
+        if (index === -1) {
+            throw new Error('Drawable is not a child of the container.');
+        }
+
+        return index;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Drawable} child
+     * @param {Number} index
+     * @returns {SceneNode}
+     */
+    setChildIndex(child, index) {
+        if (index < 0 || index >= this._children.length) {
+            throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
+        }
+
+        removeArrayItems(this._children, this.getChildIndex(child), 1);
+
+        this._children.splice(index, 0, child);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @param {Number} index
+     * @returns {Drawable}
+     */
+    getChildAt(index) {
+        if (index < 0 || index >= this._children.length) {
+            throw new Error(`getChildAt: Index (${index}) does not exist.`);
+        }
+
+        return this._children[index];
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Drawable} child
+     * @returns {SceneNode}
+     */
+    removeChild(child) {
+        const index = this._children.indexOf(child);
+
+        if (index !== -1) {
+            this.removeChildAt(index);
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} index
+     * @returns {SceneNode}
+     */
+    removeChildAt(index) {
+        removeArrayItems(this._children, index, 1);
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Number} [begin=0]
+     * @param {Number} [end=this._children.length]
+     * @returns {SceneNode}
+     */
+    removeChildren(begin = 0, end = this._children.length) {
+        const range = (end - begin);
+
+        if (range < 0 || range > end) {
+            throw new Error('Values are outside the acceptable range.');
+        }
+
+        removeArrayItems(this._children, begin, range);
+
+        return this;
     }
 
     /**
@@ -385,6 +548,12 @@ export default class SceneNode {
         this._bounds.reset()
             .addRect(this.getLocalBounds(), this.getGlobalTransform());
 
+        for (const child of this._children) {
+            if (child.visible) {
+                this._bounds.addRect(child.getBounds());
+            }
+        }
+
         return this;
     }
 
@@ -483,6 +652,9 @@ export default class SceneNode {
      * @override
      */
     destroy() {
+        this._children.length = 0;
+        this._children = null;
+
         this._localTransform.destroy();
         this._localTransform = null;
 

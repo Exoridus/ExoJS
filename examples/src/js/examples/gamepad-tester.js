@@ -65,7 +65,7 @@ app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Container}
+         * @member {Drawable}
          */
         this._container = this.createGamepad();
 
@@ -98,7 +98,7 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createStatus() {
         const { width, height } = this.app.screen,
@@ -116,10 +116,10 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createGamepad() {
-        const container = new Exo.Container();
+        const container = new Exo.Drawable();
 
         container.addChild(this.createDPadField());
         container.addChild(this.createFaceButtons());
@@ -132,12 +132,12 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createDPadField() {
         const { width, height } = this.app.screen,
             mappedButtons = this._mappingButtons,
-            container = new Exo.Container(),
+            container = new Exo.Drawable(),
             dpad = this._buttons.sprites['dpad'],
             dpadUp = this._buttons.sprites['DPadUp'],
             dpadDown = this._buttons.sprites['DPadDown'],
@@ -171,12 +171,12 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createFaceButtons() {
         const { width, height } = this.app.screen,
             mappedButtons = this._mappingButtons,
-            container = new Exo.Container(),
+            container = new Exo.Drawable(),
             buttonTop = this._buttons.sprites['FaceTop'],
             buttonLeft = this._buttons.sprites['FaceLeft'],
             buttonRight = this._buttons.sprites['FaceRight'],
@@ -212,12 +212,12 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createShoulderButtons() {
         const { width, height } = this.app.screen,
             mappedButtons = this._mappingButtons,
-            container = new Exo.Container(),
+            container = new Exo.Drawable(),
             leftButton = this._buttons.sprites['ShoulderLeftBottom'],
             rightButton = this._buttons.sprites['ShoulderRightBottom'],
             leftTrigger = this._buttons.sprites['ShoulderLeftTop'],
@@ -249,12 +249,12 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createMenuButtons() {
         const { width, height } = this.app.screen,
             mappedButtons = this._mappingButtons,
-            container = new Exo.Container(),
+            container = new Exo.Drawable(),
             selectButton = this._buttons.sprites['Select'],
             startButton = this._buttons.sprites['Start'];
 
@@ -275,13 +275,13 @@ app.start(new Exo.Scene({
 
     /**
      * @private
-     * @returns {Container}
+     * @returns {Drawable}
      */
     createJoysticks() {
         const { width, height } = this.app.screen,
             mappedButtons = this._mappingButtons,
             mappingFunctions = this._mappingFunctions,
-            container = new Exo.Container(),
+            container = new Exo.Drawable(),
             leftStick = this._buttons.sprites['LeftStick'],
             rightStick = this._buttons.sprites['RightStick'],
             startLeft = new Exo.Vector(0, 0),

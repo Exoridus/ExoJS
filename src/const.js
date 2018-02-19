@@ -268,7 +268,6 @@ export const
         FLOAT_MAT4: 0x8B5C,
 
         SAMPLER_2D: 0x8B5E,
-        SAMPLER_CUBE: 0x8B60,
     },
 
     /**
@@ -324,7 +323,7 @@ export const
         [UNIFORM_TYPES.FLOAT_MAT3]: Float32Array,
         [UNIFORM_TYPES.FLOAT_MAT4]: Float32Array,
 
-        [UNIFORM_TYPES.SAMPLER_2D]: Float32Array,
+        [UNIFORM_TYPES.SAMPLER_2D]: Uint8Array,
     },
 
     /**
@@ -352,7 +351,7 @@ export const
         [UNIFORM_TYPES.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, value),
         [UNIFORM_TYPES.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, value),
 
-        [UNIFORM_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1f(location, value[0]),
+        [UNIFORM_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value[0]),
     },
 
     /**

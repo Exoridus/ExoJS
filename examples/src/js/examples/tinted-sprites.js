@@ -25,9 +25,9 @@ app.start(new Exo.Scene({
         this._bunnyTexture = resources.get('texture', 'bunny');
 
         /**
-         * @type {Container}
+         * @type {Drawable}
          */
-        this._bunnies = new Exo.Container();
+        this._bunnies = new Exo.Drawable();
 
         for (let i = 0; i < 25; i++) {
             const bunny = new Exo.Sprite(this._bunnyTexture);

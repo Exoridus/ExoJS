@@ -9,7 +9,7 @@ export * from './utils';
 export * from './audio';
 export * from './input';
 export * from './display';
-export * from './geometry';
+export * from './geometry/index';
 export * from './particles';
 
 import * as settings from './settings';

@@ -1,4 +1,4 @@
-import Renderer from '../display/renderer/Renderer';
+import Renderer from '../display/Renderer';
 import Shader from '../display/shader/Shader';
 import { createQuadIndices } from '../utils/rendering';
 import settings from '../settings';

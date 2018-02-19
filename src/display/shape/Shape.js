@@ -1,18 +1,18 @@
 import Color from '../../types/Color';
-import Container from './Container';
+import Drawable from '../Drawable';
 
 /**
- * @class Mesh
- * @extends Container
+ * @class Shape
+ * @extends Drawable
  */
-export default class Mesh extends Container {
+export default class Shape extends Drawable {
 
     /**
      * @constructor
      * @param {Geometry} geometry
-     * @param {Color|Texture} material
+     * @param {Color} color
      */
-    constructor(geometry, material) {
+    constructor(geometry, color) {
         super();
 
         /**
@@ -23,9 +23,9 @@ export default class Mesh extends Container {
 
         /**
          * @private
-         * @member {Color|Texture}
+         * @member {Color}
          */
-        this._material = material;
+        this._color = color;
     }
 
     /**
@@ -40,10 +40,10 @@ export default class Mesh extends Container {
     /**
      * @public
      * @readonly
-     * @member {Color|Texture}
+     * @member {Color}
      */
-    get material() {
-        return this._material;
+    get color() {
+        return this._color;
     }
 
     /**
@@ -66,7 +66,7 @@ export default class Mesh extends Container {
     destroy() {
         super.destroy();
 
-        this._material = null;
         this._geometry = null;
+        this._color = null;
     }
 }
