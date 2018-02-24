@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 

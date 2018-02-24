@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 
@@ -13,25 +13,15 @@ app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {Image}
+         * @member {Texture}
          */
-        this._svg = await loader.loadItem({
-            type: 'svg',
-            name: 'tiger',
-            path: 'svg/tiger.svg',
-        });
+        this._texture = new Exo.Texture(await loader.load('svg', 'svg/tiger.svg'));
     },
 
     /**
      * @param {Application} app
      */
     init(app) {
-
-        /**
-         * @private
-         * @member {Texture}
-         */
-        this._texture = new Exo.Texture(this._svg);
 
         /**
          * @private

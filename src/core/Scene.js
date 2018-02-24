@@ -31,6 +31,15 @@ export default class Scene {
          * @member {Application}
          */
         this._app = app;
+
+        Object.defineProperty(this, 'app', {
+            get() {
+                return this._app;
+            },
+            set(app) {
+                this._app = app;
+            }
+        })
     }
 
     /**

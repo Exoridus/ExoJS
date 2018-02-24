@@ -3,7 +3,7 @@ import LauncherScene from './scene/LauncherScene';
 
 $(() => {
     const app = new Application({
-        resourcePath: 'assets/',
+        basePath: 'assets/',
         width: 1280,
         height: 720,
         canvas: document.querySelector('#game-canvas'),

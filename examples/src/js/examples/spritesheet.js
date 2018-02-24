@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 
@@ -15,21 +15,13 @@ app.start(new Exo.Scene({
          * @private
          * @member {Texture}
          */
-        this._texture = await loader.loadItem({
-            type: 'texture',
-            name: 'explosion',
-            path: 'image/explosion.png',
-        });
+        this._texture = await loader.load('texture', 'image/explosion.png');
 
         /**
          * @private
          * @member {Object}
          */
-        this._json = await loader.loadItem({
-            type: 'json',
-            name: 'explosion',
-            path: 'json/explosion.json',
-        });
+        this._json = await loader.load('json', 'json/explosion.json');
     },
 
     /**

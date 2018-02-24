@@ -40,7 +40,14 @@ export default class ResourceFactory {
      * @returns {Promise<Response>}
      */
     async request(path, options) {
-        return await fetch(path, options);
+        const response = await fetch(path, options);
+
+        switch (response.status) {
+            case 404:
+                throw new Error(`Could not find resource located at "${response.url}"`);
+        }
+
+        return response;
     }
 
     /**

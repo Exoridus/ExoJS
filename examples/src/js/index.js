@@ -56,12 +56,8 @@ $(() => {
             document.title = `${example.title} - ExoJS Examples`;
             $title.html(`Example Code: ${example.title}`);
 
-            loader.reset();
-            loader.loadItem({
-                type: 'text',
-                name: activePath,
-                path: `src/js/examples/${activePath}?no-cache=${Date.now()}`,
-            }).then(createExample);
+            loader.load('text', `src/js/examples/${activePath}?no-cache=${Date.now()}`)
+                .then(createExample);
         },
 
         createNavigation = (entries) => {
@@ -84,11 +80,8 @@ $(() => {
             }
         };
 
-    loader.loadItem({
-        type: 'json',
-        name: 'config',
-        path: `config.json?no-cache=${Date.now()}`,
-    }).then(createNavigation);
+    loader.load('json', `config.json?no-cache=${Date.now()}`)
+        .then(createNavigation);
 
     $refresh.on('click', () => {
         if (activeEditor) {

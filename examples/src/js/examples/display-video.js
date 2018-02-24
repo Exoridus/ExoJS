@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 
@@ -15,11 +15,7 @@ app.start(new Exo.Scene({
          * @private
          * @member {Video}
          */
-        this._video = await loader.loadItem({
-            type: 'video',
-            name: 'example',
-            path: 'video/example.webm',
-        });
+        this._video = await loader.load('video', 'video/example.webm');
     },
 
     /**

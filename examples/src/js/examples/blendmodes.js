@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 
@@ -15,23 +15,13 @@ app.start(new Exo.Scene({
          * @private
          * @member {Texture}
          */
-        this._backgroundTexture = await loader.loadItem({
-            type: 'texture',
-            name: 'background',
-            path: 'image/uv.png',
-            options: { scaleMode: Exo.SCALE_MODES.NEAREST }
-        });
+        this._backgroundTexture = await loader.load('texture', 'image/uv.png', { scaleMode: Exo.SCALE_MODES.NEAREST });
 
         /**
          * @private
          * @member {Texture}
          */
-        this._bunnyTexture = await loader.loadItem({
-            type: 'texture',
-            name: 'bunny',
-            path: 'image/bunny.png',
-            options: { scaleMode: Exo.SCALE_MODES.NEAREST }
-        });
+        this._bunnyTexture = await loader.load('texture', 'image/bunny.png', { scaleMode: Exo.SCALE_MODES.NEAREST });
     },
 
     /**

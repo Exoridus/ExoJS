@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 
@@ -15,11 +15,7 @@ app.start(new Exo.Scene({
          * @private
          * @member {Music}
          */
-        this._music = await loader.loadItem({
-            type: 'music',
-            name: 'example',
-            path: 'audio/example.ogg',
-        });
+        this._music = await loader.load('music', 'audio/example.ogg');
     },
 
     /**

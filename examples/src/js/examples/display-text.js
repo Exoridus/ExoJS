@@ -1,6 +1,6 @@
 const app = new Exo.Application({
     loader: new Exo.Loader({
-        resourcePath: 'assets/'
+        basePath: 'assets/'
     })
 });
 
@@ -15,12 +15,7 @@ app.start(new Exo.Scene({
          * @private
          * @member {FontFace}
          */
-        this._font = await loader.loadItem({
-            type: 'font',
-            name: 'example',
-            path: 'font/AndyBold/AndyBold.woff2',
-            options: { family: 'AndyBold' }
-        });
+        this._font = await loader.load('font', 'font/AndyBold/AndyBold.woff2', { family: 'AndyBold' });
     },
 
     /**
