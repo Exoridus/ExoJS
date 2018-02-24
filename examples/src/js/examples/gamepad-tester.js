@@ -9,20 +9,33 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', {
-            buttons: 'image/buttons.png',
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._texture = await loader.loadItem({
+            type: 'texture',
+            name: 'buttons',
+            path: 'image/buttons.png',
         });
 
-        loader.add('json', {
-            buttons: 'json/buttons.json',
+        /**
+         * @private
+         * @member {Object}
+         */
+        this._json = await loader.loadItem({
+            type: 'json',
+            name: 'buttons',
+            path: 'json/buttons.json',
         });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
+    init(app) {
 
         /**
          * @private
@@ -34,10 +47,7 @@ app.start(new Exo.Scene({
          * @private
          * @member {Spritesheet}
          */
-        this._buttons = new Exo.Spritesheet(
-            resources.get('texture', 'buttons'),
-            resources.get('json', 'buttons')
-        );
+        this._buttons = new Exo.Spritesheet(this._texture, this._json);
 
         /**
          * @private

@@ -9,15 +9,24 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('font', { example: 'font/AndyBold/AndyBold.woff2' }, { family: 'AndyBold' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {FontFace}
+         */
+        this._font = await loader.loadItem({
+            type: 'font',
+            name: 'example',
+            path: 'font/AndyBold/AndyBold.woff2',
+            options: { family: 'AndyBold' }
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const screen = this.app.screen;
+    init(app) {
 
         /**
          * @private
@@ -38,7 +47,7 @@ app.start(new Exo.Scene({
             fontFamily: 'AndyBold',
         });
 
-        this._text.setPosition(screen.width / 2, screen.height / 2);
+        this._text.setPosition(app.screen.width / 2, app.screen.height / 2);
         this._text.setAnchor(0.5, 0.5);
     },
 

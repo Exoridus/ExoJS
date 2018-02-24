@@ -9,23 +9,38 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', { explosion: 'image/explosion.png' });
-        loader.add('json', { explosion: 'json/explosion.json' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._texture = await loader.loadItem({
+            type: 'texture',
+            name: 'explosion',
+            path: 'image/explosion.png',
+        });
+
+        /**
+         * @private
+         * @member {Object}
+         */
+        this._json = await loader.loadItem({
+            type: 'json',
+            name: 'explosion',
+            path: 'json/explosion.json',
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const { width, height } = this.app.screen,
-            texture = resources.get('texture', 'explosion'),
-            data = resources.get('json', 'explosion');
+    init(app) {
 
         /**
          * @type {Spritesheet}
          */
-        this._spritesheet = new Exo.Spritesheet(texture, data);
+        this._spritesheet = new Exo.Spritesheet(this._texture, this._json);
 
         /**
          * @type {Sprite}
@@ -44,7 +59,7 @@ app.start(new Exo.Scene({
 
         for (const sprite of Object.values(this._spritesheet.sprites)) {
             sprite.setAnchor(0.5);
-            sprite.setPosition(width / 2, height / 2);
+            sprite.setPosition(app.screen.width / 2, app.screen.height / 2);
         }
     },
 

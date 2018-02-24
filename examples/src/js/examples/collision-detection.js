@@ -9,15 +9,23 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', { rainbow: 'image/rainbow.png' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._texture = await loader.loadItem({
+            type: 'texture',
+            name: 'rainbow',
+            path: 'image/rainbow.png',
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const { width, height } = this.app.screen;
+    init(app) {
 
         /**
          * @private
@@ -29,16 +37,16 @@ app.start(new Exo.Scene({
          * @private
          * @type {Sprite}
          */
-        this._boxA = new Exo.Sprite(resources.get('texture', 'rainbow'));
-        this._boxA.setPosition(width / 2, height / 2);
+        this._boxA = new Exo.Sprite(this._texture);
+        this._boxA.setPosition(app.screen.width / 2, app.screen.height / 2);
         this._boxA.setAnchor(0.5, 0.5);
 
         /**
          * @private
          * @type {Sprite}
          */
-        this._boxB = new Exo.Sprite(resources.get('texture', 'rainbow'));
-        this._boxB.setPosition(width / 2, height / 2);
+        this._boxB = new Exo.Sprite(this._texture);
+        this._boxB.setPosition(app.screen.width / 2, app.screen.height / 2);
         this._boxB.setAnchor(0.5, 0.5);
 
         this.app.inputManager.onPointerMove.add((pointer) => {

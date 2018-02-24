@@ -241,7 +241,6 @@ export default class Loader {
      */
     addFactory(type, factory) {
         this._factories.set(type, factory);
-        this._resources.addType(type);
 
         return this;
     }

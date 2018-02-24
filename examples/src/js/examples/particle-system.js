@@ -9,15 +9,23 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', { particle: 'image/particle.png' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._texture = await loader.loadItem({
+            type: 'texture',
+            name: 'particle',
+            path: 'image/particle.png',
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const screen = this.app.screen;
+    init(app) {
 
         /**
          * @private
@@ -44,8 +52,8 @@ app.start(new Exo.Scene({
          * @private
          * @member {ParticleSystem}
          */
-        this._system = new Exo.ParticleSystem(resources.get('texture', 'particle'));
-        this._system.setPosition(screen.width * 0.5, screen.height * 0.75);
+        this._system = new Exo.ParticleSystem(this._texture);
+        this._system.setPosition(app.screen.width * 0.5, app.screen.height * 0.75);
         this._system.setBlendMode(Exo.BLEND_MODES.ADD);
         this._system.addEmitter(this._emitter);
         this._system.addAffector(this._affector);

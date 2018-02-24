@@ -6,6 +6,7 @@ export default class Scene {
     /**
      * @constructor
      * @param {Object} [prototype]
+     * @param {Function} [prototype.create]
      * @param {Function} [prototype.load]
      * @param {Function} [prototype.init]
      * @param {Function} [prototype.update]
@@ -14,13 +15,6 @@ export default class Scene {
      * @param {Function} [prototype.destroy]
      */
     constructor(prototype) {
-
-        /**
-         * @private
-         * @member {Application}
-         */
-        this._app = null;
-
         if (prototype) {
             Object.assign(this, prototype);
         }
@@ -28,13 +22,14 @@ export default class Scene {
 
     /**
      * @public
-     * @member {Application}
+     * @param {Application} app
      */
-    get app() {
-        return this._app;
-    }
+    create(app) {
 
-    set app(app) {
+        /**
+         * @private
+         * @member {Application}
+         */
         this._app = app;
     }
 
@@ -42,40 +37,30 @@ export default class Scene {
      * @public
      * @param {Loader} loader
      */
-    async load(loader) { // eslint-disable-line
-        // do nothing
-    }
+    async load(loader) { }
 
     /**
      * @public
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) { // eslint-disable-line
-        // do nothing
-    }
+    init(app) { }
 
     /**
      * @public
      * @param {Time} delta
      */
-    update(delta) { // eslint-disable-line
-        // do nothing
-    }
+    update(delta) { }
 
     /**
      * @public
      * @param {RenderManager} renderManager
      */
-    draw(renderManager) { // eslint-disable-line
-        // do nothing
-    }
+    draw(renderManager) { }
 
     /**
      * @public
      */
-    unload() {
-        // do nothing
-    }
+    unload() { }
 
     /**
      * @public

@@ -9,32 +9,47 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', {
-            bunny: 'image/bunny.png',
-            rainbow: 'image/rainbow.png',
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._rainbowTexture = await loader.loadItem({
+            type: 'texture',
+            name: 'rainbow',
+            path: 'image/rainbow.png',
+        });
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._bunnyTexture = await loader.loadItem({
+            type: 'texture',
+            name: 'bunny',
+            path: 'image/bunny.png',
         });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const screen = this.app.screen;
+    init(app) {
 
         /**
          * @type {Sprite}
          */
-        this._rainbow = new Exo.Sprite(resources.get('texture', 'rainbow'));
+        this._rainbow = new Exo.Sprite(this._rainbowTexture);
 
         /**
          * @type {Drawable}
          */
         this._bunnies = new Exo.Drawable();
-        this._bunnies.setPosition(screen.width / 2 | 0, screen.height / 2 | 0);
+        this._bunnies.setPosition(app.screen.width / 2 | 0, app.screen.height / 2 | 0);
 
         for (let i = 0; i < 25; i++) {
-            const bunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+            const bunny = new Exo.Sprite(this._bunnyTexture);
 
             bunny.setPosition((i % 5) * (bunny.width + 15), (i / 5 | 0) * (bunny.height + 10));
 

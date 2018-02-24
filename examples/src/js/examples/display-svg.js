@@ -9,21 +9,29 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('svg', { tiger: 'svg/tiger.svg' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Image}
+         */
+        this._svg = await loader.loadItem({
+            type: 'svg',
+            name: 'tiger',
+            path: 'svg/tiger.svg',
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const screen = this.app.screen;
+    init(app) {
 
         /**
          * @private
          * @member {Texture}
          */
-        this._texture = new Exo.Texture(resources.get('svg', 'tiger'));
+        this._texture = new Exo.Texture(this._svg);
 
         /**
          * @private
@@ -31,7 +39,7 @@ app.start(new Exo.Scene({
          */
         this._tiger = new Exo.Sprite(this._texture);
         this._tiger.setAnchor(0.5);
-        this._tiger.setPosition(screen.width / 2 | 0, screen.height / 2 | 0);
+        this._tiger.setPosition(app.screen.width / 2 | 0, app.screen.height / 2 | 0);
     },
 
     /**

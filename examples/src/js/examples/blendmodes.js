@@ -9,40 +9,55 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', {
-            background: 'image/uv.png',
-            bunny: 'image/bunny.png',
-        }, {
-            scaleMode: Exo.SCALE_MODES.NEAREST,
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._backgroundTexture = await loader.loadItem({
+            type: 'texture',
+            name: 'background',
+            path: 'image/uv.png',
+            options: { scaleMode: Exo.SCALE_MODES.NEAREST }
+        });
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._bunnyTexture = await loader.loadItem({
+            type: 'texture',
+            name: 'bunny',
+            path: 'image/bunny.png',
+            options: { scaleMode: Exo.SCALE_MODES.NEAREST }
         });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const screen = this.app.screen;
+    init(app) {
 
         /**
          * @private
          * @member {Sprite}
          */
-        this._background = new Exo.Sprite(resources.get('texture', 'background'));
-        this._background.setPosition(screen.width / 2, screen.height / 2);
+        this._background = new Exo.Sprite(this._backgroundTexture);
+        this._background.setPosition(app.screen.width / 2, app.screen.height / 2);
         this._background.setAnchor(0.5, 0.5);
 
         /**
          * @type {Sprite}
          */
-        this._leftBunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+        this._leftBunny = new Exo.Sprite(this._bunnyTexture);
         this._leftBunny.setAnchor(0.5, 0.5);
         this._leftBunny.setScale(5);
 
         /**
          * @type {Sprite}
          */
-        this._rightBunny = new Exo.Sprite(resources.get('texture', 'bunny'));
+        this._rightBunny = new Exo.Sprite(this._bunnyTexture);
         this._rightBunny.setAnchor(0.5, 0.5);
         this._rightBunny.setScale(5);
 
@@ -93,7 +108,7 @@ app.start(new Exo.Scene({
             align: 'center',
         });
 
-        this._info.setPosition(screen.width / 2, 0);
+        this._info.setPosition(app.screen.width / 2, 0);
         this._info.setAnchor(0.5, 0);
 
         this.app.inputManager.onPointerDown.add(this.updateBlendMode, this);

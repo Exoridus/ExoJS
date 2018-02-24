@@ -9,23 +9,25 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('video', { example: 'video/example.webm' });
-    },
-
-    /**
-     * @param {ResourceCollection} resources
-     */
-    init(resources) {
-        const screen = this.app.screen;
+    async load(loader) {
 
         /**
          * @private
          * @member {Video}
          */
-        this._video = resources.get('video', 'example');
-        this._video.width = screen.width;
-        this._video.height = screen.height;
+        this._video = await loader.loadItem({
+            type: 'video',
+            name: 'example',
+            path: 'video/example.webm',
+        });
+    },
+
+    /**
+     * @param {Application} app
+     */
+    init(app) {
+        this._video.width = app.screen.width;
+        this._video.height = app.screen.height;
         this._video.play({ loop: true, volume: 0.5 });
 
         this.app.inputManager.onPointerTap.add(() => {

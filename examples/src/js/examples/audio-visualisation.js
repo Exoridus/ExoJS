@@ -9,21 +9,23 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('music', { example: 'audio/example.ogg' });
-    },
-
-    /**
-     * @param {ResourceCollection} resources
-     */
-    init(resources) {
-        const screen = this.app.screen;
+    async load(loader) {
 
         /**
          * @private
          * @member {Music}
          */
-        this._music = resources.get('music', 'example');
+        this._music = await loader.loadItem({
+            type: 'music',
+            name: 'example',
+            path: 'audio/example.ogg',
+        });
+    },
+
+    /**
+     * @param {Application} app
+     */
+    init(app) {
 
         /**
          * @private
@@ -39,8 +41,8 @@ app.start(new Exo.Scene({
         this._canvas.style.position = 'absolute';
         this._canvas.style.top = '12.5%';
         this._canvas.style.left = 0;
-        this._canvas.width = screen.width;
-        this._canvas.height = screen.height;
+        this._canvas.width = app.screen.width;
+        this._canvas.height = app.screen.height;
 
         /**
          * @private

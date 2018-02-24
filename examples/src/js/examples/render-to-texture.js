@@ -9,21 +9,29 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', { bunny: 'image/bunny.png' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._texture = await loader.loadItem({
+            type: 'texture',
+            name: 'bunny',
+            path: 'image/bunny.png',
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const screen = this.app.screen;
+    init(app) {
 
         /**
          * @private
          * @member {Drawable}
          */
-        this._container = this.createBunnyContainer(resources.get('texture', 'bunny'));
+        this._container = this.createBunnyContainer(this._texture);
 
         /**
          * @private
@@ -36,7 +44,7 @@ app.start(new Exo.Scene({
          * @member {Sprite}
          */
         this._renderSprite = new Exo.Sprite(this._renderTexture);
-        this._renderSprite.setPosition(screen.width, screen.height);
+        this._renderSprite.setPosition(app.screen.width, app.screen.height);
         this._renderSprite.setAnchor(1, 1);
     },
 

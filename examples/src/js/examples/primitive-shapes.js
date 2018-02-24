@@ -7,9 +7,9 @@ const app = new Exo.Application({
 app.start(new Exo.Scene({
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
+    init(app) {
 
         /**
          * @private

@@ -9,15 +9,23 @@ app.start(new Exo.Scene({
     /**
      * @param {Loader} loader
      */
-    load(loader) {
-        loader.add('texture', { example: 'image/uv.png' });
+    async load(loader) {
+
+        /**
+         * @private
+         * @member {Texture}
+         */
+        this._texture = await loader.loadItem({
+            type: 'texture',
+            name: 'example',
+            path: 'image/uv.png',
+        });
     },
 
     /**
-     * @param {ResourceCollection} resources
+     * @param {Application} app
      */
-    init(resources) {
-        const { width, height } = this.app.screen;
+    init(app) {
 
         /**
          * @private
@@ -41,13 +49,13 @@ app.start(new Exo.Scene({
          * @private
          * @member {View}
          */
-        this._camera = new Exo.View(0, 0, width, height);
+        this._camera = new Exo.View(0, 0, app.screen.width, app.screen.height);
 
         /**
          * @private
          * @member {Sprite}
          */
-        this._sprite = new Exo.Sprite(resources.get('texture', 'example'));
+        this._sprite = new Exo.Sprite(this._texture);
         this._sprite.setAnchor(0.5, 0.5);
 
         /**
@@ -136,7 +144,7 @@ app.start(new Exo.Scene({
             new Exo.Input(Exo.KEYBOARD.R, {
                 context: this,
                 onTrigger(value) {
-                    this._camera.reset(0, 0, width, height);
+                    this._camera.reset(0, 0, app.screen.width, app.screen.height);
                 },
             })
         ]);

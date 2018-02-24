@@ -110,9 +110,9 @@ export default class SceneManager {
             this._onChangeScene.dispatch(scene);
 
             if (scene) {
-                scene.app = this._app;
-                scene.load(this._app.loader);
-                scene.init(await this._app.loader.load());
+                scene.create(this._app);
+                await scene.load(this._app.loader);
+                scene.init(this._app);
 
                 this._onStartScene.dispatch(scene);
             }
