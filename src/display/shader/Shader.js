@@ -10,22 +10,29 @@ export default class Shader {
 
     /**
      * @constructor
-     * @param {String} vertexSource
-     * @param {String} fragmentSource
+     * @param {String} vertSource
+     * @param {String} fragSource
+     * @param {Object} uniformData
      */
-    constructor(vertexSource, fragmentSource) {
+    constructor(vertSource, fragSource, uniformData = {}) {
 
         /**
          * @private
          * @member {String}
          */
-        this._vertexSource = vertexSource;
+        this._vertexSource = vertSource;
 
         /**
          * @private
          * @member {String}
          */
-        this._fragmentSource = fragmentSource;
+        this._fragmentSource = fragSource;
+
+        /**
+         * @private
+         * @member {Object}
+         */
+        this._uniformData = uniformData;
 
         /**
          * @private
@@ -64,6 +71,12 @@ export default class Shader {
             this._attributes = this._program.extractAttributes();
             this._uniforms = this._program.extractUniforms();
             this._uniformBlocks = this._program.extractUniformBlocks();
+
+            for (const uniform of this._uniforms.values()) {
+                if (uniform.name in this._uniformData) {
+                    uniform.setValue(this._uniformData[uniform.name]);
+                }
+            }
         }
 
         return this;
@@ -185,11 +198,12 @@ export default class Shader {
     destroy() {
         this.disconnect();
 
-        this._uniformBlocks = null;
-        this._uniforms = null;
-        this._attributes = null;
-        this._program = null;
-        this._fragmentSource = null;
         this._vertexSource = null;
+        this._fragmentSource = null;
+        this._program = null;
+        this._attributes = null;
+        this._uniforms = null;
+        this._uniformBlocks = null;
+        this._uniformData = null;
     }
 }

@@ -1,9 +1,13 @@
-import { BLEND_MODES } from '../const';
+import { BLEND_MODES, TYPES } from '../const';
 import RenderTarget from './RenderTarget';
 import Color from '../types/Color';
 import Texture from './Texture';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ShapeRenderer from './shape/ShapeRenderer';
+import RenderTexture from './RenderTexture';
+import VertexArray from './VertexArray';
+import { createQuadIndices } from '../utils/rendering';
+import Buffer from './Buffer';
 
 /**
  * @class RenderManager
@@ -72,7 +76,7 @@ export default class RenderManager {
 
         /**
          * @private
-         * @member {?Texture}
+         * @member {?Texture|?RenderTexture}
          */
         this._texture = null;
 
@@ -81,6 +85,54 @@ export default class RenderManager {
          * @member {?VertexArray}
          */
         this._vao = null;
+
+        /**
+         * @private
+         * @member {RenderTexture[]}
+         */
+        this._filterTextures = [
+            new RenderTexture(100, 100),
+            new RenderTexture(100, 100),
+        ];
+
+        /**
+         * @private
+         * @member {ArrayBuffer}
+         */
+        this._filterData = new ArrayBuffer(48);
+
+        /**
+         * @private
+         * @member {Buffer}
+         */
+        this._filterVertexBuffer = Buffer.createVertexBuffer(this._context, this._filterData);
+
+        /**
+         * @private
+         * @member {Buffer}
+         */
+        this._filterIndexBuffer = Buffer.createIndexBuffer(this._context, createQuadIndices(1));
+
+        /**
+         * @private
+         * @member {Float32Array}
+         */
+        this._filterVertices = new Float32Array(this._filterData);
+
+        /**
+         * @private
+         * @member {Uint32Array}
+         */
+        this._filterTexCoords = new Uint32Array(this._filterData);
+
+        /**
+         * @private
+         * @member {VertexArray}
+         */
+        this._filterVAO = new VertexArray(this._context)
+            .addAttribute(this._filterVertexBuffer, 0, TYPES.FLOAT, 2, false)
+            .addAttribute(this._filterVertexBuffer, 1, TYPES.UNSIGNED_SHORT, 2, true)
+            .addIndex(this._filterIndexBuffer);
 
         this.addRenderer('sprite', new SpriteRenderer());
         this.addRenderer('shape', new ShapeRenderer());
@@ -439,6 +491,40 @@ export default class RenderManager {
         }
 
         return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Texture} texture
+     * @param {Shader[]} filters
+     * @returns {RenderTexture}
+     */
+    applyTextureFilters(texture, filters) {
+        const lastTarget = this.renderTarget,
+            lastShader = this.shader,
+            lastVAO = this.vao,
+            len = filters.length;
+
+        this.setTexture(texture);
+
+        for (let i = 0; i < len; i++) {
+            const filterTexture = this._filterTextures[i % 2];
+
+            this.setRenderTarget(filterTexture.setSize(texture.width, texture.height));
+            this.setShader(filters[i]);
+            this.setVAO(this._filterVAO);
+
+            this._filterVAO.draw(6, 0);
+
+            this.setTexture(filterTexture);
+        }
+
+        this.setRenderTarget(lastTarget);
+        this.setShader(lastShader);
+        this.setVAO(lastVAO);
+
+        return this._texture;
     }
 
     /**

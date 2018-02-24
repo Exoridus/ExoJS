@@ -33,13 +33,19 @@ export default class Sprite extends Drawable {
          * @private
          * @type {Float32Array}
          */
-        this._vertices = new Float32Array(8);
+        this._arrayBuffer = new ArrayBuffer(48);
+
+        /**
+         * @private
+         * @type {Float32Array}
+         */
+        this._vertices = new Float32Array(this._arrayBuffer, 0, 8);
 
         /**
          * @private
          * @type {Uint32Array}
          */
-        this._texCoords = new Uint32Array(4);
+        this._texCoords = new Uint32Array(this._arrayBuffer, 32, 4);
 
         if (texture) {
             this.setTexture(texture);
@@ -301,5 +307,6 @@ export default class Sprite extends Drawable {
         this._texture = null;
         this._vertices = null;
         this._texCoords = null;
+        this._arrayBuffer = null;
     }
 }

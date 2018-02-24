@@ -15,6 +15,10 @@
                 "path": "spritesheet.js"
             },
             {
+                "title": "Filters",
+                "path": "filters.js"
+            },
+            {
                 "title": "Blendmodes",
                 "path": "blendmodes.js"
             },

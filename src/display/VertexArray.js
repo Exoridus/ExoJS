@@ -1,4 +1,4 @@
-import { DRAW_MODES, TYPES } from '../const';
+import { DRAW_MODES, TYPES, UNIFORM_SIZES } from '../const';
 
 /**
  * @class VertexArray
@@ -85,16 +85,15 @@ export default class VertexArray {
      * @public
      * @chainable
      * @param {Buffer} buffer
-     * @param {ShaderAttribute} attribute
+     * @param {Number} location
      * @param {Number} [type=TYPES.FLOAT]
      * @param {Boolean} [normalized=false]
+     * @param {Number} [size=1]
      * @param {Number} [stride=0]
      * @param {Number} [start=0]
      * @returns {VertexArray}
      */
-    addAttribute(buffer, attribute, type = TYPES.FLOAT, normalized = false, stride = 0, start = 0) {
-        const { location, size } = attribute;
-
+    addAttribute(buffer, location, type = TYPES.FLOAT, size = 1, normalized = false, stride = 0, start = 0) {
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });
         this._dirty = true;
 

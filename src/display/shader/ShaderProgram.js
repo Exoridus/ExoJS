@@ -108,9 +108,10 @@ export default class ShaderProgram {
             attributes = new Map();
 
         for (let i = 0; i < length; i++) {
-            const attribute = new ShaderAttribute(gl, program, i);
+            const { name, type, size } = gl.getActiveAttrib(program, i),
+                lodation = gl.getAttribLocation(program, name);
 
-            attributes.set(attribute.name, attribute);
+            attributes.set(name, new ShaderAttribute(name, lodation, type, size));
         }
 
         return attributes;
@@ -163,7 +164,7 @@ export default class ShaderProgram {
     /**
      * @public
      * @chainable
-     * @returns {Program}
+     * @returns {ShaderProgram}
      */
     bind() {
         this._context.useProgram(this._program);
@@ -174,7 +175,7 @@ export default class ShaderProgram {
     /**
      * @public
      * @chainable
-     * @returns {Program}
+     * @returns {ShaderProgram}
      */
     unbind() {
         this._context.useProgram(null);

@@ -31,6 +31,12 @@ export default class Drawable extends SceneNode {
          * @member {Number}
          */
         this._blendMode = BLEND_MODES.NORMAL;
+
+        /**
+         * @private
+         * @type {Filter[]}
+         */
+        this._filters = [];
     }
 
     /**
@@ -131,6 +137,18 @@ export default class Drawable extends SceneNode {
 
     /**
      * @public
+     * @member {Filter[]}
+     */
+    get filters() {
+        return this._filters;
+    }
+
+    set filters(filters) {
+        this._filters = filters;
+    }
+
+    /**
+     * @public
      * @chainable
      * @param {Color} color
      * @returns {Drawable}
@@ -149,6 +167,18 @@ export default class Drawable extends SceneNode {
      */
     setBlendMode(blendMode) {
         this._blendMode = blendMode;
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @param {Filter} filter
+     * @returns {Drawable}
+     */
+    addFilter(filter) {
+        this._filters.push(filter);
 
         return this;
     }
@@ -183,6 +213,9 @@ export default class Drawable extends SceneNode {
      */
     destroy() {
         super.destroy();
+
+        this._filters.length = 0;
+        this._filters = null;
 
         this._tint.destroy();
         this._tint = null;

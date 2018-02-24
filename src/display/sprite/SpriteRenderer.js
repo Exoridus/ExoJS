@@ -127,9 +127,9 @@ export default class SpriteRenderer extends Renderer {
             this._vertexBuffer = Buffer.createVertexBuffer(gl,this._vertexData);
             this._indexBuffer = Buffer.createIndexBuffer(gl, createQuadIndices(this._batchSize));
             this._vertexArray = new VertexArray(gl)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), TYPES.FLOAT, false, this._attributeCount, 0)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_texcoord'), TYPES.UNSIGNED_SHORT, true, this._attributeCount, 8)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), TYPES.UNSIGNED_BYTE, true, this._attributeCount, 12)
+                .addAttribute(this._vertexBuffer, 0, TYPES.FLOAT, 2, false, this._attributeCount, 0)
+                .addAttribute(this._vertexBuffer, 1, TYPES.UNSIGNED_SHORT, 2, true, this._attributeCount, 8)
+                .addAttribute(this._vertexBuffer, 2, TYPES.UNSIGNED_BYTE, 4, true, this._attributeCount, 12)
                 .addIndex(this._indexBuffer);
         }
 
@@ -193,11 +193,12 @@ export default class SpriteRenderer extends Renderer {
      * @param {Sprite} sprite
      */
     render(sprite) {
-        const { texture, blendMode, tint, vertices, texCoords } = sprite,
+        const { vertices, texCoords, texture, blendMode, tint, filters } = sprite,
+            filterTexture = (filters && filters.length > 0),
+            switchTexture = (texture !== this._currentTexture || filterTexture),
+            switchBlendMode = (blendMode !== this._currentBlendMode),
             batchFull = (this._batchIndex >= this._batchSize),
-            textureChanged = (texture !== this._currentTexture),
-            blendModeChanged = (blendMode !== this._currentBlendMode),
-            flush = (batchFull || textureChanged || blendModeChanged),
+            flush = (batchFull || switchTexture || switchBlendMode),
             index = flush ? 0 : (this._batchIndex * this._attributeCount),
             float32View = this._float32View,
             uint32View = this._uint32View;
@@ -205,12 +206,17 @@ export default class SpriteRenderer extends Renderer {
         if (flush) {
             this.flush();
 
-            if (textureChanged) {
+            if (switchTexture) {
                 this._currentTexture = texture;
-                this._renderManager.setTexture(texture);
+
+                if (filterTexture) {
+                    this._renderManager.applyTextureFilters(texture, filters);
+                } else {
+                    this._renderManager.setTexture(texture);
+                }
             }
 
-            if (blendModeChanged) {
+            if (switchBlendMode) {
                 this._currentBlendMode = blendMode;
                 this._renderManager.setBlendMode(blendMode);
             }

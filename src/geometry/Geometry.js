@@ -66,8 +66,8 @@ export default class Geometry {
                 indexBuffer = Buffer.createIndexBuffer(gl, this._indices);
 
             this._vao = new VertexArray(gl)
-                .addAttribute(vertexBuffer, shader.getAttribute('a_position'), TYPES.FLOAT, false, 12, 0)
-                .addAttribute(vertexBuffer, shader.getAttribute('a_color'), TYPES.UNSIGNED_BYTE, true, 12, 8)
+                .addAttribute(vertexBuffer, 0, TYPES.FLOAT, 2, false, 12, 0)
+                .addAttribute(vertexBuffer, 1, TYPES.UNSIGNED_BYTE, 4, true, 12, 8)
                 .addIndex(indexBuffer);
         }
 

@@ -158,7 +158,7 @@ export default class ShaderUniform {
     /**
      * @public
      * @chainable
-     * @param {ArrayBufferView} value
+     * @param {ArrayBufferView|Number} value
      * @returns {ShaderUniform}
      */
     setValue(value) {
@@ -166,7 +166,12 @@ export default class ShaderUniform {
             throw new Error(`Uniform value cannot be undefined!`);
         }
 
-        this._value.set(value);
+        if (typeof value === 'number') {
+            this._value[0] = value;
+        } else {
+            this._value.set(value);
+        }
+
         this.upload();
 
         return this;
