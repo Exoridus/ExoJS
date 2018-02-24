@@ -4,7 +4,7 @@
 export { default as Database } from './Database';
 export { default as IDBDatabase } from './IDBDatabase';
 export { default as Loader } from './Loader';
-export { default as ResourceContainer } from './ResourceContainer';
+export { default as ResourceCollection } from './ResourceCollection';
 export { default as ResourceFactory } from './ResourceFactory';
 export { default as BlobFactory } from './factories/BlobFactory';
 export { default as FontFactory } from './factories/FontFactory';

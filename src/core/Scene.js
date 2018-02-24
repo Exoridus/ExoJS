@@ -48,7 +48,7 @@ export default class Scene {
 
     /**
      * @public
-     * @param {ResourceContainer} resources
+     * @param {ResourceCollection} resources
      */
     init(resources) { // eslint-disable-line
         // do nothing

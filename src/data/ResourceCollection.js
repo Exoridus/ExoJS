@@ -1,7 +1,7 @@
 /**
- * @class ResourceContainer
+ * @class ResourceCollection
  */
-export default class ResourceContainer {
+export default class ResourceCollection {
 
     /**
      * @constructor
@@ -13,12 +13,6 @@ export default class ResourceContainer {
          * @member {Map<String, Map<String, *>>}
          */
         this._resources = new Map();
-
-        /**
-         * @private
-         * @member {Set<String>}
-         */
-        this._types = new Set();
     }
 
     /**
@@ -32,36 +26,12 @@ export default class ResourceContainer {
 
     /**
      * @public
-     * @readonly
-     * @member {Set<String>}
-     */
-    get types() {
-        return this._types;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @param {String} type
-     * @returns {ResourceContainer}
-     */
-    addType(type) {
-        if (!this._types.has(type)) {
-            this._resources.set(type, new Map());
-            this._types.add(type);
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
      * @param {String} type
      * @returns {Map<String, *>}
      */
     getResources(type) {
-        if (!this._types.has(type)) {
-            throw new Error(`Unknown type "${type}".`);
+        if (!this._resources.has(type)) {
+            this._resources.set(type, new Map());
         }
 
         return this._resources.get(type);
@@ -74,8 +44,7 @@ export default class ResourceContainer {
      * @returns {Boolean}
      */
     has(type, name) {
-        return this.getResources(type)
-            .has(name);
+        return this.getResources(type).has(name);
     }
 
     /**
@@ -100,11 +69,10 @@ export default class ResourceContainer {
      * @param {String} type
      * @param {String} name
      * @param {*} resource
-     * @returns {ResourceContainer}
+     * @returns {ResourceCollection}
      */
     set(type, name, resource) {
-        this.getResources(type)
-            .set(name, resource);
+        this.getResources(type).set(name, resource);
 
         return this;
     }
@@ -114,11 +82,10 @@ export default class ResourceContainer {
      * @chainable
      * @param {String} type
      * @param {String} name
-     * @returns {ResourceContainer}
+     * @returns {ResourceCollection}
      */
     remove(type, name) {
-        this.getResources(type)
-            .delete(name);
+        this.getResources(type).delete(name);
 
         return this;
     }
@@ -126,7 +93,7 @@ export default class ResourceContainer {
     /**
      * @public
      * @chainable
-     * @returns {ResourceContainer}
+     * @returns {ResourceCollection}
      */
     clear() {
         for (const container of this._resources.values()) {
@@ -144,8 +111,5 @@ export default class ResourceContainer {
 
         this._resources.clear();
         this._resources = null;
-
-        this._types.clear();
-        this._types = null;
     }
 }

@@ -1,5 +1,5 @@
 import Signal from '../core/Signal';
-import ResourceContainer from './ResourceContainer';
+import ResourceCollection from './ResourceCollection';
 import ArrayBufferFactory from './factories/ArrayBufferFactory';
 import BlobFactory from './factories/BlobFactory';
 import FontFactory from './factories/FontFactory';
@@ -48,9 +48,9 @@ export default class Loader {
 
         /**
          * @private
-         * @member {ResourceContainer}
+         * @member {ResourceCollection}
          */
-        this._resources = new ResourceContainer();
+        this._resources = new ResourceCollection();
 
         /**
          * @private
@@ -130,7 +130,7 @@ export default class Loader {
     /**
      * @public
      * @readonly
-     * @member {ResourceContainer}
+     * @member {ResourceCollection}
      */
     get resources() {
         return this._resources;
@@ -291,7 +291,7 @@ export default class Loader {
     /**
      * @public
      * @param {Function} [callback]
-     * @returns {Promise<ResourceContainer>}
+     * @returns {Promise<ResourceCollection>}
      */
     async load(callback) {
         const queue = this._queue.splice(0),

@@ -20,7 +20,7 @@ app.start(new Exo.Scene({
     },
 
     /**
-     * @param {ResourceContainer} resources
+     * @param {ResourceCollection} resources
      */
     init(resources) {
 

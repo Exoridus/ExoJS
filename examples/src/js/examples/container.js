@@ -17,7 +17,7 @@ app.start(new Exo.Scene({
     },
 
     /**
-     * @param {ResourceContainer} resources
+     * @param {ResourceCollection} resources
      */
     init(resources) {
         const screen = this.app.screen;

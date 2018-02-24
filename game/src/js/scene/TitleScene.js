@@ -8,7 +8,7 @@ import TitleMenuManager from '../menu/title/TitleMenuManager';
 export default class TitleScene extends Scene {
 
     /**
-     * @param {ResourceContainer} resources
+     * @param {ResourceCollection} resources
      */
     init(resources) {
 
