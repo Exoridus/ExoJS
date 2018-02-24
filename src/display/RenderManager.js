@@ -4,7 +4,6 @@ import Color from '../types/Color';
 import Texture from './Texture';
 import SpriteRenderer from './sprite/SpriteRenderer';
 import ShapeRenderer from './shape/ShapeRenderer';
-import ParticleRenderer from '../particles/ParticleRenderer';
 
 /**
  * @class RenderManager
@@ -85,7 +84,6 @@ export default class RenderManager {
 
         this.addRenderer('sprite', new SpriteRenderer());
         this.addRenderer('shape', new ShapeRenderer());
-        this.addRenderer('particle', new ParticleRenderer());
 
         this.setBlendMode(BLEND_MODES.NORMAL);
         this.setRenderTarget(this._screen.renderTarget);

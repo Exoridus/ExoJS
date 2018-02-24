@@ -67,7 +67,7 @@ export default class Loader {
          * @private
          * @member {ResourceCollection}
          */
-        this._collection = new ResourceCollection();
+        this._resources = new ResourceCollection();
 
         /**
          * @private
@@ -182,7 +182,7 @@ export default class Loader {
      * @returns {Promise<*>}
      */
     async load(type, path, options) {
-        if (!this._collection.has(type, path)) {
+        if (!this._resources.has(type, path)) {
             const factory = this.getFactory(type);
 
             let source = this._database ? (await this._database.load(factory.storageType, path)) : null;
@@ -199,10 +199,10 @@ export default class Loader {
                 }
             }
 
-            this._collection.set(type, path, await factory.create(source, options));
+            this._resources.set(type, path, await factory.create(source, options));
         }
 
-        return this._collection.get(type, path);
+        return this._resources.get(type, path);
     }
 
     /**
@@ -214,7 +214,7 @@ export default class Loader {
      * @returns {Loader}
      */
     clear() {
-        this._collection.clear();
+        this._resources.clear();
 
         return this;
     }
@@ -232,8 +232,8 @@ export default class Loader {
             this._database = null;
         }
 
-        this._collection.destroy();
-        this._collection = null;
+        this._resources.destroy();
+        this._resources = null;
 
         this._factories.clear();
         this._factories = null;

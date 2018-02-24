@@ -3,14 +3,13 @@
  */
 export * from './const';
 export * from './core';
-export * from './data';
+export * from './content';
 export * from './types';
 export * from './utils';
 export * from './audio';
 export * from './input';
 export * from './display';
-export * from './geometry/index';
-export * from './particles';
+export * from './geometry';
 
 import * as settings from './settings';
 import * as support from './support';

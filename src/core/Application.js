@@ -2,7 +2,7 @@ import Clock from './Clock';
 import SceneManager from './SceneManager';
 import RenderManager from '../display/RenderManager';
 import InputManager from '../input/InputManager';
-import Loader from '../data/Loader';
+import Loader from '../content/Loader';
 import Signal from './Signal';
 import { APP_STATUS } from '../const';
 import Screen from '../display/Screen';

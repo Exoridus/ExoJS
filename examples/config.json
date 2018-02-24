@@ -41,10 +41,6 @@
             {
                 "title": "Display SVG",
                 "path": "display-svg.js"
-            },
-            {
-                "title": "Primitive Shapes",
-                "path": "primitive-shapes.js"
             }
         ]
     },
@@ -54,10 +50,6 @@
             {
                 "title": "Collision Detection",
                 "path": "collision-detection.js"
-            },
-            {
-                "title": "Particle System",
-                "path": "particle-system.js"
             },
             {
                 "title": "Gamepad Tester",
