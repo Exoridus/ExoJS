@@ -1,4 +1,5 @@
 import support from './support';
+import { repeatArray, repeatPattern } from './utils/core';
 
 export const
 
@@ -303,27 +304,27 @@ export const
      * @constant
      * @type {Object}
      */
-    UNIFORM_VALUES = {
-        [UNIFORM_TYPES.FLOAT]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_VEC2]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_VEC3]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_VEC4]: Float32Array,
+    UNIFORM_VALUE = {
+        [UNIFORM_TYPES.FLOAT]: () => 0,
+        [UNIFORM_TYPES.FLOAT_VEC2]: () => new Float32Array(2),
+        [UNIFORM_TYPES.FLOAT_VEC3]: () => new Float32Array(3),
+        [UNIFORM_TYPES.FLOAT_VEC4]: () => new Float32Array(4),
 
-        [UNIFORM_TYPES.INT]: Int32Array,
-        [UNIFORM_TYPES.INT_VEC2]: Int32Array,
-        [UNIFORM_TYPES.INT_VEC3]: Int32Array,
-        [UNIFORM_TYPES.INT_VEC4]: Int32Array,
+        [UNIFORM_TYPES.INT]: () => 0,
+        [UNIFORM_TYPES.INT_VEC2]: () => new Int32Array(2),
+        [UNIFORM_TYPES.INT_VEC3]: () => new Int32Array(3),
+        [UNIFORM_TYPES.INT_VEC4]: () => new Int32Array(4),
 
-        [UNIFORM_TYPES.BOOL]: Uint8Array,
-        [UNIFORM_TYPES.BOOL_VEC2]: Uint8Array,
-        [UNIFORM_TYPES.BOOL_VEC3]: Uint8Array,
-        [UNIFORM_TYPES.BOOL_VEC4]: Uint8Array,
+        [UNIFORM_TYPES.BOOL]: () => 0,
+        [UNIFORM_TYPES.BOOL_VEC2]: () => new Uint8Array(2),
+        [UNIFORM_TYPES.BOOL_VEC3]: () => new Uint8Array(3),
+        [UNIFORM_TYPES.BOOL_VEC4]: () => new Uint8Array(4),
 
-        [UNIFORM_TYPES.FLOAT_MAT2]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_MAT3]: Float32Array,
-        [UNIFORM_TYPES.FLOAT_MAT4]: Float32Array,
+        [UNIFORM_TYPES.FLOAT_MAT2]: () => new Float32Array([1, 0, 0, 1]),
+        [UNIFORM_TYPES.FLOAT_MAT3]: () => new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]),
+        [UNIFORM_TYPES.FLOAT_MAT4]: () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
 
-        [UNIFORM_TYPES.SAMPLER_2D]: Uint8Array,
+        [UNIFORM_TYPES.SAMPLER_2D]: () => 0,
     },
 
     /**
@@ -332,17 +333,17 @@ export const
      * @type {Object}
      */
     UNIFORM_UPLOADS = {
-        [UNIFORM_TYPES.FLOAT]: (gl, location, value) => gl.uniform1f(location, value[0]),
+        [UNIFORM_TYPES.FLOAT]: (gl, location, value) => gl.uniform1f(location, value),
         [UNIFORM_TYPES.FLOAT_VEC2]: (gl, location, value) => gl.uniform2fv(location, value),
         [UNIFORM_TYPES.FLOAT_VEC3]: (gl, location, value) => gl.uniform3fv(location, value),
         [UNIFORM_TYPES.FLOAT_VEC4]: (gl, location, value) => gl.uniform4fv(location, value),
 
-        [UNIFORM_TYPES.INT]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [UNIFORM_TYPES.INT]: (gl, location, value) => gl.uniform1i(location, value),
         [UNIFORM_TYPES.INT_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
         [UNIFORM_TYPES.INT_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
         [UNIFORM_TYPES.INT_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
 
-        [UNIFORM_TYPES.BOOL]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [UNIFORM_TYPES.BOOL]: (gl, location, value) => gl.uniform1i(location, value),
         [UNIFORM_TYPES.BOOL_VEC2]: (gl, location, value) => gl.uniform2iv(location, value),
         [UNIFORM_TYPES.BOOL_VEC3]: (gl, location, value) => gl.uniform3iv(location, value),
         [UNIFORM_TYPES.BOOL_VEC4]: (gl, location, value) => gl.uniform4iv(location, value),
@@ -351,7 +352,7 @@ export const
         [UNIFORM_TYPES.FLOAT_MAT3]: (gl, location, value) => gl.uniformMatrix3fv(location, false, value),
         [UNIFORM_TYPES.FLOAT_MAT4]: (gl, location, value) => gl.uniformMatrix4fv(location, false, value),
 
-        [UNIFORM_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value[0]),
+        [UNIFORM_TYPES.SAMPLER_2D]: (gl, location, value) => gl.uniform1i(location, value),
     },
 
     /**

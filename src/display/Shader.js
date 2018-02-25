@@ -1,7 +1,6 @@
 import Attribute from './Attribute';
 import Uniform from './Uniform';
 import UniformBlock from './UniformBlock';
-import { UNIFORM_SIZES, UNIFORM_VALUES } from '../const';
 
 /**
  * @class Shader
@@ -94,30 +93,30 @@ export default class Shader {
         this.unbindProgram();
 
         if (this._context) {
-            this._context.deleteShader(this._vertShader);
-            this._context.deleteShader(this._fragShader);
-            this._context.deleteProgram(this._program);
-
             for (const attribute of this._attributes.values()) {
                 attribute.destroy();
-            }
-
-            for (const uniform of this._uniforms.values()) {
-                uniform.destroy();
-            }
-
-            for (const uniformBlock of this._uniformBlocks.values()) {
-                uniformBlock.destroy();
             }
 
             this._attributes.clear();
             this._attributes = null;
 
+            for (const uniform of this._uniforms.values()) {
+                uniform.destroy();
+            }
+
             this._uniforms.clear();
             this._uniforms = null;
 
+            for (const uniformBlock of this._uniformBlocks.values()) {
+                uniformBlock.destroy();
+            }
+
             this._uniformBlocks.clear();
             this._uniformBlocks = null;
+
+            this._context.deleteShader(this._vertShader);
+            this._context.deleteShader(this._fragShader);
+            this._context.deleteProgram(this._program);
 
             this._vertShader = null;
             this._fragShader = null;
@@ -225,31 +224,14 @@ export default class Shader {
      */
     extractAttributes() {
         const gl = this._context,
-            len = gl.getProgramParameter(this._program, gl.ACTIVE_ATTRIBUTES);
-
-        for (let i = 0; i < len; i++) {
-            const { name, type, size } = gl.getActiveAttrib(this._program, i),
-                lodation = gl.getAttribLocation(this._program, name);
-
-            this._attributes.set(name, new Attribute(name, lodation, type, size));
-        }
-
-        return this;
-    }
-
-    /**
-     * @public
-     * @chainable
-     * @returns {Shader}
-     */
-    extractUniformBlocks() {
-        const gl = this._context,
-            length = gl.getProgramParameter(this._program, gl.ACTIVE_UNIFORM_BLOCKS);
+            program = this._program,
+            length = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
         for (let i = 0; i < length; i++) {
-            const uniformBlock = new UniformBlock(gl, this._program, i);
+            const { name, type, size } = gl.getActiveAttrib(program, i),
+                lodation = gl.getAttribLocation(program, name);
 
-            this._uniformBlocks.set(uniformBlock.name, uniformBlock);
+            this._attributes.set(name, new Attribute(name, lodation, type, size));
         }
 
         return this;
@@ -270,11 +252,30 @@ export default class Shader {
             length = indices.length;
 
         for (let i = 0; i < length; i++) {
-            const { type, size, name } = gl.getActiveUniform(program, indices[i]),
-                value = new UNIFORM_VALUES[type](UNIFORM_SIZES[type] * size),
-                uniform = new Uniform(gl, program, indices[i], type, size, name, value);
+            const { name, type, size } = gl.getActiveUniform(program, indices[i]),
+                realName = name.replace(/\[.*?]/, ''),
+                location = gl.getUniformLocation(program, realName);
 
-            this._uniforms.set(uniform.uniformName, uniform);
+            this._uniforms.set(realName, new Uniform(gl, realName, location, type, size));
+        }
+
+        return this;
+    }
+
+    /**
+     * @public
+     * @chainable
+     * @returns {Shader}
+     */
+    extractUniformBlocks() {
+        const gl = this._context,
+            program = this._program,
+            length = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+
+        for (let i = 0; i < length; i++) {
+            const uniformBlock = new UniformBlock(gl, program, i);
+
+            this._uniformBlocks.set(uniformBlock.name, uniformBlock);
         }
 
         return this;

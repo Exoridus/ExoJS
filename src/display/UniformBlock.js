@@ -1,5 +1,5 @@
 import Uniform from './Uniform';
-import { UNIFORM_VALUES, UNIFORM_SIZES } from '../const';
+import { UNIFORM_VALUE, UNIFORM_SIZES } from '../const';
 
 /**
  * @class UniformBlock
@@ -110,8 +110,8 @@ export default class UniformBlock {
 
         for (let i = 0; i < length; i++) {
             const { type, size, name } = gl.getActiveUniform(program, indices[i]),
-                value = new UNIFORM_VALUES[type](this._data, offsets[i], UNIFORM_SIZES[type] * size),
-                uniform = new Uniform(gl, program, indices[i], type, size, name, value);
+                value = new UNIFORM_VALUE[type](this._data, offsets[i], UNIFORM_SIZES[type] * size),
+                uniform = new Uniform(name, indices[i], type, size, value);
 
             uniforms.set(uniform.uniformName, uniform);
         }

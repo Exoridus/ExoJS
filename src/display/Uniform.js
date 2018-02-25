@@ -1,4 +1,4 @@
-import { UNIFORM_UPLOADS } from '../const';
+import { UNIFORM_UPLOADS, UNIFORM_VALUE } from '../const';
 
 /**
  * @class Uniform
@@ -8,14 +8,12 @@ export default class Uniform {
     /**
      * @constructor
      * @param {WebGL2RenderingContext} gl
-     * @param {WebGLProgram} program
-     * @param {Number} index
+     * @param {String} name
+     * @param {WebGLUniformLocation} location
      * @param {Number} type
      * @param {Number} size
-     * @param {String} name
-     * @param {ArrayBufferView} value
      */
-    constructor(gl, program, index, type, size, name, value) {
+    constructor(gl, name, location, type, size) {
 
         /**
          * @private
@@ -25,15 +23,15 @@ export default class Uniform {
 
         /**
          * @private
-         * @member {WebGLProgram}
+         * @member {String}
          */
-        this._program = program;
+        this._name = name;
 
         /**
          * @private
-         * @member {Number}
+         * @member {WebGLUniformLocation}
          */
-        this._index = index;
+        this._location = location;
 
         /**
          * @private
@@ -49,48 +47,15 @@ export default class Uniform {
 
         /**
          * @private
-         * @member {String}
-         */
-        this._name = name.replace(/\[.*?]/, '');
-
-        /**
-         * @private
-         * @member {String}
-         */
-        this._blockName = this._name.substring(0, this._name.lastIndexOf('.'));
-
-        /**
-         * @private
-         * @member {String}
-         */
-        this._uniformName = this._name.substring(this._name.lastIndexOf('.') + 1);
-
-        /**
-         * @private
-         * @member {WebGLUniformLocation}
-         */
-        this._location = gl.getUniformLocation(program, this._name);
-
-        /**
-         * @private
          * @member {ArrayBufferView}
          */
-        this._value = value;
+        this._value = UNIFORM_VALUE[type]();
 
         /**
          * @private
          * @member {Function}
          */
         this._uploadFn = UNIFORM_UPLOADS[type];
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {Number}
-     */
-    get index() {
-        return this._index;
     }
 
     /**
@@ -105,19 +70,10 @@ export default class Uniform {
     /**
      * @public
      * @readonly
-     * @member {String}
+     * @member {WebGLUniformLocation}
      */
-    get blockName() {
-        return this._blockName;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {String}
-     */
-    get uniformName() {
-        return this._uniformName;
+    get location() {
+        return this._location;
     }
 
     /**
@@ -136,15 +92,6 @@ export default class Uniform {
      */
     get size() {
         return this._size;
-    }
-
-    /**
-     * @public
-     * @readonly
-     * @member {WebGLUniformLocation}
-     */
-    get location() {
-        return this._location;
     }
 
     /**
@@ -195,15 +142,11 @@ export default class Uniform {
      */
     destroy() {
         this._context = null;
-        this._program = null;
-        this._index = null;
         this._name = null;
-        this._blockName = null;
-        this._uniformName = null;
+        this._location = null;
         this._type = null;
         this._size = null;
         this._value = null;
-        this._location = null;
         this._uploadFn = null;
     }
 }
