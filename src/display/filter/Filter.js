@@ -1,4 +1,4 @@
-import Shader from '../shader/Shader';
+import Shader from '../Shader';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 

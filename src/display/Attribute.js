@@ -1,7 +1,7 @@
 /**
- * @class ShaderAttribute
+ * @class Attribute
  */
-export default class ShaderAttribute {
+export default class Attribute {
 
     /**
      * @constructor

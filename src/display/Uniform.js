@@ -1,9 +1,9 @@
-import { UNIFORM_UPLOADS } from '../../const';
+import { UNIFORM_UPLOADS } from '../const';
 
 /**
- * @class ShaderUniform
+ * @class Uniform
  */
-export default class ShaderUniform {
+export default class Uniform {
 
     /**
      * @constructor
@@ -159,7 +159,7 @@ export default class ShaderUniform {
      * @public
      * @chainable
      * @param {ArrayBufferView|Number} value
-     * @returns {ShaderUniform}
+     * @returns {Uniform}
      */
     setValue(value) {
         if (value === undefined) {
@@ -180,7 +180,7 @@ export default class ShaderUniform {
     /**
      * @public
      * @chainable
-     * @returns {ShaderUniform}
+     * @returns {Uniform}
      */
     upload() {
         if (this._location) {

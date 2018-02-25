@@ -1,5 +1,5 @@
 import Renderer from '../Renderer';
-import Shader from '../shader/Shader';
+import Shader from '../Shader';
 import settings from '../../settings';
 import VertexArray from '../VertexArray';
 import Buffer from '../Buffer';

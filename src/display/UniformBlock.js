@@ -1,10 +1,10 @@
-import ShaderUniform from './ShaderUniform';
-import { UNIFORM_VALUES, UNIFORM_SIZES } from '../../const';
+import Uniform from './Uniform';
+import { UNIFORM_VALUES, UNIFORM_SIZES } from '../const';
 
 /**
- * @class ShaderBlock
+ * @class UniformBlock
  */
-export default class ShaderBlock {
+export default class UniformBlock {
 
     /**
      * @constructor
@@ -52,7 +52,7 @@ export default class ShaderBlock {
 
         /**
          * @private
-         * @member {Map<String, ShaderUniform>}
+         * @member {Map<String, Uniform>}
          */
         this._uniforms = this.extractUniforms();
 
@@ -98,7 +98,7 @@ export default class ShaderBlock {
 
     /**
      * @public
-     * @returns {Map<String, ShaderUniform>}
+     * @returns {Map<String, Uniform>}
      */
     extractUniforms() {
         const gl = this._context,
@@ -111,7 +111,7 @@ export default class ShaderBlock {
         for (let i = 0; i < length; i++) {
             const { type, size, name } = gl.getActiveUniform(program, indices[i]),
                 value = new UNIFORM_VALUES[type](this._data, offsets[i], UNIFORM_SIZES[type] * size),
-                uniform = new ShaderUniform(gl, program, indices[i], type, size, name, value);
+                uniform = new Uniform(gl, program, indices[i], type, size, name, value);
 
             uniforms.set(uniform.uniformName, uniform);
         }
@@ -122,7 +122,7 @@ export default class ShaderBlock {
     /**
      * @public
      * @param {String} name
-     * @returns {ShaderUniform}
+     * @returns {Uniform}
      */
     getUniform(name) {
         if (!this._uniforms.has(name)) {
@@ -135,7 +135,7 @@ export default class ShaderBlock {
     /**
      * @public
      * @chainable
-     * @returns {ShaderBlock}
+     * @returns {UniformBlock}
      */
     upload() {
         this._buffer.upload(this._data);
