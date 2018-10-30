@@ -1,7 +1,7 @@
 /**
- * @class MeshHalfEdge
+ * @class HalfEdge
  */
-export default class MeshHalfEdge {
+export default class HalfEdge {
 
     /**
      * @constructor
@@ -10,33 +10,33 @@ export default class MeshHalfEdge {
 
         /**
          * @private
-         * @member {MeshVertex}
+         * @member {Vertex}
          */
         this._vertex = null;
 
         /**
          * @private
-         * @member {MeshFace}
+         * @member {Face}
          */
         this._face = null;
 
         /**
          * @private
-         * @member {MeshHalfEdge}
+         * @member {HalfEdge}
          */
         this._next = null;
 
         /**
          * @private
-         * @member {MeshHalfEdge}
+         * @member {HalfEdge}
          */
-        this._prev = null;
+        this._opposite = null;
 
         /**
          * @private
-         * @member {MeshHalfEdge}
+         * @member {HalfEdge}
          */
-        this._opposite = null;
+        this._prev = null;
     }
 
     /**
@@ -65,7 +65,7 @@ export default class MeshHalfEdge {
 
     /**
      * @public
-     * @member {MeshHalfEdge}
+     * @member {HalfEdge}
      */
     get next() {
         return this._next;
@@ -77,19 +77,7 @@ export default class MeshHalfEdge {
 
     /**
      * @public
-     * @member {MeshHalfEdge}
-     */
-    get prev() {
-        return this._prev;
-    }
-
-    set prev(prev) {
-        this._prev = prev;
-    }
-
-    /**
-     * @public
-     * @member {MeshHalfEdge}
+     * @member {HalfEdge}
      */
     get opposite() {
         return this._opposite;
@@ -101,12 +89,24 @@ export default class MeshHalfEdge {
 
     /**
      * @public
+     * @member {HalfEdge}
+     */
+    get prev() {
+        return this._prev;
+    }
+
+    set prev(prev) {
+        this._prev = prev;
+    }
+
+    /**
+     * @public
      */
     destroy() {
         this._vertex = null;
         this._face = null;
         this._next = null;
-        this._prev = null;
         this._opposite = null;
+        this._prev = null;
     }
 }

@@ -65,7 +65,7 @@ export default class Application {
          * @private
          * @member {Loader}
          */
-        this._loader = new Loader(config.loader);
+        this._loader = new Loader(config);
 
         /**
          * @private

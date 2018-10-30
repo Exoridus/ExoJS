@@ -1,7 +1,7 @@
 /**
- * @class MeshVertex
+ * @class Vertex
  */
-export default class MeshVertex {
+export default class Vertex {
 
     /**
      * @constructor

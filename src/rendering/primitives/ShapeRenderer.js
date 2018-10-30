@@ -71,8 +71,8 @@ export default class ShapeRenderer extends Renderer {
          * @member {Shader}
          */
         this._shader = new Shader(
-            readFileSync(join(__dirname, './glsl/sprite.vert'), 'utf8'),
-            readFileSync(join(__dirname, './glsl/sprite.frag'), 'utf8')
+            readFileSync(join(__dirname, './glsl/shape.vert'), 'utf8'),
+            readFileSync(join(__dirname, './glsl/shape.frag'), 'utf8')
         );
 
         /**

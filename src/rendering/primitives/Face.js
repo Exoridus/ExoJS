@@ -1,7 +1,7 @@
 /**
- * @class MeshFace
+ * @class Face
  */
-export default class MeshFace {
+export default class Face {
 
     /**
      * @constructor

@@ -58,16 +58,16 @@ app.start(new Exo.Scene({
          * @private
          * @member {CanvasGradient}
          */
-        this._gradient = this._context.createLinearGradient(0, 0, 0, this._canvas.height);
-        this._gradient.addColorStop(0, '#f70');
-        this._gradient.addColorStop(0.5, '#f30');
-        this._gradient.addColorStop(1, '#f70');
+        this._gradientStyle = this._context.createLinearGradient(0, 0, 0, this._canvas.height);
+        this._gradientStyle.addColorStop(0, '#f70');
+        this._gradientStyle.addColorStop(0.5, '#f30');
+        this._gradientStyle.addColorStop(1, '#f70');
 
         /**
          * @private
          * @member {String}
          */
-        this._progress = 'rgba(255, 255, 255, 0.1)';
+        this._progressStyle = 'rgba(255, 255, 255, 0.1)';
 
         /**
          * @private
@@ -93,6 +93,23 @@ app.start(new Exo.Scene({
          */
         this._time = new Exo.Time();
 
+        /**
+         * @private
+         * @member {Float32Array}
+         */
+        this._values = new Float32Array(4);
+
+        /**
+         * @private
+         * @member {String[]}
+         */
+        this._styles = [
+            'rgba(255, 255, 255, 1)',
+            'rgba(0, 0, 255, 1)',
+            'rgba(0, 255, 0, 1)',
+            'rgba(255, 0, 0, 1)',
+        ];
+
         this._music.play({
             loop: true,
             volume: 0.5
@@ -111,29 +128,29 @@ app.start(new Exo.Scene({
             return;
         }
 
+        this._time.addTime(delta);
+
         const freqData = this._analyser.frequencyData,
-            seconds = this._time.addTime(delta).seconds,
-            length = freqData.length,
-            redModifier = (Math.cos(seconds) * 0.5) + 0.5,
-            greenModifier = (Math.sin(seconds) * 0.5) + 0.5;
+            len = freqData.length;
 
-        let [r, g, b] = [0, 0, 0];
+        let [average, low, mid, high] = [0, 0, 0, 0];
 
-        for (let i = 0; i < length; i++) {
-            switch (i / (length / 3 | 0)) {
-                case 0:
-                    r += freqData[i] * redModifier;
-                    break;
-                case 1:
-                    g += freqData[i] * greenModifier;
-                    break;
-                case 2:
-                    b += freqData[i];
-                    break;
-            }
+        for (let i = 0; i < len; i++) {
+            const val = freqData[i] / 255,
+                iSq = (i * i),
+                i2Sq = ((i * 2) * (i * 2)),
+                len2 = (len * len);
+
+            average += val;
+            high += val * (iSq / len2);
+            low += val * ((len2 - iSq) / len2);
+            mid += val * (i < len / 2 ? (i2Sq / len2) : ((len2 - i2Sq) / len2));
         }
 
-        this._clearColor.set(r / length, g / length, b / length);
+        this._values[0] = average / len;
+        this._values[1] = low / len;
+        this._values[2] = mid / len;
+        this._values[3] = high / len;
     },
 
     /**
@@ -154,10 +171,10 @@ app.start(new Exo.Scene({
 
         this._context.clearRect(0, 0, width, height);
 
-        this._context.fillStyle = this._progress;
+        this._context.fillStyle = this._progressStyle;
         this._context.fillRect(0, 0, (width * this._music.progress), height);
 
-        this._context.fillStyle = this._gradient;
+        this._context.fillStyle = this._gradientStyle;
         this._context.beginPath();
 
         for (let i = 0; i < length; i++) {
@@ -169,7 +186,13 @@ app.start(new Exo.Scene({
             this._context.lineTo(offsetX, ((height * 0.75) - (lineHeight / 2)) | 0);
         }
 
+        for (let i = 0; i < 4; i++) {
+            this._context.fillStyle = this._styles[i];
+            this._context.fillRect(0, height - (height * this._values[i]), width, 2);
+        }
+
         this._context.stroke();
+
         this._screen.updateTexture();
 
         renderManager
