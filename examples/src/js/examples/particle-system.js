@@ -31,7 +31,7 @@ app.start(new Exo.Scene({
 
         /**
          * @private
-         * @member {ParticleEmitter}
+         * @member {IParticleEmitter}
          */
         this._emitter = new Exo.ParticleEmitter(resources.get('texture', 'particle'));
         this._emitter.setPosition(canvas.width * 0.5, canvas.height * 0.75);
