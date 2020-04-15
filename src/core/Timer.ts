@@ -1,4 +1,4 @@
-import { TimeInterval } from '../const/core';
+import { TimeInterval } from 'const/core';
 import { Clock } from './Clock';
 
 export class Timer extends Clock {

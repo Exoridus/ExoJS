@@ -1,6 +1,6 @@
-import { IParticleAffector } from "./IParticleAffector";
-import { Particle } from '../Particle';
-import { Time } from '../../core/Time';
+import { IParticleAffector } from "particles/affectors/IParticleAffector";
+import { Particle } from 'particles/Particle';
+import { Time } from 'core/Time';
 
 export class TorqueAffector implements IParticleAffector {
 

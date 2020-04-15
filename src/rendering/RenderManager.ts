@@ -1,9 +1,9 @@
-import { BlendModes } from '../const/rendering';
+import { BlendModes } from 'const/rendering';
 import { RenderTarget } from './RenderTarget';
 import { SpriteRenderer } from './sprite/SpriteRenderer';
-import { ParticleRenderer } from '../particles/ParticleRenderer';
-import { Color } from '../core/Color';
-import { canvasSourceToDataURL } from '../utils/core';
+import { ParticleRenderer } from 'particles/ParticleRenderer';
+import { Color } from 'core/Color';
+import { canvasSourceToDataURL } from 'utils/core';
 import { Texture } from './texture/Texture';
 import { Sampler } from './texture/Sampler';
 import { IRenderer, RendererType } from "./IRenderer";
@@ -12,7 +12,7 @@ import { VertexArrayObject } from './VertexArrayObject';
 import { RenderTexture } from './texture/RenderTexture';
 import { Drawable } from './Drawable';
 import { View } from './View';
-import { Application } from "../core/Application";
+import { Application } from "core/Application";
 
 export class RenderManager {
 

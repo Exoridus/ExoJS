@@ -1,11 +1,11 @@
 import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
-import { RenderManager } from '../rendering/RenderManager';
-import { InputManager } from '../input/InputManager';
-import { Loader, LoaderOptions } from '../resources/Loader';
-import { defaultApplicationOptions } from '../const/defaults';
+import { RenderManager } from 'rendering/RenderManager';
+import { InputManager } from 'input/InputManager';
+import { Loader, LoaderOptions } from 'resources/Loader';
+import { defaultApplicationOptions } from 'const/defaults';
 import { Signal } from './Signal';
-import { AppStatus } from '../const/core';
+import { AppStatus } from 'const/core';
 import { Color } from './Color';
 import { Time } from './Time';
 import { Scene } from './Scene';

@@ -1,14 +1,14 @@
-import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const/input';
-import { Flags } from '../math/Flags';
-import { stopEvent } from '../utils/core';
-import { Vector } from '../math/Vector';
+import { CHANNEL_RANGE, CHANNEL_OFFSET } from 'const/input';
+import { Flags } from 'math/Flags';
+import { stopEvent } from 'utils/core';
+import { Vector } from 'math/Vector';
 import { Pointer } from './Pointer';
 import { GamepadProvider } from './GamepadProvider';
-import { Signal } from '../core/Signal';
-import { getDistance } from '../utils/math';
+import { Signal } from 'core/Signal';
+import { getDistance } from 'utils/math';
 import { Input } from './Input';
-import { activeListenerOption, passiveListenerOption } from "../const/core";
-import { Application } from "../core/Application";
+import { activeListenerOption, passiveListenerOption } from "const/core";
+import { Application } from "core/Application";
 
 enum InputManagerFlags {
     NONE = 0,

@@ -1,4 +1,4 @@
-import { RenderingPrimitives, ShaderPrimitives } from '../const/rendering';
+import { RenderingPrimitives, ShaderPrimitives } from 'const/rendering';
 import { ShaderAttribute } from './shader/ShaderAttribute';
 import { RenderBuffer } from './RenderBuffer';
 

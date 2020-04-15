@@ -1,7 +1,7 @@
-import { IParticleAffector } from './IParticleAffector';
-import { Vector } from '../../math/Vector';
-import { Time } from '../../core/Time';
-import { Particle } from '../Particle';
+import { IParticleAffector } from 'particles/affectors/IParticleAffector';
+import { Vector } from 'math/Vector';
+import { Time } from 'core/Time';
+import { Particle } from 'particles/Particle';
 
 export class ScaleAffector implements IParticleAffector {
 

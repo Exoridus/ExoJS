@@ -1,4 +1,4 @@
-import { Signal } from "../core/Signal";
+import { Signal } from "core/Signal";
 
 export const audioContext: AudioContext = new AudioContext();
 

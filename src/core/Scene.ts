@@ -1,7 +1,7 @@
 import { Time } from './Time';
-import { Loader } from "../resources/Loader";
-import { ResourceContainer } from "../resources/ResourceContainer";
-import { RenderManager } from "../rendering/RenderManager";
+import { Loader } from "resources/Loader";
+import { ResourceContainer } from "resources/ResourceContainer";
+import { RenderManager } from "rendering/RenderManager";
 import { Application } from "./Application";
 
 export interface SceneData {

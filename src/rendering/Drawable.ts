@@ -1,6 +1,6 @@
-import { SceneNode } from '../core/SceneNode';
-import { Color } from '../core/Color';
-import { BlendModes } from '../const/rendering';
+import { SceneNode } from 'core/SceneNode';
+import { Color } from 'core/Color';
+import { BlendModes } from 'const/rendering';
 import { View } from './View';
 import { RenderManager } from './RenderManager';
 

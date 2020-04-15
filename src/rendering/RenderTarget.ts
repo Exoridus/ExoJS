@@ -1,7 +1,7 @@
-import { Size } from '../math/Size';
+import { Size } from 'math/Size';
 import { View } from './View';
-import { Rectangle } from '../math/Rectangle';
-import { Vector } from '../math/Vector';
+import { Rectangle } from 'math/Rectangle';
+import { Vector } from 'math/Vector';
 
 export class RenderTarget {
 

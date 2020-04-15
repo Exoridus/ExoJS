@@ -1,7 +1,7 @@
-import { Vector } from '../math/Vector';
-import { Size } from '../math/Size';
-import { Flags } from '../math/Flags';
-import { Signal } from '../core/Signal';
+import { Vector } from 'math/Vector';
+import { Size } from 'math/Size';
+import { Flags } from 'math/Flags';
+import { Signal } from 'core/Signal';
 
 enum PointerFlags {
     None = 0,

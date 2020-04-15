@@ -1,6 +1,6 @@
-import { Rectangle } from '../math/Rectangle';
+import { Rectangle } from 'math/Rectangle';
 import { SceneNode } from './SceneNode';
-import { defaultQuadTreeMaxLevel, defaultQuadTreeMaxObjects } from "../const/defaults";
+import { defaultQuadTreeMaxLevel, defaultQuadTreeMaxObjects } from "const/defaults";
 
 export class Quadtree {
 

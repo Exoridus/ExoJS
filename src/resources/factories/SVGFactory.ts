@@ -1,5 +1,5 @@
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { StorageNames } from "../../const/core";
+import { StorageNames } from "const/core";
 
 export class SVGFactory extends AbstractResourceFactory<string, HTMLImageElement> {
 

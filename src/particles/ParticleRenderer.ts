@@ -1,15 +1,15 @@
-import { IRenderer } from '../rendering/IRenderer';
-import { Shader } from '../rendering/shader/Shader';
-import { createQuadIndices } from '../utils/rendering';
-import { RenderBuffer } from '../rendering/RenderBuffer';
-import { VertexArrayObject } from '../rendering/VertexArrayObject';
-import { RenderManager } from '../rendering/RenderManager';
-import { Texture } from '../rendering/texture/Texture';
-import { RenderTexture } from '../rendering/texture/RenderTexture';
-import { BlendModes, BufferTypes, BufferUsage } from "../const/rendering";
-import { View } from '../rendering/View';
+import { IRenderer } from 'rendering/IRenderer';
+import { Shader } from 'rendering/shader/Shader';
+import { createQuadIndices } from 'utils/rendering';
+import { RenderBuffer } from 'rendering/RenderBuffer';
+import { VertexArrayObject } from 'rendering/VertexArrayObject';
+import { RenderManager } from 'rendering/RenderManager';
+import { Texture } from 'rendering/texture/Texture';
+import { RenderTexture } from 'rendering/texture/RenderTexture';
+import { BlendModes, BufferTypes, BufferUsage } from "const/rendering";
+import { View } from 'rendering/View';
 import { ParticleSystem } from './ParticleSystem';
-import { defaultParticleRendererBatchSize } from "../const/defaults";
+import { defaultParticleRendererBatchSize } from "const/defaults";
 import vertexSource from "./glsl/particle.vert";
 import fragmentSource from "./glsl/particle.frag";
 

@@ -1,9 +1,9 @@
-import { defaultRenderTextureSamplerOptions } from '../../const/defaults';
-import { isPowerOfTwo } from '../../utils/math';
-import { RenderTarget } from '../RenderTarget';
-import { Flags } from '../../math/Flags';
-import { ScaleModes, WrapModes } from "../../const/rendering";
-import { SamplerOptions } from "./Sampler";
+import { defaultRenderTextureSamplerOptions } from 'const/defaults';
+import { isPowerOfTwo } from 'utils/math';
+import { RenderTarget } from 'rendering/RenderTarget';
+import { Flags } from 'math/Flags';
+import { ScaleModes, WrapModes } from "const/rendering";
+import { SamplerOptions } from "rendering/texture/Sampler";
 
 enum RenderTextureFlags {
     SCALE_MODE = 1 << 0,

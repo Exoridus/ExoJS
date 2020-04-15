@@ -1,6 +1,6 @@
-import { TimeInterval } from '../const/core';
+import { TimeInterval } from 'const/core';
 import { Time } from './Time';
-import { getPreciseTime } from '../utils/core';
+import { getPreciseTime } from 'utils/core';
 
 export class Clock {
 

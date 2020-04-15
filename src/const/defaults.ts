@@ -1,10 +1,10 @@
 import { ScaleModes, WrapModes } from './rendering';
-import { Color } from '../core/Color';
+import { Color } from 'core/Color';
 import { Gamepad } from "./input";
-import { ApplicationOptions } from "../core/Application";
-import { SamplerOptions } from "../rendering/texture/Sampler";
-import { GamepadControl } from "../input/GamepadControl";
-import { GamepadMapping } from "../input/GamepadMapping";
+import { ApplicationOptions } from "core/Application";
+import { SamplerOptions } from "rendering/texture/Sampler";
+import { GamepadControl } from "input/GamepadControl";
+import { GamepadMapping } from "input/GamepadMapping";
 import { PlaybackOptions } from "./types";
 
 /**

@@ -1,8 +1,8 @@
 import { ObservableVector } from './ObservableVector';
 import { Matrix } from './Matrix';
-import { degreesToRadians } from '../utils/math';
+import { degreesToRadians } from 'utils/math';
 import { Flags } from './Flags';
-import { trimRotation } from "../const/math";
+import { trimRotation } from "const/math";
 
 export enum TransformableFlags {
     NONE = 0x00,

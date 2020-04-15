@@ -1,6 +1,6 @@
-import { internalAudioElement, internalCanvasElement, internalCanvasContext, codecNotSupportedPattern } from '../const/core';
-import { TextureSource } from "../rendering/texture/Texture";
-import { Size } from '../math/Size';
+import { internalAudioElement, internalCanvasElement, internalCanvasContext, codecNotSupportedPattern } from 'const/core';
+import { TextureSource } from "rendering/texture/Texture";
+import { Size } from 'math/Size';
 
 export const stopEvent = (event: Event) => {
     event.preventDefault();

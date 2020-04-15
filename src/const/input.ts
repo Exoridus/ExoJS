@@ -1,5 +1,5 @@
-import { GamepadMapping } from '../input/GamepadMapping';
-import { GamepadControl } from '../input/GamepadControl';
+import { GamepadMapping } from 'input/GamepadMapping';
+import { GamepadControl } from 'input/GamepadControl';
 
 export enum CHANNEL_OFFSET {
     KEYBOARD = 0x000,

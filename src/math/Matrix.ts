@@ -1,4 +1,4 @@
-import { degreesToRadians } from '../utils/math';
+import { degreesToRadians } from 'utils/math';
 
 /**
  * | a | b | x |

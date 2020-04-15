@@ -1,4 +1,4 @@
-import { TimeInterval } from '../const/core';
+import { TimeInterval } from 'const/core';
 
 export class Time {
 

@@ -1,8 +1,8 @@
-import { StorageNames } from '../../const/core';
-import { PlaybackOptions } from "../../const/types";
+import { StorageNames } from 'const/core';
+import { PlaybackOptions } from "const/types";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { Sound } from "../../audio/Sound";
-import { decodeAudioData } from "../../const/audio-context";
+import { Sound } from "audio/Sound";
+import { decodeAudioData } from "const/audio-context";
 
 interface SoundFactoryOptions {
     playbackOptions?: Partial<PlaybackOptions>;

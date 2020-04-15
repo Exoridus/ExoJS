@@ -1,4 +1,4 @@
-import { TypedEnum } from "../const/types";
+import { TypedEnum } from "const/types";
 
 export class Flags<T extends TypedEnum<T, number>> {
 

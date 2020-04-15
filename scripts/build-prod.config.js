@@ -1,5 +1,6 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
+const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
 
 module.exports = {
     mode: 'production',
@@ -15,7 +16,10 @@ module.exports = {
         umdNamedDefine: true
     },
     resolve: {
-        extensions: [".ts", ".tsx", ".js"]
+        extensions: [".ts", ".tsx", ".js"],
+        plugins: [
+            new TsConfigPathsPlugin()
+        ]
     },
     devtool: "source-map",
     optimization: {

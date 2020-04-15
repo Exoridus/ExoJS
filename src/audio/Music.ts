@@ -1,7 +1,7 @@
-import { clamp } from '../utils/math';
-import { PlaybackOptions } from "../const/types";
-import { AbstractMedia } from "../interfaces/AbstractMedia";
-import { audioContext, isAudioContextReady, onAudioContextReady } from "../const/audio-context";
+import { clamp } from 'utils/math';
+import { PlaybackOptions } from "const/types";
+import { AbstractMedia } from "interfaces/AbstractMedia";
+import { audioContext, isAudioContextReady, onAudioContextReady } from "const/audio-context";
 
 export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;

@@ -1,8 +1,8 @@
-import { Vector } from '../../math/Vector';
-import { Color } from '../../core/Color';
-import { Time } from '../../core/Time';
-import { IParticleProps } from "../IParticleProps";
-import { trimRotation } from "../../const/math";
+import { Vector } from 'math/Vector';
+import { Color } from 'core/Color';
+import { Time } from 'core/Time';
+import { IParticleProps } from "particles/IParticleProps";
+import { trimRotation } from "const/math";
 
 export class ParticleOptions implements IParticleProps {
     private readonly _totalLifetime: Time;

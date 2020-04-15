@@ -1,5 +1,5 @@
-import { Gamepad } from "../const/input";
-import { clamp } from "../utils/math";
+import { Gamepad } from "const/input";
+import { clamp } from "utils/math";
 
 export interface GamepadControlOptions {
     invert?: boolean;

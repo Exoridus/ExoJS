@@ -1,4 +1,4 @@
-import { PlaybackOptions } from "../const/types";
+import { PlaybackOptions } from "const/types";
 
 export enum MediaFlags {
     None = 0,

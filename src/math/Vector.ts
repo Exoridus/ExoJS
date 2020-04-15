@@ -1,4 +1,4 @@
-import { getDistance } from '../utils/math';
+import { getDistance } from 'utils/math';
 import { Matrix } from './Matrix';
 
 export class Vector {

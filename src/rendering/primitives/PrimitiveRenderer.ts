@@ -1,16 +1,16 @@
-import { IRenderer } from "../IRenderer";
-import { defaultPrimitiveRendererBatchSize } from "../../const/defaults";
-import { createQuadIndices } from "../../utils/rendering";
-import { Shader } from "../shader/Shader";
-import { RenderManager } from "../RenderManager";
-import { Texture } from "../texture/Texture";
-import { BlendModes, BufferTypes, BufferUsage } from "../../const/rendering";
-import { View } from "../View";
-import { RenderBuffer } from "../RenderBuffer";
-import { VertexArrayObject } from "../VertexArrayObject";
-import { DrawableShape } from "./DrawableShape";
-import vertexSource from "./glsl/primitive.vert";
-import fragmentSource from "./glsl/primitive.frag";
+import { IRenderer } from "rendering/IRenderer";
+import { defaultPrimitiveRendererBatchSize } from "const/defaults";
+import { createQuadIndices } from "utils/rendering";
+import { Shader } from "rendering/shader/Shader";
+import { RenderManager } from "rendering/RenderManager";
+import { Texture } from "rendering/texture/Texture";
+import { BlendModes, BufferTypes, BufferUsage } from "const/rendering";
+import { View } from "rendering/View";
+import { RenderBuffer } from "rendering/RenderBuffer";
+import { VertexArrayObject } from "rendering/VertexArrayObject";
+import { DrawableShape } from "rendering/primitives/DrawableShape";
+import vertexSource from "rendering/primitives/glsl/primitive.vert";
+import fragmentSource from "rendering/primitives/glsl/primitive.frag";
 
 export class PrimitiveRenderer implements IRenderer {
 

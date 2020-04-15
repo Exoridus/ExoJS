@@ -1,5 +1,5 @@
-import { Particle } from '../Particle';
-import { Time } from '../../core/Time';
+import { Particle } from 'particles/Particle';
+import { Time } from 'core/Time';
 
 export interface IParticleAffector {
     apply(particle: Particle, delta: Time): this;

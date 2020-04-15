@@ -1,4 +1,4 @@
-import { removeArrayItems } from '../utils/core';
+import { removeArrayItems } from 'utils/core';
 
 type SignalHandler<T> =  (...params: Array<T>) => void | boolean | any;
 

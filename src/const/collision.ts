@@ -1,10 +1,10 @@
-import { SceneNode } from '../core/SceneNode';
-import { Polygon } from '../math/Polygon';
-import { Rectangle } from '../math/Rectangle';
-import { Circle } from '../math/Circle';
-import { Interval } from '../math/Interval';
-import { Vector } from '../math/Vector';
-import { getDistance, getVoronoiRegion } from "../utils/math";
+import { SceneNode } from 'core/SceneNode';
+import { Polygon } from 'math/Polygon';
+import { Rectangle } from 'math/Rectangle';
+import { Circle } from 'math/Circle';
+import { Interval } from 'math/Interval';
+import { Vector } from 'math/Vector';
+import { getDistance, getVoronoiRegion } from "utils/math";
 import { VoronoiRegion } from "./math";
 
 export interface Collision {

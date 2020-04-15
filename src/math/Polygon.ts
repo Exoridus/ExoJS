@@ -2,13 +2,13 @@ import { Interval } from './Interval';
 import { Vector } from './Vector';
 import { Rectangle } from './Rectangle';
 import { Circle } from './Circle';
-import { IShape } from '../interfaces/IShape';
+import { IShape } from 'interfaces/IShape';
 import {
     Collidable, Collision, CollisionType,
     getCollisionPolygonCircle,
     getCollisionSAT,
     isPolygonIntersectingWithTarget
-} from "../const/collision";
+} from "const/collision";
 
 export class Polygon implements IShape {
 

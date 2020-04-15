@@ -1,5 +1,5 @@
 import { Drawable } from './Drawable';
-import { removeArrayItems } from '../utils/core';
+import { removeArrayItems } from 'utils/core';
 import { RenderManager } from './RenderManager';
 
 export class Container extends Drawable {

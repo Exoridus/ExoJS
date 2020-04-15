@@ -1,5 +1,5 @@
-import { IResourceFactory } from "../../interfaces/IResourceFactory";
-import { StorageNames } from "../../const/core";
+import { IResourceFactory } from "interfaces/IResourceFactory";
+import { StorageNames } from "const/core";
 
 export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = any> implements IResourceFactory<SourceValue, TargetValue> {
 

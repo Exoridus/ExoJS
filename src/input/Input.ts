@@ -1,7 +1,7 @@
-import { defaultInputThreshold } from '../const/defaults';
-import { Signal } from '../core/Signal';
-import { Timer } from '../core/Timer';
-import { InputChannel } from "../const/input";
+import { defaultInputThreshold } from 'const/defaults';
+import { Signal } from 'core/Signal';
+import { Timer } from 'core/Timer';
+import { InputChannel } from "const/input";
 
 interface InputOptions {
     onStart?: () => void;

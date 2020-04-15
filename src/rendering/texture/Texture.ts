@@ -1,11 +1,11 @@
-import { ScaleModes, WrapModes } from '../../const/rendering';
-import { isPowerOfTwo } from '../../utils/math';
-import { defaultTextureSamplerOptions } from '../../const/defaults';
-import { Size } from '../../math/Size';
-import { Flags } from '../../math/Flags';
-import { createCanvas } from '../../utils/rendering';
+import { ScaleModes, WrapModes } from 'const/rendering';
+import { isPowerOfTwo } from 'utils/math';
+import { defaultTextureSamplerOptions } from 'const/defaults';
+import { Size } from 'math/Size';
+import { Flags } from 'math/Flags';
+import { createCanvas } from 'utils/rendering';
 import { Sampler, SamplerOptions } from "./Sampler";
-import { getTextureSourceSize } from "../../utils/core";
+import { getTextureSourceSize } from "utils/core";
 
 enum TextureFlags {
     SCALE_MODE = 1 << 0,

@@ -1,10 +1,10 @@
-import { RenderingPrimitives } from '../../const/rendering';
-import { Geometry } from "./Geometry";
-import { Color } from "../../core/Color";
-import { Container } from "../Container";
-import { RenderManager } from "../RenderManager";
-import {PrimitiveRenderer  } from "./PrimitiveRenderer";
-import { RendererType } from "../IRenderer";
+import { RenderingPrimitives } from 'const/rendering';
+import { Geometry } from "rendering/primitives/Geometry";
+import { Color } from "core/Color";
+import { Container } from "rendering/Container";
+import { RenderManager } from "rendering/RenderManager";
+import { PrimitiveRenderer } from "rendering/primitives/PrimitiveRenderer";
+import { RendererType } from "rendering/IRenderer";
 
 export class DrawableShape extends Container {
 

@@ -2,15 +2,15 @@ import { Vector } from './Vector';
 import { Rectangle } from './Rectangle';
 import { Polygon } from './Polygon';
 import { Interval } from './Interval';
-import { getDistance } from '../utils/math';
-import { IShape } from '../interfaces/IShape';
+import { getDistance } from 'utils/math';
+import { IShape } from 'interfaces/IShape';
 import {
     Collidable, Collision, CollisionType,
     getCollisionCircleCircle,
     getCollisionCircleRectangle,
     getCollisionPolygonCircle,
     isCircleIntersectingWithTarget
-} from "../const/collision";
+} from "const/collision";
 
 export class Circle implements IShape {
 

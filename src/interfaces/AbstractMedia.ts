@@ -1,7 +1,7 @@
 import { IMedia } from "./IMedia";
-import { Signal } from '../core/Signal';
-import { PlaybackOptions } from "../const/types";
-import { defaultPlaybackOptions } from "../const/defaults";
+import { Signal } from 'core/Signal';
+import { PlaybackOptions } from "const/types";
+import { defaultPlaybackOptions } from "const/defaults";
 
 export interface AbstractMediaInitialState {
     duration: number;

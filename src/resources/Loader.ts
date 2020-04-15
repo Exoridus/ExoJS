@@ -1,4 +1,4 @@
-import { Signal } from '../core/Signal';
+import { Signal } from 'core/Signal';
 import { ResourceContainer } from './ResourceContainer';
 import { FontFactory } from './factories/FontFactory';
 import { ImageFactory } from './factories/ImageFactory';
@@ -9,9 +9,9 @@ import { TextFactory } from './factories/TextFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
 import { SVGFactory } from './factories/SVGFactory';
-import { IDatabase } from "../interfaces/IDatabase";
-import { IResourceFactory } from "../interfaces/IResourceFactory";
-import { ResourceTypes } from "../const/core";
+import { IDatabase } from "interfaces/IDatabase";
+import { IResourceFactory } from "interfaces/IResourceFactory";
+import { ResourceTypes } from "const/core";
 
 export interface LoaderOptions {
     database?: IDatabase;

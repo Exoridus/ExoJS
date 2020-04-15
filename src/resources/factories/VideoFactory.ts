@@ -1,9 +1,9 @@
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { SamplerOptions } from "../../rendering/texture/Sampler";
-import { PlaybackOptions } from "../../const/types";
-import { determineMimeType } from "../../utils/resources";
-import { onceListenerOption, StorageNames } from "../../const/core";
-import { Video } from "../../rendering/Video";
+import { SamplerOptions } from "rendering/texture/Sampler";
+import { PlaybackOptions } from "const/types";
+import { determineMimeType } from "utils/resources";
+import { onceListenerOption, StorageNames } from "const/core";
+import { Video } from "rendering/Video";
 
 interface VideoFactoryOptions {
     mimeType?: string;

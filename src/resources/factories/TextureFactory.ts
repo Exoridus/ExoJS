@@ -1,8 +1,8 @@
-import { Texture } from '../../rendering/texture/Texture';
-import { SamplerOptions } from "../../rendering/texture/Sampler";
+import { Texture } from 'rendering/texture/Texture';
+import { SamplerOptions } from "rendering/texture/Sampler";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { determineMimeType } from "../../utils/resources";
-import { StorageNames } from "../../const/core";
+import { determineMimeType } from "utils/resources";
+import { StorageNames } from "const/core";
 
 interface TextureFactoryOptions {
     mimeType?: string;

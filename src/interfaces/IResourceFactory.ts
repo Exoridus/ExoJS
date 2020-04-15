@@ -1,4 +1,4 @@
-import { StorageNames } from "../const/core";
+import { StorageNames } from "const/core";
 
 export interface IResourceFactory<SourceValue = any, TargetValue = any> {
 

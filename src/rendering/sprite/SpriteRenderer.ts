@@ -1,17 +1,17 @@
-import { IRenderer } from '../IRenderer';
-import { Shader } from '../shader/Shader';
-import { defaultSpriteRendererBatchSize } from '../../const/defaults';
-import { VertexArrayObject } from '../VertexArrayObject';
-import { RenderBuffer } from '../RenderBuffer';
-import { createQuadIndices } from '../../utils/rendering';
-import { Texture } from '../texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage } from "../../const/rendering";
-import { View } from '../View';
-import { RenderManager } from '../RenderManager';
-import { Sprite } from './Sprite';
-import { RenderTexture } from '../texture/RenderTexture';
-import vertexSource from "./glsl/sprite.vert";
-import fragmentSource from "./glsl/sprite.frag";
+import { IRenderer } from 'rendering/IRenderer';
+import { Shader } from 'rendering/shader/Shader';
+import { defaultSpriteRendererBatchSize } from 'const/defaults';
+import { VertexArrayObject } from 'rendering/VertexArrayObject';
+import { RenderBuffer } from 'rendering/RenderBuffer';
+import { createQuadIndices } from 'utils/rendering';
+import { Texture } from 'rendering/texture/Texture';
+import { BlendModes, BufferTypes, BufferUsage } from "const/rendering";
+import { View } from 'rendering/View';
+import { RenderManager } from 'rendering/RenderManager';
+import { Sprite } from 'rendering/sprite/Sprite';
+import { RenderTexture } from 'rendering/texture/RenderTexture';
+import vertexSource from "rendering/sprite/glsl/sprite.vert";
+import fragmentSource from "rendering/sprite/glsl/sprite.frag";
 
 export class SpriteRenderer implements IRenderer {
 

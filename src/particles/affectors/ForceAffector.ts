@@ -1,7 +1,7 @@
-import { IParticleAffector } from './IParticleAffector';
-import { Vector } from '../../math/Vector';
-import { Particle } from '../Particle';
-import { Time } from '../../core/Time';
+import { IParticleAffector } from 'particles/affectors/IParticleAffector';
+import { Vector } from 'math/Vector';
+import { Particle } from 'particles/Particle';
+import { Time } from 'core/Time';
 
 export class ForceAffector implements IParticleAffector {
 

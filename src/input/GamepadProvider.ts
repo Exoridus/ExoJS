@@ -1,5 +1,5 @@
 import { GamepadMapping } from './GamepadMapping';
-import { defaultGamepadMapping } from "../const/defaults";
+import { defaultGamepadMapping } from "const/defaults";
 
 export class GamepadProvider {
 

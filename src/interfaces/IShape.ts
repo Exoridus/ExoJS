@@ -1,5 +1,5 @@
-import { Vector } from '../math/Vector';
-import { Collidable } from "../const/collision";
+import { Vector } from 'math/Vector';
+import { Collidable } from "const/collision";
 
 export interface IShape extends Collidable {
     position: Vector;

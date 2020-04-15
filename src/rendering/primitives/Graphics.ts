@@ -1,9 +1,9 @@
-import { Color } from '../../core/Color';
-import { Container } from '../Container';
-import { bezierCurveTo, quadraticCurveTo } from '../../utils/math';
-import { RenderingPrimitives } from '../../const/rendering';
-import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '../../utils/geometry';
-import { Vector } from '../../math/Vector';
+import { Color } from 'core/Color';
+import { Container } from 'rendering/Container';
+import { bezierCurveTo, quadraticCurveTo } from 'utils/math';
+import { RenderingPrimitives } from 'const/rendering';
+import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from 'utils/geometry';
+import { Vector } from 'math/Vector';
 import { CircleGeometry } from './CircleGeometry';
 import { DrawableShape } from "./DrawableShape";
 

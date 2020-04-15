@@ -1,12 +1,12 @@
-import { clamp } from '../utils/math';
+import { clamp } from 'utils/math';
 import { Sprite } from './sprite/Sprite';
 import { Texture } from './texture/Texture';
-import { Signal } from '../core/Signal';
-import { PlaybackOptions } from "../const/types";
+import { Signal } from 'core/Signal';
+import { PlaybackOptions } from "const/types";
 import { RenderManager } from './RenderManager';
 import { SamplerOptions } from "./texture/Sampler";
-import { IMedia } from "../interfaces/IMedia";
-import { audioContext, isAudioContextReady, onAudioContextReady } from "../const/audio-context";
+import { IMedia } from "interfaces/IMedia";
+import { audioContext, isAudioContextReady, onAudioContextReady } from "const/audio-context";
 
 export class Video extends Sprite implements IMedia {
 

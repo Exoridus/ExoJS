@@ -1,11 +1,11 @@
-import { inRange } from '../utils/math';
+import { inRange } from 'utils/math';
 import { Vector } from './Vector';
 import { Size } from './Size';
 import { Circle } from './Circle';
 import { Polygon } from './Polygon';
 import { Interval } from './Interval';
 import { Matrix } from './Matrix';
-import { IShape } from '../interfaces/IShape';
+import { IShape } from 'interfaces/IShape';
 import {
     Collidable,
     Collision,
@@ -14,7 +14,7 @@ import {
     getCollisionRectangleRectangle,
     getCollisionSAT,
     isRectangleIntersectingWithTarget
-} from "../const/collision";
+} from "const/collision";
 
 export class Rectangle implements IShape {
 
