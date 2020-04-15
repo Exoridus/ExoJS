@@ -1,11 +1,11 @@
 const limit = (2 ** 32) - 1;
 
-export default class Random {
+export class Random {
 
     private _state: Uint32Array = new Uint32Array(624);
-    private _iteration: number = 0;
-    private _seed: number = 0;
-    private _value: number = 0;
+    private _iteration = 0;
+    private _seed = 0;
+    private _value = 0;
 
     constructor(seed: number = Date.now()) {
         this.setSeed(seed);
@@ -46,7 +46,7 @@ export default class Random {
         return this;
     }
 
-    public next(min: number = 0, max: number = 1): number {
+    public next(min = 0, max = 1): number {
         if (this._iteration >= 624) {
             this._twist();
         }
@@ -62,7 +62,7 @@ export default class Random {
     }
 
     public destroy() {
-
+        // todo - check if destroy is needed
     }
 
     private _twist() {

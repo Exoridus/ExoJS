@@ -1,12 +1,12 @@
-import { clamp } from '../utils/math';
-import Sprite from './sprite/Sprite';
-import Texture from './texture/Texture';
-import { GlobalAudioContext } from '../const/core';
-import Signal from '../core/Signal';
-import { PlaybackOptions } from "../const/types";
-import RenderManager from "./RenderManager";
+import { clamp } from '../utils';
+import { Sprite } from './sprite/Sprite';
+import { Texture } from './texture/Texture';
+import { Signal } from '../core';
+import { PlaybackOptions } from "../const";
+import { RenderManager } from './RenderManager';
 import { SamplerOptions } from "./texture/Sampler";
-import { IMedia } from "../interfaces/IMedia";
+import { IMedia } from "../interfaces";
+import { audioContext, isAudioContextReady, onAudioContextReady } from "../const/audio-context";
 
 export class Video extends Sprite implements IMedia {
 
@@ -15,14 +15,16 @@ export class Video extends Sprite implements IMedia {
 
     private readonly _videoElement: HTMLVideoElement;
     private readonly _duration: number;
-    private readonly _gainNode: GainNode;
-    private _volume: number = 1;
-    private _speed: number = 1;
-    private _loop: boolean = false;
-    private _muted: boolean = false;
-    private _sourceNode: MediaElementAudioSourceNode;
+    private readonly _setupAudioContextHandler: (audioContext: AudioContext) => void = this.setupWithAudioContext.bind(this);
+    private _audioContext: AudioContext | null = null;
+    private _volume = 1;
+    private _speed = 1;
+    private _loop = false;
+    private _muted = false;
+    private _gainNode: GainNode | null = null;
+    private _sourceNode: MediaElementAudioSourceNode | null = null;
 
-    constructor(videoElement: HTMLVideoElement, playbackOptions?: PlaybackOptions, samplerOptions?: SamplerOptions) {
+    constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>) {
         super(new Texture(videoElement, samplerOptions));
 
         const { duration, volume, playbackRate, loop, muted } = videoElement;
@@ -34,15 +36,14 @@ export class Video extends Sprite implements IMedia {
         this._loop = loop;
         this._muted = muted;
 
-        this._gainNode = GlobalAudioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this._volume, GlobalAudioContext.currentTime, 10);
-        this._gainNode.connect(GlobalAudioContext.destination);
-
-        this._sourceNode = GlobalAudioContext.createMediaElementSource(videoElement);
-        this._sourceNode.connect(this._gainNode);
-
         if (playbackOptions) {
             this.applyOptions(playbackOptions);
+        }
+
+        if (isAudioContextReady()) {
+            this._setupAudioContextHandler(audioContext!);
+        } else {
+            onAudioContextReady.once(this._setupAudioContextHandler);
         }
     }
 
@@ -66,15 +67,7 @@ export class Video extends Sprite implements IMedia {
     }
 
     set volume(value) {
-        const volume = clamp(value, 0, 2);
-
-        if (this._volume !== volume) {
-            this._volume = volume;
-
-            if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, GlobalAudioContext.currentTime, 10);
-            }
-        }
+        this.setVolume(value);
     }
 
     get loop() {
@@ -82,10 +75,7 @@ export class Video extends Sprite implements IMedia {
     }
 
     set loop(loop: boolean) {
-        if (this._loop !== loop) {
-            this._loop = loop;
-            this._videoElement.loop = loop;
-        }
+        this.setLoop(loop);
     }
 
     get speed() {
@@ -93,20 +83,15 @@ export class Video extends Sprite implements IMedia {
     }
 
     set speed(value) {
-        const speed = Math.max(0, value);
-
-        if (this._speed !== speed) {
-            this._speed = speed;
-            this._videoElement.playbackRate = speed;
-        }
+        this.setSpeed(value);
     }
 
     get currentTime() {
-        return this._videoElement.currentTime;
+        return this.getTime();
     }
 
-    set currentTime(currentTime) {
-        this._videoElement.currentTime = Math.max(0, currentTime);
+    set currentTime(time) {
+        this.setTime(time);
     }
 
     get muted() {
@@ -114,13 +99,7 @@ export class Video extends Sprite implements IMedia {
     }
 
     set muted(muted: boolean) {
-        if (this._muted !== muted) {
-            this._muted = muted;
-
-            if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, GlobalAudioContext.currentTime, 10);
-            }
-        }
+        this.setMuted(muted);
     }
 
     get paused() {
@@ -148,10 +127,10 @@ export class Video extends Sprite implements IMedia {
     }
 
     get analyserTarget(): AudioNode | null {
-        return this._gainNode || null;
+        return this._gainNode;
     }
 
-    play(options?: PlaybackOptions) {
+    play(options?: Partial<PlaybackOptions>) {
         if (options) {
             this.applyOptions(options);
         }
@@ -164,7 +143,7 @@ export class Video extends Sprite implements IMedia {
         return this;
     }
 
-    pause(options?: PlaybackOptions) {
+    pause(options?: Partial<PlaybackOptions>) {
         if (options) {
             this.applyOptions(options);
         }
@@ -177,18 +156,18 @@ export class Video extends Sprite implements IMedia {
         return this;
     }
 
-    stop() {
-        this.pause();
+    stop(options?: Partial<PlaybackOptions>) {
+        this.pause(options);
         this.currentTime = 0;
 
         return this;
     }
 
-    toggle(options: PlaybackOptions) {
+    toggle(options?: Partial<PlaybackOptions>) {
         return this.paused ? this.play(options) : this.pause(options);
     }
 
-    applyOptions(options: PlaybackOptions = {}) {
+    applyOptions(options: Partial<PlaybackOptions> = {}) {
         const { volume, loop, speed, time, muted } = options;
 
         if (volume !== undefined) {
@@ -214,36 +193,60 @@ export class Video extends Sprite implements IMedia {
         return this;
     }
 
-    setVolume(volume: number): this {
-        this.volume = volume;
+    setVolume(value: number): this {
+        const volume = clamp(value, 0, 2);
+
+        if (this._volume === volume) {
+            return this;
+        }
+
+        this._volume = volume;
+
+        if (this._gainNode) {
+            this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, this._audioContext!.currentTime, 10);
+        }
 
         return this;
     }
 
     setLoop(loop: boolean): this {
-        this.loop = loop;
+        if (this._loop !== loop) {
+            this._loop = loop;
+            this._videoElement.loop = loop;
+        }
 
         return this;
     }
 
-    setSpeed(speed: number): this {
-        this.speed = speed;
+    setSpeed(value: number): this {
+        const speed = clamp(value, 0.1, 20);
+
+        if (this._speed !== speed) {
+            this._speed = speed;
+            this._videoElement.playbackRate = speed;
+        }
 
         return this;
     }
 
     getTime(): number {
-        return this.currentTime;
+        return this._videoElement.currentTime;
     }
 
     setTime(time: number): this {
-        this.currentTime = time;
+        this._videoElement.currentTime = Math.max(0, time);
 
         return this;
     }
 
     setMuted(muted: boolean): this {
-        this.muted = muted;
+        if (this._muted !== muted) {
+            this._muted = muted;
+
+            if (this._gainNode) {
+                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, this._audioContext!.currentTime, 10);
+            }
+        }
 
         return this;
     }
@@ -260,10 +263,26 @@ export class Video extends Sprite implements IMedia {
         super.destroy();
         this.stop();
 
-        this._sourceNode.disconnect();
-        this._gainNode.disconnect();
+        onAudioContextReady.remove(this.setupWithAudioContext, this);
+
+        this._sourceNode?.disconnect();
+        this._sourceNode = null;
+
+        this._gainNode?.disconnect();
+        this._gainNode = null;
 
         this.onStart.destroy();
         this.onStop.destroy();
+    }
+
+    private setupWithAudioContext(audioContext: AudioContext) {
+        this._audioContext = audioContext;
+
+        this._gainNode = audioContext.createGain();
+        this._gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
+        this._gainNode.connect(audioContext.destination);
+
+        this._sourceNode = audioContext.createMediaElementSource(this._videoElement);
+        this._sourceNode.connect(this._gainNode);
     }
 }

@@ -1,22 +1,22 @@
-import Sprite from './sprite/Sprite';
-import Texture from './texture/Texture';
-import TextStyle, { TextStyleOptions } from './TextStyle';
-import Rectangle from '../math/Rectangle';
+import { Sprite } from './sprite/Sprite';
+import { Texture } from './texture/Texture';
+import { TextStyle, TextStyleOptions } from './TextStyle';
+import { Rectangle } from '../math/Rectangle';
 import { SamplerOptions } from "./texture/Sampler";
-import RenderManager from "./RenderManager";
+import { RenderManager } from './RenderManager';
 
 const heightCache: Map<string, number> = new Map<string, number>();
-const NEWLINE: RegExp = /(?:\r\n|\r|\n)/;
+const NewLinePattern = /(?:\r\n|\r|\n)/;
 
-export default class Text extends Sprite {
+export class Text extends Sprite {
 
     private _text: string;
     private _style: TextStyle;
     private _canvas: HTMLCanvasElement;
     private _context: CanvasRenderingContext2D;
-    private _dirty: boolean = true;
+    private _dirty = true;
 
-    constructor(text: string, style?: TextStyle | TextStyleOptions, samplerOptions?: SamplerOptions, canvas: HTMLCanvasElement = document.createElement('canvas')) {
+    constructor(text: string, style?: TextStyle | TextStyleOptions, samplerOptions?: Partial<SamplerOptions>, canvas: HTMLCanvasElement = document.createElement('canvas')) {
         super(new Texture(canvas, samplerOptions));
 
         this._text = text;
@@ -86,7 +86,7 @@ export default class Text extends Sprite {
                 style = this._style.apply(context),
                 text = style.wordWrap ? this.getWordWrappedText() : this._text,
                 lineHeight = Text.determineFontHeight(context.font) + style.strokeThickness,
-                lines = text.split(NEWLINE),
+                lines = text.split(NewLinePattern),
                 lineMetrics = lines.map((line) => context.measureText(line)),
                 maxLineWidth = lineMetrics.reduce((max, measure) => Math.max(max, measure.width), 0),
                 canvasWidth = Math.ceil((maxLineWidth + style.strokeThickness) + (style.padding * 2)),

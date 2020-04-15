@@ -1,11 +1,17 @@
-export const TAU = Math.PI * 2;
+export const Tau = Math.PI * 2;
 
-export const RAD_PER_DEG = Math.PI / 180;
+export const RadiansPerDegree = Math.PI / 180;
 
-export const DEG_PER_RAD = 180 / Math.PI;
+export const DegreesPerRadian = 180 / Math.PI;
 
-export const VORONOI_REGION = {
+export const VoronoiRegion = {
     LEFT: -1,
     MIDDLE: 0,
     RIGHT: 1,
+};
+
+export const trimRotation = (degrees: number): number => {
+    const rotation = degrees % 360;
+
+    return rotation < 0 ? rotation + 360 : rotation;
 };

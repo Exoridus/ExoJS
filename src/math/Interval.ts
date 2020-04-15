@@ -1,4 +1,4 @@
-export default class Interval {
+export class Interval {
 
     public static readonly Zero = new Interval(0, 0);
     public static readonly Temp = new Interval();
@@ -6,7 +6,7 @@ export default class Interval {
     public min: number;
     public max: number;
 
-    constructor(min: number = 0, max: number = min) {
+    constructor(min = 0, max = min) {
         this.min = min;
         this.max = max;
     }
@@ -43,6 +43,6 @@ export default class Interval {
     }
 
     public destroy() {
-
+        // todo - check if destroy is needed
     }
 }

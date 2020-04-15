@@ -1,7 +1,7 @@
-import Vector from '../math/Vector';
-import Size from '../math/Size';
-import Flags from '../math/Flags';
-import Signal from '../core/Signal';
+import { Vector } from '../math/Vector';
+import { Size } from '../math/Size';
+import { Flags } from '../math/Flags';
+import { Signal } from '../core/Signal';
 
 enum PointerFlags {
     None = 0,
@@ -13,13 +13,13 @@ enum PointerFlags {
     Rotation = 1 << 5,
 }
 
-export default class Pointer {
+export class Pointer {
 
     private readonly _id: number;
     private readonly _type: string;
     private readonly _position: Vector;
     private readonly _startPos: Vector = new Vector(-1, -1);
-    private readonly _flags: Flags = new Flags();
+    private readonly _flags: Flags<PointerFlags> = new Flags<PointerFlags>();
     private readonly _size: Size;
     private readonly _tilt: Vector;
     private _buttons: number;

@@ -1,15 +1,15 @@
-import settings from '../../settings';
+import { defaultTextureSamplerOptions } from '../../const/defaults';
 import { ScaleModes, WrapModes } from "../../const/rendering";
 
 export interface SamplerOptions {
-    scaleMode?: ScaleModes;
-    wrapMode?: WrapModes;
-    premultiplyAlpha?: boolean;
-    generateMipMap?: boolean;
-    flipY?: boolean;
+    scaleMode: ScaleModes;
+    wrapMode: WrapModes;
+    premultiplyAlpha: boolean;
+    generateMipMap: boolean;
+    flipY: boolean;
 }
 
-export default class Sampler {
+export class Sampler {
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _sampler: WebGLSampler | null;
@@ -19,17 +19,17 @@ export default class Sampler {
     private _generateMipMap: boolean;
     private _flipY: boolean;
 
-    constructor(gl: WebGL2RenderingContext, options: SamplerOptions = {}) {
+    constructor(gl: WebGL2RenderingContext, options?: Partial<SamplerOptions>) {
 
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...defaultTextureSamplerOptions, ...options };
 
         this._context = gl;
         this._sampler = gl.createSampler();
-        this._scaleMode = scaleMode ?? settings.SCALE_MODE;
-        this._wrapMode = wrapMode ?? settings.WRAP_MODE;
-        this._premultiplyAlpha = premultiplyAlpha ?? settings.PREMULTIPLY_ALPHA;
-        this._generateMipMap = generateMipMap ?? settings.GENERATE_MIPMAP;
-        this._flipY = flipY ?? settings.FLIP_Y;
+        this._scaleMode = scaleMode;
+        this._wrapMode = wrapMode;
+        this._premultiplyAlpha = premultiplyAlpha;
+        this._generateMipMap = generateMipMap;
+        this._flipY = flipY;
 
         this.updateWrapModeParameters();
         this.updateScaleModeParameters();

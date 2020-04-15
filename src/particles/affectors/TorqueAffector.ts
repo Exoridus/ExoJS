@@ -1,8 +1,8 @@
 import { IParticleAffector } from "./IParticleAffector";
-import Particle from "../Particle";
-import Time from "../../core/time/Time";
+import { Particle } from '../Particle';
+import { Time } from '../../core/Time';
 
-export default class TorqueAffector implements IParticleAffector {
+export class TorqueAffector implements IParticleAffector {
 
     private _angularAcceleration: number;
 
@@ -31,6 +31,6 @@ export default class TorqueAffector implements IParticleAffector {
     }
 
     destroy() {
-
+        // todo - check if destroy is needed
     }
 }

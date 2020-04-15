@@ -1,6 +1,6 @@
-import GamepadControl from './GamepadControl';
+import { GamepadControl } from './GamepadControl';
 
-export default class GamepadMapping {
+export class GamepadMapping {
 
     private readonly _buttons: Array<GamepadControl>;
     private readonly _axes: Array<GamepadControl>;

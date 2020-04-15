@@ -1,7 +1,7 @@
-import { PrimitiveUploadFunction, PrimitiveUploadFunctions } from '../../const/rendering';
-import { TypedArray } from "../../const/types";
+import { PrimitiveUploadFunction, PrimitiveUploadFunctions } from '../../const';
+import { TypedArray } from "../../const";
 
-export default class ShaderUniform {
+export class ShaderUniform {
 
     public readonly index: number;
     public readonly type: number;
@@ -9,9 +9,9 @@ export default class ShaderUniform {
     public readonly name: string;
     public readonly location: WebGLUniformLocation | null;
 
-    private readonly _context: WebGL2RenderingContext;
-    private readonly _program: WebGLProgram;
-    private readonly _uploadFn: PrimitiveUploadFunction;
+    private readonly _context: WebGL2RenderingContext | null;
+    private readonly _program: WebGLProgram | null;
+    private readonly _uploadFn: PrimitiveUploadFunction | null;
     private readonly _value: TypedArray;
 
     constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, type: number, size: number, name: string, data: TypedArray) {
@@ -43,13 +43,13 @@ export default class ShaderUniform {
 
     public upload(): this {
         if (this.location) {
-            this._uploadFn(this._context, this.location, this._value);
+            this._uploadFn!(this._context!, this.location, this._value);
         }
 
         return this;
     }
 
     public destroy(): void {
-
+        // todo - check if destroy is needed
     }
 }

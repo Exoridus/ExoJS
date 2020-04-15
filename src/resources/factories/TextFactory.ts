@@ -1,7 +1,7 @@
 import { AbstractResourceFactory } from './AbstractResourceFactory';
 import { StorageNames } from "../../const/core";
 
-export default class TextFactory extends AbstractResourceFactory<string, string> {
+export class TextFactory extends AbstractResourceFactory<string, string> {
 
     public readonly storageName: StorageNames = StorageNames.Text;
 

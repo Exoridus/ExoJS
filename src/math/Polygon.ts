@@ -1,8 +1,8 @@
-import Interval from './Interval';
-import Vector from './Vector';
-import Rectangle from './Rectangle';
-import Circle from './Circle';
-import IShape from "../interfaces/IShape";
+import { Interval } from './Interval';
+import { Vector } from './Vector';
+import { Rectangle } from './Rectangle';
+import { Circle } from './Circle';
+import { IShape } from '../interfaces/IShape';
 import {
     Collidable, Collision, CollisionType,
     getCollisionPolygonCircle,
@@ -10,7 +10,7 @@ import {
     isPolygonIntersectingWithTarget
 } from "../const/collision";
 
-export default class Polygon implements IShape {
+export class Polygon implements IShape {
 
     public static readonly Temp = new Polygon();
 
@@ -19,7 +19,7 @@ export default class Polygon implements IShape {
     private readonly _position: Vector;
     private readonly _points: Array<Vector>;
 
-    constructor(points: Array<Vector> = [], x: number = 0, y: number = 0) {
+    constructor(points: Array<Vector> = [], x = 0, y = 0) {
         this._position = new Vector(x, y);
         this._points = points.map(point => point.clone());
     }

@@ -1,15 +1,15 @@
-import Rectangle from '../math/Rectangle';
-import settings from '../settings';
-import SceneNode from "./SceneNode";
+import { Rectangle } from '../math/Rectangle';
+import { SceneNode } from './SceneNode';
+import { defaultQuadTreeMaxLevel, defaultQuadTreeMaxObjects } from "../const/defaults";
 
-export default class Quadtree {
+export class Quadtree {
 
     public readonly bounds: Rectangle;
     public readonly level: number;
     private _nodes: Map<number, Quadtree> = new Map();
     private _children: Set<SceneNode> = new Set();
 
-    constructor(bounds: Rectangle, level: number = 0) {
+    constructor(bounds: Rectangle, level = 0) {
         this.bounds = (bounds && bounds.clone()) || new Rectangle();
         this.level = level;
     }
@@ -45,7 +45,7 @@ export default class Quadtree {
 
         children.add(child);
 
-        if ((children.size > settings.QUAD_TREE_MAX_OBJECTS) && (this.level < settings.QUAD_TREE_MAX_LEVEL)) {
+        if ((children.size > defaultQuadTreeMaxObjects) && (this.level < defaultQuadTreeMaxLevel)) {
             this._split();
 
             for (const child of children) {

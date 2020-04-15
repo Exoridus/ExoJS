@@ -1,17 +1,17 @@
-import GamepadMapping from "./GamepadMapping";
-import settings from "../settings";
+import { GamepadMapping } from './GamepadMapping';
+import { defaultGamepadMapping } from "../const/defaults";
 
-export default class GamepadProvider {
+export class GamepadProvider {
 
     private readonly _index: number;
     private readonly _channels: Float32Array;
     private _mapping: GamepadMapping;
     private _gamepad: Gamepad | null = null;
 
-    constructor(index: number, channels: Float32Array, mapping?: GamepadMapping) {
+    constructor(index: number, channels: Float32Array, mapping: GamepadMapping = defaultGamepadMapping) {
         this._index = index;
         this._channels = channels;
-        this._mapping = mapping ?? settings.GamepadMapping;
+        this._mapping = mapping;
     }
 
     get mapping(): GamepadMapping {

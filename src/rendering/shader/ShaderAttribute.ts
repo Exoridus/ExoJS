@@ -1,6 +1,6 @@
 import { primitiveByteSizeMapping } from '../../const/rendering';
 
-export default class ShaderAttribute {
+export class ShaderAttribute {
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _program: WebGLProgram;
@@ -24,6 +24,6 @@ export default class ShaderAttribute {
     }
 
     destroy() {
-
+        // todo - check if destroy is needed
     }
 }

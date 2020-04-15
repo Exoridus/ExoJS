@@ -1,14 +1,14 @@
-import Signal from '../core/Signal';
-import ResourceContainer from './ResourceContainer';
-import FontFactory from './factories/FontFactory';
-import ImageFactory from './factories/ImageFactory';
-import JSONFactory from './factories/JSONFactory';
-import MusicFactory from './factories/MusicFactory';
-import SoundFactory from './factories/SoundFactory';
-import TextFactory from './factories/TextFactory';
-import TextureFactory from './factories/TextureFactory';
-import VideoFactory from './factories/VideoFactory';
-import SVGFactory from './factories/SVGFactory';
+import { Signal } from '../core/Signal';
+import { ResourceContainer } from './ResourceContainer';
+import { FontFactory } from './factories/FontFactory';
+import { ImageFactory } from './factories/ImageFactory';
+import { JSONFactory } from './factories/JSONFactory';
+import { MusicFactory } from './factories/MusicFactory';
+import { SoundFactory } from './factories/SoundFactory';
+import { TextFactory } from './factories/TextFactory';
+import { TextureFactory } from './factories/TextureFactory';
+import { VideoFactory } from './factories/VideoFactory';
+import { SVGFactory } from './factories/SVGFactory';
 import { IDatabase } from "../interfaces/IDatabase";
 import { IResourceFactory } from "../interfaces/IResourceFactory";
 import { ResourceTypes } from "../const/core";
@@ -28,7 +28,7 @@ export interface ResourceQueueItem {
     options?: object;
 }
 
-export default class Loader {
+export class Loader {
 
     private _resourcePath: string;
     private _factories: Map<ResourceTypes, IResourceFactory> = new Map<ResourceTypes, IResourceFactory>();
@@ -176,7 +176,7 @@ export default class Loader {
             let source = this._database ? (await this._database.load(factory.storageName, name)) : null;
 
             if (!source) {
-                const request = await fetch((this._resourcePath + path), {
+                const request = await fetch(`${this._resourcePath}${path}`, {
                     method: this._method,
                     mode: this._mode,
                     cache: this._cache,

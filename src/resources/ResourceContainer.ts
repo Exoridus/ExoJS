@@ -1,7 +1,7 @@
 type ResourceMap = Map<string, any>;
 type TypeMapping = Map<string, ResourceMap>;
 
-export default class ResourceContainer {
+export class ResourceContainer {
 
     private _resources: TypeMapping = new Map<string, Map<string, any>>();
 

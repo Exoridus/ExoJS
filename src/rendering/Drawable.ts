@@ -1,12 +1,12 @@
-import SceneNode from '../core/SceneNode';
-import Color from '../core/Color';
+import { SceneNode } from '../core/SceneNode';
+import { Color } from '../core/Color';
 import { BlendModes } from '../const/rendering';
-import View from "./View";
-import RenderManager from "./RenderManager";
+import { View } from './View';
+import { RenderManager } from './RenderManager';
 
-export default class Drawable extends SceneNode {
+export class Drawable extends SceneNode {
 
-    private _visible: boolean = true;
+    private _visible = true;
     private _tint: Color = Color.White.clone();
     private _blendMode: BlendModes = BlendModes.NORMAL;
 

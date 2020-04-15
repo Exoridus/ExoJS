@@ -1,6 +1,6 @@
 import { clamp } from '../utils/math';
 
-export default class Color {
+export class Color {
 
     private _r: number;
     private _g: number;
@@ -110,7 +110,7 @@ export default class Color {
             && (a === undefined || this.a === a);
     }
 
-    public toArray(normalized: boolean = false): Float32Array {
+    public toArray(normalized = false): Float32Array {
         if (!this._array) {
             this._array = new Float32Array(4);
         }
@@ -130,7 +130,7 @@ export default class Color {
         return this._array;
     }
 
-    public toString(prefixed: boolean = true): string {
+    public toString(prefixed = true): string {
         return `${prefixed ? '#' : ''}${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
     }
 
@@ -291,146 +291,3 @@ export default class Color {
     public static readonly Yellow = new Color(255, 255, 0, 1);
     public static readonly YellowGreen = new Color(154, 205, 50, 1);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

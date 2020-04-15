@@ -1,6 +1,6 @@
-import Texture from './texture/Texture';
-import Rectangle from '../math/Rectangle';
-import Sprite from './sprite/Sprite';
+import { Texture } from './texture/Texture';
+import { Rectangle } from '../math/Rectangle';
+import { Sprite } from './sprite/Sprite';
 
 export interface SpritesheetFrame {
     frame: {
@@ -8,14 +8,14 @@ export interface SpritesheetFrame {
         y: number;
         w: number;
         h: number;
-    }
+    };
 }
 
 export interface SpritesheetData {
-    frames: { [name: string]: SpritesheetFrame }
+    frames: { [name: string]: SpritesheetFrame };
 }
 
-export default class Spritesheet {
+export class Spritesheet {
     private _texture: Texture;
     private _frames = new Map<string, Rectangle>();
     private _sprites = new Map<string, Sprite>();
@@ -38,7 +38,7 @@ export default class Spritesheet {
         return this._sprites;
     }
 
-    parse(data: SpritesheetData, keepFrames: boolean = false) {
+    parse(data: SpritesheetData, keepFrames = false) {
         if (!keepFrames) {
             this.clear();
         }

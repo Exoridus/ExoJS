@@ -8,11 +8,11 @@ import { Video } from "../../rendering/Video";
 interface VideoFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
-    playbackOptions?: PlaybackOptions;
-    samplerOptions?: SamplerOptions;
+    playbackOptions?: Partial<PlaybackOptions>;
+    samplerOptions?: Partial<SamplerOptions>;
 }
 
-export default class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video> {
+export class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video> {
 
     public readonly storageName: StorageNames = StorageNames.Video;
 

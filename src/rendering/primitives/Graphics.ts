@@ -1,15 +1,15 @@
-import Color from '../../core/Color';
-import Container from '../Container';
+import { Color } from '../../core/Color';
+import { Container } from '../Container';
 import { bezierCurveTo, quadraticCurveTo } from '../../utils/math';
 import { RenderingPrimitives } from '../../const/rendering';
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '../../utils/geometry';
-import Shape from './Shape';
-import Vector from '../../math/Vector';
-import CircleGeometry from './CircleGeometry';
+import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '../../utils/geometry';
+import { Vector } from '../../math/Vector';
+import { CircleGeometry } from './CircleGeometry';
+import { DrawableShape } from "./DrawableShape";
 
-export default class Graphics extends Container {
+export class Graphics extends Container {
 
-    private _lineWidth: number = 0;
+    private _lineWidth = 0;
     private _lineColor: Color = new Color();
     private _fillColor: Color = new Color();
     private _currentPoint: Vector = new Vector(0, 0);
@@ -79,18 +79,18 @@ export default class Graphics extends Container {
         return this; // todo
     }
 
-    drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise: boolean = false): this {
+    drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise = false): this {
         return this; // todo
     }
 
     drawLine(startX: number, startY: number, endX: number, endY: number): this {
-        this.addChild(new Shape(buildLine(startX, startY, endX, endY, this._lineWidth), this._lineColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(buildLine(startX, startY, endX, endY, this._lineWidth), this._lineColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         return this;
     }
 
     drawPath(path: Array<number>): this {
-        this.addChild(new Shape(buildPath(path, this._lineWidth), this._lineColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(buildPath(path, this._lineWidth), this._lineColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         return this;
     }
@@ -98,7 +98,7 @@ export default class Graphics extends Container {
     drawPolygon(path: Array<number>): this {
         const polygon = buildPolygon(path);
 
-        this.addChild(new Shape(polygon, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(polygon, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         if (this._lineWidth > 0) {
             this.drawPath(polygon.points);
@@ -110,7 +110,7 @@ export default class Graphics extends Container {
     drawCircle(centerX: number, centerY: number, radius: number): this {
         const circle = new CircleGeometry(centerX, centerY, radius);
 
-        this.addChild(new Shape(circle, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(circle, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         if (this._lineWidth > 0) {
             this.drawPath(circle.points);
@@ -122,7 +122,7 @@ export default class Graphics extends Container {
     drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
         const ellipse = buildEllipse(centerX, centerY, radiusX, radiusY);
 
-        this.addChild(new Shape(ellipse, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(ellipse, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         if (this._lineWidth > 0) {
             this.drawPath(ellipse.points);
@@ -134,7 +134,7 @@ export default class Graphics extends Container {
     drawRectangle(x: number, y: number, width: number, height: number): this {
         const rectangle = buildRectangle(x, y, width, height);
 
-        this.addChild(new Shape(rectangle, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(rectangle, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         if (this._lineWidth > 0) {
             this.drawPath(rectangle.points);
@@ -143,10 +143,10 @@ export default class Graphics extends Container {
         return this;
     }
 
-    drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation: number = 0): this {
+    drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
         const star = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
 
-        this.addChild(new Shape(star, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(star, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
 
         if (this._lineWidth > 0) {
             this.drawPath(star.points);

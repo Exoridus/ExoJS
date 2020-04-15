@@ -1,9 +1,9 @@
-import Signal from './Signal';
-import Time from "./time/Time";
-import Scene from "./Scene";
-import Application from "./Application";
+import { Signal } from './Signal';
+import { Time } from './Time';
+import { Scene } from './Scene';
+import { Application } from "./Application";
 
-export default class SceneManager {
+export class SceneManager {
 
     private readonly _app: Application;
     private _scene: Scene | null = null;

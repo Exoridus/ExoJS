@@ -3,7 +3,6 @@
 .sass-cache
 .babel-cache
 node_modules
-dist
-coverage
+dist/*
 !.gitignore
 !.gitkeep

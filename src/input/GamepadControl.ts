@@ -7,7 +7,7 @@ export interface GamepadControlOptions {
     threshold?: number;
 }
 
-export default class GamepadControl {
+export class GamepadControl {
 
     public readonly index: number;
     public readonly channel: Gamepad;
@@ -51,6 +51,6 @@ export default class GamepadControl {
     }
 
     public destroy() {
-
+        // todo - check if destroy is needed
     }
 }

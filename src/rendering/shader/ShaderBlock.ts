@@ -1,7 +1,7 @@
-import ShaderUniform from './ShaderUniform';
+import { ShaderUniform } from './ShaderUniform';
 import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from '../../const/rendering';
 
-export default class ShaderBlock {
+export class ShaderBlock {
 
     public readonly index: number;
     public readonly name: string;

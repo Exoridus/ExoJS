@@ -1,7 +1,7 @@
 import earcut from 'earcut';
-import Geometry from '../rendering/primitives/Geometry';
-import Vector from '../math/Vector';
-import { TAU } from '../const/math';
+import { Geometry } from '../rendering';
+import { Vector } from '../math';
+import { Tau } from '../const';
 
 export const buildLine = (startX: number, startY: number, endX: number, endY: number, width: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
     const points = [startX, startY, endX, endY];
@@ -237,7 +237,7 @@ export const buildPolygon = (points: Array<number>, vertices: Array<number> = []
 
     const index = vertices.length / 6,
         length = points.length / 2,
-        triangles = earcut(points, null, 2);
+        triangles = earcut(points, [], 2);
 
     if (triangles) {
         for (let i = 0; i < triangles.length; i += 3) {
@@ -266,10 +266,10 @@ export const buildRectangle = (x: number, y: number, width: number, height: numb
     return new Geometry({vertices, indices, points});
 };
 
-export const buildStar = (centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation: number = 0): Geometry => {
+export const buildStar = (centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): Geometry => {
     const startAngle = (Math.PI / -2) + rotation,
         length = points * 2,
-        delta = TAU / length,
+        delta = Tau / length,
         path = [];
 
     for (let i = 0; i < length; i++) {

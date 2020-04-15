@@ -1,9 +1,9 @@
 import { RenderingPrimitives, ShaderPrimitives } from '../const/rendering';
-import ShaderAttribute from "./shader/ShaderAttribute";
-import Buffer from './Buffer';
+import { ShaderAttribute } from './shader/ShaderAttribute';
+import { RenderBuffer } from './RenderBuffer';
 
 interface VAOAttribute {
-    buffer: Buffer,
+    buffer: RenderBuffer;
     location: number;
     size: number;
     type: number;
@@ -12,14 +12,14 @@ interface VAOAttribute {
     start: number;
 }
 
-export default class VertexArrayObject {
+export class VertexArrayObject {
 
     private _context: WebGL2RenderingContext;
     private _vao: WebGLVertexArrayObject | null;
     private _attributes: Array<VAOAttribute> = [];
-    private _indexBuffer: Buffer | null = null;
+    private _indexBuffer: RenderBuffer | null = null;
     private _drawMode: RenderingPrimitives;
-    private _dirty: boolean = false;
+    private _dirty = false;
 
     constructor(gl: WebGL2RenderingContext, drawMode: RenderingPrimitives = RenderingPrimitives.TRIANGLES) {
         this._context = gl;
@@ -61,7 +61,7 @@ export default class VertexArrayObject {
         return this;
     }
 
-    addAttribute(buffer: Buffer, attribute: ShaderAttribute, type = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0) {
+    addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0) {
         const { location, size } = attribute;
 
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });
@@ -70,7 +70,7 @@ export default class VertexArrayObject {
         return this;
     }
 
-    addIndex(buffer: Buffer) {
+    addIndex(buffer: RenderBuffer) {
         this._indexBuffer = buffer;
         this._dirty = true;
 

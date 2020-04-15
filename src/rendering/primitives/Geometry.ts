@@ -4,7 +4,7 @@ interface GeometryOptions {
     points?: Array<number>;
 }
 
-export default class Geometry {
+export class Geometry {
 
     public readonly vertices: Float32Array;
     public readonly indices: Uint16Array;
@@ -21,6 +21,6 @@ export default class Geometry {
     }
 
     destroy() {
-
+        // todo - check if destroy is needed
     }
 }

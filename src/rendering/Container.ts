@@ -1,8 +1,8 @@
-import Drawable from './Drawable';
+import { Drawable } from './Drawable';
 import { removeArrayItems } from '../utils/core';
-import RenderManager from "./RenderManager";
+import { RenderManager } from './RenderManager';
 
-export default class Container extends Drawable {
+export class Container extends Drawable {
 
     private readonly _children: Array<Drawable> = [];
 
@@ -121,7 +121,7 @@ export default class Container extends Drawable {
         return this;
     }
 
-    removeChildren(begin: number = 0, end: number = this._children.length): this {
+    removeChildren(begin = 0, end: number = this._children.length): this {
         const range = (end - begin);
 
         if (range < 0 || range > end) {

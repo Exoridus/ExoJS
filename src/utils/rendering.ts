@@ -25,7 +25,7 @@ export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasEleme
     const { canvas, fillStyle, width, height } = options;
 
     const newCanvas = canvas ?? document.createElement('canvas');
-    const context = <CanvasRenderingContext2D>newCanvas.getContext('2d');
+    const context = newCanvas.getContext('2d') as CanvasRenderingContext2D;
 
     newCanvas.width = width ?? 10;
     newCanvas.height = height ?? 10;

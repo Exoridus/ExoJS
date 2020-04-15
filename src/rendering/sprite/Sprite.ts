@@ -1,15 +1,27 @@
-import Container from '../Container';
-import Rectangle from '../../math/Rectangle';
-import Vector from '../../math/Vector';
-import Interval from '../../math/Interval';
-import { Flags } from '../../const/core';
-import Texture from "../texture/Texture";
-import RenderTexture from "../texture/RenderTexture";
-import RenderManager from "../RenderManager";
-import SpriteRenderer from "./SpriteRenderer";
+import { Container } from '../Container';
+import { Rectangle } from '../../math/Rectangle';
+import { Vector } from '../../math/Vector';
+import { Interval } from '../../math/Interval';
+import { Texture } from "../texture/Texture";
+import { RenderTexture } from "../texture/RenderTexture";
+import { RenderManager } from "../RenderManager";
+import { SpriteRenderer } from "./SpriteRenderer";
 import { RendererType } from "../IRenderer";
 
-export default class Sprite extends Container {
+export enum SpriteFlags {
+    NONE = 0x00,
+    TRANSLATION = 0x01,
+    ROTATION = 0x02,
+    SCALING = 0x04,
+    ORIGIN = 0x08,
+    TRANSFORM = 0x0F,
+    TRANSFORM_INV = 0x10,
+    BOUNDING_BOX = 0x20,
+    TEXTURE_COORDS = 0x40,
+    VERTEX_TINT = 0x80,
+}
+
+export class Sprite extends Container {
 
     private _texture: Texture | RenderTexture | null = null;
     private _textureFrame: Rectangle = new Rectangle();
@@ -81,7 +93,7 @@ export default class Sprite extends Container {
             throw new Error('texCoords can only be calculated when the sprite has a texture')
         }
 
-        if (this.flags.has(Flags.TEXTURE_COORDS)) {
+        if (this.flags.has(SpriteFlags.TEXTURE_COORDS)) {
             const { width, height } = this._texture;
             const  { left, top, right, bottom } = this._textureFrame;
             const  minX = ((left / width) * 65535 & 65535);
@@ -101,7 +113,7 @@ export default class Sprite extends Container {
                 this._texCoords[3] = (maxY | minX);
             }
 
-            this.flags.remove(Flags.TEXTURE_COORDS);
+            this.flags.remove(SpriteFlags.TEXTURE_COORDS);
         }
 
         return this._texCoords;
@@ -125,12 +137,12 @@ export default class Sprite extends Container {
         return this;
     }
 
-    setTextureFrame(frame: Rectangle, resetSize: boolean = true): this {
+    setTextureFrame(frame: Rectangle, resetSize = true): this {
         const width = this.width;
         const height = this.height;
 
         this._textureFrame.copy(frame);
-        this.flags.add(Flags.TEXTURE_COORDS);
+        this.flags.add(SpriteFlags.TEXTURE_COORDS);
         this.localBounds.set(0, 0, frame.width, frame.height);
 
         if (resetSize) {

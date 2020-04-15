@@ -1,14 +1,14 @@
-import Clock from './time/Clock';
-import SceneManager from './SceneManager';
-import RenderManager from '../rendering/RenderManager';
-import InputManager from '../input/InputManager';
-import Loader, { LoaderOptions } from '../resources/Loader';
-import settings from '../settings';
-import Signal from './Signal';
+import { Clock } from './Clock';
+import { SceneManager } from './SceneManager';
+import { RenderManager } from '../rendering/RenderManager';
+import { InputManager } from '../input/InputManager';
+import { Loader, LoaderOptions } from '../resources/Loader';
+import { defaultApplicationOptions } from '../const/defaults';
+import { Signal } from './Signal';
 import { AppStatus } from '../const/core';
-import Color from "./Color";
-import Time from "./time/Time";
-import Scene from "./Scene";
+import { Color } from './Color';
+import { Time } from './Time';
+import { Scene } from './Scene';
 
 export interface ApplicationOptions {
     width: number;
@@ -19,7 +19,7 @@ export interface ApplicationOptions {
     loader: LoaderOptions;
 }
 
-export default class Application {
+export class Application {
     public readonly config: ApplicationOptions;
     public readonly canvas: HTMLCanvasElement;
     public readonly loader: Loader;
@@ -34,12 +34,12 @@ export default class Application {
     private readonly _frameClock: Clock = new Clock();
 
     private _status: AppStatus = AppStatus.STOPPED;
-    private _frameCount: number = 0;
-    private _frameRequest: number = 0;
+    private _frameCount = 0;
+    private _frameRequest = 0;
 
     constructor(options: Partial<ApplicationOptions> = {}) {
         const config: ApplicationOptions = {
-            ...settings.APP_OPTIONS,
+            ...defaultApplicationOptions,
             ...options
         };
 

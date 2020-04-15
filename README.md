@@ -17,7 +17,7 @@ Modern multimedia framework with a focus on performance and extensibility.
 * Quadtree implementation
 
 ### Work in Progress ###
-* Primitive Shape rendering
+* Primitive DrawableShape rendering
 * Touch Gestures
 * Input Sequences
 * Audio Fallback

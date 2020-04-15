@@ -5,7 +5,7 @@ import { degreesToRadians } from '../utils/math';
  * | c | d | y |
  * | e | f | z |
  */
-export default class Matrix {
+export class Matrix {
 
     public static readonly Temp = new Matrix();
     public static readonly Identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
@@ -22,9 +22,9 @@ export default class Matrix {
 
     private _array: Float32Array | null = null;
 
-    constructor(a: number = 1, b: number = 0, x: number = 0,
-                c: number = 0, d: number = 1, y: number = 0,
-                e: number = 0, f: number = 0, z: number = 1) {
+    constructor(a = 1, b = 0, x = 0,
+                c = 0, d = 1, y = 0,
+                e = 0, f = 0, z = 1) {
 
         this.a = a;
         this.b = b;
@@ -132,7 +132,7 @@ export default class Matrix {
         ));
     }
 
-    public rotate(angle: number, centerX: number = 0, centerY: number = centerX): Matrix {
+    public rotate(angle: number, centerX = 0, centerY: number = centerX): Matrix {
         const radian = degreesToRadians(angle);
         const cos = Math.cos(radian);
         const sin = Math.sin(radian);
@@ -144,7 +144,7 @@ export default class Matrix {
         ));
     }
 
-    public scale(scaleX: number, scaleY: number = scaleX, centerX: number = 0, centerY: number = centerX): Matrix {
+    public scale(scaleX: number, scaleY: number = scaleX, centerX = 0, centerY: number = centerX): Matrix {
         return this.combine(Matrix.Temp.set(
             scaleX, 0, (centerX * (1 - scaleX)),
             0, scaleY, (centerY * (1 - scaleY)),
@@ -152,7 +152,7 @@ export default class Matrix {
         ));
     }
 
-    public toArray(transpose: boolean = false): Float32Array {
+    public toArray(transpose = false): Float32Array {
         const array = this._array || (this._array = new Float32Array(9));
 
         if (transpose) {

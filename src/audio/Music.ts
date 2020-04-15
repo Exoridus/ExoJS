@@ -1,37 +1,40 @@
 import { clamp } from '../utils/math';
-import { GlobalAudioContext } from '../const/core';
 import { PlaybackOptions } from "../const/types";
-import { AbstractMedia } from "../AbstractMedia";
+import { AbstractMedia } from "../interfaces/AbstractMedia";
+import { audioContext, isAudioContextReady, onAudioContextReady } from "../const/audio-context";
 
-export default class Music extends AbstractMedia {
+export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;
-    private readonly _gainNode: GainNode;
-    private _sourceNode: MediaElementAudioSourceNode;
+    private readonly _setupAudioContextHandler: (audioContext: AudioContext) => void = this.setupWithAudioContext.bind(this);
+    private _gainNode: GainNode | null = null;
+    private _sourceNode: MediaElementAudioSourceNode | null = null;
 
-    constructor(audioElement: HTMLAudioElement, options?: PlaybackOptions) {
-        const { duration, volume, playbackRate, loop, muted } = audioElement;
-
-        super({ duration, volume, speed: playbackRate, loop, muted });
+    constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
+        super(audioElement);
 
         this._audioElement = audioElement;
-        this._gainNode = GlobalAudioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this._volume, GlobalAudioContext.currentTime, 10);
-        this._gainNode.connect(GlobalAudioContext.destination);
-
-        this._sourceNode = GlobalAudioContext.createMediaElementSource(audioElement);
-        this._sourceNode.connect(this._gainNode);
+        this._setupAudioContextHandler = this.setupWithAudioContext.bind(this);
 
         if (options) {
             this.applyOptions(options);
+        }
+
+        if (isAudioContextReady()) {
+            this._setupAudioContextHandler(audioContext!);
+        } else {
+            onAudioContextReady.once(this._setupAudioContextHandler);
         }
     }
 
     public setVolume(value: number): this {
         const volume = clamp(value, 0, 2);
 
-        if (this._volume !== volume) {
-            this._volume = volume;
-            this._gainNode.gain.setTargetAtTime(volume, GlobalAudioContext.currentTime, 10);
+        if (this._volume === volume) {
+            return this;
+        }
+
+        if (this._gainNode) {
+            this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, this._audioContext!.currentTime, 10);
         }
 
         return this;
@@ -70,7 +73,10 @@ export default class Music extends AbstractMedia {
     public setMuted(muted: boolean): this {
         if (this._muted !== muted) {
             this._muted = muted;
-            this._audioElement.muted = muted;
+
+            if (this._gainNode) {
+                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, this._audioContext!.currentTime, 10);
+            }
         }
 
         return this;
@@ -89,10 +95,10 @@ export default class Music extends AbstractMedia {
     }
 
     public get analyserTarget(): AudioNode | null {
-        return this._gainNode || null;
+        return this._gainNode;
     }
 
-    public play(options?: PlaybackOptions): this {
+    public play(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -105,7 +111,7 @@ export default class Music extends AbstractMedia {
         return this;
     }
 
-    public pause(options?: PlaybackOptions): this {
+    public pause(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -121,7 +127,23 @@ export default class Music extends AbstractMedia {
     public destroy(): void {
         super.destroy();
 
-        this._sourceNode.disconnect();
-        this._gainNode.disconnect();
+        onAudioContextReady.remove(this.setupWithAudioContext, this);
+
+        this._sourceNode?.disconnect();
+        this._sourceNode = null;
+
+        this._gainNode?.disconnect();
+        this._gainNode = null;
+    }
+
+    private setupWithAudioContext(audioContext: AudioContext): void {
+        this._audioContext = audioContext;
+
+        this._gainNode = audioContext.createGain();
+        this._gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
+        this._gainNode.connect(audioContext.destination);
+
+        this._sourceNode = audioContext.createMediaElementSource(this._audioElement);
+        this._sourceNode.connect(this._gainNode);
     }
 }

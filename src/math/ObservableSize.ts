@@ -1,11 +1,11 @@
-import Size from './Size';
+import { Size } from './Size';
 
-export default class ObservableSize extends Size {
+export class ObservableSize extends Size {
 
     private readonly _callback: () => void;
     private readonly _context: object;
 
-    public constructor(callback: () => void, context?: object, width: number = 0, height: number = 0) {
+    public constructor(callback: () => void, context?: object, width = 0, height = 0) {
         super(width, height);
 
         this._callback = callback;

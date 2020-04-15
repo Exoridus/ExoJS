@@ -1,15 +1,15 @@
-import Particle from './Particle';
-import Rectangle from '../math/Rectangle';
-import Time from '../core/time/Time';
-import Container from '../rendering/Container';
-import Texture from "../rendering/texture/Texture";
+import { Particle } from './Particle';
+import { Rectangle } from '../math/Rectangle';
+import { Time } from '../core/Time';
+import { Container } from '../rendering/Container';
+import { Texture } from '../rendering/texture/Texture';
 import { IParticleEmitter } from "./emitters/IParticleEmitter";
 import { IParticleAffector } from "./affectors/IParticleAffector";
-import RenderManager from "../rendering/RenderManager";
-import ParticleRenderer from "./ParticleRenderer";
+import { RenderManager } from '../rendering/RenderManager';
+import { ParticleRenderer } from './ParticleRenderer';
 import { RendererType } from "../rendering/IRenderer";
 
-export default class ParticleSystem extends Container {
+export class ParticleSystem extends Container {
 
     private _emitters: Array<IParticleEmitter> = [];
     private _affectors: Array<IParticleAffector> = [];
@@ -18,7 +18,7 @@ export default class ParticleSystem extends Container {
     private _texture: Texture;
     private _textureFrame: Rectangle = new Rectangle();
     private _texCoordData: Uint32Array = new Uint32Array(4);
-    private _updateTexCoords: boolean = true;
+    private _updateTexCoords = true;
 
     constructor(texture: Texture) {
         super();

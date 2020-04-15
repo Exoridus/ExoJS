@@ -1,17 +1,17 @@
-import Transformable from '../math/Transformable';
-import Matrix from '../math/Matrix';
-import Rectangle from '../math/Rectangle';
-import Bounds from './Bounds';
-import Interval from '../math/Interval';
-import Vector from '../math/Vector';
-import ObservableVector from '../math/ObservableVector';
+import { Transformable } from '../math/Transformable';
+import { Matrix } from '../math/Matrix';
+import { Rectangle } from '../math/Rectangle';
+import { Bounds } from './Bounds';
+import { Interval } from '../math/Interval';
+import { Vector } from '../math/Vector';
+import { ObservableVector } from '../math/ObservableVector';
 import {
     getCollisionSAT,
     isSceneNodeIntersecting, Collidable, Collision, CollisionType
 } from "../const/collision";
-import Container from "../rendering/Container";
+import { Container } from '../rendering/Container';
 
-export default class SceneNode extends Transformable implements Collidable {
+export class SceneNode extends Transformable implements Collidable {
 
     public readonly collisionType: CollisionType = CollisionType.TransformableRectangle;
 

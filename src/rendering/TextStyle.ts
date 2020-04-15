@@ -15,8 +15,7 @@ export interface TextStyleOptions {
     padding?: number;
 }
 
-export default class TextStyle {
-
+export class TextStyle {
     private _align: string;
     private _fill: string | CanvasGradient | CanvasPattern;
     private _stroke: string | CanvasGradient | CanvasPattern;
@@ -30,7 +29,7 @@ export default class TextStyle {
     private _lineJoin: CanvasLineJoin;
     private _miterLimit: number;
     private _padding: number;
-    private _dirty: boolean = true;
+    private _dirty = true;
 
     constructor(options: TextStyleOptions = {}) {
         this._align = options.align ?? 'left';
@@ -238,9 +237,5 @@ export default class TextStyle {
 
     clone() {
         return new TextStyle().copy(this);
-    }
-
-    destroy() {
-
     }
 }

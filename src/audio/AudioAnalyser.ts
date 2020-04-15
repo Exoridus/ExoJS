@@ -1,93 +1,119 @@
-import { GlobalAudioContext } from '../const/core';
-import { supportsWebAudio } from "../support";
-import Sound from "./Sound";
-import Music from "./Music";
+import { IMedia } from "../interfaces";
+import { audioContext, isAudioContextReady, onAudioContextReady } from "../const/audio-context";
 
 export interface AudioAnalyserOptions {
-    fftSize?: number;
-    minDecibels?: number;
-    maxDecibels?: number;
-    smoothingTimeConstant?: number;
+    fftSize: number;
+    minDecibels: number;
+    maxDecibels: number;
+    smoothingTimeConstant: number;
 }
 
-export default class AudioAnalyser {
+export class AudioAnalyser {
+    private readonly _media: IMedia;
 
-    private readonly _analyser: AnalyserNode;
-    private readonly _media: Sound | Music | Video;
+    private readonly _fftSize: number;
+    private readonly _minDecibels: number;
+    private readonly _maxDecibels: number;
+    private readonly _smoothingTimeConstant: number;
+    private readonly _frequencyBinCount: number;
+
     private readonly _timeDomainData: Uint8Array;
     private readonly _frequencyData: Uint8Array;
     private readonly _preciseTimeDomainData: Float32Array;
     private readonly _preciseFrequencyData: Float32Array;
+
+    private _analyser: AnalyserNode | null = null;
+    private _audioContext: AudioContext | null = null;
     private _analyserTarget: AudioNode | null = null;
 
-    constructor(media: Sound | Music | Video, options: AudioAnalyserOptions = {}) {
-        if (!supportsWebAudio) {
-            throw new Error('Web Audio API should be enabled when using the audio analyzer.');
-        }
-
+    constructor(media: IMedia, options: Partial<AudioAnalyserOptions> = {}) {
         const { fftSize,  minDecibels, maxDecibels, smoothingTimeConstant } = options;
 
-        this._analyser = GlobalAudioContext.createAnalyser();
-        this._analyser.fftSize = fftSize ?? 2048;
-        this._analyser.minDecibels = minDecibels ?? -100;
-        this._analyser.maxDecibels = maxDecibels ?? -30;
-        this._analyser.smoothingTimeConstant = smoothingTimeConstant ?? 0.8;
+        this._media = media;
+        this._fftSize = fftSize ?? 2048;
+        this._minDecibels = minDecibels ?? -100;
+        this._maxDecibels = maxDecibels ?? -30;
+        this._smoothingTimeConstant = smoothingTimeConstant ?? 0.8;
+        this._frequencyBinCount = this._fftSize / 2;
 
-        this._timeDomainData = new Uint8Array(this._analyser.frequencyBinCount);
-        this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
-        this._preciseTimeDomainData = new Float32Array(this._analyser.frequencyBinCount);
-        this._preciseFrequencyData = new Float32Array(this._analyser.frequencyBinCount);
+        this._timeDomainData = new Uint8Array(this._frequencyBinCount);
+        this._frequencyData = new Uint8Array(this._frequencyBinCount);
+        this._preciseTimeDomainData = new Float32Array(this._frequencyBinCount);
+        this._preciseFrequencyData = new Float32Array(this._frequencyBinCount);
+
+        if (isAudioContextReady()) {
+            this.setupWithAudioContext(audioContext!);
+        } else {
+            onAudioContextReady.once(this.setupWithAudioContext, this);
+        }
     }
 
-    connect(): this {
-        if (supportsWebAudio && this._analyserTarget === null) {
-            const analyserTarget = this._media.analyserTarget;
-
-            if (!analyserTarget) {
-                throw new Error('No AudioNode on property analyserTarget.');
-            }
-
-            this._analyserTarget = analyserTarget;
-            analyserTarget.connect(this._analyser);
+    public connect(): this {
+        if (!this._analyser || this._analyserTarget !== null) {
+            return this;
         }
+
+        const analyserTarget = this._media.analyserTarget;
+
+        if (!analyserTarget) {
+            throw new Error('No AudioNode on property analyserTarget.');
+        }
+
+        this._analyserTarget = analyserTarget;
+        analyserTarget.connect(this._analyser);
 
         return this;
     }
 
-    get timeDomainData(): Uint8Array {
-        this.connect();
-
-        this._analyser.getByteTimeDomainData(this._timeDomainData);
+    public get timeDomainData(): Uint8Array {
+        if (this._analyser) {
+            this.connect();
+            this._analyser!.getByteTimeDomainData(this._timeDomainData);
+        }
 
         return this._timeDomainData;
     }
 
-    get frequencyData(): Uint8Array {
-        this.connect();
-
-        this._analyser.getByteFrequencyData(this._frequencyData);
+    public get frequencyData(): Uint8Array {
+        if (this._analyser) {
+            this.connect();
+            this._analyser.getByteFrequencyData(this._frequencyData);
+        }
 
         return this._frequencyData;
     }
 
-    get preciseTimeDomainData(): Float32Array {
-        this.connect();
-
-        this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
+    public get preciseTimeDomainData(): Float32Array {
+        if (this._analyser) {
+            this.connect();
+            this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
+        }
 
         return this._preciseTimeDomainData;
     }
 
-    get preciseFrequencyData(): Float32Array {
-        this.connect();
-
-        this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
+    public get preciseFrequencyData(): Float32Array {
+        if (this._analyser) {
+            this.connect();
+            this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
+        }
 
         return this._preciseFrequencyData;
     }
 
-    destroy() {
+    public destroy() {
+        onAudioContextReady.remove(this.setupWithAudioContext, this);
+
         this._analyserTarget?.disconnect();
-        this._analyser.disconnect();
+        this._analyser?.disconnect();
+    }
+
+    private setupWithAudioContext(audioContext: AudioContext) {
+        this._audioContext = audioContext;
+        this._analyser = audioContext.createAnalyser();
+        this._analyser.fftSize = this._fftSize;
+        this._analyser.minDecibels = this._minDecibels;
+        this._analyser.maxDecibels = this._maxDecibels;
+        this._analyser.smoothingTimeConstant = this._smoothingTimeConstant;
     }
 }

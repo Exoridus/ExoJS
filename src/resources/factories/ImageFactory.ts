@@ -6,7 +6,7 @@ interface ImageFactoryOptions {
     mimeType?: string;
 }
 
-export default class ImageFactory extends AbstractResourceFactory<ArrayBuffer, HTMLImageElement> {
+export class ImageFactory extends AbstractResourceFactory<ArrayBuffer, HTMLImageElement> {
 
     public readonly storageName: StorageNames = StorageNames.Image;
 

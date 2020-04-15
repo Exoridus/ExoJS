@@ -1,13 +1,13 @@
-import Vector from './Vector';
+import { Vector } from './Vector';
 
-export default class Segment {
+export class Segment {
 
     public static readonly Temp = new Segment();
 
     private readonly _startPoint: Vector;
     private readonly _endPoint: Vector;
 
-    constructor(startX: number = 0, startY: number = 0, endX: number = 0, endY: number = 0) {
+    constructor(startX = 0, startY = 0, endX = 0, endY = 0) {
         this._startPoint = new Vector(startX, startY);
         this._endPoint = new Vector(endX, endY);
     }

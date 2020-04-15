@@ -1,11 +1,11 @@
-import SceneNode from "../core/SceneNode";
-import Polygon from "../math/Polygon";
-import Rectangle from "../math/Rectangle";
-import Circle from "../math/Circle";
-import Interval from "../math/Interval";
-import Vector from "../math/Vector";
+import { SceneNode } from '../core/SceneNode';
+import { Polygon } from '../math/Polygon';
+import { Rectangle } from '../math/Rectangle';
+import { Circle } from '../math/Circle';
+import { Interval } from '../math/Interval';
+import { Vector } from '../math/Vector';
 import { getDistance, getVoronoiRegion } from "../utils/math";
-import { VORONOI_REGION } from "./math";
+import { VoronoiRegion } from "./math";
 
 export interface Collision {
     readonly shapeA: Collidable;
@@ -33,94 +33,9 @@ export interface Collidable {
     getCollision(target: Collidable): Collision | null;
 }
 
-export const isIntersecting = (targetA: Collidable, targetB: Collidable): boolean => {
-
-    if (targetA instanceof SceneNode) {
-        return isSceneNodeIntersecting(targetA, targetB);
-    }
-
-    if (targetA instanceof Rectangle) {
-        return isRectangleIntersectingWithTarget(targetA, targetB);
-    }
-
-    if (targetA instanceof Polygon) {
-        return isPolygonIntersectingWithTarget(targetA, targetB);
-    }
-
-    if (targetA instanceof Circle) {
-        return isCircleIntersectingWithTarget(targetA, targetB);
-    }
-
-    return isIntersectingSAT(targetA, targetB);
-};
-
-export const isCircleIntersectingWithTarget = (circle: Circle, target: Collidable): boolean => {
-
-    if (target instanceof SceneNode && target.rotation % 90 === 0) {
-        return isIntersectingCircleRectangle(circle, target.getBounds());
-    }
-
-    if (target instanceof Rectangle) {
-        return isIntersectingCircleRectangle(circle, target);
-    }
-
-    if (target instanceof Circle) {
-        return isIntersectingCircleCircle(circle, target);
-    }
-
-    if (target instanceof Polygon) {
-        return isIntersectingPolygonCircle(target, circle);
-    }
-
-    return false;
-};
-
-export const isRectangleIntersectingWithTarget = (rectangle: Rectangle, target: Collidable): boolean => {
-
-    if (target instanceof SceneNode && target.rotation % 90 === 0) {
-        return isIntersectingRectangleRectangle(rectangle, target.getBounds());
-    }
-
-    if (target instanceof Rectangle) {
-        return isIntersectingRectangleRectangle(rectangle, target);
-    }
-
-    if (target instanceof Circle) {
-        return isIntersectingCircleRectangle(target, rectangle);
-    }
-
-    return isIntersectingSAT(rectangle, target);
-};
-
-export const isPolygonIntersectingWithTarget = (polygon: Polygon, target: Collidable): boolean => {
-    if (target instanceof Circle) {
-        return isIntersectingPolygonCircle(polygon, target);
-    }
-
-    return isIntersectingSAT(polygon, target);
-};
-
-export const isSceneNodeIntersecting = (sceneNode: SceneNode, target: Collidable): boolean => {
-    const isAlignedBox = sceneNode.rotation % 90 === 0;
-
-    if (isAlignedBox && target instanceof SceneNode && target.rotation % 90 === 0) {
-        return isIntersectingRectangleRectangle(sceneNode.getBounds(), target.getBounds());
-    }
-
-    if (isAlignedBox && target instanceof Rectangle) {
-        return isIntersectingRectangleRectangle(sceneNode.getBounds(), target);
-    }
-
-    if (target instanceof Circle) {
-        if (isAlignedBox) {
-            return isIntersectingCircleRectangle(target, sceneNode.getBounds());
-        }
-
-        window.console.warn("Rotierte SceneNode + Circle wird noch nicht unterstützt.", sceneNode, target);
-    }
-
-    return isIntersectingSAT(sceneNode, target);
-};
+/**
+ * Intersection Methods
+ */
 
 export const isIntersectingRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): boolean => {
 
@@ -175,22 +90,22 @@ export const isIntersectingPolygonCircle = (polygon: Polygon, circle: Circle): b
             positionA.set(x - pointA.x, y - pointA.y)
         );
 
-        if (region === VORONOI_REGION.LEFT) {
+        if (region === VoronoiRegion.LEFT) {
             const prev = points[(i === 0 ? len - 1 : i - 1)];
 
             edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
             positionB.set(x - prev.x, y - prev.y);
 
-            if ((getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.RIGHT) && (positionA.length > circle.radius)) {
+            if ((getVoronoiRegion(edgeB, positionB) === VoronoiRegion.RIGHT) && (positionA.length > circle.radius)) {
                 return false;
             }
-        } else if (region === VORONOI_REGION.RIGHT) {
+        } else if (region === VoronoiRegion.RIGHT) {
             const next = points[(i + 2) % len]; // pointB ?
 
             edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
             positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
-            if (getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.LEFT && (positionB.length > circle.radius)) {
+            if (getVoronoiRegion(edgeB, positionB) === VoronoiRegion.LEFT && (positionB.length > circle.radius)) {
                 return false;
             }
         } else {
@@ -274,7 +189,7 @@ export const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): Coll
     };
 };
 
-export const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap: boolean = false): Collision | null => {
+export const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): Collision | null => {
     const radius = circle.radius,
         centerWidth = rect.width / 2,
         centerHeight = rect.height / 2,
@@ -297,7 +212,7 @@ export const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swa
     };
 };
 
-export const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap: boolean = false): Collision | null => {
+export const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): Collision | null => {
     const radius = circle.radius;
     const points = polygon.points;
     const x = (circle.x - polygon.x);
@@ -325,13 +240,13 @@ export const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap
             containsA = false;
         }
 
-        if (region === VORONOI_REGION.LEFT) {
+        if (region === VoronoiRegion.LEFT) {
             const prev = points[(i === 0 ? len - 1 : i - 1)];
 
             edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
             positionB.set(x - prev.x, y - prev.y);
 
-            if ((getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.RIGHT)) {
+            if ((getVoronoiRegion(edgeB, positionB) === VoronoiRegion.RIGHT)) {
                 const distance = positionA.length;
 
                 if (distance > radius) {
@@ -345,13 +260,13 @@ export const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap
 
                 containsB = false;
             }
-        } else if (region === VORONOI_REGION.RIGHT) {
+        } else if (region === VoronoiRegion.RIGHT) {
             const next = points[(i + 2) % len]; // pointB ?
 
             edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
             positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
-            if (getVoronoiRegion(edgeB, positionB) === VORONOI_REGION.LEFT) {
+            if (getVoronoiRegion(edgeB, positionB) === VoronoiRegion.LEFT) {
                 const distance = positionB.length;
 
                 if (distance > radius) {
@@ -484,4 +399,97 @@ export const getCollisionSAT = (shapeA: Collidable, shapeB: Collidable): Collisi
         projectionN: projection,
         projectionV: projection.clone().multiply(overlap, overlap),
     };
+};
+
+/**
+ * Intersection Checking By Class
+ */
+
+export const isSceneNodeIntersecting = (sceneNode: SceneNode, target: Collidable): boolean => {
+    const isAlignedBox = sceneNode.rotation % 90 === 0;
+
+    if (isAlignedBox && target instanceof SceneNode && target.rotation % 90 === 0) {
+        return isIntersectingRectangleRectangle(sceneNode.getBounds(), target.getBounds());
+    }
+
+    if (isAlignedBox && target instanceof Rectangle) {
+        return isIntersectingRectangleRectangle(sceneNode.getBounds(), target);
+    }
+
+    if (target instanceof Circle) {
+        if (isAlignedBox) {
+            return isIntersectingCircleRectangle(target, sceneNode.getBounds());
+        }
+
+        window.console.warn("Rotierte SceneNode + Circle wird noch nicht unterstützt.", sceneNode, target);
+    }
+
+    return isIntersectingSAT(sceneNode, target);
+};
+
+export const isPolygonIntersectingWithTarget = (polygon: Polygon, target: Collidable): boolean => {
+    if (target instanceof Circle) {
+        return isIntersectingPolygonCircle(polygon, target);
+    }
+
+    return isIntersectingSAT(polygon, target);
+};
+
+export const isRectangleIntersectingWithTarget = (rectangle: Rectangle, target: Collidable): boolean => {
+
+    if (target instanceof SceneNode && target.rotation % 90 === 0) {
+        return isIntersectingRectangleRectangle(rectangle, target.getBounds());
+    }
+
+    if (target instanceof Rectangle) {
+        return isIntersectingRectangleRectangle(rectangle, target);
+    }
+
+    if (target instanceof Circle) {
+        return isIntersectingCircleRectangle(target, rectangle);
+    }
+
+    return isIntersectingSAT(rectangle, target);
+};
+
+export const isCircleIntersectingWithTarget = (circle: Circle, target: Collidable): boolean => {
+
+    if (target instanceof SceneNode && target.rotation % 90 === 0) {
+        return isIntersectingCircleRectangle(circle, target.getBounds());
+    }
+
+    if (target instanceof Rectangle) {
+        return isIntersectingCircleRectangle(circle, target);
+    }
+
+    if (target instanceof Circle) {
+        return isIntersectingCircleCircle(circle, target);
+    }
+
+    if (target instanceof Polygon) {
+        return isIntersectingPolygonCircle(target, circle);
+    }
+
+    return false;
+};
+
+export const isIntersecting = (targetA: Collidable, targetB: Collidable): boolean => {
+
+    if (targetA instanceof SceneNode) {
+        return isSceneNodeIntersecting(targetA, targetB);
+    }
+
+    if (targetA instanceof Rectangle) {
+        return isRectangleIntersectingWithTarget(targetA, targetB);
+    }
+
+    if (targetA instanceof Polygon) {
+        return isPolygonIntersectingWithTarget(targetA, targetB);
+    }
+
+    if (targetA instanceof Circle) {
+        return isCircleIntersectingWithTarget(targetA, targetB);
+    }
+
+    return isIntersectingSAT(targetA, targetB);
 };

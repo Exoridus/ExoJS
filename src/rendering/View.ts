@@ -1,32 +1,45 @@
-import ObservableVector from '../math/ObservableVector';
-import Rectangle from '../math/Rectangle';
-import Matrix from '../math/Matrix';
+import { ObservableVector } from '../math/ObservableVector';
+import { Rectangle } from '../math/Rectangle';
+import { Matrix } from '../math/Matrix';
 import { degreesToRadians } from '../utils/math';
-import ObservableSize from '../math/ObservableSize';
-import Bounds from '../core/Bounds';
-import { Flags } from '../const/core';
-import Flags from '../math/Flags';
+import { ObservableSize } from '../math/ObservableSize';
+import { Bounds } from '../core/Bounds';
+import { Flags } from '../math/Flags';
+import { trimRotation } from "../const/math";
 
-export default class View {
+export enum ViewFlags {
+    NONE = 0x00,
+    TRANSLATION = 0x01,
+    ROTATION = 0x02,
+    SCALING = 0x04,
+    ORIGIN = 0x08,
+    TRANSFORM = 0x0F,
+    TRANSFORM_INV = 0x10,
+    BOUNDING_BOX = 0x20,
+    TEXTURE_COORDS = 0x40,
+    VERTEX_TINT = 0x80,
+}
+
+export class View {
     private readonly _center: ObservableVector;
     private readonly _size: ObservableSize;
     private readonly _viewport: Rectangle = new Rectangle(0, 0, 1, 1);
     private readonly _transform: Matrix = new Matrix();
     private readonly _inverseTransform: Matrix = new Matrix();
     private readonly _bounds: Bounds = new Bounds();
-    private readonly _flags: Flags = new Flags();
-    private _rotation: number = 0;
-    private _sin: number = 0;
-    private _cos: number = 1;
-    private _updateId: number = 0;
+    private readonly _flags: Flags<ViewFlags> = new Flags<ViewFlags>();
+    private _rotation = 0;
+    private _sin = 0;
+    private _cos = 1;
+    private _updateId = 0;
 
     constructor(centerX: number, centerY: number, width: number, height: number) {
         this._center = new ObservableVector(this._setPositionDirty, this, centerX, centerY);
         this._size = new ObservableSize(this._setScalingDirty, this, width, height);
         this._flags.add(
-            Flags.TRANSFORM,
-            Flags.TRANSFORM_INV,
-            Flags.BOUNDING_BOX
+            ViewFlags.TRANSFORM,
+            ViewFlags.TRANSFORM_INV,
+            ViewFlags.BOUNDING_BOX
         );
     }
 
@@ -98,8 +111,7 @@ export default class View {
     }
 
     public setRotation(degrees: number): this {
-        const trimmed = degrees % 360;
-        const rotation = trimmed < 0 ? trimmed + 360 : trimmed;
+        const rotation = trimRotation(degrees);
 
         if (this._rotation !== rotation) {
             this._rotation = rotation;
@@ -135,15 +147,15 @@ export default class View {
         this._sin = 0;
         this._cos = 1;
 
-        this._flags.add(Flags.TRANSFORM);
+        this._flags.add(ViewFlags.TRANSFORM);
 
         return this;
     }
 
     public getTransform(): Matrix {
-        if (this._flags.has(Flags.TRANSFORM)) {
+        if (this._flags.has(ViewFlags.TRANSFORM)) {
             this.updateTransform();
-            this._flags.remove(Flags.TRANSFORM);
+            this._flags.remove(ViewFlags.TRANSFORM);
         }
 
         return this._transform;
@@ -153,14 +165,14 @@ export default class View {
         const x = 2 / this.width,
             y = -2 / this.height;
 
-        if (this._flags.has(Flags.ROTATION)) {
+        if (this._flags.has(ViewFlags.ROTATION)) {
             const radians = degreesToRadians(this._rotation);
 
             this._cos = Math.cos(radians);
             this._sin = Math.sin(radians);
         }
 
-        if (this._flags.has(Flags.ROTATION | Flags.SCALING)) {
+        if (this._flags.has(ViewFlags.ROTATION | ViewFlags.SCALING)) {
             this._transform.a = x * this._cos;
             this._transform.b = x * this._sin;
 
@@ -175,20 +187,20 @@ export default class View {
     }
 
     public getInverseTransform(): Matrix {
-        if (this._flags.has(Flags.TRANSFORM_INV)) {
+        if (this._flags.has(ViewFlags.TRANSFORM_INV)) {
             this.getTransform()
                 .getInverse(this._inverseTransform);
 
-            this._flags.remove(Flags.TRANSFORM_INV);
+            this._flags.remove(ViewFlags.TRANSFORM_INV);
         }
 
         return this._inverseTransform;
     }
 
     public getBounds(): Rectangle {
-        if (this._flags.has(Flags.BOUNDING_BOX)) {
+        if (this._flags.has(ViewFlags.BOUNDING_BOX)) {
             this.updateBounds();
-            this._flags.remove(Flags.BOUNDING_BOX);
+            this._flags.remove(ViewFlags.BOUNDING_BOX);
         }
 
         return this._bounds.getRect();
@@ -216,22 +228,22 @@ export default class View {
     }
 
     private _setDirty() {
-        this._flags.add(Flags.TRANSFORM_INV | Flags.BOUNDING_BOX);
+        this._flags.add(ViewFlags.TRANSFORM_INV | ViewFlags.BOUNDING_BOX);
         this._updateId++;
     }
 
     private _setPositionDirty() {
-        this._flags.add(Flags.TRANSLATION);
+        this._flags.add(ViewFlags.TRANSLATION);
         this._setDirty();
     }
 
     private _setRotationDirty() {
-        this._flags.add(Flags.ROTATION);
+        this._flags.add(ViewFlags.ROTATION);
         this._setDirty();
     }
 
     private _setScalingDirty() {
-        this._flags.add(Flags.SCALING);
+        this._flags.add(ViewFlags.SCALING);
         this._setDirty();
     }
 }

@@ -1,9 +1,9 @@
-import Vector from './Vector';
-import Rectangle from './Rectangle';
-import Polygon from './Polygon';
-import Interval from './Interval';
+import { Vector } from './Vector';
+import { Rectangle } from './Rectangle';
+import { Polygon } from './Polygon';
+import { Interval } from './Interval';
 import { getDistance } from '../utils/math';
-import IShape from "../interfaces/IShape";
+import { IShape } from '../interfaces/IShape';
 import {
     Collidable, Collision, CollisionType,
     getCollisionCircleCircle,
@@ -12,7 +12,7 @@ import {
     isCircleIntersectingWithTarget
 } from "../const/collision";
 
-export default class Circle implements IShape {
+export class Circle implements IShape {
 
     public static readonly Temp = new Circle();
 
@@ -21,7 +21,7 @@ export default class Circle implements IShape {
     private readonly _position: Vector;
     private _radius: number;
 
-    constructor(x: number = 0, y: number = 0, radius: number = 0) {
+    constructor(x = 0, y = 0, radius = 0) {
         this._position = new Vector(x, y);
         this._radius = radius;
     }

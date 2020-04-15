@@ -1,23 +1,35 @@
 {
-  "name": "ExoJS",
+  "name": "exo-js-core",
   "description": "A lightweight, flexibile and powerful game engine.",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "license": "MIT",
-  "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
   "homepage": "https://github.com/Exoridus/ExoJS",
   "repository": {
     "type": "git",
     "url": "https://github.com/Exoridus/ExoJS.git"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
   "scripts": {
-    "build-dev": "webpack --config scripts/build-dev.config.js",
-    "examples": "node scripts/examples"
+    "clean": "shx rm -rf dist/bundles dist/lib dist/lib-esm",
+    "build": "npm run clean && tsc && tsc -m es6 --outDir dist/lib-esm && webpack --config scripts/build-prod.config.js",
+    "prepare": "npm run build && npm version patch"
   },
   "devDependencies": {
+    "@types/css-font-loading-module": "0.0.4",
+    "@types/earcut": "^2.1.0",
     "@types/node": "^13.7.1",
-    "express": "^4.17.1",
+    "@typescript-eslint/eslint-plugin": "^2.28.0",
+    "@typescript-eslint/parser": "^2.28.0",
+    "awesome-typescript-loader": "^5.2.1",
+    "eslint": "^6.8.0",
     "node-sass": "^4.13.1",
-    "serve-static": "^1.14.1",
+    "raw-loader": "^4.0.0",
+    "shx": "^0.3.2",
+    "terser-webpack-plugin": "^2.3.5",
     "ts-loader": "^6.2.1",
     "tslint": "^6.0.0",
     "typescript": "^3.7.5",
@@ -25,7 +37,6 @@
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "@types/css-font-loading-module": "0.0.4",
     "earcut": "^2.2.2"
   }
 }

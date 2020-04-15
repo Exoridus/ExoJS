@@ -1,15 +1,14 @@
-import { ResourceTypes } from '../const/core';
-import { supportsIndexedDB } from "../support";
-import { IDatabase } from "../interfaces/IDatabase";
+import { ResourceTypes, supportsIndexedDB } from '../const';
+import { IDatabase } from "../interfaces";
 
-export default class IndexedDBDatabase implements IDatabase {
+export class IndexedDBDatabase implements IDatabase {
 
     public readonly name: string;
     public readonly version: number;
 
-    private readonly _onCloseHandler: () => void;
-    private _connected: boolean = false;
-    private _database: IDBDatabase | null;
+    private readonly _onCloseHandler: () => void = this.disconnect.bind(this);
+    private _connected = false;
+    private _database: IDBDatabase | null = null;
 
     get connected(): boolean {
         return this._connected;
@@ -22,9 +21,6 @@ export default class IndexedDBDatabase implements IDatabase {
 
         this.name = name;
         this.version = version;
-
-        this._database = null;
-        this._onCloseHandler = this.disconnect.bind(this);
     }
 
     async getObjectStore(type: ResourceTypes, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {

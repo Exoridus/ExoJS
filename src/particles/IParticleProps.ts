@@ -1,6 +1,6 @@
-import Time from "../core/time/Time";
-import Vector from "../math/Vector";
-import Color from "../core/Color";
+import { Time } from '../core/Time';
+import { Vector } from '../math/Vector';
+import { Color } from '../core/Color';
 
 export interface IParticleProps {
     totalLifetime: Time;

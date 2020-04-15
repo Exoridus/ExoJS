@@ -1,19 +1,32 @@
-import { Flags } from '../const/core';
-import ObservableVector from './ObservableVector';
-import Matrix from './Matrix';
+import { ObservableVector } from './ObservableVector';
+import { Matrix } from './Matrix';
 import { degreesToRadians } from '../utils/math';
-import Flags from './Flags';
+import { Flags } from './Flags';
+import { trimRotation } from "../const/math";
 
-export default class Transformable {
-    public readonly flags = new Flags(Flags.TRANSFORM);
+export enum TransformableFlags {
+    NONE = 0x00,
+    TRANSLATION = 0x01,
+    ROTATION = 0x02,
+    SCALING = 0x04,
+    ORIGIN = 0x08,
+    TRANSFORM = 0x0F,
+    TRANSFORM_INV = 0x10,
+    BOUNDING_BOX = 0x20,
+    TEXTURE_COORDS = 0x40,
+    VERTEX_TINT = 0x80,
+}
+
+export class Transformable {
+    public readonly flags: Flags<TransformableFlags> = new Flags<TransformableFlags>(TransformableFlags.TRANSFORM);
 
     protected _transform: Matrix = new Matrix();
     protected _position: ObservableVector = new ObservableVector(this._setPositionDirty, this, 0, 0);
     protected _scale: ObservableVector = new ObservableVector(this._setScalingDirty, this, 1, 1);
     protected _origin: ObservableVector = new ObservableVector(this._setOriginDirty, this, 0, 0);
-    protected _rotation: number = 0;
-    protected _sin: number = 0;
-    protected _cos: number = 1;
+    protected _rotation = 0;
+    protected _sin = 0;
+    protected _cos = 1;
 
     public get position(): ObservableVector {
         return this._position;
@@ -70,8 +83,7 @@ export default class Transformable {
     }
 
     public setRotation(degrees: number): this {
-        const trimmed = degrees % 360;
-        const rotation = trimmed < 0 ? trimmed + 360 : trimmed;
+        const rotation = trimRotation(degrees);
 
         if (this._rotation !== rotation) {
             this._rotation = rotation;
@@ -102,23 +114,23 @@ export default class Transformable {
     }
 
     public getTransform(): Matrix {
-        if (this.flags.has(Flags.TRANSFORM)) {
+        if (this.flags.has(TransformableFlags.TRANSFORM)) {
             this.updateTransform();
-            this.flags.remove(Flags.TRANSFORM);
+            this.flags.remove(TransformableFlags.TRANSFORM);
         }
 
         return this._transform;
     }
 
     public updateTransform(): this {
-        if (this.flags.has(Flags.ROTATION)) {
+        if (this.flags.has(TransformableFlags.ROTATION)) {
             const radians = degreesToRadians(this._rotation);
 
             this._cos = Math.cos(radians);
             this._sin = Math.sin(radians);
         }
 
-        if (this.flags.has(Flags.ROTATION | Flags.SCALING)) {
+        if (this.flags.has(TransformableFlags.ROTATION | TransformableFlags.SCALING)) {
             const { x, y } = this._scale;
 
             this._transform.a = x * this._cos;
@@ -150,18 +162,18 @@ export default class Transformable {
     }
 
     private _setPositionDirty() {
-        this.flags.add(Flags.TRANSLATION);
+        this.flags.add(TransformableFlags.TRANSLATION);
     }
 
     private _setRotationDirty() {
-        this.flags.add(Flags.ROTATION);
+        this.flags.add(TransformableFlags.ROTATION);
     }
 
     private _setScalingDirty() {
-        this.flags.add(Flags.SCALING);
+        this.flags.add(TransformableFlags.SCALING);
     }
 
     private _setOriginDirty() {
-        this.flags.add(Flags.ORIGIN);
+        this.flags.add(TransformableFlags.ORIGIN);
     }
 }

@@ -1,9 +1,9 @@
-import Size from '../math/Size';
-import View from './View';
-import Rectangle from '../math/Rectangle';
-import Vector from '../math/Vector';
+import { Size } from '../math/Size';
+import { View } from './View';
+import { Rectangle } from '../math/Rectangle';
+import { Vector } from '../math/Vector';
 
-export default class RenderTarget {
+export class RenderTarget {
 
     private readonly _root: boolean;
     protected _size: Size;
@@ -13,7 +13,7 @@ export default class RenderTarget {
     protected _defaultView: View;
     protected _view: View;
 
-    constructor(width: number, height: number, root: boolean = false) {
+    constructor(width: number, height: number, root = false) {
         this._size = new Size(width, height);
         this._root = root;
         this._defaultView = new View(width / 2, height / 2, width, height);

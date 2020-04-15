@@ -1,11 +1,11 @@
-import Vector from './Vector';
+import { Vector } from './Vector';
 
-export default class ObservableVector extends Vector {
+export class ObservableVector extends Vector {
 
     private readonly _callback: () => void;
     private readonly _context: object;
 
-    public constructor(callback: () => void, context?: object, x: number = 0, y: number = 0) {
+    public constructor(callback: () => void, context?: object, x = 0, y = 0) {
         super(x, y);
 
         this._callback = callback;

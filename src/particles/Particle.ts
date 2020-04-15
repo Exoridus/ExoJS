@@ -1,10 +1,11 @@
-import Vector from '../math/Vector';
-import Color from '../core/Color';
-import Time from '../core/time/Time';
-import ParticleOptions from "./emitters/ParticleOptions";
+import { Vector } from '../math/Vector';
+import { Color } from '../core/Color';
+import { Time } from '../core/Time';
+import { ParticleOptions } from './emitters/ParticleOptions';
 import { IParticleProps } from "./IParticleProps";
+import { trimRotation } from "../const/math";
 
-export default class Particle implements IParticleProps {
+export class Particle implements IParticleProps {
     private _totalLifetime = Time.OneSecond.clone();
     private _elapsedLifetime = Time.Zero.clone();
     private _position = Vector.Zero.clone();
@@ -68,9 +69,7 @@ export default class Particle implements IParticleProps {
     }
 
     set rotation(degrees) {
-        const rotation = degrees % 360;
-
-        this._rotation = rotation < 0 ? rotation + 360 : rotation;
+        this._rotation = trimRotation(degrees);
     }
 
     get rotationSpeed() {

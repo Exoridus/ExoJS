@@ -1,9 +1,9 @@
-import ShaderAttribute from './ShaderAttribute';
-import ShaderUniform from './ShaderUniform';
-import ShaderBlock from './ShaderBlock';
+import { ShaderAttribute } from './ShaderAttribute';
+import { ShaderUniform } from './ShaderUniform';
+import { ShaderBlock } from './ShaderBlock';
 import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from '../../const/rendering';
 
-export default class Shader {
+export class Shader {
 
     public readonly attributes: Map<string, ShaderAttribute> = new Map<string, ShaderAttribute>();
     public readonly uniforms: Map<string, ShaderUniform> = new Map<string, ShaderUniform>();

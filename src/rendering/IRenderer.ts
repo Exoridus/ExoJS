@@ -1,12 +1,13 @@
-import Drawable from "./Drawable";
-import RenderManager from "./RenderManager";
+import { Drawable } from './Drawable';
+import { RenderManager } from './RenderManager';
 
 export enum RendererType {
     Sprite = 1,
     Particle = 2,
+    Primitive = 3,
 }
 
-export default interface IRenderer {
+export interface IRenderer {
     connect(renderManager: RenderManager): this;
     disconnect(): this;
     bind(): this;

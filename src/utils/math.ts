@@ -1,9 +1,9 @@
-import { RAD_PER_DEG, DEG_PER_RAD, VORONOI_REGION } from '../const/math';
-import Vector from "../math/Vector";
+import { RadiansPerDegree, DegreesPerRadian, VoronoiRegion } from '../const';
+import { Vector } from '../math';
 
-export const degreesToRadians = (degree: number): number => degree * RAD_PER_DEG;
+export const degreesToRadians = (degree: number): number => degree * RadiansPerDegree;
 
-export const radiansToDegrees = (radian: number): number => radian * DEG_PER_RAD;
+export const radiansToDegrees = (radian: number): number => radian * DegreesPerRadian;
 
 export const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
@@ -38,7 +38,7 @@ export const bezierCurveTo = (
     toX: number,
     toY: number,
     path: Array<number> = [],
-    len: number = 20
+    len = 20
 ): Array<number> => {
     path.push(fromX, fromY);
 
@@ -69,7 +69,7 @@ export const quadraticCurveTo = (
     toX: number,
     toY: number,
     path: Array<number> = [],
-    len: number = 20
+    len = 20
 ): Array<number> => {
     for (let i = 0; i <= len; i++) {
         const ratio = i / len;
@@ -87,10 +87,10 @@ export const getVoronoiRegion = (line: Vector, point: Vector): number => {
     const product = point.dot(line.x, line.y);
 
     if (product < 0) {
-        return VORONOI_REGION.LEFT;
+        return VoronoiRegion.LEFT;
     } else if (product > line.lengthSq) {
-        return VORONOI_REGION.RIGHT;
+        return VoronoiRegion.RIGHT;
     } else {
-        return VORONOI_REGION.MIDDLE;
+        return VoronoiRegion.MIDDLE;
     }
 };

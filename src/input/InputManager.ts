@@ -1,14 +1,14 @@
 import { CHANNEL_RANGE, CHANNEL_OFFSET } from '../const/input';
-import Flags from '../math/Flags';
+import { Flags } from '../math/Flags';
 import { stopEvent } from '../utils/core';
-import Vector from '../math/Vector';
-import Pointer from './Pointer';
-import GamepadProvider from './GamepadProvider';
-import Signal from '../core/Signal';
+import { Vector } from '../math/Vector';
+import { Pointer } from './Pointer';
+import { GamepadProvider } from './GamepadProvider';
+import { Signal } from '../core/Signal';
 import { getDistance } from '../utils/math';
-import Input from "./Input";
+import { Input } from './Input';
 import { activeListenerOption, passiveListenerOption } from "../const/core";
-import Application from "../core/Application";
+import { Application } from "../core/Application";
 
 enum InputManagerFlags {
     NONE = 0,
@@ -26,7 +26,7 @@ enum InputManagerFlags {
 type PointerMapping = { [pointerId: number]: Pointer };
 type GamepadMapping = { readonly [index: number]: GamepadProvider };
 
-export default class InputManager {
+export class InputManager {
 
     private _app: Application;
     private _channels: Float32Array = new Float32Array(CHANNEL_RANGE.GLOBAL);
@@ -39,7 +39,7 @@ export default class InputManager {
         3: new GamepadProvider(3, this._channels),
     };
     private _wheelOffset: Vector = new Vector();
-    private _flags: Flags = new Flags();
+    private _flags: Flags<InputManagerFlags> = new Flags<InputManagerFlags>();
 
     private _channelsPressed: Array<number> = [];
     private _channelsReleased: Array<number> = [];
@@ -131,7 +131,7 @@ export default class InputManager {
         return this;
     }
 
-    public clear(destroyInputs: boolean = false): this {
+    public clear(destroyInputs = false): this {
         if (destroyInputs) {
             for (const input of this._inputs) {
                 input.destroy();

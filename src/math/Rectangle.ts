@@ -1,11 +1,11 @@
 import { inRange } from '../utils/math';
-import Vector from './Vector';
-import Size from './Size';
-import Circle from './Circle';
-import Polygon from './Polygon';
-import Interval from './Interval';
-import Matrix from "./Matrix";
-import IShape from "../interfaces/IShape";
+import { Vector } from './Vector';
+import { Size } from './Size';
+import { Circle } from './Circle';
+import { Polygon } from './Polygon';
+import { Interval } from './Interval';
+import { Matrix } from './Matrix';
+import { IShape } from '../interfaces/IShape';
 import {
     Collidable,
     Collision,
@@ -16,7 +16,7 @@ import {
     isRectangleIntersectingWithTarget
 } from "../const/collision";
 
-export default class Rectangle implements IShape {
+export class Rectangle implements IShape {
 
     public static readonly Temp = new Rectangle();
 
@@ -25,7 +25,7 @@ export default class Rectangle implements IShape {
     private readonly _position: Vector;
     private readonly _size: Size;
 
-    constructor(x: number = 0, y: number = x, width: number = 0, height: number = width) {
+    constructor(x = 0, y = x, width = 0, height = width) {
         this._position = new Vector(x, y);
         this._size = new Size(width, height);
     }

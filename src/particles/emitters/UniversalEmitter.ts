@@ -1,12 +1,12 @@
-import Time from '../../core/time/Time';
-import ParticleOptions from './ParticleOptions';
+import { Time } from '../../core/Time';
+import { ParticleOptions } from './ParticleOptions';
 import { IParticleEmitter } from "./IParticleEmitter";
-import ParticleSystem from "../ParticleSystem";
+import { ParticleSystem } from '../ParticleSystem';
 
-export default class UniversalEmitter implements IParticleEmitter {
+export class UniversalEmitter implements IParticleEmitter {
     private _emissionRate: number;
     private _particleOptions: ParticleOptions;
-    private _emissionDelta: number = 0;
+    private _emissionDelta = 0;
 
     constructor(emissionRate: number, particleOptions?: ParticleOptions) {
         this._emissionRate = emissionRate;

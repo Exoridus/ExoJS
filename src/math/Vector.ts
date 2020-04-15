@@ -1,7 +1,7 @@
 import { getDistance } from '../utils/math';
-import Matrix from "./Matrix";
+import { Matrix } from './Matrix';
 
-export default class Vector {
+export class Vector {
 
     public static readonly Zero = new Vector(0, 0);
     public static readonly One = new Vector(1, 1);
@@ -10,7 +10,7 @@ export default class Vector {
     protected _x: number;
     protected _y: number;
 
-    constructor(x: number = 0, y: number = 0) {
+    constructor(x = 0, y = 0) {
         this._x = x;
         this._y = y;
     }
@@ -183,7 +183,7 @@ export default class Vector {
     }
 
     public destroy() {
-
+        // todo - check if destroy is needed
     }
 
     public static add(vecA: Vector, vecB: Vector, result: Vector = new Vector()): Vector {

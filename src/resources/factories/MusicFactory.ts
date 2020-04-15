@@ -1,17 +1,16 @@
-import Music from '../../audio/Music';
-import {supportsEventOptions} from "../../support";
 import { PlaybackOptions } from "../../const/types";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { determineMimeType } from "../../utils/resources";
 import { onceListenerOption, StorageNames } from "../../const/core";
+import { Music } from "../../audio/Music";
 
 interface MusicFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
-    playbackOptions?: PlaybackOptions;
+    playbackOptions?: Partial<PlaybackOptions>;
 }
 
-export default class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music> {
+export class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music> {
 
     public readonly storageName: StorageNames = StorageNames.Music;
 

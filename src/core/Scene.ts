@@ -1,4 +1,8 @@
-import Time from "./time/Time";
+import { Time } from './Time';
+import { Loader } from "../resources/Loader";
+import { ResourceContainer } from "../resources/ResourceContainer";
+import { RenderManager } from "../rendering/RenderManager";
+import { Application } from "./Application";
 
 export interface SceneData {
     load?: (loader: Loader) => Promise<void>;
@@ -9,7 +13,7 @@ export interface SceneData {
     destroy?: () => void;
 }
 
-export default class Scene {
+export class Scene {
 
     private _app: Application | null = null;
 

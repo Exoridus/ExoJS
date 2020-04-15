@@ -1,22 +1,22 @@
-import IRenderer from '../IRenderer';
-import Shader from '../shader/Shader';
-import settings from '../../settings';
-import VertexArrayObject from '../VertexArrayObject';
-import Buffer from '../Buffer';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { IRenderer } from '../IRenderer';
+import { Shader } from '../shader/Shader';
+import { defaultSpriteRendererBatchSize } from '../../const/defaults';
+import { VertexArrayObject } from '../VertexArrayObject';
+import { RenderBuffer } from '../RenderBuffer';
 import { createQuadIndices } from '../../utils/rendering';
-import Texture from "../texture/Texture";
+import { Texture } from '../texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage } from "../../const/rendering";
-import View from "../View";
-import RenderManager from "../RenderManager";
-import Sprite from "./Sprite";
-import RenderTexture from "../texture/RenderTexture";
+import { View } from '../View';
+import { RenderManager } from '../RenderManager';
+import { Sprite } from './Sprite';
+import { RenderTexture } from '../texture/RenderTexture';
+import vertexSource from "./glsl/sprite.vert";
+import fragmentSource from "./glsl/sprite.frag";
 
-export default class SpriteRenderer implements IRenderer {
+export class SpriteRenderer implements IRenderer {
 
-    private _batchSize: number = settings.BATCH_SIZE_SPRITES;
-    private _batchIndex: number = 0;
+    private _batchSize: number = defaultSpriteRendererBatchSize;
+    private _batchIndex = 0;
 
     /**
      * 4 x 4 Properties:
@@ -24,24 +24,21 @@ export default class SpriteRenderer implements IRenderer {
      * 1 = texCoord (packed uv) +
      * 1 = color    (ARGB int)
      */
-    private _attributeCount: number = 16;
+    private _attributeCount = 16;
     private _vertexData: ArrayBuffer = new ArrayBuffer(this._batchSize * this._attributeCount * 4);
     private _float32View: Float32Array = new Float32Array(this._vertexData);
     private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
     private _indexData: Uint16Array = createQuadIndices(this._batchSize);
-    private _shader: Shader = new Shader(
-        readFileSync(join(__dirname, './glsl/sprite.vert'), 'utf8'),
-        readFileSync(join(__dirname, './glsl/sprite.frag'), 'utf8')
-    );
+    private _shader: Shader = new Shader(vertexSource, fragmentSource);
     private _renderManager: RenderManager | null = null;
     private _context: WebGL2RenderingContext | null = null;
     private _currentTexture: Texture | RenderTexture | null = null;
     private _currentBlendMode: BlendModes | null = null;
     private _currentView: View | null = null;
-    private _viewId: number = -1;
+    private _viewId = -1;
     private _vao: VertexArrayObject | null = null;
-    private _indexBuffer: Buffer | null = null;
-    private _vertexBuffer: Buffer | null = null;
+    private _indexBuffer: RenderBuffer | null = null;
+    private _vertexBuffer: RenderBuffer | null = null;
 
     connect(renderManager: RenderManager) {
         if (!this._context) {
@@ -51,8 +48,8 @@ export default class SpriteRenderer implements IRenderer {
             this._renderManager = renderManager;
 
             this._shader.connect(gl);
-            this._indexBuffer = new Buffer(gl, BufferTypes.ELEMENT_ARRAY_BUFFER, this._indexData, BufferUsage.STATIC_DRAW);
-            this._vertexBuffer = new Buffer(gl, BufferTypes.ARRAY_BUFFER, this._vertexData, BufferUsage.DYNAMIC_DRAW);
+            this._indexBuffer = new RenderBuffer(gl, BufferTypes.ELEMENT_ARRAY_BUFFER, this._indexData, BufferUsage.STATIC_DRAW);
+            this._vertexBuffer = new RenderBuffer(gl, BufferTypes.ARRAY_BUFFER, this._vertexData, BufferUsage.DYNAMIC_DRAW);
 
             this._vao = new VertexArrayObject(gl)
                 .addIndex(this._indexBuffer)

@@ -1,0 +1,4 @@
+**/*.vert
+**/*.frag
+dist/*
+scripts/*

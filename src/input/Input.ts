@@ -1,6 +1,6 @@
-import settings from '../settings';
-import Signal from '../core/Signal';
-import Timer from '../core/time/Timer';
+import { defaultInputThreshold } from '../const/defaults';
+import { Signal } from '../core/Signal';
+import { Timer } from '../core/Timer';
 import { InputChannel } from "../const/input";
 
 interface InputOptions {
@@ -12,18 +12,18 @@ interface InputOptions {
     threshold?: number;
 }
 
-export default class Input {
+export class Input {
 
     private readonly _channels: Set<number>;
     private readonly _triggerTimer: Timer;
-    private _value: number = 0;
+    private _value = 0;
 
     public readonly onStart: Signal = new Signal();
     public readonly onStop: Signal = new Signal();
     public readonly onActive: Signal = new Signal();
     public readonly onTrigger: Signal = new Signal();
 
-    constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold = settings.INPUT_THRESHOLD }: InputOptions = {}) {
+    constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold = defaultInputThreshold }: InputOptions = {}) {
 
         this._channels = new Set(Array.isArray(channels) ? channels : [channels]);
         this._triggerTimer = new Timer({ limit: threshold });

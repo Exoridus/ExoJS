@@ -1,13 +1,13 @@
-import Rectangle from '../math/Rectangle';
-import Matrix from '../math/Matrix';
+import { Rectangle } from '../math/Rectangle';
+import { Matrix } from '../math/Matrix';
 
-export default class Bounds {
+export class Bounds {
 
-    private _minX: number = Infinity;
-    private _minY: number = Infinity;
-    private _maxX: number = -Infinity;
-    private _maxY: number = -Infinity;
-    private _dirty: boolean = true;
+    private _minX = Infinity;
+    private _minY = Infinity;
+    private _maxX = -Infinity;
+    private _maxY = -Infinity;
+    private _dirty = true;
     private _rect: Rectangle = new Rectangle();
 
     public get minX(): number {

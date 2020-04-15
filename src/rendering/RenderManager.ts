@@ -1,21 +1,20 @@
 import { BlendModes } from '../const/rendering';
-import RenderTarget from './RenderTarget';
-import SpriteRenderer from './sprite/SpriteRenderer';
-import ParticleRenderer from '../particles/ParticleRenderer';
-import Color from '../core/Color';
+import { RenderTarget } from './RenderTarget';
+import { SpriteRenderer } from './sprite/SpriteRenderer';
+import { ParticleRenderer } from '../particles/ParticleRenderer';
+import { Color } from '../core/Color';
 import { canvasSourceToDataURL } from '../utils/core';
-import Texture from './texture/Texture';
-import Sampler from './texture/Sampler';
-import { supportsWebGL2 } from "../support";
-import IRenderer, { RendererType } from "./IRenderer";
-import Shader from "./shader/Shader";
-import VertexArrayObject from "./VertexArrayObject";
-import RenderTexture from "./texture/RenderTexture";
-import Drawable from "./Drawable";
-import View from "./View";
-import Application from "../core/Application";
+import { Texture } from './texture/Texture';
+import { Sampler } from './texture/Sampler';
+import { IRenderer, RendererType } from "./IRenderer";
+import { Shader } from './shader/Shader';
+import { VertexArrayObject } from './VertexArrayObject';
+import { RenderTexture } from './texture/RenderTexture';
+import { Drawable } from './Drawable';
+import { View } from './View';
+import { Application } from "../core/Application";
 
-export default class RenderManager {
+export class RenderManager {
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _rootRenderTarget: RenderTarget;
@@ -31,17 +30,13 @@ export default class RenderManager {
     private _blendMode: BlendModes | null = null;
     private _texture: Texture | RenderTexture | null = null;
     private _sampler: Sampler;
-    private _textureUnit: number = 0;
+    private _textureUnit = 0;
     private _vao: VertexArrayObject | null = null;
     private _clearColor: Color = new Color();
     private _cursor: string;
 
     constructor(app: Application) {
         const { width, height, clearColor, context } = app.config;
-
-        if (!supportsWebGL2) {
-            throw new Error('This browser or hardware does not support WebGL v2!');
-        }
 
         this._canvas = app.canvas;
 
@@ -390,7 +385,7 @@ export default class RenderManager {
 
     private _createContext(options: WebGLContextAttributes): WebGL2RenderingContext | null {
         try {
-            return this._canvas.getContext('webgl2', options) as WebGL2RenderingContext;
+            return this._canvas.getContext('webgl2', options) as WebGL2RenderingContext | null;
         } catch (e) {
             return null;
         }

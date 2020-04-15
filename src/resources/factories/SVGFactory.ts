@@ -1,7 +1,7 @@
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { StorageNames } from "../../const/core";
 
-export default class SVGFactory extends AbstractResourceFactory<string, HTMLImageElement> {
+export class SVGFactory extends AbstractResourceFactory<string, HTMLImageElement> {
 
     public readonly storageName: StorageNames = StorageNames.Text;
 

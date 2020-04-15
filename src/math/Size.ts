@@ -1,4 +1,4 @@
-export default class Size {
+export class Size {
 
     public static readonly Zero = new Size(0, 0);
     public static readonly Temp = new Size();
@@ -6,7 +6,7 @@ export default class Size {
     protected _width: number;
     protected _height: number;
 
-    constructor(width: number = 0, height: number = 0) {
+    constructor(width = 0, height = 0) {
         this._width = width;
         this._height = height;
     }
@@ -62,7 +62,7 @@ export default class Size {
         return this;
     }
 
-    public copy(size: { width: number, height: number }): this {
+    public copy(size: { width: number; height: number }): this {
         this._width = size.width;
         this._height = size.height;
 
@@ -79,6 +79,6 @@ export default class Size {
     }
 
     public destroy(): void {
-
+        // todo - check if destroy is needed
     }
 }

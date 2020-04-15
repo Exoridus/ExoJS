@@ -1,13 +1,13 @@
-import { AUDIO_ELEMENT, GlobalCanvasElement, GlobalCanvasContext, CodecNotSupportedPattern, TIMING } from '../const/core';
+import { internalAudioElement, internalCanvasElement, internalCanvasContext, codecNotSupportedPattern } from '../const/core';
 import { TextureSource } from "../rendering/texture/Texture";
-import Size from "../math/Size";
+import { Size } from '../math/Size';
 
 export const stopEvent = (event: Event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
 };
 
-export const getPreciseTime = () => TIMING.now();
+export const getPreciseTime = () => performance.now();
 
 export const removeArrayItems = <T = any>(array: Array<T>, startIndex: number, amount: number): Array<T> => {
     if (startIndex < array.length && amount > 0) {
@@ -27,18 +27,7 @@ export const removeArrayItems = <T = any>(array: Array<T>, startIndex: number, a
     return array;
 };
 
-export const canvasSourceToDataURL = (source: CanvasImageSource): string => {
-    const { width, height } = getCanvasSourceSize(source);
-
-    GlobalCanvasElement.width = width;
-    GlobalCanvasElement.height = height;
-
-    GlobalCanvasContext.drawImage(source, 0, 0, width, height);
-
-    return GlobalCanvasElement.toDataURL();
-};
-
-export const supportsCodec = (...codecs: Array<string>): boolean => codecs.some((codec) => AUDIO_ELEMENT.canPlayType(codec).replace(CodecNotSupportedPattern, ''));
+export const supportsCodec = (...codecs: Array<string>): boolean => codecs.some((codec) => internalAudioElement.canPlayType(codec).replace(codecNotSupportedPattern, ''));
 
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
 
@@ -63,4 +52,15 @@ export const getTextureSourceSize = (source: TextureSource): Size => {
     }
 
     return getCanvasSourceSize(source);
+};
+
+export const canvasSourceToDataURL = (source: CanvasImageSource): string => {
+    const { width, height } = getCanvasSourceSize(source);
+
+    internalCanvasElement.width = width;
+    internalCanvasElement.height = height;
+
+    internalCanvasContext.drawImage(source, 0, 0, width, height);
+
+    return internalCanvasElement.toDataURL();
 };

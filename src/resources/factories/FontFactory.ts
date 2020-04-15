@@ -8,7 +8,7 @@ export interface FontFactoryOptions {
     addToDocument?: boolean;
 }
 
-export default class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> {
+export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> {
 
     public readonly storageName: StorageNames = StorageNames.Font;
 

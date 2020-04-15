@@ -1,4 +1,4 @@
-import Texture from '../../rendering/texture/Texture';
+import { Texture } from '../../rendering/texture/Texture';
 import { SamplerOptions } from "../../rendering/texture/Sampler";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { determineMimeType } from "../../utils/resources";
@@ -9,7 +9,7 @@ interface TextureFactoryOptions {
     samplerOptions?: SamplerOptions;
 }
 
-export default class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture> {
+export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture> {
 
     public readonly storageName: StorageNames = StorageNames.Image;
 

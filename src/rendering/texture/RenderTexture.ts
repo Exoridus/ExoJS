@@ -1,7 +1,7 @@
-import settings from '../../settings';
+import { defaultRenderTextureSamplerOptions } from '../../const/defaults';
 import { isPowerOfTwo } from '../../utils/math';
-import RenderTarget from '../RenderTarget';
-import Flags from '../../math/Flags';
+import { RenderTarget } from '../RenderTarget';
+import { Flags } from '../../math/Flags';
 import { ScaleModes, WrapModes } from "../../const/rendering";
 import { SamplerOptions } from "./Sampler";
 
@@ -13,7 +13,7 @@ enum RenderTextureFlags {
     SIZE = 1 << 4,
 }
 
-export default class RenderTexture extends RenderTarget {
+export class RenderTexture extends RenderTarget {
 
     private _source: DataView | null = null;
     private _texture: WebGLTexture | null = null;
@@ -22,18 +22,18 @@ export default class RenderTexture extends RenderTarget {
     private _premultiplyAlpha: boolean;
     private _generateMipMap: boolean;
     private _flipY: boolean;
-    private _flags: Flags = new Flags();
+    private _flags: Flags<RenderTextureFlags> = new Flags<RenderTextureFlags>();
 
-    constructor(width: number, height: number, options: SamplerOptions = {}) {
+    constructor(width: number, height: number, options?: Partial<SamplerOptions>) {
         super(width, height, false);
 
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...defaultRenderTextureSamplerOptions, ...options };
 
-        this._scaleMode = scaleMode ?? settings.SCALE_MODE;
-        this._wrapMode = wrapMode ?? settings.WRAP_MODE;
-        this._premultiplyAlpha = premultiplyAlpha ?? settings.PREMULTIPLY_ALPHA;
-        this._generateMipMap = generateMipMap ?? settings.GENERATE_MIPMAP;
-        this._flipY = flipY ?? settings.FLIP_Y_RENDER_TEXTURE;
+        this._scaleMode = scaleMode;
+        this._wrapMode = wrapMode;
+        this._premultiplyAlpha = premultiplyAlpha;
+        this._generateMipMap = generateMipMap;
+        this._flipY = flipY;
 
         this._flags.add(
             RenderTextureFlags.SOURCE,

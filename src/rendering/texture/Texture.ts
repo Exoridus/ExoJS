@@ -1,10 +1,10 @@
 import { ScaleModes, WrapModes } from '../../const/rendering';
 import { isPowerOfTwo } from '../../utils/math';
-import settings from '../../settings';
-import Size from '../../math/Size';
-import Flags from '../../math/Flags';
+import { defaultTextureSamplerOptions } from '../../const/defaults';
+import { Size } from '../../math/Size';
+import { Flags } from '../../math/Flags';
 import { createCanvas } from '../../utils/rendering';
-import Sampler, { SamplerOptions } from "./Sampler";
+import { Sampler, SamplerOptions } from "./Sampler";
 import { getTextureSourceSize } from "../../utils/core";
 
 enum TextureFlags {
@@ -17,7 +17,7 @@ enum TextureFlags {
 
 export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | null;
 
-export default class Texture {
+export class Texture {
 
     public static readonly Empty = new Texture(null);
     public static readonly Black = new Texture(createCanvas({ fillStyle: '#000' }));
@@ -30,20 +30,20 @@ export default class Texture {
     private _size: Size = new Size(0, 0);
     private _scaleMode: ScaleModes;
     private _wrapMode: WrapModes;
-    private _premultiplyAlpha: boolean = false;
-    private _generateMipMap: boolean = false;
-    private _flipY: boolean = false;
-    private _flags: Flags = new Flags();
+    private _premultiplyAlpha = false;
+    private _generateMipMap = false;
+    private _flipY = false;
+    private _flags: Flags<TextureFlags> = new Flags<TextureFlags>();
 
-    constructor(source: TextureSource = null, options: SamplerOptions = {}) {
+    constructor(source: TextureSource = null, options?: Partial<SamplerOptions>) {
 
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...defaultTextureSamplerOptions, ...options };
 
-        this._scaleMode = scaleMode ?? settings.SCALE_MODE;
-        this._wrapMode = wrapMode ?? settings.WRAP_MODE;
-        this._premultiplyAlpha = premultiplyAlpha ?? settings.PREMULTIPLY_ALPHA;
-        this._generateMipMap = generateMipMap ?? settings.GENERATE_MIPMAP;
-        this._flipY = flipY ?? settings.FLIP_Y;
+        this._scaleMode = scaleMode;
+        this._wrapMode = wrapMode;
+        this._premultiplyAlpha = premultiplyAlpha;
+        this._generateMipMap = generateMipMap;
+        this._flipY = flipY;
 
         this._flags.add(
             TextureFlags.SCALE_MODE,
