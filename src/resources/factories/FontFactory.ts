@@ -20,7 +20,7 @@ export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> 
         const { family, descriptors, addToDocument } = options;
         const fontFace = await new FontFace(family, source, descriptors).load();
 
-        if (addToDocument) {
+        if (addToDocument !== false) {
             document.fonts.add(fontFace);
         }
 
