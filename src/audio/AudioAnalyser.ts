@@ -1,4 +1,4 @@
-import { IMedia } from "../interfaces";
+import { IMedia } from "../interfaces/IMedia";
 import { audioContext, isAudioContextReady, onAudioContextReady } from "../const/audio-context";
 
 export interface AudioAnalyserOptions {

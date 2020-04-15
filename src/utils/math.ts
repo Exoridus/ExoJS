@@ -1,5 +1,5 @@
-import { RadiansPerDegree, DegreesPerRadian, VoronoiRegion } from '../const';
-import { Vector } from '../math';
+import { RadiansPerDegree, DegreesPerRadian, VoronoiRegion } from '../const/math';
+import { Vector } from '../math/Vector';
 
 export const degreesToRadians = (degree: number): number => degree * RadiansPerDegree;
 

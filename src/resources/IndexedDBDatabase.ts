@@ -1,5 +1,6 @@
-import { ResourceTypes, supportsIndexedDB } from '../const';
-import { IDatabase } from "../interfaces";
+import { ResourceTypes } from '../const/core';
+import { supportsIndexedDB } from '../const/support';
+import { IDatabase } from "../interfaces/IDatabase";
 
 export class IndexedDBDatabase implements IDatabase {
 
