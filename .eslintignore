@@ -2,3 +2,4 @@
 **/*.frag
 dist/*
 scripts/*
+src/vendor/*

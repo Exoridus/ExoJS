@@ -1,3 +1,5 @@
+import WebGLDebugUtils from "vendor/webgl-debug";
+
 import { BlendModes } from 'const/rendering';
 import { RenderTarget } from './RenderTarget';
 import { SpriteRenderer } from './sprite/SpriteRenderer';
@@ -13,6 +15,30 @@ import { RenderTexture } from './texture/RenderTexture';
 import { Drawable } from './Drawable';
 import { View } from './View';
 import { Application } from "core/Application";
+
+const throwOnGLError = (err: number, funcName: string): void => {
+    throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const logGLCall = (functionName: string, args: any): void => {
+    console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const validateNoneOfTheArgsAreUndefined = (functionName: string, args: any): void => {
+    for (const arg of args) {
+        if (arg === undefined) {
+            console.error(`undefined passed to gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
+        }
+    }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const logAndValidate = (functionName: string, args: any): void => {
+    logGLCall(functionName, args);
+    validateNoneOfTheArgsAreUndefined (functionName, args);
+};
 
 export class RenderManager {
 
@@ -36,7 +62,7 @@ export class RenderManager {
     private _cursor: string;
 
     constructor(app: Application) {
-        const { width, height, clearColor, context } = app.config;
+        const { width, height, clearColor, context, debug } = app.config;
 
         this._canvas = app.canvas;
 
@@ -46,14 +72,14 @@ export class RenderManager {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
-        this._context = gl;
-        this._contextLost = gl.isContextLost();
+        this._context = debug ? WebGLDebugUtils.makeDebugContext(gl, throwOnGLError, logAndValidate, gl) as WebGL2RenderingContext : gl;
+        this._contextLost = this._context.isContextLost();
 
         if (this._contextLost) {
             this._restoreContext();
         }
 
-        this._sampler = new Sampler(gl);
+        this._sampler = new Sampler(this._context);
 
         if (clearColor) {
             this.clearColor.copy(clearColor);

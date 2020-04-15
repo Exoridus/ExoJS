@@ -27,7 +27,8 @@ export const defaultApplicationOptions: ApplicationOptions = {
         method: 'GET',
         mode: 'cors',
         cache: 'default',
-    }
+    },
+    debug: false
 };
 
 /**

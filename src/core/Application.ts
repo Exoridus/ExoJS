@@ -17,6 +17,7 @@ export interface ApplicationOptions {
     canvas?: HTMLCanvasElement;
     context: WebGLContextAttributes;
     loader: LoaderOptions;
+    debug: boolean;
 }
 
 export class Application {
