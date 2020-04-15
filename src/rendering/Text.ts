@@ -20,7 +20,7 @@ export class Text extends Sprite {
         super(new Texture(canvas, samplerOptions));
 
         this._text = text;
-        this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
+        this._style = (style && style instanceof TextStyle) ? style : new TextStyle(style);
         this._canvas = canvas;
         this._context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
@@ -109,7 +109,7 @@ export class Text extends Sprite {
                     offset = (style.align === 'right') ? lineWidth : lineWidth / 2,
                     padding = style.padding + (style.strokeThickness / 2),
                     lineX = metrics.actualBoundingBoxLeft + (style.align === 'left' ? 0 : offset) + padding,
-                    lineY = metrics.fontBoundingBoxAscent + (lineHeight * i) + padding;
+                    lineY = metrics.actualBoundingBoxAscent + (lineHeight * i) + padding;
 
                 if (style.stroke && style.strokeThickness) {
                     context.strokeText(lines[i], lineX, lineY);
@@ -170,7 +170,6 @@ export class Text extends Sprite {
     render(renderManager: RenderManager): this {
         if (this.visible) {
             this.updateTexture();
-
             super.render(renderManager);
         }
 

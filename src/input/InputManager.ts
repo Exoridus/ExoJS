@@ -24,7 +24,7 @@ enum InputManagerFlags {
 }
 
 type PointerMapping = { [pointerId: number]: Pointer };
-type GamepadMapping = { readonly [index: number]: GamepadProvider };
+type GamepadList = { readonly [index: number]: GamepadProvider };
 
 export class InputManager {
 
@@ -32,7 +32,7 @@ export class InputManager {
     private _channels: Float32Array = new Float32Array(CHANNEL_RANGE.GLOBAL);
     private _inputs: Set<Input> = new Set();
     private _pointers: PointerMapping = {};
-    private _gamepads: GamepadMapping = {
+    private _gamepads: GamepadList = {
         0: new GamepadProvider(0, this._channels),
         1: new GamepadProvider(1, this._channels),
         2: new GamepadProvider(2, this._channels),
@@ -103,7 +103,7 @@ export class InputManager {
         return this._pointers;
     }
 
-    public get gamepads(): GamepadMapping {
+    public get gamepads(): GamepadList {
         return this._gamepads;
     }
 

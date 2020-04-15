@@ -10,8 +10,7 @@ export class ShaderAttribute {
     public readonly type: number;
     public readonly size: number;
 
-    constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number) {
-        const { name, type } = gl.getActiveAttrib(program, index)!; // todo - check if NNAO should be removed
+    constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, name: string, type: number) {
         const location = gl.getAttribLocation(program, name);
 
         this._context = gl;

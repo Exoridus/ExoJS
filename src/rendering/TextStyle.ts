@@ -35,7 +35,7 @@ export class TextStyle {
         this._align = options.align ?? 'left';
         this._fill = options.fill ?? 'black';
         this._stroke = options.stroke ?? 'black';
-        this._strokeThickness = options.strokeThickness ?? 0;
+        this._strokeThickness = options.strokeThickness ?? 1;
         this._fontSize = options.fontSize ?? 20;
         this._fontWeight = options.fontWeight ?? 'bold';
         this._fontFamily = options.fontFamily ?? 'Arial';

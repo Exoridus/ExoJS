@@ -1,7 +1,7 @@
 import { ShaderAttribute } from './ShaderAttribute';
 import { ShaderUniform } from './ShaderUniform';
 import { ShaderBlock } from './ShaderBlock';
-import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from '../../const/rendering';
+import { PrimitiveArrayConstructors, primitiveByteSizeMapping, PrimitiveTypeNames } from '../../const/rendering';
 
 export class Shader {
 
@@ -202,9 +202,26 @@ export class Shader {
         const activeAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
         for (let i = 0; i < activeAttributes; i++) {
-            const { name } = gl.getActiveAttrib(program, i)!;
+            const { name, type } = gl.getActiveAttrib(program, i)!;
 
-            this.attributes.set(name, new ShaderAttribute(gl, program, i));
+            this.attributes.set(name, new ShaderAttribute(gl, program, i, name, type));
+        }
+    }
+
+    _extractUniforms() {
+        const gl = this._context!;
+        const program = this._program!;
+        const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+        const activeIndices = new Uint8Array(activeCount).map((value, index) => index);
+        const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX);
+        const indices = activeIndices.filter((index) => (blocks[index] === -1));
+
+        for (const index of indices) {
+            const { type, size, name } = gl.getActiveUniform(program, index)!;
+            const data = new PrimitiveArrayConstructors[type](primitiveByteSizeMapping[type] * size);
+            const uniform = new ShaderUniform(gl, program, index, type, size, name, data);
+
+            this.uniforms.set(uniform.name, uniform);
         }
     }
 
@@ -217,25 +234,6 @@ export class Shader {
             const uniformBlock = new ShaderBlock(gl, program, index);
 
             this.uniformBlocks.set(uniformBlock.name, uniformBlock);
-        }
-    }
-
-    _extractUniforms() {
-        const gl = this._context!;
-        const program = this._program!;
-        const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-        const activeIndices = new Uint8Array(activeCount).map((value, index) => index);
-        const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX);
-        const indices = activeIndices.filter((index) => (blocks[index] === -1));
-        const len = indices.length;
-
-        for (let i = 0; i < len; i++) {
-            const index = indices[i];
-            const { type, size, name } = gl.getActiveUniform(program, index)!;
-            const data = new PrimitiveArrayConstructors[type](primitiveByteSizeMapping[type] * size);
-            const uniform = new ShaderUniform(gl, program, index, type, size, name, data);
-
-            this.uniforms.set(uniform.name, uniform);
         }
     }
 }

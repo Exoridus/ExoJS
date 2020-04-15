@@ -147,7 +147,7 @@ export const PrimitiveUploadFunctions: { [key: number]: PrimitiveUploadFunction 
     [ShaderPrimitives.FLOAT_MAT3]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniformMatrix3fv(location, false, value),
     [ShaderPrimitives.FLOAT_MAT4]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniformMatrix4fv(location, false, value),
 
-    [ShaderPrimitives.SAMPLER_2D]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniform1f(location, value[0]),
+    [ShaderPrimitives.SAMPLER_2D]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniform1i(location, value[0]),
 };
 
 export const PrimitiveTypeNames: { [key: number]: string } = {

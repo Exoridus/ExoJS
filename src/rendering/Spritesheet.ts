@@ -16,29 +16,17 @@ export interface SpritesheetData {
 }
 
 export class Spritesheet {
-    private _texture: Texture;
-    private _frames = new Map<string, Rectangle>();
-    private _sprites = new Map<string, Sprite>();
+    public readonly texture: Texture;
+    public readonly frames = new Map<string, Rectangle>();
+    public readonly sprites = new Map<string, Sprite>();
 
     constructor(texture: Texture, data: SpritesheetData) {
-        this._texture = texture;
+        this.texture = texture;
 
         this.parse(data);
     }
 
-    get texture() {
-        return this._texture;
-    }
-
-    get frames() {
-        return this._frames;
-    }
-
-    get sprites() {
-        return this._sprites;
-    }
-
-    parse(data: SpritesheetData, keepFrames = false) {
+    public parse(data: SpritesheetData, keepFrames = false): void {
         if (!keepFrames) {
             this.clear();
         }
@@ -46,33 +34,41 @@ export class Spritesheet {
         for (const [name, frame] of Object.entries(data.frames)) {
             this.addFrame(name, frame);
         }
-
-        return this;
     }
 
-    addFrame(name: string, data: SpritesheetFrame) {
+    public addFrame(name: string, data: SpritesheetFrame): void {
         const { x, y, w, h } = data.frame;
         const frame = new Rectangle(x, y, w, h);
-        const sprite = new Sprite(this._texture);
+        const sprite = new Sprite(this.texture);
 
         sprite.setTextureFrame(frame);
 
-        this._frames.set(name, frame);
-        this._sprites.set(name, sprite);
+        this.frames.set(name, frame);
+        this.sprites.set(name, sprite);
+    }
+
+    public getFrameSprite(name: string): Sprite {
+        const sprite = this.sprites.get(name);
+
+        if (!sprite) {
+            throw new Error(`Spritesheet frame named ${name} is not available!`);
+        }
+
+        return sprite;
     }
 
     clear(): this {
-        for (const frame of this._frames.values()) {
+        for (const frame of this.frames.values()) {
             frame.destroy();
         }
 
-        this._frames.clear();
+        this.frames.clear();
 
-        for (const sprite of this._sprites.values()) {
+        for (const sprite of this.sprites.values()) {
             sprite.destroy();
         }
 
-        this._sprites.clear();
+        this.sprites.clear();
 
         return this;
     }

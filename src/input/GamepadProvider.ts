@@ -1,7 +1,12 @@
 import { GamepadMapping } from './GamepadMapping';
 import { defaultGamepadMapping } from "const/defaults";
+import { Signal } from "core/Signal";
 
 export class GamepadProvider {
+
+    public readonly onConnect = new Signal();
+    public readonly onDisconnect = new Signal();
+    public readonly onUpdate = new Signal();
 
     private readonly _index: number;
     private readonly _channels: Float32Array;
@@ -41,6 +46,7 @@ export class GamepadProvider {
     connect(gamepad: Gamepad): this {
         if (!this.connected) {
             this._gamepad = gamepad;
+            this.onConnect.dispatch();
         }
 
         return this;
@@ -49,6 +55,7 @@ export class GamepadProvider {
     disconnect(): this {
         if (this.connected) {
             this._gamepad = null;
+            this.onDisconnect.dispatch();
         }
 
         return this;
@@ -71,6 +78,7 @@ export class GamepadProvider {
 
                 if (channels[channel] !== value) {
                     channels[channel] = value;
+                    this.onUpdate.dispatch(channel, value, this);
                 }
             }
         }
@@ -83,6 +91,7 @@ export class GamepadProvider {
 
                 if (channels[channel] !== value) {
                     channels[channel] = value;
+                    this.onUpdate.dispatch(channel, value, this);
                 }
             }
         }
@@ -90,7 +99,11 @@ export class GamepadProvider {
         return this;
     }
 
-    destroy() {
+    public destroy(): void {
         this.disconnect();
+
+        this.onConnect.destroy();
+        this.onDisconnect.destroy();
+        this.onUpdate.destroy();
     }
 }
