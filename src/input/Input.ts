@@ -54,7 +54,7 @@ export class Input {
     }
 
     public update(channels: Float32Array): this {
-        this._value = 0;
+        this._value = Math.max(0);
 
         for (const channel of this._channels) {
             this._value = Math.max(channels[channel], this._value);
@@ -70,7 +70,7 @@ export class Input {
         } else if (this._triggerTimer.running) {
             this.onStop.dispatch(this._value);
 
-            if (this._triggerTimer.expired) {
+            if (!this._triggerTimer.expired) {
                 this.onTrigger.dispatch(this._value);
             }
 

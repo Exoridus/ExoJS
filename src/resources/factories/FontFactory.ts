@@ -16,7 +16,7 @@ export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> 
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: FontFactoryOptions) {
+    async create(source: ArrayBuffer, options: FontFactoryOptions): Promise<FontFace> {
         const { family, descriptors, addToDocument } = options;
         const fontFace = await new FontFace(family, source, descriptors).load();
 

@@ -1,13 +1,12 @@
 import { supportsEventOptions } from "./support";
+import { Random } from "math/Random";
 
 export const internalAudioElement = document.createElement('audio') as HTMLAudioElement;
-
 export const internalCanvasElement = document.createElement('canvas') as HTMLCanvasElement;
-
 export const internalCanvasContext = internalCanvasElement.getContext('2d') as CanvasRenderingContext2D;
+export const internalRandom = new Random();
 
 export const codecNotSupportedPattern = /^no$/;
-
 export const emptyArrayBuffer = new ArrayBuffer(0);
 
 export const activeListenerOption: AddEventListenerOptions | boolean = supportsEventOptions ? { capture: true, passive: false } : true;

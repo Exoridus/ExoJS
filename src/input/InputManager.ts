@@ -24,7 +24,6 @@ enum InputManagerFlags {
 }
 
 type PointerMapping = { [pointerId: number]: Pointer };
-type GamepadList = { readonly [index: number]: GamepadProvider };
 
 export class InputManager {
 
@@ -32,12 +31,12 @@ export class InputManager {
     private _channels: Float32Array = new Float32Array(CHANNEL_RANGE.GLOBAL);
     private _inputs: Set<Input> = new Set();
     private _pointers: PointerMapping = {};
-    private _gamepads: GamepadList = {
-        0: new GamepadProvider(0, this._channels),
-        1: new GamepadProvider(1, this._channels),
-        2: new GamepadProvider(2, this._channels),
-        3: new GamepadProvider(3, this._channels),
-    };
+    private _gamepads: Array<GamepadProvider> = [
+        new GamepadProvider(0, this._channels),
+        new GamepadProvider(1, this._channels),
+        new GamepadProvider(2, this._channels),
+        new GamepadProvider(3, this._channels),
+    ];
     private _wheelOffset: Vector = new Vector();
     private _flags: Flags<InputManagerFlags> = new Flags<InputManagerFlags>();
 
@@ -81,9 +80,10 @@ export class InputManager {
         this._app = app;
 
         const canvas = app.canvas;
+        const realWindow = window.parent || window;
 
-        window.addEventListener('keydown', this._keyDownHandler, true);
-        window.addEventListener('keyup', this._keyUpHandler, true);
+        realWindow.addEventListener('keydown', this._keyDownHandler, true);
+        realWindow.addEventListener('keyup', this._keyUpHandler, true);
         canvas.addEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
         canvas.addEventListener('pointerover', this._pointerEnterHandler, passiveListenerOption);
         canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
@@ -103,7 +103,7 @@ export class InputManager {
         return this._pointers;
     }
 
-    public get gamepads(): GamepadList {
+    public get gamepads(): Array<GamepadProvider> {
         return this._gamepads;
     }
 
@@ -161,9 +161,10 @@ export class InputManager {
 
     public destroy(): void {
         const canvas = this._app.canvas;
+        const realWindow = window.parent || window;
 
-        window.removeEventListener('keydown', this._keyDownHandler, true);
-        window.removeEventListener('keyup', this._keyUpHandler, true);
+        realWindow.removeEventListener('keydown', this._keyDownHandler, true);
+        realWindow.removeEventListener('keyup', this._keyUpHandler, true);
         canvas.removeEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
         canvas.removeEventListener('pointerover', this._pointerEnterHandler, passiveListenerOption);
         canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
@@ -178,7 +179,7 @@ export class InputManager {
             pointer.destroy();
         }
 
-        for (const gamepad of Object.values(this._gamepads)) {
+        for (const gamepad of this._gamepads) {
             gamepad.destroy();
         }
 
@@ -210,7 +211,7 @@ export class InputManager {
         this.onGamepadUpdated.destroy();
     }
 
-    private _keyDown(event: KeyboardEvent) {
+    private _keyDown(event: KeyboardEvent): void {
         const channel = (CHANNEL_OFFSET.KEYBOARD + event.keyCode);
 
         this._channels[channel] = 1;
@@ -218,7 +219,7 @@ export class InputManager {
         this._flags.add(InputManagerFlags.KEY_DOWN);
     }
 
-    private _keyUp(event: KeyboardEvent) {
+    private _keyUp(event: KeyboardEvent): void {
         const channel = (CHANNEL_OFFSET.KEYBOARD + event.keyCode);
 
         this._channels[channel] = 0;
@@ -226,7 +227,7 @@ export class InputManager {
         this._flags.add(InputManagerFlags.KEY_UP);
     }
 
-    private _pointerEnter(event: PointerEvent) {
+    private _pointerEnter(event: PointerEvent): void {
         const pointer = new Pointer(event);
 
         this._pointers[pointer.id] = pointer;
@@ -234,7 +235,7 @@ export class InputManager {
         this._flags.add(InputManagerFlags.POINTER_ENTER);
     }
 
-    private _pointerLeave(event: PointerEvent) {
+    private _pointerLeave(event: PointerEvent): void {
         const pointer = this._pointers[event.pointerId].update(event);
 
         delete this._pointers[pointer.id];
@@ -242,7 +243,7 @@ export class InputManager {
         this._flags.add(InputManagerFlags.POINTER_LEAVE);
     }
 
-    private _pointerDown(event: PointerEvent) {
+    private _pointerDown(event: PointerEvent): void {
         const pointer = this._pointers[event.pointerId].update(event);
 
         pointer.startPos.copy(pointer.position);
@@ -252,14 +253,14 @@ export class InputManager {
         event.preventDefault();
     }
 
-    private _pointerMove(event: PointerEvent) {
+    private _pointerMove(event: PointerEvent): void {
         const pointer = this._pointers[event.pointerId].update(event);
 
         this._pointersMoved.push(pointer);
         this._flags.add(InputManagerFlags.POINTER_MOVE);
     }
 
-    private _pointerUp(event: PointerEvent) {
+    private _pointerUp(event: PointerEvent): void {
         const pointer = this._pointers[event.pointerId].update(event);
 
         this._pointersReleased.push(pointer);
@@ -268,7 +269,7 @@ export class InputManager {
         event.preventDefault();
     }
 
-    private _pointerCancel(event: PointerEvent) {
+    private _pointerCancel(event: PointerEvent): void {
         const pointer = this._pointers[event.pointerId].update(event);
 
         this._pointersCancelled.push(pointer);
@@ -283,7 +284,7 @@ export class InputManager {
     private _updateGamepads(): this {
         const activeGamepads = window.navigator.getGamepads();
 
-        for (const gamepad of Object.values(this._gamepads)) {
+        for (const gamepad of this._gamepads) {
             const activeGamepad = activeGamepads[gamepad.index];
 
             if (!!activeGamepad !== gamepad.connected) {
@@ -294,7 +295,9 @@ export class InputManager {
                 }
             }
 
-            this.onGamepadUpdated.dispatch(gamepad.update(), this._gamepads);
+            gamepad.update();
+
+            this.onGamepadUpdated.dispatch(gamepad, this._gamepads);
         }
 
         return this;

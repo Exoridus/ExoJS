@@ -1,5 +1,6 @@
 import { RadiansPerDegree, DegreesPerRadian, VoronoiRegion } from 'const/math';
 import { Vector } from 'math/Vector';
+import { internalRandom } from "const/core";
 
 export const degreesToRadians = (degree: number): number => degree * RadiansPerDegree;
 
@@ -94,3 +95,5 @@ export const getVoronoiRegion = (line: Vector, point: Vector): number => {
         return VoronoiRegion.MIDDLE;
     }
 };
+
+export const getRandomNumber = (min?: number, max?: number): number => internalRandom.next(min, max);
