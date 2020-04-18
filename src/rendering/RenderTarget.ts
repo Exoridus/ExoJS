@@ -148,7 +148,7 @@ export class RenderTarget {
 
     public mapCoordsToPixel(point: Vector, view: View = this._view): Vector {
         const viewport = this.getViewport(view);
-        const normalized = point.transform(view.getTransform(), new Vector());
+        const normalized = point.clone().transform(view.getTransform());
 
         return normalized.set(
             ((( normalized.x + 1) / 2 * viewport.width) + viewport.left) | 0,

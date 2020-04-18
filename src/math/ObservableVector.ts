@@ -1,15 +1,18 @@
-import { Vector } from './Vector';
+import { AbstractVector } from './Vector';
+import { Cloneable } from "const/types";
 
-export class ObservableVector extends Vector {
+export class ObservableVector extends AbstractVector implements Cloneable<ObservableVector> {
 
+    private _x: number;
+    private _y: number;
     private readonly _callback: () => void;
-    private readonly _context: object;
 
-    public constructor(callback: () => void, context?: object, x = 0, y = 0) {
-        super(x, y);
+    public constructor(callback: () => void, x = 0, y = 0) {
+        super();
 
+        this._x = x;
+        this._y = y;
         this._callback = callback;
-        this._context = context ?? this;
     }
 
     public get x(): number {
@@ -19,7 +22,7 @@ export class ObservableVector extends Vector {
     public set x(x: number) {
         if (this._x !== x) {
             this._x = x;
-            this._callback.call(this._context);
+            this._callback?.();
         }
     }
 
@@ -30,15 +33,27 @@ export class ObservableVector extends Vector {
     public set y(y: number) {
         if (this._y !== y) {
             this._y = y;
-            this._callback.call(this._context);
+            this._callback?.();
         }
+    }
+
+    public set direction(angle: number) {
+        const length = this.length;
+
+        this.set(Math.cos(angle) * length, Math.sin(angle) * length);
+    }
+
+    public set length(magnitude: number) {
+        const direction = this.direction;
+
+        this.set(Math.cos(direction) * magnitude, Math.sin(direction) * magnitude);
     }
 
     public set(x: number = this._x, y: number = this._y): this {
         if (this._x !== x || this._y !== y) {
             this._x = x;
             this._y = y;
-            this._callback.call(this._context);
+            this._callback?.();
         }
 
         return this;
@@ -57,14 +72,22 @@ export class ObservableVector extends Vector {
     }
 
     public divide(x: number, y: number = x): this {
-        return this.set(this._x / x, this._y / y);
-    }
+        if (x !== 0 && y !== 0) {
+            return this.set(this._x / x, this._y / y);
+        }
 
-    public copy(vector: Vector | ObservableVector): this {
-        return this.set(vector.x, vector.y);
+        return this;
     }
 
     public clone(): ObservableVector {
-        return new ObservableVector(this._callback, this._context, this._x, this._y);
+        return new ObservableVector(this._callback, this._x, this._y);
+    }
+
+    public copy(vector: ObservableVector): this {
+        return this.set(vector.x, vector.y);
+    }
+
+    public destroy<T = ObservableVector>(): void {
+        // todo - check if destroy is needed
     }
 }

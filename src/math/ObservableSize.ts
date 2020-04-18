@@ -3,13 +3,11 @@ import { Size } from './Size';
 export class ObservableSize extends Size {
 
     private readonly _callback: () => void;
-    private readonly _context: object;
 
-    public constructor(callback: () => void, context?: object, width = 0, height = 0) {
+    public constructor(callback: () => void, width = 0, height = 0) {
         super(width, height);
 
         this._callback = callback;
-        this._context = context ?? this;
     }
 
     public get width(): number {
@@ -19,7 +17,7 @@ export class ObservableSize extends Size {
     public set width(width: number) {
         if (this._width !== width) {
             this._width = width;
-            this._callback.call(this._context);
+            this._callback();
         }
     }
 
@@ -30,7 +28,7 @@ export class ObservableSize extends Size {
     public set height(height: number) {
         if (this._height !== height) {
             this._height = height;
-            this._callback.call(this._context);
+            this._callback();
         }
     }
 
@@ -38,7 +36,7 @@ export class ObservableSize extends Size {
         if (this._width !== width || this._height !== height) {
             this._width = width;
             this._height = height;
-            this._callback.call(this._context);
+            this._callback();
         }
 
         return this;
@@ -65,6 +63,6 @@ export class ObservableSize extends Size {
     }
 
     public clone(): ObservableSize {
-        return new ObservableSize(this._callback, this._context, this._width, this._height);
+        return new ObservableSize(this._callback, this._width, this._height);
     }
 }

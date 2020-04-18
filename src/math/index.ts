@@ -11,3 +11,4 @@ export * from './Segment';
 export * from './Size';
 export * from './Transformable';
 export * from './Vector';
+export * from './PolarVector';

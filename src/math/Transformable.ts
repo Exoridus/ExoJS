@@ -21,9 +21,9 @@ export class Transformable {
     public readonly flags: Flags<TransformableFlags> = new Flags<TransformableFlags>(TransformableFlags.TRANSFORM);
 
     protected _transform: Matrix = new Matrix();
-    protected _position: ObservableVector = new ObservableVector(this._setPositionDirty, this, 0, 0);
-    protected _scale: ObservableVector = new ObservableVector(this._setScalingDirty, this, 1, 1);
-    protected _origin: ObservableVector = new ObservableVector(this._setOriginDirty, this, 0, 0);
+    protected _position: ObservableVector = new ObservableVector(this._setPositionDirty.bind(this), 0, 0);
+    protected _scale: ObservableVector = new ObservableVector(this._setScalingDirty.bind(this), 1, 1);
+    protected _origin: ObservableVector = new ObservableVector(this._setOriginDirty.bind(this), 0, 0);
     protected _rotation = 0;
     protected _sin = 0;
     protected _cos = 1;

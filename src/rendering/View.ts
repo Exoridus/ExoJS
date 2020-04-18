@@ -34,8 +34,8 @@ export class View {
     private _updateId = 0;
 
     constructor(centerX: number, centerY: number, width: number, height: number) {
-        this._center = new ObservableVector(this._setPositionDirty, this, centerX, centerY);
-        this._size = new ObservableSize(this._setScalingDirty, this, width, height);
+        this._center = new ObservableVector(this._setPositionDirty.bind(this), centerX, centerY);
+        this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
         this._flags.add(
             ViewFlags.TRANSFORM,
             ViewFlags.TRANSFORM_INV,

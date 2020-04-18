@@ -18,7 +18,7 @@ export class SceneNode extends Transformable implements Collidable {
     private _globalTransform = new Matrix();
     private _localBounds = new Rectangle();
     protected _bounds = new Bounds();
-    private _anchor = new ObservableVector(this._updateOrigin, this, 0, 0);
+    private _anchor = new ObservableVector(this._updateOrigin.bind(this), 0, 0);
     private _parent: Container | null = null;
 
     public get anchor(): ObservableVector {

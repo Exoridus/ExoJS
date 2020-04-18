@@ -11,3 +11,8 @@ export interface PlaybackOptions {
 export type TypedEnum<Enum, Type> = { [Key in keyof Enum]: Type };
 
 export type ValueOf<T> = T[keyof T];
+
+export interface Cloneable<T> {
+    clone(): T;
+    copy(source: T): this;
+}
