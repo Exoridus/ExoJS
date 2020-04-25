@@ -2,23 +2,22 @@ import { clamp } from 'utils/math';
 import { Sprite } from './sprite/Sprite';
 import { Texture } from './texture/Texture';
 import { Signal } from 'core/Signal';
-import { PlaybackOptions } from "const/types";
+import { PlaybackOptions } from "types/types";
 import { RenderManager } from './RenderManager';
 import { SamplerOptions } from "./texture/Sampler";
-import { IMedia } from "interfaces/IMedia";
-import { audioContext, isAudioContextReady, onAudioContextReady } from "const/audio-context";
+import { MediaInterface } from "types/MediaInterface";
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
-export class Video extends Sprite implements IMedia {
+export class Video extends Sprite implements MediaInterface {
 
     public readonly onStart = new Signal();
     public readonly onStop = new Signal();
 
     private readonly _videoElement: HTMLVideoElement;
     private readonly _duration: number;
-    private readonly _setupAudioContextHandler: (audioContext: AudioContext) => void = this.setupWithAudioContext.bind(this);
     private _audioContext: AudioContext | null = null;
     private _volume = 1;
-    private _speed = 1;
+    private _playbackRate = 1;
     private _loop = false;
     private _muted = false;
     private _gainNode: GainNode | null = null;
@@ -32,7 +31,7 @@ export class Video extends Sprite implements IMedia {
         this._videoElement = videoElement;
         this._duration = duration;
         this._volume = volume;
-        this._speed = playbackRate;
+        this._playbackRate = playbackRate;
         this._loop = loop;
         this._muted = muted;
 
@@ -41,9 +40,9 @@ export class Video extends Sprite implements IMedia {
         }
 
         if (isAudioContextReady()) {
-            this._setupAudioContextHandler(audioContext!);
+            this.setupWithAudioContext(getAudioContext());
         } else {
-            onAudioContextReady.once(this._setupAudioContextHandler);
+            onAudioContextReady.once(this.setupWithAudioContext, this);
         }
     }
 
@@ -78,12 +77,12 @@ export class Video extends Sprite implements IMedia {
         this.setLoop(loop);
     }
 
-    get speed() {
-        return this._speed;
+    get playbackRate() {
+        return this._playbackRate;
     }
 
-    set speed(value) {
-        this.setSpeed(value);
+    set playbackRate(value) {
+        this.setPlaybackRate(value);
     }
 
     get currentTime() {
@@ -168,7 +167,7 @@ export class Video extends Sprite implements IMedia {
     }
 
     applyOptions(options: Partial<PlaybackOptions> = {}) {
-        const { volume, loop, speed, time, muted } = options;
+        const { volume, loop, playbackRate, time, muted } = options;
 
         if (volume !== undefined) {
             this.volume = volume;
@@ -178,8 +177,8 @@ export class Video extends Sprite implements IMedia {
             this.loop = loop;
         }
 
-        if (speed !== undefined) {
-            this.speed = speed;
+        if (playbackRate !== undefined) {
+            this.playbackRate = playbackRate;
         }
 
         if (time !== undefined) {
@@ -218,12 +217,12 @@ export class Video extends Sprite implements IMedia {
         return this;
     }
 
-    setSpeed(value: number): this {
-        const speed = clamp(value, 0.1, 20);
+    setPlaybackRate(value: number): this {
+        const playbackRate = clamp(value, 0.1, 20);
 
-        if (this._speed !== speed) {
-            this._speed = speed;
-            this._videoElement.playbackRate = speed;
+        if (this._playbackRate !== playbackRate) {
+            this._playbackRate = playbackRate;
+            this._videoElement.playbackRate = playbackRate;
         }
 
         return this;
@@ -263,7 +262,7 @@ export class Video extends Sprite implements IMedia {
         super.destroy();
         this.stop();
 
-        onAudioContextReady.remove(this.setupWithAudioContext, this);
+        onAudioContextReady.clearByContext(this);
 
         this._sourceNode?.disconnect();
         this._sourceNode = null;

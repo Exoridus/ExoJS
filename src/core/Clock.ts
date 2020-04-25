@@ -1,16 +1,14 @@
-import { TimeInterval } from 'const/core';
 import { Time } from './Time';
 import { getPreciseTime } from 'utils/core';
 
 export class Clock {
 
-    private _startTime: number;
-    private _time: Time = new Time();
+    private _startTime: Time;
+    private _elapsedTime: Time = new Time(0);
     private _running = false;
 
-    public constructor({ start = 0, factor = TimeInterval.MILLISECONDS, autoStart = false } = {}) {
-
-        this._startTime = (start * factor);
+    public constructor(startTime: Time = Time.Zero, autoStart = false) {
+        this._startTime = startTime.clone();
 
         if (autoStart) {
             this.start();
@@ -21,23 +19,15 @@ export class Clock {
         return this._running;
     }
 
-    public get time(): Time {
-        return this._time;
-    }
-
-    public get startTime(): number {
-        return this._startTime;
-    }
-
     public get elapsedTime(): Time {
         if (this._running) {
             const now = getPreciseTime();
 
-            this._time.add(now - this._startTime);
-            this._startTime = now;
+            this._elapsedTime.add(now - this._startTime.milliseconds);
+            this._startTime.milliseconds = now;
         }
 
-        return this._time;
+        return this._elapsedTime;
     }
 
     public get elapsedMilliseconds(): number {
@@ -59,7 +49,7 @@ export class Clock {
     public start(): this {
         if (!this._running) {
             this._running = true;
-            this._startTime = getPreciseTime();
+            this._startTime.milliseconds = getPreciseTime();
         }
 
         return this;
@@ -68,7 +58,7 @@ export class Clock {
     public stop(): this {
         if (this._running) {
             this._running = false;
-            this._time.add(getPreciseTime() - this._startTime);
+            this._elapsedTime.add(getPreciseTime() - this._startTime.milliseconds);
         }
 
         return this;
@@ -76,7 +66,7 @@ export class Clock {
 
     public reset(): this {
         this._running = false;
-        this._time.setMilliseconds(0);
+        this._elapsedTime.setMilliseconds(0);
 
         return this;
     }
@@ -89,6 +79,7 @@ export class Clock {
     }
 
     public destroy() {
-        this._time.destroy();
+        this._startTime.destroy();
+        this._elapsedTime.destroy();
     }
 }

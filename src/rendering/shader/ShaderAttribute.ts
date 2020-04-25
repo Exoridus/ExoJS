@@ -1,4 +1,4 @@
-import { primitiveByteSizeMapping } from '../../const/rendering';
+import { primitiveByteSizeMapping } from '../../types/rendering';
 
 export class ShaderAttribute {
 

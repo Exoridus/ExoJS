@@ -1,3 +1,4 @@
+export * from './Vector';
 export * from './Circle';
 export * from './Flags';
 export * from './Interval';
@@ -10,5 +11,4 @@ export * from './Rectangle';
 export * from './Segment';
 export * from './Size';
 export * from './Transformable';
-export * from './Vector';
 export * from './PolarVector';

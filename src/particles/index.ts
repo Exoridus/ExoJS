@@ -1,14 +1,14 @@
 export * from './affectors/ColorAffector';
 export * from './affectors/ForceAffector';
-export * from './affectors/IParticleAffector';
+export * from 'particles/affectors/ParticleAffectorInterface';
 export * from './affectors/ScaleAffector';
 export * from './affectors/TorqueAffector';
 
-export * from './emitters/IParticleEmitter';
+export * from 'particles/emitters/ParticleEmitterInterface';
 export * from './emitters/ParticleOptions';
 export * from './emitters/UniversalEmitter';
 
-export * from './IParticleProps';
+export * from 'particles/ParticleProperties';
 export * from './Particle';
 export * from './ParticleRenderer';
 export * from './ParticleSystem';

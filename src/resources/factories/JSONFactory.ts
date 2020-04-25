@@ -1,5 +1,5 @@
 import { AbstractResourceFactory } from './AbstractResourceFactory';
-import { StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 
 export class JSONFactory extends AbstractResourceFactory<object, object> {
 

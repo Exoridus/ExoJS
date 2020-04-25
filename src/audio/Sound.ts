@@ -1,11 +1,10 @@
 import { clamp } from 'utils/math';
-import { PlaybackOptions } from "const/types";
-import { AbstractMedia } from "interfaces/AbstractMedia";
-import { audioContext, isAudioContextReady, onAudioContextReady } from "const/audio-context";
+import { PlaybackOptions } from "types/types";
+import { AbstractMedia } from "types/AbstractMedia";
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
 export class Sound extends AbstractMedia {
     private readonly _audioBuffer: AudioBuffer;
-    private readonly _setupAudioContextHandler: (audioContext: AudioContext) => void = this.setupWithAudioContext.bind(this);
     private _gainNode: GainNode | null = null;
     private _paused = true;
     private _startTime = 0;
@@ -33,7 +32,13 @@ export class Sound extends AbstractMedia {
     }
 
     constructor(audioBuffer: AudioBuffer, options?: Partial<PlaybackOptions>) {
-        super({ duration: audioBuffer.duration });
+        super({
+            duration: audioBuffer.duration,
+            volume: 1,
+            playbackRate: 1,
+            loop: false,
+            muted: false,
+        });
 
         this._audioBuffer = audioBuffer;
 
@@ -42,9 +47,9 @@ export class Sound extends AbstractMedia {
         }
 
         if (isAudioContextReady()) {
-            this._setupAudioContextHandler(audioContext!);
+            this.setupWithAudioContext(getAudioContext());
         } else {
-            onAudioContextReady.once(this._setupAudioContextHandler);
+            onAudioContextReady.once(this.setupWithAudioContext, this);
         }
     }
 
@@ -74,11 +79,11 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
-    public setSpeed(value: number): this {
-        this._speed = clamp(value, 0.1, 20);
+    public setPlaybackRate(value: number): this {
+        this._playbackRate = clamp(value, 0.1, 20);
 
         if (this._sourceNode) {
-            this._sourceNode.playbackRate.value = this._speed;
+            this._sourceNode.playbackRate.value = this._playbackRate;
         }
 
         return this;
@@ -172,7 +177,7 @@ export class Sound extends AbstractMedia {
     public destroy(): void {
         super.destroy();
 
-        onAudioContextReady.remove(this.setupWithAudioContext, this);
+        onAudioContextReady.clearByContext(this);
 
         this._gainNode?.disconnect();
         this._sourceNode?.disconnect();
@@ -182,7 +187,7 @@ export class Sound extends AbstractMedia {
         this._sourceNode = audioContext.createBufferSource();
         this._sourceNode.buffer = this._audioBuffer;
         this._sourceNode.loop = this.loop;
-        this._sourceNode.playbackRate.value = this.speed;
+        this._sourceNode.playbackRate.value = this.playbackRate;
         this._sourceNode.connect(this._gainNode!);
         this._sourceNode.start(0, this._currentTime);
         this._startTime = audioContext.currentTime;

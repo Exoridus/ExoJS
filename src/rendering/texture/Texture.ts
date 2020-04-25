@@ -1,23 +1,30 @@
-import { ScaleModes, WrapModes } from 'const/rendering';
+import { ScaleModes, WrapModes } from 'types/rendering';
 import { isPowerOfTwo } from 'utils/math';
-import { defaultTextureSamplerOptions } from 'const/defaults';
 import { Size } from 'math/Size';
 import { Flags } from 'math/Flags';
 import { createCanvas } from 'utils/rendering';
-import { Sampler, SamplerOptions } from "./Sampler";
+import { SamplerOptions } from "./Sampler";
 import { getTextureSourceSize } from "utils/core";
+import { TextureSource } from "types/types";
 
 enum TextureFlags {
-    SCALE_MODE = 1 << 0,
-    WRAP_MODE = 1 << 1,
-    PREMULTIPLY_ALPHA = 1 << 2,
-    SOURCE = 1 << 3,
-    SIZE = 1 << 4,
+    None = 0,
+    ScaleModeDirty = 1 << 0,
+    WrapModeDirty = 1 << 1,
+    PremultiplyAlphaDirty = 1 << 2,
+    SourceDirty = 1 << 3,
+    SizeDirty = 1 << 4,
 }
 
-export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | null;
-
 export class Texture {
+
+    public static DefaultSamplerOptions: SamplerOptions = {
+        scaleMode: ScaleModes.LINEAR,
+        wrapMode: WrapModes.CLAMP_TO_EDGE,
+        premultiplyAlpha: true,
+        generateMipMap: true,
+        flipY: false,
+    };
 
     public static readonly Empty = new Texture(null);
     public static readonly Black = new Texture(createCanvas({ fillStyle: '#000' }));
@@ -26,7 +33,6 @@ export class Texture {
     private _context: WebGL2RenderingContext | null = null;
     private _source: TextureSource = null;
     private _texture: WebGLTexture | null = null;
-    private _sampler: Sampler | null = null;
     private _size: Size = new Size(0, 0);
     private _scaleMode: ScaleModes;
     private _wrapMode: WrapModes;
@@ -37,7 +43,7 @@ export class Texture {
 
     constructor(source: TextureSource = null, options?: Partial<SamplerOptions>) {
 
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...defaultTextureSamplerOptions, ...options };
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...Texture.DefaultSamplerOptions, ...options };
 
         this._scaleMode = scaleMode;
         this._wrapMode = wrapMode;
@@ -45,10 +51,10 @@ export class Texture {
         this._generateMipMap = generateMipMap;
         this._flipY = flipY;
 
-        this._flags.add(
-            TextureFlags.SCALE_MODE,
-            TextureFlags.WRAP_MODE,
-            TextureFlags.PREMULTIPLY_ALPHA,
+        this._flags.push(
+            TextureFlags.ScaleModeDirty,
+            TextureFlags.WrapModeDirty,
+            TextureFlags.PremultiplyAlphaDirty,
         );
 
         if (source !== null) {
@@ -185,7 +191,7 @@ export class Texture {
     public setScaleMode(scaleMode: ScaleModes): this {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags.add(TextureFlags.SCALE_MODE);
+            this._flags.push(TextureFlags.ScaleModeDirty);
         }
 
         return this;
@@ -194,7 +200,7 @@ export class Texture {
     public setWrapMode(wrapMode: WrapModes): this {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags.add(TextureFlags.WRAP_MODE);
+            this._flags.push(TextureFlags.WrapModeDirty);
         }
 
         return this;
@@ -203,7 +209,7 @@ export class Texture {
     setPremultiplyAlpha(premultiplyAlpha: boolean) {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags.add(TextureFlags.PREMULTIPLY_ALPHA);
+            this._flags.push(TextureFlags.PremultiplyAlphaDirty);
         }
 
         return this;
@@ -219,7 +225,7 @@ export class Texture {
     }
 
     public updateSource(): this {
-        this._flags.add(TextureFlags.SOURCE);
+        this._flags.push(TextureFlags.SourceDirty);
 
         const { width, height } = getTextureSourceSize(this._source);
 
@@ -231,38 +237,32 @@ export class Texture {
     public setSize(width: number, height: number): this {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
-            this._flags.add(TextureFlags.SIZE);
+            this._flags.push(TextureFlags.SizeDirty);
         }
 
         return this;
     }
 
     public update(): this {
-        if (this._flags.value && this._context) {
+        if (this._flags.value !== TextureFlags.None && this._context) {
             const gl = this._context;
 
-            if (this._flags.has(TextureFlags.SCALE_MODE)) {
+            if (this._flags.pop(TextureFlags.ScaleModeDirty)) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
-
-                this._flags.remove(TextureFlags.SCALE_MODE);
             }
 
-            if (this._flags.has(TextureFlags.WRAP_MODE)) {
+            if (this._flags.pop(TextureFlags.WrapModeDirty)) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
-
-                this._flags.remove(TextureFlags.WRAP_MODE);
             }
 
-            if (this._flags.has(TextureFlags.PREMULTIPLY_ALPHA)) {
+            if (this._flags.pop(TextureFlags.PremultiplyAlphaDirty)) {
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
-
-                this._flags.remove(TextureFlags.PREMULTIPLY_ALPHA);
             }
 
-            if (this._flags.has(TextureFlags.SOURCE) && this._source) {
-                if (this._flags.has(TextureFlags.SIZE)) {
+            if (this._flags.pop(TextureFlags.SourceDirty) && this._source) {
+                if (this._flags.pop(TextureFlags.SizeDirty)) {
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 } else {
                     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
@@ -271,8 +271,6 @@ export class Texture {
                 if (this._generateMipMap) {
                     gl.generateMipmap(gl.TEXTURE_2D);
                 }
-
-                this._flags.remove(TextureFlags.SOURCE, TextureFlags.SIZE);
             }
         }
 

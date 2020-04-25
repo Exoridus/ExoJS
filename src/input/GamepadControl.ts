@@ -1,5 +1,5 @@
-import { Gamepad } from "const/input";
 import { clamp } from "utils/math";
+import { GamepadChannel } from "input/Gamepad";
 
 export interface GamepadControlOptions {
     invert?: boolean;
@@ -8,14 +8,13 @@ export interface GamepadControlOptions {
 }
 
 export class GamepadControl {
-
     public readonly index: number;
-    public readonly channel: Gamepad;
+    public readonly channel: GamepadChannel;
     public readonly invert: boolean;
     public readonly normalize: boolean;
     public readonly threshold: number;
 
-    constructor(index: number, channel: Gamepad, options: GamepadControlOptions = {}) {
+    constructor(index: number, channel: GamepadChannel, options: GamepadControlOptions = {}) {
         this.index = index;
         this.channel = channel;
 

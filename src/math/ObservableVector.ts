@@ -1,7 +1,6 @@
 import { AbstractVector } from './Vector';
-import { Cloneable } from "const/types";
 
-export class ObservableVector extends AbstractVector implements Cloneable<ObservableVector> {
+export class ObservableVector extends AbstractVector {
 
     private _x: number;
     private _y: number;
@@ -79,8 +78,8 @@ export class ObservableVector extends AbstractVector implements Cloneable<Observ
         return this;
     }
 
-    public clone(): ObservableVector {
-        return new ObservableVector(this._callback, this._x, this._y);
+    public clone(): this {
+        return new (this.constructor as any)(this._callback, this._x, this._y);
     }
 
     public copy(vector: ObservableVector): this {

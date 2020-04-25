@@ -1,6 +1,7 @@
 import { clamp } from 'utils/math';
+import { Cloneable } from "types/types";
 
-export class Color {
+export class Color implements Cloneable {
 
     private _r: number;
     private _g: number;
@@ -99,8 +100,8 @@ export class Color {
         return this.set(color.r, color.g, color.b, color.a);
     }
 
-    public clone(): Color {
-        return new Color(this._r, this._g, this._b, this._a);
+    public clone(): this {
+        return new (this.constructor as any)(this._r, this._g, this._b, this._a);
     }
 
     public equals({ r, g, b, a }: Partial<Color> = {}): boolean {

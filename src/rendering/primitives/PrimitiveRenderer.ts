@@ -1,10 +1,9 @@
-import { IRenderer } from "rendering/IRenderer";
-import { defaultPrimitiveRendererBatchSize } from "const/defaults";
+import { RendererInterface } from "rendering/RendererInterface";
 import { createQuadIndices } from "utils/rendering";
 import { Shader } from "rendering/shader/Shader";
 import { RenderManager } from "rendering/RenderManager";
 import { Texture } from "rendering/texture/Texture";
-import { BlendModes, BufferTypes, BufferUsage } from "const/rendering";
+import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
 import { View } from "rendering/View";
 import { RenderBuffer } from "rendering/RenderBuffer";
 import { VertexArrayObject } from "rendering/VertexArrayObject";
@@ -12,9 +11,9 @@ import { DrawableShape } from "rendering/primitives/DrawableShape";
 import vertexSource from "rendering/primitives/glsl/primitive.vert";
 import fragmentSource from "rendering/primitives/glsl/primitive.frag";
 
-export class PrimitiveRenderer implements IRenderer {
+export class PrimitiveRenderer implements RendererInterface {
 
-    private _batchSize: number = defaultPrimitiveRendererBatchSize;
+    private _batchSize: number;
     private _batchIndex = 0;
 
     /**
@@ -39,6 +38,10 @@ export class PrimitiveRenderer implements IRenderer {
     private _indexBuffer: RenderBuffer | null = null;
     private _vertexBuffer: RenderBuffer | null = null;
     private _vao: VertexArrayObject | null = null;
+
+    constructor(batchSize: number) {
+        this._batchSize = batchSize;
+    }
 
     connect(renderManager: RenderManager) {
         if (!this._context) {

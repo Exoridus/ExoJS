@@ -1,41 +1,41 @@
-import { TimeInterval } from 'const/core';
 import { Clock } from './Clock';
+import { Time } from "core/Time";
 
 export class Timer extends Clock {
 
-    private _limit: number;
+    private readonly _limit: Time;
 
-    public constructor({ limit = 0, factor = TimeInterval.MILLISECONDS, autoStart = false } = {}) {
+    public constructor(limit: Time, autoStart = false) {
         super();
 
-        this._limit = (limit * factor);
+        this._limit = limit.clone();
 
         if (autoStart) {
             this.restart();
         }
     }
 
-    public set limit(limit: number) {
-        this._limit = limit;
+    public set limit(limit: Time) {
+        this._limit.copy(limit);
     }
 
     public get expired(): boolean {
-        return this.elapsedMilliseconds >= this._limit;
+        return this.elapsedMilliseconds >= this._limit.milliseconds;
     }
 
     public get remainingMilliseconds(): number {
-        return Math.max(0, this._limit - this.elapsedMilliseconds);
+        return Math.max(0, this._limit.milliseconds - this.elapsedMilliseconds);
     }
 
     public get remainingSeconds(): number {
-        return this.remainingMilliseconds / TimeInterval.SECONDS;
+        return this.remainingMilliseconds / Time.Seconds;
     }
 
     public get remainingMinutes(): number {
-        return this.remainingMilliseconds / TimeInterval.MINUTES;
+        return this.remainingMilliseconds / Time.Minutes;
     }
 
     public get remainingHours(): number {
-        return this.remainingMilliseconds / TimeInterval.HOURS;
+        return this.remainingMilliseconds / Time.Hours;
     }
 }

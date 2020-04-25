@@ -1,9 +1,9 @@
 import { Time } from 'core/Time';
 import { ParticleOptions } from 'particles/emitters/ParticleOptions';
-import { IParticleEmitter } from "particles/emitters/IParticleEmitter";
+import { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
 import { ParticleSystem } from 'particles/ParticleSystem';
 
-export class UniversalEmitter implements IParticleEmitter {
+export class UniversalEmitter implements ParticleEmitterInterface {
     private _emissionRate: number;
     private _particleOptions: ParticleOptions;
     private _emissionDelta = 0;

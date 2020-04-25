@@ -1,5 +1,4 @@
-import { defaultTextureSamplerOptions } from '../../const/defaults';
-import { ScaleModes, WrapModes } from "../../const/rendering";
+import { ScaleModes, WrapModes } from "types/rendering";
 
 export interface SamplerOptions {
     scaleMode: ScaleModes;
@@ -19,9 +18,8 @@ export class Sampler {
     private _generateMipMap: boolean;
     private _flipY: boolean;
 
-    constructor(gl: WebGL2RenderingContext, options?: Partial<SamplerOptions>) {
-
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...defaultTextureSamplerOptions, ...options };
+    constructor(gl: WebGL2RenderingContext, options: SamplerOptions) {
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
 
         this._context = gl;
         this._sampler = gl.createSampler();

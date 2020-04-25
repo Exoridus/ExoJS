@@ -6,7 +6,7 @@ import { Texture } from "rendering/texture/Texture";
 import { RenderTexture } from "rendering/texture/RenderTexture";
 import { RenderManager } from "rendering/RenderManager";
 import { SpriteRenderer } from "rendering/sprite/SpriteRenderer";
-import { RendererType } from "rendering/IRenderer";
+import { RendererType } from "rendering/RendererInterface";
 
 export enum SpriteFlags {
     NONE = 0x00,
@@ -93,7 +93,7 @@ export class Sprite extends Container {
             throw new Error('texCoords can only be calculated when the sprite has a texture')
         }
 
-        if (this.flags.has(SpriteFlags.TEXTURE_COORDS)) {
+        if (this.flags.pop(SpriteFlags.TEXTURE_COORDS)) {
             const { width, height } = this._texture;
             const  { left, top, right, bottom } = this._textureFrame;
             const  minX = ((left / width) * 65535 & 65535);
@@ -112,8 +112,6 @@ export class Sprite extends Container {
                 this._texCoords[2] = (maxY | maxX);
                 this._texCoords[3] = (maxY | minX);
             }
-
-            this.flags.remove(SpriteFlags.TEXTURE_COORDS);
         }
 
         return this._texCoords;
@@ -142,7 +140,7 @@ export class Sprite extends Container {
         const height = this.height;
 
         this._textureFrame.copy(frame);
-        this.flags.add(SpriteFlags.TEXTURE_COORDS);
+        this.flags.push(SpriteFlags.TEXTURE_COORDS);
         this.localBounds.set(0, 0, frame.width, frame.height);
 
         if (resetSize) {

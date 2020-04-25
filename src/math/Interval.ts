@@ -1,7 +1,6 @@
-export class Interval {
+import { Cloneable } from "types/types";
 
-    public static readonly Zero = new Interval(0, 0);
-    public static readonly Temp = new Interval();
+export class Interval implements Cloneable {
 
     public min: number;
     public max: number;
@@ -22,11 +21,11 @@ export class Interval {
         return this.set(interval.min, interval.max);
     }
 
-    public clone(): Interval {
-        return new Interval(this.min, this.max);
+    public clone(): this {
+        return new (this.constructor as any)(this.min, this.max);
     }
 
-    public contains(interval: Interval): boolean {
+    public containsInterval(interval: Interval): boolean {
         return interval.min > this.min && interval.max < this.max;
     }
 
@@ -45,4 +44,7 @@ export class Interval {
     public destroy() {
         // todo - check if destroy is needed
     }
+
+    public static readonly Zero = new Interval(0, 0);
+    public static readonly Temp = new Interval();
 }

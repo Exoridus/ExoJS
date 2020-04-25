@@ -1,9 +1,11 @@
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { SamplerOptions } from "rendering/texture/Sampler";
-import { PlaybackOptions } from "const/types";
+import { PlaybackOptions } from "types/types";
 import { determineMimeType } from "utils/resources";
-import { onceListenerOption, StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 import { Video } from "rendering/Video";
+
+const onceListenerOption = { once: true };
 
 interface VideoFactoryOptions {
     mimeType?: string;

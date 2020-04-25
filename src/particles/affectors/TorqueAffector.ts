@@ -1,8 +1,8 @@
-import { IParticleAffector } from "particles/affectors/IParticleAffector";
+import { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
 import { Particle } from 'particles/Particle';
 import { Time } from 'core/Time';
 
-export class TorqueAffector implements IParticleAffector {
+export class TorqueAffector implements ParticleAffectorInterface {
 
     private _angularAcceleration: number;
 

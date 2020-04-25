@@ -1,24 +1,34 @@
 import { Vector } from './Vector';
 import { Rectangle } from './Rectangle';
-import { Polygon } from './Polygon';
 import { Interval } from './Interval';
-import { getDistance } from 'utils/math';
-import { IShape } from 'interfaces/IShape';
+import { Shape2D } from 'types/Shape';
+import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
-    Collidable, Collision, CollisionType,
     getCollisionCircleCircle,
     getCollisionCircleRectangle,
     getCollisionPolygonCircle,
-    isCircleIntersectingWithTarget
-} from "const/collision";
+} from "utils/collision-detection";
+import {
+    intersectionCircleCircle,
+    intersectionCircleEllipse,
+    intersectionCirclePoly,
+    intersectionLineCircle,
+    intersectionPointCircle,
+    intersectionRectCircle
+} from "utils/collision-detection";
+import type { SceneNode } from "core/SceneNode";
+import type { Line } from "math/Line";
+import type { Ellipse } from "math/Ellipse";
+import type { Polygon } from './Polygon';
 
-export class Circle implements IShape {
+export class Circle implements Shape2D {
 
-    public static readonly Temp = new Circle();
+    public static CollisionSegments = 32;
 
     public readonly collisionType: CollisionType = CollisionType.Circle;
 
     private readonly _position: Vector;
+    private _collisionVertices: Array<Vector> | null = null;
     private _radius: number;
 
     constructor(x = 0, y = 0, radius = 0) {
@@ -84,8 +94,8 @@ export class Circle implements IShape {
         return this;
     }
 
-    public clone(): Circle {
-        return new Circle(this.x, this.y, this.radius);
+    public clone(): this {
+        return new (this.constructor as any)(this.x, this.y, this.radius);
     }
 
     public equals({ x, y, radius }: Partial<Circle> = {}): boolean {
@@ -107,9 +117,9 @@ export class Circle implements IShape {
      * todo - cache this
      */
     public getNormals(): Array<Vector> {
-        const points = this.createCollisionPoints();
+        const points = this.getCollisionVertices();
 
-        return points.map((point, i, points) => Vector.subtract(points[(i + 1) % points.length], point).rperp().normalize());
+        return points.map((point, i, arr) => arr[(i + 1) % arr.length].clone().subtract(point.x, point.y).rperp().normalize());
     }
 
     public project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -117,35 +127,59 @@ export class Circle implements IShape {
     }
 
     public contains(x: number, y: number): boolean {
-        return getDistance(this.x, this.y, x, y) <= this._radius;
+        return intersectionPointCircle(Vector.Temp.set(x, y), this);
     }
 
-    public intersects(target: Collidable): boolean {
-        return isCircleIntersectingWithTarget(this, target);
+    public intersectsWith(target: Collidable): boolean {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return intersectionRectCircle((target as SceneNode).getBounds(), this);
+            case CollisionType.Rectangle: return intersectionRectCircle(target as Rectangle, this);
+            case CollisionType.Polygon: return intersectionCirclePoly(this, target as Polygon);
+            case CollisionType.Circle: return intersectionCircleCircle(this, target as Circle);
+            case CollisionType.Ellipse: return intersectionCircleEllipse(this, target as Ellipse);
+            case CollisionType.Line: return intersectionLineCircle(target as Line, this);
+            case CollisionType.Point: return intersectionPointCircle(target as Vector, this);
+            default: return false;
+        }
     }
 
-    public getCollision(target: Collidable): Collision | null {
-        if (target instanceof Circle) {
-            return getCollisionCircleCircle(this, target);
+    public collidesWith(target: Collidable): Collision | null {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return getCollisionCircleRectangle(this, (target as SceneNode).getBounds());
+            case CollisionType.Rectangle: return getCollisionCircleRectangle(this, target as Rectangle);
+            case CollisionType.Polygon: return getCollisionPolygonCircle(target as Polygon, this, true);
+            case CollisionType.Circle: return getCollisionCircleCircle(this, target as Circle);
+            // case CollisionType.Ellipse: return intersectionCircleEllipse(this, target as Ellipse);
+            // case CollisionType.Line: return intersectionLineCircle(target as Line, this);
+            // case CollisionType.Point: return intersectionPointCircle(target as Vector, this);
+            default: return null;
         }
-
-        if (target instanceof Rectangle) {
-            return getCollisionCircleRectangle(this, target);
-        }
-
-        if (target instanceof Polygon) {
-            return getCollisionPolygonCircle(target, this, true);
-        }
-
-        return null;
     }
 
     public destroy(): void {
         this._position.destroy();
     }
 
-    private createCollisionPoints(): Array<Vector> {
+    private getCollisionVertices(): Array<Vector> {
+        if (this._collisionVertices === null) {
+            this._collisionVertices = [];
 
-        return [];
+            for (let i = 0; i < Circle.CollisionSegments; i++) {
+                this._collisionVertices.push(this.getCollisionVertex(i));
+            }
+        }
+
+
+        return this._collisionVertices;
     }
+
+    private getCollisionVertex(index: number): Vector {
+        const angle = index * 2 * Math.PI / Circle.CollisionSegments - Math.PI / 2;
+        const x = Math.cos(angle) * this._radius;
+        const y = Math.sin(angle) * this._radius;
+
+        return new Vector(this._radius + x, this._radius + y);
+    }
+
+    public static readonly Temp = new Circle();
 }

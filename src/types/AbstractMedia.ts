@@ -1,24 +1,19 @@
-import { IMedia } from "./IMedia";
+import { MediaInterface } from "types/MediaInterface";
 import { Signal } from 'core/Signal';
-import { PlaybackOptions } from "const/types";
-import { defaultPlaybackOptions } from "const/defaults";
+import { PlaybackOptions } from "types/types";
 
-export interface AbstractMediaInitialState {
+export interface AbstractMediaInitialState extends Omit<PlaybackOptions, "time"> {
     duration: number;
-    volume?: number;
-    speed?: number;
-    loop?: boolean;
-    muted?: boolean;
 }
 
-export abstract class AbstractMedia implements IMedia {
+export abstract class AbstractMedia implements MediaInterface {
 
     public readonly onStart = new Signal();
     public readonly onStop = new Signal();
 
     protected readonly _duration: number;
     protected _volume: number;
-    protected _speed: number;
+    protected _playbackRate: number;
     protected _loop: boolean;
     protected _muted: boolean;
     protected _audioContext: AudioContext | null = null;
@@ -47,12 +42,12 @@ export abstract class AbstractMedia implements IMedia {
         this.setLoop(loop);
     }
 
-    public get speed(): number {
-        return this._speed;
+    public get playbackRate(): number {
+        return this._playbackRate;
     }
 
-    public set speed(speed: number) {
-        this.setSpeed(speed);
+    public set playbackRate(playbackRate: number) {
+        this.setPlaybackRate(playbackRate);
     }
 
     public get currentTime(): number {
@@ -91,20 +86,20 @@ export abstract class AbstractMedia implements IMedia {
     }
 
     protected constructor(initialState: AbstractMediaInitialState) {
-        const { duration, volume, speed, loop, muted } = initialState;
+        const { duration, volume, playbackRate, loop, muted } = initialState;
 
         this._duration = duration;
-        this._volume = volume ?? defaultPlaybackOptions.volume;
-        this._speed = speed ?? defaultPlaybackOptions.speed;
-        this._loop = loop ?? defaultPlaybackOptions.loop;
-        this._muted = muted ?? defaultPlaybackOptions.muted;
+        this._volume = volume;
+        this._playbackRate = playbackRate;
+        this._loop = loop;
+        this._muted = muted;
     }
 
     public abstract play(options?: Partial<PlaybackOptions>): this;
     public abstract pause(options?: Partial<PlaybackOptions>): this;
     public abstract setVolume(volume: number): this;
     public abstract setLoop(loop: boolean): this;
-    public abstract setSpeed(speed: number): this;
+    public abstract setPlaybackRate(playbackRate: number): this;
     public abstract getTime(): number;
     public abstract setTime(time: number): this;
     public abstract setMuted(muted: boolean): this;
@@ -121,7 +116,7 @@ export abstract class AbstractMedia implements IMedia {
     }
 
     public applyOptions(options: Partial<PlaybackOptions> = {}): this {
-        const { volume, loop, speed, time, muted } = options;
+        const { volume, loop, playbackRate, time, muted } = options;
 
         if (volume !== undefined) {
             this.volume = volume;
@@ -131,8 +126,8 @@ export abstract class AbstractMedia implements IMedia {
             this.loop = loop;
         }
 
-        if (speed !== undefined) {
-            this.speed = speed;
+        if (playbackRate !== undefined) {
+            this.playbackRate = playbackRate;
         }
 
         if (time !== undefined) {

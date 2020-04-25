@@ -1,11 +1,10 @@
 import { clamp } from 'utils/math';
-import { PlaybackOptions } from "const/types";
-import { AbstractMedia } from "interfaces/AbstractMedia";
-import { audioContext, isAudioContextReady, onAudioContextReady } from "const/audio-context";
+import { PlaybackOptions } from "types/types";
+import { AbstractMedia } from "types/AbstractMedia";
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
 export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;
-    private readonly _setupAudioContextHandler: (audioContext: AudioContext) => void = this.setupWithAudioContext.bind(this);
     private _gainNode: GainNode | null = null;
     private _sourceNode: MediaElementAudioSourceNode | null = null;
 
@@ -13,16 +12,15 @@ export class Music extends AbstractMedia {
         super(audioElement);
 
         this._audioElement = audioElement;
-        this._setupAudioContextHandler = this.setupWithAudioContext.bind(this);
 
         if (options) {
             this.applyOptions(options);
         }
 
         if (isAudioContextReady()) {
-            this._setupAudioContextHandler(audioContext!);
+            this.setupWithAudioContext(getAudioContext());
         } else {
-            onAudioContextReady.once(this._setupAudioContextHandler);
+            onAudioContextReady.once(this.setupWithAudioContext, this);
         }
     }
 
@@ -49,12 +47,12 @@ export class Music extends AbstractMedia {
         return this;
     }
 
-    public setSpeed(value: number): this {
-        const speed = clamp(value, 0.1, 20);
+    public setPlaybackRate(value: number): this {
+        const playbackRate = clamp(value, 0.1, 20);
 
-        if (this._speed !== speed) {
-            this._speed = speed;
-            this._audioElement.playbackRate = speed;
+        if (this._playbackRate !== playbackRate) {
+            this._playbackRate = playbackRate;
+            this._audioElement.playbackRate = playbackRate;
         }
 
         return this;
@@ -127,7 +125,7 @@ export class Music extends AbstractMedia {
     public destroy(): void {
         super.destroy();
 
-        onAudioContextReady.remove(this.setupWithAudioContext, this);
+        onAudioContextReady.clearByContext(this);
 
         this._sourceNode?.disconnect();
         this._sourceNode = null;

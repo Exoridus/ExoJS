@@ -1,5 +1,5 @@
-import { IMedia } from "interfaces/IMedia";
-import { audioContext, isAudioContextReady, onAudioContextReady } from "const/audio-context";
+import { MediaInterface } from "types/MediaInterface";
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
 export interface AudioAnalyserOptions {
     fftSize: number;
@@ -9,7 +9,7 @@ export interface AudioAnalyserOptions {
 }
 
 export class AudioAnalyser {
-    private readonly _media: IMedia;
+    private readonly _media: MediaInterface;
 
     private readonly _fftSize: number;
     private readonly _minDecibels: number;
@@ -26,7 +26,7 @@ export class AudioAnalyser {
     private _audioContext: AudioContext | null = null;
     private _analyserTarget: AudioNode | null = null;
 
-    constructor(media: IMedia, options: Partial<AudioAnalyserOptions> = {}) {
+    constructor(media: MediaInterface, options: Partial<AudioAnalyserOptions> = {}) {
         const { fftSize,  minDecibels, maxDecibels, smoothingTimeConstant } = options;
 
         this._media = media;
@@ -41,8 +41,8 @@ export class AudioAnalyser {
         this._preciseTimeDomainData = new Float32Array(this._frequencyBinCount);
         this._preciseFrequencyData = new Float32Array(this._frequencyBinCount);
 
-        if (isAudioContextReady()) {
-            this.setupWithAudioContext(audioContext!);
+        if (!isAudioContextReady()) {
+            this.setupWithAudioContext(getAudioContext());
         } else {
             onAudioContextReady.once(this.setupWithAudioContext, this);
         }
@@ -102,7 +102,7 @@ export class AudioAnalyser {
     }
 
     public destroy() {
-        onAudioContextReady.remove(this.setupWithAudioContext, this);
+        onAudioContextReady.clearByContext(this);
 
         this._analyserTarget?.disconnect();
         this._analyser?.disconnect();

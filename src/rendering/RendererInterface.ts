@@ -7,7 +7,7 @@ export enum RendererType {
     Primitive = 3,
 }
 
-export interface IRenderer {
+export interface RendererInterface {
     connect(renderManager: RenderManager): this;
     disconnect(): this;
     bind(): this;

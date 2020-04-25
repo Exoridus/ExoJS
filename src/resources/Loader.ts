@@ -9,16 +9,14 @@ import { TextFactory } from './factories/TextFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
 import { SVGFactory } from './factories/SVGFactory';
-import { IDatabase } from "interfaces/IDatabase";
-import { IResourceFactory } from "interfaces/IResourceFactory";
-import { ResourceTypes } from "const/core";
+import { DatabaseInterface } from "types/DatabaseInterface";
+import { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
+import { ResourceTypes } from "types/types";
 
 export interface LoaderOptions {
-    database?: IDatabase;
-    cache?: RequestCache;
-    mode?: RequestMode;
-    resourcePath?: string;
-    method?: string;
+    resourcePath: string;
+    requestOptions?: RequestInit;
+    database?: DatabaseInterface;
 }
 
 export interface ResourceQueueItem {
@@ -30,29 +28,23 @@ export interface ResourceQueueItem {
 
 export class Loader {
 
-    private _resourcePath: string;
-    private _factories: Map<ResourceTypes, IResourceFactory> = new Map<ResourceTypes, IResourceFactory>();
+    private _factories: Map<ResourceTypes, ResourceFactoryInterface> = new Map<ResourceTypes, ResourceFactoryInterface>();
     private _resources: ResourceContainer = new ResourceContainer();
     private _queue: Array<ResourceQueueItem> = [];
-    private _method: string;
-    private _mode: RequestMode;
-    private _cache: RequestCache;
-    private _database: IDatabase | null;
+    private _resourcePath: string;
+    private _requestOptions: RequestInit;
+    private _database: DatabaseInterface | null;
 
     public readonly onQueueResource = new Signal();
     public readonly onStartLoading = new Signal();
     public readonly onLoadResource = new Signal();
     public readonly onFinishLoading = new Signal();
 
-    constructor(options: LoaderOptions = {}) {
+    constructor(options: LoaderOptions) {
+        const { resourcePath, requestOptions, database } = options;
 
-        const { resourcePath, mode, cache, database, method } = options;
-
-        this._resourcePath = resourcePath ?? '';
-
-        this._method = method ?? 'GET';
-        this._mode = mode ?? 'cors';
-        this._cache = cache ?? 'default';
+        this._resourcePath = resourcePath;
+        this._requestOptions = requestOptions ?? {};
         this._database = database ?? null;
 
         this.addFactory(ResourceTypes.Font, new FontFactory());
@@ -66,7 +58,7 @@ export class Loader {
         this.addFactory(ResourceTypes.Svg, new SVGFactory());
     }
 
-    get factories(): Map<string, IResourceFactory> {
+    get factories(): Map<string, ResourceFactoryInterface> {
         return this._factories;
     }
 
@@ -86,46 +78,30 @@ export class Loader {
         this._resourcePath = resourcePath;
     }
 
-    get database(): IDatabase | null {
+    get requestOptions(): RequestInit {
+        return this._requestOptions;
+    }
+
+    set requestOptions(requestOptions: RequestInit) {
+        this._requestOptions = requestOptions;
+    }
+
+    get database(): DatabaseInterface | null {
         return this._database;
     }
 
-    set database(database: IDatabase | null) {
+    set database(database: DatabaseInterface | null) {
         this._database = database;
     }
 
-    get method(): string {
-        return this._method;
-    }
-
-    set method(method: string) {
-        this._method = method;
-    }
-
-    get mode(): RequestMode {
-        return this._mode;
-    }
-
-    set mode(mode: RequestMode) {
-        this._mode = mode;
-    }
-
-    get cache(): RequestCache {
-        return this._cache;
-    }
-
-    set cache(cache: RequestCache) {
-        this._cache = cache;
-    }
-
-    addFactory(type: ResourceTypes, factory: IResourceFactory) {
+    addFactory(type: ResourceTypes, factory: ResourceFactoryInterface) {
         this._factories.set(type, factory);
         this._resources.addType(type);
 
         return this;
     }
 
-    getFactory(type: ResourceTypes): IResourceFactory {
+    getFactory(type: ResourceTypes): ResourceFactoryInterface {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }
@@ -176,11 +152,7 @@ export class Loader {
             let source = this._database ? (await this._database.load(factory.storageName, name)) : null;
 
             if (!source) {
-                const request = await fetch(`${this._resourcePath}${path}`, {
-                    method: this._method,
-                    mode: this._mode,
-                    cache: this._cache,
-                });
+                const request = await fetch(`${this._resourcePath}${path}`, this._requestOptions);
 
                 source = await factory.process(request);
 

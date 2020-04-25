@@ -1,8 +1,8 @@
-import { IDatabase } from "interfaces/IDatabase";
-import { supportsIndexedDB } from "const/support";
-import { ResourceTypes } from "const/core";
+import { DatabaseInterface } from "types/DatabaseInterface";
+import { supportsIndexedDB } from "utils/core";
+import { ResourceTypes } from "types/types";
 
-export class IndexedDBDatabase implements IDatabase {
+export class IndexedDBDatabase implements DatabaseInterface {
 
     public readonly name: string;
     public readonly version: number;

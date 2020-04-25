@@ -24,7 +24,7 @@ export class Signal<T = any> {
     }
 
     once(handler: SignalHandler<T>, context?: object): this {
-        const once = (...params: Array<any>) => {
+        const once = (...params: Array<any>): void => {
             this.remove(once, context);
             handler.call(context, ...params);
         };
@@ -39,6 +39,16 @@ export class Signal<T = any> {
 
         if (index !== -1) {
             removeArrayItems(this.bindings, index, 1);
+        }
+
+        return this;
+    }
+
+    clearByContext(context?: object): this {
+        const bindings = this.bindings.filter(binding => binding.context === context);
+
+        for (const binding of bindings) {
+            removeArrayItems(this.bindings, this.bindings.indexOf(binding), 1);
         }
 
         return this;

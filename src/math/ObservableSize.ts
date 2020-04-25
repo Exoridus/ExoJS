@@ -62,7 +62,7 @@ export class ObservableSize extends Size {
         return this.set(size.width, size.height);
     }
 
-    public clone(): ObservableSize {
-        return new ObservableSize(this._callback, this._width, this._height);
+    public clone(): this {
+        return new (this.constructor as any)(this._callback, this._width, this._height);
     }
 }

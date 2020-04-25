@@ -1,14 +1,12 @@
 import { degreesToRadians } from 'utils/math';
+import { Cloneable } from "types/types";
 
 /**
  * | a | b | x |
  * | c | d | y |
  * | e | f | z |
  */
-export class Matrix {
-
-    public static readonly Temp = new Matrix();
-    public static readonly Identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
+export class Matrix implements Cloneable {
 
     public a: number;
     public b: number;
@@ -59,8 +57,8 @@ export class Matrix {
         return this;
     }
 
-    public clone(): Matrix {
-        return new Matrix(
+    public clone(): this {
+        return new (this.constructor as any)(
             this.a, this.b, this.x,
             this.c, this.d, this.y,
             this.e, this.f, this.z
@@ -173,4 +171,7 @@ export class Matrix {
             this._array = null;
         }
     }
+
+    public static readonly Temp = new Matrix();
+    public static readonly Identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
 }

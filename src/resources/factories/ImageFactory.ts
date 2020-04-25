@@ -1,6 +1,6 @@
 import { determineMimeType } from "utils/resources";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 
 interface ImageFactoryOptions {
     mimeType?: string;

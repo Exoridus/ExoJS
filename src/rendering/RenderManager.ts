@@ -1,14 +1,13 @@
 import WebGLDebugUtils from "vendor/webgl-debug";
 
-import { BlendModes } from 'const/rendering';
+import { BlendModes } from 'types/rendering';
 import { RenderTarget } from './RenderTarget';
 import { SpriteRenderer } from './sprite/SpriteRenderer';
 import { ParticleRenderer } from 'particles/ParticleRenderer';
 import { Color } from 'core/Color';
 import { canvasSourceToDataURL } from 'utils/core';
 import { Texture } from './texture/Texture';
-import { Sampler } from './texture/Sampler';
-import { IRenderer, RendererType } from "./IRenderer";
+import { RendererInterface, RendererType } from "rendering/RendererInterface";
 import { Shader } from './shader/Shader';
 import { VertexArrayObject } from './VertexArrayObject';
 import { RenderTexture } from './texture/RenderTexture';
@@ -46,27 +45,34 @@ export class RenderManager {
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _onContextLostHandler: () => void;
     private readonly _onContextRestoredHandler: () => void;
-    private readonly _renderers: Map<RendererType, IRenderer> = new Map<RendererType, IRenderer>();
+    private readonly _renderers: Map<RendererType, RendererInterface> = new Map<RendererType, RendererInterface>();
 
     private _canvas: HTMLCanvasElement;
     private _contextLost: boolean;
     private _renderTarget: RenderTarget;
-    private _renderer: IRenderer | null = null;
+    private _renderer: RendererInterface | null = null;
     private _shader: Shader | null = null;
     private _blendMode: BlendModes | null = null;
     private _texture: Texture | RenderTexture | null = null;
-    private _sampler: Sampler;
     private _textureUnit = 0;
     private _vao: VertexArrayObject | null = null;
     private _clearColor: Color = new Color();
     private _cursor: string;
 
     constructor(app: Application) {
-        const { width, height, clearColor, context, debug } = app.config;
+        const {
+            width,
+            height,
+            clearColor,
+            webglAttributes,
+            debug,
+            spriteRendererBatchSize,
+            particleRendererBatchSize,
+        } = app.options;
 
         this._canvas = app.canvas;
 
-        const gl = this._createContext(context);
+        const gl = this._createContext(webglAttributes);
 
         if (!gl) {
             throw new Error('This browser or hardware does not support WebGL.');
@@ -78,8 +84,6 @@ export class RenderManager {
         if (this._contextLost) {
             this._restoreContext();
         }
-
-        this._sampler = new Sampler(this._context);
 
         if (clearColor) {
             this.clearColor.copy(clearColor);
@@ -95,8 +99,8 @@ export class RenderManager {
         this._setupContext();
         this._addEvents();
 
-        this.addRenderer(RendererType.Sprite, new SpriteRenderer());
-        this.addRenderer(RendererType.Particle, new ParticleRenderer());
+        this.addRenderer(RendererType.Sprite, new SpriteRenderer(spriteRendererBatchSize));
+        this.addRenderer(RendererType.Particle, new ParticleRenderer(particleRendererBatchSize));
 
         this._connectAndBindRenderTarget();
         this.setBlendMode(BlendModes.NORMAL);
@@ -128,11 +132,11 @@ export class RenderManager {
         this.setVAO(vao);
     }
 
-    get renderer(): IRenderer | null {
+    get renderer(): RendererInterface | null {
         return this._renderer;
     }
 
-    set renderer(renderer: IRenderer | null) {
+    set renderer(renderer: RendererInterface | null) {
         this.setRenderer(renderer);
     }
 
@@ -204,7 +208,7 @@ export class RenderManager {
         return this;
     }
 
-    setRenderer(renderer: IRenderer | null): this {
+    setRenderer(renderer: RendererInterface | null): this {
         if (this._renderer !== renderer) {
             if (this._renderer) {
                 this._renderer.unbind();
@@ -327,7 +331,7 @@ export class RenderManager {
         return this;
     }
 
-    public addRenderer(name: RendererType, renderer: IRenderer): this {
+    public addRenderer(name: RendererType, renderer: RendererInterface): this {
         if (this._renderers.has(name)) {
             throw new Error(`Renderer "${name}" was already added.`);
         }
@@ -337,7 +341,7 @@ export class RenderManager {
         return this;
     }
 
-    public getRenderer(name: RendererType): IRenderer {
+    public getRenderer(name: RendererType): RendererInterface {
         const renderer = this._renderers.get(name);
 
         if (!renderer) {
@@ -398,7 +402,6 @@ export class RenderManager {
         }
 
         this._renderers.clear();
-        this._sampler.destroy();
         this._clearColor.destroy();
         this._rootRenderTarget.destroy();
 

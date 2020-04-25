@@ -1,7 +1,7 @@
-import { IResourceFactory } from "interfaces/IResourceFactory";
-import { StorageNames } from "const/core";
+import { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
+import { StorageNames } from "types/types";
 
-export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = any> implements IResourceFactory<SourceValue, TargetValue> {
+export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = any> implements ResourceFactoryInterface<SourceValue, TargetValue> {
 
     public readonly objectURLs: Array<string> = [];
     public abstract readonly storageName: StorageNames;

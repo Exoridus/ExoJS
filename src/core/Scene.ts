@@ -1,8 +1,8 @@
-import { Time } from './Time';
-import { Loader } from "resources/Loader";
-import { ResourceContainer } from "resources/ResourceContainer";
-import { RenderManager } from "rendering/RenderManager";
-import { Application } from "./Application";
+import type { Time } from './Time';
+import type { Loader } from "resources/Loader";
+import type { ResourceContainer } from "resources/ResourceContainer";
+import type { RenderManager } from "rendering/RenderManager";
+import type { Application } from "./Application";
 
 export interface SceneData {
     load?: (loader: Loader) => Promise<void>;

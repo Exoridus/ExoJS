@@ -1,6 +1,22 @@
 import { getDistance } from 'utils/math';
 import { Matrix } from './Matrix';
-import { Cloneable } from "const/types";
+import { Shape1D } from "types/Shape";
+import { Interval } from "math/Interval";
+import { Collidable, Collision, CollisionType } from "types/Collision";
+import {
+    intersectionPointCircle,
+    intersectionPointEllipse,
+    intersectionPointLine,
+    intersectionPointPoint,
+    intersectionPointPoly,
+    intersectionPointRect
+} from "utils/collision-detection";
+import type { Rectangle } from "math/Rectangle";
+import type { Polygon } from "math/Polygon";
+import type { Circle } from "math/Circle";
+import type { Ellipse } from "math/Ellipse";
+import type { Line } from "math/Line";
+import type { SceneNode } from "core/SceneNode";
 
 export abstract class AbstractVector {
     public abstract x: number;
@@ -149,11 +165,9 @@ export abstract class AbstractVector {
     public abstract destroy(): void;
 }
 
-export class Vector extends AbstractVector implements Cloneable<Vector> {
+export class Vector extends AbstractVector implements Shape1D {
 
-    public static readonly Zero = new Vector(0, 0);
-    public static readonly One = new Vector(1, 1);
-    public static readonly Temp = new Vector();
+    public readonly collisionType: CollisionType = CollisionType.Point;
 
     public x: number;
     public y: number;
@@ -164,8 +178,8 @@ export class Vector extends AbstractVector implements Cloneable<Vector> {
         this.y = y;
     }
 
-    public clone(): Vector {
-        return new Vector(this.x, this.y);
+    public clone(): this {
+        return new (this.constructor as any)(this.x, this.y);
     }
 
     public copy(vector: Vector): this {
@@ -175,7 +189,58 @@ export class Vector extends AbstractVector implements Cloneable<Vector> {
         return this;
     }
 
+    public intersectsWith(target: Collidable): boolean {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return intersectionPointRect(this, (target as SceneNode).getBounds());
+            case CollisionType.Rectangle: return intersectionPointRect(this, target as Rectangle);
+            case CollisionType.Polygon: return intersectionPointPoly(this, target as Polygon);
+            case CollisionType.Circle: return intersectionPointCircle(this, target as Circle);
+            case CollisionType.Ellipse: return intersectionPointEllipse(this, target as Ellipse);
+            case CollisionType.Line: return intersectionPointLine(this, target as Line);
+            case CollisionType.Point: return intersectionPointPoint(this, target as Vector);
+            default: return false;
+        }
+    }
+
+    public collidesWith(target: Collidable): Collision | null {
+        return null;
+    }
+
+    public contains(x: number, y: number): boolean {
+        return intersectionPointPoint(Vector.Temp.set(x, y), this);
+    }
+
+    public getNormals(): Array<Vector> {
+        return [
+            this.clone().rperp().normalize()
+        ];
+    }
+
+    public project(axis: Vector, interval: Interval = new Interval()): Interval {
+        return interval;
+    }
+
     public destroy() {
         // todo - check if destroy is needed
+    }
+
+    public static readonly Zero = new Vector(0, 0);
+    public static readonly One = new Vector(1, 1);
+    public static readonly Temp = new Vector();
+
+    public static add(v1: Vector, v2: Vector): Vector {
+        return new Vector(v1.x + v2.x, v1.y + v2.y);
+    }
+
+    public static subtract(v1: Vector, v2: Vector): Vector {
+        return new Vector(v1.x - v2.x, v1.y - v2.y);
+    }
+
+    public static multiply(v1: Vector, v2: Vector): Vector {
+        return new Vector(v1.x * v2.x, v1.y * v2.y);
+    }
+
+    public static divide(v1: Vector, v2: Vector): Vector {
+        return new Vector(v1.x / v2.x, v1.y / v2.y);
     }
 }

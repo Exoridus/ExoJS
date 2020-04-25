@@ -1,11 +1,10 @@
 import { ObservableVector } from 'math/ObservableVector';
 import { Rectangle } from 'math/Rectangle';
 import { Matrix } from 'math/Matrix';
-import { degreesToRadians } from 'utils/math';
+import { degreesToRadians, trimRotation } from 'utils/math';
 import { ObservableSize } from 'math/ObservableSize';
 import { Bounds } from 'core/Bounds';
 import { Flags } from 'math/Flags';
-import { trimRotation } from "const/math";
 
 export enum ViewFlags {
     NONE = 0x00,
@@ -36,7 +35,7 @@ export class View {
     constructor(centerX: number, centerY: number, width: number, height: number) {
         this._center = new ObservableVector(this._setPositionDirty.bind(this), centerX, centerY);
         this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
-        this._flags.add(
+        this._flags.push(
             ViewFlags.TRANSFORM,
             ViewFlags.TRANSFORM_INV,
             ViewFlags.BOUNDING_BOX
@@ -147,7 +146,7 @@ export class View {
         this._sin = 0;
         this._cos = 1;
 
-        this._flags.add(ViewFlags.TRANSFORM);
+        this._flags.push(ViewFlags.TRANSFORM);
 
         return this;
     }
@@ -228,22 +227,22 @@ export class View {
     }
 
     private _setDirty() {
-        this._flags.add(ViewFlags.TRANSFORM_INV | ViewFlags.BOUNDING_BOX);
+        this._flags.push(ViewFlags.TRANSFORM_INV, ViewFlags.BOUNDING_BOX);
         this._updateId++;
     }
 
     private _setPositionDirty() {
-        this._flags.add(ViewFlags.TRANSLATION);
+        this._flags.push(ViewFlags.TRANSLATION);
         this._setDirty();
     }
 
     private _setRotationDirty() {
-        this._flags.add(ViewFlags.ROTATION);
+        this._flags.push(ViewFlags.ROTATION);
         this._setDirty();
     }
 
     private _setScalingDirty() {
-        this._flags.add(ViewFlags.SCALING);
+        this._flags.push(ViewFlags.SCALING);
         this._setDirty();
     }
 }

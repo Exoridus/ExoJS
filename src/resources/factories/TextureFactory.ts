@@ -2,7 +2,7 @@ import { Texture } from 'rendering/texture/Texture';
 import { SamplerOptions } from "rendering/texture/Sampler";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { determineMimeType } from "utils/resources";
-import { StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 
 interface TextureFactoryOptions {
     mimeType?: string;

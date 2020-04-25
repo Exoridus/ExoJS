@@ -1,11 +1,10 @@
-import { IRenderer } from 'rendering/IRenderer';
+import { RendererInterface } from 'rendering/RendererInterface';
 import { Shader } from 'rendering/shader/Shader';
-import { defaultSpriteRendererBatchSize } from 'const/defaults';
 import { VertexArrayObject } from 'rendering/VertexArrayObject';
 import { RenderBuffer } from 'rendering/RenderBuffer';
 import { createQuadIndices } from 'utils/rendering';
 import { Texture } from 'rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage } from "const/rendering";
+import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
 import { View } from 'rendering/View';
 import { RenderManager } from 'rendering/RenderManager';
 import { Sprite } from 'rendering/sprite/Sprite';
@@ -13,9 +12,9 @@ import { RenderTexture } from 'rendering/texture/RenderTexture';
 import vertexSource from "rendering/sprite/glsl/sprite.vert";
 import fragmentSource from "rendering/sprite/glsl/sprite.frag";
 
-export class SpriteRenderer implements IRenderer {
+export class SpriteRenderer implements RendererInterface {
 
-    private _batchSize: number = defaultSpriteRendererBatchSize;
+    private _batchSize: number;
     private _batchIndex = 0;
 
     /**
@@ -39,6 +38,10 @@ export class SpriteRenderer implements IRenderer {
     private _vao: VertexArrayObject | null = null;
     private _indexBuffer: RenderBuffer | null = null;
     private _vertexBuffer: RenderBuffer | null = null;
+
+    constructor(batchSize: number) {
+        this._batchSize = batchSize;
+    }
 
     connect(renderManager: RenderManager) {
         if (!this._context) {

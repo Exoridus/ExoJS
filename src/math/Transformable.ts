@@ -1,23 +1,20 @@
 import { ObservableVector } from './ObservableVector';
 import { Matrix } from './Matrix';
-import { degreesToRadians } from 'utils/math';
+import { degreesToRadians, trimRotation } from 'utils/math';
 import { Flags } from './Flags';
-import { trimRotation } from "const/math";
 
 export enum TransformableFlags {
-    NONE = 0x00,
-    TRANSLATION = 0x01,
-    ROTATION = 0x02,
-    SCALING = 0x04,
-    ORIGIN = 0x08,
-    TRANSFORM = 0x0F,
-    TRANSFORM_INV = 0x10,
-    BOUNDING_BOX = 0x20,
-    TEXTURE_COORDS = 0x40,
-    VERTEX_TINT = 0x80,
+    NONE = 0,
+    TRANSLATION = 1 << 0,
+    ROTATION = 1 << 1,
+    SCALING = 1 << 2,
+    ORIGIN = 1 << 3,
+    TRANSFORM = TransformableFlags.TRANSLATION | TransformableFlags.ROTATION | TransformableFlags.SCALING | TransformableFlags.ORIGIN,
+    TRANSFORM_INV = 1 << 4,
 }
 
 export class Transformable {
+
     public readonly flags: Flags<TransformableFlags> = new Flags<TransformableFlags>(TransformableFlags.TRANSFORM);
 
     protected _transform: Matrix = new Matrix();
@@ -162,18 +159,18 @@ export class Transformable {
     }
 
     private _setPositionDirty() {
-        this.flags.add(TransformableFlags.TRANSLATION);
+        this.flags.push(TransformableFlags.TRANSLATION);
     }
 
     private _setRotationDirty() {
-        this.flags.add(TransformableFlags.ROTATION);
+        this.flags.push(TransformableFlags.ROTATION);
     }
 
     private _setScalingDirty() {
-        this.flags.add(TransformableFlags.SCALING);
+        this.flags.push(TransformableFlags.SCALING);
     }
 
     private _setOriginDirty() {
-        this.flags.add(TransformableFlags.ORIGIN);
+        this.flags.push(TransformableFlags.ORIGIN);
     }
 }

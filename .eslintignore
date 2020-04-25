@@ -3,3 +3,4 @@
 dist/*
 scripts/*
 src/vendor/*
+src/typings.d.ts

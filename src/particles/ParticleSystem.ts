@@ -3,16 +3,16 @@ import { Rectangle } from 'math/Rectangle';
 import { Time } from 'core/Time';
 import { Container } from 'rendering/Container';
 import { Texture } from 'rendering/texture/Texture';
-import { IParticleEmitter } from "./emitters/IParticleEmitter";
-import { IParticleAffector } from "./affectors/IParticleAffector";
+import { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
+import { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
 import { RenderManager } from 'rendering/RenderManager';
 import { ParticleRenderer } from './ParticleRenderer';
-import { RendererType } from "rendering/IRenderer";
+import { RendererType } from "rendering/RendererInterface";
 
 export class ParticleSystem extends Container {
 
-    private _emitters: Array<IParticleEmitter> = [];
-    private _affectors: Array<IParticleAffector> = [];
+    private _emitters: Array<ParticleEmitterInterface> = [];
+    private _affectors: Array<ParticleAffectorInterface> = [];
     private _particles: Array<Particle> = [];
     private _graveyard: Array<Particle> = [];
     private _texture: Texture;
@@ -108,7 +108,7 @@ export class ParticleSystem extends Container {
         return this.setTextureFrame(Rectangle.Temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    addEmitter(emitter: IParticleEmitter): this {
+    addEmitter(emitter: ParticleEmitterInterface): this {
         this._emitters.push(emitter);
 
         return this;
@@ -124,7 +124,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    addAffector(affector: IParticleAffector): this {
+    addAffector(affector: ParticleAffectorInterface): this {
         this._affectors.push(affector);
 
         return this;

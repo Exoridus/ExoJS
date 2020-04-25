@@ -1,6 +1,6 @@
 import { FontFaceDescriptors } from "css-font-loading-module";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 
 export interface FontFactoryOptions {
     family: string;

@@ -1,6 +1,6 @@
-import { StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 
-export interface IResourceFactory<SourceValue = any, TargetValue = any> {
+export interface ResourceFactoryInterface<SourceValue = any, TargetValue = any> {
 
     readonly storageName: StorageNames;
 

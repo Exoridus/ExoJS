@@ -1,7 +1,8 @@
-import { defaultInputThreshold } from 'const/defaults';
 import { Signal } from 'core/Signal';
 import { Timer } from 'core/Timer';
-import { InputChannel } from "const/input";
+import { milliseconds } from "utils/core";
+import { Keyboard } from "types/input";
+import { GamepadChannel } from "input/Gamepad";
 
 interface InputOptions {
     onStart?: () => void;
@@ -12,7 +13,10 @@ interface InputOptions {
     threshold?: number;
 }
 
+export type InputChannel = GamepadChannel | Keyboard;
+
 export class Input {
+    public static TriggerThreshold = 300;
 
     private readonly _channels: Set<number>;
     private readonly _triggerTimer: Timer;
@@ -23,10 +27,10 @@ export class Input {
     public readonly onActive: Signal = new Signal();
     public readonly onTrigger: Signal = new Signal();
 
-    constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold = defaultInputThreshold }: InputOptions = {}) {
+    constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold }: InputOptions = {}) {
 
         this._channels = new Set(Array.isArray(channels) ? channels : [channels]);
-        this._triggerTimer = new Timer({ limit: threshold });
+        this._triggerTimer = new Timer(milliseconds(threshold ?? Input.TriggerThreshold));
 
         if (onStart) {
             this.onStart.add(onStart, context);

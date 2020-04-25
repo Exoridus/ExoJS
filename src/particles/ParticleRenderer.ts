@@ -1,4 +1,4 @@
-import { IRenderer } from 'rendering/IRenderer';
+import { RendererInterface } from 'rendering/RendererInterface';
 import { Shader } from 'rendering/shader/Shader';
 import { createQuadIndices } from 'utils/rendering';
 import { RenderBuffer } from 'rendering/RenderBuffer';
@@ -6,16 +6,15 @@ import { VertexArrayObject } from 'rendering/VertexArrayObject';
 import { RenderManager } from 'rendering/RenderManager';
 import { Texture } from 'rendering/texture/Texture';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
-import { BlendModes, BufferTypes, BufferUsage } from "const/rendering";
+import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
 import { View } from 'rendering/View';
 import { ParticleSystem } from './ParticleSystem';
-import { defaultParticleRendererBatchSize } from "const/defaults";
 import vertexSource from "./glsl/particle.vert";
 import fragmentSource from "./glsl/particle.frag";
 
-export class ParticleRenderer implements IRenderer {
+export class ParticleRenderer implements RendererInterface {
 
-    private _batchSize: number = defaultParticleRendererBatchSize;
+    private _batchSize: number;
     private _batchIndex = 0;
 
     /**
@@ -42,6 +41,10 @@ export class ParticleRenderer implements IRenderer {
     private _vao: VertexArrayObject | null = null;
     private _indexBuffer: RenderBuffer | null = null;
     private _vertexBuffer: RenderBuffer | null = null;
+
+    constructor(batchSize: number) {
+        this._batchSize = batchSize;
+    }
 
     connect(renderManager: RenderManager) {
         if (!this._context) {

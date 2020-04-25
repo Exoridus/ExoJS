@@ -1,4 +1,4 @@
-import { TypedEnum } from "const/types";
+import { TypedEnum } from "types/types";
 
 export class Flags<T extends TypedEnum<T, number>> {
 
@@ -10,16 +10,24 @@ export class Flags<T extends TypedEnum<T, number>> {
 
     constructor(...flags: Array<number>) {
         if (flags.length) {
-            this.add(...flags);
+            this.push(...flags);
         }
     }
 
-    public add<V extends number = T[keyof T]>(...flags: Array<V>): this {
+    public push<V extends number = T[keyof T]>(...flags: Array<V>): this {
         for (const flag of flags) {
             this._value |= flag;
         }
 
         return this;
+    }
+
+    public pop<V extends number = T[keyof T]>(flag: V): boolean {
+        const active = this.has(flag);
+
+        this.remove(flag);
+
+        return active;
     }
 
     public remove<V extends number = T[keyof T]>(...flags: Array<V>): this {
@@ -31,7 +39,7 @@ export class Flags<T extends TypedEnum<T, number>> {
     }
 
     public has<V extends number = T[keyof T]>(...flags: Array<V>): boolean {
-        return flags.every(flag => (this._value & flag) !== 0);
+        return flags.some(flag => (this._value & flag) !== 0);
     }
 
     public clear(): this {
@@ -40,7 +48,7 @@ export class Flags<T extends TypedEnum<T, number>> {
         return this;
     }
 
-    public destroy() {
-        // todo - check if destroy is needed
+    public destroy(): void {
+        this.clear();
     }
 }

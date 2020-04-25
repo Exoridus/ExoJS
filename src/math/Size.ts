@@ -1,7 +1,6 @@
-export class Size {
+import { Cloneable } from "types/types";
 
-    public static readonly Zero = new Size(0, 0);
-    public static readonly Temp = new Size();
+export class Size implements Cloneable {
 
     protected _width: number;
     protected _height: number;
@@ -69,8 +68,8 @@ export class Size {
         return this;
     }
 
-    public clone(): Size {
-        return new Size(this._width, this._height);
+    public clone(): this {
+        return new (this.constructor as any)(this._width, this._height);
     }
 
     public equals({ width, height }: Partial<Size> = {}): boolean {
@@ -81,4 +80,7 @@ export class Size {
     public destroy(): void {
         // todo - check if destroy is needed
     }
+
+    public static readonly Zero = new Size(0, 0);
+    public static readonly Temp = new Size();
 }

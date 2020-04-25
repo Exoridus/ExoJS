@@ -1,6 +1,6 @@
 import { SceneNode } from 'core/SceneNode';
 import { Color } from 'core/Color';
-import { BlendModes } from 'const/rendering';
+import { BlendModes } from 'types/rendering';
 import { View } from './View';
 import { RenderManager } from './RenderManager';
 
@@ -51,7 +51,7 @@ export class Drawable extends SceneNode {
     }
 
     inView(view: View): boolean {
-        return view.getBounds().intersects(this.getBounds());
+        return view.getBounds().intersectsWith(this.getBounds());
     }
 
     destroy() {

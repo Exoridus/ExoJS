@@ -1,109 +1,112 @@
 import { Rectangle } from 'math/Rectangle';
 import { SceneNode } from './SceneNode';
-import { defaultQuadTreeMaxLevel, defaultQuadTreeMaxObjects } from "const/defaults";
+import { Deletable, WithBoundingBox } from "types/types";
 
-export class Quadtree {
+export class Quadtree implements WithBoundingBox, Deletable {
 
-    public readonly bounds: Rectangle;
+    public static MaxSceneNodes = 50;
+    public static MaxLevel = 5;
+
     public readonly level: number;
-    private _nodes: Map<number, Quadtree> = new Map();
-    private _children: Set<SceneNode> = new Set();
+
+    private readonly _bounds: Rectangle;
+    private readonly _quadTrees: Map<number, Quadtree> = new Map();
+    private readonly _sceneNodes: Set<SceneNode> = new Set();
 
     constructor(bounds: Rectangle, level = 0) {
-        this.bounds = (bounds && bounds.clone()) || new Rectangle();
+        this._bounds = bounds.clone();
         this.level = level;
     }
 
-    get nodes(): Map<number, Quadtree> {
-        return this._nodes;
-    }
+    public addSceneNode(sceneNode: SceneNode): this {
+        const quadTree = this._getQuadTree(sceneNode);
 
-    get children(): Set<SceneNode> {
-        return this._children;
-    }
-
-    clear(): this {
-        for (const node of this._nodes.values()) {
-            node.clear();
-        }
-
-        this._nodes.clear();
-        this._children.clear();
-
-        return this;
-    }
-
-    insert(child: SceneNode): this {
-        const children = this._children;
-        const node = this._getNode(child);
-
-        if (node) {
-            node.insert(child);
+        if (quadTree) {
+            quadTree.addSceneNode(sceneNode);
 
             return this;
         }
 
-        children.add(child);
+        this._sceneNodes.add(sceneNode);
 
-        if ((children.size > defaultQuadTreeMaxObjects) && (this.level < defaultQuadTreeMaxLevel)) {
+        if (this._sceneNodes.size > Quadtree.MaxSceneNodes && this.level < Quadtree.MaxLevel) {
             this._split();
-
-            for (const child of children) {
-                const node = this._getNode(child);
-
-                if (node) {
-                    children.delete(child);
-                    node.insert(child);
-                }
-            }
         }
 
         return this;
     }
 
-    getRelatedChildren(child: SceneNode): Array<SceneNode> {
-        const node = this._getNode(child);
+    public getRelatedChildren(sceneNode: SceneNode): Array<SceneNode> {
+        const quadTree = this._getQuadTree(sceneNode);
 
-        return node ? [...node.getRelatedChildren(child), ...this._children] : [...this._children];
-    }
-
-    destroy() {
-        this.bounds.destroy();
-        this._nodes.clear();
-        this._children.clear();
-    }
-
-    _split() {
-        if (!this._nodes.size) {
-            return;
+        if (quadTree === null) {
+            return [...this._sceneNodes];
         }
 
-        const rect = Rectangle.Temp,
-            nodeLevel = this.level + 1,
-            bounds = this.bounds,
-            width = (bounds.width / 2) | 0,
-            height = (bounds.height / 2) | 0,
-            left = bounds.left,
-            top = bounds.top,
-            right = left + width,
-            bottom = top + height;
-
-        this._nodes
-            .set(0, new Quadtree(rect.set(left, top, width, height), nodeLevel))
-            .set(1, new Quadtree(rect.set(right, top, width, height), nodeLevel))
-            .set(2, new Quadtree(rect.set(left, bottom, width, height), nodeLevel))
-            .set(3, new Quadtree(rect.set(right, bottom, width, height), nodeLevel));
+        return [...quadTree.getRelatedChildren(sceneNode), ...this._sceneNodes];
     }
 
-    _getNode(child: SceneNode): Quadtree | null {
-        const bounds = child.getBounds();
+    public getBounds(): Rectangle {
+        return this._bounds;
+    }
 
-        for (const node of this._nodes.values()) {
-            if (bounds.containsRect(node.bounds)) {
-                return node;
+    public clear(): this {
+        if (this._quadTrees.size > 0) {
+            for (const quadTree of this._quadTrees.values()) {
+                quadTree.destroy();
+            }
+
+            this._quadTrees.clear();
+        }
+
+        this._sceneNodes.clear();
+
+        return this;
+    }
+
+    public destroy(): void {
+        this.clear();
+        this._bounds.destroy();
+    }
+
+    private _getQuadTree(sceneNode: SceneNode): Quadtree | null {
+        if (this._quadTrees.size > 0) {
+            const bounds = sceneNode.getBounds();
+
+            for (const quadTree of this._quadTrees.values()) {
+                if (quadTree.getBounds().containsRect(bounds)) {
+                    return quadTree;
+                }
             }
         }
 
         return null;
+    }
+
+    private _split(): void {
+        if (this._quadTrees.size === 0) {
+            const { top, left, width, height } = this.getBounds();
+            const halfWidth = (width / 2) | 0;
+            const halfHeight = (height / 2) | 0;
+            const nextLevel = this.level + 1;
+
+            this._quadTrees.set(0, new Quadtree(Rectangle.Temp.set(left, top, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(1, new Quadtree(Rectangle.Temp.set(left + halfWidth, top, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(2, new Quadtree(Rectangle.Temp.set(left, top + halfHeight, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(3, new Quadtree(Rectangle.Temp.set(left + halfWidth, top + halfHeight, halfWidth, halfHeight), nextLevel));
+        }
+
+        this._passSceneNodesToQuadTrees();
+    }
+
+    private _passSceneNodesToQuadTrees(): void {
+        for (const sceneNode of this._sceneNodes) {
+            const quadTree = this._getQuadTree(sceneNode);
+
+            if (quadTree) {
+                this._sceneNodes.delete(sceneNode);
+                quadTree.addSceneNode(sceneNode);
+            }
+        }
     }
 }

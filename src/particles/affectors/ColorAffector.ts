@@ -1,9 +1,9 @@
-import { IParticleAffector } from 'particles/affectors/IParticleAffector';
+import { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
 import { Color } from 'core/Color';
 import { Particle } from 'particles/Particle';
 import { Time } from 'core/Time';
 
-export class ColorAffector implements IParticleAffector {
+export class ColorAffector implements ParticleAffectorInterface {
 
     private readonly _fromColor: Color;
     private readonly _toColor: Color;

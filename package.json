@@ -15,16 +15,17 @@
   ],
   "scripts": {
     "clean": "shx rm -rf dist/bundles dist/lib dist/lib-esm",
-    "build": "npm run clean && tsc && tsc -m es6 --outDir dist/lib-esm && webpack --config scripts/build-prod.config.js",
+    "build": "npm run clean && tsc && tsc -m es6 --outDir dist/lib-esm && webpack --config scripts/build.config.js",
     "prepare": "npm run build && npm version patch"
   },
   "devDependencies": {
     "@types/css-font-loading-module": "0.0.4",
     "@types/earcut": "^2.1.0",
     "@types/node": "^13.7.1",
-    "@typescript-eslint/eslint-plugin": "^2.28.0",
-    "@typescript-eslint/parser": "^2.28.0",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.29.0",
     "awesome-typescript-loader": "^5.2.1",
+    "circular-dependency-plugin": "^5.2.0",
     "eslint": "^6.8.0",
     "node-sass": "^4.13.1",
     "raw-loader": "^4.0.0",
@@ -32,7 +33,7 @@
     "terser-webpack-plugin": "^2.3.5",
     "ts-loader": "^6.2.1",
     "tslint": "^6.0.0",
-    "typescript": "^3.7.5",
+    "typescript": "^3.8.3",
     "webpack": "^4.41.6",
     "webpack-cli": "^3.3.11"
   },

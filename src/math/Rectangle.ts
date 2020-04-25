@@ -1,29 +1,38 @@
 import { inRange } from 'utils/math';
 import { Vector } from './Vector';
 import { Size } from './Size';
-import { Circle } from './Circle';
-import { Polygon } from './Polygon';
 import { Interval } from './Interval';
 import { Matrix } from './Matrix';
-import { IShape } from 'interfaces/IShape';
+import { Shape2D } from 'types/Shape';
+import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
-    Collidable,
-    Collision,
-    CollisionType,
     getCollisionCircleRectangle,
     getCollisionRectangleRectangle,
     getCollisionSAT,
-    isRectangleIntersectingWithTarget
-} from "const/collision";
+} from "utils/collision-detection";
+import {
+    intersectionLineRect,
+    intersectionPointRect,
+    intersectionRectCircle,
+    intersectionRectEllipse,
+    intersectionRectPoly,
+    intersectionRectRect,
+    intersectionSAT
+} from "utils/collision-detection";
+import type { SceneNode } from "core/SceneNode";
+import type { Ellipse } from "math/Ellipse";
+import type { Line } from "math/Line";
+import type { Circle } from './Circle';
+import type { Polygon } from './Polygon';
 
-export class Rectangle implements IShape {
-
-    public static readonly Temp = new Rectangle();
+export class Rectangle implements Shape2D {
 
     public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
     private readonly _position: Vector;
     private readonly _size: Size;
+    private _normals: Array<Vector> | null = null;
+    private _normalsDirty = false;
 
     constructor(x = 0, y = x, width = 0, height = width) {
         this._position = new Vector(x, y);
@@ -36,6 +45,7 @@ export class Rectangle implements IShape {
 
     public set position(position: Vector) {
         this._position.copy(position);
+        this._normalsDirty = true;
     }
 
     public get x(): number {
@@ -44,6 +54,7 @@ export class Rectangle implements IShape {
 
     public set x(x: number) {
         this._position.x = x;
+        this._normalsDirty = true;
     }
 
     public get y(): number {
@@ -52,6 +63,7 @@ export class Rectangle implements IShape {
 
     public set y(y: number) {
         this._position.y = y;
+        this._normalsDirty = true;
     }
 
     public get size(): Size {
@@ -60,6 +72,7 @@ export class Rectangle implements IShape {
 
     public set size(size: Size) {
         this._size.copy(size);
+        this._normalsDirty = true;
     }
 
     public get width(): number {
@@ -68,6 +81,7 @@ export class Rectangle implements IShape {
 
     public set width(width: number) {
         this._size.width = width;
+        this._normalsDirty = true;
     }
 
     public get height(): number {
@@ -76,6 +90,7 @@ export class Rectangle implements IShape {
 
     public set height(height: number) {
         this._size.height = height;
+        this._normalsDirty = true;
     }
 
     public get left(): number {
@@ -96,32 +111,34 @@ export class Rectangle implements IShape {
 
     public setPosition(x: number, y: number): this {
         this._position.set(x, y);
+        this._normalsDirty = true;
 
         return this;
     }
 
     public setSize(width: number, height: number): this {
         this._size.set(width, height);
+        this._normalsDirty = true;
 
         return this;
     }
 
     public set(x: number, y: number, width: number, height: number): this {
-        this._position.set(x, y);
-        this._size.set(width, height);
+        this.setPosition(x, y);
+        this.setSize(width, height);
 
         return this;
     }
 
     public copy(rectangle: Rectangle): this {
-        this._position.copy(rectangle.position);
-        this._size.copy(rectangle.size);
+        this.position = rectangle.position;
+        this.size = rectangle.size;
 
         return this;
     }
 
-    public clone(): Rectangle {
-        return new Rectangle(this.x, this.y, this.width, this.height);
+    public clone(): this {
+        return new (this.constructor as any)(this.x, this.y, this.width, this.height);
     }
 
     public equals({ x, y, width, height }: Partial<Rectangle> = {}): boolean {
@@ -135,16 +152,19 @@ export class Rectangle implements IShape {
         return this.clone();
     }
 
-    /**
-     * todo - cache this
-     */
     public getNormals(): Array<Vector> {
-        return [
-            new Vector(this.right - this.left, 0).rperp().normalize(),
-            new Vector(0, this.bottom - this.top).rperp().normalize(),
-            new Vector(this.left - this.right, 0).rperp().normalize(),
-            new Vector(0, this.top - this.bottom).rperp().normalize(),
-        ];
+        if (this._normalsDirty || this._normals === null) {
+            this._updateNormals(this._normals || (this._normals = [
+                new Vector(),
+                new Vector(),
+                new Vector(),
+                new Vector(),
+            ]));
+
+            this._normalsDirty = false;
+        }
+
+        return this._normals;
     }
 
     public project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -154,8 +174,8 @@ export class Rectangle implements IShape {
         const projection4 = axis.dot(this.left, this.bottom);
 
         return result.set(
-            Math.min(projection1, projection2,projection3, projection4),
-            Math.max(projection1, projection2,projection3, projection4)
+            Math.min(projection1, projection2, projection3, projection4),
+            Math.max(projection1, projection2, projection3, projection4)
         );
     }
 
@@ -192,8 +212,7 @@ export class Rectangle implements IShape {
     }
 
     public contains(x: number, y: number): boolean {
-        return inRange(x, this.left, this.right)
-            && inRange(y, this.top, this.bottom);
+        return intersectionPointRect(Vector.Temp.set(x, y), this);
     }
 
     public containsRect(rect: Rectangle): boolean {
@@ -203,28 +222,53 @@ export class Rectangle implements IShape {
             && inRange(rect.bottom, this.top, this.bottom);
     }
 
-    public intersects(target: Collidable): boolean {
-        return isRectangleIntersectingWithTarget(this, target);
+    public intersectsWith(target: Collidable): boolean {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode:
+                return (target as SceneNode).isAlignedBox
+                    ? intersectionRectRect(this, (target as SceneNode).getBounds())
+                    : intersectionSAT(this, target as SceneNode);
+            case CollisionType.Rectangle: return intersectionRectRect(this, target as Rectangle);
+            case CollisionType.Polygon: return intersectionRectPoly(this, target as Polygon);
+            case CollisionType.Circle: return intersectionRectCircle(this, target as Circle);
+            case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
+            case CollisionType.Line: return intersectionLineRect(target as Line, this);
+            case CollisionType.Point: return intersectionPointRect(target as Vector, this);
+            default: return false;
+        }
     }
 
-    public getCollision(target: Collidable): Collision | null {
-        if (target instanceof Rectangle) {
-            return getCollisionRectangleRectangle(this, target);
+    public collidesWith(target: Collidable): Collision | null {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode:
+                return (target as SceneNode).isAlignedBox
+                    ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds())
+                    : getCollisionSAT(this, target as SceneNode);
+            case CollisionType.Rectangle: return getCollisionRectangleRectangle(this, target as Rectangle);
+            case CollisionType.Polygon: return getCollisionSAT(this, target as Polygon);
+            case CollisionType.Circle: return getCollisionCircleRectangle(target as Circle, this, true);
+            // case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
+            // case CollisionType.Line: return intersectionLineRect(target as Line, this);
+            // case CollisionType.Point: return intersectionPointRect(target as Vector, this);
+            default: return null;
         }
-
-        if (target instanceof Circle) {
-            return getCollisionCircleRectangle(target, this, true);
-        }
-
-        if (target instanceof Polygon) {
-            return getCollisionSAT(this, target);
-        }
-
-        return null;
     }
 
-    public destroy() {
+    public destroy(): void {
         this._position.destroy();
         this._size.destroy();
+
+        if (this._normals) {
+            this._normals = null;
+        }
     }
+
+    private _updateNormals(normals: Array<Vector>): void {
+        normals[0].set(this.right - this.left, 0).rperp().normalize();
+        normals[1].set(0, this.bottom - this.top).rperp().normalize();
+        normals[2].set(this.left - this.right, 0).rperp().normalize();
+        normals[3].set(0, this.top - this.bottom).rperp().normalize();
+    }
+
+    public static readonly Temp = new Rectangle();
 }

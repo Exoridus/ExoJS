@@ -2,10 +2,10 @@ import { Vector } from 'math/Vector';
 import { Color } from 'core/Color';
 import { Time } from 'core/Time';
 import { ParticleOptions } from './emitters/ParticleOptions';
-import { IParticleProps } from "./IParticleProps";
-import { trimRotation } from "const/math";
+import { ParticleProperties } from "particles/ParticleProperties";
+import { trimRotation } from "utils/math";
 
-export class Particle implements IParticleProps {
+export class Particle implements ParticleProperties {
     private _totalLifetime = Time.OneSecond.clone();
     private _elapsedLifetime = Time.Zero.clone();
     private _position = Vector.Zero.clone();

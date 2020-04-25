@@ -1,6 +1,22 @@
-import { RadiansPerDegree, DegreesPerRadian, VoronoiRegion } from 'const/math';
 import { Vector } from 'math/Vector';
-import { internalRandom } from "const/core";
+
+export const Tau = Math.PI * 2;
+
+export const RadiansPerDegree = Math.PI / 180;
+
+export const DegreesPerRadian = 180 / Math.PI;
+
+export const enum VoronoiRegion {
+    Left = -1,
+    Middle = 0,
+    Right = 1,
+}
+
+export const trimRotation = (degrees: number): number => {
+    const rotation = degrees % 360;
+
+    return rotation < 0 ? rotation + 360 : rotation;
+};
 
 export const degreesToRadians = (degree: number): number => degree * RadiansPerDegree;
 
@@ -19,7 +35,7 @@ export const isPowerOfTwo = (value: number): boolean => (
 );
 
 export const inRange = (value: number, min: number, max: number): boolean => (
-    (value >= Math.min(min, max)) && (value <= Math.max(min, max))
+    value >= Math.min(min, max) && value <= Math.max(min, max)
 );
 
 export const getDistance = (x1: number, y1: number, x2: number, y2: number): number => {
@@ -84,16 +100,14 @@ export const quadraticCurveTo = (
     return path;
 };
 
-export const getVoronoiRegion = (line: Vector, point: Vector): number => {
+export const getVoronoiRegion = (line: Vector, point: Vector): VoronoiRegion => {
     const product = point.dot(line.x, line.y);
 
     if (product < 0) {
-        return VoronoiRegion.LEFT;
+        return VoronoiRegion.Left;
     } else if (product > line.lengthSq) {
-        return VoronoiRegion.RIGHT;
+        return VoronoiRegion.Right;
     } else {
-        return VoronoiRegion.MIDDLE;
+        return VoronoiRegion.Middle;
     }
 };
-
-export const getRandomNumber = (min?: number, max?: number): number => internalRandom.next(min, max);

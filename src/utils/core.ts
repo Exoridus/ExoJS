@@ -1,13 +1,50 @@
-import { internalAudioElement, internalCanvasElement, internalCanvasContext, codecNotSupportedPattern } from 'const/core';
-import { TextureSource } from "rendering/texture/Texture";
 import { Size } from 'math/Size';
+import { Random } from "math/Random";
+import { TextureSource } from "types/types";
+import { Time } from "core/Time";
 
-export const stopEvent = (event: Event) => {
+const codecNotSupportedPattern = /^no$/;
+const internalAudioElement = document.createElement('audio') as HTMLAudioElement;
+const internalCanvasElement = document.createElement('canvas') as HTMLCanvasElement;
+const internalCanvasContext = internalCanvasElement.getContext('2d') as CanvasRenderingContext2D;
+const internalRandom = new Random();
+
+export const rand = (min?: number, max?: number): number => internalRandom.next(min, max);
+export const noop = (): void => { /* empty function */ };
+export const stopEvent = (event: Event): void => {
     event.preventDefault();
     event.stopImmediatePropagation();
 };
 
-export const getPreciseTime = () => performance.now();
+export const supportsWebAudio: boolean = ('AudioContext' in window);
+export const supportsIndexedDB: boolean = ('indexedDB' in window);
+export const supportsTouchEvents: boolean = ('ontouchstart' in window);
+export const supportsPointerEvents: boolean = ('PointerEvent' in window);
+export const supportsEventOptions: boolean = ((): boolean => {
+    let supportsPassive = false;
+
+    try {
+        window.addEventListener('test', noop, {
+            get passive() {
+                supportsPassive = true;
+
+                return false;
+            }
+        });
+    } catch (e) {
+        // do nothing
+    }
+
+    return supportsPassive;
+})();
+
+export const getPreciseTime = (): number => performance.now();
+export const milliseconds = (value: number): Time => new Time(value, Time.Milliseconds);
+export const seconds = (value: number): Time => new Time(value, Time.Seconds);
+export const minutes = (value: number): Time => new Time(value, Time.Minutes);
+export const hours = (value: number): Time => new Time(value, Time.Hours);
+
+export const emptyArrayBuffer = new ArrayBuffer(0);
 
 export const removeArrayItems = <T = any>(array: Array<T>, startIndex: number, amount: number): Array<T> => {
     if (startIndex < array.length && amount > 0) {

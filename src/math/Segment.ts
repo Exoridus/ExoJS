@@ -1,8 +1,7 @@
 import { Vector } from './Vector';
+import { Cloneable } from "types/types";
 
-export class Segment {
-
-    public static readonly Temp = new Segment();
+export class Segment implements Cloneable {
 
     private readonly _startPoint: Vector;
     private readonly _endPoint: Vector;
@@ -74,8 +73,8 @@ export class Segment {
         return this;
     }
 
-    public clone(): Segment {
-        return new Segment(this.startX, this.startY, this.endX, this.endY);
+    public clone(): this {
+        return new (this.constructor as any)(this.startX, this.startY, this.endX, this.endY);
     }
 
     public equals({ startX, startY, endX, endY }: Partial<Segment> = {}): boolean {
@@ -89,4 +88,6 @@ export class Segment {
         this._startPoint.destroy();
         this._endPoint.destroy();
     }
+
+    public static readonly Temp = new Segment();
 }

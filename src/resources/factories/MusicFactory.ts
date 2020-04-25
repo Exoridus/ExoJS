@@ -1,8 +1,10 @@
-import { PlaybackOptions } from "const/types";
+import { PlaybackOptions } from "types/types";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { determineMimeType } from "utils/resources";
-import { onceListenerOption, StorageNames } from "const/core";
+import { StorageNames } from "types/types";
 import { Music } from "audio/Music";
+
+const onceListenerOption = { once: true };
 
 interface MusicFactoryOptions {
     mimeType?: string;

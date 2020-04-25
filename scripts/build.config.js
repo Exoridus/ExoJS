@@ -1,6 +1,7 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
+const CircularDependencyPlugin  = require('circular-dependency-plugin');
 
 module.exports = {
     mode: 'production',
@@ -50,5 +51,13 @@ module.exports = {
     },
     performance: {
         hints: false,
-    }
+    },
+    plugins: [
+        new CircularDependencyPlugin({
+            exclude: /\.js|node_modules|dist/,
+            failOnError: true,
+            allowAsyncCycles: false,
+            cwd: process.cwd(),
+        })
+    ]
 };

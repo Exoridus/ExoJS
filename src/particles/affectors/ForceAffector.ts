@@ -1,9 +1,9 @@
-import { IParticleAffector } from 'particles/affectors/IParticleAffector';
+import { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
 import { Vector } from 'math/Vector';
 import { Particle } from 'particles/Particle';
 import { Time } from 'core/Time';
 
-export class ForceAffector implements IParticleAffector {
+export class ForceAffector implements ParticleAffectorInterface {
 
     private readonly _acceleration: Vector;
 

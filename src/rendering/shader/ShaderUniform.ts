@@ -1,5 +1,5 @@
-import { PrimitiveUploadFunction, PrimitiveUploadFunctions } from '../../const/rendering';
-import { TypedArray } from "../../const/types";
+import { PrimitiveUploadFunction, PrimitiveUploadFunctions } from '../../types/rendering';
+import { TypedArray } from "../../types/types";
 
 export class ShaderUniform {
 

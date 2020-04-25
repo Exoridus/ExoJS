@@ -1,27 +1,37 @@
 import { Interval } from './Interval';
 import { Vector } from './Vector';
 import { Rectangle } from './Rectangle';
-import { Circle } from './Circle';
-import { IShape } from 'interfaces/IShape';
+import { Shape2D } from 'types/Shape';
+import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
-    Collidable, Collision, CollisionType,
     getCollisionPolygonCircle,
     getCollisionSAT,
-    isPolygonIntersectingWithTarget
-} from "const/collision";
+} from "utils/collision-detection";
+import {
+    intersectionCirclePoly,
+    intersectionEllipsePoly,
+    intersectionLinePoly,
+    intersectionPointPoly,
+    intersectionPolyPoly,
+    intersectionRectPoly,
+} from "utils/collision-detection";
+import type { SceneNode } from "core/SceneNode";
+import type { Circle } from './Circle';
+import type { Ellipse } from "math/Ellipse";
+import type { Line } from "math/Line";
 
-export class Polygon implements IShape {
-
-    public static readonly Temp = new Polygon();
+export class Polygon implements Shape2D {
 
     public readonly collisionType: CollisionType = CollisionType.Polygon;
 
     private readonly _position: Vector;
-    private readonly _points: Array<Vector>;
+    private readonly _points: Array<Vector> = [];
+    private readonly _edges: Array<Vector> = [];
+    private readonly _normals: Array<Vector> = [];
 
     constructor(points: Array<Vector> = [], x = 0, y = 0) {
         this._position = new Vector(x, y);
-        this._points = points.map(point => point.clone());
+        this.setPoints(points);
     }
 
     public get position(): Vector {
@@ -56,6 +66,14 @@ export class Polygon implements IShape {
         this.setPoints(points);
     }
 
+    public get edges(): Array<Vector> {
+        return this._edges;
+    }
+
+    public get normals(): Array<Vector> {
+        return this._normals;
+    }
+
     public setPosition(x: number, y: number): this {
         this._position.set(x, y);
 
@@ -63,22 +81,32 @@ export class Polygon implements IShape {
     }
 
     public setPoints(newPoints: Array<Vector>): this {
-        const points = this._points,
-            len = points.length,
-            diff = len - newPoints.length;
+        const len = this._points.length;
+        const newLen = newPoints.length;
+        const diff = len - newLen;
 
         for (let i = 0; i < len; i++) {
-            points[i].copy(newPoints[i]);
+            this._points[i].copy(newPoints[i]);
         }
 
         if (diff > 0) {
-            for (const point of points.splice(newPoints.length, diff)) {
-                point.destroy();
-            }
+            this._points.splice(newLen).forEach(point => point.destroy());
+            this._edges.splice(newLen).forEach(point => point.destroy());
+            this._normals.splice(newLen).forEach(point => point.destroy());
         } else if (diff < 0) {
-            for (let i = len; i < newPoints.length; i++) {
-                points.push(newPoints[i].clone());
+            for (let i = len; i < newLen; i++) {
+                this._points.push(newPoints[i].clone());
+                this._edges.push(newPoints[i].clone());
+                this._normals.push(newPoints[i].clone());
             }
+        }
+
+        for (let i = 0; i < len; i += 1) {
+            const curr = this._points[i];
+            const next = this._points[(i + 1) % len];
+
+            this._edges[i].set(next.x - curr.x, next.y - curr.y);
+            this._normals[i].copy(this._edges[i]).rperp().normalize();
         }
 
         return this;
@@ -98,8 +126,8 @@ export class Polygon implements IShape {
         return this;
     }
 
-    public clone(): Polygon {
-        return new Polygon(this.points, this.x, this.y);
+    public clone(): this {
+        return new (this.constructor as any)(this.points, this.x, this.y);
     }
 
     public equals({ x, y, points }: Partial<Polygon> = {}): boolean {
@@ -132,7 +160,7 @@ export class Polygon implements IShape {
     }
 
     public getNormals(): Array<Vector> {
-        return this._points.map((point, i, points) => Vector.subtract(points[(i + 1) % points.length], point).rperp().normalize());
+        return this._normals;
     }
 
     public project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -145,41 +173,37 @@ export class Polygon implements IShape {
         );
     }
 
-    // todo - gehört hier noch ein transform matrix dazu?
     public contains(x: number, y: number): boolean {
-        const length = this._points.length;
-
-        let inside = false;
-
-        for (let i = 0, j = length - 1; i < length; j = i++) {
-            const { x: aX, y: aY } = this._points[i];
-            const { x: bX, y: bY } = this._points[j];
-
-            if (((aY <= y && y < bY) || (bY <= y && y < aY)) && x < ((bX - aX) / (bY - aY) * (y - aY) + aX)) {
-                inside = !inside;
-            }
-        }
-
-        return inside;
+        return intersectionPointPoly(Vector.Temp.set(x, y), this);
     }
 
-    public intersects(target: Collidable): boolean {
-        return isPolygonIntersectingWithTarget(this, target);
+    public intersectsWith(target: Collidable): boolean {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return intersectionRectPoly((target as SceneNode).getBounds(), this);
+            case CollisionType.Rectangle: return intersectionRectPoly(target as Rectangle, this);
+            case CollisionType.Polygon: return intersectionPolyPoly(this, target as Polygon);
+            case CollisionType.Circle: return intersectionCirclePoly(target as Circle, this);
+            case CollisionType.Ellipse: return intersectionEllipsePoly(target as Ellipse, this);
+            case CollisionType.Line: return intersectionLinePoly(target as Line, this);
+            case CollisionType.Point: return intersectionPointPoly(target as Vector, this);
+            default: return false;
+        }
     }
 
-    public getCollision(target: Collidable): Collision | null {
-        if (target instanceof Polygon || target instanceof Rectangle) {
-            return getCollisionSAT(this, target);
+    public collidesWith(target: Collidable): Collision | null {
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return getCollisionSAT(this, target as SceneNode);
+            case CollisionType.Rectangle: return getCollisionSAT(this, target as Rectangle);
+            case CollisionType.Polygon: return getCollisionSAT(this, target as Polygon);
+            case CollisionType.Circle: return getCollisionPolygonCircle(this, target as Circle);
+            // case CollisionType.Ellipse: return intersectionEllipsePoly(target as Ellipse, this);
+            // case CollisionType.Line: return intersectionLinePoly(target as Line, this);
+            // case CollisionType.Point: return intersectionPointPoly(target as Vector, this);
+            default: return null;
         }
-
-        if (target instanceof Circle) {
-            return getCollisionPolygonCircle(this, target);
-        }
-
-        return null;
     }
 
-    public destroy() {
+    public destroy(): void {
 
         for (const point of this._points) {
             point.destroy();
@@ -188,4 +212,6 @@ export class Polygon implements IShape {
         this._position.destroy();
         this._points.length = 0;
     }
+
+    public static readonly Temp = new Polygon();
 }

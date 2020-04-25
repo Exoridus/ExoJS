@@ -1,64 +1,45 @@
-import { CHANNEL_RANGE, CHANNEL_OFFSET } from 'const/input';
+import { ChannelSize, ChannelOffset } from 'types/input';
 import { Flags } from 'math/Flags';
 import { stopEvent } from 'utils/core';
 import { Vector } from 'math/Vector';
-import { Pointer } from './Pointer';
-import { GamepadProvider } from './GamepadProvider';
+import { Pointer, PointerState, PointerStateFlag } from './Pointer';
+import { Gamepad } from 'input/Gamepad';
 import { Signal } from 'core/Signal';
 import { getDistance } from 'utils/math';
 import { Input } from './Input';
-import { activeListenerOption, passiveListenerOption } from "const/core";
 import { Application } from "core/Application";
 
 enum InputManagerFlags {
     NONE = 0,
     KEY_DOWN = 1 << 0,
     KEY_UP = 1 << 1,
-    POINTER_ENTER = 1 << 2,
-    POINTER_LEAVE = 1 << 3,
-    POINTER_MOVE = 1 << 4,
-    POINTER_DOWN = 1 << 5,
-    POINTER_UP = 1 << 6,
-    POINTER_CANCEL = 1 << 7,
-    MOUSE_WHEEL = 1 << 8,
+    MOUSE_WHEEL = 1 << 2,
+    POINTER_UPDATE = 1 << 3,
 }
-
-type PointerMapping = { [pointerId: number]: Pointer };
 
 export class InputManager {
 
-    private _app: Application;
-    private _channels: Float32Array = new Float32Array(CHANNEL_RANGE.GLOBAL);
+    private _canvas: HTMLCanvasElement;
+    private _channels: Float32Array = new Float32Array(ChannelSize.Container);
     private _inputs: Set<Input> = new Set();
-    private _pointers: PointerMapping = {};
-    private _gamepads: Array<GamepadProvider> = [
-        new GamepadProvider(0, this._channels),
-        new GamepadProvider(1, this._channels),
-        new GamepadProvider(2, this._channels),
-        new GamepadProvider(3, this._channels),
-    ];
+    private _pointers: Record<number, Pointer> = {};
+    private _gamepads: Array<Gamepad>;
     private _wheelOffset: Vector = new Vector();
     private _flags: Flags<InputManagerFlags> = new Flags<InputManagerFlags>();
-
     private _channelsPressed: Array<number> = [];
     private _channelsReleased: Array<number> = [];
+    private _canvasFocused: boolean;
+    private _pointerDistanceThreshold: number;
 
-    private _pointersEntered: Array<Pointer> = [];
-    private _pointersLeft: Array<Pointer> = [];
-    private _pointersPressed: Array<Pointer> = [];
-    private _pointersMoved: Array<Pointer> = [];
-    private _pointersReleased: Array<Pointer> = [];
-    private _pointersCancelled: Array<Pointer> = [];
-
-    private readonly _keyDownHandler: (event: KeyboardEvent) => void = this._keyDown.bind(this);
-    private readonly _keyUpHandler: (event: KeyboardEvent) => void = this._keyUp.bind(this);
-    private readonly _mouseWheelHandler: (event: WheelEvent) => void = this._mouseWheel.bind(this);
-    private readonly _pointerEnterHandler: (event: PointerEvent) => void = this._pointerEnter.bind(this);
-    private readonly _pointerLeaveHandler: (event: PointerEvent) => void = this._pointerLeave.bind(this);
-    private readonly _pointerDownHandler: (event: PointerEvent) => void = this._pointerDown.bind(this);
-    private readonly _pointerMoveHandler: (event: PointerEvent) => void = this._pointerMove.bind(this);
-    private readonly _pointerUpHandler: (event: PointerEvent) => void = this._pointerUp.bind(this);
-    private readonly _pointerCancelHandler: (event: PointerEvent) => void = this._pointerCancel.bind(this);
+    private readonly _keyDownHandler: (event: KeyboardEvent) => void = this._handleKeyDown.bind(this);
+    private readonly _keyUpHandler: (event: KeyboardEvent) => void = this._handleKeyUp.bind(this);
+    private readonly _mouseWheelHandler: (event: WheelEvent) => void = this._handleMouseWheel.bind(this);
+    private readonly _pointerOverHandler: (event: PointerEvent) => void = this._handlePointerOver.bind(this);
+    private readonly _pointerLeaveHandler: (event: PointerEvent) => void = this._handlePointerLeave.bind(this);
+    private readonly _pointerDownHandler: (event: PointerEvent) => void = this._handlePointerDown.bind(this);
+    private readonly _pointerMoveHandler: (event: PointerEvent) => void = this._handlePointerMove.bind(this);
+    private readonly _pointerUpHandler: (event: PointerEvent) => void = this._handlePointerUp.bind(this);
+    private readonly _pointerCancelHandler: (event: PointerEvent) => void = this._handlePointerCancel.bind(this);
 
     public readonly onPointerEnter = new Signal();
     public readonly onPointerLeave = new Signal();
@@ -76,34 +57,33 @@ export class InputManager {
     public readonly onGamepadUpdated = new Signal();
 
     constructor(app: Application) {
+        const { gamepadMapping, pointerDistanceThreshold } = app.options;
 
-        this._app = app;
+        this._canvas = app.canvas;
+        this._canvasFocused = document.activeElement === this._canvas;
+        this._pointerDistanceThreshold = pointerDistanceThreshold;
+        this._gamepads = [
+            new Gamepad(0, this._channels, gamepadMapping),
+            new Gamepad(1, this._channels, gamepadMapping),
+            new Gamepad(2, this._channels, gamepadMapping),
+            new Gamepad(3, this._channels, gamepadMapping),
+        ];
 
-        const canvas = app.canvas;
-        const realWindow = window.parent || window;
-
-        realWindow.addEventListener('keydown', this._keyDownHandler, true);
-        realWindow.addEventListener('keyup', this._keyUpHandler, true);
-        canvas.addEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
-        canvas.addEventListener('pointerover', this._pointerEnterHandler, passiveListenerOption);
-        canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
-        canvas.addEventListener('pointerdown', this._pointerDownHandler, activeListenerOption);
-        canvas.addEventListener('pointermove', this._pointerMoveHandler, passiveListenerOption);
-        canvas.addEventListener('pointerup', this._pointerUpHandler, activeListenerOption);
-        canvas.addEventListener('pointercancel', this._pointerCancelHandler, passiveListenerOption);
-        canvas.addEventListener('contextmenu', stopEvent, activeListenerOption);
-        canvas.addEventListener('selectstart', stopEvent, activeListenerOption);
+        this._addEventListeners();
     }
 
-    public get channels(): Float32Array {
-        return this._channels;
+    public get pointersInCanvas(): boolean {
+        return Object.values(this._pointers).some(pointer => (
+            pointer.currentState !== PointerState.OutsideCanvas &&
+            pointer.currentState !== PointerState.Cancelled
+        ));
     }
 
-    public get pointers(): PointerMapping {
-        return this._pointers;
+    public get canvasFocused(): boolean {
+        return this._canvasFocused;
     }
 
-    public get gamepads(): Array<GamepadProvider> {
+    public get gamepads(): Array<Gamepad> {
         return this._gamepads;
     }
 
@@ -150,30 +130,15 @@ export class InputManager {
             input.update(this._channels);
         }
 
-        this._updateEvents();
-
-        for (const pointer of Object.values(this._pointers)) {
-            pointer.updateEvents();
+        if (this._flags.value !== InputManagerFlags.NONE) {
+            this._updateEvents();
         }
 
         return this;
     }
 
     public destroy(): void {
-        const canvas = this._app.canvas;
-        const realWindow = window.parent || window;
-
-        realWindow.removeEventListener('keydown', this._keyDownHandler, true);
-        realWindow.removeEventListener('keyup', this._keyUpHandler, true);
-        canvas.removeEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
-        canvas.removeEventListener('pointerover', this._pointerEnterHandler, passiveListenerOption);
-        canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
-        canvas.removeEventListener('pointerdown', this._pointerDownHandler, activeListenerOption);
-        canvas.removeEventListener('pointermove', this._pointerMoveHandler, passiveListenerOption);
-        canvas.removeEventListener('pointerup', this._pointerUpHandler, activeListenerOption);
-        canvas.removeEventListener('pointercancel', this._pointerCancelHandler, passiveListenerOption);
-        canvas.removeEventListener('contextmenu', stopEvent, activeListenerOption);
-        canvas.removeEventListener('selectstart', stopEvent, activeListenerOption);
+        this._removeEventListeners();
 
         for (const pointer of Object.values(this._pointers)) {
             pointer.destroy();
@@ -186,12 +151,6 @@ export class InputManager {
         this._inputs.clear();
         this._channelsPressed.length = 0;
         this._channelsReleased.length = 0;
-        this._pointersEntered.length = 0;
-        this._pointersLeft.length = 0;
-        this._pointersPressed.length = 0;
-        this._pointersMoved.length = 0;
-        this._pointersReleased.length = 0;
-        this._pointersCancelled.length = 0;
         this._wheelOffset.destroy();
         this._flags.destroy();
 
@@ -211,74 +170,101 @@ export class InputManager {
         this.onGamepadUpdated.destroy();
     }
 
-    private _keyDown(event: KeyboardEvent): void {
-        const channel = (CHANNEL_OFFSET.KEYBOARD + event.keyCode);
+    private _handleKeyDown(event: KeyboardEvent): void {
+        const channel = (ChannelOffset.Keyboard + event.keyCode);
 
         this._channels[channel] = 1;
         this._channelsPressed.push(channel);
-        this._flags.add(InputManagerFlags.KEY_DOWN);
+        this._flags.push(InputManagerFlags.KEY_DOWN);
     }
 
-    private _keyUp(event: KeyboardEvent): void {
-        const channel = (CHANNEL_OFFSET.KEYBOARD + event.keyCode);
+    private _handleKeyUp(event: KeyboardEvent): void {
+        const channel = (ChannelOffset.Keyboard + event.keyCode);
 
         this._channels[channel] = 0;
         this._channelsReleased.push(channel);
-        this._flags.add(InputManagerFlags.KEY_UP);
+        this._flags.push(InputManagerFlags.KEY_UP);
     }
 
-    private _pointerEnter(event: PointerEvent): void {
-        const pointer = new Pointer(event);
-
-        this._pointers[pointer.id] = pointer;
-        this._pointersEntered.push(pointer);
-        this._flags.add(InputManagerFlags.POINTER_ENTER);
+    private _handlePointerOver(event: PointerEvent): void {
+        this._pointers[event.pointerId] = new Pointer(event, this._canvas);
+        this._flags.push(InputManagerFlags.POINTER_UPDATE);
     }
 
-    private _pointerLeave(event: PointerEvent): void {
-        const pointer = this._pointers[event.pointerId].update(event);
-
-        delete this._pointers[pointer.id];
-        this._pointersLeft.push(pointer);
-        this._flags.add(InputManagerFlags.POINTER_LEAVE);
+    private _handlePointerLeave(event: PointerEvent): void {
+        this._pointers[event.pointerId].handleLeave(event);
+        this._flags.push(InputManagerFlags.POINTER_UPDATE);
     }
 
-    private _pointerDown(event: PointerEvent): void {
-        const pointer = this._pointers[event.pointerId].update(event);
-
-        pointer.startPos.copy(pointer.position);
-        this._pointersPressed.push(pointer);
-        this._flags.add(InputManagerFlags.POINTER_DOWN);
+    private _handlePointerDown(event: PointerEvent): void {
+        this._pointers[event.pointerId].handlePress(event);
+        this._flags.push(InputManagerFlags.POINTER_UPDATE);
 
         event.preventDefault();
     }
 
-    private _pointerMove(event: PointerEvent): void {
-        const pointer = this._pointers[event.pointerId].update(event);
-
-        this._pointersMoved.push(pointer);
-        this._flags.add(InputManagerFlags.POINTER_MOVE);
+    private _handlePointerMove(event: PointerEvent): void {
+        this._pointers[event.pointerId].handleMove(event);
+        this._flags.push(InputManagerFlags.POINTER_UPDATE);
     }
 
-    private _pointerUp(event: PointerEvent): void {
-        const pointer = this._pointers[event.pointerId].update(event);
-
-        this._pointersReleased.push(pointer);
-        this._flags.add(InputManagerFlags.POINTER_UP);
+    private _handlePointerUp(event: PointerEvent): void {
+        this._pointers[event.pointerId].handleRelease(event);
+        this._flags.push(InputManagerFlags.POINTER_UPDATE);
 
         event.preventDefault();
     }
 
-    private _pointerCancel(event: PointerEvent): void {
-        const pointer = this._pointers[event.pointerId].update(event);
-
-        this._pointersCancelled.push(pointer);
-        this._flags.add(InputManagerFlags.POINTER_CANCEL);
+    private _handlePointerCancel(event: PointerEvent): void {
+        this._pointers[event.pointerId].handleCancel(event);
+        this._flags.push(InputManagerFlags.POINTER_UPDATE);
     }
 
-    private _mouseWheel(event: WheelEvent): void {
+    private _handleMouseWheel(event: WheelEvent): void {
         this._wheelOffset.set(event.deltaX, event.deltaY);
-        this._flags.add(InputManagerFlags.MOUSE_WHEEL);
+        this._flags.push(InputManagerFlags.MOUSE_WHEEL);
+
+        if (this._canvasFocused) {
+            event.preventDefault();
+        }
+    }
+
+    private _addEventListeners(): void {
+        const canvas = this._canvas;
+        const activeWindow = window.parent || window;
+        const activeListenerOption = { capture: true, passive: false };
+        const passiveListenerOption = { capture: true, passive: true };
+
+        activeWindow.addEventListener('keydown', this._keyDownHandler, true);
+        activeWindow.addEventListener('keyup', this._keyUpHandler, true);
+        canvas.addEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
+        canvas.addEventListener('pointerover', this._pointerOverHandler, passiveListenerOption); // Cancellable
+        canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
+        canvas.addEventListener('pointerdown', this._pointerDownHandler, activeListenerOption); // Cancellable
+        canvas.addEventListener('pointermove', this._pointerMoveHandler, passiveListenerOption); // Cancellable
+        canvas.addEventListener('pointerup', this._pointerUpHandler, activeListenerOption); // Cancellable
+        canvas.addEventListener('pointercancel', this._pointerCancelHandler, passiveListenerOption);
+        canvas.addEventListener('contextmenu', stopEvent, activeListenerOption); // Cancellable
+        canvas.addEventListener('selectstart', stopEvent, activeListenerOption); // Cancellable
+    }
+
+    private _removeEventListeners(): void {
+        const canvas = this._canvas;
+        const keyEventTarget = window.parent || window;
+        const activeListenerOption = { capture: true, passive: false };
+        const passiveListenerOption = { capture: true, passive: true };
+
+        keyEventTarget.removeEventListener('keydown', this._keyDownHandler, true);
+        keyEventTarget.removeEventListener('keyup', this._keyUpHandler, true);
+        canvas.removeEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
+        canvas.removeEventListener('pointerover', this._pointerOverHandler, passiveListenerOption);
+        canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
+        canvas.removeEventListener('pointerdown', this._pointerDownHandler, activeListenerOption);
+        canvas.removeEventListener('pointermove', this._pointerMoveHandler, passiveListenerOption);
+        canvas.removeEventListener('pointerup', this._pointerUpHandler, activeListenerOption);
+        canvas.removeEventListener('pointercancel', this._pointerCancelHandler, passiveListenerOption);
+        canvas.removeEventListener('contextmenu', stopEvent, activeListenerOption);
+        canvas.removeEventListener('selectstart', stopEvent, activeListenerOption);
     }
 
     private _updateGamepads(): this {
@@ -304,67 +290,61 @@ export class InputManager {
     }
 
     private _updateEvents(): this {
-        if (!this._flags.value) {
-            return this;
-        }
-
-        if (this._flags.has(InputManagerFlags.KEY_DOWN)) {
-            while (this._channelsPressed.length > 0) {
-                this.onKeyDown.dispatch(this._channelsPressed.pop());
+        if (this._flags.pop(InputManagerFlags.KEY_DOWN)) {
+            for (const channel of this._channelsPressed) {
+                this.onKeyDown.dispatch(channel);
             }
 
-            this._flags.remove(InputManagerFlags.KEY_DOWN);
+            this._channelsPressed.length = 0;
         }
 
-        if (this._flags.has(InputManagerFlags.KEY_UP)) {
-            while (this._channelsReleased.length > 0) {
-                this.onKeyUp.dispatch(this._channelsReleased.pop());
+        if (this._flags.pop(InputManagerFlags.KEY_UP)) {
+            for (const channel of this._channelsReleased) {
+                this.onKeyUp.dispatch(channel);
             }
 
-            this._flags.remove(InputManagerFlags.KEY_UP);
+            this._channelsReleased.length = 0;
         }
 
-        if (this._flags.has(InputManagerFlags.POINTER_ENTER)) {
-            while (this._pointersEntered.length > 0) {
-                this.onPointerEnter.dispatch(this._pointersEntered.pop());
+        if (this._flags.pop(InputManagerFlags.MOUSE_WHEEL)) {
+            this.onMouseWheel.dispatch(this._wheelOffset);
+            this._wheelOffset.set(0, 0);
+        }
+
+        if (this._flags.pop(InputManagerFlags.POINTER_UPDATE)) {
+            this._updatePointerEvents();
+        }
+
+        return this;
+    }
+
+    private _updatePointerEvents(): void {
+        for (const pointer of Object.values(this._pointers)) {
+            const { stateFlags } = pointer;
+
+            if (stateFlags.value === PointerStateFlag.None) {
+                continue;
             }
 
-            this._flags.remove(InputManagerFlags.POINTER_ENTER);
-        }
-
-        if (this._flags.has(InputManagerFlags.POINTER_LEAVE)) {
-            while (this._pointersLeft.length > 0) {
-                this.onPointerLeave.dispatch(this._pointersLeft.pop());
+            if (stateFlags.pop(PointerStateFlag.Over)) {
+                this.onPointerEnter.dispatch(pointer);
             }
 
-            this._flags.remove(InputManagerFlags.POINTER_LEAVE);
-        }
-
-        if (this._flags.has(InputManagerFlags.POINTER_DOWN)) {
-            while (this._pointersPressed.length > 0) {
-                this.onPointerDown.dispatch(this._pointersPressed.pop());
+            if (stateFlags.pop(PointerStateFlag.Down)) {
+                this.onPointerDown.dispatch(pointer);
             }
 
-            this._flags.remove(InputManagerFlags.POINTER_DOWN);
-        }
-
-        if (this._flags.has(InputManagerFlags.POINTER_MOVE)) {
-            while (this._pointersMoved.length > 0) {
-                this.onPointerMove.dispatch(this._pointersMoved.pop());
+            if (stateFlags.pop(PointerStateFlag.Move)) {
+                this.onPointerMove.dispatch(pointer);
             }
 
-            this._flags.remove(InputManagerFlags.POINTER_MOVE);
-        }
-
-        if (this._flags.has(InputManagerFlags.POINTER_UP)) {
-            while (this._pointersReleased.length > 0) {
-                const pointer = this._pointersReleased.pop()!;
+            if (stateFlags.pop(PointerStateFlag.Up)) {
                 const { x: startX, y: startY } = pointer.startPos;
 
                 this.onPointerUp.dispatch(pointer);
 
                 if (startX > 0 && startY > 0) {
-                    if (getDistance(startX, startY, pointer.x, pointer.y) < 10) {
+                    if (getDistance(startX, startY, pointer.x, pointer.y) < this._pointerDistanceThreshold) {
                         this.onPointerTap.dispatch(pointer);
                     } else {
                         this.onPointerSwipe.dispatch(pointer);
@@ -374,24 +354,14 @@ export class InputManager {
                 pointer.startPos.set(-1, -1);
             }
 
-            this._flags.remove(InputManagerFlags.POINTER_UP);
-        }
-
-        if (this._flags.has(InputManagerFlags.POINTER_CANCEL)) {
-            while (this._pointersCancelled.length > 0) {
-                this.onPointerCancel.dispatch(this._pointersCancelled.pop());
+            if (stateFlags.pop(PointerStateFlag.Cancel)) {
+                this.onPointerCancel.dispatch(pointer);
             }
 
-            this._flags.remove(InputManagerFlags.POINTER_CANCEL);
+            if (stateFlags.pop(PointerStateFlag.Leave)) {
+                this.onPointerLeave.dispatch(pointer);
+                delete this._pointers[pointer.id];
+            }
         }
-
-        if (this._flags.has(InputManagerFlags.MOUSE_WHEEL)) {
-            this.onMouseWheel.dispatch(this._wheelOffset);
-            this._wheelOffset.set(0, 0);
-
-            this._flags.remove(InputManagerFlags.MOUSE_WHEEL);
-        }
-
-        return this;
     }
 }

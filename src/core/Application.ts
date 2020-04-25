@@ -2,26 +2,69 @@ import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
 import { RenderManager } from 'rendering/RenderManager';
 import { InputManager } from 'input/InputManager';
-import { Loader, LoaderOptions } from 'resources/Loader';
-import { defaultApplicationOptions } from 'const/defaults';
+import { Loader } from 'resources/Loader';
 import { Signal } from './Signal';
-import { AppStatus } from 'const/core';
 import { Color } from './Color';
 import { Time } from './Time';
 import { Scene } from './Scene';
+import { GamepadMapping } from "input/GamepadMapping";
+import { DatabaseInterface } from "types/DatabaseInterface";
+import { DefaultGamepadMapping } from "input/DefaultGamepadMapping";
 
-export interface ApplicationOptions {
-    width: number;
-    height: number;
-    clearColor: Color;
-    canvas?: HTMLCanvasElement;
-    context: WebGLContextAttributes;
-    loader: LoaderOptions;
-    debug: boolean;
+export enum ApplicationStatus {
+    Loading = 1,
+    Running = 2,
+    Halting = 3,
+    Stopped = 4,
 }
 
+export interface ApplicationOptions {
+    canvas: HTMLCanvasElement;
+    width: number;
+    height: number;
+    debug: boolean;
+    clearColor: Color;
+    spriteRendererBatchSize: number;
+    particleRendererBatchSize: number;
+    primitiveRendererBatchSize: number;
+    gamepadMapping: GamepadMapping;
+    pointerDistanceThreshold: number;
+    webglAttributes: WebGLContextAttributes;
+    resourcePath: string;
+    requestOptions: RequestInit;
+    database?: DatabaseInterface;
+}
+
+const defaultAppSettings: ApplicationOptions = {
+    canvas: document.createElement('canvas') as HTMLCanvasElement,
+    width: 800,
+    height: 600,
+    clearColor: Color.CornflowerBlue,
+    debug: false,
+    spriteRendererBatchSize: 4096, // ~ 262kb
+    particleRendererBatchSize: 8192, // ~ 1.18mb
+    primitiveRendererBatchSize: 65536, // ~ 786kb
+    gamepadMapping: new DefaultGamepadMapping(),
+    pointerDistanceThreshold: 10,
+    webglAttributes: {
+        alpha: false,
+        antialias: false,
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: false,
+        stencil: false,
+        depth: false,
+    },
+    resourcePath: '',
+    requestOptions: {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'default',
+    },
+    database: undefined,
+};
+
 export class Application {
-    public readonly config: ApplicationOptions;
+    public readonly options: ApplicationOptions;
     public readonly canvas: HTMLCanvasElement;
     public readonly loader: Loader;
     public readonly renderManager: RenderManager;
@@ -34,20 +77,19 @@ export class Application {
     private readonly _activeClock: Clock = new Clock();
     private readonly _frameClock: Clock = new Clock();
 
-    private _status: AppStatus = AppStatus.STOPPED;
+    private _status: ApplicationStatus = ApplicationStatus.Stopped;
     private _frameCount = 0;
     private _frameRequest = 0;
 
-    constructor(options: Partial<ApplicationOptions> = {}) {
-        const config: ApplicationOptions = {
-            ...defaultApplicationOptions,
-            ...options
-        };
+    constructor(appSettings?: Partial<ApplicationOptions>) {
+        this.options = { ...defaultAppSettings, ...appSettings };
+        this.canvas = this.options.canvas;
 
-        this.config = config;
-        this.canvas = config.canvas ?? document.createElement('canvas');
+        if (this.canvas.getAttribute('tabindex') === null) {
+            this.canvas.setAttribute('tabindex', '-1');
+        }
 
-        this.loader = new Loader(config.loader);
+        this.loader = new Loader(this.options);
         this.renderManager = new RenderManager(this);
         this.inputManager = new InputManager(this);
         this.sceneManager = new SceneManager(this);
@@ -77,20 +119,20 @@ export class Application {
     }
 
     async start(scene: Scene): Promise<this> {
-        if (this._status === AppStatus.STOPPED) {
-            this._status = AppStatus.LOADING;
+        if (this._status === ApplicationStatus.Stopped) {
+            this._status = ApplicationStatus.Loading;
             await this.sceneManager.setScene(scene);
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();
             this._activeClock.start();
-            this._status = AppStatus.RUNNING;
+            this._status = ApplicationStatus.Running;
         }
 
         return this;
     }
 
     update(): this {
-        if (this._status === AppStatus.RUNNING) {
+        if (this._status === ApplicationStatus.Running) {
             this.inputManager.update();
             this.sceneManager.update(this._frameClock.elapsedTime);
             this._frameRequest = requestAnimationFrame(this._updateHandler);
@@ -102,13 +144,13 @@ export class Application {
     }
 
     stop(): this {
-        if (this._status === AppStatus.RUNNING) {
-            this._status = AppStatus.HALTING;
+        if (this._status === ApplicationStatus.Running) {
+            this._status = ApplicationStatus.Halting;
             cancelAnimationFrame(this._frameRequest);
             this.sceneManager.setScene(null);
             this._activeClock.stop();
             this._frameClock.stop();
-            this._status = AppStatus.STOPPED;
+            this._status = ApplicationStatus.Stopped;
         }
 
         return this;

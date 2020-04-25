@@ -1,5 +1,5 @@
 import { ShaderUniform } from './ShaderUniform';
-import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from '../../const/rendering';
+import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from '../../types/rendering';
 
 export class ShaderBlock {
 
