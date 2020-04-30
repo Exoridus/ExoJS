@@ -1,6 +1,6 @@
+import { Gamepad } from "input/Gamepad";
 import { GamepadMapping } from "input/GamepadMapping";
 import { GamepadControl } from "input/GamepadControl";
-import { Gamepad } from "types/input";
 
 export class DefaultGamepadMapping extends GamepadMapping {
 

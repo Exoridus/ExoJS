@@ -1,6 +1,6 @@
 import { getDistance } from 'utils/math';
-import { Matrix } from './Matrix';
-import { Shape1D } from "types/Shape";
+import { Matrix } from 'math/Matrix';
+import { Shape } from "math/Shape";
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -11,12 +11,14 @@ import {
     intersectionPointPoly,
     intersectionPointRect
 } from "utils/collision-detection";
-import type { Rectangle } from "math/Rectangle";
+import { Rectangle } from "math/Rectangle";
 import type { Polygon } from "math/Polygon";
 import type { Circle } from "math/Circle";
 import type { Ellipse } from "math/Ellipse";
 import type { Line } from "math/Line";
 import type { SceneNode } from "core/SceneNode";
+
+let temp: Vector | null = null;
 
 export abstract class AbstractVector {
     public abstract x: number;
@@ -165,7 +167,7 @@ export abstract class AbstractVector {
     public abstract destroy(): void;
 }
 
-export class Vector extends AbstractVector implements Shape1D {
+export class Vector extends AbstractVector implements Shape {
 
     public readonly collisionType: CollisionType = CollisionType.Point;
 
@@ -206,6 +208,10 @@ export class Vector extends AbstractVector implements Shape1D {
         return null;
     }
 
+    public getBounds(): Rectangle {
+        return Rectangle.Temp.set(this.x, this.y, 0, 0);
+    }
+
     public contains(x: number, y: number): boolean {
         return intersectionPointPoint(Vector.Temp.set(x, y), this);
     }
@@ -224,9 +230,16 @@ export class Vector extends AbstractVector implements Shape1D {
         // todo - check if destroy is needed
     }
 
+    public static get Temp(): Vector {
+        if (temp === null) {
+            temp = new Vector();
+        }
+
+        return temp;
+    }
+
     public static readonly Zero = new Vector(0, 0);
     public static readonly One = new Vector(1, 1);
-    public static readonly Temp = new Vector();
 
     public static add(v1: Vector, v2: Vector): Vector {
         return new Vector(v1.x + v2.x, v1.y + v2.y);

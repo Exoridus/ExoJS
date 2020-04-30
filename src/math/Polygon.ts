@@ -1,7 +1,7 @@
-import { Interval } from './Interval';
-import { Vector } from './Vector';
-import { Rectangle } from './Rectangle';
-import { Shape2D } from 'types/Shape';
+import { Interval } from 'math/Interval';
+import { Vector } from 'math/Vector';
+import { Rectangle } from 'math/Rectangle';
+import { Shape } from 'math/Shape';
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
     getCollisionPolygonCircle,
@@ -16,11 +16,13 @@ import {
     intersectionRectPoly,
 } from "utils/collision-detection";
 import type { SceneNode } from "core/SceneNode";
-import type { Circle } from './Circle';
+import type { Circle } from 'math/Circle';
 import type { Ellipse } from "math/Ellipse";
 import type { Line } from "math/Line";
 
-export class Polygon implements Shape2D {
+let temp: Polygon | null = null;
+
+export class Polygon implements Shape {
 
     public readonly collisionType: CollisionType = CollisionType.Polygon;
 
@@ -213,5 +215,11 @@ export class Polygon implements Shape2D {
         this._points.length = 0;
     }
 
-    public static readonly Temp = new Polygon();
+    public static get Temp(): Polygon {
+        if (temp === null) {
+            temp = new Polygon();
+        }
+
+        return temp;
+    }
 }

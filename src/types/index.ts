@@ -6,4 +6,3 @@ export * from './AbstractMedia';
 export * from './DatabaseInterface';
 export * from './MediaInterface';
 export * from './ResourceFactoryInterface';
-export * from './Shape';

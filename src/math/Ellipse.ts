@@ -1,6 +1,6 @@
-import { Vector } from './Vector';
-import { Rectangle } from './Rectangle';
-import { Shape2D } from 'types/Shape';
+import { Vector } from 'math/Vector';
+import { Rectangle } from 'math/Rectangle';
+import { Shape } from 'math/Shape';
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -11,12 +11,12 @@ import {
     intersectionPointEllipse,
     intersectionRectEllipse
 } from "utils/collision-detection";
-import type { SceneNode } from "core/SceneNode";
 import type { Polygon } from "math/Polygon";
 import type { Line } from "math/Line";
 import type { Circle } from "math/Circle";
+import { SceneNode } from "core/SceneNode";
 
-export class Ellipse implements Shape2D {
+export class Ellipse implements Shape {
     public readonly collisionType: CollisionType = CollisionType.Ellipse;
 
     private readonly _position: Vector;

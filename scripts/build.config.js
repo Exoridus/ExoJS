@@ -53,11 +53,11 @@ module.exports = {
         hints: false,
     },
     plugins: [
-        new CircularDependencyPlugin({
-            exclude: /\.js|node_modules|dist/,
-            failOnError: true,
-            allowAsyncCycles: false,
-            cwd: process.cwd(),
-        })
+        // new CircularDependencyPlugin({
+        //     exclude: /\.js|node_modules|dist/,
+        //     failOnError: true,
+        //     allowAsyncCycles: false,
+        //     cwd: process.cwd(),
+        // })
     ]
 };

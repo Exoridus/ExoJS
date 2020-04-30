@@ -1,6 +1,8 @@
 import { degreesToRadians } from 'utils/math';
 import { Cloneable } from "types/types";
 
+let temp: Matrix | null = null;
+
 /**
  * | a | b | x |
  * | c | d | y |
@@ -172,6 +174,13 @@ export class Matrix implements Cloneable {
         }
     }
 
-    public static readonly Temp = new Matrix();
     public static readonly Identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
+
+    public static get Temp(): Matrix {
+        if (temp === null) {
+            temp = new Matrix();
+        }
+
+        return temp;
+    }
 }

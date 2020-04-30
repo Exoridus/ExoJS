@@ -1,5 +1,7 @@
 import { Cloneable, TimeInterval } from "types/types";
 
+let temp: Time | null = null;
+
 export class Time implements Cloneable {
 
     private _milliseconds: number;
@@ -128,10 +130,17 @@ export class Time implements Cloneable {
     public static readonly Minutes: TimeInterval = 60000;
     public static readonly Hours: TimeInterval = 3600000;
 
-    public static readonly Temp = new Time();
     public static readonly Zero = new Time(0);
     public static readonly OneMillisecond = new Time(1);
     public static readonly OneSecond = new Time(1, Time.Seconds);
     public static readonly OneMinute = new Time(1, Time.Minutes);
     public static readonly OneHour = new Time(1, Time.Hours);
+
+    public static get Temp(): Time {
+        if (temp === null) {
+            temp = new Time();
+        }
+
+        return temp;
+    }
 }

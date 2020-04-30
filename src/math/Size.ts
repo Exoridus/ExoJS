@@ -1,5 +1,7 @@
 import { Cloneable } from "types/types";
 
+let temp: Size | null = null;
+
 export class Size implements Cloneable {
 
     protected _width: number;
@@ -82,5 +84,12 @@ export class Size implements Cloneable {
     }
 
     public static readonly Zero = new Size(0, 0);
-    public static readonly Temp = new Size();
+
+    public static get Temp(): Size {
+        if (temp === null) {
+            temp = new Size();
+        }
+
+        return temp;
+    }
 }

@@ -1,5 +1,7 @@
 import { Cloneable } from "types/types";
 
+let temp: Interval | null = null;
+
 export class Interval implements Cloneable {
 
     public min: number;
@@ -46,5 +48,12 @@ export class Interval implements Cloneable {
     }
 
     public static readonly Zero = new Interval(0, 0);
-    public static readonly Temp = new Interval();
+
+    public static get Temp(): Interval {
+        if (temp === null) {
+            temp = new Interval();
+        }
+
+        return temp;
+    }
 }

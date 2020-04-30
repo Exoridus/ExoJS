@@ -1,4 +1,4 @@
-import { AbstractVector } from './Vector';
+import { AbstractVector } from 'math/Vector';
 
 export class ObservableVector extends AbstractVector {
 

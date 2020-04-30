@@ -1,6 +1,6 @@
-import { Vector } from './Vector';
-import { Rectangle } from './Rectangle';
-import { Shape2D } from 'types/Shape';
+import { Vector } from 'math/Vector';
+import { Rectangle } from 'math/Rectangle';
+import { Shape } from 'math/Shape';
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -16,7 +16,9 @@ import type { Polygon } from "math/Polygon";
 import type { Circle } from "math/Circle";
 import type { Ellipse } from "math/Ellipse";
 
-export class Line implements Shape2D {
+let temp: Line | null = null;
+
+export class Line implements Shape {
 
     public readonly collisionType: CollisionType = CollisionType.Line;
 
@@ -148,5 +150,11 @@ export class Line implements Shape2D {
         this._toPosition.destroy();
     }
 
-    public static readonly Temp: Line = new Line();
+    public static get Temp(): Line {
+        if (temp === null) {
+            temp = new Line();
+        }
+
+        return temp;
+    }
 }

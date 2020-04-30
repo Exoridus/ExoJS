@@ -14,7 +14,7 @@ export class PolarVector {
     }
 
     public toVector(): Vector {
-        return new Vector(
+        return Vector.Temp.set(
             this.radius * Math.cos(this.phi),
             this.radius * Math.sin(this.phi),
         );

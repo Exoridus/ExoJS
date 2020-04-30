@@ -17,8 +17,10 @@ export class ParticleSystem extends Container {
     private _graveyard: Array<Particle> = [];
     private _texture: Texture;
     private _textureFrame: Rectangle = new Rectangle();
-    private _texCoordData: Uint32Array = new Uint32Array(4);
+    private _vertices: Float32Array = new Float32Array(4);
+    private _texCoords: Uint32Array = new Uint32Array(4);
     private _updateTexCoords = true;
+    private _updateVertices = true;
 
     constructor(texture: Texture) {
         super();
@@ -43,7 +45,24 @@ export class ParticleSystem extends Container {
         this.setTextureFrame(frame);
     }
 
-    get texCoordData() {
+    get vertices() {
+        if (this._updateVertices) {
+            const { x, y, width, height } = this._textureFrame;
+            const offsetX = (width / 2);
+            const offsetY = (height / 2);
+
+            this._vertices[0] = x - offsetX;
+            this._vertices[1] = y - offsetY;
+            this._vertices[2] = width - offsetX;
+            this._vertices[3] = height - offsetY;
+
+            this._updateVertices = false;
+        }
+
+        return this._vertices;
+    }
+
+    get texCoords() {
         if (this._updateTexCoords) {
             const { width, height } = this._texture;
             const { left, top, right, bottom } = this._textureFrame;
@@ -53,21 +72,21 @@ export class ParticleSystem extends Container {
             const maxY = ((bottom / height) * 65535 & 65535) << 16;
 
             if (this._texture.flipY) {
-                this._texCoordData[0] = (maxY | minX);
-                this._texCoordData[1] = (maxY | maxX);
-                this._texCoordData[2] = (minY | maxX);
-                this._texCoordData[3] = (minY | minX);
+                this._texCoords[0] = (maxY | minX);
+                this._texCoords[1] = (maxY | maxX);
+                this._texCoords[2] = (minY | maxX);
+                this._texCoords[3] = (minY | minX);
             } else {
-                this._texCoordData[0] = (minY | minX);
-                this._texCoordData[1] = (minY | maxX);
-                this._texCoordData[2] = (maxY | maxX);
-                this._texCoordData[3] = (maxY | minX);
+                this._texCoords[0] = (minY | minX);
+                this._texCoords[1] = (minY | maxX);
+                this._texCoords[2] = (maxY | maxX);
+                this._texCoords[3] = (maxY | minX);
             }
 
             this._updateTexCoords = false;
         }
 
-        return this._texCoordData;
+        return this._texCoords;
     }
 
     get emitters() {
@@ -98,6 +117,7 @@ export class ParticleSystem extends Container {
     setTextureFrame(frame: Rectangle): this {
         this._textureFrame.copy(frame);
         this._updateTexCoords = true;
+        this._updateVertices = true;
 
         this.localBounds.set(0, 0, frame.width, frame.height);
 

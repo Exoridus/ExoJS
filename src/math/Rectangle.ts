@@ -1,9 +1,9 @@
 import { inRange } from 'utils/math';
-import { Vector } from './Vector';
-import { Size } from './Size';
-import { Interval } from './Interval';
-import { Matrix } from './Matrix';
-import { Shape2D } from 'types/Shape';
+import { Vector } from 'math/Vector';
+import { Size } from 'math/Size';
+import { Interval } from 'math/Interval';
+import { Matrix } from 'math/Matrix';
+import { Shape } from 'math/Shape';
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
     getCollisionCircleRectangle,
@@ -22,10 +22,12 @@ import {
 import type { SceneNode } from "core/SceneNode";
 import type { Ellipse } from "math/Ellipse";
 import type { Line } from "math/Line";
-import type { Circle } from './Circle';
-import type { Polygon } from './Polygon';
+import type { Circle } from 'math/Circle';
+import type { Polygon } from 'math/Polygon';
 
-export class Rectangle implements Shape2D {
+let temp: Rectangle | null = null;
+
+export class Rectangle implements Shape {
 
     public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
@@ -270,5 +272,11 @@ export class Rectangle implements Shape2D {
         normals[3].set(0, this.top - this.bottom).rperp().normalize();
     }
 
-    public static readonly Temp = new Rectangle();
+    public static get Temp(): Rectangle {
+        if (temp === null) {
+            temp = new Rectangle();
+        }
+
+        return temp;
+    }
 }

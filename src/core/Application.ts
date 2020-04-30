@@ -85,7 +85,7 @@ export class Application {
         this.options = { ...defaultAppSettings, ...appSettings };
         this.canvas = this.options.canvas;
 
-        if (this.canvas.getAttribute('tabindex') === null) {
+        if (!this.canvas.hasAttribute('tabindex')) {
             this.canvas.setAttribute('tabindex', '-1');
         }
 
