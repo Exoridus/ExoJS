@@ -1,7 +1,7 @@
 {
   "name": "exo-js-core",
   "description": "A lightweight, flexibile and powerful game engine.",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "license": "MIT",
   "homepage": "https://github.com/Exoridus/ExoJS",
   "repository": {
