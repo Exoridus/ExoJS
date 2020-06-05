@@ -43,7 +43,7 @@ export class PrimitiveRenderer implements RendererInterface {
         this._batchSize = batchSize;
     }
 
-    connect(renderManager: RenderManager) {
+    connect(renderManager: RenderManager): this {
         if (!this._context) {
             const gl = renderManager.context;
 
@@ -64,7 +64,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    disconnect() {
+    disconnect(): this {
         if (this._context) {
             this.unbind();
 
@@ -78,7 +78,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    bind() {
+    bind(): this {
         if (!this._context) {
             throw new Error('Renderer has to be connected first!')
         }
@@ -89,7 +89,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    unbind() {
+    unbind(): this {
         if (this._context) {
             this.flush();
 
@@ -105,7 +105,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    render(shape: DrawableShape) {
+    render(shape: DrawableShape): this {
         // const { texture, blendMode, tint, vertices, texCoords } = shape;
         // const batchFull = (this._batchIndex >= this._batchSize);
         // const textureChanged = (texture !== this._currentTexture);
@@ -167,7 +167,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    flush() {
+    flush(): this {
         if (this._batchIndex > 0) {
             const view = this._renderManager!.view;
 
@@ -186,7 +186,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         this.disconnect();
 
         this._shader.destroy();

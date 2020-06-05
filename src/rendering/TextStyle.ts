@@ -1,8 +1,10 @@
 
+export type TextStyleColor = string | CanvasGradient | CanvasPattern;
+
 export interface TextStyleOptions {
     align?: string;
-    fill?: string | CanvasGradient | CanvasPattern;
-    stroke?: string | CanvasGradient | CanvasPattern;
+    fill?: TextStyleColor;
+    stroke?: TextStyleColor;
     strokeThickness?: number;
     fontSize?: number;
     fontWeight?: string;
@@ -17,8 +19,8 @@ export interface TextStyleOptions {
 
 export class TextStyle {
     private _align: string;
-    private _fill: string | CanvasGradient | CanvasPattern;
-    private _stroke: string | CanvasGradient | CanvasPattern;
+    private _fill: TextStyleColor;
+    private _stroke: TextStyleColor;
     private _strokeThickness: number;
     private _fontSize: number;
     private _fontWeight: string;
@@ -47,162 +49,162 @@ export class TextStyle {
         this._padding = options.padding ?? 0;
     }
 
-    get align() {
+    get align(): string {
         return this._align;
     }
 
-    set align(align) {
+    set align(align: string) {
         if (this._align !== align) {
             this._align = align;
             this._dirty = true;
         }
     }
 
-    get fill() {
+    get fill(): TextStyleColor {
         return this._fill;
     }
 
-    set fill(fill) {
+    set fill(fill: TextStyleColor) {
         if (this._fill !== fill) {
             this._fill = fill;
             this._dirty = true;
         }
     }
 
-    get stroke() {
+    get stroke(): TextStyleColor {
         return this._stroke;
     }
 
-    set stroke(stroke) {
+    set stroke(stroke: TextStyleColor) {
         if (this._stroke !== stroke) {
             this._stroke = stroke;
             this._dirty = true;
         }
     }
 
-    get strokeThickness() {
+    get strokeThickness(): number {
         return this._strokeThickness;
     }
 
-    set strokeThickness(strokeThickness) {
+    set strokeThickness(strokeThickness: number) {
         if (this._strokeThickness !== strokeThickness) {
             this._strokeThickness = strokeThickness;
             this._dirty = true;
         }
     }
 
-    get fontSize() {
+    get fontSize(): number {
         return this._fontSize;
     }
 
-    set fontSize(fontSize) {
+    set fontSize(fontSize: number) {
         if (this._fontSize !== fontSize) {
             this._fontSize = fontSize;
             this._dirty = true;
         }
     }
 
-    get fontWeight() {
+    get fontWeight(): string {
         return this._fontWeight;
     }
 
-    set fontWeight(fontWeight) {
+    set fontWeight(fontWeight: string) {
         if (this._fontWeight !== fontWeight) {
             this._fontWeight = fontWeight;
             this._dirty = true;
         }
     }
 
-    get fontFamily() {
+    get fontFamily(): string {
         return this._fontFamily;
     }
 
-    set fontFamily(fontFamily) {
+    set fontFamily(fontFamily: string) {
         if (this._fontFamily !== fontFamily) {
             this._fontFamily = fontFamily;
             this._dirty = true;
         }
     }
 
-    get wordWrap() {
+    get wordWrap(): boolean {
         return this._wordWrap;
     }
 
-    set wordWrap(wordWrap) {
+    set wordWrap(wordWrap: boolean) {
         if (this._wordWrap !== wordWrap) {
             this._wordWrap = wordWrap;
             this._dirty = true;
         }
     }
 
-    get wordWrapWidth() {
+    get wordWrapWidth(): number {
         return this._wordWrapWidth;
     }
 
-    set wordWrapWidth(wordWrapWidth) {
+    set wordWrapWidth(wordWrapWidth: number) {
         if (this._wordWrapWidth !== wordWrapWidth) {
             this._wordWrapWidth = wordWrapWidth;
             this._dirty = true;
         }
     }
 
-    get baseline() {
+    get baseline(): CanvasTextBaseline {
         return this._baseline;
     }
 
-    set baseline(baseline) {
+    set baseline(baseline: CanvasTextBaseline) {
         if (this._baseline !== baseline) {
             this._baseline = baseline;
             this._dirty = true;
         }
     }
 
-    get lineJoin() {
+    get lineJoin(): CanvasLineJoin {
         return this._lineJoin;
     }
 
-    set lineJoin(lineJoin) {
+    set lineJoin(lineJoin: CanvasLineJoin) {
         if (this._lineJoin !== lineJoin) {
             this._lineJoin = lineJoin;
             this._dirty = true;
         }
     }
 
-    get miterLimit() {
+    get miterLimit(): number {
         return this._miterLimit;
     }
 
-    set miterLimit(miterLimit) {
+    set miterLimit(miterLimit: number) {
         if (this._miterLimit !== miterLimit) {
             this._miterLimit = miterLimit;
             this._dirty = true;
         }
     }
 
-    get padding() {
+    get padding(): number {
         return this._padding;
     }
 
-    set padding(padding) {
+    set padding(padding: number) {
         if (this._padding !== padding) {
             this._padding = padding;
             this._dirty = true;
         }
     }
 
-    get dirty() {
+    get dirty(): boolean {
         return this._dirty;
     }
 
-    set dirty(dirty) {
+    set dirty(dirty: boolean) {
         this._dirty = dirty;
     }
 
-    get font() {
+    get font(): string {
         return `${this._fontWeight} ${this._fontSize}px ${this._fontFamily}`;
     }
 
-    apply(context: CanvasRenderingContext2D) {
+    apply(context: CanvasRenderingContext2D): this {
         context.font = this.font;
         context.fillStyle = this.fill;
         context.strokeStyle = this.stroke;
@@ -214,7 +216,7 @@ export class TextStyle {
         return this;
     }
 
-    copy(style: TextStyle) {
+    copy(style: TextStyle): this {
         if (style !== this) {
             this.align = style.align;
             this.fill = style.fill;
@@ -235,7 +237,7 @@ export class TextStyle {
         return this;
     }
 
-    clone() {
+    clone(): TextStyle {
         return new TextStyle().copy(this);
     }
 }

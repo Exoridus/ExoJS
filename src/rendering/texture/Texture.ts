@@ -206,7 +206,7 @@ export class Texture {
         return this;
     }
 
-    setPremultiplyAlpha(premultiplyAlpha: boolean) {
+    setPremultiplyAlpha(premultiplyAlpha: boolean): this {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
             this._flags.push(TextureFlags.PremultiplyAlphaDirty);

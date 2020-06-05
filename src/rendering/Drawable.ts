@@ -10,27 +10,27 @@ export class Drawable extends SceneNode {
     private _tint: Color = Color.White.clone();
     private _blendMode: BlendModes = BlendModes.NORMAL;
 
-    get visible() {
+    get visible(): boolean {
         return this._visible;
     }
 
-    set visible(visible) {
+    set visible(visible: boolean) {
         this._visible = visible;
     }
 
-    get tint() {
+    get tint(): Color {
         return this._tint;
     }
 
-    set tint(tint) {
+    set tint(tint: Color) {
         this.setTint(tint);
     }
 
-    get blendMode() {
+    get blendMode(): BlendModes {
         return this._blendMode;
     }
 
-    set blendMode(blendMode) {
+    set blendMode(blendMode: BlendModes) {
         this.setBlendMode(blendMode);
     }
 
@@ -54,7 +54,7 @@ export class Drawable extends SceneNode {
         return view.getBounds().intersectsWith(this.getBounds());
     }
 
-    destroy() {
+    destroy(): void {
         super.destroy();
 
         this._tint.destroy();

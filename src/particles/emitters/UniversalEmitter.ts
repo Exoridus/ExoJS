@@ -13,23 +13,23 @@ export class UniversalEmitter implements ParticleEmitterInterface {
         this._particleOptions = particleOptions ?? new ParticleOptions();
     }
 
-    get emissionRate() {
+    get emissionRate(): number {
         return this._emissionRate;
     }
 
-    set emissionRate(particlesPerSecond) {
+    set emissionRate(particlesPerSecond: number) {
         this._emissionRate = particlesPerSecond;
     }
 
-    get particleOptions() {
+    get particleOptions(): ParticleOptions {
         return this._particleOptions;
     }
 
-    set particleOptions(particleOptions) {
+    set particleOptions(particleOptions: ParticleOptions) {
         this._particleOptions = particleOptions;
     }
 
-    computeParticleCount(time: Time) {
+    computeParticleCount(time: Time): number {
         const particleAmount = (this._emissionRate * time.seconds) + this._emissionDelta;
         const particles = particleAmount | 0;
 
@@ -38,7 +38,7 @@ export class UniversalEmitter implements ParticleEmitterInterface {
         return particles;
     }
 
-    apply(system: ParticleSystem, delta: Time) {
+    apply(system: ParticleSystem, delta: Time): this {
         const count = this.computeParticleCount(delta);
         const options = this._particleOptions;
 
@@ -52,7 +52,7 @@ export class UniversalEmitter implements ParticleEmitterInterface {
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         this._particleOptions.destroy();
     }
 }

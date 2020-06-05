@@ -43,7 +43,7 @@ export class Interval implements Cloneable {
         return this.max < interval.max ? this.max - interval.min : interval.max - this.min;
     }
 
-    public destroy() {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 

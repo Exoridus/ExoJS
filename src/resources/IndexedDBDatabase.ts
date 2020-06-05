@@ -137,7 +137,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    destroy() {
+    destroy(): void {
         this.disconnect();
         this._database = null;
     }

@@ -20,7 +20,7 @@ export class DrawableShape extends Container {
         this.drawMode = drawMode;
     }
 
-    render(renderManager: RenderManager) {
+    render(renderManager: RenderManager): this {
         if (this.visible && this.inView(renderManager.view)) {
             const renderer = renderManager.getRenderer(RendererType.Primitive) as PrimitiveRenderer;
 
@@ -31,7 +31,7 @@ export class DrawableShape extends Container {
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         super.destroy();
 
         this.color.destroy();

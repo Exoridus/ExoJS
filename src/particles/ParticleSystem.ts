@@ -29,23 +29,23 @@ export class ParticleSystem extends Container {
         this.resetTextureFrame();
     }
 
-    get texture() {
+    get texture(): Texture {
         return this._texture;
     }
 
-    set texture(texture) {
+    set texture(texture: Texture) {
         this.setTexture(texture);
     }
 
-    get textureFrame() {
+    get textureFrame(): Rectangle {
         return this._textureFrame;
     }
 
-    set textureFrame(frame) {
+    set textureFrame(frame: Rectangle) {
         this.setTextureFrame(frame);
     }
 
-    get vertices() {
+    get vertices(): Float32Array  {
         if (this._updateVertices) {
             const { x, y, width, height } = this._textureFrame;
             const offsetX = (width / 2);
@@ -62,7 +62,7 @@ export class ParticleSystem extends Container {
         return this._vertices;
     }
 
-    get texCoords() {
+    get texCoords(): Uint32Array {
         if (this._updateTexCoords) {
             const { width, height } = this._texture;
             const { left, top, right, bottom } = this._textureFrame;
@@ -89,19 +89,19 @@ export class ParticleSystem extends Container {
         return this._texCoords;
     }
 
-    get emitters() {
+    get emitters(): Array<ParticleEmitterInterface> {
         return this._emitters;
     }
 
-    get affectors() {
+    get affectors(): Array<ParticleAffectorInterface> {
         return this._affectors;
     }
 
-    get particles() {
+    get particles(): Array<Particle> {
         return this._particles;
     }
 
-    get graveyard() {
+    get graveyard(): Array<Particle> {
         return this._graveyard;
     }
 

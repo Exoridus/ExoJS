@@ -10,27 +10,27 @@ export class TorqueAffector implements ParticleAffectorInterface {
         this._angularAcceleration = angularAcceleration;
     }
 
-    get angularAcceleration() {
+    get angularAcceleration(): number {
         return this._angularAcceleration;
     }
 
-    set angularAcceleration(angularAcceleration) {
+    set angularAcceleration(angularAcceleration: number) {
         this.setAngularAcceleration(angularAcceleration);
     }
 
-    setAngularAcceleration(angularAcceleration: number) {
+    setAngularAcceleration(angularAcceleration: number): this {
         this._angularAcceleration = angularAcceleration;
 
         return this;
     }
 
-    apply(particle: Particle, delta: Time) {
+    apply(particle: Particle, delta: Time): this {
         particle.rotationSpeed += (delta.seconds * this._angularAcceleration);
 
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         // todo - check if destroy is needed
     }
 }

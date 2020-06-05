@@ -6,39 +6,39 @@ export class Container extends Drawable {
 
     private readonly _children: Array<Drawable> = [];
 
-    get children() {
+    get children(): Array<Drawable> {
         return this._children;
     }
 
-    get width() {
+    get width(): number {
         return Math.abs(this.scale.x) * this.bounds.width;
     }
 
-    set width(value) {
+    set width(value: number) {
         this.scale.x = value / this.bounds.width;
     }
 
-    get height() {
+    get height(): number {
         return Math.abs(this.scale.y) * this.bounds.height;
     }
 
-    set height(value) {
+    set height(value: number) {
         this.scale.y = value / this.bounds.height;
     }
 
-    get left() {
+    get left(): number {
         return this.x - (this.width * this.origin.x);
     }
 
-    get top() {
+    get top(): number {
         return this.y - (this.height * this.origin.y);
     }
 
-    get right() {
+    get right(): number {
         return (this.x + this.width - this.origin.x);
     }
 
-    get bottom() {
+    get bottom(): number {
         return (this.y + this.height - this.origin.y);
     }
 

@@ -169,7 +169,7 @@ export class Matrix implements Cloneable {
         return array;
     }
 
-    public destroy() {
+    public destroy(): void {
         if (this._array) {
             this._array = null;
         }

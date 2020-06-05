@@ -14,31 +14,31 @@ export class Graphics extends Container {
     private _fillColor: Color = new Color();
     private _currentPoint: Vector = new Vector(0, 0);
 
-    get lineWidth() {
+    get lineWidth(): number {
         return this._lineWidth;
     }
 
-    set lineWidth(lineWidth) {
+    set lineWidth(lineWidth: number) {
         this._lineWidth = lineWidth;
     }
 
-    get lineColor() {
+    get lineColor(): Color {
         return this._lineColor;
     }
 
-    set lineColor(lineColor) {
+    set lineColor(lineColor: Color) {
         this._lineColor.copy(lineColor);
     }
 
-    get fillColor() {
+    get fillColor(): Color {
         return this._fillColor;
     }
 
-    set fillColor(fillColor) {
+    set fillColor(fillColor: Color) {
         this._fillColor.copy(fillColor);
     }
 
-    get currentPoint() {
+    get currentPoint(): Vector {
         return this._currentPoint;
     }
 

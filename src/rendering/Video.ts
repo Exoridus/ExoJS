@@ -46,22 +46,22 @@ export class Video extends Sprite implements MediaInterface {
         }
     }
 
-    get videoElement() {
+    get videoElement(): HTMLVideoElement {
         return this._videoElement;
     }
 
-    get duration() {
+    get duration(): number {
         return this._duration;
     }
 
-    get progress() {
+    get progress(): number {
         const elapsed = this.currentTime,
             duration = this.duration;
 
         return ((elapsed % duration) / duration);
     }
 
-    get volume() {
+    get volume(): number {
         return this._volume;
     }
 
@@ -69,7 +69,7 @@ export class Video extends Sprite implements MediaInterface {
         this.setVolume(value);
     }
 
-    get loop() {
+    get loop(): boolean {
         return this._loop;
     }
 
@@ -77,7 +77,7 @@ export class Video extends Sprite implements MediaInterface {
         this.setLoop(loop);
     }
 
-    get playbackRate() {
+    get playbackRate(): number {
         return this._playbackRate;
     }
 
@@ -85,7 +85,7 @@ export class Video extends Sprite implements MediaInterface {
         this.setPlaybackRate(value);
     }
 
-    get currentTime() {
+    get currentTime(): number {
         return this.getTime();
     }
 
@@ -93,7 +93,7 @@ export class Video extends Sprite implements MediaInterface {
         this.setTime(time);
     }
 
-    get muted() {
+    get muted(): boolean {
         return this._muted;
     }
 
@@ -101,7 +101,7 @@ export class Video extends Sprite implements MediaInterface {
         this.setMuted(muted);
     }
 
-    get paused() {
+    get paused(): boolean {
         return this._videoElement.paused;
     }
 
@@ -113,7 +113,7 @@ export class Video extends Sprite implements MediaInterface {
         }
     }
 
-    get playing() {
+    get playing(): boolean {
         return !this.paused;
     }
 
@@ -129,7 +129,7 @@ export class Video extends Sprite implements MediaInterface {
         return this._gainNode;
     }
 
-    play(options?: Partial<PlaybackOptions>) {
+    play(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -142,7 +142,7 @@ export class Video extends Sprite implements MediaInterface {
         return this;
     }
 
-    pause(options?: Partial<PlaybackOptions>) {
+    pause(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -155,18 +155,18 @@ export class Video extends Sprite implements MediaInterface {
         return this;
     }
 
-    stop(options?: Partial<PlaybackOptions>) {
+    stop(options?: Partial<PlaybackOptions>): this {
         this.pause(options);
         this.currentTime = 0;
 
         return this;
     }
 
-    toggle(options?: Partial<PlaybackOptions>) {
+    toggle(options?: Partial<PlaybackOptions>): this {
         return this.paused ? this.play(options) : this.pause(options);
     }
 
-    applyOptions(options: Partial<PlaybackOptions> = {}) {
+    applyOptions(options: Partial<PlaybackOptions> = {}): this {
         const { volume, loop, playbackRate, time, muted } = options;
 
         if (volume !== undefined) {
@@ -251,14 +251,14 @@ export class Video extends Sprite implements MediaInterface {
     }
 
 
-    render(renderManager: RenderManager) {
+    render(renderManager: RenderManager): this {
         this.texture!.updateSource();
         super.render(renderManager);
 
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         super.destroy();
         this.stop();
 
@@ -274,7 +274,7 @@ export class Video extends Sprite implements MediaInterface {
         this.onStop.destroy();
     }
 
-    private setupWithAudioContext(audioContext: AudioContext) {
+    private setupWithAudioContext(audioContext: AudioContext): void {
         this._audioContext = audioContext;
 
         this._gainNode = audioContext.createGain();

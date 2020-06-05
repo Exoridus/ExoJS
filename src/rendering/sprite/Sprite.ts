@@ -202,7 +202,7 @@ export class Sprite extends Container {
         );
     }
 
-    contains(x: number, y: number) {
+    contains(x: number, y: number): boolean {
         if ((this.rotation % 90 === 0)) {
             return this.getBounds().contains(x, y);
         }
@@ -220,7 +220,7 @@ export class Sprite extends Container {
             && (dotB > 0) && (dotB <= lenB);
     }
 
-    destroy() {
+    destroy(): void {
         super.destroy();
 
         this._textureFrame.destroy();

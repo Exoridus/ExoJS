@@ -22,7 +22,7 @@ export abstract class AbstractMedia implements MediaInterface {
     public abstract set paused(paused: boolean);
     public abstract get analyserTarget(): AudioNode | null;
 
-    public get duration() {
+    public get duration(): number {
         return this._duration;
     }
 
@@ -104,7 +104,7 @@ export abstract class AbstractMedia implements MediaInterface {
     public abstract setTime(time: number): this;
     public abstract setMuted(muted: boolean): this;
 
-    public stop(options?: Partial<PlaybackOptions>) {
+    public stop(options?: Partial<PlaybackOptions>): this {
         this.pause(options);
         this.currentTime = 0;
 

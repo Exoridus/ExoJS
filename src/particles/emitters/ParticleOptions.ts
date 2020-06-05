@@ -39,79 +39,79 @@ export class ParticleOptions implements ParticleProperties {
         this._textureIndex = textureIndex ?? 0;
     }
 
-    get totalLifetime() {
+    get totalLifetime(): Time {
         return this._totalLifetime;
     }
 
-    set totalLifetime(totalLifetime) {
+    set totalLifetime(totalLifetime: Time) {
         this._totalLifetime.copy(totalLifetime);
     }
 
-    get elapsedLifetime() {
+    get elapsedLifetime(): Time {
         return this._elapsedLifetime;
     }
 
-    set elapsedLifetime(elapsedLifetime) {
+    set elapsedLifetime(elapsedLifetime: Time) {
         this._elapsedLifetime.copy(elapsedLifetime);
     }
 
-    get position() {
+    get position(): Vector {
         return this._position;
     }
 
-    set position(position) {
+    set position(position: Vector) {
         this._position.copy(position);
     }
 
-    get velocity() {
+    get velocity(): Vector {
         return this._velocity;
     }
 
-    set velocity(velocity) {
+    set velocity(velocity: Vector) {
         this._velocity.copy(velocity);
     }
 
-    get scale() {
+    get scale(): Vector {
         return this._scale;
     }
 
-    set scale(scale) {
+    set scale(scale: Vector) {
         this._scale.copy(scale);
     }
 
-    get rotation() {
+    get rotation(): number {
         return this._rotation;
     }
 
-    set rotation(degrees) {
+    set rotation(degrees: number) {
         this._rotation = trimRotation(degrees);
     }
 
-    get rotationSpeed() {
+    get rotationSpeed(): number {
         return this._rotationSpeed;
     }
 
-    set rotationSpeed(rotationSpeed) {
+    set rotationSpeed(rotationSpeed: number) {
         this._rotationSpeed = rotationSpeed;
     }
 
-    get textureIndex() {
+    get textureIndex(): number {
         return this._textureIndex;
     }
 
-    set textureIndex(textureIndex) {
+    set textureIndex(textureIndex: number) {
         this._textureIndex = textureIndex;
     }
 
-    get tint() {
+    get tint(): Color {
         return this._tint;
     }
 
-    set tint(color) {
+    set tint(color: Color) {
         this._tint.copy(color);
     }
 
-    destroy() {
+    destroy(): void {
         this._totalLifetime.destroy();
         this._elapsedLifetime.destroy();
         this._position.destroy();

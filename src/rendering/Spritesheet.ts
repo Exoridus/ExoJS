@@ -73,7 +73,7 @@ export class Spritesheet {
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         this.clear();
     }
 }

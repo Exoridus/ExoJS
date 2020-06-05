@@ -17,7 +17,7 @@ export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = a
         return objectURL;
     }
 
-    destroy() {
+    destroy(): void {
         for (const objectURL of this.objectURLs) {
             URL.revokeObjectURL(objectURL);
         }

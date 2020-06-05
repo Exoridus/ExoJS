@@ -11,15 +11,15 @@ export class ScaleAffector implements ParticleAffectorInterface {
         this._scaleFactor = new Vector(factorX, factorY);
     }
 
-    get scaleFactor() {
+    get scaleFactor(): Vector {
         return this._scaleFactor;
     }
 
-    set scaleFactor(scaleFactor) {
+    set scaleFactor(scaleFactor: Vector) {
         this.setScaleFactor(scaleFactor);
     }
 
-    setScaleFactor(scaleFactor: Vector) {
+    setScaleFactor(scaleFactor: Vector): this {
         this._scaleFactor.copy(scaleFactor);
 
         return this;
@@ -34,7 +34,7 @@ export class ScaleAffector implements ParticleAffectorInterface {
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         this._scaleFactor.destroy();
     }
 }

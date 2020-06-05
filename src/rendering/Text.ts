@@ -27,31 +27,31 @@ export class Text extends Sprite {
         this.updateTexture();
     }
 
-    get text() {
+    get text(): string {
         return this._text;
     }
 
-    set text(text) {
+    set text(text: string) {
         this.setText(text);
     }
 
-    get style() {
+    get style(): TextStyle {
         return this._style;
     }
 
-    set style(style) {
+    set style(style: TextStyle) {
         this.setStyle(style);
     }
 
-    get canvas() {
+    get canvas(): HTMLCanvasElement {
         return this._canvas;
     }
 
-    set canvas(canvas) {
+    set canvas(canvas: HTMLCanvasElement) {
         this.setCanvas(canvas);
     }
 
-    setText(text: string) {
+    setText(text: string): this {
         if (this._text !== text) {
             this._text = text;
             this._dirty = true;
@@ -60,14 +60,14 @@ export class Text extends Sprite {
         return this;
     }
 
-    setStyle(style: TextStyle | TextStyleOptions) {
+    setStyle(style: TextStyle | TextStyleOptions): this {
         this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
         this._dirty = true;
 
         return this;
     }
 
-    setCanvas(canvas: HTMLCanvasElement) {
+    setCanvas(canvas: HTMLCanvasElement): this {
         if (this._canvas !== canvas) {
             this._canvas = canvas;
             this._context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -79,7 +79,7 @@ export class Text extends Sprite {
         return this;
     }
 
-    updateTexture() {
+    updateTexture(): this {
         if (this._style && (this._dirty || this._style.dirty)) {
             const canvas = this._canvas,
                 context = this._context,
@@ -174,10 +174,6 @@ export class Text extends Sprite {
         }
 
         return this;
-    }
-
-    destroy() {
-        super.destroy();
     }
 
     static determineFontHeight(font: string): number {

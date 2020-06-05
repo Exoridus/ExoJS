@@ -81,7 +81,7 @@ export class Sampler {
         this._context.deleteSampler(this._sampler);
     }
 
-    private updateScaleModeParameters() {
+    private updateScaleModeParameters(): void {
         if (this._sampler === null) {
             throw new Error("Sampler is null. Could not update sampler parameters.");
         }
@@ -92,7 +92,7 @@ export class Sampler {
         gl.samplerParameteri(this._sampler, gl.TEXTURE_MIN_FILTER, this._scaleMode);
     }
 
-    private updateWrapModeParameters() {
+    private updateWrapModeParameters(): void {
         if (this._sampler === null) {
             throw new Error("Sampler is null. Could not update sampler parameters.");
         }

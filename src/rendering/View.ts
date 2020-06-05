@@ -226,22 +226,22 @@ export class View {
         this._flags.destroy();
     }
 
-    private _setDirty() {
+    private _setDirty(): void {
         this._flags.push(ViewFlags.TRANSFORM_INV, ViewFlags.BOUNDING_BOX);
         this._updateId++;
     }
 
-    private _setPositionDirty() {
+    private _setPositionDirty(): void {
         this._flags.push(ViewFlags.TRANSLATION);
         this._setDirty();
     }
 
-    private _setRotationDirty() {
+    private _setRotationDirty(): void {
         this._flags.push(ViewFlags.ROTATION);
         this._setDirty();
     }
 
-    private _setScalingDirty() {
+    private _setScalingDirty(): void {
         this._flags.push(ViewFlags.SCALING);
         this._setDirty();
     }

@@ -11,21 +11,21 @@ export class ForceAffector implements ParticleAffectorInterface {
         this._acceleration = new Vector(accelerationX, accelerationY);
     }
 
-    get acceleration() {
+    get acceleration(): Vector {
         return this._acceleration;
     }
 
-    set acceleration(acceleration) {
+    set acceleration(acceleration: Vector) {
         this.setAcceleration(acceleration);
     }
 
-    setAcceleration(acceleration: Vector) {
+    setAcceleration(acceleration: Vector): this {
         this._acceleration.copy(acceleration);
 
         return this;
     }
 
-    apply(particle: Particle, delta: Time) {
+    apply(particle: Particle, delta: Time): this {
         particle.velocity.add(
             delta.seconds * this._acceleration.x,
             delta.seconds * this._acceleration.y
@@ -34,7 +34,7 @@ export class ForceAffector implements ParticleAffectorInterface {
         return this;
     }
 
-    destroy() {
+    destroy(): void {
         this._acceleration.destroy();
     }
 }

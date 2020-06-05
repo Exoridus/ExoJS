@@ -196,7 +196,7 @@ export class Shader {
         this.disconnect();
     }
 
-    _extractAttributes() {
+    _extractAttributes(): void {
         const gl = this._context!;
         const program = this._program!;
         const activeAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
@@ -208,7 +208,7 @@ export class Shader {
         }
     }
 
-    _extractUniforms() {
+    _extractUniforms(): void {
         const gl = this._context!;
         const program = this._program!;
         const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
@@ -225,7 +225,7 @@ export class Shader {
         }
     }
 
-    _extractUniformBlocks() {
+    _extractUniformBlocks(): void {
         const gl = this._context!;
         const program = this._program!;
         const activeBlocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);

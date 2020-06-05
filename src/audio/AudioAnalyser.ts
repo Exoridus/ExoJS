@@ -101,14 +101,14 @@ export class AudioAnalyser {
         return this._preciseFrequencyData;
     }
 
-    public destroy() {
+    public destroy(): void {
         onAudioContextReady.clearByContext(this);
 
         this._analyserTarget?.disconnect();
         this._analyser?.disconnect();
     }
 
-    private setupWithAudioContext(audioContext: AudioContext) {
+    private setupWithAudioContext(audioContext: AudioContext): void {
         this._audioContext = audioContext;
         this._analyser = audioContext.createAnalyser();
         this._analyser.fftSize = this._fftSize;

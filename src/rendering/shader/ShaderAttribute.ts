@@ -22,7 +22,7 @@ export class ShaderAttribute {
         this.size = primitiveByteSizeMapping[type];
     }
 
-    destroy() {
+    destroy(): void {
         // todo - check if destroy is needed
     }
 }

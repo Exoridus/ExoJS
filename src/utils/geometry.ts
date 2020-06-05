@@ -178,7 +178,7 @@ export const buildPath = (points: Array<number>, width: number, vertices: Array<
     return new Geometry({vertices, indices, points});
 };
 
-export const buildCircle = (centerX: number, centerY: number, radius: number, vertices: Array<number> = [], indices: Array<number> = []) => {
+export const buildCircle = (centerX: number, centerY: number, radius: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
     const length = Math.floor(15 * Math.sqrt(radius + radius)),
         segment = (Math.PI * 2) / length,
         points = [];

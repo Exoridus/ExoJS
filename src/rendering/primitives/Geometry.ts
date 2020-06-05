@@ -20,7 +20,7 @@ export class Geometry {
         this.points = points;
     }
 
-    destroy() {
+    destroy(): void {
         // todo - check if destroy is needed
     }
 }

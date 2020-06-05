@@ -13,7 +13,7 @@ export class ResourceContainer {
         return [...this._resources.keys()];
     }
 
-    addType(type: string) {
+    addType(type: string): this {
         if (!this._resources.has(type)) {
             this._resources.set(type, new Map<string, any>());
         }

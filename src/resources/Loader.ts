@@ -94,7 +94,7 @@ export class Loader {
         this._database = database;
     }
 
-    addFactory(type: ResourceTypes, factory: ResourceFactoryInterface) {
+    addFactory(type: ResourceTypes, factory: ResourceFactoryInterface): this {
         this._factories.set(type, factory);
         this._resources.addType(type);
 

@@ -192,7 +192,7 @@ export class RenderManager {
         return this;
     }
 
-    setVAO(vao: VertexArrayObject | null) {
+    setVAO(vao: VertexArrayObject | null): this {
         if (this._vao !== vao) {
             if (vao) {
                 vao.bind();
@@ -420,11 +420,11 @@ export class RenderManager {
         }
     }
 
-    private _restoreContext() {
+    private _restoreContext(): void {
         this._context.getExtension('WEBGL_lose_context')?.restoreContext();
     }
 
-    private _setupContext() {
+    private _setupContext(): void {
         const gl = this._context;
         const { r, g, b, a } = this._clearColor;
 
@@ -438,26 +438,26 @@ export class RenderManager {
         gl.clearColor(r / 255, g / 255, b / 255, a);
     }
 
-    private _addEvents() {
+    private _addEvents(): void {
         this._canvas.addEventListener('webglcontextlost', this._onContextLostHandler, false);
         this._canvas.addEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
     }
 
-    private _removeEvents() {
+    private _removeEvents(): void {
         this._canvas.removeEventListener('webglcontextlost', this._onContextLostHandler, false);
         this._canvas.removeEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
     }
 
-    private _onContextLost() {
+    private _onContextLost(): void {
         this._contextLost = true;
         this._restoreContext();
     }
 
-    private _onContextRestored() {
+    private _onContextRestored(): void {
         this._contextLost = false;
     }
 
-    private _connectAndBindRenderTarget() {
+    private _connectAndBindRenderTarget(): void {
         if (!this._context) {
             throw new Error("Cannot connect rendertarget when no context is provided!");
         }

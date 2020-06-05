@@ -183,7 +183,7 @@ export class Sound extends AbstractMedia {
         this._sourceNode?.disconnect();
     }
 
-    private createSourceNode(audioContext: AudioContext) {
+    private createSourceNode(audioContext: AudioContext): void {
         this._sourceNode = audioContext.createBufferSource();
         this._sourceNode.buffer = this._audioBuffer;
         this._sourceNode.loop = this.loop;
