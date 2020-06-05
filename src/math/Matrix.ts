@@ -1,5 +1,5 @@
 import { degreesToRadians } from 'utils/math';
-import { Cloneable } from "types/types";
+import type { Cloneable } from "types/types";
 
 let temp: Matrix | null = null;
 
@@ -22,10 +22,11 @@ export class Matrix implements Cloneable {
 
     private _array: Float32Array | null = null;
 
-    constructor(a = 1, b = 0, x = 0,
-                c = 0, d = 1, y = 0,
-                e = 0, f = 0, z = 1) {
-
+    public constructor(
+        a = 1, b = 0, x = 0,
+        c = 0, d = 1, y = 0,
+        e = 0, f = 0, z = 1
+    ) {
         this.a = a;
         this.b = b;
         this.x = x;

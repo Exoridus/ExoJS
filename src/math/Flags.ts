@@ -1,4 +1,4 @@
-import { TypedEnum } from "types/types";
+import type { TypedEnum } from "types/types";
 
 export class Flags<T extends TypedEnum<T, number>> {
 
@@ -8,7 +8,7 @@ export class Flags<T extends TypedEnum<T, number>> {
         return this._value;
     }
 
-    constructor(...flags: Array<number>) {
+    public constructor(...flags: Array<number>) {
         if (flags.length) {
             this.push(...flags);
         }

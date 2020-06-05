@@ -1,6 +1,6 @@
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { SamplerOptions } from "rendering/texture/Sampler";
-import { PlaybackOptions } from "types/types";
+import type { SamplerOptions } from "rendering/texture/Sampler";
+import type { PlaybackOptions } from "types/types";
 import { determineMimeType } from "utils/resources";
 import { StorageNames } from "types/types";
 import { Video } from "rendering/Video";

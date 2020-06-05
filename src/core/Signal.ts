@@ -11,11 +11,11 @@ export class Signal<T = any> {
 
     public readonly bindings = new Array<SignalBinding<T>>();
 
-    has(handler: SignalHandler<T>, context?: object): boolean {
+    public has(handler: SignalHandler<T>, context?: object): boolean {
         return this.bindings.some((binding) => (binding.handler === handler && binding.context === context));
     }
 
-    add(handler: SignalHandler<T>, context?: object): this {
+    public add(handler: SignalHandler<T>, context?: object): this {
         if (!this.has(handler, context)) {
             this.bindings.push({ handler, context });
         }
@@ -23,7 +23,7 @@ export class Signal<T = any> {
         return this;
     }
 
-    once(handler: SignalHandler<T>, context?: object): this {
+    public once(handler: SignalHandler<T>, context?: object): this {
         const once = (...params: Array<any>): void => {
             this.remove(once, context);
             handler.call(context, ...params);
@@ -34,7 +34,7 @@ export class Signal<T = any> {
         return this;
     }
 
-    remove(handler: SignalHandler<T>, context?: object): this {
+    public remove(handler: SignalHandler<T>, context?: object): this {
         const index = this.bindings.findIndex((binding) => (binding.handler === handler && binding.context === context));
 
         if (index !== -1) {
@@ -44,7 +44,7 @@ export class Signal<T = any> {
         return this;
     }
 
-    clearByContext(context?: object): this {
+    public clearByContext(context?: object): this {
         const bindings = this.bindings.filter(binding => binding.context === context);
 
         for (const binding of bindings) {
@@ -54,13 +54,13 @@ export class Signal<T = any> {
         return this;
     }
 
-    clear(): this {
+    public clear(): this {
         this.bindings.length = 0;
 
         return this;
     }
 
-    dispatch(...params: Array<T>): this {
+    public dispatch(...params: Array<T>): this {
         if (this.bindings.length) {
             for (const binding of this.bindings) {
                 if (binding.handler.call(binding.context, ...params) === false) {
@@ -72,7 +72,7 @@ export class Signal<T = any> {
         return this;
     }
 
-    destroy() {
+    public destroy(): void {
         this.clear();
     }
 }

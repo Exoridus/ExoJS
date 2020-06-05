@@ -2,10 +2,10 @@ import { clamp } from 'utils/math';
 import { Sprite } from './sprite/Sprite';
 import { Texture } from './texture/Texture';
 import { Signal } from 'core/Signal';
-import { PlaybackOptions } from "types/types";
-import { RenderManager } from './RenderManager';
-import { SamplerOptions } from "./texture/Sampler";
-import { MediaInterface } from "types/MediaInterface";
+import type { PlaybackOptions } from "types/types";
+import type { RenderManager } from './RenderManager';
+import type { SamplerOptions } from "./texture/Sampler";
+import type { MediaInterface } from "types/MediaInterface";
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
 export class Video extends Sprite implements MediaInterface {

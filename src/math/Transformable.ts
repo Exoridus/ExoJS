@@ -158,19 +158,19 @@ export class Transformable {
         this.flags.destroy();
     }
 
-    private _setPositionDirty() {
+    private _setPositionDirty(): void {
         this.flags.push(TransformableFlags.TRANSLATION);
     }
 
-    private _setRotationDirty() {
+    private _setRotationDirty(): void {
         this.flags.push(TransformableFlags.ROTATION);
     }
 
-    private _setScalingDirty() {
+    private _setScalingDirty(): void {
         this.flags.push(TransformableFlags.SCALING);
     }
 
-    private _setOriginDirty() {
+    private _setOriginDirty(): void {
         this.flags.push(TransformableFlags.ORIGIN);
     }
 }

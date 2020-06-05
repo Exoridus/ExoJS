@@ -1,7 +1,7 @@
 import { ShaderAttribute } from './ShaderAttribute';
 import { ShaderUniform } from './ShaderUniform';
 import { ShaderBlock } from './ShaderBlock';
-import { PrimitiveArrayConstructors, primitiveByteSizeMapping, PrimitiveTypeNames } from '../../types/rendering';
+import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from 'types/rendering';
 
 export class Shader {
 

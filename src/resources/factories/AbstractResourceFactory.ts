@@ -1,5 +1,5 @@
-import { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
-import { StorageNames } from "types/types";
+import type { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
+import type { StorageNames } from "types/types";
 
 export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = any> implements ResourceFactoryInterface<SourceValue, TargetValue> {
 

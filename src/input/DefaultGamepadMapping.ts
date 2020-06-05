@@ -4,7 +4,7 @@ import { GamepadControl } from "input/GamepadControl";
 
 export class DefaultGamepadMapping extends GamepadMapping {
 
-    constructor() {
+    public constructor() {
         super([
             new GamepadControl(0, Gamepad.FaceBottom),
             new GamepadControl(1, Gamepad.FaceRight),

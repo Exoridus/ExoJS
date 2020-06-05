@@ -3,8 +3,8 @@ import { Matrix } from 'math/Matrix';
 import { Rectangle } from 'math/Rectangle';
 import { Bounds } from './Bounds';
 import { ObservableVector } from 'math/ObservableVector';
-import { Container } from 'rendering/Container';
-import { Vector } from "math/Vector";
+import type { Container } from 'rendering/Container';
+import type { Vector } from "math/Vector";
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -143,7 +143,7 @@ export class SceneNode extends Transformable implements Collidable {
         return this.getBounds().contains(x, y);
     }
 
-    public destroy() {
+    public destroy(): void {
         super.destroy();
 
         this._globalTransform.destroy();
@@ -152,7 +152,7 @@ export class SceneNode extends Transformable implements Collidable {
         this._anchor.destroy();
     }
 
-    private _updateOrigin() {
+    private _updateOrigin(): void {
         const { x, y } = this._anchor;
         const { width, height } = this.getBounds();
 

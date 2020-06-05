@@ -1,4 +1,4 @@
-import { PlaybackOptions } from "types/types";
+import type { PlaybackOptions } from "types/types";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { determineMimeType } from "utils/resources";
 import { StorageNames } from "types/types";

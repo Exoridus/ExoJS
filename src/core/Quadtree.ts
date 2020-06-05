@@ -1,6 +1,6 @@
 import { Rectangle } from 'math/Rectangle';
-import { SceneNode } from './SceneNode';
-import { Deletable, WithBoundingBox } from "types/types";
+import type { SceneNode } from './SceneNode';
+import type { Deletable, WithBoundingBox } from "types/types";
 
 export class Quadtree implements WithBoundingBox, Deletable {
 
@@ -13,7 +13,7 @@ export class Quadtree implements WithBoundingBox, Deletable {
     private readonly _quadTrees: Map<number, Quadtree> = new Map();
     private readonly _sceneNodes: Set<SceneNode> = new Set();
 
-    constructor(bounds: Rectangle, level = 0) {
+    public constructor(bounds: Rectangle, level = 0) {
         this._bounds = bounds.clone();
         this.level = level;
     }

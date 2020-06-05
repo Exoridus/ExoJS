@@ -1,8 +1,8 @@
 import { Vector } from 'math/Vector';
 import { Color } from 'core/Color';
 import { Time } from 'core/Time';
-import { ParticleOptions } from './emitters/ParticleOptions';
-import { ParticleProperties } from "particles/ParticleProperties";
+import type { ParticleOptions } from './emitters/ParticleOptions';
+import type { ParticleProperties } from "particles/ParticleProperties";
 import { trimRotation } from "utils/math";
 
 export class Particle implements ParticleProperties {
@@ -16,95 +16,95 @@ export class Particle implements ParticleProperties {
     private _textureIndex = 0;
     private _tint = Color.White.clone();
 
-    get totalLifetime() {
+    public get totalLifetime(): Time {
         return this._totalLifetime;
     }
 
-    set totalLifetime(totalLifetime) {
+    public set totalLifetime(totalLifetime) {
         this._totalLifetime.copy(totalLifetime);
     }
 
-    get elapsedLifetime() {
+    public get elapsedLifetime(): Time {
         return this._elapsedLifetime;
     }
 
-    set elapsedLifetime(elapsedLifetime) {
+    public set elapsedLifetime(elapsedLifetime) {
         this._elapsedLifetime.copy(elapsedLifetime);
     }
 
-    get position() {
+    public get position(): Vector {
         return this._position;
     }
 
-    set position(position) {
+    public set position(position) {
         this._position.copy(position);
     }
 
-    get velocity() {
+    public get velocity(): Vector {
         return this._velocity;
     }
 
-    set velocity(velocity) {
+    public set velocity(velocity) {
         this._velocity.copy(velocity);
     }
 
-    get scale() {
+    public get scale(): Vector {
         return this._scale;
     }
 
-    set scale(scale) {
+    public set scale(scale) {
         this._scale.copy(scale);
     }
 
-    get tint() {
+    public get tint(): Color {
         return this._tint;
     }
 
-    set tint(tint) {
+    public set tint(tint) {
         this._tint.copy(tint);
     }
 
-    get rotation() {
+    public get rotation(): number {
         return this._rotation;
     }
 
-    set rotation(degrees) {
+    public set rotation(degrees) {
         this._rotation = trimRotation(degrees);
     }
 
-    get rotationSpeed() {
+    public get rotationSpeed(): number {
         return this._rotationSpeed;
     }
 
-    set rotationSpeed(rotationSpeed) {
+    public set rotationSpeed(rotationSpeed) {
         this._rotationSpeed = rotationSpeed;
     }
 
-    get textureIndex() {
+    public get textureIndex(): number {
         return this._textureIndex;
     }
 
-    set textureIndex(textureIndex) {
+    public set textureIndex(textureIndex) {
         this._textureIndex = textureIndex;
     }
 
-    get remainingLifetime() {
+    public get remainingLifetime(): Time {
         return Time.Temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
     }
 
-    get elapsedRatio() {
+    public get elapsedRatio(): number {
         return this._elapsedLifetime.milliseconds / this._totalLifetime.milliseconds;
     }
 
-    get remainingRatio() {
+    public get remainingRatio(): number {
         return this.remainingLifetime.milliseconds / this._totalLifetime.milliseconds;
     }
 
-    get expired() {
+    public get expired(): boolean {
         return this._elapsedLifetime.greaterThan(this._totalLifetime);
     }
 
-    applyOptions(options: ParticleOptions) {
+    public applyOptions(options: ParticleOptions): this {
         const {
             totalLifetime,
             elapsedLifetime,
@@ -130,7 +130,7 @@ export class Particle implements ParticleProperties {
         return this;
     }
 
-    destroy() {
+    public destroy(): void {
         this._totalLifetime.destroy();
         this._elapsedLifetime.destroy();
         this._position.destroy();

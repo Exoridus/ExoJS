@@ -5,10 +5,10 @@ import { InputManager } from 'input/InputManager';
 import { Loader } from 'resources/Loader';
 import { Signal } from './Signal';
 import { Color } from './Color';
-import { Time } from './Time';
-import { Scene } from './Scene';
-import { GamepadMapping } from "input/GamepadMapping";
-import { DatabaseInterface } from "types/DatabaseInterface";
+import type { Time } from './Time';
+import type { Scene } from './Scene';
+import type { GamepadMapping } from "input/GamepadMapping";
+import type { DatabaseInterface } from "types/DatabaseInterface";
 import { DefaultGamepadMapping } from "input/DefaultGamepadMapping";
 
 export enum ApplicationStatus {
@@ -81,7 +81,7 @@ export class Application {
     private _frameCount = 0;
     private _frameRequest = 0;
 
-    constructor(appSettings?: Partial<ApplicationOptions>) {
+    public constructor(appSettings?: Partial<ApplicationOptions>) {
         this.options = { ...defaultAppSettings, ...appSettings };
         this.canvas = this.options.canvas;
 
@@ -98,27 +98,27 @@ export class Application {
         this._startupClock.start();
     }
 
-    get status() {
+    public get status(): ApplicationStatus {
         return this._status;
     }
 
-    get startupTime(): Time {
+    public get startupTime(): Time {
         return this._startupClock.elapsedTime;
     }
 
-    get activeTime(): Time {
+    public get activeTime(): Time {
         return this._activeClock.elapsedTime;
     }
 
-    get frameTime(): Time {
+    public get frameTime(): Time {
         return this._frameClock.elapsedTime;
     }
 
-    get frameCount(): number {
+    public get frameCount(): number {
         return this._frameCount;
     }
 
-    async start(scene: Scene): Promise<this> {
+    public async start(scene: Scene): Promise<this> {
         if (this._status === ApplicationStatus.Stopped) {
             this._status = ApplicationStatus.Loading;
             await this.sceneManager.setScene(scene);
@@ -131,7 +131,7 @@ export class Application {
         return this;
     }
 
-    update(): this {
+    public update(): this {
         if (this._status === ApplicationStatus.Running) {
             this.inputManager.update();
             this.sceneManager.update(this._frameClock.elapsedTime);
@@ -143,7 +143,7 @@ export class Application {
         return this;
     }
 
-    stop(): this {
+    public stop(): this {
         if (this._status === ApplicationStatus.Running) {
             this._status = ApplicationStatus.Halting;
             cancelAnimationFrame(this._frameRequest);
@@ -156,14 +156,14 @@ export class Application {
         return this;
     }
 
-    resize(width: number, height: number): this {
+    public resize(width: number, height: number): this {
         this.renderManager.resize(width, height);
         this.onResize.dispatch(width, height, this);
 
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this.stop();
         this.loader.destroy();
         this.inputManager.destroy();

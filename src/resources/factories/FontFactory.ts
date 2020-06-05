@@ -1,4 +1,4 @@
-import { FontFaceDescriptors } from "css-font-loading-module";
+import type { FontFaceDescriptors } from "css-font-loading-module";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { StorageNames } from "types/types";
 

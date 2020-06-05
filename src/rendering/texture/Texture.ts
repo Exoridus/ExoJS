@@ -3,9 +3,9 @@ import { isPowerOfTwo } from 'utils/math';
 import { Size } from 'math/Size';
 import { Flags } from 'math/Flags';
 import { createCanvas } from 'utils/rendering';
-import { SamplerOptions } from "./Sampler";
+import type { SamplerOptions } from "./Sampler";
 import { getTextureSourceSize } from "utils/core";
-import { TextureSource } from "types/types";
+import type { TextureSource } from "types/types";
 
 enum TextureFlags {
     None = 0,

@@ -1,5 +1,5 @@
 import { clamp } from "utils/math";
-import { GamepadChannel } from "input/Gamepad";
+import type { GamepadChannel } from "input/Gamepad";
 
 export interface GamepadControlOptions {
     invert?: boolean;
@@ -14,7 +14,7 @@ export class GamepadControl {
     public readonly normalize: boolean;
     public readonly threshold: number;
 
-    constructor(index: number, channel: GamepadChannel, options: GamepadControlOptions = {}) {
+    public constructor(index: number, channel: GamepadChannel, options: GamepadControlOptions = {}) {
         this.index = index;
         this.channel = channel;
 
@@ -35,7 +35,7 @@ export class GamepadControl {
         this.threshold = clamp(options.threshold ?? 0.2, -1, 1);
     }
 
-    public transformValue(value: number) {
+    public transformValue(value: number): number {
         let result = clamp(value, -1, 1);
 
         if (this.invert) {
@@ -49,7 +49,7 @@ export class GamepadControl {
         return (result > this.threshold) ? result : 0;
     }
 
-    public destroy() {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 }

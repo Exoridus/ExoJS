@@ -1,5 +1,5 @@
 import { Vector } from 'math/Vector';
-import { Cloneable } from "types/types";
+import type { Cloneable } from "types/types";
 
 let temp: Segment | null = null;
 
@@ -8,7 +8,7 @@ export class Segment implements Cloneable {
     private readonly _startPoint: Vector;
     private readonly _endPoint: Vector;
 
-    constructor(startX = 0, startY = 0, endX = 0, endY = 0) {
+    public constructor(startX = 0, startY = 0, endX = 0, endY = 0) {
         this._startPoint = new Vector(startX, startY);
         this._endPoint = new Vector(endX, endY);
     }

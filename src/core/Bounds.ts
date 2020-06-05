@@ -1,5 +1,5 @@
 import { Rectangle } from 'math/Rectangle';
-import { Matrix } from 'math/Matrix';
+import type { Matrix } from 'math/Matrix';
 
 export class Bounds {
 
@@ -73,7 +73,7 @@ export class Bounds {
         return this;
     }
 
-    public destroy() {
+    public destroy(): void {
         this._rect.destroy();
     }
 }

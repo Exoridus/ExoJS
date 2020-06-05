@@ -1,4 +1,4 @@
-import { Vector } from 'math/Vector';
+import type { Vector } from 'math/Vector';
 
 export const Tau = Math.PI * 2;
 

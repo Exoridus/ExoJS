@@ -4,7 +4,7 @@ export class PolarVector {
     public radius: number;
     public phi: number;
 
-    constructor(radius = 0, angle = 0) {
+    public constructor(radius = 0, angle = 0) {
         this.radius = radius;
         this.phi = angle;
     }

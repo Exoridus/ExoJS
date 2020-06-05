@@ -1,7 +1,7 @@
 import { Signal } from './Signal';
-import { Time } from './Time';
-import { Scene } from './Scene';
-import { Application } from "./Application";
+import type { Time } from './Time';
+import type { Scene } from './Scene';
+import type { Application } from "./Application";
 
 export class SceneManager {
 
@@ -13,19 +13,19 @@ export class SceneManager {
     public readonly onUpdateScene = new Signal();
     public readonly onStopScene = new Signal();
 
-    constructor(app: Application) {
+    public constructor(app: Application) {
         this._app = app;
     }
 
-    get scene(): Scene | null {
+    public get scene(): Scene | null {
         return this._scene;
     }
 
-    set scene(scene: Scene | null) {
+    public set scene(scene: Scene | null) {
         this.setScene(scene);
     }
 
-    async setScene(scene: Scene | null): Promise<this> {
+    public async setScene(scene: Scene | null): Promise<this> {
         if (scene !== this._scene) {
             this._unloadScene();
 
@@ -54,7 +54,7 @@ export class SceneManager {
         return this;
     }
 
-    public destroy() {
+    public destroy(): void {
         this._unloadScene();
 
         this.onChangeScene.destroy();

@@ -1,14 +1,14 @@
-import { RendererInterface } from 'rendering/RendererInterface';
+import type { RendererInterface } from 'rendering/RendererInterface';
 import { Shader } from 'rendering/shader/Shader';
-import { VertexArrayObject } from 'rendering/VertexArrayObject';
+import type { VertexArrayObject } from 'rendering/VertexArrayObject';
 import { RenderBuffer } from 'rendering/RenderBuffer';
 import { createQuadIndices } from 'utils/rendering';
-import { Texture } from 'rendering/texture/Texture';
+import type { Texture } from 'rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
-import { View } from 'rendering/View';
-import { RenderManager } from 'rendering/RenderManager';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import { Drawable } from "rendering/Drawable";
+import type { View } from 'rendering/View';
+import type { RenderManager } from 'rendering/RenderManager';
+import type { RenderTexture } from 'rendering/texture/RenderTexture';
+import type { Drawable } from "rendering/Drawable";
 
 export abstract class AbstractRenderer implements RendererInterface {
     protected readonly attributeCount: number;
@@ -106,7 +106,7 @@ export abstract class AbstractRenderer implements RendererInterface {
             if (this.currentView !== view || this.currentViewId !== view.updateId) {
                 this.currentView = view;
                 this.currentViewId = view.updateId;
-                this.shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+                this.updateView(view);
             }
 
             this.renderManager!.setVAO(this.vao);
@@ -129,5 +129,6 @@ export abstract class AbstractRenderer implements RendererInterface {
     }
 
     public abstract render(drawable: Drawable): this;
-    public abstract createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject;
+    protected abstract createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject;
+    protected abstract updateView(view: View): this;
 }

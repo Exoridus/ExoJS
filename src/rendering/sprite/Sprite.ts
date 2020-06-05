@@ -2,10 +2,10 @@ import { Container } from 'rendering/Container';
 import { Rectangle } from 'math/Rectangle';
 import { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
-import { Texture } from "rendering/texture/Texture";
-import { RenderTexture } from "rendering/texture/RenderTexture";
-import { RenderManager } from "rendering/RenderManager";
-import { SpriteRenderer } from "rendering/sprite/SpriteRenderer";
+import type { Texture } from "rendering/texture/Texture";
+import type { RenderTexture } from "rendering/texture/RenderTexture";
+import type { RenderManager } from "rendering/RenderManager";
+import type { SpriteRenderer } from "rendering/sprite/SpriteRenderer";
 import { RendererType } from "rendering/RendererInterface";
 
 export enum SpriteFlags {

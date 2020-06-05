@@ -1,4 +1,4 @@
-import { Rectangle } from "math/Rectangle";
+import type { Rectangle } from "math/Rectangle";
 
 export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
 export type TimeInterval = 1 | 1000 | 60000 | 3600000;

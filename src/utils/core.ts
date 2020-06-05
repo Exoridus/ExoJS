@@ -1,6 +1,6 @@
 import { Size } from 'math/Size';
 import { Random } from "math/Random";
-import { TextureSource } from "types/types";
+import type { TextureSource } from "types/types";
 import { Time } from "core/Time";
 
 const codecNotSupportedPattern = /^no$/;

@@ -1,6 +1,6 @@
-import { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
-import { Particle } from 'particles/Particle';
-import { Time } from 'core/Time';
+import type { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
+import type { Particle } from 'particles/Particle';
+import type { Time } from 'core/Time';
 
 export class TorqueAffector implements ParticleAffectorInterface {
 

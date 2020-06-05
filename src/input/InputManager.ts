@@ -6,8 +6,8 @@ import { Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { Gamepad } from 'input/Gamepad';
 import { Signal } from 'core/Signal';
 import { getDistance } from 'utils/math';
-import { Input } from './Input';
-import { Application } from "core/Application";
+import type { Input } from './Input';
+import type { Application } from "core/Application";
 
 enum InputManagerFlags {
     NONE = 0,
@@ -56,7 +56,7 @@ export class InputManager {
     public readonly onGamepadDisconnected = new Signal();
     public readonly onGamepadUpdated = new Signal();
 
-    constructor(app: Application) {
+    public constructor(app: Application) {
         const { gamepadMapping, pointerDistanceThreshold } = app.options;
 
         this._canvas = app.canvas;

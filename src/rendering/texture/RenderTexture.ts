@@ -2,7 +2,7 @@ import { isPowerOfTwo } from 'utils/math';
 import { RenderTarget } from 'rendering/RenderTarget';
 import { Flags } from 'math/Flags';
 import { ScaleModes, WrapModes } from "types/rendering";
-import { SamplerOptions } from "rendering/texture/Sampler";
+import type { SamplerOptions } from "rendering/texture/Sampler";
 
 enum RenderTextureFlags {
     None = 0,

@@ -78,7 +78,7 @@ export class Clock {
         return this;
     }
 
-    public destroy() {
+    public destroy(): void {
         this._startTime.destroy();
         this._elapsedTime.destroy();
     }

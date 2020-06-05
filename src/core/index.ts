@@ -1,7 +1,6 @@
 export * from './Application';
 export * from './Bounds';
 export * from './Clock';
-export * from './Collision';
 export * from './Color';
 export * from './Quadtree';
 export * from './Scene';

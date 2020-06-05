@@ -1,6 +1,6 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import { Shape } from 'math/Shape';
+import type { Shape } from 'math/Shape';
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -14,7 +14,7 @@ import {
 import type { Polygon } from "math/Polygon";
 import type { Line } from "math/Line";
 import type { Circle } from "math/Circle";
-import { SceneNode } from "core/SceneNode";
+import type { SceneNode } from "core/SceneNode";
 
 export class Ellipse implements Shape {
     public readonly collisionType: CollisionType = CollisionType.Ellipse;
@@ -22,7 +22,7 @@ export class Ellipse implements Shape {
     private readonly _position: Vector;
     private readonly _radius: Vector;
 
-    constructor(x = 0, y = 0, halfWidth = 0, halfHeight = halfWidth) {
+    public constructor(x = 0, y = 0, halfWidth = 0, halfHeight = halfWidth) {
         this._position = new Vector(x, y);
         this._radius = new Vector(halfWidth, halfHeight);
     }

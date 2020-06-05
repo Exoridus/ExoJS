@@ -8,12 +8,12 @@ import { Color } from 'core/Color';
 import { canvasSourceToDataURL } from 'utils/core';
 import { Texture } from './texture/Texture';
 import { RendererInterface, RendererType } from "rendering/RendererInterface";
-import { Shader } from './shader/Shader';
-import { VertexArrayObject } from './VertexArrayObject';
-import { RenderTexture } from './texture/RenderTexture';
-import { Drawable } from './Drawable';
-import { View } from './View';
-import { Application } from "core/Application";
+import type { Shader } from './shader/Shader';
+import type { VertexArrayObject } from './VertexArrayObject';
+import type { RenderTexture } from './texture/RenderTexture';
+import type { Drawable } from './Drawable';
+import type { View } from './View';
+import type { Application } from "core/Application";
 
 const throwOnGLError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;

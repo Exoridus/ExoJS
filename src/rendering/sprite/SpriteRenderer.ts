@@ -1,9 +1,10 @@
 import { VertexArrayObject } from 'rendering/VertexArrayObject';
-import { RenderBuffer } from 'rendering/RenderBuffer';
-import { Sprite } from 'rendering/sprite/Sprite';
+import type { RenderBuffer } from 'rendering/RenderBuffer';
+import type { Sprite } from 'rendering/sprite/Sprite';
+import { AbstractRenderer } from "rendering/AbstractRenderer";
+import type { View } from "rendering/View";
 import vertexSource from "rendering/sprite/glsl/sprite.vert";
 import fragmentSource from "rendering/sprite/glsl/sprite.frag";
-import { AbstractRenderer } from "rendering/AbstractRenderer";
 
 export class SpriteRenderer extends AbstractRenderer {
 
@@ -18,23 +19,15 @@ export class SpriteRenderer extends AbstractRenderer {
         super(batchSize, 16, vertexSource, fragmentSource);
     }
 
-    public createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
-        return new VertexArrayObject(gl)
-            .addIndex(indexBuffer)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'), gl.FLOAT, false, this.attributeCount, 0)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this.attributeCount, 8)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this.attributeCount, 12);
-    }
-
-    public render(sprite: Sprite) {
-        const { texture, blendMode, tint, vertices, texCoords } = sprite,
-            batchFull = (this.batchIndex >= this.batchSize),
-            textureChanged = (texture !== this.currentTexture),
-            blendModeChanged = (blendMode !== this.currentBlendMode),
-            flush = (batchFull || textureChanged || blendModeChanged),
-            index = flush ? 0 : (this.batchIndex * this.attributeCount),
-            float32View = this.float32View,
-            uint32View = this.uint32View;
+    public render(sprite: Sprite): this {
+        const { texture, blendMode, tint, vertices, texCoords } = sprite;
+        const batchFull = (this.batchIndex >= this.batchSize);
+        const textureChanged = (texture !== this.currentTexture);
+        const blendModeChanged = (blendMode !== this.currentBlendMode);
+        const flush = (batchFull || textureChanged || blendModeChanged);
+        const index = flush ? 0 : (this.batchIndex * this.attributeCount);
+        const float32View = this.float32View;
+        const uint32View = this.uint32View;
 
         if (flush) {
             this.flush();
@@ -86,6 +79,22 @@ export class SpriteRenderer extends AbstractRenderer {
             = tint.toRGBA();
 
         this.batchIndex++;
+
+        return this;
+    }
+
+    protected createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
+        return new VertexArrayObject(gl)
+            .addIndex(indexBuffer)
+            .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'), gl.FLOAT, false, this.attributeCount, 0)
+            .addAttribute(vertexBuffer, this.shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this.attributeCount, 8)
+            .addAttribute(vertexBuffer, this.shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this.attributeCount, 12);
+    }
+
+    protected updateView(view: View): this {
+        this.shader
+            .getUniform('u_projection')
+            .setValue(view.getTransform().toArray(false));
 
         return this;
     }

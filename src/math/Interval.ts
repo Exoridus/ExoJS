@@ -1,4 +1,4 @@
-import { Cloneable } from "types/types";
+import type { Cloneable } from "types/types";
 
 let temp: Interval | null = null;
 

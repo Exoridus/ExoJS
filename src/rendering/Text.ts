@@ -2,8 +2,8 @@ import { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
 import { TextStyle, TextStyleOptions } from 'rendering/TextStyle';
 import { Rectangle } from 'math/Rectangle';
-import { SamplerOptions } from "rendering/texture/Sampler";
-import { RenderManager } from 'rendering/RenderManager';
+import type { SamplerOptions } from "rendering/texture/Sampler";
+import type { RenderManager } from 'rendering/RenderManager';
 
 const heightCache: Map<string, number> = new Map<string, number>();
 const NewLinePattern = /(?:\r\n|\r|\n)/;

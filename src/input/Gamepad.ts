@@ -1,4 +1,4 @@
-import { GamepadMapping } from './GamepadMapping';
+import type { GamepadMapping } from './GamepadMapping';
 import { Signal } from "core/Signal";
 import { ChannelOffset, ChannelSize } from "types/input";
 
@@ -16,38 +16,38 @@ export class Gamepad {
     private _mapping: GamepadMapping;
     private _gamepad: OriginalGamepad = null;
 
-    constructor(index: number, channels: Float32Array, mapping: GamepadMapping) {
+    public constructor(index: number, channels: Float32Array, mapping: GamepadMapping) {
         this._index = index;
         this._channelOffset = ChannelOffset.Gamepads + (index * ChannelSize.Gamepad);
         this._channels = channels;
         this._mapping = mapping;
     }
 
-    get mapping(): GamepadMapping {
+    public get mapping(): GamepadMapping {
         return this._mapping;
     }
 
-    set mapping(mapping: GamepadMapping) {
+    public set mapping(mapping: GamepadMapping) {
         this._mapping = mapping;
     }
 
-    get channels(): Float32Array {
+    public get channels(): Float32Array {
         return this._channels;
     }
 
-    get gamepad(): OriginalGamepad {
+    public get gamepad(): OriginalGamepad {
         return this._gamepad;
     }
 
-    get index(): number {
+    public get index(): number {
         return this._index;
     }
 
-    get connected(): boolean {
+    public get connected(): boolean {
         return this._gamepad !== null;
     }
 
-    connect(gamepad: OriginalGamepad): this {
+    public connect(gamepad: OriginalGamepad): this {
         if (!this.connected) {
             this._gamepad = gamepad;
             this.onConnect.dispatch();
@@ -56,7 +56,7 @@ export class Gamepad {
         return this;
     }
 
-    disconnect(): this {
+    public disconnect(): this {
         if (this.connected) {
             this._gamepad = null;
             this.onDisconnect.dispatch();
@@ -65,7 +65,7 @@ export class Gamepad {
         return this;
     }
 
-    update(): this {
+    public update(): this {
         if (this._gamepad === null) {
             return this;
         }

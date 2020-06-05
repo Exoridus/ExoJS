@@ -1,7 +1,7 @@
-import { Time } from 'core/Time';
+import type { Time } from 'core/Time';
 import { ParticleOptions } from 'particles/emitters/ParticleOptions';
-import { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
-import { ParticleSystem } from 'particles/ParticleSystem';
+import type { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
+import type { ParticleSystem } from 'particles/ParticleSystem';
 
 export class UniversalEmitter implements ParticleEmitterInterface {
     private _emissionRate: number;

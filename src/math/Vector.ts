@@ -1,6 +1,6 @@
 import { getDistance } from 'utils/math';
-import { Matrix } from 'math/Matrix';
-import { Shape } from "math/Shape";
+import type { Matrix } from 'math/Matrix';
+import type { Shape } from "math/Shape";
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -174,7 +174,7 @@ export class Vector extends AbstractVector implements Shape {
     public x: number;
     public y: number;
 
-    constructor(x = 0, y = 0) {
+    public constructor(x = 0, y = 0) {
         super();
         this.x = x;
         this.y = y;
@@ -226,7 +226,7 @@ export class Vector extends AbstractVector implements Shape {
         return interval;
     }
 
-    public destroy() {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 

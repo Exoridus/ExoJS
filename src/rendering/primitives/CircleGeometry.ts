@@ -2,7 +2,7 @@ import { Geometry } from './Geometry';
 
 export class CircleGeometry extends Geometry {
 
-    constructor(centerX: number, centerY: number, radius: number) {
+    public constructor(centerX: number, centerY: number, radius: number) {
         const length = Math.floor(15 * Math.sqrt(radius + radius)),
             segment = (Math.PI * 2) / length,
             vertices = [],

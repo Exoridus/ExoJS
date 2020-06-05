@@ -1,7 +1,7 @@
 import { Interval } from 'math/Interval';
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import { Shape } from 'math/Shape';
+import type { Shape } from 'math/Shape';
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
     getCollisionPolygonCircle,
@@ -31,7 +31,7 @@ export class Polygon implements Shape {
     private readonly _edges: Array<Vector> = [];
     private readonly _normals: Array<Vector> = [];
 
-    constructor(points: Array<Vector> = [], x = 0, y = 0) {
+    public constructor(points: Array<Vector> = [], x = 0, y = 0) {
         this._position = new Vector(x, y);
         this.setPoints(points);
     }

@@ -1,7 +1,7 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
 import { Interval } from 'math/Interval';
-import { Shape } from 'math/Shape';
+import type { Shape } from 'math/Shape';
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
     getCollisionCircleCircle,
@@ -33,7 +33,7 @@ export class Circle implements Shape {
     private _collisionVertices: Array<Vector> | null = null;
     private _radius: number;
 
-    constructor(x = 0, y = 0, radius = 0) {
+    public constructor(x = 0, y = 0, radius = 0) {
         this._position = new Vector(x, y);
         this._radius = radius;
     }

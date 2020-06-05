@@ -50,7 +50,7 @@ export class ObservableSize extends Size {
         return this.set(this._width - x, this._height - y);
     }
 
-    public scale(x: number, y: number = x) {
+    public scale(x: number, y: number = x): this {
         return this.set(this._width * x, this._height * y);
     }
 

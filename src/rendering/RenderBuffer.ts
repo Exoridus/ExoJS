@@ -1,6 +1,6 @@
 import { emptyArrayBuffer } from 'utils/core';
-import { BufferTypes, BufferUsage } from "types/rendering";
-import { TypedArray } from "types/types";
+import type { BufferTypes, BufferUsage } from "types/rendering";
+import type { TypedArray } from "types/types";
 
 type DataContainer = ArrayBuffer | SharedArrayBuffer | ArrayBufferView | TypedArray;
 

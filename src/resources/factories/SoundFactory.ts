@@ -1,5 +1,5 @@
 import { StorageNames } from 'types/types';
-import { PlaybackOptions } from "types/types";
+import type { PlaybackOptions } from "types/types";
 import { AbstractResourceFactory } from "./AbstractResourceFactory";
 import { Sound } from "audio/Sound";
 import { decodeAudioData } from "utils/audio-context";

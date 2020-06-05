@@ -1,6 +1,6 @@
 import { RenderingPrimitives, ShaderPrimitives } from 'types/rendering';
-import { ShaderAttribute } from './shader/ShaderAttribute';
-import { RenderBuffer } from './RenderBuffer';
+import type { ShaderAttribute } from './shader/ShaderAttribute';
+import type { RenderBuffer } from './RenderBuffer';
 
 interface VAOAttribute {
     buffer: RenderBuffer;
@@ -27,7 +27,7 @@ export class VertexArrayObject {
         this._drawMode = drawMode;
     }
 
-    bind() {
+    public bind(): this {
         const gl = this._context;
 
         this._context.bindVertexArray(this._vao);
@@ -55,13 +55,13 @@ export class VertexArrayObject {
         return this;
     }
 
-    unbind() {
+    public unbind(): this {
         this._context.bindVertexArray(null);
 
         return this;
     }
 
-    addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0) {
+    public addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0): this {
         const { location, size } = attribute;
 
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });
@@ -70,14 +70,14 @@ export class VertexArrayObject {
         return this;
     }
 
-    addIndex(buffer: RenderBuffer) {
+    public addIndex(buffer: RenderBuffer): this {
         this._indexBuffer = buffer;
         this._dirty = true;
 
         return this;
     }
 
-    clear() {
+    public clear(): this {
         this.unbind();
 
         this._attributes.length = 0;
@@ -86,7 +86,7 @@ export class VertexArrayObject {
         return this;
     }
 
-    draw(size: number, start: number, type: RenderingPrimitives = this._drawMode) {
+    public draw(size: number, start: number, type: RenderingPrimitives = this._drawMode): this {
         const gl = this._context;
 
         if (this._indexBuffer) {
@@ -98,7 +98,7 @@ export class VertexArrayObject {
         return this;
     }
 
-    destroy() {
+    public destroy(): void {
         this._context.deleteVertexArray(this._vao);
         this._indexBuffer = null;
         this._vao = null;

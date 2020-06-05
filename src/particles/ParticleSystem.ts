@@ -1,12 +1,12 @@
 import { Particle } from './Particle';
 import { Rectangle } from 'math/Rectangle';
-import { Time } from 'core/Time';
+import type { Time } from 'core/Time';
 import { Container } from 'rendering/Container';
-import { Texture } from 'rendering/texture/Texture';
-import { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
-import { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
-import { RenderManager } from 'rendering/RenderManager';
-import { ParticleRenderer } from './ParticleRenderer';
+import type { Texture } from 'rendering/texture/Texture';
+import type { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
+import type { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
+import type { RenderManager } from 'rendering/RenderManager';
+import type { ParticleRenderer } from './ParticleRenderer';
 import { RendererType } from "rendering/RendererInterface";
 
 export class ParticleSystem extends Container {

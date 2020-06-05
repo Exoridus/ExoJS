@@ -36,7 +36,7 @@ export class Pointer {
     private _rotation: number;
     private _currentState: PointerState = PointerState.Unknown;
 
-    constructor(event: PointerEvent, canvas: HTMLCanvasElement) {
+    public constructor(event: PointerEvent, canvas: HTMLCanvasElement) {
         const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist } = event;
         const { left, top } = canvas.getBoundingClientRect();
 
@@ -53,19 +53,19 @@ export class Pointer {
         this.stateFlags.push(PointerStateFlag.Over);
     }
 
-    public get x() {
+    public get x(): number {
         return this.position.x;
     }
 
-    public get y() {
+    public get y(): number {
         return this.position.y;
     }
 
-    public get width() {
+    public get width(): number {
         return this.size.width;
     }
 
-    public get height() {
+    public get height(): number {
         return this.size.height;
     }
 

@@ -1,13 +1,13 @@
-import { RendererInterface } from "rendering/RendererInterface";
+import type { RendererInterface } from "rendering/RendererInterface";
 import { createQuadIndices } from "utils/rendering";
 import { Shader } from "rendering/shader/Shader";
-import { RenderManager } from "rendering/RenderManager";
-import { Texture } from "rendering/texture/Texture";
+import type { RenderManager } from "rendering/RenderManager";
+import type { Texture } from "rendering/texture/Texture";
 import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
-import { View } from "rendering/View";
+import type { View } from "rendering/View";
 import { RenderBuffer } from "rendering/RenderBuffer";
 import { VertexArrayObject } from "rendering/VertexArrayObject";
-import { DrawableShape } from "rendering/primitives/DrawableShape";
+import type { DrawableShape } from "rendering/primitives/DrawableShape";
 import vertexSource from "rendering/primitives/glsl/primitive.vert";
 import fragmentSource from "rendering/primitives/glsl/primitive.frag";
 

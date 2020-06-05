@@ -1,4 +1,4 @@
-import { DatabaseInterface } from "types/DatabaseInterface";
+import type { DatabaseInterface } from "types/DatabaseInterface";
 import { supportsIndexedDB } from "utils/core";
 import { ResourceTypes } from "types/types";
 

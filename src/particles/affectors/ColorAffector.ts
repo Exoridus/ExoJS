@@ -1,47 +1,47 @@
-import { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
-import { Color } from 'core/Color';
-import { Particle } from 'particles/Particle';
-import { Time } from 'core/Time';
+import type { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
+import type { Color } from 'core/Color';
+import type { Particle } from 'particles/Particle';
+import type { Time } from 'core/Time';
 
 export class ColorAffector implements ParticleAffectorInterface {
 
     private readonly _fromColor: Color;
     private readonly _toColor: Color;
 
-    constructor(fromColor: Color, toColor: Color) {
+    public constructor(fromColor: Color, toColor: Color) {
         this._fromColor = fromColor.clone();
         this._toColor = toColor.clone();
     }
 
-    get fromColor() {
+    public get fromColor(): Color {
         return this._fromColor;
     }
 
-    set fromColor(color) {
+    public set fromColor(color) {
         this.setFromColor(color);
     }
 
-    get toColor() {
+    public get toColor(): Color {
         return this._toColor;
     }
 
-    set toColor(color) {
+    public set toColor(color) {
         this.setToColor(color);
     }
 
-    setFromColor(color: Color) {
+    public setFromColor(color: Color): this {
         this._fromColor.copy(color);
 
         return this;
     }
 
-    setToColor(color: Color) {
+    public setToColor(color: Color): this {
         this._toColor.copy(color);
 
         return this;
     }
 
-    apply(particle: Particle, delta: Time) {
+    public apply(particle: Particle, delta: Time): this {
         const ratio = particle.elapsedRatio;
          const { r: r1, g: g1, b: b1, a: a1 } = this._fromColor;
          const { r: r2, g: g2, b: b2, a: a2 } = this._toColor;
@@ -56,7 +56,7 @@ export class ColorAffector implements ParticleAffectorInterface {
         return this;
     }
 
-    destroy() {
+    public destroy(): void {
         this._fromColor.destroy();
         this._toColor.destroy();
     }

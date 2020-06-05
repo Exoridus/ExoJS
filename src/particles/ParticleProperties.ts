@@ -1,6 +1,6 @@
-import { Time } from 'core/Time';
-import { Vector } from 'math/Vector';
-import { Color } from 'core/Color';
+import type { Time } from 'core/Time';
+import type { Vector } from 'math/Vector';
+import type { Color } from 'core/Color';
 
 export interface ParticleProperties {
     totalLifetime: Time;

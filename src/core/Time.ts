@@ -1,4 +1,4 @@
-import { Cloneable, TimeInterval } from "types/types";
+import type { Cloneable, TimeInterval } from "types/types";
 
 let temp: Time | null = null;
 
@@ -121,7 +121,7 @@ export class Time implements Cloneable {
         return this;
     }
 
-    public destroy() {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 

@@ -1,5 +1,5 @@
 import { clamp } from 'utils/math';
-import { PlaybackOptions } from "types/types";
+import type { PlaybackOptions } from "types/types";
 import { AbstractMedia } from "types/AbstractMedia";
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
@@ -31,7 +31,7 @@ export class Sound extends AbstractMedia {
         return this._gainNode;
     }
 
-    constructor(audioBuffer: AudioBuffer, options?: Partial<PlaybackOptions>) {
+    public constructor(audioBuffer: AudioBuffer, options?: Partial<PlaybackOptions>) {
         super({
             duration: audioBuffer.duration,
             volume: 1,

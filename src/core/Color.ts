@@ -1,5 +1,5 @@
 import { clamp } from 'utils/math';
-import { Cloneable } from "types/types";
+import type { Cloneable } from "types/types";
 
 export class Color implements Cloneable {
 
@@ -10,7 +10,7 @@ export class Color implements Cloneable {
     private _rgba: number | null = null;
     private _array: Float32Array | null = null;
 
-    constructor(r = 0, g = 0, b = 0, a = 1) {
+    public constructor(r = 0, g = 0, b = 0, a = 1) {
         this._r = r & 255;
         this._g = g & 255;
         this._b = b & 255;
@@ -143,7 +143,7 @@ export class Color implements Cloneable {
         return this._rgba;
     }
 
-    public destroy() {
+    public destroy(): void {
         if (this._array) {
             this._array = null;
         }

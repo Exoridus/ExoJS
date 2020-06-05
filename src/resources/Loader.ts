@@ -9,8 +9,8 @@ import { TextFactory } from './factories/TextFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
 import { SVGFactory } from './factories/SVGFactory';
-import { DatabaseInterface } from "types/DatabaseInterface";
-import { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
+import type { DatabaseInterface } from "types/DatabaseInterface";
+import type { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
 import { ResourceTypes } from "types/types";
 
 export interface LoaderOptions {

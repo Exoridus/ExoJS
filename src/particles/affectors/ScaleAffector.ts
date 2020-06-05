@@ -1,7 +1,7 @@
-import { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
+import type { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
 import { Vector } from 'math/Vector';
-import { Time } from 'core/Time';
-import { Particle } from 'particles/Particle';
+import type { Time } from 'core/Time';
+import type { Particle } from 'particles/Particle';
 
 export class ScaleAffector implements ParticleAffectorInterface {
 

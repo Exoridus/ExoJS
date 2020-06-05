@@ -17,42 +17,42 @@ export class Scene {
 
     private _app: Application | null = null;
 
-    constructor(prototype: SceneData) {
+    public constructor(prototype: SceneData) {
 
         if (prototype) {
             Object.assign(this, prototype);
         }
     }
 
-    get app(): Application | null {
+    public get app(): Application | null {
         return this._app;
     }
 
-    set app(app: Application | null) {
+    public set app(app: Application | null) {
         this._app = app;
     }
 
-    async load(loader: Loader) {
+    public async load(loader: Loader): Promise<void> {
         // do nothing
     }
 
-    init(resources: ResourceContainer) {
+    public init(resources: ResourceContainer): void {
         // do nothing
     }
 
-    update(delta: Time) {
+    public update(delta: Time): void {
         // do nothing
     }
 
-    draw(renderManager: RenderManager) {
+    public draw(renderManager: RenderManager): void {
         // do nothing
     }
 
-    unload() {
+    public unload(): void {
         // do nothing
     }
 
-    destroy() {
+    public destroy(): void {
         this._app = null;
     }
 }

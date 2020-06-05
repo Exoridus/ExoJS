@@ -1,5 +1,5 @@
-import { Drawable } from './Drawable';
-import { RenderManager } from './RenderManager';
+import type { Drawable } from './Drawable';
+import type { RenderManager } from './RenderManager';
 
 export enum RendererType {
     Sprite = 1,

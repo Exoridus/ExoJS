@@ -2,8 +2,8 @@ import { inRange } from 'utils/math';
 import { Vector } from 'math/Vector';
 import { Size } from 'math/Size';
 import { Interval } from 'math/Interval';
-import { Matrix } from 'math/Matrix';
-import { Shape } from 'math/Shape';
+import type { Matrix } from 'math/Matrix';
+import type { Shape } from 'math/Shape';
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
     getCollisionCircleRectangle,
@@ -36,7 +36,7 @@ export class Rectangle implements Shape {
     private _normals: Array<Vector> | null = null;
     private _normalsDirty = false;
 
-    constructor(x = 0, y = x, width = 0, height = width) {
+    public constructor(x = 0, y = x, width = 0, height = width) {
         this._position = new Vector(x, y);
         this._size = new Size(width, height);
     }

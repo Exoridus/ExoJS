@@ -1,7 +1,7 @@
-import { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
+import type { ParticleAffectorInterface } from 'particles/affectors/ParticleAffectorInterface';
 import { Vector } from 'math/Vector';
-import { Particle } from 'particles/Particle';
-import { Time } from 'core/Time';
+import type { Particle } from 'particles/Particle';
+import type { Time } from 'core/Time';
 
 export class ForceAffector implements ParticleAffectorInterface {
 

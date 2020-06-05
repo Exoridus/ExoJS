@@ -1,4 +1,4 @@
-import { MediaInterface } from "types/MediaInterface";
+import type { MediaInterface } from "types/MediaInterface";
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
 export interface AudioAnalyserOptions {
@@ -26,7 +26,7 @@ export class AudioAnalyser {
     private _audioContext: AudioContext | null = null;
     private _analyserTarget: AudioNode | null = null;
 
-    constructor(media: MediaInterface, options: Partial<AudioAnalyserOptions> = {}) {
+    public constructor(media: MediaInterface, options: Partial<AudioAnalyserOptions> = {}) {
         const { fftSize,  minDecibels, maxDecibels, smoothingTimeConstant } = options;
 
         this._media = media;

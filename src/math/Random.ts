@@ -7,7 +7,7 @@ export class Random {
     private _seed = 0;
     private _value = 0;
 
-    constructor(seed: number = Date.now()) {
+    public constructor(seed: number = Date.now()) {
         this.setSeed(seed);
         this._twist();
     }
@@ -61,11 +61,11 @@ export class Random {
         return this._value;
     }
 
-    public destroy() {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 
-    private _twist() {
+    private _twist(): void {
         const state = this._state;
 
         // first 624-397=227 words

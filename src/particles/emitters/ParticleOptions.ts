@@ -1,7 +1,7 @@
 import { Vector } from 'math/Vector';
 import { Color } from 'core/Color';
 import { Time } from 'core/Time';
-import { ParticleProperties } from "particles/ParticleProperties";
+import type { ParticleProperties } from "particles/ParticleProperties";
 import { trimRotation } from "utils/math";
 
 export class ParticleOptions implements ParticleProperties {

@@ -1,6 +1,6 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import { Shape } from 'math/Shape';
+import type { Shape } from 'math/Shape';
 import { Interval } from "math/Interval";
 import { Collidable, Collision, CollisionType } from "types/Collision";
 import {
@@ -25,7 +25,7 @@ export class Line implements Shape {
     private readonly _fromPosition: Vector;
     private readonly _toPosition: Vector;
 
-    constructor(x1 = 0, y1 = 0, x2 = 0, y2 = 0) {
+    public constructor(x1 = 0, y1 = 0, x2 = 0, y2 = 0) {
         this._fromPosition = new Vector(x1, y1);
         this._toPosition = new Vector(x2, y2);
     }

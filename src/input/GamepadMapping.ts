@@ -1,31 +1,31 @@
-import { GamepadControl } from './GamepadControl';
+import type { GamepadControl } from './GamepadControl';
 
 export class GamepadMapping {
 
     private readonly _buttons: Array<GamepadControl>;
     private readonly _axes: Array<GamepadControl>;
 
-    constructor(buttons: Array<GamepadControl>, axes: Array<GamepadControl>) {
+    public constructor(buttons: Array<GamepadControl>, axes: Array<GamepadControl>) {
         this._buttons = buttons;
         this._axes = axes;
     }
 
-    get buttons(): Array<GamepadControl> {
+    public get buttons(): Array<GamepadControl> {
         return this._buttons;
     }
 
-    get axes(): Array<GamepadControl> {
+    public get axes(): Array<GamepadControl> {
         return this._axes;
     }
 
-    setButtons(buttons: Array<GamepadControl>): this {
+    public setButtons(buttons: Array<GamepadControl>): this {
         this.clearButtons();
         this._buttons.push(...buttons);
 
         return this;
     }
 
-    clearButtons(): this {
+    public clearButtons(): this {
         for (const button of this._buttons) {
             button.destroy();
         }
@@ -35,14 +35,14 @@ export class GamepadMapping {
         return this;
     }
 
-    setAxes(axes: Array<GamepadControl>): this {
+    public setAxes(axes: Array<GamepadControl>): this {
         this.clearAxes();
         this._axes.push(...axes);
 
         return this;
     }
 
-    clearAxes(): this {
+    public clearAxes(): this {
         for (const axis of this._axes) {
             axis.destroy();
         }
@@ -52,14 +52,14 @@ export class GamepadMapping {
         return this;
     }
 
-    clearControls(): this {
+    public clearControls(): this {
         this.clearButtons();
         this.clearAxes();
 
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this.clearControls();
     }
 }

@@ -1,6 +1,6 @@
-import { MediaInterface } from "types/MediaInterface";
+import type { MediaInterface } from "types/MediaInterface";
 import { Signal } from 'core/Signal';
-import { PlaybackOptions } from "types/types";
+import type { PlaybackOptions } from "types/types";
 
 export interface AbstractMediaInitialState extends Omit<PlaybackOptions, "time"> {
     duration: number;

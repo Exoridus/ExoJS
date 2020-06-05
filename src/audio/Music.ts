@@ -1,5 +1,5 @@
 import { clamp } from 'utils/math';
-import { PlaybackOptions } from "types/types";
+import type { PlaybackOptions } from "types/types";
 import { AbstractMedia } from "types/AbstractMedia";
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
 
@@ -8,7 +8,7 @@ export class Music extends AbstractMedia {
     private _gainNode: GainNode | null = null;
     private _sourceNode: MediaElementAudioSourceNode | null = null;
 
-    constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
+    public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
         super(audioElement);
 
         this._audioElement = audioElement;
