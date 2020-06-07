@@ -13,7 +13,7 @@ export class RenderTarget {
     protected _defaultView: View;
     protected _view: View;
 
-    constructor(width: number, height: number, root = false) {
+    public constructor(width: number, height: number, root = false) {
         this._size = new Size(width, height);
         this._root = root;
         this._defaultView = new View(width / 2, height / 2, width, height);

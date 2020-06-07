@@ -1,7 +1,7 @@
 import { Signal } from './Signal';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
-import type { Application } from "./Application";
+import type { Application } from './Application';
 
 export class SceneManager {
 

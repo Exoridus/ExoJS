@@ -1,6 +1,6 @@
 import { emptyArrayBuffer } from 'utils/core';
-import type { BufferTypes, BufferUsage } from "types/rendering";
-import type { TypedArray } from "types/types";
+import type { BufferTypes, BufferUsage } from 'types/rendering';
+import type { TypedArray } from 'types/types';
 
 type DataContainer = ArrayBuffer | SharedArrayBuffer | ArrayBufferView | TypedArray;
 
@@ -12,7 +12,7 @@ export class RenderBuffer {
     private readonly _usage: BufferUsage;
     private _data: DataContainer = emptyArrayBuffer;
 
-    constructor(gl: WebGL2RenderingContext, type: BufferTypes, data: DataContainer, usage: BufferUsage) {
+    public constructor(gl: WebGL2RenderingContext, type: BufferTypes, data: DataContainer, usage: BufferUsage) {
 
         this._context = gl;
         this._buffer = gl.createBuffer();

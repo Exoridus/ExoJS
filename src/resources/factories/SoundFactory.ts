@@ -1,22 +1,22 @@
 import { StorageNames } from 'types/types';
-import type { PlaybackOptions } from "types/types";
-import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { Sound } from "audio/Sound";
-import { decodeAudioData } from "utils/audio-context";
+import type { IPlaybackOptions } from 'types/types';
+import { AbstractResourceFactory } from './AbstractResourceFactory';
+import { Sound } from 'audio/Sound';
+import { decodeAudioData } from 'utils/audio-context';
 
-interface SoundFactoryOptions {
-    playbackOptions?: Partial<PlaybackOptions>;
+interface ISoundFactoryOptions {
+    playbackOptions?: Partial<IPlaybackOptions>;
 }
 
 export class SoundFactory extends AbstractResourceFactory<ArrayBuffer, Sound> {
 
-    public readonly storageName: StorageNames = StorageNames.Sound;
+    public readonly storageName: StorageNames = StorageNames.sound;
 
-    async process(response: Response): Promise<ArrayBuffer> {
+    public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: SoundFactoryOptions = {}): Promise<Sound> {
+    public async create(source: ArrayBuffer, options: ISoundFactoryOptions = {}): Promise<Sound> {
         const audioBuffer = await decodeAudioData(source);
 
         return new Sound(audioBuffer, options.playbackOptions);

@@ -3,13 +3,13 @@ import { Vector } from 'math/Vector';
 import { Size } from 'math/Size';
 import { Interval } from 'math/Interval';
 import type { Matrix } from 'math/Matrix';
-import type { Shape } from 'math/Shape';
-import { Collidable, Collision, CollisionType } from "types/Collision";
+import type { IShape } from 'math/IShape';
+import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
     getCollisionCircleRectangle,
     getCollisionRectangleRectangle,
-    getCollisionSAT,
-} from "utils/collision-detection";
+    getCollisionSat,
+} from 'utils/collision-detection';
 import {
     intersectionLineRect,
     intersectionPointRect,
@@ -17,19 +17,19 @@ import {
     intersectionRectEllipse,
     intersectionRectPoly,
     intersectionRectRect,
-    intersectionSAT
-} from "utils/collision-detection";
-import type { SceneNode } from "core/SceneNode";
-import type { Ellipse } from "math/Ellipse";
-import type { Line } from "math/Line";
+    intersectionSat
+} from 'utils/collision-detection';
+import type { SceneNode } from 'core/SceneNode';
+import type { Ellipse } from 'math/Ellipse';
+import type { Line } from 'math/Line';
 import type { Circle } from 'math/Circle';
 import type { Polygon } from 'math/Polygon';
 
 let temp: Rectangle | null = null;
 
-export class Rectangle implements Shape {
+export class Rectangle implements IShape {
 
-    public readonly collisionType: CollisionType = CollisionType.Rectangle;
+    public readonly collisionType: CollisionType = CollisionType.rectangle;
 
     private readonly _position: Vector;
     private readonly _size: Size;
@@ -182,7 +182,7 @@ export class Rectangle implements Shape {
     }
 
     public transform(matrix: Matrix, result: Rectangle = this): Rectangle {
-        const point = Vector.Temp.set(this.left, this.top).transform(matrix);
+        const point = Vector.temp.set(this.left, this.top).transform(matrix);
 
         let minX = point.x,
             maxX = point.x,
@@ -214,7 +214,7 @@ export class Rectangle implements Shape {
     }
 
     public contains(x: number, y: number): boolean {
-        return intersectionPointRect(Vector.Temp.set(x, y), this);
+        return intersectionPointRect(Vector.temp.set(x, y), this);
     }
 
     public containsRect(rect: Rectangle): boolean {
@@ -224,31 +224,31 @@ export class Rectangle implements Shape {
             && inRange(rect.bottom, this.top, this.bottom);
     }
 
-    public intersectsWith(target: Collidable): boolean {
+    public intersectsWith(target: ICollidable): boolean {
         switch (target.collisionType) {
-            case CollisionType.SceneNode:
+            case CollisionType.sceneNode:
                 return (target as SceneNode).isAlignedBox
                     ? intersectionRectRect(this, (target as SceneNode).getBounds())
-                    : intersectionSAT(this, target as SceneNode);
-            case CollisionType.Rectangle: return intersectionRectRect(this, target as Rectangle);
-            case CollisionType.Polygon: return intersectionRectPoly(this, target as Polygon);
-            case CollisionType.Circle: return intersectionRectCircle(this, target as Circle);
-            case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
-            case CollisionType.Line: return intersectionLineRect(target as Line, this);
-            case CollisionType.Point: return intersectionPointRect(target as Vector, this);
+                    : intersectionSat(this, target as SceneNode);
+            case CollisionType.rectangle: return intersectionRectRect(this, target as Rectangle);
+            case CollisionType.polygon: return intersectionRectPoly(this, target as Polygon);
+            case CollisionType.circle: return intersectionRectCircle(this, target as Circle);
+            case CollisionType.ellipse: return intersectionRectEllipse(this, target as Ellipse);
+            case CollisionType.line: return intersectionLineRect(target as Line, this);
+            case CollisionType.point: return intersectionPointRect(target as Vector, this);
             default: return false;
         }
     }
 
-    public collidesWith(target: Collidable): Collision | null {
+    public collidesWith(target: ICollidable): ICollisionResponse | null {
         switch (target.collisionType) {
-            case CollisionType.SceneNode:
+            case CollisionType.sceneNode:
                 return (target as SceneNode).isAlignedBox
                     ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds())
-                    : getCollisionSAT(this, target as SceneNode);
-            case CollisionType.Rectangle: return getCollisionRectangleRectangle(this, target as Rectangle);
-            case CollisionType.Polygon: return getCollisionSAT(this, target as Polygon);
-            case CollisionType.Circle: return getCollisionCircleRectangle(target as Circle, this, true);
+                    : getCollisionSat(this, target as SceneNode);
+            case CollisionType.rectangle: return getCollisionRectangleRectangle(this, target as Rectangle);
+            case CollisionType.polygon: return getCollisionSat(this, target as Polygon);
+            case CollisionType.circle: return getCollisionCircleRectangle(target as Circle, this, true);
             // case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
             // case CollisionType.Line: return intersectionLineRect(target as Line, this);
             // case CollisionType.Point: return intersectionPointRect(target as Vector, this);
@@ -272,7 +272,7 @@ export class Rectangle implements Shape {
         normals[3].set(0, this.top - this.bottom).rperp().normalize();
     }
 
-    public static get Temp(): Rectangle {
+    public static get temp(): Rectangle {
         if (temp === null) {
             temp = new Rectangle();
         }

@@ -1,13 +1,13 @@
-import type { Cloneable } from "types/types";
+import type { ICloneable } from 'types/types';
 
 let temp: Interval | null = null;
 
-export class Interval implements Cloneable {
+export class Interval implements ICloneable {
 
     public min: number;
     public max: number;
 
-    constructor(min = 0, max = min) {
+    public constructor(min = 0, max = min) {
         this.min = min;
         this.max = max;
     }
@@ -47,9 +47,9 @@ export class Interval implements Cloneable {
         // todo - check if destroy is needed
     }
 
-    public static readonly Zero = new Interval(0, 0);
+    public static readonly zero = new Interval(0, 0);
 
-    public static get Temp(): Interval {
+    public static get temp(): Interval {
         if (temp === null) {
             temp = new Interval();
         }

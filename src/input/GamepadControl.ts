@@ -1,7 +1,7 @@
-import { clamp } from "utils/math";
-import type { GamepadChannel } from "input/Gamepad";
+import { clamp } from 'utils/math';
+import type { GamepadChannel } from 'input/Gamepad';
 
-export interface GamepadControlOptions {
+export interface IGamepadControlOptions {
     invert?: boolean;
     normalize?: boolean;
     threshold?: number;
@@ -14,7 +14,7 @@ export class GamepadControl {
     public readonly normalize: boolean;
     public readonly threshold: number;
 
-    public constructor(index: number, channel: GamepadChannel, options: GamepadControlOptions = {}) {
+    public constructor(index: number, channel: GamepadChannel, options: IGamepadControlOptions = {}) {
         this.index = index;
         this.channel = channel;
 

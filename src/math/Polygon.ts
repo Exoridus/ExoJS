@@ -1,12 +1,12 @@
 import { Interval } from 'math/Interval';
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import type { Shape } from 'math/Shape';
-import { Collidable, Collision, CollisionType } from "types/Collision";
+import type { IShape } from 'math/IShape';
+import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
     getCollisionPolygonCircle,
-    getCollisionSAT,
-} from "utils/collision-detection";
+    getCollisionSat,
+} from 'utils/collision-detection';
 import {
     intersectionCirclePoly,
     intersectionEllipsePoly,
@@ -14,17 +14,17 @@ import {
     intersectionPointPoly,
     intersectionPolyPoly,
     intersectionRectPoly,
-} from "utils/collision-detection";
-import type { SceneNode } from "core/SceneNode";
+} from 'utils/collision-detection';
+import type { SceneNode } from 'core/SceneNode';
 import type { Circle } from 'math/Circle';
-import type { Ellipse } from "math/Ellipse";
-import type { Line } from "math/Line";
+import type { Ellipse } from 'math/Ellipse';
+import type { Line } from 'math/Line';
 
 let temp: Polygon | null = null;
 
-export class Polygon implements Shape {
+export class Polygon implements IShape {
 
-    public readonly collisionType: CollisionType = CollisionType.Polygon;
+    public readonly collisionType: CollisionType = CollisionType.polygon;
 
     private readonly _position: Vector;
     private readonly _points: Array<Vector> = [];
@@ -176,28 +176,28 @@ export class Polygon implements Shape {
     }
 
     public contains(x: number, y: number): boolean {
-        return intersectionPointPoly(Vector.Temp.set(x, y), this);
+        return intersectionPointPoly(Vector.temp.set(x, y), this);
     }
 
-    public intersectsWith(target: Collidable): boolean {
+    public intersectsWith(target: ICollidable): boolean {
         switch (target.collisionType) {
-            case CollisionType.SceneNode: return intersectionRectPoly((target as SceneNode).getBounds(), this);
-            case CollisionType.Rectangle: return intersectionRectPoly(target as Rectangle, this);
-            case CollisionType.Polygon: return intersectionPolyPoly(this, target as Polygon);
-            case CollisionType.Circle: return intersectionCirclePoly(target as Circle, this);
-            case CollisionType.Ellipse: return intersectionEllipsePoly(target as Ellipse, this);
-            case CollisionType.Line: return intersectionLinePoly(target as Line, this);
-            case CollisionType.Point: return intersectionPointPoly(target as Vector, this);
+            case CollisionType.sceneNode: return intersectionRectPoly((target as SceneNode).getBounds(), this);
+            case CollisionType.rectangle: return intersectionRectPoly(target as Rectangle, this);
+            case CollisionType.polygon: return intersectionPolyPoly(this, target as Polygon);
+            case CollisionType.circle: return intersectionCirclePoly(target as Circle, this);
+            case CollisionType.ellipse: return intersectionEllipsePoly(target as Ellipse, this);
+            case CollisionType.line: return intersectionLinePoly(target as Line, this);
+            case CollisionType.point: return intersectionPointPoly(target as Vector, this);
             default: return false;
         }
     }
 
-    public collidesWith(target: Collidable): Collision | null {
+    public collidesWith(target: ICollidable): ICollisionResponse | null {
         switch (target.collisionType) {
-            case CollisionType.SceneNode: return getCollisionSAT(this, target as SceneNode);
-            case CollisionType.Rectangle: return getCollisionSAT(this, target as Rectangle);
-            case CollisionType.Polygon: return getCollisionSAT(this, target as Polygon);
-            case CollisionType.Circle: return getCollisionPolygonCircle(this, target as Circle);
+            case CollisionType.sceneNode: return getCollisionSat(this, target as SceneNode);
+            case CollisionType.rectangle: return getCollisionSat(this, target as Rectangle);
+            case CollisionType.polygon: return getCollisionSat(this, target as Polygon);
+            case CollisionType.circle: return getCollisionPolygonCircle(this, target as Circle);
             // case CollisionType.Ellipse: return intersectionEllipsePoly(target as Ellipse, this);
             // case CollisionType.Line: return intersectionLinePoly(target as Line, this);
             // case CollisionType.Point: return intersectionPointPoly(target as Vector, this);
@@ -215,7 +215,7 @@ export class Polygon implements Shape {
         this._points.length = 0;
     }
 
-    public static get Temp(): Polygon {
+    public static get temp(): Polygon {
         if (temp === null) {
             temp = new Polygon();
         }

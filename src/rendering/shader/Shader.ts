@@ -1,7 +1,7 @@
 import { ShaderAttribute } from './ShaderAttribute';
 import { ShaderUniform } from './ShaderUniform';
 import { ShaderBlock } from './ShaderBlock';
-import { PrimitiveArrayConstructors, primitiveByteSizeMapping } from 'types/rendering';
+import { primitiveArrayConstructors, primitiveByteSizeMapping } from 'types/rendering';
 
 export class Shader {
 
@@ -16,14 +16,14 @@ export class Shader {
     private _fragmentShader: WebGLShader | null = null;
     private _program: WebGLProgram | null = null;
 
-    constructor(vertexSource: string, fragmentSource: string) {
+    public constructor(vertexSource: string, fragmentSource: string) {
         this._vertexSource = vertexSource;
         this._fragmentSource = fragmentSource;
     }
 
-    createShader(type: number, source: string): WebGLShader | null {
+    public createShader(type: number, source: string): WebGLShader | null {
         if (!this._context) {
-            throw Error("Tried to create shader without webgl context.")
+            throw Error('Tried to create shader without webgl context.')
         }
 
         const gl = this._context;
@@ -45,9 +45,9 @@ export class Shader {
         return shader;
     }
 
-    createProgram(vertexShader: WebGLShader, fragmentShader: WebGLShader): WebGLProgram | null {
+    public createProgram(vertexShader: WebGLShader, fragmentShader: WebGLShader): WebGLProgram | null {
         if (!this._context) {
-            throw Error("Tried to create program without webgl context.");
+            throw Error('Tried to create program without webgl context.');
         }
 
         const gl = this._context;
@@ -81,20 +81,20 @@ export class Shader {
         return program;
     }
 
-    connect(gl: WebGL2RenderingContext): this {
+    public connect(gl: WebGL2RenderingContext): this {
         if (!this._context) {
             this._context = gl;
             this._vertexShader = this.createShader(gl.VERTEX_SHADER, this._vertexSource);
             this._fragmentShader = this.createShader(gl.FRAGMENT_SHADER, this._fragmentSource);
 
             if (!this._vertexShader || !this._fragmentShader) {
-                throw new Error("Could not create vertex/fragment shader.")
+                throw new Error('Could not create vertex/fragment shader.')
             }
 
             this._program = this.createProgram(this._vertexShader, this._fragmentShader);
 
             if (!this._program) {
-                throw new Error("Could not create shader program.")
+                throw new Error('Could not create shader program.')
             }
 
             this._extractAttributes();
@@ -105,7 +105,7 @@ export class Shader {
         return this;
     }
 
-    disconnect(): this {
+    public disconnect(): this {
         this.unbindProgram();
 
         if (this._context) {
@@ -140,7 +140,7 @@ export class Shader {
         return this;
     }
 
-    bindProgram(): this {
+    public bindProgram(): this {
         if (!this._context) {
             throw new Error('No context!')
         }
@@ -160,7 +160,7 @@ export class Shader {
         return this;
     }
 
-    unbindProgram(): this {
+    public unbindProgram(): this {
         if (this._context) {
             this._context.useProgram(null);
         }
@@ -168,7 +168,7 @@ export class Shader {
         return this;
     }
 
-    getAttribute(name: string): ShaderAttribute {
+    public getAttribute(name: string): ShaderAttribute {
         if (!this.attributes.has(name)) {
             throw new Error(`Attribute "${name}" is not available.`);
         }
@@ -176,7 +176,7 @@ export class Shader {
         return this.attributes.get(name)!;
     }
 
-    getUniform(name: string): ShaderUniform {
+    public getUniform(name: string): ShaderUniform {
         if (!this.uniforms.has(name)) {
             throw new Error(`Uniform Block "${name}" is not available.`);
         }
@@ -184,7 +184,7 @@ export class Shader {
         return this.uniforms.get(name)!;
     }
 
-    getUniformBlock(name: string): ShaderBlock {
+    public getUniformBlock(name: string): ShaderBlock {
         if (!this.uniformBlocks.has(name)) {
             throw new Error(`Uniform Block "${name}" is not available.`);
         }
@@ -192,11 +192,11 @@ export class Shader {
         return this.uniformBlocks.get(name)!;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this.disconnect();
     }
 
-    _extractAttributes(): void {
+    private _extractAttributes(): void {
         const gl = this._context!;
         const program = this._program!;
         const activeAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
@@ -208,7 +208,7 @@ export class Shader {
         }
     }
 
-    _extractUniforms(): void {
+    private _extractUniforms(): void {
         const gl = this._context!;
         const program = this._program!;
         const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
@@ -218,14 +218,14 @@ export class Shader {
 
         for (const index of indices) {
             const { type, size, name } = gl.getActiveUniform(program, index)!;
-            const data = new PrimitiveArrayConstructors[type](primitiveByteSizeMapping[type] * size);
+            const data = new primitiveArrayConstructors[type](primitiveByteSizeMapping[type] * size);
             const uniform = new ShaderUniform(gl, program, index, type, size, name, data);
 
             this.uniforms.set(uniform.name, uniform);
         }
     }
 
-    _extractUniformBlocks(): void {
+    private _extractUniformBlocks(): void {
         const gl = this._context!;
         const program = this._program!;
         const activeBlocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);

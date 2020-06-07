@@ -1,18 +1,19 @@
 import { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
-import { Line } from "math/Line";
-import { clamp, getDistance, getVoronoiRegion, inRange, VoronoiRegion } from "utils/math";
-import type { Collidable, Collision } from "types/Collision";
+import { Line } from 'math/Line';
+import { clamp, getDistance, getVoronoiRegion, inRange, VoronoiRegion } from 'utils/math';
+import type { ICollidable, ICollisionResponse } from 'types/Collision';
 import type { Polygon } from 'math/Polygon';
 import type { Rectangle } from 'math/Rectangle';
 import type { Circle } from 'math/Circle';
-import type { Ellipse } from "math/Ellipse";
+import type { Ellipse } from 'math/Ellipse';
+import type { IPoint } from 'types/primitives/IPoint';
 
 /**
  * INTERSECTION
  */
 
-const intersectionSAT = (shapeA: Collidable, shapeB: Collidable): boolean => {
+const intersectionSat = (shapeA: ICollidable, shapeB: ICollidable): boolean => {
     const normalsA = shapeA.getNormals();
     const normalsB = shapeB.getNormals();
     const projectionA = new Interval();
@@ -39,11 +40,11 @@ const intersectionSAT = (shapeA: Collidable, shapeB: Collidable): boolean => {
     return true;
 };
 
-const intersectionPointPoint = ({ x: x1, y: y1 }: Vector, { x: x2, y: y2 }: Vector, threshold = 0): boolean => (
+const intersectionPointPoint = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint, threshold = 0): boolean => (
     getDistance(x1, y1, x2, y2) <= threshold
 );
 
-const intersectionPointLine = ({ x, y }: Vector, { fromX, fromY, toX, toY }: Line, threshold = 0.1): boolean => {
+const intersectionPointLine = ({ x, y }: IPoint, { fromX, fromY, toX, toY }: Line, threshold = 0.1): boolean => {
     const d1 = getDistance(x, y, fromX, fromY);
     const d2 = getDistance(x, y, toX, toY);
     const d3 = getDistance(fromX, fromY, toX, toY);
@@ -52,15 +53,15 @@ const intersectionPointLine = ({ x, y }: Vector, { fromX, fromY, toX, toY }: Lin
         && (d1 + d2) <= (d3 + threshold);
 };
 
-const intersectionPointRect = ({ x: x1, y: y1 }: Vector, { x: x2, y: y2, width, height }: Rectangle): boolean => (
+const intersectionPointRect = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, width, height }: Rectangle): boolean => (
     inRange(x1, x2, x2 + width) && inRange(y1, y2, y2 + height)
 );
 
-const intersectionPointCircle = ({ x: x1, y: y1 }: Vector, { x: x2, y: y2, radius }: Circle): boolean => (
+const intersectionPointCircle = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, radius }: Circle): boolean => (
     radius > 0 && getDistance(x1, y1, x2, y2) <= radius
 );
 
-const intersectionPointEllipse = ({ x: x1, y: y1 }: Vector, { x: x2, y: y2, rx, ry }: Ellipse): boolean => {
+const intersectionPointEllipse = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, rx, ry }: Ellipse): boolean => {
     if (rx <= 0 || ry <= 0) {
         return false;
     }
@@ -71,7 +72,7 @@ const intersectionPointEllipse = ({ x: x1, y: y1 }: Vector, { x: x2, y: y2, rx, 
     return ((normX * normX) + (normY * normY)) <= 1;
 };
 
-const intersectionPointPoly = ({ x, y }: Vector, { points }: Polygon): boolean => {
+const intersectionPointPoly = ({ x, y }: IPoint, { points }: Polygon): boolean => {
     const len = points.length;
 
     let inside = false;
@@ -97,10 +98,10 @@ const intersectionLineLine = ({ fromX: x1, fromY: y1, toX: x2, toY: y2 }: Line, 
 };
 
 const intersectionLineRect = (line: Line, { x, y, width, height }: Rectangle): boolean => {
-    return intersectionLineLine(line, Line.Temp.set(x, y, x, y + height))
-        || intersectionLineLine(line, Line.Temp.set(x + width, y, x + width, y + height))
-        || intersectionLineLine(line, Line.Temp.set(x, y, x + width, y))
-        || intersectionLineLine(line, Line.Temp.set(x, y + height, x + width, y + height));
+    return intersectionLineLine(line, Line.temp.set(x, y, x, y + height))
+        || intersectionLineLine(line, Line.temp.set(x + width, y, x + width, y + height))
+        || intersectionLineLine(line, Line.temp.set(x, y, x + width, y))
+        || intersectionLineLine(line, Line.temp.set(x, y + height, x + width, y + height));
 };
 
 const intersectionLineCircle = (line: Line, circle: Circle): boolean => {
@@ -117,7 +118,7 @@ const intersectionLineCircle = (line: Line, circle: Circle): boolean => {
     const closestX = x1 + (dot * (x2 - x1));
     const closestY = y1 + (dot * (y2 - y1));
 
-    if (!intersectionPointLine(Vector.Temp.set(closestX, closestY), line)) {
+    if (!intersectionPointLine(Vector.temp.set(closestX, closestY), line)) {
         return false;
     }
 
@@ -138,7 +139,7 @@ const intersectionLinePoly = (line: Line, { points }: Polygon): boolean => {
         const curr = points[i];
         const next = points[(i + 1) % len];
 
-        if (intersectionLineLine(line, Line.Temp.set(curr.x, curr.y, next.x, next.y))) {
+        if (intersectionLineLine(line, Line.temp.set(curr.x, curr.y, next.x, next.y))) {
             return true;
         }
     }
@@ -173,7 +174,7 @@ const intersectionRectEllipse = (rectangle: Rectangle, ellipse: Ellipse): boolea
     return false;
 };
 
-const intersectionRectPoly = (rectangle: Rectangle, polygon: Polygon): boolean => intersectionSAT(rectangle, polygon);
+const intersectionRectPoly = (rectangle: Rectangle, polygon: Polygon): boolean => intersectionSat(rectangle, polygon);
 
 const intersectionCircleCircle = ({ x: x1, y: y1, radius: r1 }: Circle, { x: x2, y: y2, radius: r2 }: Circle): boolean => {
     return getDistance(x1, y1, x2, y2) <= (r1 + r2);
@@ -187,25 +188,25 @@ const intersectionCircleEllipse = (circle: Circle, ellipse: Ellipse): boolean =>
 };
 
 const excludeLeftVoronoi = (circlePos: Vector, prevPoint: Vector, prevEdge: Vector, point: Vector, radius: number, edge: Vector): boolean => {
-    if (getVoronoiRegion(edge, point) !== VoronoiRegion.Left) {
+    if (getVoronoiRegion(edge, point) !== VoronoiRegion.left) {
         return false;
     }
 
     const point2 = circlePos.clone().subtract(prevPoint.x, prevPoint.y);
     const region = getVoronoiRegion(prevEdge, point2);
 
-    return region === VoronoiRegion.Right && point.length > radius;
+    return region === VoronoiRegion.right && point.length > radius;
 };
 
 const excludeRightVoronoi = (circlePos: Vector, nextPoint: Vector, nextEdge: Vector, point: Vector, radius: number, edge: Vector): boolean => {
-    if (getVoronoiRegion(edge, point) !== VoronoiRegion.Right) {
+    if (getVoronoiRegion(edge, point) !== VoronoiRegion.right) {
         return false;
     }
 
     const point2 = circlePos.clone().subtract(nextEdge.x, nextEdge.y);
     const region = getVoronoiRegion(nextEdge, point2);
 
-    return region === VoronoiRegion.Left && point.length > radius;
+    return region === VoronoiRegion.left && point.length > radius;
 };
 
 const excludeMiddleVoronoi = (currentPoint: Vector, currentEdge: Vector, radius: number): boolean => {
@@ -254,13 +255,13 @@ const intersectionEllipsePoly = (ellipse: Ellipse, polygon: Polygon): boolean =>
     return false;
 };
 
-const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => intersectionSAT(polygonA, polygonB);
+const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => intersectionSat(polygonA, polygonB);
 
 /**
  * COLLISION DETECTION
  */
 
-const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Collision | null => {
+const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): ICollisionResponse | null => {
     if ((rectB.left > rectA.right) || (rectB.top > rectA.bottom)) {
         return null;
     }
@@ -273,14 +274,14 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
         shapeA: rectA,
         shapeB: rectB,
         overlap: 0, // todo
-        shapeAInB: rectB.containsRect(rectA),
-        shapeBInA: rectA.containsRect(rectB),
+        shapeAinB: rectB.containsRect(rectA),
+        shapeBinA: rectA.containsRect(rectB),
         projectionN: new Vector(), // todo
         projectionV: new Vector(), // todo
     };
 };
 
-const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): Collision | null => {
+const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): ICollisionResponse | null => {
     const difference = new Vector(circleB.x - circleA.x, circleB.y - circleA.y),
         distance = difference.length,
         overlap = (circleA.radius + circleB.radius) - distance;
@@ -293,14 +294,14 @@ const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): Collision |
         shapeA: circleA,
         shapeB: circleB,
         overlap: overlap,
-        shapeAInB: (circleA.radius <= circleB.radius) && (distance <= (circleB.radius - circleA.radius)),
-        shapeBInA: (circleB.radius <= circleA.radius) && (distance <= (circleA.radius - circleB.radius)),
+        shapeAinB: (circleA.radius <= circleB.radius) && (distance <= (circleB.radius - circleA.radius)),
+        shapeBinA: (circleB.radius <= circleA.radius) && (distance <= (circleA.radius - circleB.radius)),
         projectionN: difference.normalize(),
         projectionV: difference.multiply(overlap),
     };
 };
 
-const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): Collision | null => {
+const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): ICollisionResponse | null => {
     const radius = circle.radius,
         centerWidth = rect.width / 2,
         centerHeight = rect.height / 2,
@@ -316,14 +317,14 @@ const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = fal
         shapeA: swap ? rect : circle,
         shapeB: swap ? circle : rect,
         overlap: radius - distance,
-        shapeAInB: swap ? containsB : containsA,
-        shapeBInA: swap ? containsA : containsB,
+        shapeAinB: swap ? containsB : containsA,
+        shapeBinA: swap ? containsA : containsB,
         projectionN: new Vector(), // todo
         projectionV: new Vector(), // todo
     };
 };
 
-const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): Collision | null => {
+const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): ICollisionResponse | null => {
     const radius = circle.radius;
     const points = polygon.points;
     const x = (circle.x - polygon.x);
@@ -351,13 +352,13 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
             containsA = false;
         }
 
-        if (region === VoronoiRegion.Left) {
+        if (region === VoronoiRegion.left) {
             const prev = points[(i === 0 ? len - 1 : i - 1)];
 
             edgeB.set(pointA.x - prev.x, pointA.y - prev.y);
             positionB.set(x - prev.x, y - prev.y);
 
-            if ((getVoronoiRegion(edgeB, positionB) === VoronoiRegion.Right)) {
+            if ((getVoronoiRegion(edgeB, positionB) === VoronoiRegion.right)) {
                 const distance = positionA.length;
 
                 if (distance > radius) {
@@ -371,13 +372,13 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
 
                 containsB = false;
             }
-        } else if (region === VoronoiRegion.Right) {
+        } else if (region === VoronoiRegion.right) {
             const next = points[(i + 2) % len]; // pointB ?
 
             edgeB.set(next.x - pointB.x, next.y - pointB.y); // edgeB.set(pointB.x - pointA.x, pointB.y - pointA.y); ?
             positionB.set(x - pointB.x, y - pointB.y); // positionB.set(x - pointB.x, y - pointB.y); ?
 
-            if (getVoronoiRegion(edgeB, positionB) === VoronoiRegion.Left) {
+            if (getVoronoiRegion(edgeB, positionB) === VoronoiRegion.left) {
                 const distance = positionB.length;
 
                 if (distance > radius) {
@@ -414,14 +415,14 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
         shapeA: swap ? circle : polygon,
         shapeB: swap ? polygon : circle,
         overlap: overlap,
-        shapeAInB: swap ? containsB : containsA,
-        shapeBInA: swap ? containsA : containsB,
+        shapeAinB: swap ? containsB : containsA,
+        shapeBinA: swap ? containsA : containsB,
         projectionN: projection,
         projectionV: projection.multiply(overlap),
     };
 };
 
-const getCollisionSAT = (shapeA: Collidable, shapeB: Collidable): Collision | null => {
+const getCollisionSat = (shapeA: ICollidable, shapeB: ICollidable): ICollisionResponse | null => {
     const projection = new Vector();
     const normalsA = shapeA.getNormals();
     const normalsB = shapeB.getNormals();
@@ -429,8 +430,8 @@ const getCollisionSAT = (shapeA: Collidable, shapeB: Collidable): Collision | nu
     const projB = new Interval();
 
     let overlap = Infinity;
-    let shapeAInB = true;
-    let shapeBInA = true;
+    let shapeAinB = true;
+    let shapeBinA = true;
     let containsA = false;
     let containsB = false;
     let distance = 0;
@@ -447,12 +448,12 @@ const getCollisionSAT = (shapeA: Collidable, shapeB: Collidable): Collision | nu
         containsA = projB.containsInterval(projA);
         containsB = projA.containsInterval(projB);
 
-        if (!containsA && shapeAInB) {
-            shapeAInB = false;
+        if (!containsA && shapeAinB) {
+            shapeAinB = false;
         }
 
-        if (!containsB && shapeBInA) {
-            shapeBInA = false;
+        if (!containsB && shapeBinA) {
+            shapeBinA = false;
         }
 
         if (containsA || containsB) {
@@ -480,12 +481,12 @@ const getCollisionSAT = (shapeA: Collidable, shapeB: Collidable): Collision | nu
         containsA = projB.containsInterval(projA);
         containsB = projA.containsInterval(projB);
 
-        if (!containsA && shapeAInB) {
-            shapeAInB = false;
+        if (!containsA && shapeAinB) {
+            shapeAinB = false;
         }
 
-        if (!containsB && shapeBInA) {
-            shapeBInA = false;
+        if (!containsB && shapeBinA) {
+            shapeBinA = false;
         }
 
         if (containsA || containsB) {
@@ -505,38 +506,44 @@ const getCollisionSAT = (shapeA: Collidable, shapeB: Collidable): Collision | nu
         shapeA,
         shapeB,
         overlap,
-        shapeAInB,
-        shapeBInA,
+        shapeAinB,
+        shapeBinA,
         projectionN: projection,
         projectionV: projection.clone().multiply(overlap, overlap),
     };
 };
 
 export {
-    intersectionSAT,
+    intersectionSat,
+
     intersectionPointPoint,
     intersectionPointLine,
     intersectionPointRect,
     intersectionPointCircle,
     intersectionPointEllipse,
     intersectionPointPoly,
+
     intersectionLineLine,
     intersectionLineRect,
     intersectionLineCircle,
     intersectionLineEllipse,
     intersectionLinePoly,
+
     intersectionRectRect,
     intersectionRectCircle,
     intersectionRectEllipse,
     intersectionRectPoly,
+
     intersectionCircleCircle,
     intersectionCircleEllipse,
     intersectionCirclePoly,
+
     intersectionEllipseEllipse,
     intersectionEllipsePoly,
+
     intersectionPolyPoly,
 
-    getCollisionSAT,
+    getCollisionSat,
     getCollisionRectangleRectangle,
     getCollisionCircleRectangle,
     getCollisionCircleCircle,

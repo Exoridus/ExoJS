@@ -1,4 +1,4 @@
-import { Vector } from "math/Vector";
+import { Vector } from 'math/Vector';
 
 export class PolarVector {
     public radius: number;
@@ -14,7 +14,7 @@ export class PolarVector {
     }
 
     public toVector(): Vector {
-        return Vector.Temp.set(
+        return Vector.temp.set(
             this.radius * Math.cos(this.phi),
             this.radius * Math.sin(this.phi),
         );

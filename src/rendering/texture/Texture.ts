@@ -3,22 +3,22 @@ import { isPowerOfTwo } from 'utils/math';
 import { Size } from 'math/Size';
 import { Flags } from 'math/Flags';
 import { createCanvas } from 'utils/rendering';
-import type { SamplerOptions } from "./Sampler";
-import { getTextureSourceSize } from "utils/core";
-import type { TextureSource } from "types/types";
+import type { ISamplerOptions } from './Sampler';
+import { getTextureSourceSize } from 'utils/core';
+import type { TextureSource } from 'types/types';
 
 enum TextureFlags {
-    None = 0,
-    ScaleModeDirty = 1 << 0,
-    WrapModeDirty = 1 << 1,
-    PremultiplyAlphaDirty = 1 << 2,
-    SourceDirty = 1 << 3,
-    SizeDirty = 1 << 4,
+    none = 0,
+    scaleModeDirty = 1 << 0,
+    wrapModeDirty = 1 << 1,
+    premultiplyAlphaDirty = 1 << 2,
+    sourceDirty = 1 << 3,
+    sizeDirty = 1 << 4,
 }
 
 export class Texture {
 
-    public static DefaultSamplerOptions: SamplerOptions = {
+    public static defaultSamplerOptions: ISamplerOptions = {
         scaleMode: ScaleModes.LINEAR,
         wrapMode: WrapModes.CLAMP_TO_EDGE,
         premultiplyAlpha: true,
@@ -26,9 +26,9 @@ export class Texture {
         flipY: false,
     };
 
-    public static readonly Empty = new Texture(null);
-    public static readonly Black = new Texture(createCanvas({ fillStyle: '#000' }));
-    public static readonly White = new Texture(createCanvas({ fillStyle: '#fff' }));
+    public static readonly empty = new Texture(null);
+    public static readonly black = new Texture(createCanvas({ fillStyle: '#000' }));
+    public static readonly white = new Texture(createCanvas({ fillStyle: '#fff' }));
 
     private _context: WebGL2RenderingContext | null = null;
     private _source: TextureSource = null;
@@ -41,9 +41,9 @@ export class Texture {
     private _flipY = false;
     private _flags: Flags<TextureFlags> = new Flags<TextureFlags>();
 
-    constructor(source: TextureSource = null, options?: Partial<SamplerOptions>) {
+    public constructor(source: TextureSource = null, options?: Partial<ISamplerOptions>) {
 
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...Texture.DefaultSamplerOptions, ...options };
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...Texture.defaultSamplerOptions, ...options };
 
         this._scaleMode = scaleMode;
         this._wrapMode = wrapMode;
@@ -52,9 +52,9 @@ export class Texture {
         this._flipY = flipY;
 
         this._flags.push(
-            TextureFlags.ScaleModeDirty,
-            TextureFlags.WrapModeDirty,
-            TextureFlags.PremultiplyAlphaDirty,
+            TextureFlags.scaleModeDirty,
+            TextureFlags.wrapModeDirty,
+            TextureFlags.premultiplyAlphaDirty,
         );
 
         if (source !== null) {
@@ -191,7 +191,7 @@ export class Texture {
     public setScaleMode(scaleMode: ScaleModes): this {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags.push(TextureFlags.ScaleModeDirty);
+            this._flags.push(TextureFlags.scaleModeDirty);
         }
 
         return this;
@@ -200,16 +200,16 @@ export class Texture {
     public setWrapMode(wrapMode: WrapModes): this {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags.push(TextureFlags.WrapModeDirty);
+            this._flags.push(TextureFlags.wrapModeDirty);
         }
 
         return this;
     }
 
-    setPremultiplyAlpha(premultiplyAlpha: boolean): this {
+    public setPremultiplyAlpha(premultiplyAlpha: boolean): this {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags.push(TextureFlags.PremultiplyAlphaDirty);
+            this._flags.push(TextureFlags.premultiplyAlphaDirty);
         }
 
         return this;
@@ -225,7 +225,7 @@ export class Texture {
     }
 
     public updateSource(): this {
-        this._flags.push(TextureFlags.SourceDirty);
+        this._flags.push(TextureFlags.sourceDirty);
 
         const { width, height } = getTextureSourceSize(this._source);
 
@@ -237,32 +237,32 @@ export class Texture {
     public setSize(width: number, height: number): this {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
-            this._flags.push(TextureFlags.SizeDirty);
+            this._flags.push(TextureFlags.sizeDirty);
         }
 
         return this;
     }
 
     public update(): this {
-        if (this._flags.value !== TextureFlags.None && this._context) {
+        if (this._flags.value !== TextureFlags.none && this._context) {
             const gl = this._context;
 
-            if (this._flags.pop(TextureFlags.ScaleModeDirty)) {
+            if (this._flags.pop(TextureFlags.scaleModeDirty)) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
             }
 
-            if (this._flags.pop(TextureFlags.WrapModeDirty)) {
+            if (this._flags.pop(TextureFlags.wrapModeDirty)) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
             }
 
-            if (this._flags.pop(TextureFlags.PremultiplyAlphaDirty)) {
+            if (this._flags.pop(TextureFlags.premultiplyAlphaDirty)) {
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
             }
 
-            if (this._flags.pop(TextureFlags.SourceDirty) && this._source) {
-                if (this._flags.pop(TextureFlags.SizeDirty)) {
+            if (this._flags.pop(TextureFlags.sourceDirty) && this._source) {
+                if (this._flags.pop(TextureFlags.sizeDirty)) {
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 } else {
                     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);

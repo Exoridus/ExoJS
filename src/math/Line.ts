@@ -1,8 +1,8 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import type { Shape } from 'math/Shape';
-import { Interval } from "math/Interval";
-import { Collidable, Collision, CollisionType } from "types/Collision";
+import type { IShape } from 'math/IShape';
+import { Interval } from 'math/Interval';
+import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
     intersectionLineCircle,
     intersectionLineEllipse,
@@ -10,17 +10,17 @@ import {
     intersectionLinePoly,
     intersectionLineRect,
     intersectionPointLine
-} from "utils/collision-detection";
-import type { SceneNode } from "core/SceneNode";
-import type { Polygon } from "math/Polygon";
-import type { Circle } from "math/Circle";
-import type { Ellipse } from "math/Ellipse";
+} from 'utils/collision-detection';
+import type { SceneNode } from 'core/SceneNode';
+import type { Polygon } from 'math/Polygon';
+import type { Circle } from 'math/Circle';
+import type { Ellipse } from 'math/Ellipse';
 
 let temp: Line | null = null;
 
-export class Line implements Shape {
+export class Line implements IShape {
 
-    public readonly collisionType: CollisionType = CollisionType.Line;
+    public readonly collisionType: CollisionType = CollisionType.line;
 
     private readonly _fromPosition: Vector;
     private readonly _toPosition: Vector;
@@ -117,25 +117,25 @@ export class Line implements Shape {
         return result;
     }
 
-    public intersectsWith(target: Collidable): boolean {
+    public intersectsWith(target: ICollidable): boolean {
         switch (target.collisionType) {
-            case CollisionType.SceneNode: return intersectionLineRect(this, (target as SceneNode).getBounds());
-            case CollisionType.Rectangle: return intersectionLineRect(this, target as Rectangle);
-            case CollisionType.Polygon: return intersectionLinePoly(this, target as Polygon);
-            case CollisionType.Circle: return intersectionLineCircle(this, target as Circle);
-            case CollisionType.Ellipse: return intersectionLineEllipse(this, target as Ellipse);
-            case CollisionType.Line: return intersectionLineLine(this, target as Line);
-            case CollisionType.Point: return intersectionPointLine(target as Vector, this);
+            case CollisionType.sceneNode: return intersectionLineRect(this, (target as SceneNode).getBounds());
+            case CollisionType.rectangle: return intersectionLineRect(this, target as Rectangle);
+            case CollisionType.polygon: return intersectionLinePoly(this, target as Polygon);
+            case CollisionType.circle: return intersectionLineCircle(this, target as Circle);
+            case CollisionType.ellipse: return intersectionLineEllipse(this, target as Ellipse);
+            case CollisionType.line: return intersectionLineLine(this, target as Line);
+            case CollisionType.point: return intersectionPointLine(target as Vector, this);
             default: return false;
         }
     }
 
-    public collidesWith(target: Collidable): Collision | null {
+    public collidesWith(target: ICollidable): ICollisionResponse | null {
         return null;
     }
 
     public contains(x: number, y: number, threshold = 0.1): boolean {
-        return intersectionPointLine(Vector.Temp.set(x, y), this, threshold);
+        return intersectionPointLine(Vector.temp.set(x, y), this, threshold);
     }
 
     public equals({ fromX, fromY, toX, toY }: Partial<Line> = {}): boolean {
@@ -150,7 +150,7 @@ export class Line implements Shape {
         this._toPosition.destroy();
     }
 
-    public static get Temp(): Line {
+    public static get temp(): Line {
         if (temp === null) {
             temp = new Line();
         }

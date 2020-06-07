@@ -1,9 +1,9 @@
 import { Vector } from 'math/Vector';
-import type { Cloneable } from "types/types";
+import type { ICloneable } from 'types/types';
 
 let temp: Segment | null = null;
 
-export class Segment implements Cloneable {
+export class Segment implements ICloneable {
 
     private readonly _startPoint: Vector;
     private readonly _endPoint: Vector;
@@ -91,7 +91,7 @@ export class Segment implements Cloneable {
         this._endPoint.destroy();
     }
 
-    public static get Temp(): Segment {
+    public static get temp(): Segment {
         if (temp === null) {
             temp = new Segment();
         }

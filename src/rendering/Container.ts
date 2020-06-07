@@ -6,47 +6,47 @@ export class Container extends Drawable {
 
     private readonly _children: Array<Drawable> = [];
 
-    get children(): Array<Drawable> {
+    public get children(): Array<Drawable> {
         return this._children;
     }
 
-    get width(): number {
+    public get width(): number {
         return Math.abs(this.scale.x) * this.bounds.width;
     }
 
-    set width(value: number) {
+    public set width(value: number) {
         this.scale.x = value / this.bounds.width;
     }
 
-    get height(): number {
+    public get height(): number {
         return Math.abs(this.scale.y) * this.bounds.height;
     }
 
-    set height(value: number) {
+    public set height(value: number) {
         this.scale.y = value / this.bounds.height;
     }
 
-    get left(): number {
+    public get left(): number {
         return this.x - (this.width * this.origin.x);
     }
 
-    get top(): number {
+    public get top(): number {
         return this.y - (this.height * this.origin.y);
     }
 
-    get right(): number {
+    public get right(): number {
         return (this.x + this.width - this.origin.x);
     }
 
-    get bottom(): number {
+    public get bottom(): number {
         return (this.y + this.height - this.origin.y);
     }
 
-    addChild(child: Drawable): this {
+    public addChild(child: Drawable): this {
         return this.addChildAt(child, this._children.length);
     }
 
-    addChildAt(child: Drawable, index: number): this {
+    public addChildAt(child: Drawable, index: number): this {
         if (index < 0 || index > this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
@@ -66,7 +66,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    swapChildren(firstChild: Drawable, secondChild: Drawable): this {
+    public swapChildren(firstChild: Drawable, secondChild: Drawable): this {
         if (firstChild !== secondChild) {
             this._children[this.getChildIndex(firstChild)] = secondChild;
             this._children[this.getChildIndex(secondChild)] = firstChild;
@@ -75,7 +75,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    getChildIndex(child: Drawable): number {
+    public getChildIndex(child: Drawable): number {
         const index = this._children.indexOf(child);
 
         if (index === -1) {
@@ -85,7 +85,7 @@ export class Container extends Drawable {
         return index;
     }
 
-    setChildIndex(child: Drawable, index: number): this {
+    public setChildIndex(child: Drawable, index: number): this {
         if (index < 0 || index >= this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
@@ -97,7 +97,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    getChildAt(index: number): Drawable {
+    public getChildAt(index: number): Drawable {
         if (index < 0 || index >= this._children.length) {
             throw new Error(`getChildAt: Index (${index}) does not exist.`);
         }
@@ -105,7 +105,7 @@ export class Container extends Drawable {
         return this._children[index];
     }
 
-    removeChild(child: Drawable): this {
+    public removeChild(child: Drawable): this {
         const index = this._children.indexOf(child);
 
         if (index !== -1) {
@@ -115,13 +115,13 @@ export class Container extends Drawable {
         return this;
     }
 
-    removeChildAt(index: number): this {
+    public removeChildAt(index: number): this {
         removeArrayItems(this._children, index, 1);
 
         return this;
     }
 
-    removeChildren(begin = 0, end: number = this._children.length): this {
+    public removeChildren(begin = 0, end: number = this._children.length): this {
         const range = (end - begin);
 
         if (range < 0 || range > end) {
@@ -133,7 +133,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    render(renderManager: RenderManager): this {
+    public render(renderManager: RenderManager): this {
         if (this.visible && this.inView(renderManager.view)) {
             for (const child of this._children) {
                 child.render(renderManager);
@@ -143,11 +143,11 @@ export class Container extends Drawable {
         return this;
     }
 
-    contains(x: number, y: number): boolean {
+    public contains(x: number, y: number): boolean {
         return this._children.some((child) => child.contains(x, y));
     }
 
-    updateBounds(): this {
+    public updateBounds(): this {
         this._bounds.reset()
             .addRect(this.getLocalBounds(), this.getGlobalTransform());
 
@@ -160,7 +160,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         super.destroy();
 
         this._children.length = 0;

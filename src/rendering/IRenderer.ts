@@ -2,12 +2,12 @@ import type { Drawable } from './Drawable';
 import type { RenderManager } from './RenderManager';
 
 export enum RendererType {
-    Sprite = 1,
-    Particle = 2,
-    Primitive = 3,
+    sprite = 1,
+    particle = 2,
+    primitive = 3,
 }
 
-export interface RendererInterface {
+export interface IRenderer {
     connect(renderManager: RenderManager): this;
     disconnect(): this;
     bind(): this;

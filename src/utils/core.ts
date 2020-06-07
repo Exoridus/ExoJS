@@ -1,7 +1,7 @@
 import { Size } from 'math/Size';
-import { Random } from "math/Random";
-import type { TextureSource } from "types/types";
-import { Time } from "core/Time";
+import { Random } from 'math/Random';
+import type { TextureSource } from 'types/types';
+import { Time } from 'core/Time';
 
 const codecNotSupportedPattern = /^no$/;
 const internalAudioElement = document.createElement('audio') as HTMLAudioElement;
@@ -17,7 +17,7 @@ export const stopEvent = (event: Event): void => {
 };
 
 export const supportsWebAudio: boolean = ('AudioContext' in window);
-export const supportsIndexedDB: boolean = ('indexedDB' in window);
+export const supportsIndexedDb: boolean = ('indexedDB' in window);
 export const supportsTouchEvents: boolean = ('ontouchstart' in window);
 export const supportsPointerEvents: boolean = ('PointerEvent' in window);
 export const supportsEventOptions: boolean = ((): boolean => {
@@ -39,10 +39,10 @@ export const supportsEventOptions: boolean = ((): boolean => {
 })();
 
 export const getPreciseTime = (): number => performance.now();
-export const milliseconds = (value: number): Time => new Time(value, Time.Milliseconds);
-export const seconds = (value: number): Time => new Time(value, Time.Seconds);
-export const minutes = (value: number): Time => new Time(value, Time.Minutes);
-export const hours = (value: number): Time => new Time(value, Time.Hours);
+export const milliseconds = (value: number): Time => new Time(value, Time.milliseconds);
+export const seconds = (value: number): Time => new Time(value, Time.seconds);
+export const minutes = (value: number): Time => new Time(value, Time.minutes);
+export const hours = (value: number): Time => new Time(value, Time.hours);
 
 export const emptyArrayBuffer = new ArrayBuffer(0);
 
@@ -69,29 +69,29 @@ export const supportsCodec = (...codecs: Array<string>): boolean => codecs.some(
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
 
     if (source instanceof HTMLImageElement) {
-        return Size.Temp.set(source.naturalWidth, source.naturalHeight);
+        return Size.temp.set(source.naturalWidth, source.naturalHeight);
     }
 
     if (source instanceof HTMLVideoElement) {
-        return Size.Temp.set(source.videoWidth, source.videoHeight);
+        return Size.temp.set(source.videoWidth, source.videoHeight);
     }
 
     if (source instanceof SVGElement) {
-        return Size.Temp.copy(source.getBoundingClientRect());
+        return Size.temp.copy(source.getBoundingClientRect());
     }
 
-    return Size.Temp.set(source.width, source.height);
+    return Size.temp.set(source.width, source.height);
 };
 
 export const getTextureSourceSize = (source: TextureSource): Size => {
     if (source === null) {
-        return Size.Zero;
+        return Size.zero;
     }
 
     return getCanvasSourceSize(source);
 };
 
-export const canvasSourceToDataURL = (source: CanvasImageSource): string => {
+export const canvasSourceToDataUrl = (source: CanvasImageSource): string => {
     const { width, height } = getCanvasSourceSize(source);
 
     internalCanvasElement.width = width;

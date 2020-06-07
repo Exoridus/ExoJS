@@ -5,15 +5,15 @@ export class ResourceContainer {
 
     private _resources: TypeMapping = new Map<string, Map<string, any>>();
 
-    get resources(): TypeMapping {
+    public get resources(): TypeMapping {
         return this._resources;
     }
 
-    get types(): Array<string> {
+    public get types(): Array<string> {
         return [...this._resources.keys()];
     }
 
-    addType(type: string): this {
+    public addType(type: string): this {
         if (!this._resources.has(type)) {
             this._resources.set(type, new Map<string, any>());
         }
@@ -21,7 +21,7 @@ export class ResourceContainer {
         return this;
     }
 
-    getResources(type: string): ResourceMap {
+    public getResources(type: string): ResourceMap {
         if (!this._resources.has(type)) {
             throw new Error(`Unknown type "${type}".`);
         }
@@ -29,11 +29,11 @@ export class ResourceContainer {
         return this._resources.get(type)!;
     }
 
-    has(type: string, name: string): boolean {
+    public has(type: string, name: string): boolean {
         return this.getResources(type).has(name);
     }
 
-    get<T = any>(type: string, name: string): T {
+    public get<T = any>(type: string, name: string): T {
         const resources = this.getResources(type);
 
         if (!resources.has(name)) {
@@ -43,19 +43,19 @@ export class ResourceContainer {
         return resources.get(name);
     }
 
-    set<T = any>(type: string, name: string, resource: T): this {
+    public set<T = any>(type: string, name: string, resource: T): this {
         this.getResources(type).set(name, resource);
 
         return this;
     }
 
-    remove(type: string, name: string): this {
+    public remove(type: string, name: string): this {
         this.getResources(type).delete(name);
 
         return this;
     }
 
-    clear(): this {
+    public clear(): this {
         for (const container of this._resources.values()) {
             container.clear();
         }
@@ -63,7 +63,7 @@ export class ResourceContainer {
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this.clear();
 
         this._resources.clear();

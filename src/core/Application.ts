@@ -7,18 +7,18 @@ import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
-import type { GamepadMapping } from "input/GamepadMapping";
-import type { DatabaseInterface } from "types/DatabaseInterface";
-import { DefaultGamepadMapping } from "input/DefaultGamepadMapping";
+import type { GamepadMapping } from 'input/GamepadMapping';
+import type { IDatabase } from 'types/IDatabase';
+import { DefaultGamepadMapping } from 'input/DefaultGamepadMapping';
 
 export enum ApplicationStatus {
-    Loading = 1,
-    Running = 2,
-    Halting = 3,
-    Stopped = 4,
+    loading = 1,
+    running = 2,
+    halting = 3,
+    stopped = 4,
 }
 
-export interface ApplicationOptions {
+export interface IApplicationOptions {
     canvas: HTMLCanvasElement;
     width: number;
     height: number;
@@ -32,14 +32,14 @@ export interface ApplicationOptions {
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
     requestOptions: RequestInit;
-    database?: DatabaseInterface;
+    database?: IDatabase;
 }
 
-const defaultAppSettings: ApplicationOptions = {
+const defaultAppSettings: IApplicationOptions = {
     canvas: document.createElement('canvas') as HTMLCanvasElement,
     width: 800,
     height: 600,
-    clearColor: Color.CornflowerBlue,
+    clearColor: Color.cornflowerBlue,
     debug: false,
     spriteRendererBatchSize: 4096, // ~ 262kb
     particleRendererBatchSize: 8192, // ~ 1.18mb
@@ -64,7 +64,7 @@ const defaultAppSettings: ApplicationOptions = {
 };
 
 export class Application {
-    public readonly options: ApplicationOptions;
+    public readonly options: IApplicationOptions;
     public readonly canvas: HTMLCanvasElement;
     public readonly loader: Loader;
     public readonly renderManager: RenderManager;
@@ -77,11 +77,11 @@ export class Application {
     private readonly _activeClock: Clock = new Clock();
     private readonly _frameClock: Clock = new Clock();
 
-    private _status: ApplicationStatus = ApplicationStatus.Stopped;
+    private _status: ApplicationStatus = ApplicationStatus.stopped;
     private _frameCount = 0;
     private _frameRequest = 0;
 
-    public constructor(appSettings?: Partial<ApplicationOptions>) {
+    public constructor(appSettings?: Partial<IApplicationOptions>) {
         this.options = { ...defaultAppSettings, ...appSettings };
         this.canvas = this.options.canvas;
 
@@ -119,20 +119,20 @@ export class Application {
     }
 
     public async start(scene: Scene): Promise<this> {
-        if (this._status === ApplicationStatus.Stopped) {
-            this._status = ApplicationStatus.Loading;
+        if (this._status === ApplicationStatus.stopped) {
+            this._status = ApplicationStatus.loading;
             await this.sceneManager.setScene(scene);
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();
             this._activeClock.start();
-            this._status = ApplicationStatus.Running;
+            this._status = ApplicationStatus.running;
         }
 
         return this;
     }
 
     public update(): this {
-        if (this._status === ApplicationStatus.Running) {
+        if (this._status === ApplicationStatus.running) {
             this.inputManager.update();
             this.sceneManager.update(this._frameClock.elapsedTime);
             this._frameRequest = requestAnimationFrame(this._updateHandler);
@@ -144,13 +144,13 @@ export class Application {
     }
 
     public stop(): this {
-        if (this._status === ApplicationStatus.Running) {
-            this._status = ApplicationStatus.Halting;
+        if (this._status === ApplicationStatus.running) {
+            this._status = ApplicationStatus.halting;
             cancelAnimationFrame(this._frameRequest);
             this.sceneManager.setScene(null);
             this._activeClock.stop();
             this._frameClock.stop();
-            this._status = ApplicationStatus.Stopped;
+            this._status = ApplicationStatus.stopped;
         }
 
         return this;

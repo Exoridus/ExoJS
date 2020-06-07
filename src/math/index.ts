@@ -4,7 +4,7 @@ export * from './Rectangle';
 export * from './Circle';
 export * from './Ellipse';
 export * from './Polygon';
-export * from './Shape';
+export * from 'math/IShape';
 export * from './Flags';
 export * from './Interval';
 export * from './Matrix';

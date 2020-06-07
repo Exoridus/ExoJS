@@ -1,17 +1,17 @@
-import type { RendererInterface } from "rendering/RendererInterface";
-import { createQuadIndices } from "utils/rendering";
-import { Shader } from "rendering/shader/Shader";
-import type { RenderManager } from "rendering/RenderManager";
-import type { Texture } from "rendering/texture/Texture";
-import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
-import type { View } from "rendering/View";
-import { RenderBuffer } from "rendering/RenderBuffer";
-import { VertexArrayObject } from "rendering/VertexArrayObject";
-import type { DrawableShape } from "rendering/primitives/DrawableShape";
-import vertexSource from "rendering/primitives/glsl/primitive.vert";
-import fragmentSource from "rendering/primitives/glsl/primitive.frag";
+import type { IRenderer } from 'rendering/IRenderer';
+import { createQuadIndices } from 'utils/rendering';
+import { Shader } from 'rendering/shader/Shader';
+import type { RenderManager } from 'rendering/RenderManager';
+import type { Texture } from 'rendering/texture/Texture';
+import { BlendModes, BufferTypes, BufferUsage } from 'types/rendering';
+import type { View } from 'rendering/View';
+import { RenderBuffer } from 'rendering/RenderBuffer';
+import { VertexArrayObject } from 'rendering/VertexArrayObject';
+import type { DrawableShape } from 'rendering/primitives/DrawableShape';
+import vertexSource from 'rendering/primitives/glsl/primitive.vert';
+import fragmentSource from 'rendering/primitives/glsl/primitive.frag';
 
-export class PrimitiveRenderer implements RendererInterface {
+export class PrimitiveRenderer implements IRenderer {
 
     private _batchSize: number;
     private _batchIndex = 0;
@@ -39,11 +39,11 @@ export class PrimitiveRenderer implements RendererInterface {
     private _vertexBuffer: RenderBuffer | null = null;
     private _vao: VertexArrayObject | null = null;
 
-    constructor(batchSize: number) {
+    public constructor(batchSize: number) {
         this._batchSize = batchSize;
     }
 
-    connect(renderManager: RenderManager): this {
+    public connect(renderManager: RenderManager): this {
         if (!this._context) {
             const gl = renderManager.context;
 
@@ -64,7 +64,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    disconnect(): this {
+    public disconnect(): this {
         if (this._context) {
             this.unbind();
 
@@ -78,23 +78,23 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    bind(): this {
+    public bind(): this {
         if (!this._context) {
             throw new Error('Renderer has to be connected first!')
         }
 
-        this._renderManager!.setVAO(this._vao);
+        this._renderManager!.setVao(this._vao);
         this._renderManager!.setShader(this._shader);
 
         return this;
     }
 
-    unbind(): this {
+    public unbind(): this {
         if (this._context) {
             this.flush();
 
             this._renderManager!.setShader(null);
-            this._renderManager!.setVAO(null);
+            this._renderManager!.setVao(null);
 
             this._currentTexture = null;
             this._currentBlendMode = null;
@@ -105,7 +105,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    render(shape: DrawableShape): this {
+    public render(shape: DrawableShape): this {
         // const { texture, blendMode, tint, vertices, texCoords } = shape;
         // const batchFull = (this._batchIndex >= this._batchSize);
         // const textureChanged = (texture !== this._currentTexture);
@@ -167,7 +167,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    flush(): this {
+    public flush(): this {
         if (this._batchIndex > 0) {
             const view = this._renderManager!.view;
 
@@ -177,7 +177,7 @@ export class PrimitiveRenderer implements RendererInterface {
                 this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
             }
 
-            this._renderManager!.setVAO(this._vao);
+            this._renderManager!.setVao(this._vao);
             this._vertexBuffer!.upload(this._float32View.subarray(0, this._batchIndex * this._attributeCount));
             this._vao!.draw(this._batchIndex * 6, 0);
             this._batchIndex = 0;
@@ -186,7 +186,7 @@ export class PrimitiveRenderer implements RendererInterface {
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this.disconnect();
 
         this._shader.destroy();

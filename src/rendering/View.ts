@@ -32,7 +32,7 @@ export class View {
     private _cos = 1;
     private _updateId = 0;
 
-    constructor(centerX: number, centerY: number, width: number, height: number) {
+    public constructor(centerX: number, centerY: number, width: number, height: number) {
         this._center = new ObservableVector(this._setPositionDirty.bind(this), centerX, centerY);
         this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
         this._flags.push(

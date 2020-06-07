@@ -1,12 +1,12 @@
 import { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
-import { TextStyle, TextStyleOptions } from 'rendering/TextStyle';
+import { TextStyle, ITextStyleOptions } from 'rendering/TextStyle';
 import { Rectangle } from 'math/Rectangle';
-import type { SamplerOptions } from "rendering/texture/Sampler";
+import type { ISamplerOptions } from 'rendering/texture/Sampler';
 import type { RenderManager } from 'rendering/RenderManager';
+import { determineFontHeight } from '../utils/rendering';
 
-const heightCache: Map<string, number> = new Map<string, number>();
-const NewLinePattern = /(?:\r\n|\r|\n)/;
+const newLinePattern = /(?:\r\n|\r|\n)/;
 
 export class Text extends Sprite {
 
@@ -16,7 +16,7 @@ export class Text extends Sprite {
     private _context: CanvasRenderingContext2D;
     private _dirty = true;
 
-    constructor(text: string, style?: TextStyle | TextStyleOptions, samplerOptions?: Partial<SamplerOptions>, canvas: HTMLCanvasElement = document.createElement('canvas')) {
+    public constructor(text: string, style?: TextStyle | ITextStyleOptions, samplerOptions?: Partial<ISamplerOptions>, canvas: HTMLCanvasElement = document.createElement('canvas')) {
         super(new Texture(canvas, samplerOptions));
 
         this._text = text;
@@ -27,31 +27,31 @@ export class Text extends Sprite {
         this.updateTexture();
     }
 
-    get text(): string {
+    public get text(): string {
         return this._text;
     }
 
-    set text(text: string) {
+    public set text(text: string) {
         this.setText(text);
     }
 
-    get style(): TextStyle {
+    public get style(): TextStyle {
         return this._style;
     }
 
-    set style(style: TextStyle) {
+    public set style(style: TextStyle) {
         this.setStyle(style);
     }
 
-    get canvas(): HTMLCanvasElement {
+    public get canvas(): HTMLCanvasElement {
         return this._canvas;
     }
 
-    set canvas(canvas: HTMLCanvasElement) {
+    public set canvas(canvas: HTMLCanvasElement) {
         this.setCanvas(canvas);
     }
 
-    setText(text: string): this {
+    public setText(text: string): this {
         if (this._text !== text) {
             this._text = text;
             this._dirty = true;
@@ -60,33 +60,33 @@ export class Text extends Sprite {
         return this;
     }
 
-    setStyle(style: TextStyle | TextStyleOptions): this {
+    public setStyle(style: TextStyle | ITextStyleOptions): this {
         this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
         this._dirty = true;
 
         return this;
     }
 
-    setCanvas(canvas: HTMLCanvasElement): this {
+    public setCanvas(canvas: HTMLCanvasElement): this {
         if (this._canvas !== canvas) {
             this._canvas = canvas;
             this._context = canvas.getContext('2d') as CanvasRenderingContext2D;
             this._dirty = true;
 
-            this.setTextureFrame(Rectangle.Temp.set(0, 0, canvas.width, canvas.height));
+            this.setTextureFrame(Rectangle.temp.set(0, 0, canvas.width, canvas.height));
         }
 
         return this;
     }
 
-    updateTexture(): this {
+    public updateTexture(): this {
         if (this._style && (this._dirty || this._style.dirty)) {
             const canvas = this._canvas,
                 context = this._context,
                 style = this._style.apply(context),
                 text = style.wordWrap ? this.getWordWrappedText() : this._text,
-                lineHeight = Text.determineFontHeight(context.font) + style.strokeThickness,
-                lines = text.split(NewLinePattern),
+                lineHeight = determineFontHeight(context.font) + style.strokeThickness,
+                lines = text.split(newLinePattern),
                 lineMetrics = lines.map((line) => context.measureText(line)),
                 maxLineWidth = lineMetrics.reduce((max, measure) => Math.max(max, measure.width), 0),
                 canvasWidth = Math.ceil((maxLineWidth + style.strokeThickness) + (style.padding * 2)),
@@ -96,7 +96,7 @@ export class Text extends Sprite {
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
-                this.setTextureFrame(Rectangle.Temp.set(0, 0, canvasWidth, canvasHeight));
+                this.setTextureFrame(Rectangle.temp.set(0, 0, canvasWidth, canvasHeight));
             } else {
                 context.clearRect(0, 0, canvasWidth, canvasHeight);
             }
@@ -129,7 +129,7 @@ export class Text extends Sprite {
         return this;
     }
 
-    getWordWrappedText(): string {
+    public getWordWrappedText(): string {
         const context = this._context,
             wrapWidth = this._style.wordWrapWidth,
             lines = this._text.split('\n'),
@@ -167,28 +167,12 @@ export class Text extends Sprite {
         return result;
     }
 
-    render(renderManager: RenderManager): this {
+    public render(renderManager: RenderManager): this {
         if (this.visible) {
             this.updateTexture();
             super.render(renderManager);
         }
 
         return this;
-    }
-
-    static determineFontHeight(font: string): number {
-        if (!heightCache.has(font)) {
-            const body = document.body;
-            const dummy = document.createElement('div');
-
-            dummy.appendChild(document.createTextNode('M'));
-            dummy.setAttribute('style', `font: ${font};position:absolute;top:0;left:0`);
-
-            body.appendChild(dummy);
-            heightCache.set(font, dummy.offsetHeight);
-            body.removeChild(dummy);
-        }
-
-        return heightCache.get(font)!;
     }
 }

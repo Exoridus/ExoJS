@@ -1,23 +1,23 @@
 import { Texture } from 'rendering/texture/Texture';
-import type { SamplerOptions } from "rendering/texture/Sampler";
-import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { determineMimeType } from "utils/resources";
-import { StorageNames } from "types/types";
+import type { ISamplerOptions } from 'rendering/texture/Sampler';
+import { AbstractResourceFactory } from './AbstractResourceFactory';
+import { determineMimeType } from 'utils/resources';
+import { StorageNames } from 'types/types';
 
-interface TextureFactoryOptions {
+interface ITextureFactoryOptions {
     mimeType?: string;
-    samplerOptions?: SamplerOptions;
+    samplerOptions?: ISamplerOptions;
 }
 
 export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture> {
 
-    public readonly storageName: StorageNames = StorageNames.Image;
+    public readonly storageName: StorageNames = StorageNames.image;
 
-    async process(response: Response): Promise<ArrayBuffer> {
+    public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: TextureFactoryOptions = {}): Promise<Texture> {
+    public async create(source: ArrayBuffer, options: ITextureFactoryOptions = {}): Promise<Texture> {
         const { mimeType, samplerOptions } = options;
         const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
@@ -28,7 +28,7 @@ export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture
             image.addEventListener('error', () => reject(Error('Error loading image source.')));
             image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
 
-            image.src = this.createObjectURL(blob);
+            image.src = this.createObjectUrl(blob);
         });
     }
 }

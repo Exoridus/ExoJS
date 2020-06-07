@@ -1,14 +1,14 @@
 import { VertexArrayObject } from 'rendering/VertexArrayObject';
 import type { RenderBuffer } from 'rendering/RenderBuffer';
 import type { Sprite } from 'rendering/sprite/Sprite';
-import { AbstractRenderer } from "rendering/AbstractRenderer";
-import type { View } from "rendering/View";
-import vertexSource from "rendering/sprite/glsl/sprite.vert";
-import fragmentSource from "rendering/sprite/glsl/sprite.frag";
+import { AbstractRenderer } from 'rendering/AbstractRenderer';
+import type { View } from 'rendering/View';
+import vertexSource from 'rendering/sprite/glsl/sprite.vert';
+import fragmentSource from 'rendering/sprite/glsl/sprite.frag';
 
 export class SpriteRenderer extends AbstractRenderer {
 
-    constructor(batchSize: number) {
+    public constructor(batchSize: number) {
 
         /**
          * 4 x 4 Attributes:
@@ -76,14 +76,14 @@ export class SpriteRenderer extends AbstractRenderer {
             = uint32View[index + 7]
             = uint32View[index + 11]
             = uint32View[index + 15]
-            = tint.toRGBA();
+            = tint.toRgba();
 
         this.batchIndex++;
 
         return this;
     }
 
-    protected createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
+    protected createVao(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
         return new VertexArrayObject(gl)
             .addIndex(indexBuffer)
             .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'), gl.FLOAT, false, this.attributeCount, 0)

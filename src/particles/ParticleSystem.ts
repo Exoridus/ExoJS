@@ -3,16 +3,16 @@ import { Rectangle } from 'math/Rectangle';
 import type { Time } from 'core/Time';
 import { Container } from 'rendering/Container';
 import type { Texture } from 'rendering/texture/Texture';
-import type { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
-import type { ParticleAffectorInterface } from "particles/affectors/ParticleAffectorInterface";
+import type { IParticleEmitter } from 'particles/emitters/IParticleEmitter';
+import type { IParticleAffector } from 'particles/affectors/IParticleAffector';
 import type { RenderManager } from 'rendering/RenderManager';
 import type { ParticleRenderer } from './ParticleRenderer';
-import { RendererType } from "rendering/RendererInterface";
+import { RendererType } from 'rendering/IRenderer';
 
 export class ParticleSystem extends Container {
 
-    private _emitters: Array<ParticleEmitterInterface> = [];
-    private _affectors: Array<ParticleAffectorInterface> = [];
+    private _emitters: Array<IParticleEmitter> = [];
+    private _affectors: Array<IParticleAffector> = [];
     private _particles: Array<Particle> = [];
     private _graveyard: Array<Particle> = [];
     private _texture: Texture;
@@ -22,30 +22,30 @@ export class ParticleSystem extends Container {
     private _updateTexCoords = true;
     private _updateVertices = true;
 
-    constructor(texture: Texture) {
+    public constructor(texture: Texture) {
         super();
 
         this._texture = texture;
         this.resetTextureFrame();
     }
 
-    get texture(): Texture {
+    public get texture(): Texture {
         return this._texture;
     }
 
-    set texture(texture: Texture) {
+    public set texture(texture: Texture) {
         this.setTexture(texture);
     }
 
-    get textureFrame(): Rectangle {
+    public get textureFrame(): Rectangle {
         return this._textureFrame;
     }
 
-    set textureFrame(frame: Rectangle) {
+    public set textureFrame(frame: Rectangle) {
         this.setTextureFrame(frame);
     }
 
-    get vertices(): Float32Array  {
+    public get vertices(): Float32Array  {
         if (this._updateVertices) {
             const { x, y, width, height } = this._textureFrame;
             const offsetX = (width / 2);
@@ -62,7 +62,7 @@ export class ParticleSystem extends Container {
         return this._vertices;
     }
 
-    get texCoords(): Uint32Array {
+    public get texCoords(): Uint32Array {
         if (this._updateTexCoords) {
             const { width, height } = this._texture;
             const { left, top, right, bottom } = this._textureFrame;
@@ -89,23 +89,23 @@ export class ParticleSystem extends Container {
         return this._texCoords;
     }
 
-    get emitters(): Array<ParticleEmitterInterface> {
+    public get emitters(): Array<IParticleEmitter> {
         return this._emitters;
     }
 
-    get affectors(): Array<ParticleAffectorInterface> {
+    public get affectors(): Array<IParticleAffector> {
         return this._affectors;
     }
 
-    get particles(): Array<Particle> {
+    public get particles(): Array<Particle> {
         return this._particles;
     }
 
-    get graveyard(): Array<Particle> {
+    public get graveyard(): Array<Particle> {
         return this._graveyard;
     }
 
-    setTexture(texture: Texture): this {
+    public setTexture(texture: Texture): this {
         if (this._texture !== texture) {
             this._texture = texture;
             this.resetTextureFrame();
@@ -114,7 +114,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    setTextureFrame(frame: Rectangle): this {
+    public setTextureFrame(frame: Rectangle): this {
         this._textureFrame.copy(frame);
         this._updateTexCoords = true;
         this._updateVertices = true;
@@ -124,17 +124,17 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    resetTextureFrame(): this {
-        return this.setTextureFrame(Rectangle.Temp.set(0, 0, this._texture.width, this._texture.height));
+    public resetTextureFrame(): this {
+        return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    addEmitter(emitter: ParticleEmitterInterface): this {
+    public addEmitter(emitter: IParticleEmitter): this {
         this._emitters.push(emitter);
 
         return this;
     }
 
-    clearEmitters(): this {
+    public clearEmitters(): this {
         for (const emitter of this._emitters) {
             emitter.destroy();
         }
@@ -144,13 +144,13 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    addAffector(affector: ParticleAffectorInterface): this {
+    public addAffector(affector: IParticleAffector): this {
         this._affectors.push(affector);
 
         return this;
     }
 
-    clearAffectors(): this {
+    public clearAffectors(): this {
         for (const affector of this._affectors) {
             affector.destroy();
         }
@@ -160,17 +160,17 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    requestParticle(): Particle {
+    public requestParticle(): Particle {
         return this._graveyard.pop() || new Particle();
     }
 
-    emitParticle(particle: Particle): this {
+    public emitParticle(particle: Particle): this {
         this._particles.push(particle);
 
         return this;
     }
 
-    updateParticle(particle: Particle, delta: Time): this {
+    public updateParticle(particle: Particle, delta: Time): this {
         const seconds = delta.seconds;
 
         particle.elapsedLifetime.addTime(delta);
@@ -181,7 +181,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    clearParticles(): this {
+    public clearParticles(): this {
         for (const particle of this._particles) {
             particle.destroy();
         }
@@ -196,7 +196,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    update(delta: Time): this {
+    public update(delta: Time): this {
         const emitters = this._emitters;
         const affectors = this._affectors;
         const particles = this._particles;
@@ -236,9 +236,9 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    render(renderManager: RenderManager): this {
+    public render(renderManager: RenderManager): this {
         if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.Particle) as ParticleRenderer;
+            const renderer = renderManager.getRenderer(RendererType.particle) as ParticleRenderer;
 
             renderManager.setRenderer(renderer);
             renderer.render(this);
@@ -247,7 +247,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         super.destroy();
 
         this.clearEmitters();

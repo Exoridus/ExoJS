@@ -1,16 +1,16 @@
-import type { RendererInterface } from 'rendering/RendererInterface';
+import type { IRenderer } from 'rendering/IRenderer';
 import { Shader } from 'rendering/shader/Shader';
 import type { VertexArrayObject } from 'rendering/VertexArrayObject';
 import { RenderBuffer } from 'rendering/RenderBuffer';
 import { createQuadIndices } from 'utils/rendering';
 import type { Texture } from 'rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage } from "types/rendering";
+import { BlendModes, BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
 import type { RenderManager } from 'rendering/RenderManager';
 import type { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { Drawable } from "rendering/Drawable";
+import type { Drawable } from 'rendering/Drawable';
 
-export abstract class AbstractRenderer implements RendererInterface {
+export abstract class AbstractRenderer implements IRenderer {
     protected readonly attributeCount: number;
     protected readonly batchSize: number;
     protected readonly indexData: Uint16Array;
@@ -50,7 +50,7 @@ export abstract class AbstractRenderer implements RendererInterface {
             this.indexBuffer = new RenderBuffer(gl, BufferTypes.ELEMENT_ARRAY_BUFFER, this.indexData, BufferUsage.STATIC_DRAW);
             this.vertexBuffer = new RenderBuffer(gl, BufferTypes.ARRAY_BUFFER, this.vertexData, BufferUsage.DYNAMIC_DRAW);
 
-            this.vao = this.createVAO(gl, this.indexBuffer, this.vertexBuffer);
+            this.vao = this.createVao(gl, this.indexBuffer, this.vertexBuffer);
         }
 
         return this;
@@ -77,7 +77,7 @@ export abstract class AbstractRenderer implements RendererInterface {
             throw new Error('Renderer has to be connected first!')
         }
 
-        this.renderManager.setVAO(this.vao);
+        this.renderManager.setVao(this.vao);
         this.renderManager.setShader(this.shader);
 
         return this;
@@ -88,7 +88,7 @@ export abstract class AbstractRenderer implements RendererInterface {
             this.flush();
 
             this.renderManager.setShader(null);
-            this.renderManager.setVAO(null);
+            this.renderManager.setVao(null);
 
             this.currentTexture = null;
             this.currentBlendMode = null;
@@ -109,7 +109,7 @@ export abstract class AbstractRenderer implements RendererInterface {
                 this.updateView(view);
             }
 
-            this.renderManager!.setVAO(this.vao);
+            this.renderManager!.setVao(this.vao);
             this.vertexBuffer!.upload(this.float32View.subarray(0, this.batchIndex * this.attributeCount));
             this.vao!.draw(this.batchIndex * 6, 0);
             this.batchIndex = 0;
@@ -129,6 +129,6 @@ export abstract class AbstractRenderer implements RendererInterface {
     }
 
     public abstract render(drawable: Drawable): this;
-    protected abstract createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject;
+    protected abstract createVao(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject;
     protected abstract updateView(view: View): this;
 }

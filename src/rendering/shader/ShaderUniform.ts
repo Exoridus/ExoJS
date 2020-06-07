@@ -1,5 +1,5 @@
-import { PrimitiveUploadFunction, PrimitiveUploadFunctions } from 'types/rendering';
-import type { TypedArray } from "types/types";
+import { PrimitiveUploadFunction, primitiveUploadFunctions } from 'types/rendering';
+import type { TypedArray } from 'types/types';
 
 export class ShaderUniform {
 
@@ -14,7 +14,7 @@ export class ShaderUniform {
     private readonly _uploadFn: PrimitiveUploadFunction | null;
     private readonly _value: TypedArray;
 
-    constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, type: number, size: number, name: string, data: TypedArray) {
+    public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, type: number, size: number, name: string, data: TypedArray) {
         this._context = gl;
         this._program = program;
         this.name = name.replace(/\[.*?]/, '');
@@ -23,7 +23,7 @@ export class ShaderUniform {
         this.type = type;
         this.size = size;
         this._value = data;
-        this._uploadFn = PrimitiveUploadFunctions[type];
+        this._uploadFn = primitiveUploadFunctions[type];
     }
 
     public get propName(): string {

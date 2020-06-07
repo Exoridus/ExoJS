@@ -2,7 +2,7 @@ import { RenderingPrimitives, ShaderPrimitives } from 'types/rendering';
 import type { ShaderAttribute } from './shader/ShaderAttribute';
 import type { RenderBuffer } from './RenderBuffer';
 
-interface VAOAttribute {
+interface IVaoAttribute {
     buffer: RenderBuffer;
     location: number;
     size: number;
@@ -16,12 +16,12 @@ export class VertexArrayObject {
 
     private _context: WebGL2RenderingContext;
     private _vao: WebGLVertexArrayObject | null;
-    private _attributes: Array<VAOAttribute> = [];
+    private _attributes: Array<IVaoAttribute> = [];
     private _indexBuffer: RenderBuffer | null = null;
     private _drawMode: RenderingPrimitives;
     private _dirty = false;
 
-    constructor(gl: WebGL2RenderingContext, drawMode: RenderingPrimitives = RenderingPrimitives.TRIANGLES) {
+    public constructor(gl: WebGL2RenderingContext, drawMode: RenderingPrimitives = RenderingPrimitives.TRIANGLES) {
         this._context = gl;
         this._vao = gl.createVertexArray();
         this._drawMode = drawMode;

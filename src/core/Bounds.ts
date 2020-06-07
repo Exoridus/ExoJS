@@ -39,7 +39,7 @@ export class Bounds {
 
     public addRect(rectangle: Rectangle, transform?: Matrix): this {
         if (transform) {
-            rectangle = rectangle.transform(transform, Rectangle.Temp);
+            rectangle = rectangle.transform(transform, Rectangle.temp);
         }
 
         return this

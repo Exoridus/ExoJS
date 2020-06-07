@@ -7,7 +7,7 @@ export class Clock {
     private _elapsedTime: Time = new Time(0);
     private _running = false;
 
-    public constructor(startTime: Time = Time.Zero, autoStart = false) {
+    public constructor(startTime: Time = Time.zero, autoStart = false) {
         this._startTime = startTime.clone();
 
         if (autoStart) {

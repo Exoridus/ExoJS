@@ -1,4 +1,4 @@
-interface GeometryOptions {
+interface IGeometryOptions {
     vertices?: Array<number>;
     indices?: Array<number>;
     points?: Array<number>;
@@ -10,17 +10,17 @@ export class Geometry {
     public readonly indices: Uint16Array;
     public readonly points: Array<number>;
 
-    constructor({
+    public constructor({
         vertices = [],
         indices = [],
         points = [],
-    }: GeometryOptions = {}) {
+    }: IGeometryOptions = {}) {
         this.vertices = new Float32Array(vertices);
         this.indices = new Uint16Array(indices);
         this.points = points;
     }
 
-    destroy(): void {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 }

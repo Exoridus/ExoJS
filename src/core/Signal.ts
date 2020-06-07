@@ -1,15 +1,15 @@
 import { removeArrayItems } from 'utils/core';
 
-type SignalHandler<T> =  (...params: Array<T>) => void | boolean | any;
+type SignalHandler<T> = (...params: Array<T>) => void | boolean | any;
 
-interface SignalBinding<T> {
+interface ISignalBinding<T> {
     handler: SignalHandler<T>;
     context?: object;
 }
 
 export class Signal<T = any> {
 
-    public readonly bindings = new Array<SignalBinding<T>>();
+    public readonly bindings = new Array<ISignalBinding<T>>();
 
     public has(handler: SignalHandler<T>, context?: object): boolean {
         return this.bindings.some((binding) => (binding.handler === handler && binding.context === context));

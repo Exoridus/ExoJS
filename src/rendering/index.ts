@@ -17,7 +17,7 @@ export * from './texture/Sampler';
 export * from './RenderBuffer';
 export * from './Container';
 export * from './Drawable';
-export * from 'rendering/RendererInterface';
+export * from 'rendering/IRenderer';
 export * from './RenderManager';
 export * from './RenderTarget';
 export * from './Spritesheet';

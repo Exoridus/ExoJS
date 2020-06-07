@@ -1,8 +1,8 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import type { Shape } from 'math/Shape';
-import { Interval } from "math/Interval";
-import { Collidable, Collision, CollisionType } from "types/Collision";
+import type { IShape } from 'math/IShape';
+import { Interval } from 'math/Interval';
+import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
     intersectionCircleEllipse,
     intersectionEllipseEllipse,
@@ -10,14 +10,14 @@ import {
     intersectionLineEllipse,
     intersectionPointEllipse,
     intersectionRectEllipse
-} from "utils/collision-detection";
-import type { Polygon } from "math/Polygon";
-import type { Line } from "math/Line";
-import type { Circle } from "math/Circle";
-import type { SceneNode } from "core/SceneNode";
+} from 'utils/collision-detection';
+import type { Polygon } from 'math/Polygon';
+import type { Line } from 'math/Line';
+import type { Circle } from 'math/Circle';
+import type { SceneNode } from 'core/SceneNode';
 
-export class Ellipse implements Shape {
-    public readonly collisionType: CollisionType = CollisionType.Ellipse;
+export class Ellipse implements IShape {
+    public readonly collisionType: CollisionType = CollisionType.ellipse;
 
     private readonly _position: Vector;
     private readonly _radius: Vector;
@@ -117,25 +117,25 @@ export class Ellipse implements Shape {
         return result;
     }
 
-    public intersectsWith(target: Collidable): boolean {
+    public intersectsWith(target: ICollidable): boolean {
         switch (target.collisionType) {
-            case CollisionType.SceneNode: return intersectionRectEllipse((target as SceneNode).getBounds(), this);
-            case CollisionType.Rectangle: return intersectionRectEllipse(target as Rectangle, this);
-            case CollisionType.Polygon: return intersectionEllipsePoly(this, target as Polygon);
-            case CollisionType.Circle: return intersectionCircleEllipse(target as Circle, this);
-            case CollisionType.Ellipse: return intersectionEllipseEllipse(this, target as Ellipse);
-            case CollisionType.Line: return intersectionLineEllipse(target as Line, this);
-            case CollisionType.Point: return intersectionPointEllipse(target as Vector, this);
+            case CollisionType.sceneNode: return intersectionRectEllipse((target as SceneNode).getBounds(), this);
+            case CollisionType.rectangle: return intersectionRectEllipse(target as Rectangle, this);
+            case CollisionType.polygon: return intersectionEllipsePoly(this, target as Polygon);
+            case CollisionType.circle: return intersectionCircleEllipse(target as Circle, this);
+            case CollisionType.ellipse: return intersectionEllipseEllipse(this, target as Ellipse);
+            case CollisionType.line: return intersectionLineEllipse(target as Line, this);
+            case CollisionType.point: return intersectionPointEllipse(target as Vector, this);
             default: return false;
         }
     }
 
-    public collidesWith(target: Collidable): Collision | null {
+    public collidesWith(target: ICollidable): ICollisionResponse | null {
         return null;
     }
 
     public contains(x: number, y: number): boolean {
-        return intersectionPointEllipse(Vector.Temp.set(x, y), this)
+        return intersectionPointEllipse(Vector.temp.set(x, y), this)
     }
 
     public equals({ x, y, rx, ry }: Partial<Ellipse> = {}): boolean {

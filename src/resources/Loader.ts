@@ -2,24 +2,24 @@ import { Signal } from 'core/Signal';
 import { ResourceContainer } from './ResourceContainer';
 import { FontFactory } from './factories/FontFactory';
 import { ImageFactory } from './factories/ImageFactory';
-import { JSONFactory } from './factories/JSONFactory';
+import { JsonFactory } from './factories/JsonFactory';
 import { MusicFactory } from './factories/MusicFactory';
 import { SoundFactory } from './factories/SoundFactory';
 import { TextFactory } from './factories/TextFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
-import { SVGFactory } from './factories/SVGFactory';
-import type { DatabaseInterface } from "types/DatabaseInterface";
-import type { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
-import { ResourceTypes } from "types/types";
+import { SvgFactory } from './factories/SvgFactory';
+import type { IDatabase } from 'types/IDatabase';
+import type { IResourceFactory } from 'types/IResourceFactory';
+import { ResourceTypes } from 'types/types';
 
-export interface LoaderOptions {
+export interface ILoaderOptions {
     resourcePath: string;
     requestOptions?: RequestInit;
-    database?: DatabaseInterface;
+    database?: IDatabase;
 }
 
-export interface ResourceQueueItem {
+export interface IResourceQueueItem {
     type: ResourceTypes;
     name: string;
     path: string;
@@ -28,80 +28,80 @@ export interface ResourceQueueItem {
 
 export class Loader {
 
-    private _factories: Map<ResourceTypes, ResourceFactoryInterface> = new Map<ResourceTypes, ResourceFactoryInterface>();
+    private _factories: Map<ResourceTypes, IResourceFactory> = new Map<ResourceTypes, IResourceFactory>();
     private _resources: ResourceContainer = new ResourceContainer();
-    private _queue: Array<ResourceQueueItem> = [];
+    private _queue: Array<IResourceQueueItem> = [];
     private _resourcePath: string;
     private _requestOptions: RequestInit;
-    private _database: DatabaseInterface | null;
+    private _database: IDatabase | null;
 
     public readonly onQueueResource = new Signal();
     public readonly onStartLoading = new Signal();
     public readonly onLoadResource = new Signal();
     public readonly onFinishLoading = new Signal();
 
-    constructor(options: LoaderOptions) {
+    public constructor(options: ILoaderOptions) {
         const { resourcePath, requestOptions, database } = options;
 
         this._resourcePath = resourcePath;
         this._requestOptions = requestOptions ?? {};
         this._database = database ?? null;
 
-        this.addFactory(ResourceTypes.Font, new FontFactory());
-        this.addFactory(ResourceTypes.Music, new MusicFactory());
-        this.addFactory(ResourceTypes.Sound, new SoundFactory());
-        this.addFactory(ResourceTypes.Video, new VideoFactory());
-        this.addFactory(ResourceTypes.Image, new ImageFactory());
-        this.addFactory(ResourceTypes.Texture, new TextureFactory());
-        this.addFactory(ResourceTypes.Text, new TextFactory());
-        this.addFactory(ResourceTypes.Json, new JSONFactory());
-        this.addFactory(ResourceTypes.Svg, new SVGFactory());
+        this.addFactory(ResourceTypes.font, new FontFactory());
+        this.addFactory(ResourceTypes.music, new MusicFactory());
+        this.addFactory(ResourceTypes.sound, new SoundFactory());
+        this.addFactory(ResourceTypes.video, new VideoFactory());
+        this.addFactory(ResourceTypes.image, new ImageFactory());
+        this.addFactory(ResourceTypes.texture, new TextureFactory());
+        this.addFactory(ResourceTypes.text, new TextFactory());
+        this.addFactory(ResourceTypes.json, new JsonFactory());
+        this.addFactory(ResourceTypes.svg, new SvgFactory());
     }
 
-    get factories(): Map<string, ResourceFactoryInterface> {
+    public get factories(): Map<string, IResourceFactory> {
         return this._factories;
     }
 
-    get queue(): Array<ResourceQueueItem> {
+    public get queue(): Array<IResourceQueueItem> {
         return this._queue;
     }
 
-    get resources(): ResourceContainer {
+    public get resources(): ResourceContainer {
         return this._resources;
     }
 
-    get resourcePath(): string {
+    public get resourcePath(): string {
         return this._resourcePath;
     }
 
-    set resourcePath(resourcePath: string) {
+    public set resourcePath(resourcePath: string) {
         this._resourcePath = resourcePath;
     }
 
-    get requestOptions(): RequestInit {
+    public get requestOptions(): RequestInit {
         return this._requestOptions;
     }
 
-    set requestOptions(requestOptions: RequestInit) {
+    public set requestOptions(requestOptions: RequestInit) {
         this._requestOptions = requestOptions;
     }
 
-    get database(): DatabaseInterface | null {
+    public get database(): IDatabase | null {
         return this._database;
     }
 
-    set database(database: DatabaseInterface | null) {
+    public set database(database: IDatabase | null) {
         this._database = database;
     }
 
-    addFactory(type: ResourceTypes, factory: ResourceFactoryInterface): this {
+    public addFactory(type: ResourceTypes, factory: IResourceFactory): this {
         this._factories.set(type, factory);
         this._resources.addType(type);
 
         return this;
     }
 
-    getFactory(type: ResourceTypes): ResourceFactoryInterface {
+    public getFactory(type: ResourceTypes): IResourceFactory {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }
@@ -109,7 +109,7 @@ export class Loader {
         return this._factories.get(type)!;
     }
 
-    add(type: ResourceTypes, items: object, options?: object): this {
+    public add(type: ResourceTypes, items: object, options?: object): this {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }
@@ -122,7 +122,7 @@ export class Loader {
         return this;
     }
 
-    async load(callback?: () => void): Promise<ResourceContainer> {
+    public async load(callback?: () => void): Promise<ResourceContainer> {
         const queue = this._queue.splice(0);
         const length = queue.length;
 
@@ -143,7 +143,7 @@ export class Loader {
         return this._resources;
     }
 
-    async loadItem(queueItem: ResourceQueueItem): Promise<any> {
+    public async loadItem(queueItem: IResourceQueueItem): Promise<any> {
         const { type, name, path, options } = queueItem;
 
         if (!this._resources.has(type, name)) {
@@ -167,7 +167,7 @@ export class Loader {
         return this._resources.get(type, name);
     }
 
-    reset({ signals = true, queue = true, resources = true } = {}): this {
+    public reset({ signals = true, queue = true, resources = true } = {}): this {
         if (signals) {
             this.onQueueResource.clear();
             this.onStartLoading.clear();
@@ -186,7 +186,7 @@ export class Loader {
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         for (const factory of this._factories.values()) {
             factory.destroy();
         }

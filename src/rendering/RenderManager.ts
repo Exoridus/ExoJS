@@ -1,26 +1,26 @@
-import WebGLDebugUtils from "vendor/webgl-debug";
+import WebGLDebugUtils from 'vendor/webgl-debug';
 
 import { BlendModes } from 'types/rendering';
 import { RenderTarget } from './RenderTarget';
 import { SpriteRenderer } from './sprite/SpriteRenderer';
 import { ParticleRenderer } from 'particles/ParticleRenderer';
 import { Color } from 'core/Color';
-import { canvasSourceToDataURL } from 'utils/core';
+import { canvasSourceToDataUrl } from 'utils/core';
 import { Texture } from './texture/Texture';
-import { RendererInterface, RendererType } from "rendering/RendererInterface";
+import { IRenderer, RendererType } from 'rendering/IRenderer';
 import type { Shader } from './shader/Shader';
 import type { VertexArrayObject } from './VertexArrayObject';
 import type { RenderTexture } from './texture/RenderTexture';
 import type { Drawable } from './Drawable';
 import type { View } from './View';
-import type { Application } from "core/Application";
+import type { Application } from 'core/Application';
 
-const throwOnGLError = (err: number, funcName: string): void => {
+const throwOnGlError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const logGLCall = (functionName: string, args: any): void => {
+const logGlCall = (functionName: string, args: any): void => {
     console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
 };
 
@@ -35,7 +35,7 @@ const validateNoneOfTheArgsAreUndefined = (functionName: string, args: any): voi
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const logAndValidate = (functionName: string, args: any): void => {
-    logGLCall(functionName, args);
+    logGlCall(functionName, args);
     validateNoneOfTheArgsAreUndefined (functionName, args);
 };
 
@@ -45,12 +45,12 @@ export class RenderManager {
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _onContextLostHandler: () => void;
     private readonly _onContextRestoredHandler: () => void;
-    private readonly _renderers: Map<RendererType, RendererInterface> = new Map<RendererType, RendererInterface>();
+    private readonly _renderers: Map<RendererType, IRenderer> = new Map<RendererType, IRenderer>();
 
     private _canvas: HTMLCanvasElement;
     private _contextLost: boolean;
     private _renderTarget: RenderTarget;
-    private _renderer: RendererInterface | null = null;
+    private _renderer: IRenderer | null = null;
     private _shader: Shader | null = null;
     private _blendMode: BlendModes | null = null;
     private _texture: Texture | RenderTexture | null = null;
@@ -59,7 +59,7 @@ export class RenderManager {
     private _clearColor: Color = new Color();
     private _cursor: string;
 
-    constructor(app: Application) {
+    public constructor(app: Application) {
         const {
             width,
             height,
@@ -78,7 +78,7 @@ export class RenderManager {
             throw new Error('This browser or hardware does not support WebGL.');
         }
 
-        this._context = debug ? WebGLDebugUtils.makeDebugContext(gl, throwOnGLError, logAndValidate, gl) as WebGL2RenderingContext : gl;
+        this._context = debug ? WebGLDebugUtils.makeDebugContext(gl, throwOnGlError, logAndValidate, gl) as WebGL2RenderingContext : gl;
         this._contextLost = this._context.isContextLost();
 
         if (this._contextLost) {
@@ -99,88 +99,88 @@ export class RenderManager {
         this._setupContext();
         this._addEvents();
 
-        this.addRenderer(RendererType.Sprite, new SpriteRenderer(spriteRendererBatchSize));
-        this.addRenderer(RendererType.Particle, new ParticleRenderer(particleRendererBatchSize));
+        this.addRenderer(RendererType.sprite, new SpriteRenderer(spriteRendererBatchSize));
+        this.addRenderer(RendererType.particle, new ParticleRenderer(particleRendererBatchSize));
 
         this._connectAndBindRenderTarget();
-        this.setBlendMode(BlendModes.NORMAL);
+        this.setBlendMode(BlendModes.normal);
 
         this.resize(width, height);
     }
 
-    get context(): WebGL2RenderingContext {
+    public get context(): WebGL2RenderingContext {
         return this._context;
     }
 
-    get renderTarget(): RenderTarget | null {
+    public get renderTarget(): RenderTarget | null {
         return this._renderTarget;
     }
 
-    get view(): View {
+    public get view(): View {
         return this._renderTarget.view;
     }
 
-    get texture(): Texture | RenderTexture | null {
+    public get texture(): Texture | RenderTexture | null {
         return this._texture;
     }
 
-    get vao(): VertexArrayObject | null {
+    public get vao(): VertexArrayObject | null {
         return this._vao;
     }
 
-    set vao(vao: VertexArrayObject | null) {
-        this.setVAO(vao);
+    public set vao(vao: VertexArrayObject | null) {
+        this.setVao(vao);
     }
 
-    get renderer(): RendererInterface | null {
+    public get renderer(): IRenderer | null {
         return this._renderer;
     }
 
-    set renderer(renderer: RendererInterface | null) {
+    public set renderer(renderer: IRenderer | null) {
         this.setRenderer(renderer);
     }
 
-    get shader(): Shader | null {
+    public get shader(): Shader | null {
         return this._shader;
     }
 
-    set shader(shader: Shader | null) {
+    public set shader(shader: Shader | null) {
         this.setShader(shader);
     }
 
-    get blendMode(): BlendModes | null {
+    public get blendMode(): BlendModes | null {
         return this._blendMode;
     }
 
-    set blendMode(blendMode: BlendModes | null) {
+    public set blendMode(blendMode: BlendModes | null) {
         this.setBlendMode(blendMode);
     }
 
-    get textureUnit(): number {
+    public get textureUnit(): number {
         return this._textureUnit;
     }
 
-    set textureUnit(textureUnit) {
+    public set textureUnit(textureUnit) {
         this.setTextureUnit(textureUnit);
     }
 
-    get clearColor(): Color {
+    public get clearColor(): Color {
         return this._clearColor;
     }
 
-    set clearColor(color) {
+    public set clearColor(color) {
         this.setClearColor(color);
     }
 
-    get cursor(): string {
+    public get cursor(): string {
         return this._cursor;
     }
 
-    set cursor(cursor) {
+    public set cursor(cursor) {
         this.setCursor(cursor);
     }
 
-    setRenderTarget(target: RenderTarget | null): this {
+    public setRenderTarget(target: RenderTarget | null): this {
         const renderTarget = target || this._rootRenderTarget;
 
         if (this._renderTarget !== renderTarget) {
@@ -192,7 +192,7 @@ export class RenderManager {
         return this;
     }
 
-    setVAO(vao: VertexArrayObject | null): this {
+    public setVao(vao: VertexArrayObject | null): this {
         if (this._vao !== vao) {
             if (vao) {
                 vao.bind();
@@ -208,7 +208,7 @@ export class RenderManager {
         return this;
     }
 
-    setRenderer(renderer: RendererInterface | null): this {
+    public setRenderer(renderer: IRenderer | null): this {
         if (this._renderer !== renderer) {
             if (this._renderer) {
                 this._renderer.unbind();
@@ -273,16 +273,16 @@ export class RenderManager {
             this._blendMode = blendMode;
 
             switch (blendMode) {
-                case BlendModes.ADDITIVE:
+                case BlendModes.additive:
                     gl.blendFunc(gl.ONE, gl.ONE);
                     break;
-                case BlendModes.SUBTRACT:
+                case BlendModes.subtract:
                     gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
                     break;
-                case BlendModes.MULTIPLY:
+                case BlendModes.multiply:
                     gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
                     break;
-                case BlendModes.SCREEN:
+                case BlendModes.screen:
                     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
                     break;
                 default:
@@ -325,13 +325,13 @@ export class RenderManager {
             throw new Error('Provided Texture has no source.');
         }
 
-        this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataURL(source)})`;
+        this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataUrl(source)})`;
         this._canvas.style.cursor = this._cursor;
 
         return this;
     }
 
-    public addRenderer(name: RendererType, renderer: RendererInterface): this {
+    public addRenderer(name: RendererType, renderer: IRenderer): this {
         if (this._renderers.has(name)) {
             throw new Error(`Renderer "${name}" was already added.`);
         }
@@ -341,7 +341,7 @@ export class RenderManager {
         return this;
     }
 
-    public getRenderer(name: RendererType): RendererInterface {
+    public getRenderer(name: RendererType): IRenderer {
         const renderer = this._renderers.get(name);
 
         if (!renderer) {
@@ -393,7 +393,7 @@ export class RenderManager {
 
         this.setRenderTarget(null);
         this.setRenderer(null);
-        this.setVAO(null);
+        this.setVao(null);
         this.setShader(null);
         this.setTexture(null);
 
@@ -459,7 +459,7 @@ export class RenderManager {
 
     private _connectAndBindRenderTarget(): void {
         if (!this._context) {
-            throw new Error("Cannot connect rendertarget when no context is provided!");
+            throw new Error('Cannot connect rendertarget when no context is provided!');
         }
 
         this._renderTarget.connect(this._context);

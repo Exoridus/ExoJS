@@ -1,10 +1,10 @@
-interface FileType {
+interface IFileType {
     mimeType: string;
     pattern: Array<number>;
     mask: Array<number>;
 }
 
-const FILE_TYPES: Array<FileType> = [
+const fileTypes: Array<IFileType> = [
     {
         mimeType: 'image/x-icon',
         pattern: [0x00, 0x00, 0x01, 0x00],
@@ -82,7 +82,7 @@ const FILE_TYPES: Array<FileType> = [
     }
 ];
 
-const matchesMP4Video = (arrayBuffer: ArrayBuffer): boolean => {
+const matchesMp4Video = (arrayBuffer: ArrayBuffer): boolean => {
     const header = new Uint8Array(arrayBuffer),
         view = new DataView(arrayBuffer),
         boxSize = view.getUint32(0, false);
@@ -94,7 +94,7 @@ const matchesMP4Video = (arrayBuffer: ArrayBuffer): boolean => {
     return String.fromCharCode(...header.subarray(4, 11)) === 'ftypmp4';
 };
 
-const matchesWebMVideo = (arrayBuffer: ArrayBuffer): boolean => {
+const matchesWebmVideo = (arrayBuffer: ArrayBuffer): boolean => {
     const header = new Uint8Array(arrayBuffer),
         matching = [0x1A, 0x45, 0xDF, 0xA3].every((byte, i) => (byte === header[i])),
         sliced = header.subarray(4, 4 + 4096),
@@ -114,7 +114,7 @@ export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
         throw new Error('Cannot determine mime type: No data.');
     }
 
-    for (const type of FILE_TYPES) {
+    for (const type of fileTypes) {
         if (header.length < type.pattern.length) {
             continue;
         }
@@ -124,11 +124,11 @@ export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
         }
     }
 
-    if (matchesMP4Video(arrayBuffer)) {
+    if (matchesMp4Video(arrayBuffer)) {
         return 'video/mp4';
     }
 
-    if (matchesWebMVideo(arrayBuffer)) {
+    if (matchesWebmVideo(arrayBuffer)) {
         return 'video/webm';
     }
 

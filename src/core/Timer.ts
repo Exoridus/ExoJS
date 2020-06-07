@@ -1,5 +1,5 @@
 import { Clock } from './Clock';
-import { Time } from "core/Time";
+import { Time } from 'core/Time';
 
 export class Timer extends Clock {
 
@@ -28,14 +28,14 @@ export class Timer extends Clock {
     }
 
     public get remainingSeconds(): number {
-        return this.remainingMilliseconds / Time.Seconds;
+        return this.remainingMilliseconds / Time.seconds;
     }
 
     public get remainingMinutes(): number {
-        return this.remainingMilliseconds / Time.Minutes;
+        return this.remainingMilliseconds / Time.minutes;
     }
 
     public get remainingHours(): number {
-        return this.remainingMilliseconds / Time.Hours;
+        return this.remainingMilliseconds / Time.hours;
     }
 }

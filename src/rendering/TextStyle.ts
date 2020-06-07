@@ -1,7 +1,7 @@
 
 export type TextStyleColor = string | CanvasGradient | CanvasPattern;
 
-export interface TextStyleOptions {
+export interface ITextStyleOptions {
     align?: string;
     fill?: TextStyleColor;
     stroke?: TextStyleColor;
@@ -33,7 +33,7 @@ export class TextStyle {
     private _padding: number;
     private _dirty = true;
 
-    constructor(options: TextStyleOptions = {}) {
+    public constructor(options: ITextStyleOptions = {}) {
         this._align = options.align ?? 'left';
         this._fill = options.fill ?? 'black';
         this._stroke = options.stroke ?? 'black';
@@ -49,162 +49,162 @@ export class TextStyle {
         this._padding = options.padding ?? 0;
     }
 
-    get align(): string {
+    public get align(): string {
         return this._align;
     }
 
-    set align(align: string) {
+    public set align(align: string) {
         if (this._align !== align) {
             this._align = align;
             this._dirty = true;
         }
     }
 
-    get fill(): TextStyleColor {
+    public get fill(): TextStyleColor {
         return this._fill;
     }
 
-    set fill(fill: TextStyleColor) {
+    public set fill(fill: TextStyleColor) {
         if (this._fill !== fill) {
             this._fill = fill;
             this._dirty = true;
         }
     }
 
-    get stroke(): TextStyleColor {
+    public get stroke(): TextStyleColor {
         return this._stroke;
     }
 
-    set stroke(stroke: TextStyleColor) {
+    public set stroke(stroke: TextStyleColor) {
         if (this._stroke !== stroke) {
             this._stroke = stroke;
             this._dirty = true;
         }
     }
 
-    get strokeThickness(): number {
+    public get strokeThickness(): number {
         return this._strokeThickness;
     }
 
-    set strokeThickness(strokeThickness: number) {
+    public set strokeThickness(strokeThickness: number) {
         if (this._strokeThickness !== strokeThickness) {
             this._strokeThickness = strokeThickness;
             this._dirty = true;
         }
     }
 
-    get fontSize(): number {
+    public get fontSize(): number {
         return this._fontSize;
     }
 
-    set fontSize(fontSize: number) {
+    public set fontSize(fontSize: number) {
         if (this._fontSize !== fontSize) {
             this._fontSize = fontSize;
             this._dirty = true;
         }
     }
 
-    get fontWeight(): string {
+    public get fontWeight(): string {
         return this._fontWeight;
     }
 
-    set fontWeight(fontWeight: string) {
+    public set fontWeight(fontWeight: string) {
         if (this._fontWeight !== fontWeight) {
             this._fontWeight = fontWeight;
             this._dirty = true;
         }
     }
 
-    get fontFamily(): string {
+    public get fontFamily(): string {
         return this._fontFamily;
     }
 
-    set fontFamily(fontFamily: string) {
+    public set fontFamily(fontFamily: string) {
         if (this._fontFamily !== fontFamily) {
             this._fontFamily = fontFamily;
             this._dirty = true;
         }
     }
 
-    get wordWrap(): boolean {
+    public get wordWrap(): boolean {
         return this._wordWrap;
     }
 
-    set wordWrap(wordWrap: boolean) {
+    public set wordWrap(wordWrap: boolean) {
         if (this._wordWrap !== wordWrap) {
             this._wordWrap = wordWrap;
             this._dirty = true;
         }
     }
 
-    get wordWrapWidth(): number {
+    public get wordWrapWidth(): number {
         return this._wordWrapWidth;
     }
 
-    set wordWrapWidth(wordWrapWidth: number) {
+    public set wordWrapWidth(wordWrapWidth: number) {
         if (this._wordWrapWidth !== wordWrapWidth) {
             this._wordWrapWidth = wordWrapWidth;
             this._dirty = true;
         }
     }
 
-    get baseline(): CanvasTextBaseline {
+    public get baseline(): CanvasTextBaseline {
         return this._baseline;
     }
 
-    set baseline(baseline: CanvasTextBaseline) {
+    public set baseline(baseline: CanvasTextBaseline) {
         if (this._baseline !== baseline) {
             this._baseline = baseline;
             this._dirty = true;
         }
     }
 
-    get lineJoin(): CanvasLineJoin {
+    public get lineJoin(): CanvasLineJoin {
         return this._lineJoin;
     }
 
-    set lineJoin(lineJoin: CanvasLineJoin) {
+    public set lineJoin(lineJoin: CanvasLineJoin) {
         if (this._lineJoin !== lineJoin) {
             this._lineJoin = lineJoin;
             this._dirty = true;
         }
     }
 
-    get miterLimit(): number {
+    public get miterLimit(): number {
         return this._miterLimit;
     }
 
-    set miterLimit(miterLimit: number) {
+    public set miterLimit(miterLimit: number) {
         if (this._miterLimit !== miterLimit) {
             this._miterLimit = miterLimit;
             this._dirty = true;
         }
     }
 
-    get padding(): number {
+    public get padding(): number {
         return this._padding;
     }
 
-    set padding(padding: number) {
+    public set padding(padding: number) {
         if (this._padding !== padding) {
             this._padding = padding;
             this._dirty = true;
         }
     }
 
-    get dirty(): boolean {
+    public get dirty(): boolean {
         return this._dirty;
     }
 
-    set dirty(dirty: boolean) {
+    public set dirty(dirty: boolean) {
         this._dirty = dirty;
     }
 
-    get font(): string {
+    public get font(): string {
         return `${this._fontWeight} ${this._fontSize}px ${this._fontFamily}`;
     }
 
-    apply(context: CanvasRenderingContext2D): this {
+    public apply(context: CanvasRenderingContext2D): this {
         context.font = this.font;
         context.fillStyle = this.fill;
         context.strokeStyle = this.stroke;
@@ -216,7 +216,7 @@ export class TextStyle {
         return this;
     }
 
-    copy(style: TextStyle): this {
+    public copy(style: TextStyle): this {
         if (style !== this) {
             this.align = style.align;
             this.fill = style.fill;
@@ -237,7 +237,7 @@ export class TextStyle {
         return this;
     }
 
-    clone(): TextStyle {
+    public clone(): TextStyle {
         return new TextStyle().copy(this);
     }
 }

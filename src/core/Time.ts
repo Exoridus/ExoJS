@@ -1,12 +1,12 @@
-import type { Cloneable, TimeInterval } from "types/types";
+import type { ICloneable, TimeInterval } from 'types/types';
 
 let temp: Time | null = null;
 
-export class Time implements Cloneable {
+export class Time implements ICloneable {
 
     private _milliseconds: number;
 
-    public constructor(time = 0, factor: TimeInterval = Time.Milliseconds) {
+    public constructor(time = 0, factor: TimeInterval = Time.milliseconds) {
         this._milliseconds = time * factor;
     }
 
@@ -19,30 +19,30 @@ export class Time implements Cloneable {
     }
 
     public get seconds(): number {
-        return this._milliseconds / Time.Seconds;
+        return this._milliseconds / Time.seconds;
     }
 
     public set seconds(seconds: number) {
-        this._milliseconds = seconds * Time.Seconds;
+        this._milliseconds = seconds * Time.seconds;
     }
 
     public get minutes(): number {
-        return this._milliseconds / Time.Minutes;
+        return this._milliseconds / Time.minutes;
     }
 
     public set minutes(minutes: number) {
-        this._milliseconds = minutes * Time.Minutes;
+        this._milliseconds = minutes * Time.minutes;
     }
 
     public get hours(): number {
-        return this._milliseconds / Time.Hours;
+        return this._milliseconds / Time.hours;
     }
 
     public set hours(hours: number) {
-        this._milliseconds = hours * Time.Hours;
+        this._milliseconds = hours * Time.hours;
     }
 
-    public set(time = 0, factor: TimeInterval = Time.Milliseconds): this {
+    public set(time = 0, factor: TimeInterval = Time.milliseconds): this {
         this._milliseconds = time * factor;
 
         return this;
@@ -97,7 +97,7 @@ export class Time implements Cloneable {
         return this;
     }
 
-    public add(value = 0, factor: TimeInterval = Time.Milliseconds): this {
+    public add(value = 0, factor: TimeInterval = Time.milliseconds): this {
         this._milliseconds += (value * factor);
 
         return this;
@@ -109,7 +109,7 @@ export class Time implements Cloneable {
         return this;
     }
 
-    public subtract(value = 0, factor: TimeInterval = Time.Milliseconds): this {
+    public subtract(value = 0, factor: TimeInterval = Time.milliseconds): this {
         this._milliseconds -= (value * factor);
 
         return this;
@@ -125,18 +125,18 @@ export class Time implements Cloneable {
         // todo - check if destroy is needed
     }
 
-    public static readonly Milliseconds: TimeInterval = 1;
-    public static readonly Seconds: TimeInterval = 1000;
-    public static readonly Minutes: TimeInterval = 60000;
-    public static readonly Hours: TimeInterval = 3600000;
+    public static readonly milliseconds: TimeInterval = 1;
+    public static readonly seconds: TimeInterval = 1000;
+    public static readonly minutes: TimeInterval = 60000;
+    public static readonly hours: TimeInterval = 3600000;
 
-    public static readonly Zero = new Time(0);
-    public static readonly OneMillisecond = new Time(1);
-    public static readonly OneSecond = new Time(1, Time.Seconds);
-    public static readonly OneMinute = new Time(1, Time.Minutes);
-    public static readonly OneHour = new Time(1, Time.Hours);
+    public static readonly zero = new Time(0);
+    public static readonly oneMillisecond = new Time(1);
+    public static readonly oneSecond = new Time(1, Time.seconds);
+    public static readonly oneMinute = new Time(1, Time.minutes);
+    public static readonly oneHour = new Time(1, Time.hours);
 
-    public static get Temp(): Time {
+    public static get temp(): Time {
         if (temp === null) {
             temp = new Time();
         }

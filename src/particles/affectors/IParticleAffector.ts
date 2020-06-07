@@ -1,7 +1,7 @@
 import type { Particle } from 'particles/Particle';
 import type { Time } from 'core/Time';
 
-export interface ParticleAffectorInterface {
+export interface IParticleAffector {
     apply(particle: Particle, delta: Time): this;
     destroy(): void;
 }

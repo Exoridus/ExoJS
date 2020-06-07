@@ -1,12 +1,12 @@
-import type { MediaInterface } from "types/MediaInterface";
+import type { IMedia } from 'types/IMedia';
 import { Signal } from 'core/Signal';
-import type { PlaybackOptions } from "types/types";
+import type { IPlaybackOptions } from 'types/types';
 
-export interface AbstractMediaInitialState extends Omit<PlaybackOptions, "time"> {
+export interface IAbstractMediaInitialState extends Omit<IPlaybackOptions, 'time'> {
     duration: number;
 }
 
-export abstract class AbstractMedia implements MediaInterface {
+export abstract class AbstractMedia implements IMedia {
 
     public readonly onStart = new Signal();
     public readonly onStop = new Signal();
@@ -85,7 +85,7 @@ export abstract class AbstractMedia implements MediaInterface {
         }
     }
 
-    protected constructor(initialState: AbstractMediaInitialState) {
+    protected constructor(initialState: IAbstractMediaInitialState) {
         const { duration, volume, playbackRate, loop, muted } = initialState;
 
         this._duration = duration;
@@ -95,8 +95,8 @@ export abstract class AbstractMedia implements MediaInterface {
         this._muted = muted;
     }
 
-    public abstract play(options?: Partial<PlaybackOptions>): this;
-    public abstract pause(options?: Partial<PlaybackOptions>): this;
+    public abstract play(options?: Partial<IPlaybackOptions>): this;
+    public abstract pause(options?: Partial<IPlaybackOptions>): this;
     public abstract setVolume(volume: number): this;
     public abstract setLoop(loop: boolean): this;
     public abstract setPlaybackRate(playbackRate: number): this;
@@ -104,18 +104,18 @@ export abstract class AbstractMedia implements MediaInterface {
     public abstract setTime(time: number): this;
     public abstract setMuted(muted: boolean): this;
 
-    public stop(options?: Partial<PlaybackOptions>): this {
+    public stop(options?: Partial<IPlaybackOptions>): this {
         this.pause(options);
         this.currentTime = 0;
 
         return this;
     }
 
-    public toggle(options?: Partial<PlaybackOptions>): this {
+    public toggle(options?: Partial<IPlaybackOptions>): this {
         return this.paused ? this.play(options) : this.pause(options);
     }
 
-    public applyOptions(options: Partial<PlaybackOptions> = {}): this {
+    public applyOptions(options: Partial<IPlaybackOptions> = {}): this {
         const { volume, loop, playbackRate, time, muted } = options;
 
         if (volume !== undefined) {

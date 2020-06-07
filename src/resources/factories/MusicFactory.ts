@@ -1,26 +1,26 @@
-import type { PlaybackOptions } from "types/types";
-import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { determineMimeType } from "utils/resources";
-import { StorageNames } from "types/types";
-import { Music } from "audio/Music";
+import type { IPlaybackOptions } from 'types/types';
+import { AbstractResourceFactory } from './AbstractResourceFactory';
+import { determineMimeType } from 'utils/resources';
+import { StorageNames } from 'types/types';
+import { Music } from 'audio/Music';
 
 const onceListenerOption = { once: true };
 
-interface MusicFactoryOptions {
+interface IMusicFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
-    playbackOptions?: Partial<PlaybackOptions>;
+    playbackOptions?: Partial<IPlaybackOptions>;
 }
 
 export class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music> {
 
-    public readonly storageName: StorageNames = StorageNames.Music;
+    public readonly storageName: StorageNames = StorageNames.music;
 
-    async process(response: Response): Promise<ArrayBuffer> {
+    public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: MusicFactoryOptions = {}): Promise<Music> {
+    public async create(source: ArrayBuffer, options: IMusicFactoryOptions = {}): Promise<Music> {
         const { mimeType, loadEvent, playbackOptions } = options;
         const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
@@ -32,7 +32,7 @@ export class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music> {
             audio.addEventListener(loadEvent ?? 'canplaythrough', () => resolve(new Music(audio, playbackOptions)), onceListenerOption);
 
             audio.preload = 'auto';
-            audio.src = this.createObjectURL(blob);
+            audio.src = this.createObjectUrl(blob);
         });
     }
 }

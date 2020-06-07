@@ -6,11 +6,11 @@ const CircularDependencyPlugin  = require('circular-dependency-plugin');
 module.exports = {
     mode: 'production',
     entry: {
-        'exo': path.resolve(__dirname, '../src/index.ts'),
-        'exo.min': path.resolve(__dirname, '../src/index.ts'),
+        'exo': path.resolve(__dirname, 'src/index.ts'),
+        'exo.min': path.resolve(__dirname, 'src/index.ts'),
     },
     output: {
-        path: path.resolve(__dirname, '../dist'),
+        path: path.resolve(__dirname, 'dist'),
         filename: "[name].js",
         libraryTarget: 'umd',
         library: 'Exo',
@@ -53,11 +53,11 @@ module.exports = {
         hints: false,
     },
     plugins: [
-        // new CircularDependencyPlugin({
-        //     exclude: /\.js|node_modules|dist/,
-        //     failOnError: true,
-        //     allowAsyncCycles: false,
-        //     cwd: process.cwd(),
-        // })
+        new CircularDependencyPlugin({
+            exclude: /\.js|node_modules|dist/,
+            failOnError: true,
+            allowAsyncCycles: false,
+            cwd: process.cwd(),
+        })
     ]
 };

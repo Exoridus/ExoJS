@@ -6,22 +6,68 @@
         "plugin:@typescript-eslint/recommended"
     ],
     "parserOptions": {
-        "ecmaVersion": 2018,
+        "ecmaVersion": 2020,
         "sourceType": "module"
     },
     "env": {
         "browser": true,
-        "node": true
+        "es2020": true,
+        "worker": true
     },
     "rules": {
+        "no-template-curly-in-string": "error",
+        "init-declarations": "error",
+        "no-label-var": "error",
+        "no-shadow": "error",
+        "camelcase": "error",
+        "quotes": "off",
+        "@typescript-eslint/quotes": ["error", "single"],
         "@typescript-eslint/interface-name-prefix": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
         "@typescript-eslint/explicit-member-accessibility":  "error",
         "@typescript-eslint/explicit-function-return-type":  "error",
-        "no-case-declarations": "off",
-        "init-declarations": "error",
-        "no-label-var": "error",
-        "no-shadow": "error",
-        "camelcase": "error"
+        "@typescript-eslint/array-type": ["error", {
+            "default": "generic",
+            "readonly": "generic"
+        }],
+        "@typescript-eslint/consistent-type-assertions": ["error", {
+            "assertionStyle": "as",
+            "objectLiteralTypeAssertions": "never"
+        }],
+        "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+        "@typescript-eslint/naming-convention": [
+            "error",
+            {
+                "selector": "variableLike",
+                "format": ["strictCamelCase"],
+                "leadingUnderscore": "allow",
+                "trailingUnderscore": "forbid"
+            },
+            {
+                "selector": "memberLike",
+                "format": ["strictCamelCase"],
+                "leadingUnderscore": "allow",
+                "trailingUnderscore": "forbid"
+            },
+            {
+                "selector": "typeLike",
+                "format": ["StrictPascalCase"],
+                "leadingUnderscore": "forbid",
+                "trailingUnderscore": "forbid"
+            },
+            {
+                "selector": "interface",
+                "prefix": ["I"],
+                "format": ["StrictPascalCase"],
+                "leadingUnderscore": "forbid",
+                "trailingUnderscore": "forbid"
+            },
+            {
+                "selector": "enumMember",
+                "format": ["strictCamelCase", "UPPER_CASE"],
+                "trailingUnderscore": "forbid",
+                "leadingUnderscore": "forbid"
+            }
+        ]
     }
 }

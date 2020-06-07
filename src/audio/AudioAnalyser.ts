@@ -1,7 +1,7 @@
-import type { MediaInterface } from "types/MediaInterface";
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
+import type { IMedia } from 'types/IMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 
-export interface AudioAnalyserOptions {
+export interface IAudioAnalyserOptions {
     fftSize: number;
     minDecibels: number;
     maxDecibels: number;
@@ -9,7 +9,7 @@ export interface AudioAnalyserOptions {
 }
 
 export class AudioAnalyser {
-    private readonly _media: MediaInterface;
+    private readonly _media: IMedia;
 
     private readonly _fftSize: number;
     private readonly _minDecibels: number;
@@ -26,7 +26,7 @@ export class AudioAnalyser {
     private _audioContext: AudioContext | null = null;
     private _analyserTarget: AudioNode | null = null;
 
-    public constructor(media: MediaInterface, options: Partial<AudioAnalyserOptions> = {}) {
+    public constructor(media: IMedia, options: Partial<IAudioAnalyserOptions> = {}) {
         const { fftSize,  minDecibels, maxDecibels, smoothingTimeConstant } = options;
 
         this._media = media;

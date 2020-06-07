@@ -1,35 +1,35 @@
 import type { Time } from 'core/Time';
 import { ParticleOptions } from 'particles/emitters/ParticleOptions';
-import type { ParticleEmitterInterface } from "particles/emitters/ParticleEmitterInterface";
+import type { IParticleEmitter } from 'particles/emitters/IParticleEmitter';
 import type { ParticleSystem } from 'particles/ParticleSystem';
 
-export class UniversalEmitter implements ParticleEmitterInterface {
+export class UniversalEmitter implements IParticleEmitter {
     private _emissionRate: number;
     private _particleOptions: ParticleOptions;
     private _emissionDelta = 0;
 
-    constructor(emissionRate: number, particleOptions?: ParticleOptions) {
+    public constructor(emissionRate: number, particleOptions?: ParticleOptions) {
         this._emissionRate = emissionRate;
         this._particleOptions = particleOptions ?? new ParticleOptions();
     }
 
-    get emissionRate(): number {
+    public get emissionRate(): number {
         return this._emissionRate;
     }
 
-    set emissionRate(particlesPerSecond: number) {
+    public set emissionRate(particlesPerSecond: number) {
         this._emissionRate = particlesPerSecond;
     }
 
-    get particleOptions(): ParticleOptions {
+    public get particleOptions(): ParticleOptions {
         return this._particleOptions;
     }
 
-    set particleOptions(particleOptions: ParticleOptions) {
+    public set particleOptions(particleOptions: ParticleOptions) {
         this._particleOptions = particleOptions;
     }
 
-    computeParticleCount(time: Time): number {
+    public computeParticleCount(time: Time): number {
         const particleAmount = (this._emissionRate * time.seconds) + this._emissionDelta;
         const particles = particleAmount | 0;
 
@@ -38,7 +38,7 @@ export class UniversalEmitter implements ParticleEmitterInterface {
         return particles;
     }
 
-    apply(system: ParticleSystem, delta: Time): this {
+    public apply(system: ParticleSystem, delta: Time): this {
         const count = this.computeParticleCount(delta);
         const options = this._particleOptions;
 
@@ -52,7 +52,7 @@ export class UniversalEmitter implements ParticleEmitterInterface {
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this._particleOptions.destroy();
     }
 }

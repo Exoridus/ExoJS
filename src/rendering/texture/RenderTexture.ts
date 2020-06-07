@@ -1,21 +1,21 @@
 import { isPowerOfTwo } from 'utils/math';
 import { RenderTarget } from 'rendering/RenderTarget';
 import { Flags } from 'math/Flags';
-import { ScaleModes, WrapModes } from "types/rendering";
-import type { SamplerOptions } from "rendering/texture/Sampler";
+import { ScaleModes, WrapModes } from 'types/rendering';
+import type { ISamplerOptions } from 'rendering/texture/Sampler';
 
 enum RenderTextureFlags {
-    None = 0,
-    ScaleModeDirty = 1 << 0,
-    WrapModeDirty = 1 << 1,
-    PremultiplyAlphaDirty = 1 << 2,
-    SourceDirty = 1 << 3,
-    SizeDirty = 1 << 4,
+    none = 0,
+    scaleModeDirty = 1 << 0,
+    wrapModeDirty = 1 << 1,
+    premultiplyAlphaDirty = 1 << 2,
+    sourceDirty = 1 << 3,
+    sizeDirty = 1 << 4,
 }
 
 export class RenderTexture extends RenderTarget {
 
-    public static DefaultSamplerOptions: SamplerOptions = {
+    public static defaultSamplerOptions: ISamplerOptions = {
         scaleMode: ScaleModes.LINEAR,
         wrapMode: WrapModes.CLAMP_TO_EDGE,
         premultiplyAlpha: true,
@@ -32,10 +32,10 @@ export class RenderTexture extends RenderTarget {
     private _flipY: boolean;
     private _flags: Flags<RenderTextureFlags> = new Flags<RenderTextureFlags>();
 
-    constructor(width: number, height: number, options?: Partial<SamplerOptions>) {
+    public constructor(width: number, height: number, options?: Partial<ISamplerOptions>) {
         super(width, height, false);
 
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...RenderTexture.DefaultSamplerOptions, ...options };
+        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...RenderTexture.defaultSamplerOptions, ...options };
 
         this._scaleMode = scaleMode;
         this._wrapMode = wrapMode;
@@ -44,11 +44,11 @@ export class RenderTexture extends RenderTarget {
         this._flipY = flipY;
 
         this._flags.push(
-            RenderTextureFlags.SourceDirty,
-            RenderTextureFlags.SizeDirty,
-            RenderTextureFlags.ScaleModeDirty,
-            RenderTextureFlags.WrapModeDirty,
-            RenderTextureFlags.PremultiplyAlphaDirty,
+            RenderTextureFlags.sourceDirty,
+            RenderTextureFlags.sizeDirty,
+            RenderTextureFlags.scaleModeDirty,
+            RenderTextureFlags.wrapModeDirty,
+            RenderTextureFlags.premultiplyAlphaDirty,
         );
     }
 
@@ -169,7 +169,7 @@ export class RenderTexture extends RenderTarget {
     public setScaleMode(scaleMode: ScaleModes): this {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags.push(RenderTextureFlags.ScaleModeDirty);
+            this._flags.push(RenderTextureFlags.scaleModeDirty);
         }
 
         return this;
@@ -178,7 +178,7 @@ export class RenderTexture extends RenderTarget {
     public setWrapMode(wrapMode: WrapModes): this {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags.push(RenderTextureFlags.WrapModeDirty);
+            this._flags.push(RenderTextureFlags.wrapModeDirty);
         }
 
         return this;
@@ -187,7 +187,7 @@ export class RenderTexture extends RenderTarget {
     public setPremultiplyAlpha(premultiplyAlpha: boolean): this {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags.push(RenderTextureFlags.PremultiplyAlphaDirty);
+            this._flags.push(RenderTextureFlags.premultiplyAlphaDirty);
         }
 
         return this;
@@ -212,32 +212,32 @@ export class RenderTexture extends RenderTarget {
             this._defaultView.resize(width, height);
             this.updateViewport();
 
-            this._flags.push(RenderTextureFlags.SizeDirty);
+            this._flags.push(RenderTextureFlags.sizeDirty);
         }
 
         return this;
     }
 
     public update(): this {
-        if (this._flags.value !== RenderTextureFlags.None && this._context) {
+        if (this._flags.value !== RenderTextureFlags.none && this._context) {
             const gl = this._context;
 
-            if (this._flags.pop(RenderTextureFlags.ScaleModeDirty)) {
+            if (this._flags.pop(RenderTextureFlags.scaleModeDirty)) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
             }
 
-            if (this._flags.pop(RenderTextureFlags.WrapModeDirty)) {
+            if (this._flags.pop(RenderTextureFlags.wrapModeDirty)) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
             }
 
-            if (this._flags.pop(RenderTextureFlags.PremultiplyAlphaDirty)) {
+            if (this._flags.pop(RenderTextureFlags.premultiplyAlphaDirty)) {
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
             }
 
-            if (this._flags.pop(RenderTextureFlags.SourceDirty)) {
-                if (this._flags.pop(RenderTextureFlags.SizeDirty) || !this._source) {
+            if (this._flags.pop(RenderTextureFlags.sourceDirty)) {
+                if (this._flags.pop(RenderTextureFlags.sizeDirty) || !this._source) {
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
                 } else {
                     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this._source);

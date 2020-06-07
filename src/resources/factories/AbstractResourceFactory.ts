@@ -1,27 +1,27 @@
-import type { ResourceFactoryInterface } from "types/ResourceFactoryInterface";
-import type { StorageNames } from "types/types";
+import type { IResourceFactory } from 'types/IResourceFactory';
+import type { StorageNames } from 'types/types';
 
-export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = any> implements ResourceFactoryInterface<SourceValue, TargetValue> {
+export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = any> implements IResourceFactory<SourceValue, TargetValue> {
 
-    public readonly objectURLs: Array<string> = [];
+    public readonly objectUrls: Array<string> = [];
     public abstract readonly storageName: StorageNames;
 
     abstract async process(response: Response): Promise<SourceValue>;
     abstract async create(source: SourceValue, options?: object | null): Promise<TargetValue>;
 
-    createObjectURL(blob: Blob): string {
-        const objectURL = URL.createObjectURL(blob);
+    public createObjectUrl(blob: Blob): string {
+        const objectUrl = URL.createObjectURL(blob);
 
-        this.objectURLs.push(objectURL);
+        this.objectUrls.push(objectUrl);
 
-        return objectURL;
+        return objectUrl;
     }
 
-    destroy(): void {
-        for (const objectURL of this.objectURLs) {
-            URL.revokeObjectURL(objectURL);
+    public destroy(): void {
+        for (const objectUrl of this.objectUrls) {
+            URL.revokeObjectURL(objectUrl);
         }
 
-        this.objectURLs.length = 0;
+        this.objectUrls.length = 0;
     }
 }

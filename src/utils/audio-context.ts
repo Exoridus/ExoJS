@@ -1,4 +1,4 @@
-import { Signal } from "core/Signal";
+import { Signal } from 'core/Signal';
 
 const internalAudioContext: AudioContext = new AudioContext();
 const internalOfflineAudioContext: OfflineAudioContext = new OfflineAudioContext(1, 2, internalAudioContext.sampleRate);
@@ -6,7 +6,7 @@ const internalOfflineAudioContext: OfflineAudioContext = new OfflineAudioContext
 export const onAudioContextReady = new Signal<AudioContext>();
 
 export const getAudioContext = (): AudioContext => internalAudioContext;
-export const isAudioContextReady = (): boolean => internalAudioContext.state === "running";
+export const isAudioContextReady = (): boolean => internalAudioContext.state === 'running';
 
 export const getOfflineAudioContext = (): OfflineAudioContext => internalOfflineAudioContext;
 export const decodeAudioData = async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer> => internalOfflineAudioContext.decodeAudioData(arrayBuffer);

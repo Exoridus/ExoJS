@@ -1,8 +1,8 @@
-import type { Cloneable } from "types/types";
+import type { ICloneable } from 'types/types';
 
 let temp: Size | null = null;
 
-export class Size implements Cloneable {
+export class Size implements ICloneable {
 
     protected _width: number;
     protected _height: number;
@@ -83,9 +83,9 @@ export class Size implements Cloneable {
         // todo - check if destroy is needed
     }
 
-    public static readonly Zero = new Size(0, 0);
+    public static readonly zero = new Size(0, 0);
 
-    public static get Temp(): Size {
+    public static get temp(): Size {
         if (temp === null) {
             temp = new Size();
         }

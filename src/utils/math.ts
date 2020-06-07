@@ -1,15 +1,15 @@
 import type { Vector } from 'math/Vector';
 
-export const Tau = Math.PI * 2;
+export const tau = Math.PI * 2;
 
-export const RadiansPerDegree = Math.PI / 180;
+export const radiansPerDegree = Math.PI / 180;
 
-export const DegreesPerRadian = 180 / Math.PI;
+export const degreesPerRadian = 180 / Math.PI;
 
 export const enum VoronoiRegion {
-    Left = -1,
-    Middle = 0,
-    Right = 1,
+    left = -1,
+    middle = 0,
+    right = 1,
 }
 
 export const trimRotation = (degrees: number): number => {
@@ -18,9 +18,9 @@ export const trimRotation = (degrees: number): number => {
     return rotation < 0 ? rotation + 360 : rotation;
 };
 
-export const degreesToRadians = (degree: number): number => degree * RadiansPerDegree;
+export const degreesToRadians = (degree: number): number => degree * radiansPerDegree;
 
-export const radiansToDegrees = (radian: number): number => radian * DegreesPerRadian;
+export const radiansToDegrees = (radian: number): number => radian * degreesPerRadian;
 
 export const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
@@ -104,10 +104,10 @@ export const getVoronoiRegion = (line: Vector, point: Vector): VoronoiRegion => 
     const product = point.dot(line.x, line.y);
 
     if (product < 0) {
-        return VoronoiRegion.Left;
+        return VoronoiRegion.left;
     } else if (product > line.lengthSq) {
-        return VoronoiRegion.Right;
+        return VoronoiRegion.right;
     } else {
-        return VoronoiRegion.Middle;
+        return VoronoiRegion.middle;
     }
 };

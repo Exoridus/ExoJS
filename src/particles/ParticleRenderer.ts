@@ -1,10 +1,10 @@
 import type { RenderBuffer } from 'rendering/RenderBuffer';
 import { VertexArrayObject } from 'rendering/VertexArrayObject';
 import type { ParticleSystem } from './ParticleSystem';
-import vertexSource from "./glsl/particle.vert";
-import fragmentSource from "./glsl/particle.frag";
-import { AbstractRenderer } from "rendering/AbstractRenderer";
-import type { View } from "rendering/View";
+import vertexSource from './glsl/particle.vert';
+import fragmentSource from './glsl/particle.frag';
+import { AbstractRenderer } from 'rendering/AbstractRenderer';
+import type { View } from 'rendering/View';
 
 export class ParticleRenderer extends AbstractRenderer {
 
@@ -97,7 +97,7 @@ export class ParticleRenderer extends AbstractRenderer {
                 = uint32View[index + 17]
                 = uint32View[index + 26]
                 = uint32View[index + 35]
-                = tint.toRGBA();
+                = tint.toRgba();
 
             this.batchIndex++;
         }
@@ -105,7 +105,7 @@ export class ParticleRenderer extends AbstractRenderer {
         return this;
     }
 
-    protected createVAO(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
+    protected createVao(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
         return new VertexArrayObject(gl)
             .addIndex(indexBuffer)
             .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'), gl.FLOAT, false, this.attributeCount, 0)

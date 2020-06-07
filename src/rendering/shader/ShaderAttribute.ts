@@ -10,7 +10,7 @@ export class ShaderAttribute {
     public readonly type: number;
     public readonly size: number;
 
-    constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, name: string, type: number) {
+    public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, name: string, type: number) {
         const location = gl.getAttribLocation(program, name);
 
         this._context = gl;
@@ -22,7 +22,7 @@ export class ShaderAttribute {
         this.size = primitiveByteSizeMapping[type];
     }
 
-    destroy(): void {
+    public destroy(): void {
         // todo - check if destroy is needed
     }
 }

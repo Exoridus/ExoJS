@@ -1,4 +1,4 @@
-export interface DatabaseInterface {
+export interface IDatabase {
     readonly name: string;
     readonly version: number;
     readonly connected: boolean;

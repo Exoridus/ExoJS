@@ -1,8 +1,8 @@
-import type { DatabaseInterface } from "types/DatabaseInterface";
-import { supportsIndexedDB } from "utils/core";
-import { ResourceTypes } from "types/types";
+import type { IDatabase } from 'types/IDatabase';
+import { supportsIndexedDb } from 'utils/core';
+import { ResourceTypes } from 'types/types';
 
-export class IndexedDBDatabase implements DatabaseInterface {
+export class IndexedDbDatabase implements IDatabase {
 
     public readonly name: string;
     public readonly version: number;
@@ -11,12 +11,12 @@ export class IndexedDBDatabase implements DatabaseInterface {
     private _connected = false;
     private _database: IDBDatabase | null = null;
 
-    get connected(): boolean {
+    public get connected(): boolean {
         return this._connected;
     }
 
-    constructor(name: string, version: number) {
-        if (!supportsIndexedDB) {
+    public constructor(name: string, version: number) {
+        if (!supportsIndexedDb) {
             throw new Error('This browser does not support indexedDB!');
         }
 
@@ -24,13 +24,13 @@ export class IndexedDBDatabase implements DatabaseInterface {
         this.version = version;
     }
 
-    async getObjectStore(type: ResourceTypes, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
+    public async getObjectStore(type: ResourceTypes, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
         await this.connect();
 
         return this._database!.transaction([type], transactionMode).objectStore(type);
     }
 
-    async connect(): Promise<boolean> {
+    public async connect(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             const request: IDBOpenDBRequest = indexedDB.open(this.name, this.version);
 
@@ -70,7 +70,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    async disconnect(): Promise<boolean> {
+    public async disconnect(): Promise<boolean> {
         if (this._database) {
             this._database.removeEventListener('close', this._onCloseHandler);
             this._database.removeEventListener('versionchange', this._onCloseHandler);
@@ -82,7 +82,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         return true;
     }
 
-    async load<T>(type: ResourceTypes, name: string): Promise<T> {
+    public async load<T>(type: ResourceTypes, name: string): Promise<T> {
         const store = await this.getObjectStore(type);
 
         return new Promise((resolve, reject) => {
@@ -93,7 +93,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    async save<T>(type: ResourceTypes, name: string, data: any): Promise<T> {
+    public async save<T>(type: ResourceTypes, name: string, data: any): Promise<T> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
@@ -104,7 +104,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    async delete(type: ResourceTypes, name: string): Promise<boolean> {
+    public async delete(type: ResourceTypes, name: string): Promise<boolean> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
@@ -115,7 +115,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    async clearStorage(type: ResourceTypes): Promise<boolean> {
+    public async clearStorage(type: ResourceTypes): Promise<boolean> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
@@ -126,7 +126,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    async deleteStorage(): Promise<boolean> {
+    public async deleteStorage(): Promise<boolean> {
         await this.disconnect();
 
         return new Promise((resolve, reject) => {
@@ -137,7 +137,7 @@ export class IndexedDBDatabase implements DatabaseInterface {
         });
     }
 
-    destroy(): void {
+    public destroy(): void {
         this.disconnect();
         this._database = null;
     }

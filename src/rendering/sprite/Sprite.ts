@@ -2,11 +2,11 @@ import { Container } from 'rendering/Container';
 import { Rectangle } from 'math/Rectangle';
 import { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
-import type { Texture } from "rendering/texture/Texture";
-import type { RenderTexture } from "rendering/texture/RenderTexture";
-import type { RenderManager } from "rendering/RenderManager";
-import type { SpriteRenderer } from "rendering/sprite/SpriteRenderer";
-import { RendererType } from "rendering/RendererInterface";
+import type { Texture } from 'rendering/texture/Texture';
+import type { RenderTexture } from 'rendering/texture/RenderTexture';
+import type { RenderManager } from 'rendering/RenderManager';
+import type { SpriteRenderer } from 'rendering/sprite/SpriteRenderer';
+import { RendererType } from 'rendering/IRenderer';
 
 export enum SpriteFlags {
     NONE = 0x00,
@@ -28,7 +28,7 @@ export class Sprite extends Container {
     private _vertices: Float32Array = new Float32Array(8);
     private _texCoords: Uint32Array = new Uint32Array(4);
 
-    constructor(texture: Texture | RenderTexture | null) {
+    public constructor(texture: Texture | RenderTexture | null) {
         super();
 
         if (texture !== null) {
@@ -36,40 +36,40 @@ export class Sprite extends Container {
         }
     }
 
-    get texture(): Texture | RenderTexture | null {
+    public get texture(): Texture | RenderTexture | null {
         return this._texture;
     }
 
-    set texture(texture: Texture | RenderTexture | null) {
+    public set texture(texture: Texture | RenderTexture | null) {
         this.setTexture(texture);
     }
 
-    get textureFrame(): Rectangle {
+    public get textureFrame(): Rectangle {
         return this._textureFrame;
     }
 
-    set textureFrame(frame: Rectangle) {
+    public set textureFrame(frame: Rectangle) {
         this.setTextureFrame(frame);
     }
 
-    get width(): number {
+    public get width(): number {
         return Math.abs(this.scale.x) * this._textureFrame.width;
     }
 
-    set width(value: number) {
+    public set width(value: number) {
         this.scale.x = (value / this._textureFrame.width);
     }
 
-    get height(): number {
+    public get height(): number {
         return Math.abs(this.scale.y) * this._textureFrame.height;
     }
 
-    set height(value: number) {
+    public set height(value: number) {
         this.scale.y = (value / this._textureFrame.height);
     }
 
     // todo cache this
-    get vertices(): Float32Array {
+    public get vertices(): Float32Array {
         const { left, top, right, bottom } = this.getLocalBounds();
         const { a, b, x, c, d, y } = this.getGlobalTransform();
 
@@ -88,7 +88,7 @@ export class Sprite extends Container {
         return this._vertices;
     }
 
-    get texCoords(): Uint32Array {
+    public get texCoords(): Uint32Array {
         if (this._texture === null) {
             throw new Error('texCoords can only be calculated when the sprite has a texture')
         }
@@ -117,7 +117,7 @@ export class Sprite extends Container {
         return this._texCoords;
     }
 
-    setTexture(texture: Texture | RenderTexture | null): this {
+    public setTexture(texture: Texture | RenderTexture | null): this {
         if (this._texture !== texture) {
             this._texture = texture;
             this.updateTexture();
@@ -126,7 +126,7 @@ export class Sprite extends Container {
         return this;
     }
 
-    updateTexture(): this {
+    public updateTexture(): this {
         if (this._texture) {
             this._texture.updateSource();
             this.resetTextureFrame();
@@ -135,7 +135,7 @@ export class Sprite extends Container {
         return this;
     }
 
-    setTextureFrame(frame: Rectangle, resetSize = true): this {
+    public setTextureFrame(frame: Rectangle, resetSize = true): this {
         const width = this.width;
         const height = this.height;
 
@@ -154,17 +154,17 @@ export class Sprite extends Container {
         return this;
     }
 
-    resetTextureFrame(): this {
+    public resetTextureFrame(): this {
         if (!this._texture) {
             throw new Error('Cannot reset texture frame when no texture was set');
         }
 
-        return this.setTextureFrame(Rectangle.Temp.set(0, 0, this._texture.width, this._texture.height));
+        return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    render(renderManager: RenderManager): this {
+    public render(renderManager: RenderManager): this {
         if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.Sprite) as SpriteRenderer;
+            const renderer = renderManager.getRenderer(RendererType.sprite) as SpriteRenderer;
 
             renderManager.setRenderer(renderer);
             renderer.render(this);
@@ -178,7 +178,7 @@ export class Sprite extends Container {
     }
 
     // todo cache this
-    getNormals(): Array<Vector> {
+    public getNormals(): Array<Vector> {
         const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
 
         return [
@@ -189,7 +189,7 @@ export class Sprite extends Container {
         ];
     }
 
-    project(axis: Vector, result: Interval = new Interval()): Interval {
+    public project(axis: Vector, result: Interval = new Interval()): Interval {
         const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
         const proj1 = axis.dot(x1, y1);
         const proj2 = axis.dot(x2, y2);
@@ -202,13 +202,13 @@ export class Sprite extends Container {
         );
     }
 
-    contains(x: number, y: number): boolean {
+    public contains(x: number, y: number): boolean {
         if ((this.rotation % 90 === 0)) {
             return this.getBounds().contains(x, y);
         }
 
         const [x1, y1, x2, y2, x3, y3] = this.vertices,
-            temp = Vector.Temp,
+            temp = Vector.temp,
             vecA = temp.set(x2 - x1, y2 - y1),
             dotA = vecA.dot(x - x1, y - y1),
             lenA = vecA.lengthSq,
@@ -220,7 +220,7 @@ export class Sprite extends Container {
             && (dotB > 0) && (dotB <= lenB);
     }
 
-    destroy(): void {
+    public destroy(): void {
         super.destroy();
 
         this._textureFrame.destroy();

@@ -1,4 +1,4 @@
-import type { Rectangle } from "math/Rectangle";
+import type { Rectangle } from 'math/Rectangle';
 
 export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
 export type TimeInterval = 1 | 1000 | 60000 | 3600000;
@@ -13,7 +13,7 @@ export type Readonly<T> = {
 
 export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | null;
 
-export interface PlaybackOptions {
+export interface IPlaybackOptions {
     volume: number;
     playbackRate: number;
     loop: boolean;
@@ -21,37 +21,37 @@ export interface PlaybackOptions {
     time: number;
 }
 
-export interface Cloneable {
+export interface ICloneable {
     clone(): this;
     copy(source: this): this;
 }
 
-export interface Deletable {
+export interface IDestroyable {
     destroy(): void;
 }
 
-export interface WithBoundingBox {
+export interface IWithBoundingBox {
     getBounds(): Rectangle;
 }
 
 export enum ResourceTypes {
-    Font = 'font',
-    Video = 'video',
-    Music = 'music',
-    Sound = 'sound',
-    Image = 'image',
-    Texture = 'texture',
-    Text = 'text',
-    Json = 'json',
-    Svg = 'svg',
+    font = 'font',
+    video = 'video',
+    music = 'music',
+    sound = 'sound',
+    image = 'image',
+    texture = 'texture',
+    text = 'text',
+    json = 'json',
+    svg = 'svg',
 }
 
 export enum StorageNames {
-    Font = 'font',
-    Video = 'video',
-    Music = 'music',
-    Sound = 'sound',
-    Image = 'image',
-    Text = 'text',
-    Json = 'json',
+    font = 'font',
+    video = 'video',
+    music = 'music',
+    sound = 'sound',
+    image = 'image',
+    text = 'text',
+    json = 'json',
 }

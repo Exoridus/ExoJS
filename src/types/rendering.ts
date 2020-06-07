@@ -1,11 +1,11 @@
 import TypedArray = NodeJS.TypedArray;
 
 export enum BlendModes {
-    NORMAL = 0,
-    ADDITIVE = 1,
-    SUBTRACT = 2,
-    MULTIPLY = 3,
-    SCREEN = 4,
+    normal = 0,
+    additive = 1,
+    subtract = 2,
+    multiply = 3,
+    screen = 4,
 }
 
 export enum ScaleModes {
@@ -56,6 +56,7 @@ export enum BufferUsage {
     STREAM_COPY = 0x88E2,
 }
 
+// @eslint-ignore
 export enum ShaderPrimitives {
     INT = 0x1404,
     INT_VEC2 = 0x8B53,
@@ -102,7 +103,7 @@ export const primitiveByteSizeMapping: { [key: number]: number } = {
     [ShaderPrimitives.SAMPLER_2D]: 1,
 };
 
-export const PrimitiveArrayConstructors: { [key: number]: Float32ArrayConstructor | Int32ArrayConstructor | Uint8ArrayConstructor } = {
+export const primitiveArrayConstructors: { [key: number]: Float32ArrayConstructor | Int32ArrayConstructor | Uint8ArrayConstructor } = {
     [ShaderPrimitives.FLOAT]: Float32Array,
     [ShaderPrimitives.FLOAT_VEC2]: Float32Array,
     [ShaderPrimitives.FLOAT_VEC3]: Float32Array,
@@ -127,7 +128,7 @@ export const PrimitiveArrayConstructors: { [key: number]: Float32ArrayConstructo
 
 export type PrimitiveUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => void;
 
-export const PrimitiveUploadFunctions: { [key: number]: PrimitiveUploadFunction } = {
+export const primitiveUploadFunctions: { [key: number]: PrimitiveUploadFunction } = {
     [ShaderPrimitives.FLOAT]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniform1f(location, value[0]),
     [ShaderPrimitives.FLOAT_VEC2]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniform2fv(location, value),
     [ShaderPrimitives.FLOAT_VEC3]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniform3fv(location, value),
@@ -150,7 +151,7 @@ export const PrimitiveUploadFunctions: { [key: number]: PrimitiveUploadFunction 
     [ShaderPrimitives.SAMPLER_2D]: (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => gl.uniform1i(location, value[0]),
 };
 
-export const PrimitiveTypeNames: { [key: number]: string } = {
+export const primitiveTypeNames: { [key: number]: string } = {
     [ShaderPrimitives.FLOAT]: 'FLOAT',
     [ShaderPrimitives.FLOAT_VEC2]: 'FLOAT_VEC2',
     [ShaderPrimitives.FLOAT_VEC3]: 'FLOAT_VEC3',

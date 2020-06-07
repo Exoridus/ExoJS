@@ -1,11 +1,11 @@
 import { Rectangle } from 'math/Rectangle';
 import type { SceneNode } from './SceneNode';
-import type { Deletable, WithBoundingBox } from "types/types";
+import type { IDestroyable, IWithBoundingBox } from 'types/types';
 
-export class Quadtree implements WithBoundingBox, Deletable {
+export class Quadtree implements IWithBoundingBox, IDestroyable {
 
-    public static MaxSceneNodes = 50;
-    public static MaxLevel = 5;
+    public static maxSceneNodes = 50;
+    public static maxLevel = 5;
 
     public readonly level: number;
 
@@ -29,7 +29,7 @@ export class Quadtree implements WithBoundingBox, Deletable {
 
         this._sceneNodes.add(sceneNode);
 
-        if (this._sceneNodes.size > Quadtree.MaxSceneNodes && this.level < Quadtree.MaxLevel) {
+        if (this._sceneNodes.size > Quadtree.maxSceneNodes && this.level < Quadtree.maxLevel) {
             this._split();
         }
 
@@ -90,10 +90,10 @@ export class Quadtree implements WithBoundingBox, Deletable {
             const halfHeight = (height / 2) | 0;
             const nextLevel = this.level + 1;
 
-            this._quadTrees.set(0, new Quadtree(Rectangle.Temp.set(left, top, halfWidth, halfHeight), nextLevel));
-            this._quadTrees.set(1, new Quadtree(Rectangle.Temp.set(left + halfWidth, top, halfWidth, halfHeight), nextLevel));
-            this._quadTrees.set(2, new Quadtree(Rectangle.Temp.set(left, top + halfHeight, halfWidth, halfHeight), nextLevel));
-            this._quadTrees.set(3, new Quadtree(Rectangle.Temp.set(left + halfWidth, top + halfHeight, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(0, new Quadtree(Rectangle.temp.set(left, top, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(1, new Quadtree(Rectangle.temp.set(left + halfWidth, top, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(2, new Quadtree(Rectangle.temp.set(left, top + halfHeight, halfWidth, halfHeight), nextLevel));
+            this._quadTrees.set(3, new Quadtree(Rectangle.temp.set(left + halfWidth, top + halfHeight, halfWidth, halfHeight), nextLevel));
         }
 
         this._passSceneNodesToQuadTrees();

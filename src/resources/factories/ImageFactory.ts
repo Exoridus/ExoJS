@@ -1,20 +1,20 @@
-import { determineMimeType } from "utils/resources";
-import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { StorageNames } from "types/types";
+import { determineMimeType } from 'utils/resources';
+import { AbstractResourceFactory } from './AbstractResourceFactory';
+import { StorageNames } from 'types/types';
 
-interface ImageFactoryOptions {
+interface IImageFactoryOptions {
     mimeType?: string;
 }
 
 export class ImageFactory extends AbstractResourceFactory<ArrayBuffer, HTMLImageElement> {
 
-    public readonly storageName: StorageNames = StorageNames.Image;
+    public readonly storageName: StorageNames = StorageNames.image;
 
-    async process(response: Response): Promise<ArrayBuffer> {
+    public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: ImageFactoryOptions = {}): Promise<HTMLImageElement> {
+    public async create(source: ArrayBuffer, options: IImageFactoryOptions = {}): Promise<HTMLImageElement> {
         const blob = new Blob([source], { type: options.mimeType ?? determineMimeType(source) });
 
         return new Promise((resolve, reject) => {
@@ -24,7 +24,7 @@ export class ImageFactory extends AbstractResourceFactory<ArrayBuffer, HTMLImage
             image.addEventListener('error', () => reject(Error('Error loading image source.')));
             image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
 
-            image.src = this.createObjectURL(blob);
+            image.src = this.createObjectUrl(blob);
         });
     }
 }

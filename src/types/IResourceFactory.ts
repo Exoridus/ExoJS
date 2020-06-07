@@ -1,6 +1,6 @@
-import type { StorageNames } from "types/types";
+import type { StorageNames } from 'types/types';
 
-export interface ResourceFactoryInterface<SourceValue = any, TargetValue = any> {
+export interface IResourceFactory<SourceValue = any, TargetValue = any> {
 
     readonly storageName: StorageNames;
 

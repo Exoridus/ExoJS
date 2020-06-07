@@ -1,28 +1,28 @@
-import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import type { SamplerOptions } from "rendering/texture/Sampler";
-import type { PlaybackOptions } from "types/types";
-import { determineMimeType } from "utils/resources";
-import { StorageNames } from "types/types";
-import { Video } from "rendering/Video";
+import { AbstractResourceFactory } from './AbstractResourceFactory';
+import type { ISamplerOptions } from 'rendering/texture/Sampler';
+import type { IPlaybackOptions } from 'types/types';
+import { determineMimeType } from 'utils/resources';
+import { StorageNames } from 'types/types';
+import { Video } from 'rendering/Video';
 
 const onceListenerOption = { once: true };
 
-interface VideoFactoryOptions {
+interface IVideoFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
-    playbackOptions?: Partial<PlaybackOptions>;
-    samplerOptions?: Partial<SamplerOptions>;
+    playbackOptions?: Partial<IPlaybackOptions>;
+    samplerOptions?: Partial<ISamplerOptions>;
 }
 
 export class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video> {
 
-    public readonly storageName: StorageNames = StorageNames.Video;
+    public readonly storageName: StorageNames = StorageNames.video;
 
-    async process(response: Response): Promise<ArrayBuffer> {
+    public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: VideoFactoryOptions = {}): Promise<Video> {
+    public async create(source: ArrayBuffer, options: IVideoFactoryOptions = {}): Promise<Video> {
         const { mimeType, loadEvent, playbackOptions, samplerOptions } = options;
         const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
@@ -36,7 +36,7 @@ export class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video> {
             video.addEventListener(loadEvent ?? 'canplaythrough', () => resolve(new Video(video, playbackOptions, samplerOptions)), onceListenerOption);
 
             video.preload = 'auto';
-            video.src = this.createObjectURL(blob);
+            video.src = this.createObjectUrl(blob);
         });
     }
 }

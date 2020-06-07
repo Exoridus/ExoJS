@@ -1,8 +1,8 @@
-import type { FontFaceDescriptors } from "css-font-loading-module";
-import { AbstractResourceFactory } from "./AbstractResourceFactory";
-import { StorageNames } from "types/types";
+import type { FontFaceDescriptors } from 'css-font-loading-module';
+import { AbstractResourceFactory } from './AbstractResourceFactory';
+import { StorageNames } from 'types/types';
 
-export interface FontFactoryOptions {
+export interface IFontFactoryOptions {
     family: string;
     descriptors?: FontFaceDescriptors;
     addToDocument?: boolean;
@@ -10,13 +10,13 @@ export interface FontFactoryOptions {
 
 export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> {
 
-    public readonly storageName: StorageNames = StorageNames.Font;
+    public readonly storageName: StorageNames = StorageNames.font;
 
-    async process(response: Response): Promise<ArrayBuffer> {
+    public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    async create(source: ArrayBuffer, options: FontFactoryOptions): Promise<FontFace> {
+    public async create(source: ArrayBuffer, options: IFontFactoryOptions): Promise<FontFace> {
         const { family, descriptors, addToDocument } = options;
         const fontFace = await new FontFace(family, source, descriptors).load();
 

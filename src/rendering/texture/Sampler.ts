@@ -1,6 +1,6 @@
-import type { ScaleModes, WrapModes } from "types/rendering";
+import type { ScaleModes, WrapModes } from 'types/rendering';
 
-export interface SamplerOptions {
+export interface ISamplerOptions {
     scaleMode: ScaleModes;
     wrapMode: WrapModes;
     premultiplyAlpha: boolean;
@@ -18,7 +18,7 @@ export class Sampler {
     private _generateMipMap: boolean;
     private _flipY: boolean;
 
-    constructor(gl: WebGL2RenderingContext, options: SamplerOptions) {
+    public constructor(gl: WebGL2RenderingContext, options: ISamplerOptions) {
         const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
 
         this._context = gl;
@@ -33,27 +33,27 @@ export class Sampler {
         this.updateScaleModeParameters();
     }
 
-    get sampler(): WebGLSampler | null {
+    public get sampler(): WebGLSampler | null {
         return this._sampler;
     }
 
-    get scaleMode(): ScaleModes {
+    public get scaleMode(): ScaleModes {
         return this._scaleMode;
     }
 
-    set scaleMode(scaleMode: ScaleModes) {
+    public set scaleMode(scaleMode: ScaleModes) {
         this.setScaleMode(scaleMode);
     }
 
-    get wrapMode(): WrapModes {
+    public get wrapMode(): WrapModes {
         return this._wrapMode;
     }
 
-    set wrapMode(wrapMode: WrapModes) {
+    public set wrapMode(wrapMode: WrapModes) {
         this.setWrapMode(wrapMode);
     }
 
-    setScaleMode(scaleMode: ScaleModes): this {
+    public setScaleMode(scaleMode: ScaleModes): this {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
             this.updateScaleModeParameters();
@@ -62,7 +62,7 @@ export class Sampler {
         return this;
     }
 
-    setWrapMode(wrapMode: WrapModes): this {
+    public setWrapMode(wrapMode: WrapModes): this {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
             this.updateWrapModeParameters();
@@ -71,19 +71,19 @@ export class Sampler {
         return this;
     }
 
-    bind(textureUnit: number): this {
+    public bind(textureUnit: number): this {
         this._context.bindSampler(textureUnit, this._sampler);
 
         return this;
     }
 
-    destroy(): void {
+    public destroy(): void {
         this._context.deleteSampler(this._sampler);
     }
 
     private updateScaleModeParameters(): void {
         if (this._sampler === null) {
-            throw new Error("Sampler is null. Could not update sampler parameters.");
+            throw new Error('Sampler is null. Could not update sampler parameters.');
         }
 
         const gl = this._context;
@@ -94,7 +94,7 @@ export class Sampler {
 
     private updateWrapModeParameters(): void {
         if (this._sampler === null) {
-            throw new Error("Sampler is null. Could not update sampler parameters.");
+            throw new Error('Sampler is null. Could not update sampler parameters.');
         }
 
         const gl = this._context;

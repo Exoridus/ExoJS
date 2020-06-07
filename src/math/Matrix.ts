@@ -1,5 +1,5 @@
 import { degreesToRadians } from 'utils/math';
-import type { Cloneable } from "types/types";
+import type { ICloneable } from 'types/types';
 
 let temp: Matrix | null = null;
 
@@ -8,7 +8,7 @@ let temp: Matrix | null = null;
  * | c | d | y |
  * | e | f | z |
  */
-export class Matrix implements Cloneable {
+export class Matrix implements ICloneable {
 
     public a: number;
     public b: number;
@@ -107,7 +107,7 @@ export class Matrix implements Cloneable {
             (this.x * (this.f * this.c - this.d * this.e));
 
         if (determinant === 0) {
-            return result.copy(Matrix.Identity);
+            return result.copy(Matrix.identity);
         }
 
         return result.set(
@@ -126,7 +126,7 @@ export class Matrix implements Cloneable {
     }
 
     public translate(x: number, y: number = x): Matrix {
-        return this.combine(Matrix.Temp.set(
+        return this.combine(Matrix.temp.set(
             1, 0, x,
             0, 1, y,
             0, 0, 1
@@ -138,7 +138,7 @@ export class Matrix implements Cloneable {
         const cos = Math.cos(radian);
         const sin = Math.sin(radian);
 
-        return this.combine(Matrix.Temp.set(
+        return this.combine(Matrix.temp.set(
             cos, -sin, (centerX * (1 - cos)) + (centerY * sin),
             sin,  cos, (centerY * (1 - cos)) - (centerX * sin),
             0, 0, 1
@@ -146,7 +146,7 @@ export class Matrix implements Cloneable {
     }
 
     public scale(scaleX: number, scaleY: number = scaleX, centerX = 0, centerY: number = centerX): Matrix {
-        return this.combine(Matrix.Temp.set(
+        return this.combine(Matrix.temp.set(
             scaleX, 0, (centerX * (1 - scaleX)),
             0, scaleY, (centerY * (1 - scaleY)),
             0, 0, 1
@@ -175,9 +175,9 @@ export class Matrix implements Cloneable {
         }
     }
 
-    public static readonly Identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
+    public static readonly identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
 
-    public static get Temp(): Matrix {
+    public static get temp(): Matrix {
         if (temp === null) {
             temp = new Matrix();
         }

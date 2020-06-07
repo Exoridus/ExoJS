@@ -3,23 +3,23 @@ import { Size } from 'math/Size';
 import { Flags } from 'math/Flags';
 
 export enum PointerStateFlag {
-    None = 0,
-    Over = 1 << 0,
-    Leave = 1 << 1,
-    Down = 1 << 2,
-    Move = 1 << 3,
-    Up = 1 << 4,
-    Cancel = 1 << 5,
+    none = 0,
+    over = 1 << 0,
+    leave = 1 << 1,
+    down = 1 << 2,
+    move = 1 << 3,
+    up = 1 << 4,
+    cancel = 1 << 5,
 }
 
 export enum PointerState {
-    Unknown,
-    InsideCanvas,
-    OutsideCanvas,
-    Pressed,
-    Moving,
-    Released,
-    Cancelled,
+    unknown,
+    insideCanvas,
+    outsideCanvas,
+    pressed,
+    moving,
+    released,
+    cancelled,
 }
 
 export class Pointer {
@@ -34,7 +34,7 @@ export class Pointer {
     private _buttons: number;
     private _pressure: number;
     private _rotation: number;
-    private _currentState: PointerState = PointerState.Unknown;
+    private _currentState: PointerState = PointerState.unknown;
 
     public constructor(event: PointerEvent, canvas: HTMLCanvasElement) {
         const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist } = event;
@@ -50,7 +50,7 @@ export class Pointer {
         this._pressure = pressure;
         this._rotation = twist;
 
-        this.stateFlags.push(PointerStateFlag.Over);
+        this.stateFlags.push(PointerStateFlag.over);
     }
 
     public get x(): number {
@@ -87,38 +87,38 @@ export class Pointer {
 
     public handleEnter(event: PointerEvent): void {
         this.handleEvent(event);
-        this._currentState = PointerState.InsideCanvas;
+        this._currentState = PointerState.insideCanvas;
     }
 
     public handleLeave(event: PointerEvent): void {
         this.handleEvent(event);
-        this.stateFlags.push(PointerStateFlag.Leave);
-        this._currentState = PointerState.OutsideCanvas;
+        this.stateFlags.push(PointerStateFlag.leave);
+        this._currentState = PointerState.outsideCanvas;
     }
 
     public handlePress(event: PointerEvent): void {
         this.handleEvent(event);
         this.startPos.copy(this.position);
-        this.stateFlags.push(PointerStateFlag.Down);
-        this._currentState = PointerState.Pressed;
+        this.stateFlags.push(PointerStateFlag.down);
+        this._currentState = PointerState.pressed;
     }
 
     public handleMove(event: PointerEvent): void {
         this.handleEvent(event);
-        this.stateFlags.push(PointerStateFlag.Move);
-        this._currentState = PointerState.Moving;
+        this.stateFlags.push(PointerStateFlag.move);
+        this._currentState = PointerState.moving;
     }
 
     public handleRelease(event: PointerEvent): void {
         this.handleEvent(event);
-        this.stateFlags.push(PointerStateFlag.Up);
-        this._currentState = PointerState.Released;
+        this.stateFlags.push(PointerStateFlag.up);
+        this._currentState = PointerState.released;
     }
 
     public handleCancel(event: PointerEvent): void {
         this.handleEvent(event);
-        this.stateFlags.push(PointerStateFlag.Cancel);
-        this._currentState = PointerState.Cancelled;
+        this.stateFlags.push(PointerStateFlag.cancel);
+        this._currentState = PointerState.cancelled;
     }
 
     public destroy(): void {

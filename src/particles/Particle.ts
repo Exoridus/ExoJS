@@ -2,19 +2,19 @@ import { Vector } from 'math/Vector';
 import { Color } from 'core/Color';
 import { Time } from 'core/Time';
 import type { ParticleOptions } from './emitters/ParticleOptions';
-import type { ParticleProperties } from "particles/ParticleProperties";
-import { trimRotation } from "utils/math";
+import type { IParticleProperties } from 'particles/IParticleProperties';
+import { trimRotation } from 'utils/math';
 
-export class Particle implements ParticleProperties {
-    private _totalLifetime = Time.OneSecond.clone();
-    private _elapsedLifetime = Time.Zero.clone();
-    private _position = Vector.Zero.clone();
-    private _velocity = Vector.Zero.clone();
-    private _scale = Vector.One.clone();
+export class Particle implements IParticleProperties {
+    private _totalLifetime = Time.oneSecond.clone();
+    private _elapsedLifetime = Time.zero.clone();
+    private _position = Vector.zero.clone();
+    private _velocity = Vector.zero.clone();
+    private _scale = Vector.one.clone();
     private _rotation = 0;
     private _rotationSpeed = 0;
     private _textureIndex = 0;
-    private _tint = Color.White.clone();
+    private _tint = Color.white.clone();
 
     public get totalLifetime(): Time {
         return this._totalLifetime;
@@ -89,7 +89,7 @@ export class Particle implements ParticleProperties {
     }
 
     public get remainingLifetime(): Time {
-        return Time.Temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
+        return Time.temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
     }
 
     public get elapsedRatio(): number {

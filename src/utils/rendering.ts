@@ -14,14 +14,14 @@ export const createQuadIndices = (size: number): Uint16Array => {
     return data;
 };
 
-export interface CreateCanvasOptions {
+export interface ICreateCanvasOptions {
     canvas?: HTMLCanvasElement;
     fillStyle?: string;
     width?: number;
     height?: number;
 }
 
-export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasElement => {
+export const createCanvas = (options: ICreateCanvasOptions = {}): HTMLCanvasElement => {
     const { canvas, fillStyle, width, height } = options;
 
     const newCanvas = canvas ?? document.createElement('canvas');
@@ -34,4 +34,22 @@ export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasEleme
     context.fillRect(0, 0, newCanvas.width, newCanvas.height);
 
     return newCanvas;
+};
+
+const heightCache: Map<string, number> = new Map<string, number>();
+
+export const determineFontHeight = (font: string): number => {
+    if (!heightCache.has(font)) {
+        const body = document.body;
+        const dummy = document.createElement('div');
+
+        dummy.appendChild(document.createTextNode('M'));
+        dummy.setAttribute('style', `font: ${font};position:absolute;top:0;left:0`);
+
+        body.appendChild(dummy);
+        heightCache.set(font, dummy.offsetHeight);
+        body.removeChild(dummy);
+    }
+
+    return heightCache.get(font)!;
 };

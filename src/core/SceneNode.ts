@@ -4,24 +4,24 @@ import { Rectangle } from 'math/Rectangle';
 import { Bounds } from './Bounds';
 import { ObservableVector } from 'math/ObservableVector';
 import type { Container } from 'rendering/Container';
-import type { Vector } from "math/Vector";
-import { Interval } from "math/Interval";
-import { Collidable, Collision, CollisionType } from "types/Collision";
+import type { Vector } from 'math/Vector';
+import { Interval } from 'math/Interval';
+import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
     intersectionLineRect,
     intersectionPointRect,
     intersectionRectCircle,
     intersectionRectEllipse,
-    intersectionSAT
-} from "utils/collision-detection";
-import type { Circle } from "math/Circle";
-import type { Ellipse } from "math/Ellipse";
-import type { Line } from "math/Line";
-import type { Polygon } from "math/Polygon";
+    intersectionSat
+} from 'utils/collision-detection';
+import type { Circle } from 'math/Circle';
+import type { Ellipse } from 'math/Ellipse';
+import type { Line } from 'math/Line';
+import type { Polygon } from 'math/Polygon';
 
-export class SceneNode extends Transformable implements Collidable {
+export class SceneNode extends Transformable implements ICollidable {
 
-    public readonly collisionType: CollisionType = CollisionType.SceneNode;
+    public readonly collisionType: CollisionType = CollisionType.sceneNode;
 
     protected _bounds = new Bounds();
     private _globalTransform = new Matrix();
@@ -113,24 +113,24 @@ export class SceneNode extends Transformable implements Collidable {
         return this.getBounds().project(axis, result);
     }
 
-    public intersectsWith(target: Collidable): boolean {
+    public intersectsWith(target: ICollidable): boolean {
         if (this.isAlignedBox) {
             return this.getBounds().intersectsWith(target);
         }
 
         switch (target.collisionType) {
-            case CollisionType.SceneNode: return intersectionSAT(this, target as SceneNode);
-            case CollisionType.Rectangle: return intersectionSAT(this, target as Rectangle);
-            case CollisionType.Polygon: return intersectionSAT(this, target as Polygon);
-            case CollisionType.Circle: return intersectionRectCircle(this.getBounds(), target as Circle);
-            case CollisionType.Ellipse: return intersectionRectEllipse(this.getBounds(), target as Ellipse);
-            case CollisionType.Line: return intersectionLineRect(target as Line, this.getBounds());
-            case CollisionType.Point: return intersectionPointRect(target as Vector, this.getBounds());
+            case CollisionType.sceneNode: return intersectionSat(this, target as SceneNode);
+            case CollisionType.rectangle: return intersectionSat(this, target as Rectangle);
+            case CollisionType.polygon: return intersectionSat(this, target as Polygon);
+            case CollisionType.circle: return intersectionRectCircle(this.getBounds(), target as Circle);
+            case CollisionType.ellipse: return intersectionRectEllipse(this.getBounds(), target as Ellipse);
+            case CollisionType.line: return intersectionLineRect(target as Line, this.getBounds());
+            case CollisionType.point: return intersectionPointRect(target as Vector, this.getBounds());
             default: return false;
         }
     }
 
-    public collidesWith(target: Collidable): Collision | null {
+    public collidesWith(target: ICollidable): ICollisionResponse | null {
         if (this.isAlignedBox) {
             return this.getBounds().collidesWith(target);
         }

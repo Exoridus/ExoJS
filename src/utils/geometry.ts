@@ -1,7 +1,7 @@
 import earcut from 'earcut';
 import { Geometry } from 'rendering/primitives/Geometry';
 import { Vector } from 'math/Vector';
-import { Tau } from 'utils/math';
+import { tau } from 'utils/math';
 
 export const buildLine = (startX: number, startY: number, endX: number, endY: number, width: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
     const points = [startX, startY, endX, endY];
@@ -269,7 +269,7 @@ export const buildRectangle = (x: number, y: number, width: number, height: numb
 export const buildStar = (centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): Geometry => {
     const startAngle = (Math.PI / -2) + rotation,
         length = points * 2,
-        delta = Tau / length,
+        delta = tau / length,
         path = [];
 
     for (let i = 0; i < length; i++) {

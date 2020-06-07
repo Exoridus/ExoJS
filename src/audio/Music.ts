@@ -1,14 +1,14 @@
 import { clamp } from 'utils/math';
-import type { PlaybackOptions } from "types/types";
-import { AbstractMedia } from "types/AbstractMedia";
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from "utils/audio-context";
+import type { IPlaybackOptions } from 'types/types';
+import { AbstractMedia } from 'types/AbstractMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 
 export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;
     private _gainNode: GainNode | null = null;
     private _sourceNode: MediaElementAudioSourceNode | null = null;
 
-    public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
+    public constructor(audioElement: HTMLAudioElement, options?: Partial<IPlaybackOptions>) {
         super(audioElement);
 
         this._audioElement = audioElement;
@@ -96,7 +96,7 @@ export class Music extends AbstractMedia {
         return this._gainNode;
     }
 
-    public play(options?: Partial<PlaybackOptions>): this {
+    public play(options?: Partial<IPlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -109,7 +109,7 @@ export class Music extends AbstractMedia {
         return this;
     }
 
-    public pause(options?: Partial<PlaybackOptions>): this {
+    public pause(options?: Partial<IPlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }

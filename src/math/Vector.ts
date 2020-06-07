@@ -1,8 +1,8 @@
 import { getDistance } from 'utils/math';
 import type { Matrix } from 'math/Matrix';
-import type { Shape } from "math/Shape";
-import { Interval } from "math/Interval";
-import { Collidable, Collision, CollisionType } from "types/Collision";
+import type { IShape } from 'math/IShape';
+import { Interval } from 'math/Interval';
+import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
     intersectionPointCircle,
     intersectionPointEllipse,
@@ -10,13 +10,13 @@ import {
     intersectionPointPoint,
     intersectionPointPoly,
     intersectionPointRect
-} from "utils/collision-detection";
-import { Rectangle } from "math/Rectangle";
-import type { Polygon } from "math/Polygon";
-import type { Circle } from "math/Circle";
-import type { Ellipse } from "math/Ellipse";
-import type { Line } from "math/Line";
-import type { SceneNode } from "core/SceneNode";
+} from 'utils/collision-detection';
+import { Rectangle } from 'math/Rectangle';
+import type { Polygon } from 'math/Polygon';
+import type { Circle } from 'math/Circle';
+import type { Ellipse } from 'math/Ellipse';
+import type { Line } from 'math/Line';
+import type { SceneNode } from 'core/SceneNode';
 
 let temp: Vector | null = null;
 
@@ -167,9 +167,9 @@ export abstract class AbstractVector {
     public abstract destroy(): void;
 }
 
-export class Vector extends AbstractVector implements Shape {
+export class Vector extends AbstractVector implements IShape {
 
-    public readonly collisionType: CollisionType = CollisionType.Point;
+    public readonly collisionType: CollisionType = CollisionType.point;
 
     public x: number;
     public y: number;
@@ -191,29 +191,29 @@ export class Vector extends AbstractVector implements Shape {
         return this;
     }
 
-    public intersectsWith(target: Collidable): boolean {
+    public intersectsWith(target: ICollidable): boolean {
         switch (target.collisionType) {
-            case CollisionType.SceneNode: return intersectionPointRect(this, (target as SceneNode).getBounds());
-            case CollisionType.Rectangle: return intersectionPointRect(this, target as Rectangle);
-            case CollisionType.Polygon: return intersectionPointPoly(this, target as Polygon);
-            case CollisionType.Circle: return intersectionPointCircle(this, target as Circle);
-            case CollisionType.Ellipse: return intersectionPointEllipse(this, target as Ellipse);
-            case CollisionType.Line: return intersectionPointLine(this, target as Line);
-            case CollisionType.Point: return intersectionPointPoint(this, target as Vector);
+            case CollisionType.sceneNode: return intersectionPointRect(this, (target as SceneNode).getBounds());
+            case CollisionType.rectangle: return intersectionPointRect(this, target as Rectangle);
+            case CollisionType.polygon: return intersectionPointPoly(this, target as Polygon);
+            case CollisionType.circle: return intersectionPointCircle(this, target as Circle);
+            case CollisionType.ellipse: return intersectionPointEllipse(this, target as Ellipse);
+            case CollisionType.line: return intersectionPointLine(this, target as Line);
+            case CollisionType.point: return intersectionPointPoint(this, target as Vector);
             default: return false;
         }
     }
 
-    public collidesWith(target: Collidable): Collision | null {
+    public collidesWith(target: ICollidable): ICollisionResponse | null {
         return null;
     }
 
     public getBounds(): Rectangle {
-        return Rectangle.Temp.set(this.x, this.y, 0, 0);
+        return Rectangle.temp.set(this.x, this.y, 0, 0);
     }
 
     public contains(x: number, y: number): boolean {
-        return intersectionPointPoint(Vector.Temp.set(x, y), this);
+        return intersectionPointPoint(Vector.temp.set(x, y), this);
     }
 
     public getNormals(): Array<Vector> {
@@ -230,7 +230,7 @@ export class Vector extends AbstractVector implements Shape {
         // todo - check if destroy is needed
     }
 
-    public static get Temp(): Vector {
+    public static get temp(): Vector {
         if (temp === null) {
             temp = new Vector();
         }
@@ -238,8 +238,8 @@ export class Vector extends AbstractVector implements Shape {
         return temp;
     }
 
-    public static readonly Zero = new Vector(0, 0);
-    public static readonly One = new Vector(1, 1);
+    public static readonly zero = new Vector(0, 0);
+    public static readonly one = new Vector(1, 1);
 
     public static add(v1: Vector, v2: Vector): Vector {
         return new Vector(v1.x + v2.x, v1.y + v2.y);

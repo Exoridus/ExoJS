@@ -1,8 +1,8 @@
 import type { GamepadMapping } from './GamepadMapping';
-import { Signal } from "core/Signal";
-import { ChannelOffset, ChannelSize } from "types/input";
+import { Signal } from 'core/Signal';
+import { ChannelOffset, ChannelSize } from 'types/input';
 
-type OriginalGamepad = ReturnType<Navigator["getGamepads"]>[0];
+type OriginalGamepad = ReturnType<Navigator['getGamepads']>[0];
 
 export class Gamepad {
 
@@ -18,7 +18,7 @@ export class Gamepad {
 
     public constructor(index: number, channels: Float32Array, mapping: GamepadMapping) {
         this._index = index;
-        this._channelOffset = ChannelOffset.Gamepads + (index * ChannelSize.Gamepad);
+        this._channelOffset = ChannelOffset.gamepads + (index * ChannelSize.gamepad);
         this._channels = channels;
         this._mapping = mapping;
     }
@@ -76,7 +76,7 @@ export class Gamepad {
 
         for (const mapping of mappingButtons) {
             const { index, channel } = mapping;
-            const offsetChannel = this._channelOffset + (channel ^ ChannelOffset.Gamepads);
+            const offsetChannel = this._channelOffset + (channel ^ ChannelOffset.gamepads);
 
             if (index in gamepadButtons) {
                 const value = mapping.transformValue(gamepadButtons[index].value) || 0;
@@ -90,7 +90,7 @@ export class Gamepad {
 
         for (const mapping of mappingAxes) {
             const { index, channel } = mapping;
-            const offsetChannel = this._channelOffset + (channel ^ ChannelOffset.Gamepads);
+            const offsetChannel = this._channelOffset + (channel ^ ChannelOffset.gamepads);
 
             if (index in gamepadAxes) {
                 const value = mapping.transformValue(gamepadAxes[index]) || 0;
@@ -113,60 +113,60 @@ export class Gamepad {
         this.onUpdate.destroy();
     }
 
-    public static readonly FaceBottom = ChannelOffset.Gamepads + 0;
-    public static readonly FaceLeft = ChannelOffset.Gamepads + 1;
-    public static readonly FaceRight = ChannelOffset.Gamepads + 2;
-    public static readonly FaceTop = ChannelOffset.Gamepads + 3;
-    public static readonly ShoulderLeftBottom = ChannelOffset.Gamepads + 4;
-    public static readonly ShoulderRightBottom = ChannelOffset.Gamepads + 5;
-    public static readonly ShoulderLeftTop = ChannelOffset.Gamepads + 6;
-    public static readonly ShoulderRightTop = ChannelOffset.Gamepads + 7;
-    public static readonly Select = ChannelOffset.Gamepads + 8;
-    public static readonly Start = ChannelOffset.Gamepads + 9;
-    public static readonly LeftStick = ChannelOffset.Gamepads + 10;
-    public static readonly RightStick = ChannelOffset.Gamepads + 11;
-    public static readonly DPadUp = ChannelOffset.Gamepads + 12;
-    public static readonly DPadDown = ChannelOffset.Gamepads + 13;
-    public static readonly DPadLeft = ChannelOffset.Gamepads + 14;
-    public static readonly DPadRight = ChannelOffset.Gamepads + 15;
-    public static readonly Home = ChannelOffset.Gamepads + 16;
-    public static readonly LeftStickLeft = ChannelOffset.Gamepads + 17;
-    public static readonly LeftStickRight = ChannelOffset.Gamepads + 18;
-    public static readonly LeftStickUp = ChannelOffset.Gamepads + 19;
-    public static readonly LeftStickDown = ChannelOffset.Gamepads + 20;
-    public static readonly RightStickLeft = ChannelOffset.Gamepads + 21;
-    public static readonly RightStickRight = ChannelOffset.Gamepads + 22;
-    public static readonly RightStickUp = ChannelOffset.Gamepads + 23;
-    public static readonly RightStickDown = ChannelOffset.Gamepads + 24;
+    public static readonly faceBottom = ChannelOffset.gamepads + 0;
+    public static readonly faceLeft = ChannelOffset.gamepads + 1;
+    public static readonly faceRight = ChannelOffset.gamepads + 2;
+    public static readonly faceTop = ChannelOffset.gamepads + 3;
+    public static readonly shoulderLeftBottom = ChannelOffset.gamepads + 4;
+    public static readonly shoulderRightBottom = ChannelOffset.gamepads + 5;
+    public static readonly shoulderLeftTop = ChannelOffset.gamepads + 6;
+    public static readonly shoulderRightTop = ChannelOffset.gamepads + 7;
+    public static readonly select = ChannelOffset.gamepads + 8;
+    public static readonly start = ChannelOffset.gamepads + 9;
+    public static readonly leftStick = ChannelOffset.gamepads + 10;
+    public static readonly rightStick = ChannelOffset.gamepads + 11;
+    public static readonly dPadUp = ChannelOffset.gamepads + 12;
+    public static readonly dPadDown = ChannelOffset.gamepads + 13;
+    public static readonly dPadLeft = ChannelOffset.gamepads + 14;
+    public static readonly dPadRight = ChannelOffset.gamepads + 15;
+    public static readonly home = ChannelOffset.gamepads + 16;
+    public static readonly leftStickLeft = ChannelOffset.gamepads + 17;
+    public static readonly leftStickRight = ChannelOffset.gamepads + 18;
+    public static readonly leftStickUp = ChannelOffset.gamepads + 19;
+    public static readonly leftStickDown = ChannelOffset.gamepads + 20;
+    public static readonly rightStickLeft = ChannelOffset.gamepads + 21;
+    public static readonly rightStickRight = ChannelOffset.gamepads + 22;
+    public static readonly rightStickUp = ChannelOffset.gamepads + 23;
+    public static readonly rightStickDown = ChannelOffset.gamepads + 24;
 }
 
-const GamepadButtonNames = [
-    'FaceBottom',
-    'FaceLeft',
-    'FaceRight',
-    'FaceTop',
-    'ShoulderLeftBottom',
-    'ShoulderRightBottom',
-    'ShoulderLeftTop',
-    'ShoulderRightTop',
-    'Select',
-    'Start',
-    'LeftStick',
-    'RightStick',
-    'DPadUp',
-    'DPadDown',
-    'DPadLeft',
-    'DPadRight',
-    'Home',
-    'LeftStickLeft',
-    'LeftStickRight',
-    'LeftStickUp',
-    'LeftStickDown',
-    'RightStickLeft',
-    'RightStickRight',
-    'RightStickUp',
-    'RightStickDown',
+const gamepadButtonNames = [
+    'faceBottom',
+    'faceLeft',
+    'faceRight',
+    'faceTop',
+    'shoulderLeftBottom',
+    'shoulderRightBottom',
+    'shoulderLeftTop',
+    'shoulderRightTop',
+    'select',
+    'start',
+    'leftStick',
+    'rightStick',
+    'dPadUp',
+    'dPadDown',
+    'dPadLeft',
+    'dPadRight',
+    'home',
+    'leftStickLeft',
+    'leftStickRight',
+    'leftStickUp',
+    'leftStickDown',
+    'rightStickLeft',
+    'rightStickRight',
+    'rightStickUp',
+    'rightStickDown',
 ] as const;
 
-export type GamepadButtons = typeof GamepadButtonNames[number];
+export type GamepadButtons = typeof gamepadButtonNames[number];
 export type GamepadChannel = typeof Gamepad[GamepadButtons];
