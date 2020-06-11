@@ -8,8 +8,8 @@ import type { View } from 'rendering/View';
 import { RenderBuffer } from 'rendering/RenderBuffer';
 import { VertexArrayObject } from 'rendering/VertexArrayObject';
 import type { DrawableShape } from 'rendering/primitives/DrawableShape';
-import vertexSource from 'rendering/primitives/glsl/primitive.vert';
-import fragmentSource from 'rendering/primitives/glsl/primitive.frag';
+import vertexSource from './glsl/primitive.vert';
+import fragmentSource from './glsl/primitive.frag';
 
 export class PrimitiveRenderer implements IRenderer {
 

@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "node",
     "target": "es6",
-    "module": "commonjs",
-    "allowJs": true,
-    "declaration": true,
-    "sourceMap": true,
-    "outDir": "./dist/lib",
-    "strict": true,
+    "outDir": "dist",
     "baseUrl": "src",
+    "sourceMap": true,
+    "allowJs": true,
+    "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "importsNotUsedAsValues": "error"
@@ -16,7 +16,9 @@
     "src/**/*"
   ],
   "exclude": [
+    "dist",
+    "typings",
     "node_modules",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
   ]
 }

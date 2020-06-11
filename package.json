@@ -1,46 +1,46 @@
 {
   "name": "exo-js-core",
-  "description": "A lightweight, flexibile and powerful game engine.",
+  "description": "A lightweight, flexibile and powerful multimedia framework.",
   "version": "1.0.15",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "dist/exo.js",
+  "module": "dist/exo.esm.js",
+  "browser": "dist/exo.bundle.js",
+  "types": "dist/exo.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "build:watch": "rollup -cw",
+    "build:declarations": "tsc -p tsconfig.declaration.json",
+    "prepare": "npm version patch && npm run build && npm run build:declarations"
+  },
   "license": "MIT",
   "homepage": "https://github.com/Exoridus/ExoJS",
   "repository": {
     "type": "git",
     "url": "https://github.com/Exoridus/ExoJS.git"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "/dist"
-  ],
-  "scripts": {
-    "clean": "shx rm -rf dist/bundles dist/lib dist/lib-esm",
-    "build": "npm run clean && tsc && tsc -m es6 --outDir dist/lib-esm && webpack --config webpack.config.js",
-    "prepare": "npm run build && npm version patch"
-  },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^8.0.1",
     "@types/css-font-loading-module": "0.0.4",
     "@types/earcut": "^2.1.1",
     "@types/node": "^13.13.10",
     "@typescript-eslint/eslint-plugin": "^2.34.0",
     "@typescript-eslint/parser": "^2.34.0",
-    "awesome-typescript-loader": "^5.2.1",
-    "circular-dependency-plugin": "^5.2.0",
     "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-prettier": "^3.1.3",
-    "node-sass": "^4.14.1",
-    "prettier": "^2.0.5",
-    "raw-loader": "^4.0.1",
-    "shx": "^0.3.2",
-    "terser-webpack-plugin": "^2.3.7",
-    "ts-loader": "^6.2.2",
+    "rollup": "^2.15.0",
+    "rollup-plugin-cleaner": "^1.0.0",
+    "rollup-plugin-dts": "^1.4.7",
+    "rollup-plugin-string": "^3.0.0",
+    "rollup-plugin-typescript2": "^0.27.1",
+    "tslib": "^2.0.0",
     "tslint": "^6.1.2",
-    "typescript": "^3.9.5",
-    "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.11"
+    "typescript": "^3.9.5"
   },
   "dependencies": {
     "earcut": "^2.2.2"
-  }
+  },
+  "peerDependencies": {}
 }

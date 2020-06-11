@@ -3,8 +3,8 @@ import type { RenderBuffer } from 'rendering/RenderBuffer';
 import type { Sprite } from 'rendering/sprite/Sprite';
 import { AbstractRenderer } from 'rendering/AbstractRenderer';
 import type { View } from 'rendering/View';
-import vertexSource from 'rendering/sprite/glsl/sprite.vert';
-import fragmentSource from 'rendering/sprite/glsl/sprite.frag';
+import vertexSource from './glsl/sprite.vert';
+import fragmentSource from './glsl/sprite.frag';
 
 export class SpriteRenderer extends AbstractRenderer {
 

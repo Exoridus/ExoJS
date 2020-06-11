@@ -1,6 +1,6 @@
+**/*.d.ts
 **/*.vert
 **/*.frag
-**/*.d.ts
+**/*.js
 dist/*
-src/vendor/*
-webpack.config.js
+typings/*
