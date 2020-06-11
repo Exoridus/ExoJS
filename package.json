@@ -1,7 +1,7 @@
 {
   "name": "exo-js-core",
   "description": "A lightweight, flexibile and powerful multimedia framework.",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "files": [
     "dist",
     "README.md"
