@@ -3,4 +3,3 @@
 **/*.frag
 **/*.js
 dist/*
-typings/*
