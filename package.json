@@ -23,6 +23,7 @@
     "url": "https://github.com/Exoridus/ExoJS.git"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^14.0.0",
     "@rollup/plugin-node-resolve": "^8.0.1",
     "@types/css-font-loading-module": "0.0.4",
     "@types/earcut": "^2.1.1",

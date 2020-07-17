@@ -2,6 +2,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import cleaner from 'rollup-plugin-cleaner';
 import { string } from 'rollup-plugin-string';
 import typescript from 'rollup-plugin-typescript2';
+import commonjs from '@rollup/plugin-commonjs';
 import pkg from './package.json';
 
 export default {
@@ -34,12 +35,9 @@ export default {
                 '**/*.frag',
             ],
         }),
+        commonjs(),
         typescript({
             typescript: require('typescript'),
         }),
-    ],
-    external: [
-        ...Object.keys(pkg.dependencies || {}),
-        ...Object.keys(pkg.peerDependencies || {}),
     ],
 };
