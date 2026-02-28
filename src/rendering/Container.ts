@@ -68,8 +68,11 @@ export class Container extends Drawable {
 
     public swapChildren(firstChild: Drawable, secondChild: Drawable): this {
         if (firstChild !== secondChild) {
-            this._children[this.getChildIndex(firstChild)] = secondChild;
-            this._children[this.getChildIndex(secondChild)] = firstChild;
+            const firstIndex = this.getChildIndex(firstChild);
+            const secondIndex = this.getChildIndex(secondChild);
+
+            this._children[firstIndex] = secondChild;
+            this._children[secondIndex] = firstChild;
         }
 
         return this;
@@ -116,7 +119,13 @@ export class Container extends Drawable {
     }
 
     public removeChildAt(index: number): this {
+        const child = this._children[index];
+
         removeArrayItems(this._children, index, 1);
+
+        if (child && child.parent === this) {
+            child.parent = null;
+        }
 
         return this;
     }
@@ -126,6 +135,14 @@ export class Container extends Drawable {
 
         if (range < 0 || range > end) {
             throw new Error('Values are outside the acceptable range.');
+        }
+
+        for (let i = begin; i < end; i++) {
+            const child = this._children[i];
+
+            if (child && child.parent === this) {
+                child.parent = null;
+            }
         }
 
         removeArrayItems(this._children, begin, range);
@@ -161,8 +178,8 @@ export class Container extends Drawable {
     }
 
     public destroy(): void {
-        super.destroy();
+        this.removeChildren();
 
-        this._children.length = 0;
+        super.destroy();
     }
 }

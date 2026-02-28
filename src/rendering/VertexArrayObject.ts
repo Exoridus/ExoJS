@@ -61,7 +61,7 @@ export class VertexArrayObject {
         return this;
     }
 
-    public addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0): this {
+    public addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type: number = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0): this {
         const { location, size } = attribute;
 
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "declaration": true,
     "emitDeclarationOnly": true,
-    "outFile": "dist/exo.d.ts"
+    "outFile": "dist/exo.d.ts",
+    "types": []
   }
 }

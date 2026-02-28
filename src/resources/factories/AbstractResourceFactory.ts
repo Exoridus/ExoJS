@@ -6,8 +6,8 @@ export abstract class AbstractResourceFactory<SourceValue = any, TargetValue = a
     public readonly objectUrls: Array<string> = [];
     public abstract readonly storageName: StorageNames;
 
-    abstract async process(response: Response): Promise<SourceValue>;
-    abstract async create(source: SourceValue, options?: object | null): Promise<TargetValue>;
+    abstract process(response: Response): Promise<SourceValue>;
+    abstract create(source: SourceValue, options?: object | null): Promise<TargetValue>;
 
     public createObjectUrl(blob: Blob): string {
         const objectUrl = URL.createObjectURL(blob);

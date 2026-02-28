@@ -123,7 +123,10 @@ export class Circle implements IShape {
     }
 
     public project(axis: Vector, result: Interval = new Interval()): Interval {
-        return result.set(0, 0);
+        const center = axis.dot(this.x, this.y);
+        const radius = this.radius * axis.length;
+
+        return result.set(center - radius, center + radius);
     }
 
     public contains(x: number, y: number): boolean {

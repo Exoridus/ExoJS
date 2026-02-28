@@ -12,11 +12,15 @@ export class Sound extends AbstractMedia {
     private _sourceNode: AudioBufferSourceNode | null = null;
 
     public get paused(): boolean {
-        if (!this._paused || this._loop) {
+        if (this._paused) {
+            return true;
+        }
+
+        if (this._loop) {
             return false;
         }
 
-        return (this.currentTime >= this.duration);
+        return this.currentTime >= this.duration;
     }
 
     public set paused(paused: boolean) {

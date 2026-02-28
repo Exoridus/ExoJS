@@ -68,11 +68,11 @@ export class Shader {
 
             gl.deleteProgram(program);
 
-            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS)); // eslint-disable-line
-            console.error('gl.getError()', gl.getError()); // eslint-disable-line
+            console.error('gl.VALIDATE_STATUS', gl.getProgramParameter(program, gl.VALIDATE_STATUS));
+            console.error('gl.getError()', gl.getError());
 
             if (gl.getProgramInfoLog(program)) {
-                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program)); // eslint-disable-line
+                console.warn('gl.getProgramInfoLog()', gl.getProgramInfoLog(program));
             }
 
             return null;

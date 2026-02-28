@@ -9,6 +9,155 @@ import type { Circle } from 'math/Circle';
 import type { Ellipse } from 'math/Ellipse';
 import type { IPoint } from 'types/primitives/IPoint';
 
+const epsilon = 1e-10;
+
+const getCurveSegments = (radiusA: number, radiusB = radiusA): number => (
+    Math.max(16, Math.ceil(Math.sqrt(Math.max(radiusA, radiusB)) * 8))
+);
+
+const buildEllipsePoints = ({ x: centerX, y: centerY, rx, ry }: Ellipse): Array<IPoint> => {
+    if (rx <= 0 || ry <= 0) {
+        return [];
+    }
+
+    const segments = getCurveSegments(rx, ry);
+    const delta = (Math.PI * 2) / segments;
+    const points: Array<IPoint> = [];
+
+    for (let i = 0; i < segments; i++) {
+        const angle = i * delta;
+
+        points.push({
+            x: centerX + (Math.cos(angle) * rx),
+            y: centerY + (Math.sin(angle) * ry),
+        });
+    }
+
+    return points;
+};
+
+const buildCirclePoints = ({ x: centerX, y: centerY, radius }: Circle): Array<IPoint> => {
+    if (radius <= 0) {
+        return [];
+    }
+
+    const segments = getCurveSegments(radius);
+    const delta = (Math.PI * 2) / segments;
+    const points: Array<IPoint> = [];
+
+    for (let i = 0; i < segments; i++) {
+        const angle = i * delta;
+
+        points.push({
+            x: centerX + (Math.cos(angle) * radius),
+            y: centerY + (Math.sin(angle) * radius),
+        });
+    }
+
+    return points;
+};
+
+const buildRectanglePoints = ({ x, y, width, height }: Rectangle): Array<IPoint> => ([
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+]);
+
+const buildPolygonWorldPoints = ({ x: offsetX, y: offsetY, points }: Polygon): Array<IPoint> => (
+    points.map(({ x, y }) => ({ x: x + offsetX, y: y + offsetY }))
+);
+
+const pointOnSegment = ({ x: px, y: py }: IPoint, { x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint): boolean => (
+    px <= Math.max(x1, x2) + epsilon
+    && px >= Math.min(x1, x2) - epsilon
+    && py <= Math.max(y1, y2) + epsilon
+    && py >= Math.min(y1, y2) - epsilon
+);
+
+const orientation = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint, { x: x3, y: y3 }: IPoint): number => {
+    const determinant = ((y2 - y1) * (x3 - x2)) - ((x2 - x1) * (y3 - y2));
+
+    if (Math.abs(determinant) <= epsilon) {
+        return 0;
+    }
+
+    return determinant > 0 ? 1 : 2;
+};
+
+const segmentsIntersect = (a1: IPoint, a2: IPoint, b1: IPoint, b2: IPoint): boolean => {
+    const o1 = orientation(a1, a2, b1);
+    const o2 = orientation(a1, a2, b2);
+    const o3 = orientation(b1, b2, a1);
+    const o4 = orientation(b1, b2, a2);
+
+    if (o1 !== o2 && o3 !== o4) {
+        return true;
+    }
+
+    if (o1 === 0 && pointOnSegment(b1, a1, a2)) {
+        return true;
+    }
+
+    if (o2 === 0 && pointOnSegment(b2, a1, a2)) {
+        return true;
+    }
+
+    if (o3 === 0 && pointOnSegment(a1, b1, b2)) {
+        return true;
+    }
+
+    if (o4 === 0 && pointOnSegment(a2, b1, b2)) {
+        return true;
+    }
+
+    return false;
+};
+
+const polygonContainsPoint = ({ x, y }: IPoint, points: Array<IPoint>): boolean => {
+    const len = points.length;
+
+    if (len < 3) {
+        return false;
+    }
+
+    let inside = false;
+
+    for (let current = 0, previous = len - 1; current < len; previous = current++) {
+        const prev = points[previous];
+        const curr = points[current];
+
+        if (((curr.y > y) !== (prev.y > y)) && (x < ((prev.x - curr.x) * ((y - curr.y) / (prev.y - curr.y))) + curr.x)) {
+            inside = !inside;
+        }
+    }
+
+    return inside;
+};
+
+const polygonsIntersect = (polygonA: Array<IPoint>, polygonB: Array<IPoint>): boolean => {
+    if (polygonA.length === 0 || polygonB.length === 0) {
+        return false;
+    }
+
+    for (let i = 0; i < polygonA.length; i++) {
+        const a1 = polygonA[i];
+        const a2 = polygonA[(i + 1) % polygonA.length];
+
+        for (let j = 0; j < polygonB.length; j++) {
+            const b1 = polygonB[j];
+            const b2 = polygonB[(j + 1) % polygonB.length];
+
+            if (segmentsIntersect(a1, a2, b1, b2)) {
+                return true;
+            }
+        }
+    }
+
+    return polygonContainsPoint(polygonA[0], polygonB)
+        || polygonContainsPoint(polygonB[0], polygonA);
+};
+
 /**
  * INTERSECTION
  */
@@ -125,11 +274,42 @@ const intersectionLineCircle = (line: Line, circle: Circle): boolean => {
     return getDistance(closestX, closestY, cx, cy) <= radius;
 };
 
-// todo - add Line Ellipse intersection
 const intersectionLineEllipse = (line: Line, ellipse: Ellipse): boolean => {
-    throw new Error('Line Ellipse intersection is not implemented');
+    const { x: centerX, y: centerY, rx, ry } = ellipse;
 
-    return false;
+    if (rx <= 0 || ry <= 0) {
+        return false;
+    }
+
+    const x1 = (line.fromX - centerX) / rx;
+    const y1 = (line.fromY - centerY) / ry;
+    const x2 = (line.toX - centerX) / rx;
+    const y2 = (line.toY - centerY) / ry;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const a = (dx * dx) + (dy * dy);
+    const b = 2 * ((x1 * dx) + (y1 * dy));
+    const c = (x1 * x1) + (y1 * y1) - 1;
+
+    if (c <= 0) {
+        return true;
+    }
+
+    if (a <= epsilon) {
+        return false;
+    }
+
+    const discriminant = (b * b) - (4 * a * c);
+
+    if (discriminant < 0) {
+        return false;
+    }
+
+    const sqrtDiscriminant = Math.sqrt(discriminant);
+    const tA = (-b - sqrtDiscriminant) / (2 * a);
+    const tB = (-b + sqrtDiscriminant) / (2 * a);
+
+    return (tA >= 0 && tA <= 1) || (tB >= 0 && tB <= 1);
 };
 
 const intersectionLinePoly = (line: Line, { points }: Polygon): boolean => {
@@ -167,11 +347,8 @@ const intersectionRectCircle = ({ x: rx, y: ry, width, height }: Rectangle, { x:
     return getDistance(cx, cy, distX, distY) <= radius;
 };
 
-// todo - add Rectangle Ellipse intersection
 const intersectionRectEllipse = (rectangle: Rectangle, ellipse: Ellipse): boolean => {
-    throw new Error('Rectangle Ellipse intersection is not implemented');
-
-    return false;
+    return polygonsIntersect(buildRectanglePoints(rectangle), buildEllipsePoints(ellipse));
 };
 
 const intersectionRectPoly = (rectangle: Rectangle, polygon: Polygon): boolean => intersectionSat(rectangle, polygon);
@@ -180,11 +357,8 @@ const intersectionCircleCircle = ({ x: x1, y: y1, radius: r1 }: Circle, { x: x2,
     return getDistance(x1, y1, x2, y2) <= (r1 + r2);
 };
 
-// todo - add Circle Ellipse intersection
 const intersectionCircleEllipse = (circle: Circle, ellipse: Ellipse): boolean => {
-    throw new Error('Circle Ellipse intersection is not implemented');
-
-    return false;
+    return polygonsIntersect(buildCirclePoints(circle), buildEllipsePoints(ellipse));
 };
 
 const excludeLeftVoronoi = (circlePos: Vector, prevPoint: Vector, prevEdge: Vector, point: Vector, radius: number, edge: Vector): boolean => {
@@ -241,18 +415,12 @@ const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, { x: px, y: py
     return true;
 };
 
-// todo - add Ellipse Ellipse intersection
 const intersectionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): boolean => {
-    throw new Error('Ellipse Ellipse intersection is not implemented');
-
-    return false;
+    return polygonsIntersect(buildEllipsePoints(ellipseA), buildEllipsePoints(ellipseB));
 };
 
-// todo - add Ellipse Polygon intersection
 const intersectionEllipsePoly = (ellipse: Ellipse, polygon: Polygon): boolean => {
-    throw new Error('Ellipse Polygon intersection is not implemented');
-
-    return false;
+    return polygonsIntersect(buildEllipsePoints(ellipse), buildPolygonWorldPoints(polygon));
 };
 
 const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => intersectionSat(polygonA, polygonB);

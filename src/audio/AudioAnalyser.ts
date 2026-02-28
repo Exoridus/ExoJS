@@ -41,7 +41,7 @@ export class AudioAnalyser {
         this._preciseTimeDomainData = new Float32Array(this._frequencyBinCount);
         this._preciseFrequencyData = new Float32Array(this._frequencyBinCount);
 
-        if (!isAudioContextReady()) {
+        if (isAudioContextReady()) {
             this.setupWithAudioContext(getAudioContext());
         } else {
             onAudioContextReady.once(this.setupWithAudioContext, this);
@@ -68,7 +68,7 @@ export class AudioAnalyser {
     public get timeDomainData(): Uint8Array {
         if (this._analyser) {
             this.connect();
-            this._analyser!.getByteTimeDomainData(this._timeDomainData);
+            this._analyser!.getByteTimeDomainData(this._timeDomainData as any);
         }
 
         return this._timeDomainData;
@@ -77,7 +77,7 @@ export class AudioAnalyser {
     public get frequencyData(): Uint8Array {
         if (this._analyser) {
             this.connect();
-            this._analyser.getByteFrequencyData(this._frequencyData);
+            this._analyser.getByteFrequencyData(this._frequencyData as any);
         }
 
         return this._frequencyData;
@@ -86,7 +86,7 @@ export class AudioAnalyser {
     public get preciseTimeDomainData(): Float32Array {
         if (this._analyser) {
             this.connect();
-            this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
+            this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData as any);
         }
 
         return this._preciseTimeDomainData;
@@ -95,7 +95,7 @@ export class AudioAnalyser {
     public get preciseFrequencyData(): Float32Array {
         if (this._analyser) {
             this.connect();
-            this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
+            this._analyser.getFloatFrequencyData(this._preciseFrequencyData as any);
         }
 
         return this._preciseFrequencyData;

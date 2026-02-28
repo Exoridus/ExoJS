@@ -106,7 +106,7 @@ export class Ellipse implements IShape {
     }
 
     public getBounds(): Rectangle {
-        return new Rectangle(this.x - this.rx, this.y - this.ry, this.rx, this.ry);
+        return new Rectangle(this.x - this.rx, this.y - this.ry, this.rx * 2, this.ry * 2);
     }
 
     public getNormals(): Array<Vector> {
@@ -141,8 +141,8 @@ export class Ellipse implements IShape {
     public equals({ x, y, rx, ry }: Partial<Ellipse> = {}): boolean {
         return (x === undefined || this.x === x)
             && (y === undefined || this.y === y)
-            && (rx === undefined || this.rx === x)
-            && (ry === undefined || this.ry === y);
+            && (rx === undefined || this.rx === rx)
+            && (ry === undefined || this.ry === ry);
     }
 
     public destroy(): void {

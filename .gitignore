@@ -2,5 +2,10 @@
 .vscode
 node_modules
 dist/*
+coverage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 !.gitignore
 !.gitkeep

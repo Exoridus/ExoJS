@@ -1,0 +1,14 @@
+{
+  "format": "{emoji} {message}",
+  "list": [
+    "✨",
+    "🐛",
+    "♻️",
+    "📝",
+    "✅",
+    "🔧",
+    "🚀"
+  ],
+  "maxMessageLength": 120,
+  "minMessageLength": 3
+}

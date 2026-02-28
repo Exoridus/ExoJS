@@ -4,6 +4,7 @@ import { BlendModes } from 'types/rendering';
 import { RenderTarget } from './RenderTarget';
 import { SpriteRenderer } from './sprite/SpriteRenderer';
 import { ParticleRenderer } from 'particles/ParticleRenderer';
+import { PrimitiveRenderer } from 'rendering/primitives/PrimitiveRenderer';
 import { Color } from 'core/Color';
 import { canvasSourceToDataUrl } from 'utils/core';
 import { Texture } from './texture/Texture';
@@ -19,12 +20,10 @@ const throwOnGlError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const logGlCall = (functionName: string, args: any): void => {
     console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const validateNoneOfTheArgsAreUndefined = (functionName: string, args: any): void => {
     for (const arg of args) {
         if (arg === undefined) {
@@ -33,7 +32,6 @@ const validateNoneOfTheArgsAreUndefined = (functionName: string, args: any): voi
     }
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const logAndValidate = (functionName: string, args: any): void => {
     logGlCall(functionName, args);
     validateNoneOfTheArgsAreUndefined (functionName, args);
@@ -68,6 +66,7 @@ export class RenderManager {
             debug,
             spriteRendererBatchSize,
             particleRendererBatchSize,
+            primitiveRendererBatchSize,
         } = app.options;
 
         this._canvas = app.canvas;
@@ -101,6 +100,7 @@ export class RenderManager {
 
         this.addRenderer(RendererType.sprite, new SpriteRenderer(spriteRendererBatchSize));
         this.addRenderer(RendererType.particle, new ParticleRenderer(particleRendererBatchSize));
+        this.addRenderer(RendererType.primitive, new PrimitiveRenderer(primitiveRendererBatchSize));
 
         this._connectAndBindRenderTarget();
         this.setBlendMode(BlendModes.normal);

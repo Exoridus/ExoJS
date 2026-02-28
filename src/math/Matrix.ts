@@ -175,7 +175,7 @@ export class Matrix implements ICloneable {
         }
     }
 
-    public static readonly identity = new Matrix(1, 0, 0, 1, 0, 0, 0, 1);
+    public static readonly identity = new Matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
     public static get temp(): Matrix {
         if (temp === null) {

@@ -343,7 +343,7 @@ export class InputManager {
 
                 this.onPointerUp.dispatch(pointer);
 
-                if (startX > 0 && startY > 0) {
+                if (startX >= 0 && startY >= 0) {
                     if (getDistance(startX, startY, pointer.x, pointer.y) < this._pointerDistanceThreshold) {
                         this.onPointerTap.dispatch(pointer);
                     } else {

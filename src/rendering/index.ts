@@ -1,6 +1,8 @@
 export * from './primitives/CircleGeometry';
 export * from './primitives/Geometry';
+export * from './primitives/DrawableShape';
 export * from './primitives/Graphics';
+export * from './primitives/PrimitiveRenderer';
 
 export * from './shader/Shader';
 export * from './shader/ShaderAttribute';

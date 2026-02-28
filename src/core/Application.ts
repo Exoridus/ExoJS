@@ -135,6 +135,7 @@ export class Application {
         if (this._status === ApplicationStatus.running) {
             this.inputManager.update();
             this.sceneManager.update(this._frameClock.elapsedTime);
+            this.renderManager.display();
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();
             this._frameCount++;

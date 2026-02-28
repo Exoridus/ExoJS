@@ -1,6 +1,6 @@
 import { Color } from 'core/Color';
 import { Container } from 'rendering/Container';
-import { bezierCurveTo, quadraticCurveTo } from 'utils/math';
+import { bezierCurveTo, clamp, quadraticCurveTo, tau } from 'utils/math';
 import { RenderingPrimitives } from 'types/rendering';
 import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from 'utils/geometry';
 import { Vector } from 'math/Vector';
@@ -76,11 +76,95 @@ export class Graphics extends Container {
     }
 
     public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
-        return this; // todo
+        const { x: fromX, y: fromY } = this._currentPoint;
+        const r = Math.abs(radius);
+
+        if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
+            return this.lineTo(x1, y1);
+        }
+
+        const inX = x1 - fromX;
+        const inY = y1 - fromY;
+        const outX = x2 - x1;
+        const outY = y2 - y1;
+        const inLen = Math.hypot(inX, inY);
+        const outLen = Math.hypot(outX, outY);
+
+        if (inLen === 0 || outLen === 0) {
+            return this.lineTo(x1, y1);
+        }
+
+        const inDirX = inX / inLen;
+        const inDirY = inY / inLen;
+        const outDirX = outX / outLen;
+        const outDirY = outY / outLen;
+        const dot = clamp((inDirX * outDirX) + (inDirY * outDirY), -1, 1);
+        const angle = Math.acos(dot);
+
+        if (angle === 0 || angle === Math.PI) {
+            return this.lineTo(x1, y1);
+        }
+
+        const distanceToTangent = r / Math.tan(angle / 2);
+
+        if (!Number.isFinite(distanceToTangent) || distanceToTangent > inLen || distanceToTangent > outLen) {
+            return this.lineTo(x1, y1);
+        }
+
+        const startX = x1 - (inDirX * distanceToTangent);
+        const startY = y1 - (inDirY * distanceToTangent);
+        const endX = x1 + (outDirX * distanceToTangent);
+        const endY = y1 + (outDirY * distanceToTangent);
+        const cross = (inDirX * outDirY) - (inDirY * outDirX);
+        const leftTurn = cross > 0;
+        const normalX = leftTurn ? -inDirY : inDirY;
+        const normalY = leftTurn ? inDirX : -inDirX;
+        const centerX = startX + (normalX * r);
+        const centerY = startY + (normalY * r);
+        const startAngle = Math.atan2(startY - centerY, startX - centerX);
+        const endAngle = Math.atan2(endY - centerY, endX - centerX);
+
+        this.lineTo(startX, startY);
+
+        return this.drawArc(centerX, centerY, r, startAngle, endAngle, leftTurn);
     }
 
     public drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise = false): this {
-        return this; // todo
+        const r = Math.abs(radius);
+
+        if (r === 0) {
+            return this;
+        }
+
+        let sweep = endAngle - startAngle;
+
+        if (!anticlockwise && sweep < 0) {
+            sweep += tau;
+        } else if (anticlockwise && sweep > 0) {
+            sweep -= tau;
+        }
+
+        if (sweep === 0) {
+            return this;
+        }
+
+        const segments = Math.max(2, Math.ceil(Math.abs(sweep) / (Math.PI / 16)));
+        const path: Array<number> = [];
+
+        for (let i = 0; i <= segments; i++) {
+            const ratio = i / segments;
+            const angle = startAngle + (sweep * ratio);
+
+            path.push(
+                x + (Math.cos(angle) * r),
+                y + (Math.sin(angle) * r)
+            );
+        }
+
+        this.drawPath(path);
+        this.moveTo(path[path.length - 2], path[path.length - 1]);
+
+        return this;
     }
 
     public drawLine(startX: number, startY: number, endX: number, endY: number): this {

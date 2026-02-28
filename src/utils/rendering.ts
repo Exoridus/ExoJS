@@ -30,7 +30,7 @@ export const createCanvas = (options: ICreateCanvasOptions = {}): HTMLCanvasElem
     newCanvas.width = width ?? 10;
     newCanvas.height = height ?? 10;
 
-    context.fillStyle = fillStyle ?? '#6495e';
+    context.fillStyle = fillStyle ?? '#6495ed';
     context.fillRect(0, 0, newCanvas.width, newCanvas.height);
 
     return newCanvas;

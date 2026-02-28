@@ -26,3 +26,7 @@ Modern multimedia framework with a focus on performance and extensibility.
 * WebGL Effects
 * Mesh rendering
 * Masking
+
+### Contributor Notes ###
+* AI/agent workflow: [AGENTS.md](AGENTS.md)
+* Transform/matrix conventions: [docs/TRANSFORM_CONVENTIONS.md](docs/TRANSFORM_CONVENTIONS.md)

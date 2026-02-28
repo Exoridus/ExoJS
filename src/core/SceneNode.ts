@@ -8,6 +8,7 @@ import type { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
 import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
 import {
+    getCollisionSat,
     intersectionLineRect,
     intersectionPointRect,
     intersectionRectCircle,
@@ -135,8 +136,13 @@ export class SceneNode extends Transformable implements ICollidable {
             return this.getBounds().collidesWith(target);
         }
 
-        // todo - add SceneNode Collision when rotated
-        return null
+        switch (target.collisionType) {
+            case CollisionType.sceneNode: return getCollisionSat(this, target as SceneNode);
+            case CollisionType.rectangle: return getCollisionSat(this, target as Rectangle);
+            case CollisionType.polygon: return getCollisionSat(this, target as Polygon);
+            case CollisionType.circle: return getCollisionSat(this, target as Circle);
+            default: return null;
+        }
     }
 
     public contains(x: number, y: number): boolean {

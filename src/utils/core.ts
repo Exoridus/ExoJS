@@ -67,6 +67,7 @@ export const removeArrayItems = <T = any>(array: Array<T>, startIndex: number, a
 export const supportsCodec = (...codecs: Array<string>): boolean => codecs.some((codec) => internalAudioElement.canPlayType(codec).replace(codecNotSupportedPattern, ''));
 
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
+    const dynamicSource = source as any;
 
     if (source instanceof HTMLImageElement) {
         return Size.temp.set(source.naturalWidth, source.naturalHeight);
@@ -80,7 +81,15 @@ export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
         return Size.temp.copy(source.getBoundingClientRect());
     }
 
-    return Size.temp.set(source.width, source.height);
+    if (typeof dynamicSource.displayWidth === 'number' && typeof dynamicSource.displayHeight === 'number') {
+        return Size.temp.set(dynamicSource.displayWidth, dynamicSource.displayHeight);
+    }
+
+    if (typeof dynamicSource.width === 'number' && typeof dynamicSource.height === 'number') {
+        return Size.temp.set(dynamicSource.width, dynamicSource.height);
+    }
+
+    return Size.zero;
 };
 
 export const getTextureSourceSize = (source: TextureSource): Size => {

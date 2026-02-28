@@ -99,7 +99,7 @@ export class IndexedDbDatabase implements IDatabase {
         return new Promise((resolve, reject) => {
             const request = store.put({ name, data });
 
-            request.addEventListener('success', () => resolve());
+            request.addEventListener('success', () => resolve(undefined as unknown as T));
             request.addEventListener('error', () => reject(Error('An error occurred while saving an item.')));
         });
     }
@@ -132,7 +132,7 @@ export class IndexedDbDatabase implements IDatabase {
         return new Promise((resolve, reject) => {
             const request = indexedDB.deleteDatabase(this.name);
 
-            request.addEventListener('success', () => resolve());
+            request.addEventListener('success', () => resolve(true));
             request.addEventListener('error', () => reject(Error('An error occurred while deleting a storage.')));
         });
     }

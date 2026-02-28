@@ -31,6 +31,8 @@ export class Music extends AbstractMedia {
             return this;
         }
 
+        this._volume = volume;
+
         if (this._gainNode) {
             this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, this._audioContext!.currentTime, 10);
         }

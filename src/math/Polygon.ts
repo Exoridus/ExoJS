@@ -86,8 +86,9 @@ export class Polygon implements IShape {
         const len = this._points.length;
         const newLen = newPoints.length;
         const diff = len - newLen;
+        const sharedLength = Math.min(len, newLen);
 
-        for (let i = 0; i < len; i++) {
+        for (let i = 0; i < sharedLength; i++) {
             this._points[i].copy(newPoints[i]);
         }
 
@@ -103,9 +104,9 @@ export class Polygon implements IShape {
             }
         }
 
-        for (let i = 0; i < len; i += 1) {
+        for (let i = 0; i < newLen; i++) {
             const curr = this._points[i];
-            const next = this._points[(i + 1) % len];
+            const next = this._points[(i + 1) % newLen];
 
             this._edges[i].set(next.x - curr.x, next.y - curr.y);
             this._normals[i].copy(this._edges[i]).rperp().normalize();

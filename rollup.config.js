@@ -3,6 +3,7 @@ import cleaner from 'rollup-plugin-cleaner';
 import { string } from 'rollup-plugin-string';
 import typescript from 'rollup-plugin-typescript2';
 import commonjs from '@rollup/plugin-commonjs';
+import ts from 'typescript-3-9';
 import pkg from './package.json';
 
 export default {
@@ -37,7 +38,7 @@ export default {
         }),
         commonjs(),
         typescript({
-            typescript: require('typescript'),
+            typescript: ts,
         }),
     ],
 };
