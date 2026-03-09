@@ -18,12 +18,23 @@ export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> 
 
     public async create(source: ArrayBuffer, options: IFontFactoryOptions): Promise<FontFace> {
         const { family, descriptors, addToDocument } = options;
-        const fontFace = await new FontFace(family, source, descriptors).load();
 
-        if (addToDocument !== false) {
-            document.fonts.add(fontFace);
+        if (source.byteLength < 4) {
+            throw new SyntaxError(`Invalid font data: expected at least 4 bytes, received ${source.byteLength}.`);
         }
 
-        return fontFace;
+        let fontFace: FontFace | null = null;
+
+        try {
+            fontFace = await new FontFace(family, source, descriptors).load();
+        } catch (error) {
+            throw new SyntaxError(`Invalid font data in ArrayBuffer (${source.byteLength} bytes).`);
+        }
+
+        if (addToDocument !== false) {
+            document.fonts.add(fontFace!);
+        }
+
+        return fontFace!;
     }
 }

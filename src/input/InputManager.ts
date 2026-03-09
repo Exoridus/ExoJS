@@ -6,6 +6,7 @@ import { Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { Gamepad } from 'input/Gamepad';
 import { Signal } from 'core/Signal';
 import { getDistance } from 'utils/math';
+import type { GamepadMapping, GamepadMappingResolver } from './GamepadMapping';
 import type { Input } from './Input';
 import type { Application } from 'core/Application';
 
@@ -23,16 +24,22 @@ export class InputManager {
     private _channels: Float32Array = new Float32Array(ChannelSize.container);
     private _inputs: Set<Input> = new Set();
     private _pointers: Record<number, Pointer> = {};
-    private _gamepads: Array<Gamepad>;
+    private _gamepads: Array<Gamepad> = [];
+    private _gamepadsByIndex: Map<number, Gamepad> = new Map();
+    private _gamepadSlotsActive: Uint8Array = new Uint8Array(ChannelSize.category / ChannelSize.gamepad);
     private _wheelOffset: Vector = new Vector();
     private _flags: Flags<InputManagerFlags> = new Flags<InputManagerFlags>();
     private _channelsPressed: Array<number> = [];
     private _channelsReleased: Array<number> = [];
     private _canvasFocused: boolean;
     private _pointerDistanceThreshold: number;
+    private _gamepadMappingResolver: GamepadMappingResolver;
 
     private readonly _keyDownHandler: (event: KeyboardEvent) => void = this._handleKeyDown.bind(this);
     private readonly _keyUpHandler: (event: KeyboardEvent) => void = this._handleKeyUp.bind(this);
+    private readonly _canvasFocusHandler: () => void = this._handleCanvasFocus.bind(this);
+    private readonly _canvasBlurHandler: () => void = this._handleCanvasBlur.bind(this);
+    private readonly _windowBlurHandler: () => void = this._handleWindowBlur.bind(this);
     private readonly _mouseWheelHandler: (event: WheelEvent) => void = this._handleMouseWheel.bind(this);
     private readonly _pointerOverHandler: (event: PointerEvent) => void = this._handlePointerOver.bind(this);
     private readonly _pointerLeaveHandler: (event: PointerEvent) => void = this._handlePointerLeave.bind(this);
@@ -62,12 +69,9 @@ export class InputManager {
         this._canvas = app.canvas;
         this._canvasFocused = document.activeElement === this._canvas;
         this._pointerDistanceThreshold = pointerDistanceThreshold;
-        this._gamepads = [
-            new Gamepad(0, this._channels, gamepadMapping),
-            new Gamepad(1, this._channels, gamepadMapping),
-            new Gamepad(2, this._channels, gamepadMapping),
-            new Gamepad(3, this._channels, gamepadMapping),
-        ];
+        this._gamepadMappingResolver = typeof gamepadMapping === 'function'
+            ? gamepadMapping
+            : (): GamepadMapping => gamepadMapping;
 
         this._addEventListeners();
     }
@@ -85,6 +89,10 @@ export class InputManager {
 
     public get gamepads(): Array<Gamepad> {
         return this._gamepads;
+    }
+
+    public getGamepad(index: number): Gamepad | null {
+        return this._gamepadsByIndex.get(index) ?? null;
     }
 
     public add(inputs: Input | Array<Input>): this {
@@ -149,6 +157,8 @@ export class InputManager {
         }
 
         this._inputs.clear();
+        this._gamepadsByIndex.clear();
+        this._gamepads.length = 0;
         this._channelsPressed.length = 0;
         this._channelsReleased.length = 0;
         this._wheelOffset.destroy();
@@ -197,6 +207,8 @@ export class InputManager {
     }
 
     private _handlePointerDown(event: PointerEvent): void {
+        this._canvas.focus();
+        this._canvasFocused = true;
         this._pointers[event.pointerId].handlePress(event);
         this._flags.push(InputManagerFlags.POINTER_UPDATE);
 
@@ -229,14 +241,29 @@ export class InputManager {
         }
     }
 
+    private _handleCanvasFocus(): void {
+        this._canvasFocused = true;
+    }
+
+    private _handleCanvasBlur(): void {
+        this._canvasFocused = false;
+    }
+
+    private _handleWindowBlur(): void {
+        this._canvasFocused = false;
+    }
+
     private _addEventListeners(): void {
         const canvas = this._canvas;
-        const activeWindow = window.parent || window;
+        const activeWindow = window;
         const activeListenerOption = { capture: true, passive: false };
         const passiveListenerOption = { capture: true, passive: true };
 
         activeWindow.addEventListener('keydown', this._keyDownHandler, true);
         activeWindow.addEventListener('keyup', this._keyUpHandler, true);
+        activeWindow.addEventListener('blur', this._windowBlurHandler, true);
+        canvas.addEventListener('focus', this._canvasFocusHandler, true);
+        canvas.addEventListener('blur', this._canvasBlurHandler, true);
         canvas.addEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
         canvas.addEventListener('pointerover', this._pointerOverHandler, passiveListenerOption); // Cancellable
         canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
@@ -250,12 +277,15 @@ export class InputManager {
 
     private _removeEventListeners(): void {
         const canvas = this._canvas;
-        const keyEventTarget = window.parent || window;
+        const keyEventTarget = window;
         const activeListenerOption = { capture: true, passive: false };
         const passiveListenerOption = { capture: true, passive: true };
 
         keyEventTarget.removeEventListener('keydown', this._keyDownHandler, true);
         keyEventTarget.removeEventListener('keyup', this._keyUpHandler, true);
+        keyEventTarget.removeEventListener('blur', this._windowBlurHandler, true);
+        canvas.removeEventListener('focus', this._canvasFocusHandler, true);
+        canvas.removeEventListener('blur', this._canvasBlurHandler, true);
         canvas.removeEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
         canvas.removeEventListener('pointerover', this._pointerOverHandler, passiveListenerOption);
         canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
@@ -269,24 +299,61 @@ export class InputManager {
 
     private _updateGamepads(): this {
         const activeGamepads = window.navigator.getGamepads();
+        const gamepadSlotsActive = this._gamepadSlotsActive;
 
-        for (const gamepad of this._gamepads) {
-            const activeGamepad = activeGamepads[gamepad.index];
+        gamepadSlotsActive.fill(0);
 
-            if (!!activeGamepad !== gamepad.connected) {
-                if (activeGamepad) {
-                    this.onGamepadConnected.dispatch(gamepad.connect(activeGamepad), this._gamepads);
-                } else {
-                    this.onGamepadDisconnected.dispatch(gamepad.disconnect(), this._gamepads);
-                }
+        for (const activeGamepad of activeGamepads) {
+            if (!activeGamepad) {
+                continue;
+            }
+
+            const activeIndex = activeGamepad.index;
+
+            if (activeIndex < 0 || activeIndex >= gamepadSlotsActive.length) {
+                continue;
+            }
+
+            gamepadSlotsActive[activeIndex] = 1;
+
+            let gamepad = this._gamepadsByIndex.get(activeIndex);
+
+            if (!gamepad) {
+                gamepad = new Gamepad(activeGamepad, this._channels, this._gamepadMappingResolver);
+                this._gamepadsByIndex.set(activeIndex, gamepad);
+                this._insertGamepadByIndex(gamepad);
+                this.onGamepadConnected.dispatch(gamepad, this._gamepads);
+            } else {
+                gamepad.connect(activeGamepad);
             }
 
             gamepad.update();
-
             this.onGamepadUpdated.dispatch(gamepad, this._gamepads);
         }
 
+        for (let i = this._gamepads.length - 1; i >= 0; i--) {
+            const gamepad = this._gamepads[i];
+
+            if (gamepadSlotsActive[gamepad.index] === 0) {
+                gamepad.disconnect();
+                this._gamepads.splice(i, 1);
+                this._gamepadsByIndex.delete(gamepad.index);
+                this.onGamepadDisconnected.dispatch(gamepad, this._gamepads);
+                gamepad.destroy();
+            }
+        }
+
         return this;
+    }
+
+    private _insertGamepadByIndex(gamepad: Gamepad): void {
+        let insertIndex = 0;
+
+        while (insertIndex < this._gamepads.length && this._gamepads[insertIndex].index < gamepad.index) {
+            insertIndex += 1;
+        }
+
+        this._gamepads.splice(insertIndex, 0, gamepad);
     }
 
     private _updateEvents(): this {

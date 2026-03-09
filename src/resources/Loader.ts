@@ -148,20 +148,47 @@ export class Loader {
 
         if (!this._resources.has(type, name)) {
             const factory = this.getFactory(type);
+            let source: any = null;
+            let resource: any = null;
 
-            let source = this._database ? (await this._database.load(factory.storageName, name)) : null;
+            if (this._database) {
+                source = await this._database.load(factory.storageName, name);
+            }
 
-            if (!source) {
-                const request = await fetch(`${this._resourcePath}${path}`, this._requestOptions);
+            if (source !== null && source !== undefined) {
+                try {
+                    resource = await factory.create(source, options);
+                } catch (error) {
+                    if (this._database) {
+                        await this._database.delete(factory.storageName, name);
+                    }
+
+                    source = null;
+                }
+            }
+
+            if (source === null || source === undefined) {
+                const resourcePath = `${this._resourcePath}${path}`;
+                const request = await fetch(resourcePath, this._requestOptions);
+
+                if (!request.ok) {
+                    throw new Error(`Failed to fetch "${type}:${name}" from "${resourcePath}" (${request.status} ${request.statusText}).`);
+                }
 
                 source = await factory.process(request);
+
+                if (source instanceof ArrayBuffer && source.byteLength === 0) {
+                    throw new Error(`Resource "${type}:${name}" from "${resourcePath}" has no data.`);
+                }
+
+                resource = await factory.create(source, options);
 
                 if (this._database) {
                     await this._database.save(factory.storageName, name, source);
                 }
             }
 
-            this._resources.set(type, name, await factory.create(source, options));
+            this._resources.set(type, name, resource);
         }
 
         return this._resources.get(type, name);

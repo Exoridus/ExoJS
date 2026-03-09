@@ -2,7 +2,7 @@
 export enum ChannelSize {
     container = 3 << 8,
     category = 1 << 8,
-    gamepad = 1 << 5,
+    gamepad = 1 << 6,
 }
 
 export const enum ChannelOffset {

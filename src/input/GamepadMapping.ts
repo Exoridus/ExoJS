@@ -1,4 +1,10 @@
-import type { GamepadControl } from './GamepadControl';
+import { GamepadControl } from './GamepadControl';
+import type { IGamepadControlOptions } from './GamepadControl';
+import type { GamepadChannel } from './Gamepad';
+
+export type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
+export type GamepadMappingResolver = (gamepad: BrowserGamepad) => GamepadMapping;
+export type GamepadControlDefinition = readonly [number, GamepadChannel, IGamepadControlOptions?];
 
 export class GamepadMapping {
 
@@ -61,5 +67,9 @@ export class GamepadMapping {
 
     public destroy(): void {
         this.clearControls();
+    }
+
+    public static createControls(definitions: Array<GamepadControlDefinition>): Array<GamepadControl> {
+        return definitions.map(([index, channel, options]) => new GamepadControl(index, channel, options));
     }
 }

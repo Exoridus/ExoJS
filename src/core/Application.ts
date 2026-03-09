@@ -7,9 +7,9 @@ import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
-import type { GamepadMapping } from 'input/GamepadMapping';
+import type { GamepadMapping, GamepadMappingResolver } from 'input/GamepadMapping';
 import type { IDatabase } from 'types/IDatabase';
-import { DefaultGamepadMapping } from 'input/DefaultGamepadMapping';
+import { GamepadProfiles } from 'input/GamepadProfiles';
 
 export enum ApplicationStatus {
     loading = 1,
@@ -27,7 +27,7 @@ export interface IApplicationOptions {
     spriteRendererBatchSize: number;
     particleRendererBatchSize: number;
     primitiveRendererBatchSize: number;
-    gamepadMapping: GamepadMapping;
+    gamepadMapping: GamepadMapping | GamepadMappingResolver;
     pointerDistanceThreshold: number;
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
@@ -44,7 +44,7 @@ const defaultAppSettings: IApplicationOptions = {
     spriteRendererBatchSize: 4096, // ~ 262kb
     particleRendererBatchSize: 8192, // ~ 1.18mb
     primitiveRendererBatchSize: 65536, // ~ 786kb
-    gamepadMapping: new DefaultGamepadMapping(),
+    gamepadMapping: GamepadProfiles.createAutoGamepadMappingResolver(),
     pointerDistanceThreshold: 10,
     webglAttributes: {
         alpha: false,

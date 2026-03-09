@@ -35,7 +35,9 @@ export class Drawable extends SceneNode {
     }
 
     public setTint(color: Color): this {
-        this._tint.copy(color);
+        if (color) {
+            this._tint.copy(color);
+        }
 
         return this;
     }
