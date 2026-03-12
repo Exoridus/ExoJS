@@ -6,7 +6,8 @@ import { ObservableVector } from 'math/ObservableVector';
 import type { Container } from 'rendering/Container';
 import type { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
-import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
+import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import { CollisionType } from 'types/Collision';
 import {
     getCollisionSat,
     intersectionLineRect,

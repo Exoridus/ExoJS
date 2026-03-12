@@ -4,7 +4,7 @@ import { Matrix } from 'math/Matrix';
 import type { Drawable } from 'rendering/Drawable';
 import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { IRenderer } from 'rendering/IRenderer';
-import { DrawableShape } from 'rendering/primitives/DrawableShape';
+import type { DrawableShape } from 'rendering/primitives/DrawableShape';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
 import { BlendModes, RenderingPrimitives } from 'types/rendering';
 

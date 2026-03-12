@@ -2,7 +2,8 @@ import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
 import type { IShape } from 'math/IShape';
 import { Interval } from 'math/Interval';
-import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
+import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import { CollisionType } from 'types/Collision';
 import {
     intersectionCircleEllipse,
     intersectionEllipseEllipse,

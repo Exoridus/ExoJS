@@ -4,7 +4,8 @@ import { Interval } from 'math/Interval';
 import { ObservableVector } from 'math/ObservableVector';
 import type { Matrix } from 'math/Matrix';
 import type { IShape } from 'math/IShape';
-import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
+import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import { CollisionType } from 'types/Collision';
 import {
     getCollisionCircleRectangle,
     getCollisionRectangleRectangle,

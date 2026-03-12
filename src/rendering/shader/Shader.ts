@@ -1,5 +1,5 @@
-import { ShaderAttribute } from './ShaderAttribute';
-import { ShaderUniform } from './ShaderUniform';
+import type { ShaderAttribute } from './ShaderAttribute';
+import type { ShaderUniform } from './ShaderUniform';
 
 export interface IShaderRuntime {
     initialize(shader: Shader): void;

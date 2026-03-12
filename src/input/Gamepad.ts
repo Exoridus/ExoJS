@@ -1,7 +1,7 @@
 import { Signal } from 'core/Signal';
 import { ChannelOffset, ChannelSize } from 'types/input';
 
-import { GamepadChannel } from './GamepadChannels';
+import type { GamepadChannel } from './GamepadChannels';
 
 import type { BrowserGamepad, ResolvedGamepadDefinition } from './GamepadDefinitions';
 import type { GamepadMappingFamily, GamepadMapping } from './GamepadMapping';

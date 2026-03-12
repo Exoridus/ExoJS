@@ -3,7 +3,7 @@
 import type { Drawable } from 'rendering/Drawable';
 import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { IRenderer } from 'rendering/IRenderer';
-import { Sprite } from 'rendering/sprite/Sprite';
+import type { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';

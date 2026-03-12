@@ -3,12 +3,13 @@ import { Shader } from 'rendering/shader/Shader';
 import { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
 import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { IWebGl2RenderBackend } from 'rendering/IWebGl2RenderBackend';
-import { BlendModes, BufferTypes, BufferUsage } from 'types/rendering';
+import type { BlendModes} from 'types/rendering';
+import { BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
 import { RenderBuffer, type IRenderBufferRuntime } from 'rendering/RenderBuffer';
 import { VertexArrayObject, type IVertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
 import type { Drawable } from 'rendering/Drawable';
-import { DrawableShape } from 'rendering/primitives/DrawableShape';
+import type { DrawableShape } from 'rendering/primitives/DrawableShape';
 import vertexSource from './glsl/primitive.vert';
 import fragmentSource from './glsl/primitive.frag';
 

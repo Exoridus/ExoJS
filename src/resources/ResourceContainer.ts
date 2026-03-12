@@ -2,7 +2,7 @@ import type { Texture } from 'rendering/texture/Texture';
 import type { Music } from 'audio/Music';
 import type { Sound } from 'audio/Sound';
 import type { Video } from 'rendering/Video';
-import { ResourceTypes } from 'types/types';
+import type { ResourceTypes } from 'types/types';
 
 export interface IResourceTypeMap {
     [ResourceTypes.font]: FontFace;

@@ -1,6 +1,7 @@
 import { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
-import { TextStyle, ITextStyleOptions } from 'rendering/TextStyle';
+import type { ITextStyleOptions } from 'rendering/TextStyle';
+import { TextStyle } from 'rendering/TextStyle';
 import { Rectangle } from 'math/Rectangle';
 import type { ISamplerOptions } from 'rendering/texture/Sampler';
 import type { IRenderBackend } from 'rendering/IRenderBackend';

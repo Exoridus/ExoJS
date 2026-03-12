@@ -4,7 +4,7 @@ import type { Drawable } from 'rendering/Drawable';
 import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { IRenderer } from 'rendering/IRenderer';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
-import { ParticleSystem } from 'particles/ParticleSystem';
+import type { ParticleSystem } from 'particles/ParticleSystem';
 import { Texture } from 'rendering/texture/Texture';
 import { BlendModes } from 'types/rendering';
 

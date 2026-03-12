@@ -5,7 +5,8 @@ import type { VertexArrayObject, IVertexArrayObjectRuntime } from 'rendering/Ver
 import { RenderBuffer, type IRenderBufferRuntime } from 'rendering/RenderBuffer';
 import { createQuadIndices } from 'utils/rendering';
 import type { Texture } from 'rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage } from 'types/rendering';
+import type { BlendModes} from 'types/rendering';
+import { BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
 import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { IWebGl2RenderBackend } from 'rendering/IWebGl2RenderBackend';
