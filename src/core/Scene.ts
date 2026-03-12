@@ -1,14 +1,14 @@
 import type { Time } from './Time';
 import type { Loader } from 'resources/Loader';
 import type { ResourceContainer } from 'resources/ResourceContainer';
-import type { RenderManager } from 'rendering/RenderManager';
+import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { Application } from './Application';
 
 export interface ISceneData {
     load?: (loader: Loader) => Promise<void>;
     init?: (resources: ResourceContainer) => void;
     update?: (delta: Time) => void;
-    draw?: (renderManager: RenderManager) => void;
+    draw?: (renderManager: IRenderBackend) => void;
     unload?: () => void;
     destroy?: () => void;
 }
@@ -44,7 +44,7 @@ export class Scene {
         // do nothing
     }
 
-    public draw(renderManager: RenderManager): void {
+    public draw(renderManager: IRenderBackend): void {
         // do nothing
     }
 

@@ -3,10 +3,15 @@ import type { IPlaybackOptions } from 'types/types';
 import { AbstractMedia } from 'types/AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 
+interface IMusicAudioSetup {
+    readonly audioContext: AudioContext;
+    readonly gainNode: GainNode;
+    readonly sourceNode: MediaElementAudioSourceNode;
+}
+
 export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;
-    private _gainNode: GainNode | null = null;
-    private _sourceNode: MediaElementAudioSourceNode | null = null;
+    private _audioSetup: IMusicAudioSetup | null = null;
 
     public constructor(audioElement: HTMLAudioElement, options?: Partial<IPlaybackOptions>) {
         super(audioElement);
@@ -33,8 +38,9 @@ export class Music extends AbstractMedia {
 
         this._volume = volume;
 
-        if (this._gainNode) {
-            this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, this._audioContext!.currentTime, 10);
+        if (this._audioSetup) {
+            const { gainNode, audioContext } = this._audioSetup;
+            gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
         }
 
         return this;
@@ -74,8 +80,9 @@ export class Music extends AbstractMedia {
         if (this._muted !== muted) {
             this._muted = muted;
 
-            if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, this._audioContext!.currentTime, 10);
+            if (this._audioSetup) {
+                const { gainNode, audioContext } = this._audioSetup;
+                gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
             }
         }
 
@@ -95,7 +102,7 @@ export class Music extends AbstractMedia {
     }
 
     public get analyserTarget(): AudioNode | null {
-        return this._gainNode;
+        return this._audioSetup?.gainNode ?? null;
     }
 
     public play(options?: Partial<IPlaybackOptions>): this {
@@ -129,21 +136,21 @@ export class Music extends AbstractMedia {
 
         onAudioContextReady.clearByContext(this);
 
-        this._sourceNode?.disconnect();
-        this._sourceNode = null;
-
-        this._gainNode?.disconnect();
-        this._gainNode = null;
+        if (this._audioSetup) {
+            this._audioSetup.sourceNode.disconnect();
+            this._audioSetup.gainNode.disconnect();
+            this._audioSetup = null;
+        }
     }
 
     private setupWithAudioContext(audioContext: AudioContext): void {
-        this._audioContext = audioContext;
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
+        gainNode.connect(audioContext.destination);
 
-        this._gainNode = audioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
-        this._gainNode.connect(audioContext.destination);
+        const sourceNode = audioContext.createMediaElementSource(this._audioElement);
+        sourceNode.connect(gainNode);
 
-        this._sourceNode = audioContext.createMediaElementSource(this._audioElement);
-        this._sourceNode.connect(this._gainNode);
+        this._audioSetup = { audioContext, gainNode, sourceNode };
     }
 }

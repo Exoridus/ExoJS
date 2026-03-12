@@ -17,10 +17,10 @@ export class AudioAnalyser {
     private readonly _smoothingTimeConstant: number;
     private readonly _frequencyBinCount: number;
 
-    private readonly _timeDomainData: Uint8Array;
-    private readonly _frequencyData: Uint8Array;
-    private readonly _preciseTimeDomainData: Float32Array;
-    private readonly _preciseFrequencyData: Float32Array;
+    private readonly _timeDomainData: Uint8Array<ArrayBuffer>;
+    private readonly _frequencyData: Uint8Array<ArrayBuffer>;
+    private readonly _preciseTimeDomainData: Float32Array<ArrayBuffer>;
+    private readonly _preciseFrequencyData: Float32Array<ArrayBuffer>;
 
     private _analyser: AnalyserNode | null = null;
     private _audioContext: AudioContext | null = null;
@@ -68,7 +68,7 @@ export class AudioAnalyser {
     public get timeDomainData(): Uint8Array {
         if (this._analyser) {
             this.connect();
-            this._analyser!.getByteTimeDomainData(this._timeDomainData as any);
+            this._analyser.getByteTimeDomainData(this._timeDomainData);
         }
 
         return this._timeDomainData;
@@ -77,7 +77,7 @@ export class AudioAnalyser {
     public get frequencyData(): Uint8Array {
         if (this._analyser) {
             this.connect();
-            this._analyser.getByteFrequencyData(this._frequencyData as any);
+            this._analyser.getByteFrequencyData(this._frequencyData);
         }
 
         return this._frequencyData;
@@ -86,7 +86,7 @@ export class AudioAnalyser {
     public get preciseTimeDomainData(): Float32Array {
         if (this._analyser) {
             this.connect();
-            this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData as any);
+            this._analyser.getFloatTimeDomainData(this._preciseTimeDomainData);
         }
 
         return this._preciseTimeDomainData;
@@ -95,7 +95,7 @@ export class AudioAnalyser {
     public get preciseFrequencyData(): Float32Array {
         if (this._analyser) {
             this.connect();
-            this._analyser.getFloatFrequencyData(this._preciseFrequencyData as any);
+            this._analyser.getFloatFrequencyData(this._preciseFrequencyData);
         }
 
         return this._preciseFrequencyData;

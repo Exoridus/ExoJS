@@ -8,10 +8,10 @@ export class SceneManager {
     private readonly _app: Application;
     private _scene: Scene | null = null;
 
-    public readonly onChangeScene = new Signal();
-    public readonly onStartScene = new Signal();
-    public readonly onUpdateScene = new Signal();
-    public readonly onStopScene = new Signal();
+    public readonly onChangeScene = new Signal<[Scene | null]>();
+    public readonly onStartScene = new Signal<[Scene]>();
+    public readonly onUpdateScene = new Signal<[Scene]>();
+    public readonly onStopScene = new Signal<[Scene]>();
 
     public constructor(app: Application) {
         this._app = app;

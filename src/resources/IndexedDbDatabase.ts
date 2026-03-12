@@ -82,24 +82,24 @@ export class IndexedDbDatabase implements IDatabase {
         return true;
     }
 
-    public async load<T>(type: ResourceTypes, name: string): Promise<T> {
+    public async load<T = unknown>(type: ResourceTypes, name: string): Promise<T | null> {
         const store = await this.getObjectStore(type);
 
         return new Promise((resolve, reject) => {
             const request = store.get(name);
 
-            request.addEventListener('success', () => resolve(request.result?.data || null));
+            request.addEventListener('success', () => resolve(request.result?.data ?? null));
             request.addEventListener('error', () => reject(Error('An error occurred while loading an item.')));
         });
     }
 
-    public async save<T>(type: ResourceTypes, name: string, data: any): Promise<T> {
+    public async save(type: ResourceTypes, name: string, data: unknown): Promise<void> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
             const request = store.put({ name, data });
 
-            request.addEventListener('success', () => resolve(undefined as unknown as T));
+            request.addEventListener('success', () => resolve());
             request.addEventListener('error', () => reject(Error('An error occurred while saving an item.')));
         });
     }

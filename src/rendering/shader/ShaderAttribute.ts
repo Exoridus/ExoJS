@@ -1,21 +1,14 @@
-import { primitiveByteSizeMapping } from '../../types/rendering';
+import { primitiveByteSizeMapping } from './ShaderMappings';
 
 export class ShaderAttribute {
 
-    private readonly _context: WebGL2RenderingContext;
-    private readonly _program: WebGLProgram;
-    public readonly location: number;
     public readonly index: number;
     public readonly name: string;
     public readonly type: number;
     public readonly size: number;
+    public location = -1;
 
-    public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, name: string, type: number) {
-        const location = gl.getAttribLocation(program, name);
-
-        this._context = gl;
-        this._program = program;
-        this.location = location;
+    public constructor(index: number, name: string, type: number) {
         this.index = index;
         this.name = name;
         this.type = type;
@@ -23,6 +16,6 @@ export class ShaderAttribute {
     }
 
     public destroy(): void {
-        // todo - check if destroy is needed
+        // no-op — metadata only
     }
 }

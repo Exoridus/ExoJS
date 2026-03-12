@@ -16,7 +16,6 @@ export abstract class AbstractMedia implements IMedia {
     protected _playbackRate: number;
     protected _loop: boolean;
     protected _muted: boolean;
-    protected _audioContext: AudioContext | null = null;
 
     public abstract get paused(): boolean;
     public abstract set paused(paused: boolean);

@@ -76,7 +76,7 @@ export class Segment implements ICloneable {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.startX, this.startY, this.endX, this.endY);
+        return new Segment(this.startX, this.startY, this.endX, this.endY) as this;
     }
 
     public equals({ startX, startY, endX, endY }: Partial<Segment> = {}): boolean {

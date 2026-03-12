@@ -6,7 +6,7 @@ interface IImageFactoryOptions {
     mimeType?: string;
 }
 
-export class ImageFactory extends AbstractResourceFactory<ArrayBuffer, HTMLImageElement> {
+export class ImageFactory extends AbstractResourceFactory<ArrayBuffer, HTMLImageElement, IImageFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.image;
 

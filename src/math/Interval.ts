@@ -24,7 +24,7 @@ export class Interval implements ICloneable {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.min, this.max);
+        return new Interval(this.min, this.max) as this;
     }
 
     public containsInterval(interval: Interval): boolean {

@@ -102,7 +102,7 @@ export class Ellipse implements IShape {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.x, this.y, this.rx, this.ry);
+        return new Ellipse(this.x, this.y, this.rx, this.ry) as this;
     }
 
     public getBounds(): Rectangle {

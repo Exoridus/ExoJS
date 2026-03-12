@@ -4,18 +4,22 @@ import type { TypedArray } from 'types/types';
 
 type DataContainer = ArrayBuffer | SharedArrayBuffer | ArrayBufferView | TypedArray;
 
+export interface IRenderBufferRuntime {
+    bind(buffer: RenderBuffer): void;
+    upload(buffer: RenderBuffer, offset: number): void;
+    destroy(buffer: RenderBuffer): void;
+}
+
 export class RenderBuffer {
 
-    private readonly _context: WebGL2RenderingContext;
-    private readonly _buffer: WebGLBuffer | null;
     private readonly _type: number;
     private readonly _usage: BufferUsage;
+    private _runtime: IRenderBufferRuntime | null = null;
     private _data: DataContainer = emptyArrayBuffer;
+    private _version = 0;
 
-    public constructor(gl: WebGL2RenderingContext, type: BufferTypes, data: DataContainer, usage: BufferUsage) {
+    public constructor(type: BufferTypes, data: DataContainer, usage: BufferUsage) {
 
-        this._context = gl;
-        this._buffer = gl.createBuffer();
         this._type = type;
         this._usage = usage;
 
@@ -24,23 +28,51 @@ export class RenderBuffer {
         }
     }
 
-    public upload(data: DataContainer, offset = 0): void {
-        this.bind();
+    public get type(): number {
+        return this._type;
+    }
 
-        if (this._data.byteLength >= data.byteLength) {
-            this._context.bufferSubData(this._type, offset, data);
-        } else {
-            this._context.bufferData(this._type, data, this._usage);
+    public get usage(): BufferUsage {
+        return this._usage;
+    }
+
+    public get data(): DataContainer {
+        return this._data;
+    }
+
+    public get version(): number {
+        return this._version;
+    }
+
+    public connect(runtime: IRenderBufferRuntime): this {
+        this._runtime = runtime;
+
+        if (this._data.byteLength > 0) {
+            runtime.upload(this, 0);
         }
 
+        return this;
+    }
+
+    public disconnect(): this {
+        this._runtime = null;
+
+        return this;
+    }
+
+    public upload(data: DataContainer, offset = 0): void {
         this._data = data;
+        this._version++;
+
+        this._runtime?.upload(this, offset);
     }
 
     public bind(): void {
-        this._context.bindBuffer(this._type, this._buffer);
+        this._runtime?.bind(this);
     }
 
     public destroy(): void {
-        this._context.deleteBuffer(this._buffer);
+        this._runtime?.destroy(this);
+        this._runtime = null;
     }
 }

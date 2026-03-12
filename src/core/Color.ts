@@ -101,7 +101,7 @@ export class Color implements ICloneable {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this._r, this._g, this._b, this._a);
+        return new Color(this._r, this._g, this._b, this._a) as this;
     }
 
     public equals({ r, g, b, a }: Partial<Color> = {}): boolean {

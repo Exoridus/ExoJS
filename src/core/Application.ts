@@ -1,6 +1,7 @@
 import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
 import { RenderManager } from 'rendering/RenderManager';
+import { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
 import { InputManager } from 'input/InputManager';
 import { Loader } from 'resources/Loader';
 import { Signal } from './Signal';
@@ -10,6 +11,7 @@ import type { Scene } from './Scene';
 import type { GamepadMapping, GamepadMappingResolver } from 'input/GamepadMapping';
 import type { IDatabase } from 'types/IDatabase';
 import { GamepadProfiles } from 'input/GamepadProfiles';
+import type { IRenderManager } from 'rendering/IRenderManager';
 
 export enum ApplicationStatus {
     loading = 1,
@@ -33,10 +35,29 @@ export interface IApplicationOptions {
     resourcePath: string;
     requestOptions: RequestInit;
     database?: IDatabase;
+    backend?: BackendConfig;
 }
 
-const defaultAppSettings: IApplicationOptions = {
-    canvas: document.createElement('canvas') as HTMLCanvasElement,
+type DefaultApplicationOptions = Omit<IApplicationOptions, 'canvas'>;
+
+export interface IWebGl2BackendConfig {
+    type: 'webgl2';
+}
+
+export interface IWebGpuBackendConfig {
+    type: 'webgpu';
+}
+
+export interface IAutoBackendConfig {
+    type: 'auto';
+}
+
+export type BackendConfig = IAutoBackendConfig | IWebGl2BackendConfig | IWebGpuBackendConfig;
+
+const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas') as HTMLCanvasElement;
+const defaultBackendConfig: IAutoBackendConfig = { type: 'auto' };
+
+const defaultAppSettings: DefaultApplicationOptions = {
     width: 800,
     height: 600,
     clearColor: Color.cornflowerBlue,
@@ -61,16 +82,16 @@ const defaultAppSettings: IApplicationOptions = {
         cache: 'default',
     },
     database: undefined,
+    backend: defaultBackendConfig,
 };
 
 export class Application {
     public readonly options: IApplicationOptions;
     public readonly canvas: HTMLCanvasElement;
     public readonly loader: Loader;
-    public readonly renderManager: RenderManager;
     public readonly inputManager: InputManager;
     public readonly sceneManager: SceneManager;
-    public readonly onResize = new Signal();
+    public readonly onResize = new Signal<[number, number, Application]>();
 
     private readonly _updateHandler: () => void;
     private readonly _startupClock: Clock = new Clock();
@@ -80,9 +101,16 @@ export class Application {
     private _status: ApplicationStatus = ApplicationStatus.stopped;
     private _frameCount = 0;
     private _frameRequest = 0;
+    private _backendType: 'webgl2' | 'webgpu';
+    private _renderManager: IRenderManager;
 
     public constructor(appSettings?: Partial<IApplicationOptions>) {
-        this.options = { ...defaultAppSettings, ...appSettings };
+        this.options = {
+            canvas: appSettings?.canvas ?? createDefaultCanvas(),
+            ...defaultAppSettings,
+            ...appSettings,
+            backend: appSettings?.backend ?? defaultBackendConfig,
+        };
         this.canvas = this.options.canvas;
 
         if (!this.canvas.hasAttribute('tabindex')) {
@@ -90,7 +118,8 @@ export class Application {
         }
 
         this.loader = new Loader(this.options);
-        this.renderManager = new RenderManager(this);
+        this._backendType = this._resolveInitialBackendType();
+        this._renderManager = this._createRenderManager(this._backendType);
         this.inputManager = new InputManager(this);
         this.sceneManager = new SceneManager(this);
         this._updateHandler = this.update.bind(this);
@@ -118,14 +147,25 @@ export class Application {
         return this._frameCount;
     }
 
+    public get renderManager(): IRenderManager {
+        return this._renderManager;
+    }
+
     public async start(scene: Scene): Promise<this> {
         if (this._status === ApplicationStatus.stopped) {
             this._status = ApplicationStatus.loading;
-            await this.sceneManager.setScene(scene);
-            this._frameRequest = requestAnimationFrame(this._updateHandler);
-            this._frameClock.restart();
-            this._activeClock.start();
-            this._status = ApplicationStatus.running;
+
+            try {
+                await this._initializeRenderManager();
+                await this.sceneManager.setScene(scene);
+                this._frameRequest = requestAnimationFrame(this._updateHandler);
+                this._frameClock.restart();
+                this._activeClock.start();
+                this._status = ApplicationStatus.running;
+            } catch (error) {
+                this._status = ApplicationStatus.stopped;
+                throw error;
+            }
         }
 
         return this;
@@ -168,11 +208,54 @@ export class Application {
         this.stop();
         this.loader.destroy();
         this.inputManager.destroy();
-        this.renderManager.destroy();
+        this._renderManager.destroy();
         this.sceneManager.destroy();
         this._startupClock.destroy();
         this._activeClock.destroy();
         this._frameClock.destroy();
         this.onResize.destroy();
+    }
+
+    private _resolveInitialBackendType(): 'webgl2' | 'webgpu' {
+        const backendType = this.options.backend?.type;
+
+        if (backendType === 'webgl2') {
+            return 'webgl2';
+        }
+
+        if (backendType === 'webgpu') {
+            return 'webgpu';
+        }
+
+        return this._canUseWebGpu() ? 'webgpu' : 'webgl2';
+    }
+
+    private _createRenderManager(backendType: 'webgl2' | 'webgpu'): IRenderManager {
+        if (backendType === 'webgpu') {
+            return new WebGpuRenderManager(this);
+        }
+
+        return new RenderManager(this);
+    }
+
+    private async _initializeRenderManager(): Promise<void> {
+        try {
+            await this._renderManager.initialize();
+        } catch (error) {
+            if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
+                throw error;
+            }
+
+            this._renderManager.destroy();
+            this._backendType = 'webgl2';
+            this._renderManager = this._createRenderManager(this._backendType);
+            await this._renderManager.initialize();
+        }
+    }
+
+    private _canUseWebGpu(): boolean {
+        const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU; }>;
+
+        return !!gpuNavigator.gpu;
     }
 }

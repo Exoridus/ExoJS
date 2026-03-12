@@ -1,5 +1,5 @@
 import { ShaderUniform } from './ShaderUniform';
-import { primitiveArrayConstructors, primitiveByteSizeMapping } from '../../types/rendering';
+import { primitiveArrayConstructors, primitiveByteSizeMapping } from './ShaderMappings';
 
 export class ShaderBlock {
 
@@ -67,7 +67,7 @@ export class ShaderBlock {
         for (let i = 0; i < len; i++) {
             const { type, size, name } = gl.getActiveUniform(program, indices[i])!;
             const data = new primitiveArrayConstructors[type](blockData, offsets[i], primitiveByteSizeMapping[type] * size);
-            const uniform = new ShaderUniform(gl, program, indices[i], type, size, name, data);
+            const uniform = new ShaderUniform(indices[i], type, size, name, data);
 
             this._uniforms.set(uniform.propName, uniform);
         }

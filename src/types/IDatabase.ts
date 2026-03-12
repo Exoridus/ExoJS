@@ -5,8 +5,8 @@ export interface IDatabase {
 
     connect(): Promise<boolean>;
     disconnect(): Promise<boolean>;
-    load<T = any>(type: string, name: string): Promise<T>;
-    save<T>(type: string, name: string, data: any): Promise<T>;
+    load<T = unknown>(type: string, name: string): Promise<T | null>;
+    save(type: string, name: string, data: unknown): Promise<void>;
     delete(type: string, name: string): Promise<boolean>;
     clearStorage(type: string): Promise<boolean>;
     deleteStorage(): Promise<boolean>;

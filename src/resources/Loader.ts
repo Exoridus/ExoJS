@@ -23,7 +23,7 @@ export interface IResourceQueueItem {
     type: ResourceTypes;
     name: string;
     path: string;
-    options?: object;
+    options?: unknown;
 }
 
 export class Loader {
@@ -35,10 +35,10 @@ export class Loader {
     private _requestOptions: RequestInit;
     private _database: IDatabase | null;
 
-    public readonly onQueueResource = new Signal();
-    public readonly onStartLoading = new Signal();
-    public readonly onLoadResource = new Signal();
-    public readonly onFinishLoading = new Signal();
+    public readonly onQueueResource = new Signal<[IResourceQueueItem]>();
+    public readonly onStartLoading = new Signal<[number, number, Array<IResourceQueueItem>]>();
+    public readonly onLoadResource = new Signal<[number, number, unknown]>();
+    public readonly onFinishLoading = new Signal<[number, number, ResourceContainer]>();
 
     public constructor(options: ILoaderOptions) {
         const { resourcePath, requestOptions, database } = options;
@@ -58,7 +58,7 @@ export class Loader {
         this.addFactory(ResourceTypes.svg, new SvgFactory());
     }
 
-    public get factories(): Map<string, IResourceFactory> {
+    public get factories(): Map<ResourceTypes, IResourceFactory> {
         return this._factories;
     }
 
@@ -109,7 +109,7 @@ export class Loader {
         return this._factories.get(type)!;
     }
 
-    public add(type: ResourceTypes, items: object, options?: object): this {
+    public add(type: ResourceTypes, items: Record<string, string>, options?: unknown): this {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }
@@ -143,13 +143,13 @@ export class Loader {
         return this._resources;
     }
 
-    public async loadItem(queueItem: IResourceQueueItem): Promise<any> {
+    public async loadItem(queueItem: IResourceQueueItem): Promise<unknown> {
         const { type, name, path, options } = queueItem;
 
         if (!this._resources.has(type, name)) {
             const factory = this.getFactory(type);
-            let source: any = null;
-            let resource: any = null;
+            let source: unknown = null;
+            let resource: unknown = null;
 
             if (this._database) {
                 source = await this._database.load(factory.storageName, name);
@@ -188,10 +188,14 @@ export class Loader {
                 }
             }
 
-            this._resources.set(type, name, resource);
+            this.getResources(type).set(name, resource);
         }
 
-        return this._resources.get(type, name);
+        return this.getResources(type).get(name);
+    }
+
+    private getResources(type: ResourceTypes): Map<string, unknown> {
+        return this._resources.getResources(type);
     }
 
     public reset({ signals = true, queue = true, resources = true } = {}): this {

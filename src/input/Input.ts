@@ -22,10 +22,10 @@ export class Input {
     private readonly _triggerTimer: Timer;
     private _value = 0;
 
-    public readonly onStart: Signal = new Signal();
-    public readonly onStop: Signal = new Signal();
-    public readonly onActive: Signal = new Signal();
-    public readonly onTrigger: Signal = new Signal();
+    public readonly onStart = new Signal<[number]>();
+    public readonly onStop = new Signal<[number]>();
+    public readonly onActive = new Signal<[number]>();
+    public readonly onTrigger = new Signal<[number]>();
 
     public constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold }: IInputOptions = {}) {
 

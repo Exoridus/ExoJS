@@ -9,7 +9,7 @@ interface ITextureFactoryOptions {
     samplerOptions?: ISamplerOptions;
 }
 
-export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture> {
+export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture, ITextureFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.image;
 

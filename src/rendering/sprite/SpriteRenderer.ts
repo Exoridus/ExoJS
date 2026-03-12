@@ -34,7 +34,6 @@ export class SpriteRenderer extends AbstractRenderer {
 
             if (textureChanged) {
                 this.currentTexture = texture;
-                this.renderManager!.setTexture(texture);
             }
 
             if (blendModeChanged) {
@@ -44,7 +43,7 @@ export class SpriteRenderer extends AbstractRenderer {
         }
 
         if (texture) {
-            texture.update();
+            this.renderManager!.setTexture(texture);
         }
 
         // X / Y
@@ -84,7 +83,7 @@ export class SpriteRenderer extends AbstractRenderer {
     }
 
     protected createVao(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject {
-        return new VertexArrayObject(gl)
+        return new VertexArrayObject()
             .addIndex(indexBuffer)
             .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'), gl.FLOAT, false, this.attributeCount, 0)
             .addAttribute(vertexBuffer, this.shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this.attributeCount, 8)

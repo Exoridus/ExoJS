@@ -3,7 +3,7 @@ import { Texture } from 'rendering/texture/Texture';
 import { TextStyle, ITextStyleOptions } from 'rendering/TextStyle';
 import { Rectangle } from 'math/Rectangle';
 import type { ISamplerOptions } from 'rendering/texture/Sampler';
-import type { RenderManager } from 'rendering/RenderManager';
+import type { IRenderBackend } from 'rendering/IRenderBackend';
 import { determineFontHeight } from '../utils/rendering';
 
 const newLinePattern = /(?:\r\n|\r|\n)/;
@@ -70,8 +70,9 @@ export class Text extends Sprite {
     public setCanvas(canvas: HTMLCanvasElement): this {
         if (this._canvas !== canvas) {
             this._canvas = canvas;
-            this._context = canvas.getContext('2d') as CanvasRenderingContext2D;
+            this._context = this._getContext(canvas);
             this._dirty = true;
+            (this.texture!.setSource as (source: HTMLCanvasElement) => Texture).call(this.texture, canvas);
 
             this.setTextureFrame(Rectangle.temp.set(0, 0, canvas.width, canvas.height));
         }
@@ -167,12 +168,22 @@ export class Text extends Sprite {
         return result;
     }
 
-    public render(renderManager: RenderManager): this {
+    public render(renderManager: IRenderBackend): this {
         if (this.visible) {
             this.updateTexture();
             super.render(renderManager);
         }
 
         return this;
+    }
+
+    private _getContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+        const context = canvas.getContext('2d');
+
+        if (context === null) {
+            throw new Error('Could not create a 2D canvas context.');
+        }
+
+        return context;
     }
 }

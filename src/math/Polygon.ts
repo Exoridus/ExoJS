@@ -130,7 +130,7 @@ export class Polygon implements IShape {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.points, this.x, this.y);
+        return new Polygon(this.points, this.x, this.y) as this;
     }
 
     public equals({ x, y, points }: Partial<Polygon> = {}): boolean {

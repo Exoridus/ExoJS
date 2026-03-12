@@ -8,23 +8,24 @@ import { PrimitiveRenderer } from 'rendering/primitives/PrimitiveRenderer';
 import { Color } from 'core/Color';
 import { canvasSourceToDataUrl } from 'utils/core';
 import { Texture } from './texture/Texture';
+import { RenderTexture } from './texture/RenderTexture';
 import { IRenderer, RendererType } from 'rendering/IRenderer';
+import type { IWebGl2RenderBackend } from './IWebGl2RenderBackend';
 import type { Shader } from './shader/Shader';
 import type { VertexArrayObject } from './VertexArrayObject';
-import type { RenderTexture } from './texture/RenderTexture';
-import type { Drawable } from './Drawable';
 import type { View } from './View';
 import type { Application } from 'core/Application';
+import type { IRenderManager } from './IRenderManager';
 
 const throwOnGlError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
 };
 
-const logGlCall = (functionName: string, args: any): void => {
+const logGlCall = (functionName: string, args: Array<unknown>): void => {
     console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
 };
 
-const validateNoneOfTheArgsAreUndefined = (functionName: string, args: any): void => {
+const validateNoneOfTheArgsAreUndefined = (functionName: string, args: Array<unknown>): void => {
     for (const arg of args) {
         if (arg === undefined) {
             console.error(`undefined passed to gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
@@ -32,18 +33,40 @@ const validateNoneOfTheArgsAreUndefined = (functionName: string, args: any): voi
     }
 };
 
-const logAndValidate = (functionName: string, args: any): void => {
+const logAndValidate = (functionName: string, args: Array<unknown>): void => {
     logGlCall(functionName, args);
-    validateNoneOfTheArgsAreUndefined (functionName, args);
+    validateNoneOfTheArgsAreUndefined(functionName, args);
 };
 
-export class RenderManager {
+interface IManagedTextureState {
+    readonly handle: WebGLTexture;
+    version: number;
+    width: number;
+    height: number;
+}
+
+interface IManagedRenderTargetState {
+    framebuffer: WebGLFramebuffer | null;
+    version: number;
+    attachedTexture: WebGLTexture | null;
+}
+
+interface IDestroyListenable {
+    addDestroyListener(listener: () => void): unknown;
+    removeDestroyListener(listener: () => void): unknown;
+}
+
+export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _onContextLostHandler: () => void;
     private readonly _onContextRestoredHandler: () => void;
     private readonly _renderers: Map<RendererType, IRenderer> = new Map<RendererType, IRenderer>();
+    private readonly _textureStates: Map<Texture | RenderTexture, IManagedTextureState> = new Map<Texture | RenderTexture, IManagedTextureState>();
+    private readonly _renderTargetStates: Map<RenderTarget, IManagedRenderTargetState> = new Map<RenderTarget, IManagedRenderTargetState>();
+    private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
+    private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
 
     private _canvas: HTMLCanvasElement;
     private _contextLost: boolean;
@@ -56,6 +79,7 @@ export class RenderManager {
     private _vao: VertexArrayObject | null = null;
     private _clearColor: Color = new Color();
     private _cursor: string;
+    private _boundFramebuffer: WebGLFramebuffer | null = null;
 
     public constructor(app: Application) {
         const {
@@ -102,7 +126,7 @@ export class RenderManager {
         this.addRenderer(RendererType.particle, new ParticleRenderer(particleRendererBatchSize));
         this.addRenderer(RendererType.primitive, new PrimitiveRenderer(primitiveRendererBatchSize));
 
-        this._connectAndBindRenderTarget();
+        this._bindRenderTarget(this._renderTarget);
         this.setBlendMode(BlendModes.normal);
 
         this.resize(width, height);
@@ -180,14 +204,18 @@ export class RenderManager {
         this.setCursor(cursor);
     }
 
+    public async initialize(): Promise<this> {
+        return this;
+    }
+
     public setRenderTarget(target: RenderTarget | null): this {
         const renderTarget = target || this._rootRenderTarget;
 
         if (this._renderTarget !== renderTarget) {
-            this._renderTarget.unbindFramebuffer();
             this._renderTarget = renderTarget;
-            this._connectAndBindRenderTarget();
         }
+
+        this._bindRenderTarget(renderTarget);
 
         return this;
     }
@@ -229,13 +257,12 @@ export class RenderManager {
     public setShader(shader: Shader | null): this {
         if (this._shader !== shader) {
             if (this._shader) {
-                this._shader.unbindProgram();
+                this._shader.unbind();
                 this._shader = null;
             }
 
             if (shader) {
-                shader.connect(this._context);
-                shader.bindProgram();
+                shader.bind();
             }
 
             this._shader = shader;
@@ -249,19 +276,19 @@ export class RenderManager {
             this.setTextureUnit(unit);
         }
 
-        if (this._texture !== texture) {
-            if (this._texture) {
-                this._texture.unbindTexture();
+        if (texture === null) {
+            if (this._texture !== null) {
+                this._context.bindTexture(this._context.TEXTURE_2D, null);
                 this._texture = null;
             }
 
-            if (texture) {
-                texture.connect(this._context);
-                texture.bindTexture();
-            }
-
-            this._texture = texture;
+            return this;
         }
+
+        const textureState = this._syncTexture(texture);
+
+        this._context.bindTexture(this._context.TEXTURE_2D, textureState.handle);
+        this._texture = texture;
 
         return this;
     }
@@ -358,6 +385,7 @@ export class RenderManager {
             this.setClearColor(color);
         }
 
+        this._bindRenderTarget(this._renderTarget);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         return this;
@@ -368,20 +396,14 @@ export class RenderManager {
         this._canvas.height = height;
 
         this._rootRenderTarget.resize(width, height);
-
-        return this;
-    }
-
-    public draw(drawable: Drawable): this {
-        if (!this._contextLost) {
-            drawable.render(this);
-        }
+        this._bindRenderTarget(this._renderTarget);
 
         return this;
     }
 
     public display(): this {
         if (this._renderer && !this._contextLost) {
+            this._bindRenderTarget(this._renderTarget);
             this._renderer.flush();
         }
 
@@ -403,6 +425,7 @@ export class RenderManager {
 
         this._renderers.clear();
         this._clearColor.destroy();
+        this._destroyManagedResources();
         this._rootRenderTarget.destroy();
 
         this._vao = null;
@@ -410,6 +433,7 @@ export class RenderManager {
         this._shader = null;
         this._blendMode = null;
         this._texture = null;
+        this._boundFramebuffer = null;
     }
 
     private _createContext(options: WebGLContextAttributes): WebGL2RenderingContext | null {
@@ -457,12 +481,221 @@ export class RenderManager {
         this._contextLost = false;
     }
 
-    private _connectAndBindRenderTarget(): void {
-        if (!this._context) {
-            throw new Error('Cannot connect rendertarget when no context is provided!');
+    private _createFramebuffer(): WebGLFramebuffer {
+        const framebuffer = this._context.createFramebuffer();
+
+        if (framebuffer === null) {
+            throw new Error('Could not create framebuffer.');
         }
 
-        this._renderTarget.connect(this._context);
-        this._renderTarget.bindFramebuffer();
+        return framebuffer;
+    }
+
+    private _createTextureHandle(): WebGLTexture {
+        const texture = this._context.createTexture();
+
+        if (texture === null) {
+            throw new Error('Could not create texture.');
+        }
+
+        return texture;
+    }
+
+    private _destroyManagedResources(): void {
+        for (const renderTarget of Array.from(this._renderTargetStates.keys())) {
+            this._evictRenderTarget(renderTarget, false);
+        }
+
+        for (const texture of Array.from(this._textureStates.keys())) {
+            this._evictTexture(texture, false);
+        }
+    }
+
+    private _getRenderTargetState(target: RenderTarget): IManagedRenderTargetState {
+        let state = this._renderTargetStates.get(target);
+
+        if (!state) {
+            this._subscribeToDestroy(target, this._renderTargetDestroyHandlers, () => {
+                this._evictRenderTarget(target, true);
+            });
+
+            state = {
+                framebuffer: target.root ? null : this._createFramebuffer(),
+                version: -1,
+                attachedTexture: null,
+            };
+
+            this._renderTargetStates.set(target, state);
+        }
+
+        return state;
+    }
+
+    private _getTextureState(texture: Texture | RenderTexture): IManagedTextureState {
+        let state = this._textureStates.get(texture);
+
+        if (!state) {
+            this._subscribeToDestroy(texture, this._textureDestroyHandlers, () => {
+                this._evictTexture(texture, true);
+            });
+
+            state = {
+                handle: this._createTextureHandle(),
+                version: -1,
+                width: 0,
+                height: 0,
+            };
+
+            this._textureStates.set(texture, state);
+        }
+
+        return state;
+    }
+
+    private _subscribeToDestroy<T extends IDestroyListenable>(descriptor: T, handlers: Map<T, () => void>, handler: () => void): void {
+        if (!handlers.has(descriptor)) {
+            descriptor.addDestroyListener(handler);
+            handlers.set(descriptor, handler);
+        }
+    }
+
+    private _unsubscribeFromDestroy<T extends IDestroyListenable>(descriptor: T, handlers: Map<T, () => void>): void {
+        const handler = handlers.get(descriptor);
+
+        if (handler) {
+            descriptor.removeDestroyListener(handler);
+            handlers.delete(descriptor);
+        }
+    }
+
+    private _evictRenderTarget(target: RenderTarget, rebind: boolean): void {
+        const state = this._renderTargetStates.get(target);
+
+        this._unsubscribeFromDestroy(target, this._renderTargetDestroyHandlers);
+
+        if (target instanceof RenderTexture) {
+            this._evictTexture(target, false);
+        }
+
+        if (state) {
+            if (this._boundFramebuffer === state.framebuffer) {
+                this._context.bindFramebuffer(this._context.FRAMEBUFFER, null);
+                this._boundFramebuffer = null;
+            }
+
+            if (state.framebuffer !== null) {
+                this._context.deleteFramebuffer(state.framebuffer);
+            }
+
+            this._renderTargetStates.delete(target);
+        }
+
+        if (this._renderTarget === target) {
+            this._renderTarget = this._rootRenderTarget;
+
+            if (rebind) {
+                this._bindRenderTarget(this._rootRenderTarget);
+            }
+        }
+    }
+
+    private _evictTexture(texture: Texture | RenderTexture, rebind: boolean): void {
+        const state = this._textureStates.get(texture);
+
+        this._unsubscribeFromDestroy(texture, this._textureDestroyHandlers);
+
+        if (state) {
+            if (this._texture === texture) {
+                this._context.bindTexture(this._context.TEXTURE_2D, null);
+                this._texture = null;
+            }
+
+            this._context.deleteTexture(state.handle);
+            this._textureStates.delete(texture);
+        }
+
+        if (this._texture === texture) {
+            this._texture = null;
+        }
+
+        if (rebind && this._texture !== null) {
+            this.setTexture(this._texture);
+        }
+    }
+
+    private _bindRenderTarget(target: RenderTarget): void {
+        const state = this._prepareRenderTarget(target);
+
+        if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
+            const gl = this._context;
+            const { x, y, width, height } = target.getViewport();
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+            gl.viewport(x, y, width, height);
+
+            this._boundFramebuffer = state.framebuffer;
+            state.version = target.version;
+        }
+    }
+
+    private _prepareRenderTarget(target: RenderTarget): IManagedRenderTargetState {
+        const state = this._getRenderTargetState(target);
+
+        if (target instanceof RenderTexture && state.framebuffer) {
+            const previousFramebuffer = this._boundFramebuffer;
+            const textureState = this._syncTexture(target);
+
+            if (state.attachedTexture !== textureState.handle) {
+                const gl = this._context;
+
+                gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+                state.attachedTexture = textureState.handle;
+            }
+        }
+
+        return state;
+    }
+
+    private _syncTexture(texture: Texture | RenderTexture): IManagedTextureState {
+        const gl = this._context;
+        const state = this._getTextureState(texture);
+        const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
+
+        gl.bindTexture(gl.TEXTURE_2D, state.handle);
+
+        if (state.version !== version) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+
+            if (texture instanceof RenderTexture) {
+                if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+                } else {
+                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+                }
+            } else if (texture.source) {
+                if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+                } else {
+                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+                }
+            }
+
+            if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
+                gl.generateMipmap(gl.TEXTURE_2D);
+            }
+
+            state.version = version;
+            state.width = texture.width;
+            state.height = texture.height;
+        }
+
+        return state;
     }
 }

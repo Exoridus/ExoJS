@@ -6,3 +6,4 @@ export * from './input/index';
 export * from './math/index';
 export * from './particles/index';
 export * from './rendering/index';
+export * from './webgl2';

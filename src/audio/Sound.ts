@@ -3,9 +3,14 @@ import type { IPlaybackOptions } from 'types/types';
 import { AbstractMedia } from 'types/AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 
+interface ISoundAudioSetup {
+    readonly audioContext: AudioContext;
+    readonly gainNode: GainNode;
+}
+
 export class Sound extends AbstractMedia {
     private readonly _audioBuffer: AudioBuffer;
-    private _gainNode: GainNode | null = null;
+    private _audioSetup: ISoundAudioSetup | null = null;
     private _paused = true;
     private _startTime = 0;
     private _currentTime = 0;
@@ -32,7 +37,7 @@ export class Sound extends AbstractMedia {
     }
 
     public get analyserTarget(): GainNode | null {
-        return this._gainNode;
+        return this._audioSetup?.gainNode ?? null;
     }
 
     public constructor(audioBuffer: AudioBuffer, options?: Partial<IPlaybackOptions>) {
@@ -66,8 +71,9 @@ export class Sound extends AbstractMedia {
 
         this._volume = volume;
 
-        if (this._gainNode) {
-            this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, this._audioContext!.currentTime, 10);
+        if (this._audioSetup) {
+            const { gainNode, audioContext } = this._audioSetup;
+            gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
         }
 
         return this;
@@ -94,17 +100,17 @@ export class Sound extends AbstractMedia {
     }
 
     public getTime(): number {
-        if (!this._startTime || !this._audioContext) {
+        if (!this._startTime || !this._audioSetup) {
             return 0;
         }
 
-        return (this._currentTime + this._audioContext.currentTime - this._startTime);
+        return (this._currentTime + this._audioSetup.audioContext.currentTime - this._startTime);
     }
 
     public setTime(currentTime: number): this {
         const time = Math.max(0, currentTime);
 
-        if (this.paused || !this._audioContext) {
+        if (this.paused || !this._audioSetup) {
             this._currentTime = time;
 
             return this;
@@ -120,8 +126,9 @@ export class Sound extends AbstractMedia {
     public setMuted(muted: boolean): this {
         this._muted = muted;
 
-        if (this._gainNode) {
-            this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, this._audioContext!.currentTime, 10);
+        if (this._audioSetup) {
+            const { gainNode, audioContext } = this._audioSetup;
+            gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
         }
 
         return this;
@@ -136,8 +143,8 @@ export class Sound extends AbstractMedia {
             return this;
         }
 
-        if (this._audioContext) {
-            this.createSourceNode(this._audioContext);
+        if (this._audioSetup) {
+            this.createSourceNode(this._audioSetup);
         }
 
         this._paused = false;
@@ -155,7 +162,7 @@ export class Sound extends AbstractMedia {
             return this;
         }
 
-        if (this._audioContext) {
+        if (this._audioSetup) {
             const duration = this.duration;
             const currentTime = this.currentTime;
 
@@ -183,29 +190,31 @@ export class Sound extends AbstractMedia {
 
         onAudioContextReady.clearByContext(this);
 
-        this._gainNode?.disconnect();
+        this._audioSetup?.gainNode.disconnect();
         this._sourceNode?.disconnect();
     }
 
-    private createSourceNode(audioContext: AudioContext): void {
+    private createSourceNode(setup: ISoundAudioSetup): void {
+        const { audioContext, gainNode } = setup;
+
         this._sourceNode = audioContext.createBufferSource();
         this._sourceNode.buffer = this._audioBuffer;
         this._sourceNode.loop = this.loop;
         this._sourceNode.playbackRate.value = this.playbackRate;
-        this._sourceNode.connect(this._gainNode!);
+        this._sourceNode.connect(gainNode);
         this._sourceNode.start(0, this._currentTime);
         this._startTime = audioContext.currentTime;
     }
 
     private setupWithAudioContext(audioContext: AudioContext): void {
-        this._audioContext = audioContext;
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
+        gainNode.connect(audioContext.destination);
 
-        this._gainNode = audioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
-        this._gainNode.connect(audioContext.destination);
+        this._audioSetup = { audioContext, gainNode };
 
         if (!this._paused) {
-            this.createSourceNode(this._audioContext);
+            this.createSourceNode(this._audioSetup);
         }
     }
 }

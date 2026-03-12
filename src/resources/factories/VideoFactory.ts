@@ -14,7 +14,7 @@ interface IVideoFactoryOptions {
     samplerOptions?: Partial<ISamplerOptions>;
 }
 
-export class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video> {
+export class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video, IVideoFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.video;
 

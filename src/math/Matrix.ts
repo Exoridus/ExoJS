@@ -61,11 +61,11 @@ export class Matrix implements ICloneable {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(
+        return new Matrix(
             this.a, this.b, this.x,
             this.c, this.d, this.y,
             this.e, this.f, this.z
-        );
+        ) as this;
     }
 
     public equals({

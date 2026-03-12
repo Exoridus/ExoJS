@@ -1,7 +1,7 @@
 import { inRange } from 'utils/math';
-import { Vector } from 'math/Vector';
 import { Size } from 'math/Size';
 import { Interval } from 'math/Interval';
+import { ObservableVector } from 'math/ObservableVector';
 import type { Matrix } from 'math/Matrix';
 import type { IShape } from 'math/IShape';
 import { ICollidable, ICollisionResponse, CollisionType } from 'types/Collision';
@@ -24,30 +24,34 @@ import type { Ellipse } from 'math/Ellipse';
 import type { Line } from 'math/Line';
 import type { Circle } from 'math/Circle';
 import type { Polygon } from 'math/Polygon';
+import type { Vector } from 'math/Vector';
 
 let temp: Rectangle | null = null;
+const noop = (): void => {};
+const tempPoint = new ObservableVector(noop);
 
 export class Rectangle implements IShape {
 
     public readonly collisionType: CollisionType = CollisionType.rectangle;
 
-    private readonly _position: Vector;
+    private readonly _position: ObservableVector;
     private readonly _size: Size;
-    private _normals: Array<Vector> | null = null;
+    private _normals: Array<ObservableVector> | null = null;
     private _normalsDirty = false;
 
     public constructor(x = 0, y = x, width = 0, height = width) {
-        this._position = new Vector(x, y);
+        this._position = new ObservableVector(() => {
+            this._normalsDirty = true;
+        }, x, y);
         this._size = new Size(width, height);
     }
 
     public get position(): Vector {
-        return this._position;
+        return this._position as unknown as Vector;
     }
 
     public set position(position: Vector) {
         this._position.copy(position);
-        this._normalsDirty = true;
     }
 
     public get x(): number {
@@ -140,7 +144,7 @@ export class Rectangle implements IShape {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.x, this.y, this.width, this.height);
+        return new Rectangle(this.x, this.y, this.width, this.height) as this;
     }
 
     public equals({ x, y, width, height }: Partial<Rectangle> = {}): boolean {
@@ -157,16 +161,16 @@ export class Rectangle implements IShape {
     public getNormals(): Array<Vector> {
         if (this._normalsDirty || this._normals === null) {
             this._updateNormals(this._normals || (this._normals = [
-                new Vector(),
-                new Vector(),
-                new Vector(),
-                new Vector(),
+                new ObservableVector(noop),
+                new ObservableVector(noop),
+                new ObservableVector(noop),
+                new ObservableVector(noop),
             ]));
 
             this._normalsDirty = false;
         }
 
-        return this._normals;
+        return this._normals as unknown as Array<Vector>;
     }
 
     public project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -182,7 +186,7 @@ export class Rectangle implements IShape {
     }
 
     public transform(matrix: Matrix, result: Rectangle = this): Rectangle {
-        const point = Vector.temp.set(this.left, this.top).transform(matrix);
+        const point = tempPoint.set(this.left, this.top).transform(matrix);
 
         let minX = point.x,
             maxX = point.x,
@@ -214,7 +218,7 @@ export class Rectangle implements IShape {
     }
 
     public contains(x: number, y: number): boolean {
-        return intersectionPointRect(Vector.temp.set(x, y), this);
+        return intersectionPointRect(tempPoint.set(x, y), this);
     }
 
     public containsRect(rect: Rectangle): boolean {
@@ -265,7 +269,7 @@ export class Rectangle implements IShape {
         }
     }
 
-    private _updateNormals(normals: Array<Vector>): void {
+    private _updateNormals(normals: Array<ObservableVector>): void {
         normals[0].set(this.right - this.left, 0).rperp().normalize();
         normals[1].set(0, this.bottom - this.top).rperp().normalize();
         normals[2].set(this.left - this.right, 0).rperp().normalize();

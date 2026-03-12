@@ -8,7 +8,7 @@ interface ISoundFactoryOptions {
     playbackOptions?: Partial<IPlaybackOptions>;
 }
 
-export class SoundFactory extends AbstractResourceFactory<ArrayBuffer, Sound> {
+export class SoundFactory extends AbstractResourceFactory<ArrayBuffer, Sound, ISoundFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.sound;
 

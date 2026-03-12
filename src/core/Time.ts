@@ -88,7 +88,7 @@ export class Time implements ICloneable {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this._milliseconds);
+        return new Time(this._milliseconds) as this;
     }
 
     public copy(time: Time): this {

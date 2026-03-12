@@ -1,4 +1,3 @@
-import { PrimitiveUploadFunction, primitiveUploadFunctions } from 'types/rendering';
 import type { TypedArray } from 'types/types';
 
 export class ShaderUniform {
@@ -7,49 +6,42 @@ export class ShaderUniform {
     public readonly type: number;
     public readonly size: number;
     public readonly name: string;
-    public readonly location: WebGLUniformLocation | null;
 
-    private readonly _context: WebGL2RenderingContext | null;
-    private readonly _program: WebGLProgram | null;
-    private readonly _uploadFn: PrimitiveUploadFunction | null;
     private readonly _value: TypedArray;
+    private _dirty = true;
 
-    public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number, type: number, size: number, name: string, data: TypedArray) {
-        this._context = gl;
-        this._program = program;
+    public constructor(index: number, type: number, size: number, name: string, data: TypedArray) {
         this.name = name.replace(/\[.*?]/, '');
-        this.location = gl.getUniformLocation(program, this.name);
         this.index = index;
         this.type = type;
         this.size = size;
         this._value = data;
-        this._uploadFn = primitiveUploadFunctions[type];
     }
 
     public get propName(): string {
         return this.name.substr(this.name.lastIndexOf('.') + 1);
     }
 
-    public get value(): ArrayBufferView {
+    public get value(): TypedArray {
         return this._value;
+    }
+
+    public get dirty(): boolean {
+        return this._dirty;
     }
 
     public setValue(value: TypedArray): this {
         this._value.set(value);
-        this.upload();
+        this._dirty = true;
 
         return this;
     }
 
-    public upload(): this {
-        if (this.location) {
-            this._uploadFn!(this._context!, this.location, this._value);
-        }
-
-        return this;
+    public markClean(): void {
+        this._dirty = false;
     }
 
     public destroy(): void {
-        // todo - check if destroy is needed
+        // no-op — value container only
     }
 }

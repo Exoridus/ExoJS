@@ -6,9 +6,9 @@ import { Vector } from 'math/Vector';
 export class RenderTarget {
 
     private readonly _root: boolean;
+    private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
+    private _version = 0;
     protected _size: Size;
-    protected _context: WebGL2RenderingContext | null = null;
-    protected _framebuffer: WebGLFramebuffer | null = null;
     protected _viewport: Rectangle = new Rectangle();
     protected _defaultView: View;
     protected _view: View;
@@ -52,55 +52,33 @@ export class RenderTarget {
         this.resize(this.width, height);
     }
 
-    public connect(context: WebGL2RenderingContext): this {
-        if (!this._context) {
-            this._context = context;
-            this._framebuffer = this._root ? null : context.createFramebuffer();
-        }
+    public get root(): boolean {
+        return this._root;
+    }
+
+    public get version(): number {
+        return this._version;
+    }
+
+    public addDestroyListener(listener: () => void): this {
+        this._destroyListeners.add(listener);
 
         return this;
     }
 
-    public disconnect(): this {
-        this.unbindFramebuffer();
-
-        if (this._context) {
-            this._context.deleteFramebuffer(this._framebuffer);
-
-            this._context = null;
-            this._framebuffer = null;
-        }
-
-        return this;
-    }
-
-    public bindFramebuffer(): this {
-        if (!this._context) {
-            throw new Error('Texture has to be connected first!')
-        }
-
-        const gl = this._context;
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
-
-        this.updateViewport();
-
-        return this;
-    }
-
-    public unbindFramebuffer(): this {
-        if (this._context) {
-            const gl = this._context;
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
+    public removeDestroyListener(listener: () => void): this {
+        this._destroyListeners.delete(listener);
 
         return this;
     }
 
     public setView(view: View | null): this {
-        this._view = view || this._defaultView;
-        this.updateViewport();
+        const nextView = view || this._defaultView;
+
+        if (this._view !== nextView) {
+            this._view = nextView;
+            this._touch();
+        }
 
         return this;
     }
@@ -108,7 +86,7 @@ export class RenderTarget {
     public resize(width: number, height: number): this {
         if (!this._size.equals({ width, height })) {
             this._size.set(width, height);
-            this.updateViewport();
+            this._touch();
         }
 
         return this;
@@ -126,12 +104,7 @@ export class RenderTarget {
     }
 
     public updateViewport(): this {
-        if (this._context) {
-            const gl = this._context;
-            const { x, y, width, height} = this.getViewport();
-
-            gl.viewport(x, y, width, height);
-        }
+        this._touch();
 
         return this;
     }
@@ -157,7 +130,11 @@ export class RenderTarget {
     }
 
     public destroy(): void {
-        this.disconnect();
+        for (const listener of Array.from(this._destroyListeners)) {
+            listener();
+        }
+
+        this._destroyListeners.clear();
 
         if (this._view !== this._defaultView) {
             this._view.destroy();
@@ -166,5 +143,9 @@ export class RenderTarget {
         this._defaultView.destroy();
         this._viewport.destroy();
         this._size.destroy();
+    }
+
+    protected _touch(): void {
+        this._version++;
     }
 }

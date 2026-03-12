@@ -1,30 +1,34 @@
 import { removeArrayItems } from 'utils/core';
 
-type SignalHandler<T> = (...params: Array<T>) => void | boolean | any;
+type SignalHandler<Args extends Array<unknown>> = (...params: Args) => void | boolean;
 
-interface ISignalBinding<T> {
-    handler: SignalHandler<T>;
+interface ISignalBinding<Args extends Array<unknown>> {
+    handler: SignalHandler<Args>;
     context?: object;
 }
 
-export class Signal<T = any> {
+export class Signal<Args extends Array<unknown> = []> {
 
-    public readonly bindings = new Array<ISignalBinding<T>>();
+    private readonly _bindings = new Array<ISignalBinding<Args>>();
 
-    public has(handler: SignalHandler<T>, context?: object): boolean {
-        return this.bindings.some((binding) => (binding.handler === handler && binding.context === context));
+    public get bindings(): ReadonlyArray<ISignalBinding<Args>> {
+        return this._bindings;
     }
 
-    public add(handler: SignalHandler<T>, context?: object): this {
+    public has(handler: SignalHandler<Args>, context?: object): boolean {
+        return this._bindings.some((binding) => (binding.handler === handler && binding.context === context));
+    }
+
+    public add(handler: SignalHandler<Args>, context?: object): this {
         if (!this.has(handler, context)) {
-            this.bindings.push({ handler, context });
+            this._bindings.push({ handler, context });
         }
 
         return this;
     }
 
-    public once(handler: SignalHandler<T>, context?: object): this {
-        const once = (...params: Array<any>): void => {
+    public once(handler: SignalHandler<Args>, context?: object): this {
+        const once = (...params: Args): void => {
             this.remove(once, context);
             handler.call(context, ...params);
         };
@@ -34,35 +38,35 @@ export class Signal<T = any> {
         return this;
     }
 
-    public remove(handler: SignalHandler<T>, context?: object): this {
-        const index = this.bindings.findIndex((binding) => (binding.handler === handler && binding.context === context));
+    public remove(handler: SignalHandler<Args>, context?: object): this {
+        const index = this._bindings.findIndex((binding) => (binding.handler === handler && binding.context === context));
 
         if (index !== -1) {
-            removeArrayItems(this.bindings, index, 1);
+            removeArrayItems(this._bindings, index, 1);
         }
 
         return this;
     }
 
     public clearByContext(context?: object): this {
-        const bindings = this.bindings.filter(binding => binding.context === context);
+        const bindings = this._bindings.filter(binding => binding.context === context);
 
         for (const binding of bindings) {
-            removeArrayItems(this.bindings, this.bindings.indexOf(binding), 1);
+            removeArrayItems(this._bindings, this._bindings.indexOf(binding), 1);
         }
 
         return this;
     }
 
     public clear(): this {
-        this.bindings.length = 0;
+        this._bindings.length = 0;
 
         return this;
     }
 
-    public dispatch(...params: Array<T>): this {
-        if (this.bindings.length) {
-            for (const binding of this.bindings) {
+    public dispatch(...params: Args): this {
+        if (this._bindings.length) {
+            for (const binding of this._bindings) {
                 if (binding.handler.call(binding.context, ...params) === false) {
                     break;
                 }

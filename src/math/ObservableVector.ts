@@ -1,4 +1,4 @@
-import { AbstractVector } from 'math/Vector';
+import { AbstractVector } from 'math/AbstractVector';
 
 export class ObservableVector extends AbstractVector {
 
@@ -79,10 +79,10 @@ export class ObservableVector extends AbstractVector {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this._callback, this._x, this._y);
+        return new ObservableVector(this._callback, this._x, this._y) as this;
     }
 
-    public copy(vector: ObservableVector): this {
+    public copy(vector: AbstractVector): this {
         return this.set(vector.x, vector.y);
     }
 

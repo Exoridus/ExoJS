@@ -1,10 +1,12 @@
 import type { IRenderer } from 'rendering/IRenderer';
 import { Shader } from 'rendering/shader/Shader';
-import type { RenderManager } from 'rendering/RenderManager';
+import { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
+import type { IRenderBackend } from 'rendering/IRenderBackend';
+import type { IWebGl2RenderBackend } from 'rendering/IWebGl2RenderBackend';
 import { BlendModes, BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
-import { RenderBuffer } from 'rendering/RenderBuffer';
-import { VertexArrayObject } from 'rendering/VertexArrayObject';
+import { RenderBuffer, type IRenderBufferRuntime } from 'rendering/RenderBuffer';
+import { VertexArrayObject, type IVertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
 import type { Drawable } from 'rendering/Drawable';
 import { DrawableShape } from 'rendering/primitives/DrawableShape';
 import vertexSource from './glsl/primitive.vert';
@@ -13,6 +15,21 @@ import fragmentSource from './glsl/primitive.frag';
 const minBatchVertexSize = 4;
 const vertexStrideBytes = 12; // vec2 position + packed rgba
 const vertexStrideWords = vertexStrideBytes / 4;
+
+interface IManagedBufferState {
+    readonly handle: WebGLBuffer;
+    dataByteLength: number;
+}
+
+interface IPrimitiveRendererConnection {
+    readonly gl: WebGL2RenderingContext;
+    readonly renderManager: IWebGl2RenderBackend;
+    readonly buffers: Map<RenderBuffer, IManagedBufferState>;
+    readonly vaoHandle: WebGLVertexArrayObject;
+    readonly vao: VertexArrayObject;
+    readonly indexBuffer: RenderBuffer;
+    readonly vertexBuffer: RenderBuffer;
+}
 
 export class PrimitiveRenderer implements IRenderer {
 
@@ -23,14 +40,10 @@ export class PrimitiveRenderer implements IRenderer {
     private _float32View: Float32Array;
     private _uint32View: Uint32Array;
     private _shader: Shader = new Shader(vertexSource, fragmentSource);
-    private _renderManager: RenderManager | null = null;
-    private _context: WebGL2RenderingContext | null = null;
+    private _connection: IPrimitiveRendererConnection | null = null;
     private _currentBlendMode: BlendModes | null = null;
     private _currentView: View | null = null;
     private _viewId = -1;
-    private _indexBuffer: RenderBuffer | null = null;
-    private _vertexBuffer: RenderBuffer | null = null;
-    private _vao: VertexArrayObject | null = null;
 
     public constructor(batchSize: number) {
         this._vertexCapacity = Math.max(minBatchVertexSize, batchSize);
@@ -41,60 +54,75 @@ export class PrimitiveRenderer implements IRenderer {
         this._uint32View = new Uint32Array(this._vertexData);
     }
 
-    public connect(renderManager: RenderManager): this {
-        if (!this._context) {
-            const gl = renderManager.context;
+    public connect(renderManager: IWebGl2RenderBackend): this;
+    public connect(renderManager: IRenderBackend): this {
+        if (!this._connection) {
+            const webGl2RenderManager = renderManager as IWebGl2RenderBackend;
+            const gl = webGl2RenderManager.context;
+            const vaoHandle = gl.createVertexArray();
 
-            this._context = gl;
-            this._renderManager = renderManager;
+            this._shader.connect(createWebGlShaderRuntime(gl));
 
-            this._shader.connect(gl);
-            this._indexBuffer = new RenderBuffer(gl, BufferTypes.ELEMENT_ARRAY_BUFFER, this._indexData, BufferUsage.DYNAMIC_DRAW);
-            this._vertexBuffer = new RenderBuffer(gl, BufferTypes.ARRAY_BUFFER, this._vertexData, BufferUsage.DYNAMIC_DRAW);
+            if (vaoHandle === null) {
+                throw new Error('Could not create vertex array object.');
+            }
 
-            this._vao = new VertexArrayObject(gl)
-                .addIndex(this._indexBuffer)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-                .addAttribute(this._vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 8);
+            const buffers = new Map<RenderBuffer, IManagedBufferState>();
+            const indexBuffer = new RenderBuffer(BufferTypes.ELEMENT_ARRAY_BUFFER, this._indexData, BufferUsage.DYNAMIC_DRAW)
+                .connect(this._createBufferRuntime(gl, buffers));
+            const vertexBuffer = new RenderBuffer(BufferTypes.ARRAY_BUFFER, this._vertexData, BufferUsage.DYNAMIC_DRAW)
+                .connect(this._createBufferRuntime(gl, buffers));
+
+            const vao = new VertexArrayObject()
+                .addIndex(indexBuffer)
+                .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+                .addAttribute(vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 8)
+                .connect(this._createVaoRuntime(gl, vaoHandle));
+
+            this._connection = { gl, renderManager: webGl2RenderManager, buffers, vaoHandle, vao, indexBuffer, vertexBuffer };
         }
 
         return this;
     }
 
     public disconnect(): this {
-        if (this._context) {
+        const conn = this._connection;
+
+        if (conn) {
             this.unbind();
 
             this._shader.disconnect();
-            this._vao?.destroy();
+            conn.indexBuffer.destroy();
+            conn.vertexBuffer.destroy();
+            conn.vao.destroy();
 
-            this._renderManager = null;
-            this._context = null;
-            this._vao = null;
-            this._indexBuffer = null;
-            this._vertexBuffer = null;
+            this._connection = null;
         }
 
         return this;
     }
 
     public bind(): this {
-        if (!this._context) {
-            throw new Error('Renderer has to be connected first!')
+        const conn = this._connection;
+
+        if (!conn) {
+            throw new Error('Renderer has to be connected first!');
         }
 
-        this._renderManager!.setVao(this._vao);
-        this._renderManager!.setShader(this._shader);
+        conn.renderManager.setVao(conn.vao);
+        conn.renderManager.setShader(this._shader);
 
         return this;
     }
 
     public unbind(): this {
-        if (this._context) {
+        const conn = this._connection;
+
+        if (conn) {
             this.flush();
 
-            this._renderManager!.setShader(null);
-            this._renderManager!.setVao(null);
+            conn.renderManager.setShader(null);
+            conn.renderManager.setVao(null);
 
             this._currentBlendMode = null;
             this._currentView = null;
@@ -105,6 +133,12 @@ export class PrimitiveRenderer implements IRenderer {
     }
 
     public render(drawable: Drawable): this {
+        const conn = this._connection;
+
+        if (!conn) {
+            throw new Error('Renderer not connected');
+        }
+
         const shape = drawable as DrawableShape;
         const { geometry, drawMode, color, blendMode } = shape;
         const vertices = geometry.vertices;
@@ -121,10 +155,10 @@ export class PrimitiveRenderer implements IRenderer {
 
         if (blendMode !== this._currentBlendMode) {
             this._currentBlendMode = blendMode;
-            this._renderManager!.setBlendMode(blendMode);
+            conn.renderManager.setBlendMode(blendMode);
         }
 
-        const view = this._renderManager!.view;
+        const view = conn.renderManager.view;
 
         if (this._currentView !== view || this._viewId !== view.updateId) {
             this._currentView = view;
@@ -153,10 +187,11 @@ export class PrimitiveRenderer implements IRenderer {
             }
         }
 
-        this._renderManager!.setVao(this._vao);
-        this._vertexBuffer!.upload(this._float32View.subarray(0, vertexCount * vertexStrideWords));
-        this._indexBuffer!.upload(this._indexData.subarray(0, indexCount));
-        this._vao!.draw(indexCount, 0, drawMode);
+        this._shader.sync();
+        conn.renderManager.setVao(conn.vao);
+        conn.vertexBuffer.upload(this._float32View.subarray(0, vertexCount * vertexStrideWords));
+        conn.indexBuffer.upload(this._indexData.subarray(0, indexCount));
+        conn.vao.draw(indexCount, 0, drawMode);
 
         return this;
     }
@@ -171,8 +206,6 @@ export class PrimitiveRenderer implements IRenderer {
         this._shader.destroy();
         this._currentBlendMode = null;
         this._currentView = null;
-        this._renderManager = null;
-        this._context = null;
     }
 
     private _ensureVertexCapacity(vertexCount: number): void {
@@ -199,5 +232,82 @@ export class PrimitiveRenderer implements IRenderer {
         }
 
         this._indexData = new Uint16Array(this._indexCapacity);
+    }
+
+    private _createBufferRuntime(gl: WebGL2RenderingContext, buffers: Map<RenderBuffer, IManagedBufferState>): IRenderBufferRuntime {
+        const handle = gl.createBuffer();
+
+        if (handle === null) {
+            throw new Error('Could not create render buffer.');
+        }
+
+        return {
+            bind: (buffer: RenderBuffer): void => {
+                gl.bindBuffer(buffer.type, handle);
+            },
+            upload: (buffer: RenderBuffer, offset: number): void => {
+                const state = buffers.get(buffer);
+                const data = buffer.data;
+
+                gl.bindBuffer(buffer.type, handle);
+
+                if (state && state.dataByteLength >= data.byteLength) {
+                    gl.bufferSubData(buffer.type, offset, data);
+                    state.dataByteLength = data.byteLength;
+                } else {
+                    gl.bufferData(buffer.type, data, buffer.usage);
+                    buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+                }
+            },
+            destroy: (buffer: RenderBuffer): void => {
+                gl.deleteBuffer(handle);
+                buffers.delete(buffer);
+                buffer.disconnect();
+            },
+        };
+    }
+
+    private _createVaoRuntime(gl: WebGL2RenderingContext, vaoHandle: WebGLVertexArrayObject): IVertexArrayObjectRuntime {
+        let appliedVersion = -1;
+
+        return {
+            bind: (vao: VertexArrayObject): void => {
+                gl.bindVertexArray(vaoHandle);
+
+                if (appliedVersion !== vao.version) {
+                    let lastBuffer: RenderBuffer | null = null;
+
+                    for (const attribute of vao.attributes) {
+                        if (lastBuffer !== attribute.buffer) {
+                            attribute.buffer.bind();
+                            lastBuffer = attribute.buffer;
+                        }
+
+                        gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+                        gl.enableVertexAttribArray(attribute.location);
+                    }
+
+                    if (vao.indexBuffer) {
+                        vao.indexBuffer.bind();
+                    }
+
+                    appliedVersion = vao.version;
+                }
+            },
+            unbind: (): void => {
+                gl.bindVertexArray(null);
+            },
+            draw: (vao: VertexArrayObject, size: number, start: number, type: number): void => {
+                if (vao.indexBuffer) {
+                    gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+                } else {
+                    gl.drawArrays(type, start, size);
+                }
+            },
+            destroy: (vao: VertexArrayObject): void => {
+                gl.deleteVertexArray(vaoHandle);
+                vao.disconnect();
+            },
+        };
     }
 }

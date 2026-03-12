@@ -71,7 +71,7 @@ export class Size implements ICloneable {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this._width, this._height);
+        return new Size(this._width, this._height) as this;
     }
 
     public equals({ width, height }: Partial<Size> = {}): boolean {

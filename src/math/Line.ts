@@ -93,7 +93,7 @@ export class Line implements IShape {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.fromX, this.fromY, this.toX, this.toY);
+        return new Line(this.fromX, this.fromY, this.toX, this.toY) as this;
     }
 
     public getBounds(): Rectangle {

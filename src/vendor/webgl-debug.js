@@ -394,7 +394,7 @@ const WebGLDebugUtils = function() {
      * Attempts to convert enum arguments to strings.
      *
      * @param {string} functionName the name of the WebGL function.
-     * @param {number} args The arguments.
+     * @param {Array<*>} args The arguments.
      * @return {string} The arguments as a string.
      */
     function glFunctionArgsToString(functionName, args) {

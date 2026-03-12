@@ -1,17 +1,7 @@
 import { isPowerOfTwo } from 'utils/math';
 import { RenderTarget } from 'rendering/RenderTarget';
-import { Flags } from 'math/Flags';
 import { ScaleModes, WrapModes } from 'types/rendering';
 import type { ISamplerOptions } from 'rendering/texture/Sampler';
-
-enum RenderTextureFlags {
-    none = 0,
-    scaleModeDirty = 1 << 0,
-    wrapModeDirty = 1 << 1,
-    premultiplyAlphaDirty = 1 << 2,
-    sourceDirty = 1 << 3,
-    sizeDirty = 1 << 4,
-}
 
 export class RenderTexture extends RenderTarget {
 
@@ -24,13 +14,12 @@ export class RenderTexture extends RenderTarget {
     };
 
     private _source: DataView | null = null;
-    private _texture: WebGLTexture | null = null;
+    private _textureVersion = 0;
     private _scaleMode: ScaleModes;
     private _wrapMode: WrapModes;
     private _premultiplyAlpha: boolean;
     private _generateMipMap: boolean;
     private _flipY: boolean;
-    private _flags: Flags<RenderTextureFlags> = new Flags<RenderTextureFlags>();
 
     public constructor(width: number, height: number, options?: Partial<ISamplerOptions>) {
         super(width, height, false);
@@ -42,14 +31,7 @@ export class RenderTexture extends RenderTarget {
         this._premultiplyAlpha = premultiplyAlpha;
         this._generateMipMap = generateMipMap;
         this._flipY = flipY;
-
-        this._flags.push(
-            RenderTextureFlags.sourceDirty,
-            RenderTextureFlags.sizeDirty,
-            RenderTextureFlags.scaleModeDirty,
-            RenderTextureFlags.wrapModeDirty,
-            RenderTextureFlags.premultiplyAlphaDirty,
-        );
+        this._touchTexture();
     }
 
     public get source(): DataView | null {
@@ -104,72 +86,14 @@ export class RenderTexture extends RenderTarget {
         return isPowerOfTwo(this.width) && isPowerOfTwo(this.height);
     }
 
-    public connect(gl: WebGL2RenderingContext): this {
-        if (!this._context) {
-            this._context = gl;
-            this._texture = gl.createTexture();
-            this._framebuffer = gl.createFramebuffer();
-
-            this.bindTexture();
-            this.bindFramebuffer();
-
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._texture, 0);
-
-            this.unbindTexture();
-            this.unbindFramebuffer();
-        }
-
-        return this;
-    }
-
-    public disconnect(): this {
-        this.unbindFramebuffer();
-        this.unbindTexture();
-
-        if (this._context) {
-            this._context.deleteFramebuffer(this._framebuffer);
-            this._context.deleteTexture(this._texture);
-
-            this._context = null;
-            this._texture = null;
-            this._framebuffer = null;
-        }
-
-        return this;
-    }
-
-    public bindTexture(unit?: number): this {
-        if (!this._context) {
-            throw new Error('Texture has to be connected first!')
-        }
-
-        const gl = this._context;
-
-        if (unit !== undefined) {
-            gl.activeTexture(gl.TEXTURE0 + unit);
-        }
-
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-
-        this.update();
-
-        return this;
-    }
-
-    public unbindTexture(): this {
-        if (this._context) {
-            const gl = this._context;
-
-            gl.bindTexture(gl.TEXTURE_2D, null);
-        }
-
-        return this;
+    public get textureVersion(): number {
+        return this._textureVersion;
     }
 
     public setScaleMode(scaleMode: ScaleModes): this {
         if (this._scaleMode !== scaleMode) {
             this._scaleMode = scaleMode;
-            this._flags.push(RenderTextureFlags.scaleModeDirty);
+            this._touchTexture();
         }
 
         return this;
@@ -178,7 +102,7 @@ export class RenderTexture extends RenderTarget {
     public setWrapMode(wrapMode: WrapModes): this {
         if (this._wrapMode !== wrapMode) {
             this._wrapMode = wrapMode;
-            this._flags.push(RenderTextureFlags.wrapModeDirty);
+            this._touchTexture();
         }
 
         return this;
@@ -187,7 +111,7 @@ export class RenderTexture extends RenderTarget {
     public setPremultiplyAlpha(premultiplyAlpha: boolean): this {
         if (this._premultiplyAlpha !== premultiplyAlpha) {
             this._premultiplyAlpha = premultiplyAlpha;
-            this._flags.push(RenderTextureFlags.premultiplyAlphaDirty);
+            this._touchTexture();
         }
 
         return this;
@@ -203,6 +127,8 @@ export class RenderTexture extends RenderTarget {
     }
 
     public updateSource(): this {
+        this._touchTexture();
+
         return this;
     }
 
@@ -211,42 +137,7 @@ export class RenderTexture extends RenderTarget {
             this._size.set(width, height);
             this._defaultView.resize(width, height);
             this.updateViewport();
-
-            this._flags.push(RenderTextureFlags.sizeDirty);
-        }
-
-        return this;
-    }
-
-    public update(): this {
-        if (this._flags.value !== RenderTextureFlags.none && this._context) {
-            const gl = this._context;
-
-            if (this._flags.pop(RenderTextureFlags.scaleModeDirty)) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this._scaleMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._scaleMode);
-            }
-
-            if (this._flags.pop(RenderTextureFlags.wrapModeDirty)) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this._wrapMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this._wrapMode);
-            }
-
-            if (this._flags.pop(RenderTextureFlags.premultiplyAlphaDirty)) {
-                gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this._premultiplyAlpha);
-            }
-
-            if (this._flags.pop(RenderTextureFlags.sourceDirty)) {
-                if (this._flags.pop(RenderTextureFlags.sizeDirty) || !this._source) {
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width, this.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
-                } else {
-                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this._source);
-                }
-
-                if (this._generateMipMap) {
-                    gl.generateMipmap(gl.TEXTURE_2D);
-                }
-            }
+            this._touchTexture();
         }
 
         return this;
@@ -255,8 +146,10 @@ export class RenderTexture extends RenderTarget {
     public destroy(): void {
         super.destroy();
 
-        this._flags.destroy();
         this._source = null;
-        this._texture = null;
+    }
+
+    private _touchTexture(): void {
+        this._textureVersion++;
     }
 }

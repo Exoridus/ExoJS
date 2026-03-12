@@ -8,7 +8,7 @@ export interface IFontFactoryOptions {
     addToDocument?: boolean;
 }
 
-export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> {
+export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace, IFontFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.font;
 
@@ -16,7 +16,11 @@ export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace> 
         return await response.arrayBuffer();
     }
 
-    public async create(source: ArrayBuffer, options: IFontFactoryOptions): Promise<FontFace> {
+    public async create(source: ArrayBuffer, options?: IFontFactoryOptions): Promise<FontFace> {
+        if (!options?.family) {
+            throw new Error('FontFactory.create requires options with a "family" property.');
+        }
+
         const { family, descriptors, addToDocument } = options;
 
         if (source.byteLength < 4) {

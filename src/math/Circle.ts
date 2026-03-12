@@ -95,7 +95,7 @@ export class Circle implements IShape {
     }
 
     public clone(): this {
-        return new (this.constructor as any)(this.x, this.y, this.radius);
+        return new Circle(this.x, this.y, this.radius) as this;
     }
 
     public equals({ x, y, radius }: Partial<Circle> = {}): boolean {

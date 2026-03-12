@@ -48,20 +48,20 @@ export class InputManager {
     private readonly _pointerUpHandler: (event: PointerEvent) => void = this._handlePointerUp.bind(this);
     private readonly _pointerCancelHandler: (event: PointerEvent) => void = this._handlePointerCancel.bind(this);
 
-    public readonly onPointerEnter = new Signal();
-    public readonly onPointerLeave = new Signal();
-    public readonly onPointerDown = new Signal();
-    public readonly onPointerMove = new Signal();
-    public readonly onPointerUp = new Signal();
-    public readonly onPointerTap = new Signal();
-    public readonly onPointerSwipe = new Signal();
-    public readonly onPointerCancel = new Signal();
-    public readonly onMouseWheel = new Signal();
-    public readonly onKeyDown = new Signal();
-    public readonly onKeyUp = new Signal();
-    public readonly onGamepadConnected = new Signal();
-    public readonly onGamepadDisconnected = new Signal();
-    public readonly onGamepadUpdated = new Signal();
+    public readonly onPointerEnter = new Signal<[Pointer]>();
+    public readonly onPointerLeave = new Signal<[Pointer]>();
+    public readonly onPointerDown = new Signal<[Pointer]>();
+    public readonly onPointerMove = new Signal<[Pointer]>();
+    public readonly onPointerUp = new Signal<[Pointer]>();
+    public readonly onPointerTap = new Signal<[Pointer]>();
+    public readonly onPointerSwipe = new Signal<[Pointer]>();
+    public readonly onPointerCancel = new Signal<[Pointer]>();
+    public readonly onMouseWheel = new Signal<[Vector]>();
+    public readonly onKeyDown = new Signal<[number]>();
+    public readonly onKeyUp = new Signal<[number]>();
+    public readonly onGamepadConnected = new Signal<[Gamepad, Array<Gamepad>]>();
+    public readonly onGamepadDisconnected = new Signal<[Gamepad, Array<Gamepad>]>();
+    public readonly onGamepadUpdated = new Signal<[Gamepad, Array<Gamepad>]>();
 
     public constructor(app: Application) {
         const { gamepadMapping, pointerDistanceThreshold } = app.options;

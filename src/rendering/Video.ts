@@ -3,10 +3,16 @@ import { Sprite } from './sprite/Sprite';
 import { Texture } from './texture/Texture';
 import { Signal } from 'core/Signal';
 import type { IPlaybackOptions } from 'types/types';
-import type { RenderManager } from './RenderManager';
+import type { IRenderBackend } from './IRenderBackend';
 import type { ISamplerOptions } from './texture/Sampler';
 import type { IMedia } from 'types/IMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
+
+interface IVideoAudioSetup {
+    readonly audioContext: AudioContext;
+    readonly gainNode: GainNode;
+    readonly sourceNode: MediaElementAudioSourceNode;
+}
 
 export class Video extends Sprite implements IMedia {
 
@@ -15,13 +21,11 @@ export class Video extends Sprite implements IMedia {
 
     private readonly _videoElement: HTMLVideoElement;
     private readonly _duration: number;
-    private _audioContext: AudioContext | null = null;
     private _volume = 1;
     private _playbackRate = 1;
     private _loop = false;
     private _muted = false;
-    private _gainNode: GainNode | null = null;
-    private _sourceNode: MediaElementAudioSourceNode | null = null;
+    private _audioSetup: IVideoAudioSetup | null = null;
 
     public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<IPlaybackOptions>, samplerOptions?: Partial<ISamplerOptions>) {
         super(new Texture(videoElement, samplerOptions));
@@ -126,7 +130,7 @@ export class Video extends Sprite implements IMedia {
     }
 
     public get analyserTarget(): AudioNode | null {
-        return this._gainNode;
+        return this._audioSetup?.gainNode ?? null;
     }
 
     public play(options?: Partial<IPlaybackOptions>): this {
@@ -201,8 +205,9 @@ export class Video extends Sprite implements IMedia {
 
         this._volume = volume;
 
-        if (this._gainNode) {
-            this._gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, this._audioContext!.currentTime, 10);
+        if (this._audioSetup) {
+            const { gainNode, audioContext } = this._audioSetup;
+            gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
         }
 
         return this;
@@ -242,8 +247,9 @@ export class Video extends Sprite implements IMedia {
         if (this._muted !== muted) {
             this._muted = muted;
 
-            if (this._gainNode) {
-                this._gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, this._audioContext!.currentTime, 10);
+            if (this._audioSetup) {
+                const { gainNode, audioContext } = this._audioSetup;
+                gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
             }
         }
 
@@ -251,8 +257,8 @@ export class Video extends Sprite implements IMedia {
     }
 
 
-    public render(renderManager: RenderManager): this {
-        this.texture!.updateSource();
+    public render(renderManager: IRenderBackend): this {
+        this.updateTexture();
         super.render(renderManager);
 
         return this;
@@ -264,24 +270,24 @@ export class Video extends Sprite implements IMedia {
 
         onAudioContextReady.clearByContext(this);
 
-        this._sourceNode?.disconnect();
-        this._sourceNode = null;
-
-        this._gainNode?.disconnect();
-        this._gainNode = null;
+        if (this._audioSetup) {
+            this._audioSetup.sourceNode.disconnect();
+            this._audioSetup.gainNode.disconnect();
+            this._audioSetup = null;
+        }
 
         this.onStart.destroy();
         this.onStop.destroy();
     }
 
     private setupWithAudioContext(audioContext: AudioContext): void {
-        this._audioContext = audioContext;
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
+        gainNode.connect(audioContext.destination);
 
-        this._gainNode = audioContext.createGain();
-        this._gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
-        this._gainNode.connect(audioContext.destination);
+        const sourceNode = audioContext.createMediaElementSource(this._videoElement);
+        sourceNode.connect(gainNode);
 
-        this._sourceNode = audioContext.createMediaElementSource(this._videoElement);
-        this._sourceNode.connect(this._gainNode);
+        this._audioSetup = { audioContext, gainNode, sourceNode };
     }
 }

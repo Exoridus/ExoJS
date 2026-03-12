@@ -7,9 +7,9 @@ import type { GamepadProfile, IGamepadInfo } from './GamepadProfiles';
 
 export class Gamepad {
 
-    public readonly onConnect = new Signal();
-    public readonly onDisconnect = new Signal();
-    public readonly onUpdate = new Signal();
+    public readonly onConnect = new Signal<[Gamepad]>();
+    public readonly onDisconnect = new Signal<[Gamepad]>();
+    public readonly onUpdate = new Signal<[number, number, Gamepad]>();
 
     private readonly _index: number;
     private readonly _channels: Float32Array;

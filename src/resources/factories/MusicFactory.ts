@@ -12,7 +12,7 @@ interface IMusicFactoryOptions {
     playbackOptions?: Partial<IPlaybackOptions>;
 }
 
-export class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music> {
+export class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music, IMusicFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.music;
 

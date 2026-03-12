@@ -10,5 +10,4 @@ export * from './emitters/UniversalEmitter';
 
 export * from 'particles/IParticleProperties';
 export * from './Particle';
-export * from './ParticleRenderer';
 export * from './ParticleSystem';
