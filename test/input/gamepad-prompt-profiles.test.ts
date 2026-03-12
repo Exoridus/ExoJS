@@ -1,27 +1,27 @@
-import { Gamepad } from 'input/Gamepad';
-import { GamepadProfile } from 'input/GamepadProfiles';
-import { GamepadPromptProfiles } from 'input/GamepadPromptProfiles';
+import { GamepadPromptLayouts } from 'input/GamepadPromptLayouts';
+import { GamepadChannel } from 'input/GamepadChannels';
+import { GamepadMappingFamily } from 'input/GamepadMapping';
 
-describe('GamepadPromptProfiles', () => {
+describe('GamepadPromptLayouts', () => {
     test('exposes stable control keys and base positions', () => {
-        expect(GamepadPromptProfiles.controlKeys).toContain('faceBottom');
-        expect(GamepadPromptProfiles.controlKeys).toContain('select');
-        expect(GamepadPromptProfiles.getControlPosition('leftStick')).toEqual([0.38, 0.66]);
+        expect(GamepadPromptLayouts.controls).toContain('ButtonSouth');
+        expect(GamepadPromptLayouts.controls).toContain('Select');
+        expect(GamepadPromptLayouts.getControlPosition('LeftStick')).toEqual([0.38, 0.66]);
     });
 
-    test('builds channels for generic prompts from layout maps', () => {
-        const controlChannelMap = GamepadPromptProfiles.buildControlChannelMap(GamepadProfile.generic);
+    test('builds canonical channels from prompt controls', () => {
+        const controlChannelMap = GamepadPromptLayouts.buildControlChannelMap();
 
-        expect(controlChannelMap.get('faceBottom')).toBe(Gamepad.faceBottom);
-        expect(controlChannelMap.get('select')).toBe(Gamepad.menuLeft);
-        expect(controlChannelMap.get('start')).toBe(Gamepad.menuRight);
+        expect(controlChannelMap.get('ButtonSouth')).toBe(GamepadChannel.ButtonSouth);
+        expect(controlChannelMap.get('Select')).toBe(GamepadChannel.Select);
+        expect(controlChannelMap.get('Start')).toBe(GamepadChannel.Start);
     });
 
-    test('builds profile-specific channels from aliases', () => {
-        const controlChannelMap = GamepadPromptProfiles.buildControlChannelMap(GamepadProfile.playStation);
+    test('exposes family-specific prompt labels without a separate profile system', () => {
+        const playStationLabels = GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.PlayStation);
 
-        expect(controlChannelMap.get('faceBottom')).toBe(Gamepad.faceBottom);
-        expect(controlChannelMap.get('select')).toBe(Gamepad.menuLeft);
-        expect(controlChannelMap.get('start')).toBe(Gamepad.menuRight);
+        expect(playStationLabels.get('ButtonSouth')).toBe('Cross');
+        expect(playStationLabels.get('Select')).toBe('Create');
+        expect(playStationLabels.get('Start')).toBe('Options');
     });
 });

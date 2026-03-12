@@ -1,11 +1,12 @@
 import { InputManager } from 'input/InputManager';
 import { Gamepad } from 'input/Gamepad';
-import { GamepadProfile, GamepadProfiles } from 'input/GamepadProfiles';
+import { GamepadChannel } from 'input/GamepadChannels';
+import { GamepadMappingFamily } from 'input/GamepadMapping';
 import type { Application } from 'core/Application';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 
-const createNativeGamepad = (id: string, index = 0, buttonValues: Array<number> = []): BrowserGamepad => (
+const createNativeGamepad = (id: string, index = 0, buttonValues: number[] = []): BrowserGamepad => (
     {
         id,
         index,
@@ -23,7 +24,7 @@ const createInputManager = (): InputManager => {
     const app = {
         canvas,
         options: {
-            gamepadMapping: GamepadProfiles.createAutoGamepadMappingResolver(),
+            gamepadDefinitions: [],
             pointerDistanceThreshold: 10,
         },
     } as unknown as Application;
@@ -56,20 +57,21 @@ describe('InputManager gamepad lifecycle', () => {
         inputManager.update();
 
         expect(inputManager.gamepads).toHaveLength(1);
-        expect(inputManager.gamepads[0].profile).toBe(GamepadProfile.xbox);
+        expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.Xbox);
+        expect(inputManager.gamepads[0].name).toBe('Xbox Series Controller');
         expect(onConnected).toHaveBeenCalledTimes(1);
         expect(inputManager.getGamepad(0)).toBe(inputManager.gamepads[0]);
 
-        const faceBottomChannel = Gamepad.resolveChannelOffset(0, Gamepad.faceBottom);
+        const buttonSouthChannel = Gamepad.resolveChannelOffset(0, GamepadChannel.ButtonSouth);
 
-        expect(inputManager.gamepads[0].channels[faceBottomChannel]).toBe(1);
+        expect(inputManager.gamepads[0].channels[buttonSouthChannel]).toBe(1);
 
         gamepadsSnapshot = [null, null, null, null];
         inputManager.update();
 
         expect(inputManager.gamepads).toHaveLength(0);
         expect(onDisconnected).toHaveBeenCalledTimes(1);
-        expect((onDisconnected.mock.calls[0][0] as Gamepad).channels[faceBottomChannel]).toBe(0);
+        expect((onDisconnected.mock.calls[0][0] as Gamepad).channels[buttonSouthChannel]).toBe(0);
         expect(inputManager.getGamepad(0)).toBeNull();
 
         if (originalGetGamepadsDescriptor) {

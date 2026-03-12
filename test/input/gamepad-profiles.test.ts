@@ -1,10 +1,12 @@
 import {
-    GamepadProfiles,
-    GamepadProfile,
-} from 'input/GamepadProfiles';
-import { GenericGamepadMapping } from 'input/GenericGamepadMapping';
+    builtInGamepadDefinitions,
+    parseGamepadDescriptor,
+    resolveGamepadDefinition,
+} from 'input/GamepadDefinitions';
+import { GamepadMappingFamily } from 'input/GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from 'input/GenericDualAnalogGamepadMapping';
 import { PlayStationGamepadMapping } from 'input/PlayStationGamepadMapping';
-import { SwitchGamepadMapping } from 'input/SwitchGamepadMapping';
+import { SwitchProGamepadMapping } from 'input/SwitchProGamepadMapping';
 import { XboxGamepadMapping } from 'input/XboxGamepadMapping';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
@@ -22,43 +24,76 @@ const createGamepad = (id: string): BrowserGamepad => (
     } as unknown as BrowserGamepad
 );
 
-describe('GamepadProfiles', () => {
-    test('resolves known VID/PID pairs to stable labels', () => {
-        expect(GamepadProfiles.getGamepadLabel(createGamepad('Vendor: 045e Product: 0b13'))).toBe('Microsoft Xbox Series');
-        expect(GamepadProfiles.getGamepadLabel(createGamepad('Vendor: 054c Product: 0ce6'))).toBe('Sony DualSense');
-        expect(GamepadProfiles.getGamepadLabel(createGamepad('057e-2009 Nintendo Controller'))).toBe('Nintendo Switch Pro');
-        expect(GamepadProfiles.getGamepadLabel(createGamepad('Vendor: 054c Product: 09cc'))).toBe('Sony DualShock 4');
-        expect(GamepadProfiles.getGamepadLabel(createGamepad('Vendor: 057e Product: 2006'))).toBe('Nintendo Joy-Con');
-        expect(GamepadProfiles.getGamepadLabel(createGamepad('Vendor: 057e Product: 2007'))).toBe('Nintendo Joy-Con');
+describe('GamepadDefinitions', () => {
+    test('parses VID/PID pairs into a normalized descriptor', () => {
+        const descriptor = parseGamepadDescriptor(createGamepad('Vendor: 054c Product: 0ce6'));
+
+        expect(descriptor.vendorId).toBe('054c');
+        expect(descriptor.productId).toBe('0ce6');
+        expect(descriptor.productKey).toBe('054c:0ce6');
     });
 
-    test('returns generic labels with parsed ids for unknown VID/PID pairs', () => {
-        const gamepadInfo = GamepadProfiles.resolveGamepadInfo(createGamepad('Vendor: 054c Product: ffff'));
+    test('resolves exact device rules to stable names and mapping families', () => {
+        const resolvedXbox = resolveGamepadDefinition(createGamepad('Vendor: 045e Product: 0b13'));
+        const resolvedPlayStation = resolveGamepadDefinition(createGamepad('Vendor: 054c Product: 0ce6'));
+        const resolvedSwitch = resolveGamepadDefinition(createGamepad('057e-2009 Nintendo Controller'));
 
-        expect(gamepadInfo.profile).toBe(GamepadProfile.playStation);
-        expect(gamepadInfo.label).toBe('Sony PlayStation (054c:ffff)');
+        expect(resolvedXbox.name).toBe('Xbox Series Controller');
+        expect(resolvedXbox.mapping).toBeInstanceOf(XboxGamepadMapping);
+        expect(resolvedXbox.mapping.family).toBe(GamepadMappingFamily.Xbox);
+
+        expect(resolvedPlayStation.name).toBe('DualSense Controller');
+        expect(resolvedPlayStation.mapping).toBeInstanceOf(PlayStationGamepadMapping);
+        expect(resolvedPlayStation.mapping.family).toBe(GamepadMappingFamily.PlayStation);
+
+        expect(resolvedSwitch.name).toBe('Switch Pro Controller');
+        expect(resolvedSwitch.mapping).toBeInstanceOf(SwitchProGamepadMapping);
+        expect(resolvedSwitch.mapping.family).toBe(GamepadMappingFamily.SwitchPro);
     });
 
-    test('detects profiles from vendor/product ids when available', () => {
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('Vendor: 054c Product: 0ce6'))).toBe(GamepadProfile.playStation);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('057e-2009 Nintendo Controller'))).toBe(GamepadProfile.nintendoSwitch);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('Vendor: 045e Product: 02ea'))).toBe(GamepadProfile.xbox);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('Vendor: 0x045e Product: 0x0b13'))).toBe(GamepadProfile.xbox);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('USB Gamepad VID_054C PID_09CC'))).toBe(GamepadProfile.playStation);
+    test('uses vendor fallbacks when exact devices are unknown', () => {
+        const resolved = resolveGamepadDefinition(createGamepad('Vendor: 054c Product: ffff'));
+
+        expect(resolved.name).toBe('Sony Controller');
+        expect(resolved.mapping).toBeInstanceOf(PlayStationGamepadMapping);
     });
 
-    test('detects common profile names from gamepad ids', () => {
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('Xbox Wireless Controller'))).toBe(GamepadProfile.xbox);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('DualSense Wireless Controller'))).toBe(GamepadProfile.playStation);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('Nintendo Switch Pro Controller'))).toBe(GamepadProfile.nintendoSwitch);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('USB Generic Gamepad'))).toBe(GamepadProfile.generic);
-        expect(GamepadProfiles.detectGamepadProfile(createGamepad('Microsoft SideWinder Precision Pro'))).toBe(GamepadProfile.generic);
+    test('falls back to the generic dual analog mapping last', () => {
+        const resolved = resolveGamepadDefinition(createGamepad('USB Generic Gamepad'));
+
+        expect(resolved.name).toBe('Generic Gamepad');
+        expect(resolved.mapping).toBeInstanceOf(GenericDualAnalogGamepadMapping);
+        expect(resolved.mapping.family).toBe(GamepadMappingFamily.GenericDualAnalog);
     });
 
-    test('creates mapping instances by profile', () => {
-        expect(GamepadProfiles.createMappingForProfile(GamepadProfile.xbox)).toBeInstanceOf(XboxGamepadMapping);
-        expect(GamepadProfiles.createMappingForProfile(GamepadProfile.playStation)).toBeInstanceOf(PlayStationGamepadMapping);
-        expect(GamepadProfiles.createMappingForProfile(GamepadProfile.nintendoSwitch)).toBeInstanceOf(SwitchGamepadMapping);
-        expect(GamepadProfiles.createMappingForProfile(GamepadProfile.generic)).toBeInstanceOf(GenericGamepadMapping);
+    test('lets a matching definition fall through when resolve returns null', () => {
+        const gamepad = createGamepad('Vendor: 054c Product: 0ce6');
+        const resolved = resolveGamepadDefinition(gamepad, [
+            {
+                ids: '054c:0ce6',
+                resolve: () => null,
+            },
+            ...builtInGamepadDefinitions,
+        ]);
+
+        expect(resolved.name).toBe('DualSense Controller');
+        expect(resolved.mapping).toBeInstanceOf(PlayStationGamepadMapping);
+    });
+
+    test('lets user definitions override built-in definitions by list order', () => {
+        const resolved = resolveGamepadDefinition(createGamepad('Vendor: 045e Product: 0b13'), [
+            {
+                ids: '045e:0b13',
+                name: 'Custom Xbox',
+                resolve: () => ({
+                    name: 'Custom Xbox',
+                    mapping: new GenericDualAnalogGamepadMapping(),
+                }),
+            },
+            ...builtInGamepadDefinitions,
+        ]);
+
+        expect(resolved.name).toBe('Custom Xbox');
+        expect(resolved.mapping).toBeInstanceOf(GenericDualAnalogGamepadMapping);
     });
 });

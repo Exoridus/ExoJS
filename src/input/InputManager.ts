@@ -1,52 +1,55 @@
-import { ChannelSize, ChannelOffset } from 'types/input';
 import { Flags } from 'math/Flags';
-import { stopEvent } from 'utils/core';
 import { Vector } from 'math/Vector';
-import { Pointer, PointerState, PointerStateFlag } from './Pointer';
-import { Gamepad } from 'input/Gamepad';
 import { Signal } from 'core/Signal';
 import { getDistance } from 'utils/math';
-import type { GamepadMapping, GamepadMappingResolver } from './GamepadMapping';
-import type { Input } from './Input';
-import type { Application } from 'core/Application';
+import { stopEvent } from 'utils/core';
+import { ChannelOffset, ChannelSize } from 'types/input';
 
-enum InputManagerFlags {
-    NONE = 0,
-    KEY_DOWN = 1 << 0,
-    KEY_UP = 1 << 1,
-    MOUSE_WHEEL = 1 << 2,
-    POINTER_UPDATE = 1 << 3,
+import { Gamepad } from './Gamepad';
+import { Pointer, PointerState, PointerStateFlag } from './Pointer';
+import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDefinitions';
+
+import type { Application } from 'core/Application';
+import type { GamepadDefinition, BrowserGamepad } from './GamepadDefinitions';
+import type { Input } from './Input';
+
+enum InputManagerFlag {
+    None = 0,
+    KeyDown = 1 << 0,
+    KeyUp = 1 << 1,
+    MouseWheel = 1 << 2,
+    PointerUpdate = 1 << 3,
 }
 
 export class InputManager {
+    private readonly canvas: HTMLCanvasElement;
+    private readonly channels: Float32Array = new Float32Array(ChannelSize.container);
+    private readonly inputs = new Set<Input>();
+    private readonly pointers: Record<number, Pointer> = {};
+    private readonly gamepadsValue: Array<Gamepad> = [];
+    private readonly gamepadsByIndex = new Map<number, Gamepad>();
+    private readonly gamepadSlotsActive = new Uint8Array(ChannelSize.category / ChannelSize.gamepad);
+    private readonly wheelOffset = new Vector();
+    private readonly flags = new Flags<InputManagerFlag>();
+    private readonly channelsPressed: Array<number> = [];
+    private readonly channelsReleased: Array<number> = [];
+    private readonly gamepadDefinitions: Array<GamepadDefinition>;
 
-    private _canvas: HTMLCanvasElement;
-    private _channels: Float32Array = new Float32Array(ChannelSize.container);
-    private _inputs: Set<Input> = new Set();
-    private _pointers: Record<number, Pointer> = {};
-    private _gamepads: Array<Gamepad> = [];
-    private _gamepadsByIndex: Map<number, Gamepad> = new Map();
-    private _gamepadSlotsActive: Uint8Array = new Uint8Array(ChannelSize.category / ChannelSize.gamepad);
-    private _wheelOffset: Vector = new Vector();
-    private _flags: Flags<InputManagerFlags> = new Flags<InputManagerFlags>();
-    private _channelsPressed: Array<number> = [];
-    private _channelsReleased: Array<number> = [];
-    private _canvasFocused: boolean;
-    private _pointerDistanceThreshold: number;
-    private _gamepadMappingResolver: GamepadMappingResolver;
+    private canvasFocusedValue: boolean;
+    private pointerDistanceThreshold: number;
 
-    private readonly _keyDownHandler: (event: KeyboardEvent) => void = this._handleKeyDown.bind(this);
-    private readonly _keyUpHandler: (event: KeyboardEvent) => void = this._handleKeyUp.bind(this);
-    private readonly _canvasFocusHandler: () => void = this._handleCanvasFocus.bind(this);
-    private readonly _canvasBlurHandler: () => void = this._handleCanvasBlur.bind(this);
-    private readonly _windowBlurHandler: () => void = this._handleWindowBlur.bind(this);
-    private readonly _mouseWheelHandler: (event: WheelEvent) => void = this._handleMouseWheel.bind(this);
-    private readonly _pointerOverHandler: (event: PointerEvent) => void = this._handlePointerOver.bind(this);
-    private readonly _pointerLeaveHandler: (event: PointerEvent) => void = this._handlePointerLeave.bind(this);
-    private readonly _pointerDownHandler: (event: PointerEvent) => void = this._handlePointerDown.bind(this);
-    private readonly _pointerMoveHandler: (event: PointerEvent) => void = this._handlePointerMove.bind(this);
-    private readonly _pointerUpHandler: (event: PointerEvent) => void = this._handlePointerUp.bind(this);
-    private readonly _pointerCancelHandler: (event: PointerEvent) => void = this._handlePointerCancel.bind(this);
+    private readonly keyDownHandler = this.handleKeyDown.bind(this);
+    private readonly keyUpHandler = this.handleKeyUp.bind(this);
+    private readonly canvasFocusHandler = this.handleCanvasFocus.bind(this);
+    private readonly canvasBlurHandler = this.handleCanvasBlur.bind(this);
+    private readonly windowBlurHandler = this.handleWindowBlur.bind(this);
+    private readonly mouseWheelHandler = this.handleMouseWheel.bind(this);
+    private readonly pointerOverHandler = this.handlePointerOver.bind(this);
+    private readonly pointerLeaveHandler = this.handlePointerLeave.bind(this);
+    private readonly pointerDownHandler = this.handlePointerDown.bind(this);
+    private readonly pointerMoveHandler = this.handlePointerMove.bind(this);
+    private readonly pointerUpHandler = this.handlePointerUp.bind(this);
+    private readonly pointerCancelHandler = this.handlePointerCancel.bind(this);
 
     public readonly onPointerEnter = new Signal<[Pointer]>();
     public readonly onPointerLeave = new Signal<[Pointer]>();
@@ -64,105 +67,103 @@ export class InputManager {
     public readonly onGamepadUpdated = new Signal<[Gamepad, Array<Gamepad>]>();
 
     public constructor(app: Application) {
-        const { gamepadMapping, pointerDistanceThreshold } = app.options;
+        const { gamepadDefinitions = [], pointerDistanceThreshold } = app.options;
 
-        this._canvas = app.canvas;
-        this._canvasFocused = document.activeElement === this._canvas;
-        this._pointerDistanceThreshold = pointerDistanceThreshold;
-        this._gamepadMappingResolver = typeof gamepadMapping === 'function'
-            ? gamepadMapping
-            : (): GamepadMapping => gamepadMapping;
+        this.canvas = app.canvas;
+        this.canvasFocusedValue = document.activeElement === this.canvas;
+        this.pointerDistanceThreshold = pointerDistanceThreshold;
+        this.gamepadDefinitions = [...gamepadDefinitions, ...builtInGamepadDefinitions];
 
-        this._addEventListeners();
+        this.addEventListeners();
     }
 
     public get pointersInCanvas(): boolean {
-        return Object.values(this._pointers).some(pointer => (
-            pointer.currentState !== PointerState.outsideCanvas &&
-            pointer.currentState !== PointerState.cancelled
+        return Object.values(this.pointers).some((pointer) => (
+            pointer.currentState !== PointerState.outsideCanvas
+            && pointer.currentState !== PointerState.cancelled
         ));
     }
 
     public get canvasFocused(): boolean {
-        return this._canvasFocused;
+        return this.canvasFocusedValue;
     }
 
     public get gamepads(): Array<Gamepad> {
-        return this._gamepads;
+        return this.gamepadsValue;
     }
 
     public getGamepad(index: number): Gamepad | null {
-        return this._gamepadsByIndex.get(index) ?? null;
+        return this.gamepadsByIndex.get(index) ?? null;
     }
 
     public add(inputs: Input | Array<Input>): this {
         if (Array.isArray(inputs)) {
-            inputs.forEach(this.add, this);
+            inputs.forEach((input) => this.add(input));
 
             return this;
         }
 
-        this._inputs.add(inputs);
+        this.inputs.add(inputs);
 
         return this;
     }
 
     public remove(inputs: Input | Array<Input>): this {
         if (Array.isArray(inputs)) {
-            inputs.forEach(this.remove, this);
+            inputs.forEach((input) => this.remove(input));
 
             return this;
         }
 
-        this._inputs.delete(inputs);
+        this.inputs.delete(inputs);
 
         return this;
     }
 
     public clear(destroyInputs = false): this {
         if (destroyInputs) {
-            for (const input of this._inputs) {
+            for (const input of this.inputs) {
                 input.destroy();
             }
         }
 
-        this._inputs.clear();
+        this.inputs.clear();
 
         return this;
     }
 
     public update(): this {
-        this._updateGamepads();
+        this.updateGamepads();
 
-        for (const input of this._inputs) {
-            input.update(this._channels);
+        for (const input of this.inputs) {
+            input.update(this.channels);
         }
 
-        if (this._flags.value !== InputManagerFlags.NONE) {
-            this._updateEvents();
+        if (this.flags.value !== InputManagerFlag.None) {
+            this.updateEvents();
         }
 
         return this;
     }
 
     public destroy(): void {
-        this._removeEventListeners();
+        this.removeEventListeners();
 
-        for (const pointer of Object.values(this._pointers)) {
+        for (const pointer of Object.values(this.pointers)) {
             pointer.destroy();
         }
 
-        for (const gamepad of this._gamepads) {
+        for (const gamepad of this.gamepadsValue) {
             gamepad.destroy();
         }
 
-        this._inputs.clear();
-        this._gamepadsByIndex.clear();
-        this._gamepads.length = 0;
-        this._channelsPressed.length = 0;
-        this._channelsReleased.length = 0;
-        this._wheelOffset.destroy();
-        this._flags.destroy();
+        this.inputs.clear();
+        this.gamepadsByIndex.clear();
+        this.gamepadsValue.length = 0;
+        this.channelsPressed.length = 0;
+        this.channelsReleased.length = 0;
+        this.wheelOffset.destroy();
+        this.flags.destroy();
 
         this.onPointerEnter.destroy();
         this.onPointerLeave.destroy();
@@ -180,128 +181,124 @@ export class InputManager {
         this.onGamepadUpdated.destroy();
     }
 
-    private _handleKeyDown(event: KeyboardEvent): void {
-        const channel = (ChannelOffset.keyboard + event.keyCode);
+    private handleKeyDown(event: KeyboardEvent): void {
+        const channel = ChannelOffset.keyboard + event.keyCode;
 
-        this._channels[channel] = 1;
-        this._channelsPressed.push(channel);
-        this._flags.push(InputManagerFlags.KEY_DOWN);
+        this.channels[channel] = 1;
+        this.channelsPressed.push(channel);
+        this.flags.push(InputManagerFlag.KeyDown);
     }
 
-    private _handleKeyUp(event: KeyboardEvent): void {
-        const channel = (ChannelOffset.keyboard + event.keyCode);
+    private handleKeyUp(event: KeyboardEvent): void {
+        const channel = ChannelOffset.keyboard + event.keyCode;
 
-        this._channels[channel] = 0;
-        this._channelsReleased.push(channel);
-        this._flags.push(InputManagerFlags.KEY_UP);
+        this.channels[channel] = 0;
+        this.channelsReleased.push(channel);
+        this.flags.push(InputManagerFlag.KeyUp);
     }
 
-    private _handlePointerOver(event: PointerEvent): void {
-        this._pointers[event.pointerId] = new Pointer(event, this._canvas);
-        this._flags.push(InputManagerFlags.POINTER_UPDATE);
+    private handlePointerOver(event: PointerEvent): void {
+        this.pointers[event.pointerId] = new Pointer(event, this.canvas);
+        this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
-    private _handlePointerLeave(event: PointerEvent): void {
-        this._pointers[event.pointerId].handleLeave(event);
-        this._flags.push(InputManagerFlags.POINTER_UPDATE);
+    private handlePointerLeave(event: PointerEvent): void {
+        this.pointers[event.pointerId].handleLeave(event);
+        this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
-    private _handlePointerDown(event: PointerEvent): void {
-        this._canvas.focus();
-        this._canvasFocused = true;
-        this._pointers[event.pointerId].handlePress(event);
-        this._flags.push(InputManagerFlags.POINTER_UPDATE);
+    private handlePointerDown(event: PointerEvent): void {
+        this.canvas.focus();
+        this.canvasFocusedValue = true;
+        this.pointers[event.pointerId].handlePress(event);
+        this.flags.push(InputManagerFlag.PointerUpdate);
 
         event.preventDefault();
     }
 
-    private _handlePointerMove(event: PointerEvent): void {
-        this._pointers[event.pointerId].handleMove(event);
-        this._flags.push(InputManagerFlags.POINTER_UPDATE);
+    private handlePointerMove(event: PointerEvent): void {
+        this.pointers[event.pointerId].handleMove(event);
+        this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
-    private _handlePointerUp(event: PointerEvent): void {
-        this._pointers[event.pointerId].handleRelease(event);
-        this._flags.push(InputManagerFlags.POINTER_UPDATE);
+    private handlePointerUp(event: PointerEvent): void {
+        this.pointers[event.pointerId].handleRelease(event);
+        this.flags.push(InputManagerFlag.PointerUpdate);
 
         event.preventDefault();
     }
 
-    private _handlePointerCancel(event: PointerEvent): void {
-        this._pointers[event.pointerId].handleCancel(event);
-        this._flags.push(InputManagerFlags.POINTER_UPDATE);
+    private handlePointerCancel(event: PointerEvent): void {
+        this.pointers[event.pointerId].handleCancel(event);
+        this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
-    private _handleMouseWheel(event: WheelEvent): void {
-        this._wheelOffset.set(event.deltaX, event.deltaY);
-        this._flags.push(InputManagerFlags.MOUSE_WHEEL);
+    private handleMouseWheel(event: WheelEvent): void {
+        this.wheelOffset.set(event.deltaX, event.deltaY);
+        this.flags.push(InputManagerFlag.MouseWheel);
 
-        if (this._canvasFocused) {
+        if (this.canvasFocusedValue) {
             event.preventDefault();
         }
     }
 
-    private _handleCanvasFocus(): void {
-        this._canvasFocused = true;
+    private handleCanvasFocus(): void {
+        this.canvasFocusedValue = true;
     }
 
-    private _handleCanvasBlur(): void {
-        this._canvasFocused = false;
+    private handleCanvasBlur(): void {
+        this.canvasFocusedValue = false;
     }
 
-    private _handleWindowBlur(): void {
-        this._canvasFocused = false;
+    private handleWindowBlur(): void {
+        this.canvasFocusedValue = false;
     }
 
-    private _addEventListeners(): void {
-        const canvas = this._canvas;
+    private addEventListeners(): void {
         const activeWindow = window;
         const activeListenerOption = { capture: true, passive: false };
         const passiveListenerOption = { capture: true, passive: true };
 
-        activeWindow.addEventListener('keydown', this._keyDownHandler, true);
-        activeWindow.addEventListener('keyup', this._keyUpHandler, true);
-        activeWindow.addEventListener('blur', this._windowBlurHandler, true);
-        canvas.addEventListener('focus', this._canvasFocusHandler, true);
-        canvas.addEventListener('blur', this._canvasBlurHandler, true);
-        canvas.addEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
-        canvas.addEventListener('pointerover', this._pointerOverHandler, passiveListenerOption); // Cancellable
-        canvas.addEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
-        canvas.addEventListener('pointerdown', this._pointerDownHandler, activeListenerOption); // Cancellable
-        canvas.addEventListener('pointermove', this._pointerMoveHandler, passiveListenerOption); // Cancellable
-        canvas.addEventListener('pointerup', this._pointerUpHandler, activeListenerOption); // Cancellable
-        canvas.addEventListener('pointercancel', this._pointerCancelHandler, passiveListenerOption);
-        canvas.addEventListener('contextmenu', stopEvent, activeListenerOption); // Cancellable
-        canvas.addEventListener('selectstart', stopEvent, activeListenerOption); // Cancellable
+        activeWindow.addEventListener('keydown', this.keyDownHandler, true);
+        activeWindow.addEventListener('keyup', this.keyUpHandler, true);
+        activeWindow.addEventListener('blur', this.windowBlurHandler, true);
+        this.canvas.addEventListener('focus', this.canvasFocusHandler, true);
+        this.canvas.addEventListener('blur', this.canvasBlurHandler, true);
+        this.canvas.addEventListener('wheel', this.mouseWheelHandler, activeListenerOption);
+        this.canvas.addEventListener('pointerover', this.pointerOverHandler, passiveListenerOption);
+        this.canvas.addEventListener('pointerleave', this.pointerLeaveHandler, passiveListenerOption);
+        this.canvas.addEventListener('pointerdown', this.pointerDownHandler, activeListenerOption);
+        this.canvas.addEventListener('pointermove', this.pointerMoveHandler, passiveListenerOption);
+        this.canvas.addEventListener('pointerup', this.pointerUpHandler, activeListenerOption);
+        this.canvas.addEventListener('pointercancel', this.pointerCancelHandler, passiveListenerOption);
+        this.canvas.addEventListener('contextmenu', stopEvent, activeListenerOption);
+        this.canvas.addEventListener('selectstart', stopEvent, activeListenerOption);
     }
 
-    private _removeEventListeners(): void {
-        const canvas = this._canvas;
-        const keyEventTarget = window;
+    private removeEventListeners(): void {
         const activeListenerOption = { capture: true, passive: false };
         const passiveListenerOption = { capture: true, passive: true };
 
-        keyEventTarget.removeEventListener('keydown', this._keyDownHandler, true);
-        keyEventTarget.removeEventListener('keyup', this._keyUpHandler, true);
-        keyEventTarget.removeEventListener('blur', this._windowBlurHandler, true);
-        canvas.removeEventListener('focus', this._canvasFocusHandler, true);
-        canvas.removeEventListener('blur', this._canvasBlurHandler, true);
-        canvas.removeEventListener('wheel', this._mouseWheelHandler, activeListenerOption);
-        canvas.removeEventListener('pointerover', this._pointerOverHandler, passiveListenerOption);
-        canvas.removeEventListener('pointerleave', this._pointerLeaveHandler, passiveListenerOption);
-        canvas.removeEventListener('pointerdown', this._pointerDownHandler, activeListenerOption);
-        canvas.removeEventListener('pointermove', this._pointerMoveHandler, passiveListenerOption);
-        canvas.removeEventListener('pointerup', this._pointerUpHandler, activeListenerOption);
-        canvas.removeEventListener('pointercancel', this._pointerCancelHandler, passiveListenerOption);
-        canvas.removeEventListener('contextmenu', stopEvent, activeListenerOption);
-        canvas.removeEventListener('selectstart', stopEvent, activeListenerOption);
+        window.removeEventListener('keydown', this.keyDownHandler, true);
+        window.removeEventListener('keyup', this.keyUpHandler, true);
+        window.removeEventListener('blur', this.windowBlurHandler, true);
+        this.canvas.removeEventListener('focus', this.canvasFocusHandler, true);
+        this.canvas.removeEventListener('blur', this.canvasBlurHandler, true);
+        this.canvas.removeEventListener('wheel', this.mouseWheelHandler, activeListenerOption);
+        this.canvas.removeEventListener('pointerover', this.pointerOverHandler, passiveListenerOption);
+        this.canvas.removeEventListener('pointerleave', this.pointerLeaveHandler, passiveListenerOption);
+        this.canvas.removeEventListener('pointerdown', this.pointerDownHandler, activeListenerOption);
+        this.canvas.removeEventListener('pointermove', this.pointerMoveHandler, passiveListenerOption);
+        this.canvas.removeEventListener('pointerup', this.pointerUpHandler, activeListenerOption);
+        this.canvas.removeEventListener('pointercancel', this.pointerCancelHandler, passiveListenerOption);
+        this.canvas.removeEventListener('contextmenu', stopEvent, activeListenerOption);
+        this.canvas.removeEventListener('selectstart', stopEvent, activeListenerOption);
     }
 
-    private _updateGamepads(): this {
+    private updateGamepads(): this {
         const activeGamepads = window.navigator.getGamepads();
-        const gamepadSlotsActive = this._gamepadSlotsActive;
 
-        gamepadSlotsActive.fill(0);
+        this.gamepadSlotsActive.fill(0);
 
         for (const activeGamepad of activeGamepads) {
             if (!activeGamepad) {
@@ -310,35 +307,37 @@ export class InputManager {
 
             const activeIndex = activeGamepad.index;
 
-            if (activeIndex < 0 || activeIndex >= gamepadSlotsActive.length) {
+            if (activeIndex < 0 || activeIndex >= this.gamepadSlotsActive.length) {
                 continue;
             }
 
-            gamepadSlotsActive[activeIndex] = 1;
+            this.gamepadSlotsActive[activeIndex] = 1;
 
-            let gamepad = this._gamepadsByIndex.get(activeIndex);
+            let gamepad = this.gamepadsByIndex.get(activeIndex);
 
             if (!gamepad) {
-                gamepad = new Gamepad(activeGamepad, this._channels, this._gamepadMappingResolver);
-                this._gamepadsByIndex.set(activeIndex, gamepad);
-                this._insertGamepadByIndex(gamepad);
-                this.onGamepadConnected.dispatch(gamepad, this._gamepads);
+                const definition = resolveGamepadDefinition(activeGamepad, this.gamepadDefinitions);
+
+                gamepad = new Gamepad(activeGamepad, this.channels, definition);
+                this.gamepadsByIndex.set(activeIndex, gamepad);
+                this.insertGamepadByIndex(gamepad);
+                this.onGamepadConnected.dispatch(gamepad, this.gamepadsValue);
             } else {
                 gamepad.connect(activeGamepad);
             }
 
             gamepad.update();
-            this.onGamepadUpdated.dispatch(gamepad, this._gamepads);
+            this.onGamepadUpdated.dispatch(gamepad, this.gamepadsValue);
         }
 
-        for (let i = this._gamepads.length - 1; i >= 0; i--) {
-            const gamepad = this._gamepads[i];
+        for (let index = this.gamepadsValue.length - 1; index >= 0; index -= 1) {
+            const gamepad = this.gamepadsValue[index];
 
-            if (gamepadSlotsActive[gamepad.index] === 0) {
+            if (this.gamepadSlotsActive[gamepad.index] === 0) {
                 gamepad.disconnect();
-                this._gamepads.splice(i, 1);
-                this._gamepadsByIndex.delete(gamepad.index);
-                this.onGamepadDisconnected.dispatch(gamepad, this._gamepads);
+                this.gamepadsValue.splice(index, 1);
+                this.gamepadsByIndex.delete(gamepad.index);
+                this.onGamepadDisconnected.dispatch(gamepad, this.gamepadsValue);
                 gamepad.destroy();
             }
         }
@@ -346,47 +345,47 @@ export class InputManager {
         return this;
     }
 
-    private _insertGamepadByIndex(gamepad: Gamepad): void {
+    private insertGamepadByIndex(gamepad: Gamepad): void {
         let insertIndex = 0;
 
-        while (insertIndex < this._gamepads.length && this._gamepads[insertIndex].index < gamepad.index) {
+        while (insertIndex < this.gamepadsValue.length && this.gamepadsValue[insertIndex].index < gamepad.index) {
             insertIndex += 1;
         }
 
-        this._gamepads.splice(insertIndex, 0, gamepad);
+        this.gamepadsValue.splice(insertIndex, 0, gamepad);
     }
 
-    private _updateEvents(): this {
-        if (this._flags.pop(InputManagerFlags.KEY_DOWN)) {
-            for (const channel of this._channelsPressed) {
+    private updateEvents(): this {
+        if (this.flags.pop(InputManagerFlag.KeyDown)) {
+            for (const channel of this.channelsPressed) {
                 this.onKeyDown.dispatch(channel);
             }
 
-            this._channelsPressed.length = 0;
+            this.channelsPressed.length = 0;
         }
 
-        if (this._flags.pop(InputManagerFlags.KEY_UP)) {
-            for (const channel of this._channelsReleased) {
+        if (this.flags.pop(InputManagerFlag.KeyUp)) {
+            for (const channel of this.channelsReleased) {
                 this.onKeyUp.dispatch(channel);
             }
 
-            this._channelsReleased.length = 0;
+            this.channelsReleased.length = 0;
         }
 
-        if (this._flags.pop(InputManagerFlags.MOUSE_WHEEL)) {
-            this.onMouseWheel.dispatch(this._wheelOffset);
-            this._wheelOffset.set(0, 0);
+        if (this.flags.pop(InputManagerFlag.MouseWheel)) {
+            this.onMouseWheel.dispatch(this.wheelOffset);
+            this.wheelOffset.set(0, 0);
         }
 
-        if (this._flags.pop(InputManagerFlags.POINTER_UPDATE)) {
-            this._updatePointerEvents();
+        if (this.flags.pop(InputManagerFlag.PointerUpdate)) {
+            this.updatePointerEvents();
         }
 
         return this;
     }
 
-    private _updatePointerEvents(): void {
-        for (const pointer of Object.values(this._pointers)) {
+    private updatePointerEvents(): void {
+        for (const pointer of Object.values(this.pointers)) {
             const { stateFlags } = pointer;
 
             if (stateFlags.value === PointerStateFlag.none) {
@@ -411,7 +410,7 @@ export class InputManager {
                 this.onPointerUp.dispatch(pointer);
 
                 if (startX >= 0 && startY >= 0) {
-                    if (getDistance(startX, startY, pointer.x, pointer.y) < this._pointerDistanceThreshold) {
+                    if (getDistance(startX, startY, pointer.x, pointer.y) < this.pointerDistanceThreshold) {
                         this.onPointerTap.dispatch(pointer);
                     } else {
                         this.onPointerSwipe.dispatch(pointer);
@@ -427,7 +426,7 @@ export class InputManager {
 
             if (stateFlags.pop(PointerStateFlag.leave)) {
                 this.onPointerLeave.dispatch(pointer);
-                delete this._pointers[pointer.id];
+                delete this.pointers[pointer.id];
             }
         }
     }

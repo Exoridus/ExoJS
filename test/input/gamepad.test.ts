@@ -1,11 +1,14 @@
-import { DefaultGamepadMapping } from 'input/DefaultGamepadMapping';
-import { Gamepad } from 'input/Gamepad';
-import { GamepadProfile } from 'input/GamepadProfiles';
 import { ChannelSize } from 'types/input';
+
+import { Gamepad } from 'input/Gamepad';
+import { GamepadChannel } from 'input/GamepadChannels';
+import { GenericDualAnalogGamepadMapping } from 'input/GenericDualAnalogGamepadMapping';
+import { resolveGamepadDefinition } from 'input/GamepadDefinitions';
+import { GamepadMappingFamily } from 'input/GamepadMapping';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 
-const createNativeGamepad = (id: string, index = 0, buttonValues: Array<number> = []): BrowserGamepad => (
+const createNativeGamepad = (id: string, index = 0, buttonValues: number[] = []): BrowserGamepad => (
     {
         id,
         index,
@@ -20,7 +23,7 @@ const createNativeGamepad = (id: string, index = 0, buttonValues: Array<number> 
 
 describe('Gamepad', () => {
     test('connect dispatches current gamepad instance', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new DefaultGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
         const onConnect = jest.fn();
 
         gamepad.onConnect.add(onConnect);
@@ -31,7 +34,7 @@ describe('Gamepad', () => {
     });
 
     test('connect refreshes underlying browser gamepad without reconnect event spam', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new DefaultGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
         const onConnect = jest.fn();
         const first = createNativeGamepad('first');
         const second = createNativeGamepad('second');
@@ -45,7 +48,7 @@ describe('Gamepad', () => {
     });
 
     test('disconnect dispatches current gamepad instance', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new DefaultGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
         const onDisconnect = jest.fn();
 
         gamepad.onDisconnect.add(onDisconnect);
@@ -57,44 +60,48 @@ describe('Gamepad', () => {
     });
 
     test('setInfo caches recognition metadata on gamepad instance', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new DefaultGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
 
         gamepad.setInfo({
-            profile: GamepadProfile.playStation,
-            label: 'Sony DualSense',
+            name: 'DualSense Controller',
+            label: 'Vendor: 054c Product: 0ce6',
             vendorId: '054c',
             productId: '0ce6',
+            productKey: '054c:0ce6',
         });
 
-        expect(gamepad.profile).toBe(GamepadProfile.playStation);
-        expect(gamepad.label).toBe('Sony DualSense');
+        expect(gamepad.name).toBe('DualSense Controller');
+        expect(gamepad.label).toBe('Vendor: 054c Product: 0ce6');
         expect(gamepad.vendorId).toBe('054c');
         expect(gamepad.productId).toBe('0ce6');
+        expect(gamepad.productKey).toBe('054c:0ce6');
     });
 
-    test('constructing from browser gamepad resolves profile and mapping automatically', () => {
+    test('constructing from browser gamepad uses the resolved definition', () => {
+        const nativeGamepad = createNativeGamepad('Vendor: 054c Product: 0ce6', 2);
         const gamepad = new Gamepad(
-            createNativeGamepad('Vendor: 054c Product: 0ce6', 2),
-            new Float32Array(ChannelSize.container)
+            nativeGamepad,
+            new Float32Array(ChannelSize.container),
+            resolveGamepadDefinition(nativeGamepad)
         );
 
         expect(gamepad.connected).toBe(true);
         expect(gamepad.index).toBe(2);
-        expect(gamepad.profile).toBe(GamepadProfile.playStation);
-        expect(gamepad.label).toBe('Sony DualSense');
+        expect(gamepad.name).toBe('DualSense Controller');
+        expect(gamepad.mappingFamily).toBe(GamepadMappingFamily.PlayStation);
     });
 
     test('disconnect clears mapped channels for the current gamepad', () => {
         const channels = new Float32Array(ChannelSize.container);
-        const gamepad = new Gamepad(0, channels, new DefaultGamepadMapping());
-        const faceBottomChannel = Gamepad.resolveChannelOffset(0, Gamepad.faceBottom);
+        const gamepad = new Gamepad(0, channels, new GenericDualAnalogGamepadMapping());
+        const buttonSouthChannel = Gamepad.resolveChannelOffset(0, GamepadChannel.ButtonSouth);
 
         gamepad.connect(createNativeGamepad('generic', 0, [1])).update();
 
-        expect(channels[faceBottomChannel]).toBe(1);
+        expect(channels[buttonSouthChannel]).toBe(1);
 
         gamepad.disconnect();
 
-        expect(channels[faceBottomChannel]).toBe(0);
+        expect(channels[buttonSouthChannel]).toBe(0);
     });
 });

@@ -1,10 +1,11 @@
 import { Signal } from 'core/Signal';
 import { Timer } from 'core/Timer';
 import { milliseconds } from 'utils/core';
-import type { Keyboard } from 'types/input';
-import type { GamepadChannel } from 'input/Gamepad';
 
-interface IInputOptions {
+import type { Keyboard } from 'types/input';
+import type { GamepadChannel } from './GamepadChannels';
+
+interface InputOptions {
     onStart?: () => void;
     onStop?: () => void;
     onActive?: () => void;
@@ -18,19 +19,18 @@ export type InputChannel = GamepadChannel | Keyboard;
 export class Input {
     public static triggerThreshold = 300;
 
-    private readonly _channels: Set<number>;
-    private readonly _triggerTimer: Timer;
-    private _value = 0;
+    private readonly channels = new Set<number>();
+    private readonly triggerTimer: Timer;
+    private valueState = 0;
 
     public readonly onStart = new Signal<[number]>();
     public readonly onStop = new Signal<[number]>();
     public readonly onActive = new Signal<[number]>();
     public readonly onTrigger = new Signal<[number]>();
 
-    public constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold }: IInputOptions = {}) {
-
-        this._channels = new Set(Array.isArray(channels) ? channels : [channels]);
-        this._triggerTimer = new Timer(milliseconds(threshold ?? Input.triggerThreshold));
+    public constructor(channels: Array<InputChannel> | InputChannel, { onStart, onStop, onActive, onTrigger, context, threshold }: InputOptions = {}) {
+        this.channels = new Set(Array.isArray(channels) ? channels : [channels]);
+        this.triggerTimer = new Timer(milliseconds(threshold ?? Input.triggerThreshold));
 
         if (onStart) {
             this.onStart.add(onStart, context);
@@ -49,44 +49,44 @@ export class Input {
         }
     }
 
-    public get channels(): Set<number> {
-        return this._channels;
+    public get activeChannels(): Set<number> {
+        return this.channels;
     }
 
     public get value(): number {
-        return this._value;
+        return this.valueState;
     }
 
     public update(channels: Float32Array): this {
-        this._value = Math.max(0);
+        this.valueState = 0;
 
-        for (const channel of this._channels) {
-            this._value = Math.max(channels[channel], this._value);
+        for (const channel of this.channels) {
+            this.valueState = Math.max(channels[channel], this.valueState);
         }
 
-        if (this._value) {
-            if (!this._triggerTimer.running) {
-                this._triggerTimer.restart();
-                this.onStart.dispatch(this._value);
+        if (this.valueState) {
+            if (!this.triggerTimer.running) {
+                this.triggerTimer.restart();
+                this.onStart.dispatch(this.valueState);
             }
 
-            this.onActive.dispatch(this._value);
-        } else if (this._triggerTimer.running) {
-            this.onStop.dispatch(this._value);
+            this.onActive.dispatch(this.valueState);
+        } else if (this.triggerTimer.running) {
+            this.onStop.dispatch(this.valueState);
 
-            if (!this._triggerTimer.expired) {
-                this.onTrigger.dispatch(this._value);
+            if (!this.triggerTimer.expired) {
+                this.onTrigger.dispatch(this.valueState);
             }
 
-            this._triggerTimer.stop();
+            this.triggerTimer.stop();
         }
 
         return this;
     }
 
     public destroy(): void {
-        this._channels.clear();
-        this._triggerTimer.destroy();
+        this.channels.clear();
+        this.triggerTimer.destroy();
 
         this.onStart.destroy();
         this.onStop.destroy();

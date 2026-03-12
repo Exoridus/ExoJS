@@ -1,10 +1,6 @@
-import { GenericGamepadMapping } from 'input/GenericGamepadMapping';
+import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
+import { GamepadMappingFamily } from './GamepadMapping';
 
-export class PlayStationGamepadMapping extends GenericGamepadMapping {
-}
-
-/**
- * @deprecated Use PlayStationGamepadMapping.
- */
-export class DualShockGamepadMapping extends PlayStationGamepadMapping {
+export class PlayStationGamepadMapping extends GenericDualAnalogGamepadMapping {
+    public override readonly family = GamepadMappingFamily.PlayStation;
 }
