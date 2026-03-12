@@ -24,12 +24,14 @@ interface IApplicationTestHarness {
         display: jest.Mock;
         resize: jest.Mock;
         destroy: jest.Mock;
+        renderTarget: { setView: jest.Mock };
     };
     readonly webgpuManager: {
         initialize: jest.Mock;
         display: jest.Mock;
         resize: jest.Mock;
         destroy: jest.Mock;
+        renderTarget: { setView: jest.Mock };
     };
     readonly RenderManagerMock: jest.Mock;
     readonly WebGpuRenderManagerMock: jest.Mock;
@@ -49,12 +51,14 @@ const loadApplicationHarness = (options: {
         display: jest.fn(),
         resize: jest.fn(),
         destroy: jest.fn(),
+        renderTarget: { setView: jest.fn() },
     };
     const webgpuManager = {
         initialize: options.webgpuInitialize ?? jest.fn().mockResolvedValue(undefined),
         display: jest.fn(),
         resize: jest.fn(),
         destroy: jest.fn(),
+        renderTarget: { setView: jest.fn() },
     };
     const sceneManager = {
         update: jest.fn(),
@@ -255,6 +259,29 @@ describe('Application', () => {
         } finally {
             restoreGpu();
             rafSpy.mockRestore();
+        }
+    });
+
+    test('renderManager exposes a renderTarget on both backend paths', () => {
+        const restoreGpu = setNavigatorGpu({});
+
+        try {
+            const { Application } = loadApplicationHarness();
+            const webgpuApp = new Application({
+                canvas: document.createElement('canvas'),
+                backend: { type: 'webgpu' },
+            });
+            const webglApp = new Application({
+                canvas: document.createElement('canvas'),
+                backend: { type: 'webgl2' },
+            });
+
+            expect(webgpuApp.renderManager.renderTarget).toBeDefined();
+            expect(typeof webgpuApp.renderManager.renderTarget.setView).toBe('function');
+            expect(webglApp.renderManager.renderTarget).toBeDefined();
+            expect(typeof webglApp.renderManager.renderTarget.setView).toBe('function');
+        } finally {
+            restoreGpu();
         }
     });
 });

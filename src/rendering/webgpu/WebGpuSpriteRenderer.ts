@@ -9,7 +9,6 @@ import { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
 import { BlendModes } from 'types/rendering';
 
-const maxBatchTextures = 8;
 const spriteShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
@@ -19,67 +18,22 @@ struct ProjectionUniforms {
 var<uniform> projection: ProjectionUniforms;
 
 @group(1) @binding(0)
-var spriteTexture0: texture_2d<f32>;
+var spriteTexture: texture_2d<f32>;
 @group(1) @binding(1)
-var spriteTexture1: texture_2d<f32>;
-@group(1) @binding(2)
-var spriteTexture2: texture_2d<f32>;
-@group(1) @binding(3)
-var spriteTexture3: texture_2d<f32>;
-@group(1) @binding(4)
-var spriteTexture4: texture_2d<f32>;
-@group(1) @binding(5)
-var spriteTexture5: texture_2d<f32>;
-@group(1) @binding(6)
-var spriteTexture6: texture_2d<f32>;
-@group(1) @binding(7)
-var spriteTexture7: texture_2d<f32>;
-@group(1) @binding(8)
 var spriteSampler: sampler;
-
-fn sampleSpriteTexture(index: u32, texcoord: vec2<f32>) -> vec4<f32> {
-    switch (index) {
-        case 1u: {
-            return textureSample(spriteTexture1, spriteSampler, texcoord);
-        }
-        case 2u: {
-            return textureSample(spriteTexture2, spriteSampler, texcoord);
-        }
-        case 3u: {
-            return textureSample(spriteTexture3, spriteSampler, texcoord);
-        }
-        case 4u: {
-            return textureSample(spriteTexture4, spriteSampler, texcoord);
-        }
-        case 5u: {
-            return textureSample(spriteTexture5, spriteSampler, texcoord);
-        }
-        case 6u: {
-            return textureSample(spriteTexture6, spriteSampler, texcoord);
-        }
-        case 7u: {
-            return textureSample(spriteTexture7, spriteSampler, texcoord);
-        }
-        default: {
-            return textureSample(spriteTexture0, spriteSampler, texcoord);
-        }
-    }
-}
 
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(1) texcoord: vec2<f32>,
     @location(2) color: vec4<f32>,
-    @location(3) textureIndex: u32,
-    @location(4) premultiplySample: u32,
+    @location(3) premultiplySample: u32,
 };
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) texcoord: vec2<f32>,
     @location(1) color: vec4<f32>,
-    @location(2) @interpolate(flat) textureIndex: u32,
-    @location(3) @interpolate(flat) premultiplySample: u32,
+    @location(2) @interpolate(flat) premultiplySample: u32,
 };
 
 @vertex
@@ -89,7 +43,6 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.position = projection.matrix * vec4<f32>(input.position, 0.0, 1.0);
     output.texcoord = input.texcoord;
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
-    output.textureIndex = input.textureIndex;
     output.premultiplySample = input.premultiplySample;
 
     return output;
@@ -97,19 +50,19 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let sample = sampleSpriteTexture(input.textureIndex, input.texcoord);
+    let sample = textureSample(spriteTexture, spriteSampler, input.texcoord);
     let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), input.premultiplySample == 1u);
 
     return resolvedSample * input.color;
 }
 `;
 
-const vertexStrideBytes = 28;
+const vertexStrideBytes = 24;
 const spriteVertexCount = 4;
 const spriteIndexCount = 6;
 const projectionByteLength = 64;
 const initialBatchCapacity = 32;
-const wordsPerVertex = 7;
+const wordsPerVertex = 6;
 
 interface IWebGpuSpriteDrawCall {
     readonly texture: Texture | RenderTexture;
@@ -122,7 +75,7 @@ interface IWebGpuSpriteDrawCall {
 interface IWebGpuSpriteBatchRange {
     readonly end: number;
     readonly spriteCount: number;
-    readonly textures: Array<Texture | RenderTexture>;
+    readonly texture: Texture | RenderTexture;
 }
 
 export class WebGpuSpriteRenderer implements IRenderer {
@@ -144,7 +97,7 @@ export class WebGpuSpriteRenderer implements IRenderer {
     private _vertexData: ArrayBuffer = new ArrayBuffer(0);
     private _float32View = new Float32Array(this._vertexData);
     private _uint32View = new Uint32Array(this._vertexData);
-    private readonly _pipelines: Map<BlendModes, GPURenderPipeline> = new Map<BlendModes, GPURenderPipeline>();
+    private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
     public connect(renderManager: IRenderBackend): this {
         if (!this._renderManager) {
@@ -153,16 +106,6 @@ export class WebGpuSpriteRenderer implements IRenderer {
             this._renderManager = webGpuRenderManager;
             this._device = webGpuRenderManager.device;
             this._shaderModule = this._device.createShaderModule({ code: spriteShaderSource });
-            const textureLayoutEntries: Array<GPUBindGroupLayoutEntry> = Array.from(
-                { length: maxBatchTextures },
-                (_, index): GPUBindGroupLayoutEntry => ({
-                    binding: index,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    texture: {
-                        sampleType: 'float',
-                    },
-                })
-            );
 
             this._uniformBindGroupLayout = this._device.createBindGroupLayout({
                 entries: [{
@@ -175,9 +118,15 @@ export class WebGpuSpriteRenderer implements IRenderer {
             });
             this._textureBindGroupLayout = this._device.createBindGroupLayout({
                 entries: [
-                    ...textureLayoutEntries,
                     {
-                        binding: maxBatchTextures,
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: 'float',
+                        },
+                    },
+                    {
+                        binding: 1,
                         visibility: GPUShaderStage.FRAGMENT,
                         sampler: {
                             type: 'filtering',
@@ -338,21 +287,18 @@ export class WebGpuSpriteRenderer implements IRenderer {
 
             for (let start = 0; start < this._drawCalls.length;) {
                 const batch = this._getBatchRange(start);
-                const drawCall = this._drawCalls[start];
-                const pipeline = this._getPipeline(drawCall.blendMode);
-                const textureBindings = batch.textures.map((texture) => renderManager.getTextureBinding(texture));
-                const sharedSampler = textureBindings[0].sampler;
-                const fallbackView = textureBindings[0].view;
+                const pipeline = this._getPipeline(this._drawCalls[start].blendMode, renderManager.renderTargetFormat);
+                const textureBinding = renderManager.getTextureBinding(batch.texture);
                 const textureBindGroup = device.createBindGroup({
                     layout: this._textureBindGroupLayout!,
                     entries: [
-                        ...Array.from({ length: maxBatchTextures }, (_, index) => ({
-                            binding: index,
-                            resource: textureBindings[index]?.view ?? fallbackView,
-                        })),
                         {
-                            binding: maxBatchTextures,
-                            resource: sharedSampler,
+                            binding: 0,
+                            resource: textureBinding.view,
+                        },
+                        {
+                            binding: 1,
+                            resource: textureBinding.sampler,
                         }
                     ],
                 });
@@ -425,41 +371,25 @@ export class WebGpuSpriteRenderer implements IRenderer {
 
     private _writeVertexData(drawCalls: Array<IWebGpuSpriteDrawCall>): void {
         let vertexOffset = 0;
-        let start = 0;
 
-        while (start < drawCalls.length) {
-            const batch = this._getBatchRange(start);
+        for (const drawCall of drawCalls) {
+            for (let i = 0; i < spriteVertexCount; i++) {
+                const vertexIndex = i * 2;
+                const packedTexCoord = drawCall.texCoords[i];
 
-            for (let drawCallIndex = start; drawCallIndex < batch.end; drawCallIndex++) {
-                const drawCall = drawCalls[drawCallIndex];
-                const textureIndex = batch.textures.indexOf(drawCall.texture);
-
-                if (textureIndex < 0) {
-                    throw new Error('Sprite batch texture index could not be resolved.');
-                }
-
-                for (let i = 0; i < spriteVertexCount; i++) {
-                    const vertexIndex = i * 2;
-                    const packedTexCoord = drawCall.texCoords[i];
-
-                    this._float32View[vertexOffset] = drawCall.vertices[vertexIndex];
-                    this._float32View[vertexOffset + 1] = drawCall.vertices[vertexIndex + 1];
-                    this._float32View[vertexOffset + 2] = (packedTexCoord & 0xFFFF) / 65535;
-                    this._float32View[vertexOffset + 3] = ((packedTexCoord >>> 16) & 0xFFFF) / 65535;
-                    this._uint32View[vertexOffset + 4] = drawCall.color;
-                    this._uint32View[vertexOffset + 5] = textureIndex;
-                    this._uint32View[vertexOffset + 6] = this._renderManager!.shouldPremultiplyTextureSample(drawCall.texture) ? 1 : 0;
-                    vertexOffset += wordsPerVertex;
-                }
+                this._float32View[vertexOffset] = drawCall.vertices[vertexIndex];
+                this._float32View[vertexOffset + 1] = drawCall.vertices[vertexIndex + 1];
+                this._float32View[vertexOffset + 2] = (packedTexCoord & 0xFFFF) / 65535;
+                this._float32View[vertexOffset + 3] = ((packedTexCoord >>> 16) & 0xFFFF) / 65535;
+                this._uint32View[vertexOffset + 4] = drawCall.color;
+                this._uint32View[vertexOffset + 5] = this._renderManager!.shouldPremultiplyTextureSample(drawCall.texture) ? 1 : 0;
+                vertexOffset += wordsPerVertex;
             }
-
-            start = batch.end;
         }
     }
 
     private _getBatchRange(start: number): IWebGpuSpriteBatchRange {
         const drawCall = this._drawCalls[start];
-        const textures: Array<Texture | RenderTexture> = [drawCall.texture];
         let end = start + 1;
 
         while (end < this._drawCalls.length) {
@@ -469,16 +399,8 @@ export class WebGpuSpriteRenderer implements IRenderer {
                 break;
             }
 
-            if (!this._isSamplerCompatible(drawCall.texture, nextDrawCall.texture)) {
+            if (nextDrawCall.texture !== drawCall.texture) {
                 break;
-            }
-
-            if (!textures.includes(nextDrawCall.texture)) {
-                if (textures.length >= maxBatchTextures) {
-                    break;
-                }
-
-                textures.push(nextDrawCall.texture);
             }
 
             end++;
@@ -487,17 +409,13 @@ export class WebGpuSpriteRenderer implements IRenderer {
         return {
             end,
             spriteCount: end - start,
-            textures,
+            texture: drawCall.texture,
         };
     }
 
-    private _isSamplerCompatible(first: Texture | RenderTexture, second: Texture | RenderTexture): boolean {
-        return first.scaleMode === second.scaleMode
-            && first.wrapMode === second.wrapMode;
-    }
-
-    private _getPipeline(blendMode: BlendModes): GPURenderPipeline {
-        const existingPipeline = this._pipelines.get(blendMode);
+    private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
+        const pipelineKey = `${blendMode}:${format}`;
+        const existingPipeline = this._pipelines.get(pipelineKey);
 
         if (existingPipeline) {
             return existingPipeline;
@@ -530,10 +448,6 @@ export class WebGpuSpriteRenderer implements IRenderer {
                         shaderLocation: 3,
                         offset: 20,
                         format: 'uint32',
-                    }, {
-                        shaderLocation: 4,
-                        offset: 24,
-                        format: 'uint32',
                     }],
                 }],
             },
@@ -541,7 +455,7 @@ export class WebGpuSpriteRenderer implements IRenderer {
                 module: this._shaderModule,
                 entryPoint: 'fragmentMain',
                 targets: [{
-                    format: this._renderManager.format,
+                    format,
                     blend: this._getBlendState(blendMode),
                     writeMask: GPUColorWrite.ALL,
                 }],
@@ -551,7 +465,7 @@ export class WebGpuSpriteRenderer implements IRenderer {
             },
         });
 
-        this._pipelines.set(blendMode, pipeline);
+        this._pipelines.set(pipelineKey, pipeline);
 
         return pipeline;
     }

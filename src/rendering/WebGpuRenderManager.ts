@@ -29,6 +29,8 @@ interface IManagedWebGpuTextureState {
     hasContent: boolean;
 }
 
+const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
+
 export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess {
 
     private readonly _canvas: HTMLCanvasElement;
@@ -72,10 +74,15 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
         this.addRenderer(RendererType.primitive, new WebGpuPrimitiveRenderer());
         this.addRenderer(RendererType.sprite, new WebGpuSpriteRenderer());
         this.addRenderer(RendererType.particle, new WebGpuParticleRenderer());
+        this.resize(width, height);
     }
 
     public get view(): View {
         return this._renderTarget.view;
+    }
+
+    public get renderTarget(): RenderTarget {
+        return this._renderTarget;
     }
 
     public get device(): GPUDevice {
@@ -100,6 +107,10 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
         }
 
         return this._format;
+    }
+
+    public get renderTargetFormat(): GPUTextureFormat {
+        return this._renderTarget === this._rootRenderTarget ? this.format : managedTextureFormat;
     }
 
     public get clearRequested(): boolean {
@@ -219,6 +230,12 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
                 this._subscribeRenderTarget(nextRenderTarget);
             }
         }
+
+        return this;
+    }
+
+    public setView(view: View | null): this {
+        this._renderTarget.setView(view);
 
         return this;
     }
@@ -425,7 +442,7 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
                     width: Math.max(texture.width, 1),
                     height: Math.max(texture.height, 1),
                 },
-                format: 'rgba8unorm',
+                format: managedTextureFormat,
                 mipLevelCount: this._getMipLevelCount(texture),
                 usage: this._getTextureUsage(texture),
             });
@@ -471,7 +488,7 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
                         width: texture.width,
                         height: texture.height,
                     },
-                    format: 'rgba8unorm',
+                    format: managedTextureFormat,
                     mipLevelCount,
                     usage: this._getTextureUsage(texture),
                 });
@@ -738,7 +755,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
                     module: this._mipmapShaderModule,
                     entryPoint: 'fragmentMain',
                     targets: [{
-                        format: 'rgba8unorm',
+                        format: managedTextureFormat,
                         writeMask: GPUColorWrite.ALL,
                     }],
                 },

@@ -7,6 +7,7 @@ import type { IRenderBackend } from './IRenderBackend';
 import type { ISamplerOptions } from './texture/Sampler';
 import type { IMedia } from 'types/IMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
+import { Rectangle } from 'math/Rectangle';
 
 interface IVideoAudioSetup {
     readonly audioContext: AudioContext;
@@ -260,6 +261,27 @@ export class Video extends Sprite implements IMedia {
     public render(renderManager: IRenderBackend): this {
         this.updateTexture();
         super.render(renderManager);
+
+        return this;
+    }
+
+    public updateTexture(): this {
+        const texture = this.texture;
+
+        if (!texture) {
+            return this;
+        }
+
+        const preserveSize = this.textureFrame.width > 0 && this.textureFrame.height > 0;
+
+        texture.updateSource();
+
+        if (texture.width > 0 && texture.height > 0) {
+            this.setTextureFrame(
+                Rectangle.temp.set(0, 0, texture.width, texture.height),
+                !preserveSize
+            );
+        }
 
         return this;
     }

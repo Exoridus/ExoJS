@@ -57,6 +57,7 @@ interface IWebGpuPrimitiveDrawCall {
 interface IWebGpuPrimitivePipelineKey {
     readonly drawMode: RenderingPrimitives;
     readonly blendMode: BlendModes;
+    readonly format: GPUTextureFormat;
 }
 
 export class WebGpuPrimitiveRenderer implements IRenderer {
@@ -212,6 +213,7 @@ export class WebGpuPrimitiveRenderer implements IRenderer {
             const pipeline = this._getPipeline({
                 drawMode: drawCall.drawMode,
                 blendMode: drawCall.blendMode,
+                format: renderManager.renderTargetFormat,
             });
 
             this._ensureVertexCapacity(vertexCount);
@@ -319,7 +321,7 @@ export class WebGpuPrimitiveRenderer implements IRenderer {
     }
 
     private _getPipeline(key: IWebGpuPrimitivePipelineKey): GPURenderPipeline {
-        const pipelineKey = `${key.drawMode}:${key.blendMode}`;
+        const pipelineKey = `${key.drawMode}:${key.blendMode}:${key.format}`;
         const existingPipeline = this._pipelines.get(pipelineKey);
 
         if (existingPipeline) {
@@ -349,7 +351,7 @@ export class WebGpuPrimitiveRenderer implements IRenderer {
                 module: this._shaderModule!,
                 entryPoint: 'fragmentMain',
                 targets: [{
-                    format: this._renderManager!.format,
+                    format: key.format,
                     blend: this._getBlendState(key.blendMode),
                     writeMask: GPUColorWrite.ALL,
                 }],

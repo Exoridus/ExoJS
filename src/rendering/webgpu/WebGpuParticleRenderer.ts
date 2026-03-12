@@ -118,7 +118,7 @@ export class WebGpuParticleRenderer implements IRenderer {
     private _instanceData: ArrayBuffer = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
     private _float32View = new Float32Array(this._instanceData);
     private _uint32View = new Uint32Array(this._instanceData);
-    private readonly _pipelines: Map<BlendModes, GPURenderPipeline> = new Map<BlendModes, GPURenderPipeline>();
+    private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
     public connect(renderManager: IRenderBackend): this {
         if (!this._renderManager) {
@@ -130,7 +130,7 @@ export class WebGpuParticleRenderer implements IRenderer {
             this._uniformBindGroupLayout = this._device.createBindGroupLayout({
                 entries: [{
                     binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                     buffer: {
                         type: 'uniform',
                     },
@@ -278,7 +278,7 @@ export class WebGpuParticleRenderer implements IRenderer {
         pass.setBindGroup(0, uniformBindGroup);
 
         for (const drawCall of this._drawCalls) {
-            const pipeline = this._getPipeline(drawCall.blendMode);
+            const pipeline = this._getPipeline(drawCall.blendMode, renderManager.renderTargetFormat);
             const textureBinding = renderManager.getTextureBinding(drawCall.texture);
             const textureBindGroup = device.createBindGroup({
                 layout: this._textureBindGroupLayout!,
@@ -406,8 +406,9 @@ export class WebGpuParticleRenderer implements IRenderer {
         }
     }
 
-    private _getPipeline(blendMode: BlendModes): GPURenderPipeline {
-        const existingPipeline = this._pipelines.get(blendMode);
+    private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
+        const pipelineKey = `${blendMode}:${format}`;
+        const existingPipeline = this._pipelines.get(pipelineKey);
 
         if (existingPipeline) {
             return existingPipeline;
@@ -471,7 +472,7 @@ export class WebGpuParticleRenderer implements IRenderer {
                 module: this._shaderModule,
                 entryPoint: 'fragmentMain',
                 targets: [{
-                    format: this._renderManager.format,
+                    format,
                     blend: this._getBlendState(blendMode),
                     writeMask: GPUColorWrite.ALL,
                 }],
@@ -481,7 +482,7 @@ export class WebGpuParticleRenderer implements IRenderer {
             },
         });
 
-        this._pipelines.set(blendMode, pipeline);
+        this._pipelines.set(pipelineKey, pipeline);
 
         return pipeline;
     }

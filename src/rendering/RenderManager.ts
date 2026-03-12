@@ -136,7 +136,7 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
         return this._context;
     }
 
-    public get renderTarget(): RenderTarget | null {
+    public get renderTarget(): RenderTarget {
         return this._renderTarget;
     }
 
@@ -216,6 +216,13 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
         }
 
         this._bindRenderTarget(renderTarget);
+
+        return this;
+    }
+
+    public setView(view: View | null): this {
+        this._renderTarget.setView(view);
+        this._bindRenderTarget(this._renderTarget);
 
         return this;
     }
