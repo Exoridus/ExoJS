@@ -19,7 +19,7 @@ await loader
 
 ## Key concepts
 
-- `ILoaderOptions`
+- `LoaderOptions`
 - `ResourceFactory`
 - `ResourceContainer`
 - `Database`

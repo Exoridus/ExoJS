@@ -99,6 +99,7 @@ Class-focused runtime docs live under [docs/api](docs/api/README.md).
 Key pages:
 
 - [Application](docs/api/Application.md)
+- [Examples Migration](docs/api/ExamplesMigration.md)
 - [Scene](docs/api/Scene.md)
 - [Loader](docs/api/Loader.md)
 - [Renderer](docs/api/Renderer.md)

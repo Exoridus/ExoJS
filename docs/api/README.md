@@ -5,6 +5,7 @@ This directory is the stable reference surface for the normal ExoJS runtime mode
 Use these pages as the source of truth for examples and application code:
 
 - [Application](./Application.md)
+- [Examples Migration](./ExamplesMigration.md)
 - [Scene](./Scene.md)
 - [Loader](./Loader.md)
 - [Renderer](./Renderer.md)
