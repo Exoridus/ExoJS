@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:/Users/User/Development/exojs\" && npm run typecheck 2>&1)",
+      "Bash(cd \"C:/Users/User/Development/exojs\" && npm run lint 2>&1)",
+      "Bash(cd \"C:/Users/User/Development/exojs\" && npm test 2>&1)",
+      "Bash(cd \"C:/Users/User/Development/exojs\" && npm run build 2>&1)",
+      "Bash(cd \"C:/Users/User/Development/exojs\" && npm run build:declarations 2>&1)"
+    ]
+  }
+}

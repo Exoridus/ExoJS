@@ -26,7 +26,7 @@ export default defineConfig([
       'no-label-var': 'error',
       'no-shadow': 'off',
       '@typescript-eslint/no-shadow': 'error',
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/explicit-member-accessibility': 'off',
       '@typescript-eslint/explicit-function-return-type': 'error',

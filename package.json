@@ -1,20 +1,69 @@
 {
   "name": "exo-js-core",
   "description": "A lightweight, flexibile and powerful multimedia framework.",
-  "version": "1.0.20",
+  "version": "1.1.0",
   "files": [
-    "dist",
+    "dist/exo.js",
+    "dist/exo.js.map",
+    "dist/exo.esm.js",
+    "dist/exo.esm.js.map",
+    "dist/exo.bundle.js",
+    "dist/exo.bundle.js.map",
+    "dist/exo.d.ts",
+    "dist/webgl2.js",
+    "dist/webgl2.js.map",
+    "dist/webgl2.esm.js",
+    "dist/webgl2.esm.js.map",
+    "dist/webgl2.d.ts",
+    "dist/webgpu.js",
+    "dist/webgpu.js.map",
+    "dist/webgpu.esm.js",
+    "dist/webgpu.esm.js.map",
+    "dist/webgpu.d.ts",
     "README.md"
   ],
   "main": "dist/exo.js",
   "module": "dist/exo.esm.js",
   "browser": "dist/exo.bundle.js",
   "types": "dist/exo.d.ts",
+  "typesVersions": {
+    "*": {
+      "webgl2": [
+        "dist/webgl2.d.ts"
+      ],
+      "webgpu": [
+        "dist/webgpu.d.ts"
+      ]
+    }
+  },
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/exo.d.ts",
+      "import": "./dist/exo.esm.js",
+      "require": "./dist/exo.js",
+      "default": "./dist/exo.esm.js"
+    },
+    "./webgl2": {
+      "types": "./dist/webgl2.d.ts",
+      "import": "./dist/webgl2.esm.js",
+      "require": "./dist/webgl2.js",
+      "default": "./dist/webgl2.esm.js"
+    },
+    "./webgpu": {
+      "types": "./dist/webgpu.d.ts",
+      "import": "./dist/webgpu.esm.js",
+      "require": "./dist/webgpu.js",
+      "default": "./dist/webgpu.esm.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && rollup -c",
     "build:watch": "rollup -cw",
-    "build:declarations": "node node_modules/typescript-3-9/bin/tsc -p tsconfig.declaration.json",
+    "build:declarations": "tsc -p tsconfig.declaration.json && tsc -p tsconfig.declaration.webgl2.json && tsc -p tsconfig.declaration.webgpu.json",
+    "verify:package": "npm run build && npm run build:declarations && npm pack --dry-run",
+    "prepack": "npm run build && npm run build:declarations",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint --fix \"src/**/*.ts\"",
@@ -31,12 +80,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@rollup/plugin-commonjs": "^14.0.0",
-    "@rollup/plugin-node-resolve": "^8.0.1",
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-typescript": "^12.1.4",
     "@types/css-font-loading-module": "0.0.4",
     "@types/earcut": "^2.1.1",
     "@types/jest": "^29.5.14",
-    "@types/node": "^13.13.10",
+    "@types/node": "^22.19.15",
     "eslint": "^9.39.1",
     "gitmoji-cli": "^9.7.0",
     "globals": "^17.3.0",
@@ -46,19 +96,17 @@
     "jest-util": "^29.7.0",
     "jiti": "^2.6.1",
     "rimraf": "^6.1.0",
-    "rollup": "^2.15.0",
-    "rollup-plugin-cleaner": "^1.0.0",
+    "rollup": "^4.59.0",
     "rollup-plugin-string": "^3.0.0",
-    "rollup-plugin-typescript2": "^0.27.1",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tslib": "^2.0.0",
     "typescript": "^5.9.3",
-    "typescript-3-9": "npm:typescript@3.9.10",
     "typescript-eslint": "^8.48.0"
   },
   "dependencies": {
+    "@webgpu/types": "^0.1.69",
     "earcut": "^2.2.2"
   }
 }

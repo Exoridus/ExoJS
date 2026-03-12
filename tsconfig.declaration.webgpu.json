@@ -1,10 +1,13 @@
 {
   "extends": "./tsconfig.json",
+  "files": [
+    "src/webgpu.ts"
+  ],
   "compilerOptions": {
     "declaration": true,
     "emitDeclarationOnly": true,
     "incremental": false,
-    "outFile": "dist/exo.d.ts",
+    "outFile": "dist/webgpu.d.ts",
     "types": []
   }
 }
