@@ -129,7 +129,7 @@ describe('Application', () => {
             restart: jest.fn(),
         };
 
-        rawApp['_status'] = ApplicationStatus.running;
+        rawApp['_status'] = ApplicationStatus.Running;
         rawApp['inputManager'] = inputManager;
         rawApp['sceneManager'] = sceneManager;
         rawApp['_renderManager'] = renderManager;

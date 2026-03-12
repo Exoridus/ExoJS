@@ -2,9 +2,9 @@ import type { Drawable } from './Drawable';
 import type { RenderBackend } from './RenderBackend';
 
 export enum RendererType {
-    sprite = 1,
-    particle = 2,
-    primitive = 3,
+    Sprite = 1,
+    Particle = 2,
+    Primitive = 3,
 }
 
 export interface Renderer {

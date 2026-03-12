@@ -11,7 +11,7 @@ export * from './sprite/Sprite';
 
 export * from './texture/RenderTexture';
 export * from './texture/Texture';
-export type { ISamplerOptions } from './texture/Sampler';
+export type { SamplerOptions } from './texture/Sampler';
 
 export * from './RenderBuffer';
 export * from './Container';

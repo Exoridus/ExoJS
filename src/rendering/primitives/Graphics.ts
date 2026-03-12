@@ -168,13 +168,13 @@ export class Graphics extends Container {
     }
 
     public drawLine(startX: number, startY: number, endX: number, endY: number): this {
-        this.addChild(new DrawableShape(buildLine(startX, startY, endX, endY, this._lineWidth), this._lineColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(buildLine(startX, startY, endX, endY, this._lineWidth), this._lineColor, RenderingPrimitives.TriangleStrip));
 
         return this;
     }
 
     public drawPath(path: Array<number>): this {
-        this.addChild(new DrawableShape(buildPath(path, this._lineWidth), this._lineColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(buildPath(path, this._lineWidth), this._lineColor, RenderingPrimitives.TriangleStrip));
 
         return this;
     }
@@ -182,7 +182,7 @@ export class Graphics extends Container {
     public drawPolygon(path: Array<number>): this {
         const polygon = buildPolygon(path);
 
-        this.addChild(new DrawableShape(polygon, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(polygon, this._fillColor, RenderingPrimitives.TriangleStrip));
 
         if (this._lineWidth > 0) {
             this.drawPath(polygon.points);
@@ -194,7 +194,7 @@ export class Graphics extends Container {
     public drawCircle(centerX: number, centerY: number, radius: number): this {
         const circle = new CircleGeometry(centerX, centerY, radius);
 
-        this.addChild(new DrawableShape(circle, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(circle, this._fillColor, RenderingPrimitives.TriangleStrip));
 
         if (this._lineWidth > 0) {
             this.drawPath(circle.points);
@@ -206,7 +206,7 @@ export class Graphics extends Container {
     public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
         const ellipse = buildEllipse(centerX, centerY, radiusX, radiusY);
 
-        this.addChild(new DrawableShape(ellipse, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(ellipse, this._fillColor, RenderingPrimitives.TriangleStrip));
 
         if (this._lineWidth > 0) {
             this.drawPath(ellipse.points);
@@ -218,7 +218,7 @@ export class Graphics extends Container {
     public drawRectangle(x: number, y: number, width: number, height: number): this {
         const rectangle = buildRectangle(x, y, width, height);
 
-        this.addChild(new DrawableShape(rectangle, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(rectangle, this._fillColor, RenderingPrimitives.TriangleStrip));
 
         if (this._lineWidth > 0) {
             this.drawPath(rectangle.points);
@@ -230,7 +230,7 @@ export class Graphics extends Container {
     public drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
         const star = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
 
-        this.addChild(new DrawableShape(star, this._fillColor, RenderingPrimitives.TRIANGLE_STRIP));
+        this.addChild(new DrawableShape(star, this._fillColor, RenderingPrimitives.TriangleStrip));
 
         if (this._lineWidth > 0) {
             this.drawPath(star.points);

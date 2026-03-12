@@ -489,7 +489,7 @@ export class WebGpuParticleRenderer implements Renderer {
 
     private _getBlendState(blendMode: BlendModes): GPUBlendState {
         switch (blendMode) {
-            case BlendModes.additive:
+            case BlendModes.Additive:
                 return {
                     color: {
                         operation: 'add',
@@ -502,7 +502,7 @@ export class WebGpuParticleRenderer implements Renderer {
                         dstFactor: 'one',
                     },
                 };
-            case BlendModes.subtract:
+            case BlendModes.Subtract:
                 return {
                     color: {
                         operation: 'add',
@@ -515,7 +515,7 @@ export class WebGpuParticleRenderer implements Renderer {
                         dstFactor: 'one-minus-src-alpha',
                     },
                 };
-            case BlendModes.multiply:
+            case BlendModes.Multiply:
                 return {
                     color: {
                         operation: 'add',
@@ -528,7 +528,7 @@ export class WebGpuParticleRenderer implements Renderer {
                         dstFactor: 'one-minus-src-alpha',
                     },
                 };
-            case BlendModes.screen:
+            case BlendModes.Screen:
                 return {
                     color: {
                         operation: 'add',

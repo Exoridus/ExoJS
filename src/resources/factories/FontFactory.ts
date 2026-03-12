@@ -2,13 +2,13 @@ import type { FontFaceDescriptors } from 'css-font-loading-module';
 import { AbstractResourceFactory } from './AbstractResourceFactory';
 import { StorageNames } from 'types/types';
 
-export interface IFontFactoryOptions {
+export interface FontFactoryOptions {
     family: string;
     descriptors?: FontFaceDescriptors;
     addToDocument?: boolean;
 }
 
-export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace, IFontFactoryOptions> {
+export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace, FontFactoryOptions> {
 
     public readonly storageName: StorageNames = StorageNames.font;
 
@@ -16,7 +16,7 @@ export class FontFactory extends AbstractResourceFactory<ArrayBuffer, FontFace, 
         return await response.arrayBuffer();
     }
 
-    public async create(source: ArrayBuffer, options?: IFontFactoryOptions): Promise<FontFace> {
+    public async create(source: ArrayBuffer, options?: FontFactoryOptions): Promise<FontFace> {
         if (!options?.family) {
             throw new Error('FontFactory.create requires options with a "family" property.');
         }

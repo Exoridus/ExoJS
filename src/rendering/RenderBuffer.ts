@@ -4,7 +4,7 @@ import type { TypedArray } from 'types/types';
 
 type DataContainer = ArrayBuffer | SharedArrayBuffer | ArrayBufferView | TypedArray;
 
-export interface IRenderBufferRuntime {
+export interface RenderBufferRuntime {
     bind(buffer: RenderBuffer): void;
     upload(buffer: RenderBuffer, offset: number): void;
     destroy(buffer: RenderBuffer): void;
@@ -14,7 +14,7 @@ export class RenderBuffer {
 
     private readonly _type: number;
     private readonly _usage: BufferUsage;
-    private _runtime: IRenderBufferRuntime | null = null;
+    private _runtime: RenderBufferRuntime | null = null;
     private _data: DataContainer = emptyArrayBuffer;
     private _version = 0;
 
@@ -44,7 +44,7 @@ export class RenderBuffer {
         return this._version;
     }
 
-    public connect(runtime: IRenderBufferRuntime): this {
+    public connect(runtime: RenderBufferRuntime): this {
         this._runtime = runtime;
 
         if (this._data.byteLength > 0) {

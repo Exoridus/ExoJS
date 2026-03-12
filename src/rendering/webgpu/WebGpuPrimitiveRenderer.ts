@@ -161,11 +161,11 @@ export class WebGpuPrimitiveRenderer implements Renderer {
         const shape = drawable as DrawableShape;
 
         if (
-            shape.drawMode !== RenderingPrimitives.POINTS
-            && shape.drawMode !== RenderingPrimitives.LINES
-            && shape.drawMode !== RenderingPrimitives.LINE_STRIP
-            && shape.drawMode !== RenderingPrimitives.TRIANGLES
-            && shape.drawMode !== RenderingPrimitives.TRIANGLE_STRIP
+            shape.drawMode !== RenderingPrimitives.Points
+            && shape.drawMode !== RenderingPrimitives.Lines
+            && shape.drawMode !== RenderingPrimitives.LineStrip
+            && shape.drawMode !== RenderingPrimitives.Triangles
+            && shape.drawMode !== RenderingPrimitives.TriangleStrip
         ) {
             throw new Error(`WebGPU primitive renderer does not support draw mode "${shape.drawMode}" yet.`);
         }
@@ -359,8 +359,8 @@ export class WebGpuPrimitiveRenderer implements Renderer {
             primitive: {
                 topology,
                 stripIndexFormat: (
-                    key.drawMode === RenderingPrimitives.TRIANGLE_STRIP
-                    || key.drawMode === RenderingPrimitives.LINE_STRIP
+                    key.drawMode === RenderingPrimitives.TriangleStrip
+                    || key.drawMode === RenderingPrimitives.LineStrip
                 ) ? 'uint16' : undefined,
             },
         });
@@ -372,7 +372,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
 
     private _getBlendState(blendMode: BlendModes): GPUBlendState {
         switch (blendMode) {
-            case BlendModes.additive:
+            case BlendModes.Additive:
                 return {
                     color: {
                         operation: 'add',
@@ -385,7 +385,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
                         dstFactor: 'one',
                     },
                 };
-            case BlendModes.subtract:
+            case BlendModes.Subtract:
                 return {
                     color: {
                         operation: 'add',
@@ -398,7 +398,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
                         dstFactor: 'one-minus-src-alpha',
                     },
                 };
-            case BlendModes.multiply:
+            case BlendModes.Multiply:
                 return {
                     color: {
                         operation: 'add',
@@ -411,7 +411,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
                         dstFactor: 'one-minus-src-alpha',
                     },
                 };
-            case BlendModes.screen:
+            case BlendModes.Screen:
                 return {
                     color: {
                         operation: 'add',
@@ -442,15 +442,15 @@ export class WebGpuPrimitiveRenderer implements Renderer {
 
     private _getTopology(drawMode: RenderingPrimitives): GPUPrimitiveTopology {
         switch (drawMode) {
-            case RenderingPrimitives.POINTS:
+            case RenderingPrimitives.Points:
                 return 'point-list';
-            case RenderingPrimitives.LINES:
+            case RenderingPrimitives.Lines:
                 return 'line-list';
-            case RenderingPrimitives.LINE_STRIP:
+            case RenderingPrimitives.LineStrip:
                 return 'line-strip';
-            case RenderingPrimitives.TRIANGLES:
+            case RenderingPrimitives.Triangles:
                 return 'triangle-list';
-            case RenderingPrimitives.TRIANGLE_STRIP:
+            case RenderingPrimitives.TriangleStrip:
                 return 'triangle-strip';
             default:
                 throw new Error(`WebGPU primitive renderer does not support draw mode "${drawMode}" yet.`);

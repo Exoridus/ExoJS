@@ -4,7 +4,7 @@ import { Texture } from './texture/Texture';
 import { Signal } from 'core/Signal';
 import type { PlaybackOptions } from 'types/types';
 import type { RenderBackend } from './RenderBackend';
-import type { ISamplerOptions } from './texture/Sampler';
+import type { SamplerOptions } from './texture/Sampler';
 import type { Media } from 'types/Media';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 import { Rectangle } from 'math/Rectangle';
@@ -28,7 +28,7 @@ export class Video extends Sprite implements Media {
     private _muted = false;
     private _audioSetup: IVideoAudioSetup | null = null;
 
-    public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<ISamplerOptions>) {
+    public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>) {
         super(new Texture(videoElement, samplerOptions));
 
         const { duration, volume, playbackRate, loop, muted } = videoElement;

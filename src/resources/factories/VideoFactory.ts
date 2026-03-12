@@ -1,5 +1,5 @@
 import { AbstractResourceFactory } from './AbstractResourceFactory';
-import type { ISamplerOptions } from 'rendering/texture/Sampler';
+import type { SamplerOptions } from 'rendering/texture/Sampler';
 import type { PlaybackOptions } from 'types/types';
 import { determineMimeType } from 'utils/resources';
 import { StorageNames } from 'types/types';
@@ -11,7 +11,7 @@ interface IVideoFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
     playbackOptions?: Partial<PlaybackOptions>;
-    samplerOptions?: Partial<ISamplerOptions>;
+    samplerOptions?: Partial<SamplerOptions>;
 }
 
 export class VideoFactory extends AbstractResourceFactory<ArrayBuffer, Video, IVideoFactoryOptions> {

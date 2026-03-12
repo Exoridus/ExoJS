@@ -9,16 +9,16 @@ import type { SpriteRenderer } from 'rendering/sprite/SpriteRenderer';
 import { RendererType } from 'rendering/Renderer';
 
 export enum SpriteFlags {
-    NONE = 0x00,
-    TRANSLATION = 0x01,
-    ROTATION = 0x02,
-    SCALING = 0x04,
-    ORIGIN = 0x08,
-    TRANSFORM = 0x0F,
-    TRANSFORM_INV = 0x10,
-    BOUNDING_BOX = 0x20,
-    TEXTURE_COORDS = 0x40,
-    VERTEX_TINT = 0x80,
+    None = 0x00,
+    Translation = 0x01,
+    Rotation = 0x02,
+    Scaling = 0x04,
+    Origin = 0x08,
+    Transform = 0x0F,
+    TransformInverse = 0x10,
+    BoundingBox = 0x20,
+    TextureCoords = 0x40,
+    VertexTint = 0x80,
 }
 
 export class Sprite extends Container {
@@ -93,7 +93,7 @@ export class Sprite extends Container {
             throw new Error('texCoords can only be calculated when the sprite has a texture')
         }
 
-        if (this.flags.pop(SpriteFlags.TEXTURE_COORDS)) {
+        if (this.flags.pop(SpriteFlags.TextureCoords)) {
             const { width, height } = this._texture;
             const  { left, top, right, bottom } = this._textureFrame;
             const  minX = ((left / width) * 65535 & 65535);
@@ -140,7 +140,7 @@ export class Sprite extends Container {
         const height = this.height;
 
         this._textureFrame.copy(frame);
-        this.flags.push(SpriteFlags.TEXTURE_COORDS);
+        this.flags.push(SpriteFlags.TextureCoords);
         this.localBounds.set(0, 0, frame.width, frame.height);
 
         if (resetSize) {
@@ -164,7 +164,7 @@ export class Sprite extends Container {
 
     public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.sprite) as SpriteRenderer;
+            const renderer = renderManager.getRenderer(RendererType.Sprite) as SpriteRenderer;
 
             renderManager.setRenderer(renderer);
             renderer.render(this);

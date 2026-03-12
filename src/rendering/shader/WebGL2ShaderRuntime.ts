@@ -1,4 +1,4 @@
-import type { Shader, IShaderRuntime } from './Shader';
+import type { Shader, ShaderRuntime } from './Shader';
 import { ShaderAttribute } from './ShaderAttribute';
 import { ShaderUniform } from './ShaderUniform';
 import { ShaderBlock } from './ShaderBlock';
@@ -15,29 +15,29 @@ interface IManagedUniform {
 }
 
 const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
-    [ShaderPrimitives.FLOAT]: (gl, location, value): void => { gl.uniform1f(location, value[0]); },
-    [ShaderPrimitives.FLOAT_VEC2]: (gl, location, value): void => { gl.uniform2fv(location, value); },
-    [ShaderPrimitives.FLOAT_VEC3]: (gl, location, value): void => { gl.uniform3fv(location, value); },
-    [ShaderPrimitives.FLOAT_VEC4]: (gl, location, value): void => { gl.uniform4fv(location, value); },
+    [ShaderPrimitives.Float]: (gl, location, value): void => { gl.uniform1f(location, value[0]); },
+    [ShaderPrimitives.FloatVec2]: (gl, location, value): void => { gl.uniform2fv(location, value); },
+    [ShaderPrimitives.FloatVec3]: (gl, location, value): void => { gl.uniform3fv(location, value); },
+    [ShaderPrimitives.FloatVec4]: (gl, location, value): void => { gl.uniform4fv(location, value); },
 
-    [ShaderPrimitives.INT]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
-    [ShaderPrimitives.INT_VEC2]: (gl, location, value): void => { gl.uniform2iv(location, value); },
-    [ShaderPrimitives.INT_VEC3]: (gl, location, value): void => { gl.uniform3iv(location, value); },
-    [ShaderPrimitives.INT_VEC4]: (gl, location, value): void => { gl.uniform4iv(location, value); },
+    [ShaderPrimitives.Int]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
+    [ShaderPrimitives.IntVec2]: (gl, location, value): void => { gl.uniform2iv(location, value); },
+    [ShaderPrimitives.IntVec3]: (gl, location, value): void => { gl.uniform3iv(location, value); },
+    [ShaderPrimitives.IntVec4]: (gl, location, value): void => { gl.uniform4iv(location, value); },
 
-    [ShaderPrimitives.BOOL]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
-    [ShaderPrimitives.BOOL_VEC2]: (gl, location, value): void => { gl.uniform2iv(location, value); },
-    [ShaderPrimitives.BOOL_VEC3]: (gl, location, value): void => { gl.uniform3iv(location, value); },
-    [ShaderPrimitives.BOOL_VEC4]: (gl, location, value): void => { gl.uniform4iv(location, value); },
+    [ShaderPrimitives.Bool]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
+    [ShaderPrimitives.BoolVec2]: (gl, location, value): void => { gl.uniform2iv(location, value); },
+    [ShaderPrimitives.BoolVec3]: (gl, location, value): void => { gl.uniform3iv(location, value); },
+    [ShaderPrimitives.BoolVec4]: (gl, location, value): void => { gl.uniform4iv(location, value); },
 
-    [ShaderPrimitives.FLOAT_MAT2]: (gl, location, value): void => { gl.uniformMatrix2fv(location, false, value); },
-    [ShaderPrimitives.FLOAT_MAT3]: (gl, location, value): void => { gl.uniformMatrix3fv(location, false, value); },
-    [ShaderPrimitives.FLOAT_MAT4]: (gl, location, value): void => { gl.uniformMatrix4fv(location, false, value); },
+    [ShaderPrimitives.FloatMat2]: (gl, location, value): void => { gl.uniformMatrix2fv(location, false, value); },
+    [ShaderPrimitives.FloatMat3]: (gl, location, value): void => { gl.uniformMatrix3fv(location, false, value); },
+    [ShaderPrimitives.FloatMat4]: (gl, location, value): void => { gl.uniformMatrix4fv(location, false, value); },
 
-    [ShaderPrimitives.SAMPLER_2D]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
+    [ShaderPrimitives.Sampler2D]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
 };
 
-export function createWebGlShaderRuntime(gl: WebGL2RenderingContext): IShaderRuntime {
+export function createWebGlShaderRuntime(gl: WebGL2RenderingContext): ShaderRuntime {
     let program: WebGLProgram | null = null;
     let vertexShader: WebGLShader | null = null;
     let fragmentShader: WebGLShader | null = null;

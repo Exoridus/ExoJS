@@ -6,4 +6,4 @@ export { RenderManager } from 'rendering/RenderManager';
 export { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
 export { ShaderBlock } from 'rendering/shader/ShaderBlock';
 export { SpriteRenderer } from 'rendering/sprite/SpriteRenderer';
-export { Sampler, type ISamplerOptions } from 'rendering/texture/Sampler';
+export { Sampler, type SamplerOptions } from 'rendering/texture/Sampler';

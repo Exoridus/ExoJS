@@ -6,8 +6,8 @@ import type { WebGl2RenderBackend } from 'rendering/WebGl2RenderBackend';
 import type { BlendModes} from 'types/rendering';
 import { BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
-import { RenderBuffer, type IRenderBufferRuntime } from 'rendering/RenderBuffer';
-import { VertexArrayObject, type IVertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
+import { RenderBuffer, type RenderBufferRuntime } from 'rendering/RenderBuffer';
+import { VertexArrayObject, type VertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
 import type { Drawable } from 'rendering/Drawable';
 import type { DrawableShape } from 'rendering/primitives/DrawableShape';
 import vertexSource from './glsl/primitive.vert';
@@ -69,9 +69,9 @@ export class PrimitiveRenderer implements Renderer {
             }
 
             const buffers = new Map<RenderBuffer, IManagedBufferState>();
-            const indexBuffer = new RenderBuffer(BufferTypes.ELEMENT_ARRAY_BUFFER, this._indexData, BufferUsage.DYNAMIC_DRAW)
+            const indexBuffer = new RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw)
                 .connect(this._createBufferRuntime(gl, buffers));
-            const vertexBuffer = new RenderBuffer(BufferTypes.ARRAY_BUFFER, this._vertexData, BufferUsage.DYNAMIC_DRAW)
+            const vertexBuffer = new RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw)
                 .connect(this._createBufferRuntime(gl, buffers));
 
             const vao = new VertexArrayObject()
@@ -235,7 +235,7 @@ export class PrimitiveRenderer implements Renderer {
         this._indexData = new Uint16Array(this._indexCapacity);
     }
 
-    private _createBufferRuntime(gl: WebGL2RenderingContext, buffers: Map<RenderBuffer, IManagedBufferState>): IRenderBufferRuntime {
+    private _createBufferRuntime(gl: WebGL2RenderingContext, buffers: Map<RenderBuffer, IManagedBufferState>): RenderBufferRuntime {
         const handle = gl.createBuffer();
 
         if (handle === null) {
@@ -268,7 +268,7 @@ export class PrimitiveRenderer implements Renderer {
         };
     }
 
-    private _createVaoRuntime(gl: WebGL2RenderingContext, vaoHandle: WebGLVertexArrayObject): IVertexArrayObjectRuntime {
+    private _createVaoRuntime(gl: WebGL2RenderingContext, vaoHandle: WebGLVertexArrayObject): VertexArrayObjectRuntime {
         let appliedVersion = -1;
 
         return {

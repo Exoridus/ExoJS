@@ -13,13 +13,13 @@ import type { Database } from 'types/Database';
 import type { ResourceFactory } from 'types/ResourceFactory';
 import { ResourceTypes } from 'types/types';
 
-export interface ILoaderOptions {
+export interface LoaderOptions {
     resourcePath: string;
     requestOptions?: RequestInit;
     database?: Database;
 }
 
-export interface IResourceQueueItem {
+export interface ResourceQueueItem {
     type: ResourceTypes;
     name: string;
     path: string;
@@ -30,17 +30,17 @@ export class Loader {
 
     private _factories: Map<ResourceTypes, ResourceFactory> = new Map<ResourceTypes, ResourceFactory>();
     private _resources: ResourceContainer = new ResourceContainer();
-    private _queue: Array<IResourceQueueItem> = [];
+    private _queue: Array<ResourceQueueItem> = [];
     private _resourcePath: string;
     private _requestOptions: RequestInit;
     private _database: Database | null;
 
-    public readonly onQueueResource = new Signal<[IResourceQueueItem]>();
-    public readonly onStartLoading = new Signal<[number, number, Array<IResourceQueueItem>]>();
+    public readonly onQueueResource = new Signal<[ResourceQueueItem]>();
+    public readonly onStartLoading = new Signal<[number, number, Array<ResourceQueueItem>]>();
     public readonly onLoadResource = new Signal<[number, number, unknown]>();
     public readonly onFinishLoading = new Signal<[number, number, ResourceContainer]>();
 
-    public constructor(options: ILoaderOptions) {
+    public constructor(options: LoaderOptions) {
         const { resourcePath, requestOptions, database } = options;
 
         this._resourcePath = resourcePath;
@@ -62,7 +62,7 @@ export class Loader {
         return this._factories;
     }
 
-    public get queue(): Array<IResourceQueueItem> {
+    public get queue(): Array<ResourceQueueItem> {
         return this._queue;
     }
 
@@ -143,7 +143,7 @@ export class Loader {
         return this._resources;
     }
 
-    public async loadItem(queueItem: IResourceQueueItem): Promise<unknown> {
+    public async loadItem(queueItem: ResourceQueueItem): Promise<unknown> {
         const { type, name, path, options } = queueItem;
 
         if (!this._resources.has(type, name)) {

@@ -1,7 +1,7 @@
 import type { ShaderAttribute } from './ShaderAttribute';
 import type { ShaderUniform } from './ShaderUniform';
 
-export interface IShaderRuntime {
+export interface ShaderRuntime {
     initialize(shader: Shader): void;
     bind(shader: Shader): void;
     unbind(shader: Shader): void;
@@ -16,7 +16,7 @@ export class Shader {
 
     private readonly _vertexSource: string;
     private readonly _fragmentSource: string;
-    private _runtime: IShaderRuntime | null = null;
+    private _runtime: ShaderRuntime | null = null;
 
     public constructor(vertexSource: string, fragmentSource: string) {
         this._vertexSource = vertexSource;
@@ -31,7 +31,7 @@ export class Shader {
         return this._fragmentSource;
     }
 
-    public connect(runtime: IShaderRuntime): this {
+    public connect(runtime: ShaderRuntime): this {
         this._runtime = runtime;
         runtime.initialize(this);
 

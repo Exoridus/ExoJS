@@ -123,12 +123,12 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         this._setupContext();
         this._addEvents();
 
-        this.addRenderer(RendererType.sprite, new SpriteRenderer(spriteRendererBatchSize));
-        this.addRenderer(RendererType.particle, new ParticleRenderer(particleRendererBatchSize));
-        this.addRenderer(RendererType.primitive, new PrimitiveRenderer(primitiveRendererBatchSize));
+        this.addRenderer(RendererType.Sprite, new SpriteRenderer(spriteRendererBatchSize));
+        this.addRenderer(RendererType.Particle, new ParticleRenderer(particleRendererBatchSize));
+        this.addRenderer(RendererType.Primitive, new PrimitiveRenderer(primitiveRendererBatchSize));
 
         this._bindRenderTarget(this._renderTarget);
-        this.setBlendMode(BlendModes.normal);
+        this.setBlendMode(BlendModes.Normal);
 
         this.resize(width, height);
     }
@@ -308,16 +308,16 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
             this._blendMode = blendMode;
 
             switch (blendMode) {
-                case BlendModes.additive:
+                case BlendModes.Additive:
                     gl.blendFunc(gl.ONE, gl.ONE);
                     break;
-                case BlendModes.subtract:
+                case BlendModes.Subtract:
                     gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
                     break;
-                case BlendModes.multiply:
+                case BlendModes.Multiply:
                     gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
                     break;
-                case BlendModes.screen:
+                case BlendModes.Screen:
                     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
                     break;
                 default:

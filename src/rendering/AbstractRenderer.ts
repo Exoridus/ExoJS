@@ -1,8 +1,8 @@
 import type { Renderer } from 'rendering/Renderer';
 import { Shader } from 'rendering/shader/Shader';
 import { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
-import type { VertexArrayObject, IVertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
-import { RenderBuffer, type IRenderBufferRuntime } from 'rendering/RenderBuffer';
+import type { VertexArrayObject, VertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
+import { RenderBuffer, type RenderBufferRuntime } from 'rendering/RenderBuffer';
 import { createQuadIndices } from 'utils/rendering';
 import type { Texture } from 'rendering/texture/Texture';
 import type { BlendModes} from 'types/rendering';
@@ -65,9 +65,9 @@ export abstract class AbstractRenderer implements Renderer {
 
             this.shader.connect(createWebGlShaderRuntime(gl));
             this.connection = this.createConnection(gl);
-            this.indexBuffer = new RenderBuffer(BufferTypes.ELEMENT_ARRAY_BUFFER, this.indexData, BufferUsage.STATIC_DRAW)
+            this.indexBuffer = new RenderBuffer(BufferTypes.ElementArrayBuffer, this.indexData, BufferUsage.StaticDraw)
                 .connect(this.createBufferRuntime(this.connection));
-            this.vertexBuffer = new RenderBuffer(BufferTypes.ARRAY_BUFFER, this.vertexData, BufferUsage.DYNAMIC_DRAW)
+            this.vertexBuffer = new RenderBuffer(BufferTypes.ArrayBuffer, this.vertexData, BufferUsage.DynamicDraw)
                 .connect(this.createBufferRuntime(this.connection));
             this.vao = this.createVao(gl, this.indexBuffer, this.vertexBuffer)
                 .connect(this.createVaoRuntime(this.connection));
@@ -179,7 +179,7 @@ export abstract class AbstractRenderer implements Renderer {
         };
     }
 
-    protected createBufferRuntime(connection: RendererConnection): IRenderBufferRuntime {
+    protected createBufferRuntime(connection: RendererConnection): RenderBufferRuntime {
         const handle = connection.gl.createBuffer();
 
         if (handle === null) {
@@ -213,7 +213,7 @@ export abstract class AbstractRenderer implements Renderer {
         };
     }
 
-    protected createVaoRuntime(connection: RendererConnection): IVertexArrayObjectRuntime {
+    protected createVaoRuntime(connection: RendererConnection): VertexArrayObjectRuntime {
         let appliedVersion = -1;
 
         return {

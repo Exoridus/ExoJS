@@ -1,9 +1,9 @@
-import type { IParticleAffector } from 'particles/affectors/IParticleAffector';
+import type { ParticleAffector } from 'particles/affectors/ParticleAffector';
 import { Vector } from 'math/Vector';
 import type { Time } from 'core/Time';
 import type { Particle } from 'particles/Particle';
 
-export class ScaleAffector implements IParticleAffector {
+export class ScaleAffector implements ParticleAffector {
 
     private readonly _scaleFactor: Vector;
 

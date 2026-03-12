@@ -13,10 +13,10 @@ import type { RenderRuntime } from 'rendering/RenderRuntime';
 import type { GamepadDefinition } from 'input/GamepadDefinitions';
 
 export enum ApplicationStatus {
-    loading = 1,
-    running = 2,
-    halting = 3,
-    stopped = 4,
+    Loading = 1,
+    Running = 2,
+    Halting = 3,
+    Stopped = 4,
 }
 
 export interface ApplicationOptions {
@@ -97,7 +97,7 @@ export class Application {
     private readonly _activeClock: Clock = new Clock();
     private readonly _frameClock: Clock = new Clock();
 
-    private _status: ApplicationStatus = ApplicationStatus.stopped;
+    private _status: ApplicationStatus = ApplicationStatus.Stopped;
     private _frameCount = 0;
     private _frameRequest = 0;
     private _backendType: 'webgl2' | 'webgpu';
@@ -151,8 +151,8 @@ export class Application {
     }
 
     public async start(scene: Scene): Promise<this> {
-        if (this._status === ApplicationStatus.stopped) {
-            this._status = ApplicationStatus.loading;
+        if (this._status === ApplicationStatus.Stopped) {
+            this._status = ApplicationStatus.Loading;
 
             try {
                 await this.initializeRenderManager();
@@ -160,9 +160,9 @@ export class Application {
                 this._frameRequest = requestAnimationFrame(this._updateHandler);
                 this._frameClock.restart();
                 this._activeClock.start();
-                this._status = ApplicationStatus.running;
+                this._status = ApplicationStatus.Running;
             } catch (error) {
-                this._status = ApplicationStatus.stopped;
+                this._status = ApplicationStatus.Stopped;
                 throw error;
             }
         }
@@ -171,7 +171,7 @@ export class Application {
     }
 
     public update(): this {
-        if (this._status === ApplicationStatus.running) {
+        if (this._status === ApplicationStatus.Running) {
             this.inputManager.update();
             this.sceneManager.update(this._frameClock.elapsedTime);
             this.renderManager.display();
@@ -184,13 +184,13 @@ export class Application {
     }
 
     public stop(): this {
-        if (this._status === ApplicationStatus.running) {
-            this._status = ApplicationStatus.halting;
+        if (this._status === ApplicationStatus.Running) {
+            this._status = ApplicationStatus.Halting;
             cancelAnimationFrame(this._frameRequest);
             this.sceneManager.setScene(null);
             this._activeClock.stop();
             this._frameClock.stop();
-            this._status = ApplicationStatus.stopped;
+            this._status = ApplicationStatus.Stopped;
         }
 
         return this;

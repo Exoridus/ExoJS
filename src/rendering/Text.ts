@@ -1,9 +1,9 @@
 import { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
-import type { ITextStyleOptions } from 'rendering/TextStyle';
+import type { TextStyleOptions } from 'rendering/TextStyle';
 import { TextStyle } from 'rendering/TextStyle';
 import { Rectangle } from 'math/Rectangle';
-import type { ISamplerOptions } from 'rendering/texture/Sampler';
+import type { SamplerOptions } from 'rendering/texture/Sampler';
 import type { RenderBackend } from 'rendering/RenderBackend';
 import { determineFontHeight } from '../utils/rendering';
 
@@ -17,7 +17,7 @@ export class Text extends Sprite {
     private _context: CanvasRenderingContext2D;
     private _dirty = true;
 
-    public constructor(text: string, style?: TextStyle | ITextStyleOptions, samplerOptions?: Partial<ISamplerOptions>, canvas: HTMLCanvasElement = document.createElement('canvas')) {
+    public constructor(text: string, style?: TextStyle | TextStyleOptions, samplerOptions?: Partial<SamplerOptions>, canvas: HTMLCanvasElement = document.createElement('canvas')) {
         super(new Texture(canvas, samplerOptions));
 
         this._text = text;
@@ -61,7 +61,7 @@ export class Text extends Sprite {
         return this;
     }
 
-    public setStyle(style: TextStyle | ITextStyleOptions): this {
+    public setStyle(style: TextStyle | TextStyleOptions): this {
         this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
         this._dirty = true;
 

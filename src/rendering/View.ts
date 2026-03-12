@@ -7,16 +7,16 @@ import { Bounds } from 'core/Bounds';
 import { Flags } from 'math/Flags';
 
 export enum ViewFlags {
-    NONE = 0x00,
-    TRANSLATION = 0x01,
-    ROTATION = 0x02,
-    SCALING = 0x04,
-    ORIGIN = 0x08,
-    TRANSFORM = 0x0F,
-    TRANSFORM_INV = 0x10,
-    BOUNDING_BOX = 0x20,
-    TEXTURE_COORDS = 0x40,
-    VERTEX_TINT = 0x80,
+    None = 0x00,
+    Translation = 0x01,
+    Rotation = 0x02,
+    Scaling = 0x04,
+    Origin = 0x08,
+    Transform = 0x0F,
+    TransformInverse = 0x10,
+    BoundingBox = 0x20,
+    TextureCoords = 0x40,
+    VertexTint = 0x80,
 }
 
 export class View {
@@ -36,9 +36,9 @@ export class View {
         this._center = new ObservableVector(this._setPositionDirty.bind(this), centerX, centerY);
         this._size = new ObservableSize(this._setScalingDirty.bind(this), width, height);
         this._flags.push(
-            ViewFlags.TRANSFORM,
-            ViewFlags.TRANSFORM_INV,
-            ViewFlags.BOUNDING_BOX
+            ViewFlags.Transform,
+            ViewFlags.TransformInverse,
+            ViewFlags.BoundingBox
         );
     }
 
@@ -146,15 +146,15 @@ export class View {
         this._sin = 0;
         this._cos = 1;
 
-        this._flags.push(ViewFlags.TRANSFORM);
+        this._flags.push(ViewFlags.Transform);
 
         return this;
     }
 
     public getTransform(): Matrix {
-        if (this._flags.has(ViewFlags.TRANSFORM)) {
+        if (this._flags.has(ViewFlags.Transform)) {
             this.updateTransform();
-            this._flags.remove(ViewFlags.TRANSFORM);
+            this._flags.remove(ViewFlags.Transform);
         }
 
         return this._transform;
@@ -164,14 +164,14 @@ export class View {
         const x = 2 / this.width,
             y = -2 / this.height;
 
-        if (this._flags.has(ViewFlags.ROTATION)) {
+        if (this._flags.has(ViewFlags.Rotation)) {
             const radians = degreesToRadians(this._rotation);
 
             this._cos = Math.cos(radians);
             this._sin = Math.sin(radians);
         }
 
-        if (this._flags.has(ViewFlags.ROTATION | ViewFlags.SCALING)) {
+        if (this._flags.has(ViewFlags.Rotation | ViewFlags.Scaling)) {
             this._transform.a = x * this._cos;
             this._transform.b = x * this._sin;
 
@@ -186,20 +186,20 @@ export class View {
     }
 
     public getInverseTransform(): Matrix {
-        if (this._flags.has(ViewFlags.TRANSFORM_INV)) {
+        if (this._flags.has(ViewFlags.TransformInverse)) {
             this.getTransform()
                 .getInverse(this._inverseTransform);
 
-            this._flags.remove(ViewFlags.TRANSFORM_INV);
+            this._flags.remove(ViewFlags.TransformInverse);
         }
 
         return this._inverseTransform;
     }
 
     public getBounds(): Rectangle {
-        if (this._flags.has(ViewFlags.BOUNDING_BOX)) {
+        if (this._flags.has(ViewFlags.BoundingBox)) {
             this.updateBounds();
-            this._flags.remove(ViewFlags.BOUNDING_BOX);
+            this._flags.remove(ViewFlags.BoundingBox);
         }
 
         return this._bounds.getRect();
@@ -227,22 +227,22 @@ export class View {
     }
 
     private _setDirty(): void {
-        this._flags.push(ViewFlags.TRANSFORM_INV, ViewFlags.BOUNDING_BOX);
+        this._flags.push(ViewFlags.TransformInverse, ViewFlags.BoundingBox);
         this._updateId++;
     }
 
     private _setPositionDirty(): void {
-        this._flags.push(ViewFlags.TRANSLATION);
+        this._flags.push(ViewFlags.Translation);
         this._setDirty();
     }
 
     private _setRotationDirty(): void {
-        this._flags.push(ViewFlags.ROTATION);
+        this._flags.push(ViewFlags.Rotation);
         this._setDirty();
     }
 
     private _setScalingDirty(): void {
-        this._flags.push(ViewFlags.SCALING);
+        this._flags.push(ViewFlags.Scaling);
         this._setDirty();
     }
 }

@@ -1,7 +1,7 @@
 
 export type TextStyleColor = string | CanvasGradient | CanvasPattern;
 
-export interface ITextStyleOptions {
+export interface TextStyleOptions {
     align?: string;
     fill?: TextStyleColor;
     stroke?: TextStyleColor;
@@ -33,7 +33,7 @@ export class TextStyle {
     private _padding: number;
     private _dirty = true;
 
-    public constructor(options: ITextStyleOptions = {}) {
+    public constructor(options: TextStyleOptions = {}) {
         this._align = options.align ?? 'left';
         this._fill = options.fill ?? 'black';
         this._stroke = options.stroke ?? 'black';

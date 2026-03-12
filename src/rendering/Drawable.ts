@@ -8,7 +8,7 @@ export class Drawable extends SceneNode {
 
     private _visible = true;
     private _tint: Color = Color.white.clone();
-    private _blendMode: BlendModes = BlendModes.normal;
+    private _blendMode: BlendModes = BlendModes.Normal;
 
     public get visible(): boolean {
         return this._visible;

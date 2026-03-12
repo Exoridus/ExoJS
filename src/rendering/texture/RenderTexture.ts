@@ -1,13 +1,13 @@
 import { isPowerOfTwo } from 'utils/math';
 import { RenderTarget } from 'rendering/RenderTarget';
 import { ScaleModes, WrapModes } from 'types/rendering';
-import type { ISamplerOptions } from 'rendering/texture/Sampler';
+import type { SamplerOptions } from 'rendering/texture/Sampler';
 
 export class RenderTexture extends RenderTarget {
 
-    public static defaultSamplerOptions: ISamplerOptions = {
-        scaleMode: ScaleModes.LINEAR,
-        wrapMode: WrapModes.CLAMP_TO_EDGE,
+    public static defaultSamplerOptions: SamplerOptions = {
+        scaleMode: ScaleModes.Linear,
+        wrapMode: WrapModes.ClampToEdge,
         premultiplyAlpha: true,
         generateMipMap: false,
         flipY: true,
@@ -21,7 +21,7 @@ export class RenderTexture extends RenderTarget {
     private _generateMipMap: boolean;
     private _flipY: boolean;
 
-    public constructor(width: number, height: number, options?: Partial<ISamplerOptions>) {
+    public constructor(width: number, height: number, options?: Partial<SamplerOptions>) {
         super(width, height, false);
 
         const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...RenderTexture.defaultSamplerOptions, ...options };

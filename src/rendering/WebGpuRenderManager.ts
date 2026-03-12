@@ -71,9 +71,9 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
             this._clearColor.copy(clearColor);
         }
 
-        this.addRenderer(RendererType.primitive, new WebGpuPrimitiveRenderer());
-        this.addRenderer(RendererType.sprite, new WebGpuSpriteRenderer());
-        this.addRenderer(RendererType.particle, new WebGpuParticleRenderer());
+        this.addRenderer(RendererType.Primitive, new WebGpuPrimitiveRenderer());
+        this.addRenderer(RendererType.Sprite, new WebGpuSpriteRenderer());
+        this.addRenderer(RendererType.Particle, new WebGpuParticleRenderer());
         this.resize(width, height);
     }
 
@@ -186,11 +186,11 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         }
 
         if (
-            blendMode !== BlendModes.normal
-            && blendMode !== BlendModes.additive
-            && blendMode !== BlendModes.subtract
-            && blendMode !== BlendModes.multiply
-            && blendMode !== BlendModes.screen
+            blendMode !== BlendModes.Normal
+            && blendMode !== BlendModes.Additive
+            && blendMode !== BlendModes.Subtract
+            && blendMode !== BlendModes.Multiply
+            && blendMode !== BlendModes.Screen
         ) {
             throw new Error(`WebGPU blend mode "${blendMode}" is not implemented yet.`);
         }
@@ -414,7 +414,7 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         this._context = context;
         this._device = device;
         this._format = format;
-        this._blendMode = BlendModes.normal;
+        this._blendMode = BlendModes.Normal;
         this._hasPresentedFrame = false;
         this.resize(this._canvas.width, this._canvas.height);
 
@@ -596,9 +596,9 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
 
     private _getAddressMode(wrapMode: WrapModes): GPUAddressMode {
         switch (wrapMode) {
-            case WrapModes.REPEAT:
+            case WrapModes.Repeat:
                 return 'repeat';
-            case WrapModes.MIRRORED_REPEAT:
+            case WrapModes.MirroredRepeat:
                 return 'mirror-repeat';
             default:
                 return 'clamp-to-edge';
@@ -607,9 +607,9 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
 
     private _getFilterMode(scaleMode: ScaleModes): GPUFilterMode {
         switch (scaleMode) {
-            case ScaleModes.NEAREST:
-            case ScaleModes.NEAREST_MIPMAP_NEAREST:
-            case ScaleModes.NEAREST_MIPMAP_LINEAR:
+            case ScaleModes.Nearest:
+            case ScaleModes.NearestMipmapNearest:
+            case ScaleModes.NearestMipmapLinear:
                 return 'nearest';
             default:
                 return 'linear';
@@ -618,8 +618,8 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
 
     private _getMipmapFilterMode(scaleMode: ScaleModes): GPUMipmapFilterMode {
         switch (scaleMode) {
-            case ScaleModes.NEAREST_MIPMAP_LINEAR:
-            case ScaleModes.LINEAR_MIPMAP_LINEAR:
+            case ScaleModes.NearestMipmapLinear:
+            case ScaleModes.LinearMipmapLinear:
                 return 'linear';
             default:
                 return 'nearest';

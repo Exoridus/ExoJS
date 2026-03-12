@@ -14,14 +14,14 @@ export const createQuadIndices = (size: number): Uint16Array => {
     return data;
 };
 
-export interface ICreateCanvasOptions {
+export interface CreateCanvasOptions {
     canvas?: HTMLCanvasElement;
     fillStyle?: string;
     width?: number;
     height?: number;
 }
 
-export const createCanvas = (options: ICreateCanvasOptions = {}): HTMLCanvasElement => {
+export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasElement => {
     const { canvas, fillStyle, width, height } = options;
 
     const newCanvas = canvas ?? document.createElement('canvas');

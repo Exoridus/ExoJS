@@ -4,18 +4,18 @@ import { degreesToRadians, trimRotation } from 'utils/math';
 import { Flags } from './Flags';
 
 export enum TransformableFlags {
-    NONE = 0,
-    TRANSLATION = 1 << 0,
-    ROTATION = 1 << 1,
-    SCALING = 1 << 2,
-    ORIGIN = 1 << 3,
-    TRANSFORM = TransformableFlags.TRANSLATION | TransformableFlags.ROTATION | TransformableFlags.SCALING | TransformableFlags.ORIGIN,
-    TRANSFORM_INV = 1 << 4,
+    None = 0,
+    Translation = 1 << 0,
+    Rotation = 1 << 1,
+    Scaling = 1 << 2,
+    Origin = 1 << 3,
+    Transform = TransformableFlags.Translation | TransformableFlags.Rotation | TransformableFlags.Scaling | TransformableFlags.Origin,
+    TransformInverse = 1 << 4,
 }
 
 export class Transformable {
 
-    public readonly flags: Flags<TransformableFlags> = new Flags<TransformableFlags>(TransformableFlags.TRANSFORM);
+    public readonly flags: Flags<TransformableFlags> = new Flags<TransformableFlags>(TransformableFlags.Transform);
 
     protected _transform: Matrix = new Matrix();
     protected _position: ObservableVector = new ObservableVector(this._setPositionDirty.bind(this), 0, 0);
@@ -111,23 +111,23 @@ export class Transformable {
     }
 
     public getTransform(): Matrix {
-        if (this.flags.has(TransformableFlags.TRANSFORM)) {
+        if (this.flags.has(TransformableFlags.Transform)) {
             this.updateTransform();
-            this.flags.remove(TransformableFlags.TRANSFORM);
+            this.flags.remove(TransformableFlags.Transform);
         }
 
         return this._transform;
     }
 
     public updateTransform(): this {
-        if (this.flags.has(TransformableFlags.ROTATION)) {
+        if (this.flags.has(TransformableFlags.Rotation)) {
             const radians = degreesToRadians(this._rotation);
 
             this._cos = Math.cos(radians);
             this._sin = Math.sin(radians);
         }
 
-        if (this.flags.has(TransformableFlags.ROTATION | TransformableFlags.SCALING)) {
+        if (this.flags.has(TransformableFlags.Rotation | TransformableFlags.Scaling)) {
             const { x, y } = this._scale;
 
             this._transform.a = x * this._cos;
@@ -159,18 +159,18 @@ export class Transformable {
     }
 
     private _setPositionDirty(): void {
-        this.flags.push(TransformableFlags.TRANSLATION);
+        this.flags.push(TransformableFlags.Translation);
     }
 
     private _setRotationDirty(): void {
-        this.flags.push(TransformableFlags.ROTATION);
+        this.flags.push(TransformableFlags.Rotation);
     }
 
     private _setScalingDirty(): void {
-        this.flags.push(TransformableFlags.SCALING);
+        this.flags.push(TransformableFlags.Scaling);
     }
 
     private _setOriginDirty(): void {
-        this.flags.push(TransformableFlags.ORIGIN);
+        this.flags.push(TransformableFlags.Origin);
     }
 }

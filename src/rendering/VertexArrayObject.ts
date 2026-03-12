@@ -12,7 +12,7 @@ interface IVaoAttribute {
     readonly start: number;
 }
 
-export interface IVertexArrayObjectRuntime {
+export interface VertexArrayObjectRuntime {
     bind(vao: VertexArrayObject): void;
     unbind(vao: VertexArrayObject): void;
     draw(vao: VertexArrayObject, size: number, start: number, type: RenderingPrimitives): void;
@@ -24,10 +24,10 @@ export class VertexArrayObject {
     private readonly _attributes: Array<IVaoAttribute> = [];
     private _indexBuffer: RenderBuffer | null = null;
     private _drawMode: RenderingPrimitives;
-    private _runtime: IVertexArrayObjectRuntime | null = null;
+    private _runtime: VertexArrayObjectRuntime | null = null;
     private _version = 0;
 
-    public constructor(drawMode: RenderingPrimitives = RenderingPrimitives.TRIANGLES) {
+    public constructor(drawMode: RenderingPrimitives = RenderingPrimitives.Triangles) {
         this._drawMode = drawMode;
     }
 
@@ -47,7 +47,7 @@ export class VertexArrayObject {
         return this._version;
     }
 
-    public connect(runtime: IVertexArrayObjectRuntime): this {
+    public connect(runtime: VertexArrayObjectRuntime): this {
         this._runtime = runtime;
 
         return this;
@@ -71,7 +71,7 @@ export class VertexArrayObject {
         return this;
     }
 
-    public addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type: number = ShaderPrimitives.FLOAT, normalized = false, stride = 0, start = 0): this {
+    public addAttribute(buffer: RenderBuffer, attribute: ShaderAttribute, type: number = ShaderPrimitives.Float, normalized = false, stride = 0, start = 0): this {
         const { location, size } = attribute;
 
         this._attributes.push({ buffer, location, size, type, normalized, stride, start });

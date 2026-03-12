@@ -12,7 +12,7 @@ export class DrawableShape extends Container {
     public readonly drawMode: RenderingPrimitives;
     public readonly color: Color;
 
-    public constructor(geometry: Geometry, color: Color, drawMode: RenderingPrimitives = RenderingPrimitives.TRIANGLES) {
+    public constructor(geometry: Geometry, color: Color, drawMode: RenderingPrimitives = RenderingPrimitives.Triangles) {
         super();
 
         this.geometry = geometry;
@@ -22,7 +22,7 @@ export class DrawableShape extends Container {
 
     public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.primitive) as PrimitiveRenderer;
+            const renderer = renderManager.getRenderer(RendererType.Primitive) as PrimitiveRenderer;
 
             renderManager.setRenderer(renderer);
             renderer.render(this);

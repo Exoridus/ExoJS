@@ -2,7 +2,7 @@ import type { Texture } from './texture/Texture';
 import { Rectangle } from 'math/Rectangle';
 import { Sprite } from './sprite/Sprite';
 
-export interface ISpritesheetFrame {
+export interface SpritesheetFrame {
     frame: {
         x: number;
         y: number;
@@ -11,8 +11,8 @@ export interface ISpritesheetFrame {
     };
 }
 
-export interface ISpritesheetData {
-    frames: { [name: string]: ISpritesheetFrame };
+export interface SpritesheetData {
+    frames: { [name: string]: SpritesheetFrame };
 }
 
 export class Spritesheet {
@@ -20,13 +20,13 @@ export class Spritesheet {
     public readonly frames = new Map<string, Rectangle>();
     public readonly sprites = new Map<string, Sprite>();
 
-    public constructor(texture: Texture, data: ISpritesheetData) {
+    public constructor(texture: Texture, data: SpritesheetData) {
         this.texture = texture;
 
         this.parse(data);
     }
 
-    public parse(data: ISpritesheetData, keepFrames = false): void {
+    public parse(data: SpritesheetData, keepFrames = false): void {
         if (!keepFrames) {
             this.clear();
         }
@@ -36,7 +36,7 @@ export class Spritesheet {
         }
     }
 
-    public addFrame(name: string, data: ISpritesheetFrame): void {
+    public addFrame(name: string, data: SpritesheetFrame): void {
         const { x, y, w, h } = data.frame;
         const frame = new Rectangle(x, y, w, h);
         const sprite = new Sprite(this.texture);

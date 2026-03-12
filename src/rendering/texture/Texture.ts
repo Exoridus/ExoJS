@@ -2,7 +2,7 @@ import { ScaleModes, WrapModes } from 'types/rendering';
 import { isPowerOfTwo } from 'utils/math';
 import { Size } from 'math/Size';
 import { createCanvas } from 'utils/rendering';
-import type { ISamplerOptions } from './Sampler';
+import type { SamplerOptions } from './Sampler';
 import { getTextureSourceSize } from 'utils/core';
 import type { TextureSource } from 'types/types';
 
@@ -10,9 +10,9 @@ export class Texture {
     private static _black: Texture | null = null;
     private static _white: Texture | null = null;
 
-    public static defaultSamplerOptions: ISamplerOptions = {
-        scaleMode: ScaleModes.LINEAR,
-        wrapMode: WrapModes.CLAMP_TO_EDGE,
+    public static defaultSamplerOptions: SamplerOptions = {
+        scaleMode: ScaleModes.Linear,
+        wrapMode: WrapModes.ClampToEdge,
         premultiplyAlpha: true,
         generateMipMap: true,
         flipY: false,
@@ -46,7 +46,7 @@ export class Texture {
     private _generateMipMap = false;
     private _flipY = false;
 
-    public constructor(source: TextureSource = null, options?: Partial<ISamplerOptions>) {
+    public constructor(source: TextureSource = null, options?: Partial<SamplerOptions>) {
 
         const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = { ...Texture.defaultSamplerOptions, ...options };
 

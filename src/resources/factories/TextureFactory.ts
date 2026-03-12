@@ -1,12 +1,12 @@
 import { Texture } from 'rendering/texture/Texture';
-import type { ISamplerOptions } from 'rendering/texture/Sampler';
+import type { SamplerOptions } from 'rendering/texture/Sampler';
 import { AbstractResourceFactory } from './AbstractResourceFactory';
 import { determineMimeType } from 'utils/resources';
 import { StorageNames } from 'types/types';
 
 interface ITextureFactoryOptions {
     mimeType?: string;
-    samplerOptions?: ISamplerOptions;
+    samplerOptions?: SamplerOptions;
 }
 
 export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture, ITextureFactoryOptions> {

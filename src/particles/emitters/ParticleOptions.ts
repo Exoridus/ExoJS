@@ -1,10 +1,10 @@
 import { Vector } from 'math/Vector';
 import { Color } from 'core/Color';
 import { Time } from 'core/Time';
-import type { IParticleProperties } from 'particles/IParticleProperties';
+import type { ParticleProperties } from 'particles/ParticleProperties';
 import { trimRotation } from 'utils/math';
 
-export class ParticleOptions implements IParticleProperties {
+export class ParticleOptions implements ParticleProperties {
     private readonly _totalLifetime: Time;
     private readonly _elapsedLifetime: Time;
     private readonly _position: Vector;
@@ -15,7 +15,7 @@ export class ParticleOptions implements IParticleProperties {
     private _rotationSpeed: number;
     private _textureIndex: number;
 
-    public constructor(options: Partial<IParticleProperties> = {}) {
+    public constructor(options: Partial<ParticleProperties> = {}) {
         const {
             totalLifetime,
             elapsedLifetime,

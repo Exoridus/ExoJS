@@ -3,16 +3,16 @@ import { Rectangle } from 'math/Rectangle';
 import type { Time } from 'core/Time';
 import { Container } from 'rendering/Container';
 import type { Texture } from 'rendering/texture/Texture';
-import type { IParticleEmitter } from 'particles/emitters/IParticleEmitter';
-import type { IParticleAffector } from 'particles/affectors/IParticleAffector';
+import type { ParticleEmitter } from 'particles/emitters/ParticleEmitter';
+import type { ParticleAffector } from 'particles/affectors/ParticleAffector';
 import type { RenderBackend } from 'rendering/RenderBackend';
 import type { ParticleRenderer } from './ParticleRenderer';
 import { RendererType } from 'rendering/Renderer';
 
 export class ParticleSystem extends Container {
 
-    private _emitters: Array<IParticleEmitter> = [];
-    private _affectors: Array<IParticleAffector> = [];
+    private _emitters: Array<ParticleEmitter> = [];
+    private _affectors: Array<ParticleAffector> = [];
     private _particles: Array<Particle> = [];
     private _graveyard: Array<Particle> = [];
     private _texture: Texture;
@@ -89,11 +89,11 @@ export class ParticleSystem extends Container {
         return this._texCoords;
     }
 
-    public get emitters(): Array<IParticleEmitter> {
+    public get emitters(): Array<ParticleEmitter> {
         return this._emitters;
     }
 
-    public get affectors(): Array<IParticleAffector> {
+    public get affectors(): Array<ParticleAffector> {
         return this._affectors;
     }
 
@@ -128,7 +128,7 @@ export class ParticleSystem extends Container {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    public addEmitter(emitter: IParticleEmitter): this {
+    public addEmitter(emitter: ParticleEmitter): this {
         this._emitters.push(emitter);
 
         return this;
@@ -144,7 +144,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    public addAffector(affector: IParticleAffector): this {
+    public addAffector(affector: ParticleAffector): this {
         this._affectors.push(affector);
 
         return this;
@@ -238,7 +238,7 @@ export class ParticleSystem extends Container {
 
     public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.particle) as ParticleRenderer;
+            const renderer = renderManager.getRenderer(RendererType.Particle) as ParticleRenderer;
 
             renderManager.setRenderer(renderer);
             renderer.render(this);

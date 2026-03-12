@@ -4,7 +4,7 @@ import type { Sound } from 'audio/Sound';
 import type { Video } from 'rendering/Video';
 import type { ResourceTypes } from 'types/types';
 
-export interface IResourceTypeMap {
+export interface ResourceTypeMap {
     [ResourceTypes.font]: FontFace;
     [ResourceTypes.image]: HTMLImageElement;
     [ResourceTypes.texture]: Texture;
@@ -52,17 +52,17 @@ export class ResourceContainer {
         return this.getResources(type).has(name);
     }
 
-    public get<K extends ResourceTypes>(type: K, name: string): IResourceTypeMap[K] {
+    public get<K extends ResourceTypes>(type: K, name: string): ResourceTypeMap[K] {
         const resources = this.getResources(type);
 
         if (!resources.has(name)) {
             throw new Error(`Missing resource "${name}" with type "${type}".`);
         }
 
-        return resources.get(name) as IResourceTypeMap[K];
+        return resources.get(name) as ResourceTypeMap[K];
     }
 
-    public set<K extends ResourceTypes>(type: K, name: string, resource: IResourceTypeMap[K]): this {
+    public set<K extends ResourceTypes>(type: K, name: string, resource: ResourceTypeMap[K]): this {
         this.getResources(type).set(name, resource);
 
         return this;

@@ -1,6 +1,6 @@
 import type { ScaleModes, WrapModes } from 'types/rendering';
 
-export interface ISamplerOptions {
+export interface SamplerOptions {
     scaleMode: ScaleModes;
     wrapMode: WrapModes;
     premultiplyAlpha: boolean;
@@ -18,7 +18,7 @@ export class Sampler {
     private _generateMipMap: boolean;
     private _flipY: boolean;
 
-    public constructor(gl: WebGL2RenderingContext, options: ISamplerOptions) {
+    public constructor(gl: WebGL2RenderingContext, options: SamplerOptions) {
         const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
 
         this._context = gl;

@@ -2,10 +2,10 @@ import { Vector } from 'math/Vector';
 import { Color } from 'core/Color';
 import { Time } from 'core/Time';
 import type { ParticleOptions } from './emitters/ParticleOptions';
-import type { IParticleProperties } from 'particles/IParticleProperties';
+import type { ParticleProperties } from 'particles/ParticleProperties';
 import { trimRotation } from 'utils/math';
 
-export class Particle implements IParticleProperties {
+export class Particle implements ParticleProperties {
     private _totalLifetime = Time.oneSecond.clone();
     private _elapsedLifetime = Time.zero.clone();
     private _position = Vector.zero.clone();

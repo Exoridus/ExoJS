@@ -1,70 +1,70 @@
 import { ShaderPrimitives } from 'types/rendering';
 
 export const primitiveByteSizeMapping: Record<number, number> = {
-    [ShaderPrimitives.FLOAT]: 1,
-    [ShaderPrimitives.FLOAT_VEC2]: 2,
-    [ShaderPrimitives.FLOAT_VEC3]: 3,
-    [ShaderPrimitives.FLOAT_VEC4]: 4,
+    [ShaderPrimitives.Float]: 1,
+    [ShaderPrimitives.FloatVec2]: 2,
+    [ShaderPrimitives.FloatVec3]: 3,
+    [ShaderPrimitives.FloatVec4]: 4,
 
-    [ShaderPrimitives.INT]: 1,
-    [ShaderPrimitives.INT_VEC2]: 2,
-    [ShaderPrimitives.INT_VEC3]: 3,
-    [ShaderPrimitives.INT_VEC4]: 4,
+    [ShaderPrimitives.Int]: 1,
+    [ShaderPrimitives.IntVec2]: 2,
+    [ShaderPrimitives.IntVec3]: 3,
+    [ShaderPrimitives.IntVec4]: 4,
 
-    [ShaderPrimitives.BOOL]: 1,
-    [ShaderPrimitives.BOOL_VEC2]: 2,
-    [ShaderPrimitives.BOOL_VEC3]: 3,
-    [ShaderPrimitives.BOOL_VEC4]: 4,
+    [ShaderPrimitives.Bool]: 1,
+    [ShaderPrimitives.BoolVec2]: 2,
+    [ShaderPrimitives.BoolVec3]: 3,
+    [ShaderPrimitives.BoolVec4]: 4,
 
-    [ShaderPrimitives.FLOAT_MAT2]: 4,
-    [ShaderPrimitives.FLOAT_MAT3]: 9,
-    [ShaderPrimitives.FLOAT_MAT4]: 16,
+    [ShaderPrimitives.FloatMat2]: 4,
+    [ShaderPrimitives.FloatMat3]: 9,
+    [ShaderPrimitives.FloatMat4]: 16,
 
-    [ShaderPrimitives.SAMPLER_2D]: 1,
+    [ShaderPrimitives.Sampler2D]: 1,
 };
 
 export const primitiveArrayConstructors: Record<number, Float32ArrayConstructor | Int32ArrayConstructor | Uint8ArrayConstructor> = {
-    [ShaderPrimitives.FLOAT]: Float32Array,
-    [ShaderPrimitives.FLOAT_VEC2]: Float32Array,
-    [ShaderPrimitives.FLOAT_VEC3]: Float32Array,
-    [ShaderPrimitives.FLOAT_VEC4]: Float32Array,
+    [ShaderPrimitives.Float]: Float32Array,
+    [ShaderPrimitives.FloatVec2]: Float32Array,
+    [ShaderPrimitives.FloatVec3]: Float32Array,
+    [ShaderPrimitives.FloatVec4]: Float32Array,
 
-    [ShaderPrimitives.INT]: Int32Array,
-    [ShaderPrimitives.INT_VEC2]: Int32Array,
-    [ShaderPrimitives.INT_VEC3]: Int32Array,
-    [ShaderPrimitives.INT_VEC4]: Int32Array,
+    [ShaderPrimitives.Int]: Int32Array,
+    [ShaderPrimitives.IntVec2]: Int32Array,
+    [ShaderPrimitives.IntVec3]: Int32Array,
+    [ShaderPrimitives.IntVec4]: Int32Array,
 
-    [ShaderPrimitives.BOOL]: Uint8Array,
-    [ShaderPrimitives.BOOL_VEC2]: Uint8Array,
-    [ShaderPrimitives.BOOL_VEC3]: Uint8Array,
-    [ShaderPrimitives.BOOL_VEC4]: Uint8Array,
+    [ShaderPrimitives.Bool]: Uint8Array,
+    [ShaderPrimitives.BoolVec2]: Uint8Array,
+    [ShaderPrimitives.BoolVec3]: Uint8Array,
+    [ShaderPrimitives.BoolVec4]: Uint8Array,
 
-    [ShaderPrimitives.FLOAT_MAT2]: Float32Array,
-    [ShaderPrimitives.FLOAT_MAT3]: Float32Array,
-    [ShaderPrimitives.FLOAT_MAT4]: Float32Array,
+    [ShaderPrimitives.FloatMat2]: Float32Array,
+    [ShaderPrimitives.FloatMat3]: Float32Array,
+    [ShaderPrimitives.FloatMat4]: Float32Array,
 
-    [ShaderPrimitives.SAMPLER_2D]: Uint8Array,
+    [ShaderPrimitives.Sampler2D]: Uint8Array,
 };
 
 export const primitiveTypeNames: Record<number, string> = {
-    [ShaderPrimitives.FLOAT]: 'FLOAT',
-    [ShaderPrimitives.FLOAT_VEC2]: 'FLOAT_VEC2',
-    [ShaderPrimitives.FLOAT_VEC3]: 'FLOAT_VEC3',
-    [ShaderPrimitives.FLOAT_VEC4]: 'FLOAT_VEC4',
+    [ShaderPrimitives.Float]: 'FLOAT',
+    [ShaderPrimitives.FloatVec2]: 'FLOAT_VEC2',
+    [ShaderPrimitives.FloatVec3]: 'FLOAT_VEC3',
+    [ShaderPrimitives.FloatVec4]: 'FLOAT_VEC4',
 
-    [ShaderPrimitives.INT]: 'INT',
-    [ShaderPrimitives.INT_VEC2]: 'INT_VEC2',
-    [ShaderPrimitives.INT_VEC3]: 'INT_VEC3',
-    [ShaderPrimitives.INT_VEC4]: 'INT_VEC4',
+    [ShaderPrimitives.Int]: 'INT',
+    [ShaderPrimitives.IntVec2]: 'INT_VEC2',
+    [ShaderPrimitives.IntVec3]: 'INT_VEC3',
+    [ShaderPrimitives.IntVec4]: 'INT_VEC4',
 
-    [ShaderPrimitives.BOOL]: 'BOOL',
-    [ShaderPrimitives.BOOL_VEC2]: 'BOOL_VEC2',
-    [ShaderPrimitives.BOOL_VEC3]: 'BOOL_VEC3',
-    [ShaderPrimitives.BOOL_VEC4]: 'BOOL_VEC4',
+    [ShaderPrimitives.Bool]: 'BOOL',
+    [ShaderPrimitives.BoolVec2]: 'BOOL_VEC2',
+    [ShaderPrimitives.BoolVec3]: 'BOOL_VEC3',
+    [ShaderPrimitives.BoolVec4]: 'BOOL_VEC4',
 
-    [ShaderPrimitives.FLOAT_MAT2]: 'FLOAT_MAT2',
-    [ShaderPrimitives.FLOAT_MAT3]: 'FLOAT_MAT3',
-    [ShaderPrimitives.FLOAT_MAT4]: 'FLOAT_MAT4',
+    [ShaderPrimitives.FloatMat2]: 'FLOAT_MAT2',
+    [ShaderPrimitives.FloatMat3]: 'FLOAT_MAT3',
+    [ShaderPrimitives.FloatMat4]: 'FLOAT_MAT4',
 
-    [ShaderPrimitives.SAMPLER_2D]: 'SAMPLER_2D',
+    [ShaderPrimitives.Sampler2D]: 'SAMPLER_2D',
 };

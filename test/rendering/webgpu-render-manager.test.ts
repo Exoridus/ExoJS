@@ -432,7 +432,7 @@ describe('WebGpuRenderManager', () => {
 
             graphics.fillColor = Color.red;
             graphics.drawRectangle(0, 0, 32, 32);
-            graphics.getChildAt(0).blendMode = BlendModes.additive;
+            graphics.getChildAt(0).blendMode = BlendModes.Additive;
 
             await manager.initialize();
 
@@ -472,7 +472,7 @@ describe('WebGpuRenderManager', () => {
 
             graphics.fillColor = Color.red;
             graphics.drawRectangle(0, 0, 32, 32);
-            graphics.getChildAt(0).blendMode = BlendModes.subtract;
+            graphics.getChildAt(0).blendMode = BlendModes.Subtract;
 
             await manager.initialize();
 
@@ -510,7 +510,7 @@ describe('WebGpuRenderManager', () => {
             const manager = new WebGpuRenderManager(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 16],
-            }), Color.red, RenderingPrimitives.POINTS);
+            }), Color.red, RenderingPrimitives.Points);
 
             await manager.initialize();
 
@@ -544,7 +544,7 @@ describe('WebGpuRenderManager', () => {
             const manager = new WebGpuRenderManager(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 16],
-            }), Color.red, RenderingPrimitives.LINES);
+            }), Color.red, RenderingPrimitives.Lines);
 
             await manager.initialize();
 
@@ -578,7 +578,7 @@ describe('WebGpuRenderManager', () => {
             const manager = new WebGpuRenderManager(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 16, 32, 8],
-            }), Color.red, RenderingPrimitives.LINE_STRIP);
+            }), Color.red, RenderingPrimitives.LineStrip);
 
             await manager.initialize();
 
@@ -738,7 +738,7 @@ describe('WebGpuRenderManager', () => {
             firstCanvas.width = 16;
             firstCanvas.height = 16;
             texture.updateSource();
-            texture.scaleMode = ScaleModes.NEAREST;
+            texture.scaleMode = ScaleModes.Nearest;
 
             await manager.initialize();
 
@@ -820,7 +820,7 @@ describe('WebGpuRenderManager', () => {
             sourceCanvas.width = 16;
             sourceCanvas.height = 16;
             texture.updateSource();
-            secondSprite.blendMode = BlendModes.additive;
+            secondSprite.blendMode = BlendModes.Additive;
 
             await manager.initialize();
 
@@ -857,7 +857,7 @@ describe('WebGpuRenderManager', () => {
             sourceCanvas.width = 16;
             sourceCanvas.height = 16;
             texture.updateSource();
-            sprite.blendMode = BlendModes.additive;
+            sprite.blendMode = BlendModes.Additive;
 
             await manager.initialize();
 
@@ -900,7 +900,7 @@ describe('WebGpuRenderManager', () => {
             sourceCanvas.width = 16;
             sourceCanvas.height = 16;
             texture.updateSource();
-            sprite.blendMode = BlendModes.multiply;
+            sprite.blendMode = BlendModes.Multiply;
 
             await manager.initialize();
 
@@ -942,7 +942,7 @@ describe('WebGpuRenderManager', () => {
 
             sourceCanvas.width = 16;
             sourceCanvas.height = 8;
-            texture.scaleMode = ScaleModes.LINEAR_MIPMAP_LINEAR;
+            texture.scaleMode = ScaleModes.LinearMipmapLinear;
             texture.generateMipMap = true;
             texture.updateSource();
 
@@ -1367,7 +1367,7 @@ describe('WebGpuRenderManager', () => {
 
             particle.tint = Color.red;
             system.emitParticle(particle);
-            system.blendMode = BlendModes.additive;
+            system.blendMode = BlendModes.Additive;
 
             await manager.initialize();
 
@@ -1414,7 +1414,7 @@ describe('WebGpuRenderManager', () => {
 
             particle.tint = Color.red;
             system.emitParticle(particle);
-            system.blendMode = BlendModes.screen;
+            system.blendMode = BlendModes.Screen;
 
             await manager.initialize();
 
