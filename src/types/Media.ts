@@ -1,6 +1,6 @@
 import type { PlaybackOptions } from 'types/types';
 
-export interface IMedia {
+export interface Media {
     readonly duration: number;
     readonly progress: number;
     readonly analyserTarget: AudioNode | null;

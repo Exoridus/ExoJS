@@ -1,7 +1,7 @@
-import type { IResourceFactory } from 'types/IResourceFactory';
+import type { ResourceFactory } from 'types/ResourceFactory';
 import type { StorageNames } from 'types/types';
 
-export abstract class AbstractResourceFactory<SourceValue = unknown, TargetValue = unknown, Options = unknown> implements IResourceFactory<SourceValue, TargetValue, Options> {
+export abstract class AbstractResourceFactory<SourceValue = unknown, TargetValue = unknown, Options = unknown> implements ResourceFactory<SourceValue, TargetValue, Options> {
 
     public readonly objectUrls: Array<string> = [];
     public abstract readonly storageName: StorageNames;

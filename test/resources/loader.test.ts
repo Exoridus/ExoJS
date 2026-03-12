@@ -1,9 +1,9 @@
 import { Loader } from 'resources/Loader';
-import type { IDatabase } from 'types/IDatabase';
-import type { IResourceFactory } from 'types/IResourceFactory';
+import type { Database } from 'types/Database';
+import type { ResourceFactory } from 'types/ResourceFactory';
 import { ResourceTypes, StorageNames } from 'types/types';
 
-class MockTextFactory implements IResourceFactory<string, string> {
+class MockTextFactory implements ResourceFactory<string, string> {
     public readonly storageName = StorageNames.text;
     public readonly process = jest.fn(async (_response: Response): Promise<string> => 'fresh-source');
     public readonly create = jest.fn(async (source: string): Promise<string> => `resource:${source}`);
@@ -13,7 +13,7 @@ class MockTextFactory implements IResourceFactory<string, string> {
     }
 }
 
-const createDatabase = (): IDatabase => ({
+const createDatabase = (): Database => ({
     name: 'test-db',
     version: 1,
     connected: true,

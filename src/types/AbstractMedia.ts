@@ -1,12 +1,12 @@
-import type { IMedia } from 'types/IMedia';
+import type { Media } from 'types/Media';
 import { Signal } from 'core/Signal';
 import type { PlaybackOptions } from 'types/types';
 
-export interface IAbstractMediaInitialState extends Omit<PlaybackOptions, 'time'> {
+export interface AbstractMediaInitialState extends Omit<PlaybackOptions, 'time'> {
     duration: number;
 }
 
-export abstract class AbstractMedia implements IMedia {
+export abstract class AbstractMedia implements Media {
 
     public readonly onStart = new Signal();
     public readonly onStop = new Signal();
@@ -84,7 +84,7 @@ export abstract class AbstractMedia implements IMedia {
         }
     }
 
-    protected constructor(initialState: IAbstractMediaInitialState) {
+    protected constructor(initialState: AbstractMediaInitialState) {
         const { duration, volume, playbackRate, loop, muted } = initialState;
 
         this._duration = duration;

@@ -9,14 +9,14 @@ import { TextFactory } from './factories/TextFactory';
 import { TextureFactory } from './factories/TextureFactory';
 import { VideoFactory } from './factories/VideoFactory';
 import { SvgFactory } from './factories/SvgFactory';
-import type { IDatabase } from 'types/IDatabase';
-import type { IResourceFactory } from 'types/IResourceFactory';
+import type { Database } from 'types/Database';
+import type { ResourceFactory } from 'types/ResourceFactory';
 import { ResourceTypes } from 'types/types';
 
 export interface ILoaderOptions {
     resourcePath: string;
     requestOptions?: RequestInit;
-    database?: IDatabase;
+    database?: Database;
 }
 
 export interface IResourceQueueItem {
@@ -28,12 +28,12 @@ export interface IResourceQueueItem {
 
 export class Loader {
 
-    private _factories: Map<ResourceTypes, IResourceFactory> = new Map<ResourceTypes, IResourceFactory>();
+    private _factories: Map<ResourceTypes, ResourceFactory> = new Map<ResourceTypes, ResourceFactory>();
     private _resources: ResourceContainer = new ResourceContainer();
     private _queue: Array<IResourceQueueItem> = [];
     private _resourcePath: string;
     private _requestOptions: RequestInit;
-    private _database: IDatabase | null;
+    private _database: Database | null;
 
     public readonly onQueueResource = new Signal<[IResourceQueueItem]>();
     public readonly onStartLoading = new Signal<[number, number, Array<IResourceQueueItem>]>();
@@ -58,7 +58,7 @@ export class Loader {
         this.addFactory(ResourceTypes.svg, new SvgFactory());
     }
 
-    public get factories(): Map<ResourceTypes, IResourceFactory> {
+    public get factories(): Map<ResourceTypes, ResourceFactory> {
         return this._factories;
     }
 
@@ -86,22 +86,22 @@ export class Loader {
         this._requestOptions = requestOptions;
     }
 
-    public get database(): IDatabase | null {
+    public get database(): Database | null {
         return this._database;
     }
 
-    public set database(database: IDatabase | null) {
+    public set database(database: Database | null) {
         this._database = database;
     }
 
-    public addFactory(type: ResourceTypes, factory: IResourceFactory): this {
+    public addFactory(type: ResourceTypes, factory: ResourceFactory): this {
         this._factories.set(type, factory);
         this._resources.addType(type);
 
         return this;
     }
 
-    public getFactory(type: ResourceTypes): IResourceFactory {
+    public getFactory(type: ResourceTypes): ResourceFactory {
         if (!this._factories.has(type)) {
             throw new Error(`No resource factory for type "${type}".`);
         }

@@ -8,7 +8,7 @@ import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
-import type { IDatabase } from 'types/IDatabase';
+import type { Database } from 'types/Database';
 import type { RenderRuntime } from 'rendering/RenderRuntime';
 import type { GamepadDefinition } from 'input/GamepadDefinitions';
 
@@ -33,7 +33,7 @@ export interface ApplicationOptions {
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
     requestOptions: RequestInit;
-    database?: IDatabase;
+    database?: Database;
     backend?: BackendConfig;
 }
 

@@ -33,8 +33,8 @@ Mode: Initialization only (no runtime refactor, no dependency upgrades, no packa
   - `@typescript-eslint/no-non-null-assertion: off` (`eslint.config.ts:30`)
 - Weak public typing in core abstractions:
   - `Signal<T = any>` and `context?: object` (`src/core/Signal.ts:7`, `src/core/Signal.ts:10`)
-  - `IResourceFactory<SourceValue = any, TargetValue = any>` and `options?: object | null` (`src/types/IResourceFactory.ts:3`, `src/types/IResourceFactory.ts:8`)
-  - `IDatabase.load<T = any>(...)` and `save(..., data: any)` (`src/types/IDatabase.ts:8`, `src/types/IDatabase.ts:9`)
+  - `ResourceFactory<SourceValue = any, TargetValue = any>` and `options?: object | null` (`src/types/ResourceFactory.ts:3`, `src/types/ResourceFactory.ts:8`)
+  - `Database.load<T = any>(...)` and `save(..., data: any)` (`src/types/Database.ts:8`, `src/types/Database.ts:9`)
 - Weakly typed resource containers/queues:
   - `Map<string, any>` usage (`src/resources/ResourceContainer.ts:1`, `src/resources/ResourceContainer.ts:6`)
   - queue item options and add-items object bag (`src/resources/Loader.ts:26`, `src/resources/Loader.ts:112`)

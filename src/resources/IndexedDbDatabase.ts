@@ -1,8 +1,8 @@
-import type { IDatabase } from 'types/IDatabase';
+import type { Database } from 'types/Database';
 import { supportsIndexedDb } from 'utils/core';
 import { ResourceTypes } from 'types/types';
 
-export class IndexedDbDatabase implements IDatabase {
+export class IndexedDbDatabase implements Database {
 
     public readonly name: string;
     public readonly version: number;

@@ -5,7 +5,7 @@ import { Signal } from 'core/Signal';
 import type { PlaybackOptions } from 'types/types';
 import type { RenderBackend } from './RenderBackend';
 import type { ISamplerOptions } from './texture/Sampler';
-import type { IMedia } from 'types/IMedia';
+import type { Media } from 'types/Media';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 import { Rectangle } from 'math/Rectangle';
 
@@ -15,7 +15,7 @@ interface IVideoAudioSetup {
     readonly sourceNode: MediaElementAudioSourceNode;
 }
 
-export class Video extends Sprite implements IMedia {
+export class Video extends Sprite implements Media {
 
     public readonly onStart = new Signal();
     public readonly onStop = new Signal();
