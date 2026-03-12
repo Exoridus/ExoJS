@@ -92,6 +92,19 @@ The examples repository covers:
 - WebGL2 and WebGPU validation paths
 - smoke-tested browser consumption through the real package surface
 
+## API Docs
+
+Class-focused runtime docs live under [docs/api](docs/api/README.md).
+
+Key pages:
+
+- [Application](docs/api/Application.md)
+- [Scene](docs/api/Scene.md)
+- [Loader](docs/api/Loader.md)
+- [Renderer](docs/api/Renderer.md)
+- [Sprite](docs/api/Sprite.md)
+- [Input](docs/api/Input.md)
+
 ## Advanced Backend Access
 
 Use advanced backend-specific APIs only when you actually need them.
@@ -135,3 +148,4 @@ Repository-specific contributor guidance:
 - Issues: https://github.com/Exoridus/ExoJS/issues
 - Examples repository: https://github.com/Exoridus/ExoJS-examples
 - Live examples: https://exoridus.github.io/ExoJS-examples/
+
