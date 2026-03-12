@@ -4,7 +4,7 @@ import type { ResourceContainer } from 'resources/ResourceContainer';
 import type { IRenderBackend } from 'rendering/IRenderBackend';
 import type { Application } from './Application';
 
-export interface ISceneData {
+export interface SceneData {
     load?: (loader: Loader) => Promise<void>;
     init?: (resources: ResourceContainer) => void;
     update?: (delta: Time) => void;
@@ -15,21 +15,21 @@ export interface ISceneData {
 
 export class Scene {
 
-    private _app: Application | null = null;
+    private appValue: Application | null = null;
 
-    public constructor(prototype: ISceneData) {
+    public constructor(definition: SceneData) {
 
-        if (prototype) {
-            Object.assign(this, prototype);
+        if (definition) {
+            Object.assign(this, definition);
         }
     }
 
     public get app(): Application | null {
-        return this._app;
+        return this.appValue;
     }
 
     public set app(app: Application | null) {
-        this._app = app;
+        this.appValue = app;
     }
 
     public async load(loader: Loader): Promise<void> {
@@ -53,6 +53,6 @@ export class Scene {
     }
 
     public destroy(): void {
-        this._app = null;
+        this.appValue = null;
     }
 }

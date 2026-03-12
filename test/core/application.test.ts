@@ -129,13 +129,13 @@ describe('Application', () => {
             restart: jest.fn(),
         };
 
-        rawApp['_status'] = ApplicationStatus.running;
+        rawApp['statusValue'] = ApplicationStatus.running;
         rawApp['inputManager'] = inputManager;
         rawApp['sceneManager'] = sceneManager;
-        rawApp['_renderManager'] = renderManager;
-        rawApp['_frameClock'] = frameClock;
-        rawApp['_updateHandler'] = jest.fn();
-        rawApp['_frameCount'] = 0;
+        rawApp['renderManagerValue'] = renderManager;
+        rawApp['frameClock'] = frameClock;
+        rawApp['updateHandler'] = jest.fn();
+        rawApp['frameCountValue'] = 0;
 
         const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
