@@ -1,5 +1,5 @@
 export { AbstractRenderer } from 'rendering/AbstractRenderer';
-export type { IWebGl2RenderBackend } from 'rendering/IWebGl2RenderBackend';
+export type { WebGl2RenderBackend } from 'rendering/WebGl2RenderBackend';
 export { ParticleRenderer } from 'particles/ParticleRenderer';
 export { PrimitiveRenderer } from 'rendering/primitives/PrimitiveRenderer';
 export { RenderManager } from 'rendering/RenderManager';

@@ -1,8 +1,8 @@
-import type { IRenderer } from 'rendering/IRenderer';
+import type { Renderer } from 'rendering/Renderer';
 import { Shader } from 'rendering/shader/Shader';
 import { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
-import type { IWebGl2RenderBackend } from 'rendering/IWebGl2RenderBackend';
+import type { RenderBackend } from 'rendering/RenderBackend';
+import type { WebGl2RenderBackend } from 'rendering/WebGl2RenderBackend';
 import type { BlendModes} from 'types/rendering';
 import { BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
@@ -24,7 +24,7 @@ interface IManagedBufferState {
 
 interface IPrimitiveRendererConnection {
     readonly gl: WebGL2RenderingContext;
-    readonly renderManager: IWebGl2RenderBackend;
+    readonly renderManager: WebGl2RenderBackend;
     readonly buffers: Map<RenderBuffer, IManagedBufferState>;
     readonly vaoHandle: WebGLVertexArrayObject;
     readonly vao: VertexArrayObject;
@@ -32,7 +32,7 @@ interface IPrimitiveRendererConnection {
     readonly vertexBuffer: RenderBuffer;
 }
 
-export class PrimitiveRenderer implements IRenderer {
+export class PrimitiveRenderer implements Renderer {
 
     private _vertexCapacity: number;
     private _indexCapacity: number;
@@ -55,10 +55,10 @@ export class PrimitiveRenderer implements IRenderer {
         this._uint32View = new Uint32Array(this._vertexData);
     }
 
-    public connect(renderManager: IWebGl2RenderBackend): this;
-    public connect(renderManager: IRenderBackend): this {
+    public connect(renderManager: WebGl2RenderBackend): this;
+    public connect(renderManager: RenderBackend): this {
         if (!this._connection) {
-            const webGl2RenderManager = renderManager as IWebGl2RenderBackend;
+            const webGl2RenderManager = renderManager as WebGl2RenderBackend;
             const gl = webGl2RenderManager.context;
             const vaoHandle = gl.createVertexArray();
 

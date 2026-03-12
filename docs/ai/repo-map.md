@@ -49,7 +49,7 @@ Last updated: 2026-03-09 (Codex initialization pass)
   - Convention documented in `docs/TRANSFORM_CONVENTIONS.md`.
 - Renderer seam:
   - `rendering/RenderManager.ts` owns context/state and renderer selection.
-  - Renderer contract in `rendering/IRenderer.ts`.
+  - Renderer contract in `rendering/Renderer.ts`.
 - Resource pipeline seam:
   - `resources/Loader.ts` + `resources/factories/*` + `resources/ResourceContainer.ts`
   - Optional persistence via `resources/IndexedDbDatabase.ts`.

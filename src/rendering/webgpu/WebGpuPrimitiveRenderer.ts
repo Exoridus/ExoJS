@@ -2,8 +2,8 @@
 
 import { Matrix } from 'math/Matrix';
 import type { Drawable } from 'rendering/Drawable';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
-import type { IRenderer } from 'rendering/IRenderer';
+import type { RenderBackend } from 'rendering/RenderBackend';
+import type { Renderer } from 'rendering/Renderer';
 import type { DrawableShape } from 'rendering/primitives/DrawableShape';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
 import { BlendModes, RenderingPrimitives } from 'types/rendering';
@@ -60,7 +60,7 @@ interface IWebGpuPrimitivePipelineKey {
     readonly format: GPUTextureFormat;
 }
 
-export class WebGpuPrimitiveRenderer implements IRenderer {
+export class WebGpuPrimitiveRenderer implements Renderer {
 
     private readonly _combinedTransform: Matrix = new Matrix();
     private readonly _drawCalls: Array<IWebGpuPrimitiveDrawCall> = [];
@@ -81,7 +81,7 @@ export class WebGpuPrimitiveRenderer implements IRenderer {
     private _float32View: Float32Array = new Float32Array(this._vertexData);
     private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
 
-    public connect(renderManager: IRenderBackend): this {
+    public connect(renderManager: RenderBackend): this {
         if (!this._renderManager) {
             const webGpuRenderManager = renderManager as WebGpuRenderManager;
 

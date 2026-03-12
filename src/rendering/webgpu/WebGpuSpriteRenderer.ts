@@ -1,8 +1,8 @@
 /// <reference types="@webgpu/types" />
 
 import type { Drawable } from 'rendering/Drawable';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
-import type { IRenderer } from 'rendering/IRenderer';
+import type { RenderBackend } from 'rendering/RenderBackend';
+import type { Renderer } from 'rendering/Renderer';
 import type { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
@@ -78,7 +78,7 @@ interface IWebGpuSpriteBatchRange {
     readonly texture: Texture | RenderTexture;
 }
 
-export class WebGpuSpriteRenderer implements IRenderer {
+export class WebGpuSpriteRenderer implements Renderer {
 
     private readonly _drawCalls: Array<IWebGpuSpriteDrawCall> = [];
     private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
@@ -99,7 +99,7 @@ export class WebGpuSpriteRenderer implements IRenderer {
     private _uint32View = new Uint32Array(this._vertexData);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    public connect(renderManager: IRenderBackend): this {
+    public connect(renderManager: RenderBackend): this {
         if (!this._renderManager) {
             const webGpuRenderManager = renderManager as WebGpuRenderManager;
 

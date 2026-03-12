@@ -1,5 +1,5 @@
 import type { Drawable } from './Drawable';
-import type { IRenderBackend } from './IRenderBackend';
+import type { RenderBackend } from './RenderBackend';
 
 export enum RendererType {
     sprite = 1,
@@ -7,8 +7,8 @@ export enum RendererType {
     primitive = 3,
 }
 
-export interface IRenderer {
-    connect(renderManager: IRenderBackend): this;
+export interface Renderer {
+    connect(renderManager: RenderBackend): this;
     disconnect(): this;
     bind(): this;
     unbind(): this;

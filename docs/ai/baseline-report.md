@@ -66,7 +66,7 @@ Mode: Initialization only (no runtime refactor, no dependency upgrades, no packa
   - manager and renderer contracts use `WebGL2RenderingContext` directly (`src/rendering/RenderManager.ts:42`, `src/rendering/AbstractRenderer.ts:23`)
   - shader lifecycle is WebGL2-specific throughout (`src/rendering/shader/Shader.ts`)
 - Backend seam is currently render-manager-centric rather than backend-interface-centric:
-  - renderers directly connect to `RenderManager` and GL state mutation methods (`src/rendering/IRenderer.ts`, `src/rendering/RenderManager.ts`)
+  - renderers directly connect to `RenderManager` and GL state mutation methods (`src/rendering/Renderer.ts`, `src/rendering/RenderManager.ts`)
 
 ## Notes
 - Baseline is intentionally strict and observational only.

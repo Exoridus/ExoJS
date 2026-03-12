@@ -1,8 +1,8 @@
 /// <reference types="@webgpu/types" />
 
 import type { Drawable } from 'rendering/Drawable';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
-import type { IRenderer } from 'rendering/IRenderer';
+import type { RenderBackend } from 'rendering/RenderBackend';
+import type { Renderer } from 'rendering/Renderer';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
 import type { ParticleSystem } from 'particles/ParticleSystem';
 import { Texture } from 'rendering/texture/Texture';
@@ -98,7 +98,7 @@ interface IWebGpuParticleDrawCall {
     readonly blendMode: BlendModes;
 }
 
-export class WebGpuParticleRenderer implements IRenderer {
+export class WebGpuParticleRenderer implements Renderer {
 
     private readonly _drawCalls: Array<IWebGpuParticleDrawCall> = [];
     private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
@@ -120,7 +120,7 @@ export class WebGpuParticleRenderer implements IRenderer {
     private _uint32View = new Uint32Array(this._instanceData);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    public connect(renderManager: IRenderBackend): this {
+    public connect(renderManager: RenderBackend): this {
         if (!this._renderManager) {
             const webGpuRenderManager = renderManager as WebGpuRenderManager;
 

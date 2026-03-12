@@ -4,13 +4,13 @@ import { Color } from 'core/Color';
 import type { Application } from 'core/Application';
 import type { TextureSource } from 'types/types';
 import { BlendModes } from 'types/rendering';
-import { RendererType, type IRenderer } from './IRenderer';
+import { RendererType, type Renderer } from './Renderer';
 import type { Shader } from './shader/Shader';
 import type { Texture } from './texture/Texture';
 import type { VertexArrayObject } from './VertexArrayObject';
 import type { View } from './View';
-import type { IRenderManager } from './IRenderManager';
-import type { IWebGpuRenderAccess } from './IWebGpuRenderAccess';
+import type { RenderRuntime } from './RenderRuntime';
+import type { WebGpuRenderAccess } from './WebGpuRenderAccess';
 import { RenderTarget } from './RenderTarget';
 import { WebGpuPrimitiveRenderer } from './webgpu/WebGpuPrimitiveRenderer';
 import { WebGpuSpriteRenderer } from './webgpu/WebGpuSpriteRenderer';
@@ -31,12 +31,12 @@ interface IManagedWebGpuTextureState {
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 
-export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess {
+export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
 
     private readonly _canvas: HTMLCanvasElement;
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _clearColor: Color = new Color();
-    private readonly _renderers: Map<RendererType, IRenderer> = new Map<RendererType, IRenderer>();
+    private readonly _renderers: Map<RendererType, Renderer> = new Map<RendererType, Renderer>();
     private readonly _textureStates: Map<Texture | RenderTexture, IManagedWebGpuTextureState> = new Map<Texture | RenderTexture, IManagedWebGpuTextureState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
@@ -50,7 +50,7 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
     private _format: GPUTextureFormat | null = null;
     private _initializePromise: Promise<this> | null = null;
     private _renderTarget: RenderTarget;
-    private _renderer: IRenderer | null = null;
+    private _renderer: Renderer | null = null;
     private _blendMode: BlendModes | null = null;
     private _texture: Texture | RenderTexture | null = null;
     private _clearRequested = false;
@@ -125,7 +125,7 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
         return this._initializePromise;
     }
 
-    public getRenderer(_name: RendererType): IRenderer {
+    public getRenderer(_name: RendererType): Renderer {
         const renderer = this._renderers.get(_name);
 
         if (!renderer) {
@@ -135,7 +135,7 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
         return renderer;
     }
 
-    public setRenderer(renderer: IRenderer | null): this {
+    public setRenderer(renderer: Renderer | null): this {
         if (this._renderer !== renderer) {
             if (this._renderer) {
                 this._renderer.unbind();
@@ -309,7 +309,7 @@ export class WebGpuRenderManager implements IRenderManager, IWebGpuRenderAccess 
         this._rootRenderTarget.destroy();
     }
 
-    public addRenderer(name: RendererType, renderer: IRenderer): this {
+    public addRenderer(name: RendererType, renderer: Renderer): this {
         if (this._renderers.has(name)) {
             throw new Error(`Renderer "${name}" was already added.`);
         }

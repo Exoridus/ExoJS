@@ -1,9 +1,9 @@
 import type { Color } from 'core/Color';
-import type { IRenderBackend } from './IRenderBackend';
+import type { RenderBackend } from './RenderBackend';
 import type { RenderTarget } from './RenderTarget';
 import type { View } from './View';
 
-export interface IRenderManager extends IRenderBackend {
+export interface RenderRuntime extends RenderBackend {
     readonly renderTarget: RenderTarget;
     initialize(): Promise<this>;
     clear(color?: Color): this;

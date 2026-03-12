@@ -1,6 +1,6 @@
 import { Drawable } from './Drawable';
 import { removeArrayItems } from 'utils/core';
-import type { IRenderBackend } from './IRenderBackend';
+import type { RenderBackend } from './RenderBackend';
 
 export class Container extends Drawable {
 
@@ -150,7 +150,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    public render(renderManager: IRenderBackend): this {
+    public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
             for (const child of this._children) {
                 child.render(renderManager);

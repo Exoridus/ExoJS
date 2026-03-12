@@ -2,9 +2,9 @@ import { RenderingPrimitives } from 'types/rendering';
 import type { Geometry } from 'rendering/primitives/Geometry';
 import type { Color } from 'core/Color';
 import { Container } from 'rendering/Container';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
+import type { RenderBackend } from 'rendering/RenderBackend';
 import type { PrimitiveRenderer } from 'rendering/primitives/PrimitiveRenderer';
-import { RendererType } from 'rendering/IRenderer';
+import { RendererType } from 'rendering/Renderer';
 
 export class DrawableShape extends Container {
 
@@ -20,7 +20,7 @@ export class DrawableShape extends Container {
         this.drawMode = drawMode;
     }
 
-    public render(renderManager: IRenderBackend): this {
+    public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
             const renderer = renderManager.getRenderer(RendererType.primitive) as PrimitiveRenderer;
 

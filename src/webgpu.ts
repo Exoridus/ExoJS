@@ -1,4 +1,4 @@
 /// <reference types="@webgpu/types" />
 
-export type { IWebGpuRenderAccess } from 'rendering/IWebGpuRenderAccess';
+export type { WebGpuRenderAccess } from 'rendering/WebGpuRenderAccess';
 export { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';

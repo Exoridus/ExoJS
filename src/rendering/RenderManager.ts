@@ -9,14 +9,14 @@ import { Color } from 'core/Color';
 import { canvasSourceToDataUrl } from 'utils/core';
 import { Texture } from './texture/Texture';
 import { RenderTexture } from './texture/RenderTexture';
-import type { IRenderer} from 'rendering/IRenderer';
-import { RendererType } from 'rendering/IRenderer';
-import type { IWebGl2RenderBackend } from './IWebGl2RenderBackend';
+import type { Renderer} from 'rendering/Renderer';
+import { RendererType } from 'rendering/Renderer';
+import type { WebGl2RenderBackend } from './WebGl2RenderBackend';
 import type { Shader } from './shader/Shader';
 import type { VertexArrayObject } from './VertexArrayObject';
 import type { View } from './View';
 import type { Application } from 'core/Application';
-import type { IRenderManager } from './IRenderManager';
+import type { RenderRuntime } from './RenderRuntime';
 
 const throwOnGlError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
@@ -57,13 +57,13 @@ interface IDestroyListenable {
     removeDestroyListener(listener: () => void): unknown;
 }
 
-export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
+export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _onContextLostHandler: () => void;
     private readonly _onContextRestoredHandler: () => void;
-    private readonly _renderers: Map<RendererType, IRenderer> = new Map<RendererType, IRenderer>();
+    private readonly _renderers: Map<RendererType, Renderer> = new Map<RendererType, Renderer>();
     private readonly _textureStates: Map<Texture | RenderTexture, IManagedTextureState> = new Map<Texture | RenderTexture, IManagedTextureState>();
     private readonly _renderTargetStates: Map<RenderTarget, IManagedRenderTargetState> = new Map<RenderTarget, IManagedRenderTargetState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
@@ -72,7 +72,7 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
     private _canvas: HTMLCanvasElement;
     private _contextLost: boolean;
     private _renderTarget: RenderTarget;
-    private _renderer: IRenderer | null = null;
+    private _renderer: Renderer | null = null;
     private _shader: Shader | null = null;
     private _blendMode: BlendModes | null = null;
     private _texture: Texture | RenderTexture | null = null;
@@ -157,11 +157,11 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
         this.setVao(vao);
     }
 
-    public get renderer(): IRenderer | null {
+    public get renderer(): Renderer | null {
         return this._renderer;
     }
 
-    public set renderer(renderer: IRenderer | null) {
+    public set renderer(renderer: Renderer | null) {
         this.setRenderer(renderer);
     }
 
@@ -244,7 +244,7 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
         return this;
     }
 
-    public setRenderer(renderer: IRenderer | null): this {
+    public setRenderer(renderer: Renderer | null): this {
         if (this._renderer !== renderer) {
             if (this._renderer) {
                 this._renderer.unbind();
@@ -366,7 +366,7 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
         return this;
     }
 
-    public addRenderer(name: RendererType, renderer: IRenderer): this {
+    public addRenderer(name: RendererType, renderer: Renderer): this {
         if (this._renderers.has(name)) {
             throw new Error(`Renderer "${name}" was already added.`);
         }
@@ -376,7 +376,7 @@ export class RenderManager implements IWebGl2RenderBackend, IRenderManager {
         return this;
     }
 
-    public getRenderer(name: RendererType): IRenderer {
+    public getRenderer(name: RendererType): Renderer {
         const renderer = this._renderers.get(name);
 
         if (!renderer) {

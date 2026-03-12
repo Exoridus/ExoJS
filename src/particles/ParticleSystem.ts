@@ -5,9 +5,9 @@ import { Container } from 'rendering/Container';
 import type { Texture } from 'rendering/texture/Texture';
 import type { IParticleEmitter } from 'particles/emitters/IParticleEmitter';
 import type { IParticleAffector } from 'particles/affectors/IParticleAffector';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
+import type { RenderBackend } from 'rendering/RenderBackend';
 import type { ParticleRenderer } from './ParticleRenderer';
-import { RendererType } from 'rendering/IRenderer';
+import { RendererType } from 'rendering/Renderer';
 
 export class ParticleSystem extends Container {
 
@@ -236,7 +236,7 @@ export class ParticleSystem extends Container {
         return this;
     }
 
-    public render(renderManager: IRenderBackend): this {
+    public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
             const renderer = renderManager.getRenderer(RendererType.particle) as ParticleRenderer;
 

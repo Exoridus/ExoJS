@@ -1,4 +1,4 @@
-import type { IRenderer } from 'rendering/IRenderer';
+import type { Renderer } from 'rendering/Renderer';
 import { Shader } from 'rendering/shader/Shader';
 import { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
 import type { VertexArrayObject, IVertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
@@ -8,8 +8,8 @@ import type { Texture } from 'rendering/texture/Texture';
 import type { BlendModes} from 'types/rendering';
 import { BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
-import type { IWebGl2RenderBackend } from 'rendering/IWebGl2RenderBackend';
+import type { RenderBackend } from 'rendering/RenderBackend';
+import type { WebGl2RenderBackend } from 'rendering/WebGl2RenderBackend';
 import type { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { Drawable } from 'rendering/Drawable';
 
@@ -18,13 +18,13 @@ interface IManagedBufferState {
     dataByteLength: number;
 }
 
-interface IRendererConnection {
+interface RendererConnection {
     readonly gl: WebGL2RenderingContext;
     readonly buffers: Map<RenderBuffer, IManagedBufferState>;
     readonly vaoHandle: WebGLVertexArrayObject;
 }
 
-export abstract class AbstractRenderer implements IRenderer {
+export abstract class AbstractRenderer implements Renderer {
     protected readonly attributeCount: number;
     protected readonly batchSize: number;
     protected readonly indexData: Uint16Array;
@@ -33,7 +33,7 @@ export abstract class AbstractRenderer implements IRenderer {
     protected readonly uint32View: Uint32Array;
     protected readonly shader: Shader;
     protected batchIndex = 0;
-    protected renderManager: IWebGl2RenderBackend | null = null;
+    protected renderManager: WebGl2RenderBackend | null = null;
     protected gl: WebGL2RenderingContext | null = null;
     protected currentTexture: Texture | RenderTexture | null = null;
     protected currentBlendMode: BlendModes | null = null;
@@ -42,7 +42,7 @@ export abstract class AbstractRenderer implements IRenderer {
     protected vao: VertexArrayObject | null = null;
     protected indexBuffer: RenderBuffer | null = null;
     protected vertexBuffer: RenderBuffer | null = null;
-    protected connection: IRendererConnection | null = null;
+    protected connection: RendererConnection | null = null;
 
     protected constructor(batchSize: number, attributeCount: number, vertexSource: string, fragmentSource: string) {
         this.batchSize = batchSize;
@@ -54,10 +54,10 @@ export abstract class AbstractRenderer implements IRenderer {
         this.shader = new Shader(vertexSource, fragmentSource);
     }
 
-    public connect(renderManager: IWebGl2RenderBackend): this;
-    public connect(renderManager: IRenderBackend): this {
+    public connect(renderManager: WebGl2RenderBackend): this;
+    public connect(renderManager: RenderBackend): this {
         if (!this.gl) {
-            const webGl2RenderManager = renderManager as IWebGl2RenderBackend;
+            const webGl2RenderManager = renderManager as WebGl2RenderBackend;
             const gl = webGl2RenderManager.context;
 
             this.gl = gl;
@@ -165,7 +165,7 @@ export abstract class AbstractRenderer implements IRenderer {
     protected abstract createVao(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject;
     protected abstract updateView(view: View): this;
 
-    protected createConnection(gl: WebGL2RenderingContext): IRendererConnection {
+    protected createConnection(gl: WebGL2RenderingContext): RendererConnection {
         const vaoHandle = gl.createVertexArray();
 
         if (vaoHandle === null) {
@@ -179,7 +179,7 @@ export abstract class AbstractRenderer implements IRenderer {
         };
     }
 
-    protected createBufferRuntime(connection: IRendererConnection): IRenderBufferRuntime {
+    protected createBufferRuntime(connection: RendererConnection): IRenderBufferRuntime {
         const handle = connection.gl.createBuffer();
 
         if (handle === null) {
@@ -213,7 +213,7 @@ export abstract class AbstractRenderer implements IRenderer {
         };
     }
 
-    protected createVaoRuntime(connection: IRendererConnection): IVertexArrayObjectRuntime {
+    protected createVaoRuntime(connection: RendererConnection): IVertexArrayObjectRuntime {
         let appliedVersion = -1;
 
         return {

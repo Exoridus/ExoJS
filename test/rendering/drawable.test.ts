@@ -1,5 +1,5 @@
 import { Drawable } from 'rendering/Drawable';
-import { Color } from 'core/Color';
+import type { Color } from 'core/Color';
 import type { RenderManager } from 'rendering/RenderManager';
 
 class DummyDrawable extends Drawable {

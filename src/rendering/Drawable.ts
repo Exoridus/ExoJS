@@ -2,7 +2,7 @@ import { SceneNode } from 'core/SceneNode';
 import { Color } from 'core/Color';
 import { BlendModes } from 'types/rendering';
 import type { View } from './View';
-import type { IRenderBackend } from './IRenderBackend';
+import type { RenderBackend } from './RenderBackend';
 
 export class Drawable extends SceneNode {
 
@@ -48,7 +48,7 @@ export class Drawable extends SceneNode {
         return this;
     }
 
-    public render(renderManager: IRenderBackend): this {
+    public render(renderManager: RenderBackend): this {
         throw new Error('Method not implemented!');
     }
 

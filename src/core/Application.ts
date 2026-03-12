@@ -9,7 +9,7 @@ import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
 import type { IDatabase } from 'types/IDatabase';
-import type { IRenderManager } from 'rendering/IRenderManager';
+import type { RenderRuntime } from 'rendering/RenderRuntime';
 import type { GamepadDefinition } from 'input/GamepadDefinitions';
 
 export enum ApplicationStatus {
@@ -92,16 +92,16 @@ export class Application {
     public readonly sceneManager: SceneManager;
     public readonly onResize = new Signal<[number, number, Application]>();
 
-    private readonly updateHandler: () => void;
-    private readonly startupClock: Clock = new Clock();
-    private readonly activeClock: Clock = new Clock();
-    private readonly frameClock: Clock = new Clock();
+    private readonly _updateHandler: () => void;
+    private readonly _startupClock: Clock = new Clock();
+    private readonly _activeClock: Clock = new Clock();
+    private readonly _frameClock: Clock = new Clock();
 
-    private statusValue: ApplicationStatus = ApplicationStatus.stopped;
-    private frameCountValue = 0;
-    private frameRequestId = 0;
-    private backendType: 'webgl2' | 'webgpu';
-    private renderManagerValue: IRenderManager;
+    private _status: ApplicationStatus = ApplicationStatus.stopped;
+    private _frameCount = 0;
+    private _frameRequest = 0;
+    private _backendType: 'webgl2' | 'webgpu';
+    private _renderManager: RenderRuntime;
 
     public constructor(appSettings?: Partial<ApplicationOptions>) {
         this.options = {
@@ -117,52 +117,52 @@ export class Application {
         }
 
         this.loader = new Loader(this.options);
-        this.backendType = this.resolveInitialBackendType();
-        this.renderManagerValue = this.createRenderManager(this.backendType);
+        this._backendType = this.resolveInitialBackendType();
+        this._renderManager = this.createRenderManager(this._backendType);
         this.inputManager = new InputManager(this);
         this.sceneManager = new SceneManager(this);
-        this.updateHandler = this.update.bind(this);
+        this._updateHandler = this.update.bind(this);
 
-        this.startupClock.start();
+        this._startupClock.start();
     }
 
     public get status(): ApplicationStatus {
-        return this.statusValue;
+        return this._status;
     }
 
     public get startupTime(): Time {
-        return this.startupClock.elapsedTime;
+        return this._startupClock.elapsedTime;
     }
 
     public get activeTime(): Time {
-        return this.activeClock.elapsedTime;
+        return this._activeClock.elapsedTime;
     }
 
     public get frameTime(): Time {
-        return this.frameClock.elapsedTime;
+        return this._frameClock.elapsedTime;
     }
 
     public get frameCount(): number {
-        return this.frameCountValue;
+        return this._frameCount;
     }
 
-    public get renderManager(): IRenderManager {
-        return this.renderManagerValue;
+    public get renderManager(): RenderRuntime {
+        return this._renderManager;
     }
 
     public async start(scene: Scene): Promise<this> {
-        if (this.statusValue === ApplicationStatus.stopped) {
-            this.statusValue = ApplicationStatus.loading;
+        if (this._status === ApplicationStatus.stopped) {
+            this._status = ApplicationStatus.loading;
 
             try {
                 await this.initializeRenderManager();
                 await this.sceneManager.setScene(scene);
-                this.frameRequestId = requestAnimationFrame(this.updateHandler);
-                this.frameClock.restart();
-                this.activeClock.start();
-                this.statusValue = ApplicationStatus.running;
+                this._frameRequest = requestAnimationFrame(this._updateHandler);
+                this._frameClock.restart();
+                this._activeClock.start();
+                this._status = ApplicationStatus.running;
             } catch (error) {
-                this.statusValue = ApplicationStatus.stopped;
+                this._status = ApplicationStatus.stopped;
                 throw error;
             }
         }
@@ -171,26 +171,26 @@ export class Application {
     }
 
     public update(): this {
-        if (this.statusValue === ApplicationStatus.running) {
+        if (this._status === ApplicationStatus.running) {
             this.inputManager.update();
-            this.sceneManager.update(this.frameClock.elapsedTime);
+            this.sceneManager.update(this._frameClock.elapsedTime);
             this.renderManager.display();
-            this.frameRequestId = requestAnimationFrame(this.updateHandler);
-            this.frameClock.restart();
-            this.frameCountValue++;
+            this._frameRequest = requestAnimationFrame(this._updateHandler);
+            this._frameClock.restart();
+            this._frameCount++;
         }
 
         return this;
     }
 
     public stop(): this {
-        if (this.statusValue === ApplicationStatus.running) {
-            this.statusValue = ApplicationStatus.halting;
-            cancelAnimationFrame(this.frameRequestId);
+        if (this._status === ApplicationStatus.running) {
+            this._status = ApplicationStatus.halting;
+            cancelAnimationFrame(this._frameRequest);
             this.sceneManager.setScene(null);
-            this.activeClock.stop();
-            this.frameClock.stop();
-            this.statusValue = ApplicationStatus.stopped;
+            this._activeClock.stop();
+            this._frameClock.stop();
+            this._status = ApplicationStatus.stopped;
         }
 
         return this;
@@ -207,11 +207,11 @@ export class Application {
         this.stop();
         this.loader.destroy();
         this.inputManager.destroy();
-        this.renderManagerValue.destroy();
+        this._renderManager.destroy();
         this.sceneManager.destroy();
-        this.startupClock.destroy();
-        this.activeClock.destroy();
-        this.frameClock.destroy();
+        this._startupClock.destroy();
+        this._activeClock.destroy();
+        this._frameClock.destroy();
         this.onResize.destroy();
     }
 
@@ -229,7 +229,7 @@ export class Application {
         return this.canUseWebGpu() ? 'webgpu' : 'webgl2';
     }
 
-    private createRenderManager(backendType: 'webgl2' | 'webgpu'): IRenderManager {
+    private createRenderManager(backendType: 'webgl2' | 'webgpu'): RenderRuntime {
         if (backendType === 'webgpu') {
             return new WebGpuRenderManager(this);
         }
@@ -239,16 +239,16 @@ export class Application {
 
     private async initializeRenderManager(): Promise<void> {
         try {
-            await this.renderManagerValue.initialize();
+            await this._renderManager.initialize();
         } catch (error) {
-            if (this.options.backend?.type !== 'auto' || this.backendType !== 'webgpu') {
+            if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
                 throw error;
             }
 
-            this.renderManagerValue.destroy();
-            this.backendType = 'webgl2';
-            this.renderManagerValue = this.createRenderManager(this.backendType);
-            await this.renderManagerValue.initialize();
+            this._renderManager.destroy();
+            this._backendType = 'webgl2';
+            this._renderManager = this.createRenderManager(this._backendType);
+            await this._renderManager.initialize();
         }
     }
 

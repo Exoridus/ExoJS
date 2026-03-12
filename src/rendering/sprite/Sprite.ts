@@ -4,9 +4,9 @@ import { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
 import type { Texture } from 'rendering/texture/Texture';
 import type { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
+import type { RenderBackend } from 'rendering/RenderBackend';
 import type { SpriteRenderer } from 'rendering/sprite/SpriteRenderer';
-import { RendererType } from 'rendering/IRenderer';
+import { RendererType } from 'rendering/Renderer';
 
 export enum SpriteFlags {
     NONE = 0x00,
@@ -162,7 +162,7 @@ export class Sprite extends Container {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    public render(renderManager: IRenderBackend): this {
+    public render(renderManager: RenderBackend): this {
         if (this.visible && this.inView(renderManager.view)) {
             const renderer = renderManager.getRenderer(RendererType.sprite) as SpriteRenderer;
 

@@ -1,16 +1,16 @@
 import type { BlendModes } from 'types/rendering';
-import type { IRenderer, RendererType } from './IRenderer';
+import type { Renderer, RendererType } from './Renderer';
 import type { Shader } from './shader/Shader';
 import type { RenderTexture } from './texture/RenderTexture';
 import type { Texture } from './texture/Texture';
 import type { VertexArrayObject } from './VertexArrayObject';
 import type { View } from './View';
 
-export interface IRenderBackend {
+export interface RenderBackend {
     readonly view: View;
 
-    getRenderer(name: RendererType): IRenderer;
-    setRenderer(renderer: IRenderer | null): this;
+    getRenderer(name: RendererType): Renderer;
+    setRenderer(renderer: Renderer | null): this;
 
     /**
      * Stage 0 debt: shader/program binding stays WebGL-shaped for now.

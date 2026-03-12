@@ -1,21 +1,21 @@
 import type { Time } from './Time';
 import type { Loader } from 'resources/Loader';
 import type { ResourceContainer } from 'resources/ResourceContainer';
-import type { IRenderBackend } from 'rendering/IRenderBackend';
+import type { RenderBackend } from 'rendering/RenderBackend';
 import type { Application } from './Application';
 
 export interface SceneData {
     load?: (loader: Loader) => Promise<void>;
     init?: (resources: ResourceContainer) => void;
     update?: (delta: Time) => void;
-    draw?: (renderManager: IRenderBackend) => void;
+    draw?: (renderManager: RenderBackend) => void;
     unload?: () => void;
     destroy?: () => void;
 }
 
 export class Scene {
 
-    private appValue: Application | null = null;
+    private _app: Application | null = null;
 
     public constructor(definition: SceneData) {
 
@@ -25,11 +25,11 @@ export class Scene {
     }
 
     public get app(): Application | null {
-        return this.appValue;
+        return this._app;
     }
 
     public set app(app: Application | null) {
-        this.appValue = app;
+        this._app = app;
     }
 
     public async load(loader: Loader): Promise<void> {
@@ -44,7 +44,7 @@ export class Scene {
         // do nothing
     }
 
-    public draw(renderManager: IRenderBackend): void {
+    public draw(renderManager: RenderBackend): void {
         // do nothing
     }
 
@@ -53,6 +53,6 @@ export class Scene {
     }
 
     public destroy(): void {
-        this.appValue = null;
+        this._app = null;
     }
 }

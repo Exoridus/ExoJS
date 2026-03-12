@@ -68,7 +68,7 @@ class DemoScene extends Scene {
         .drawRect(-64, -64, 128, 128)
         .endFill();
 
-    public override draw(renderBackend: import('exo-js-core').IRenderBackend): void {
+    public override draw(renderBackend: import('exo-js-core').RenderBackend): void {
         this.graphics.rotation += 0.01;
         this.graphics.render(renderBackend);
     }
@@ -105,7 +105,7 @@ import { RenderManager, SpriteRenderer } from 'exo-js-core/webgl2';
 WebGPU advanced surface:
 
 ```ts
-import { WebGpuRenderManager, type IWebGpuRenderAccess } from 'exo-js-core/webgpu';
+import { WebGpuRenderManager, type WebGpuRenderAccess } from 'exo-js-core/webgpu';
 ```
 
 These subpaths exist for custom renderers and backend-specific systems. They are not required for normal `Application`-centric usage.
