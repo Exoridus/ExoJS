@@ -68,14 +68,21 @@ export default defineConfig([
         },
         {
           selector: 'interface',
-          prefix: ['I'],
-          format: ['StrictPascalCase'],
+          format: null,
+          custom: {
+            regex: '^(I)?[A-Z][A-Za-z0-9]*$',
+            match: true,
+          },
           leadingUnderscore: 'forbid',
           trailingUnderscore: 'forbid',
         },
         {
           selector: 'enumMember',
-          format: ['strictCamelCase', 'UPPER_CASE'],
+          format: null,
+          custom: {
+            regex: '^[A-Z][A-Za-z0-9]*$|^[a-z][A-Za-z0-9]*$|^[A-Z][A-Z0-9_]*$',
+            match: true,
+          },
           leadingUnderscore: 'forbid',
           trailingUnderscore: 'forbid',
         },
