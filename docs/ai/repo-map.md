@@ -3,7 +3,7 @@
 Last updated: 2026-03-09 (Codex initialization pass)
 
 ## 1) Package and build surface
-- Package: `exo-js-core` (`package.json`)
+- Package: `exojs` (`package.json`)
 - Published files: `dist`, `README.md`
 - Main artifacts:
   - `main`: `dist/exo.js` (CJS)

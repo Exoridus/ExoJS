@@ -19,5 +19,5 @@ Use these pages as the source of truth for examples and application code:
 
 Advanced backend-specific access remains under the package subpaths:
 
-- `exo-js-core/webgl2`
-- `exo-js-core/webgpu`
+- `exojs/webgl2`
+- `exojs/webgpu`

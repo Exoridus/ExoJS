@@ -29,5 +29,5 @@ Normal code should work through drawables and scenes:
 
 Backend-specific renderer/runtime work lives under:
 
-- `exo-js-core/webgl2`
-- `exo-js-core/webgpu`
+- `exojs/webgl2`
+- `exojs/webgpu`

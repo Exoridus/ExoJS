@@ -2,14 +2,14 @@
 
 ExoJS is a TypeScript-first browser multimedia and rendering framework built around a clean `Application` entrypoint, a scene-driven runtime model, and explicit advanced backend surfaces when you need them.
 
-The normal user path is package-based ESM usage through `exo-js-core`.
+The normal user path is package-based ESM usage through `exojs`.
 Advanced backend-specific access lives under dedicated subpaths.
 
 ## Package Surface
 
-- Core package: `exo-js-core`
-- Advanced WebGL2 surface: `exo-js-core/webgl2`
-- Advanced WebGPU surface: `exo-js-core/webgpu`
+- Core package: `exojs`
+- Advanced WebGL2 surface: `exojs/webgl2`
+- Advanced WebGPU surface: `exojs/webgpu`
 
 ## Current Built-In Runtime Features
 
@@ -34,7 +34,7 @@ ExoJS now treats WebGPU as the preferred built-in backend when available, with a
 Normal users typically do not need to choose a backend explicitly:
 
 ```ts
-import { Application } from 'exo-js-core';
+import { Application } from 'exojs';
 
 const app = new Application();
 ```
@@ -42,7 +42,7 @@ const app = new Application();
 If you need to force a backend:
 
 ```ts
-import { Application } from 'exo-js-core';
+import { Application } from 'exojs';
 
 const webGpuApp = new Application({ backend: { type: 'webgpu' } });
 const webGlApp = new Application({ backend: { type: 'webgl2' } });
@@ -54,13 +54,13 @@ const autoApp = new Application({ backend: { type: 'auto' } });
 Install:
 
 ```bash
-npm install exo-js-core
+npm install exojs
 ```
 
 Minimal example:
 
 ```ts
-import { Application, Color, Graphics, Scene } from 'exo-js-core';
+import { Application, Color, Graphics, Scene } from 'exojs';
 
 class DemoScene extends Scene {
     private readonly graphics = new Graphics()
@@ -68,7 +68,7 @@ class DemoScene extends Scene {
         .drawRect(-64, -64, 128, 128)
         .endFill();
 
-    public override draw(renderBackend: import('exo-js-core').RenderBackend): void {
+    public override draw(renderBackend: import('exojs').RenderBackend): void {
         this.graphics.rotation += 0.01;
         this.graphics.render(renderBackend);
     }
@@ -113,13 +113,13 @@ Use advanced backend-specific APIs only when you actually need them.
 WebGL2 advanced surface:
 
 ```ts
-import { RenderManager, SpriteRenderer } from 'exo-js-core/webgl2';
+import { RenderManager, SpriteRenderer } from 'exojs/webgl2';
 ```
 
 WebGPU advanced surface:
 
 ```ts
-import { WebGpuRenderManager, type WebGpuRenderAccess } from 'exo-js-core/webgpu';
+import { WebGpuRenderManager, type WebGpuRenderAccess } from 'exojs/webgpu';
 ```
 
 These subpaths exist for custom renderers and backend-specific systems. They are not required for normal `Application`-centric usage.
