@@ -3,8 +3,8 @@ import { Size } from 'math/Size';
 import { Interval } from 'math/Interval';
 import { ObservableVector } from 'math/ObservableVector';
 import type { Matrix } from 'math/Matrix';
-import type { IShape } from 'math/IShape';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { ShapeLike } from 'math/ShapeLike';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     getCollisionCircleRectangle,
@@ -31,7 +31,7 @@ let temp: Rectangle | null = null;
 const noop = (): void => {};
 const tempPoint = new ObservableVector(noop);
 
-export class Rectangle implements IShape {
+export class Rectangle implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.rectangle;
 
@@ -229,7 +229,7 @@ export class Rectangle implements IShape {
             && inRange(rect.bottom, this.top, this.bottom);
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
             case CollisionType.sceneNode:
                 return (target as SceneNode).isAlignedBox
@@ -245,7 +245,7 @@ export class Rectangle implements IShape {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         switch (target.collisionType) {
             case CollisionType.sceneNode:
                 return (target as SceneNode).isAlignedBox

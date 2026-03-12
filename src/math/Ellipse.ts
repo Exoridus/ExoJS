@@ -1,8 +1,8 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import type { IShape } from 'math/IShape';
+import type { ShapeLike } from 'math/ShapeLike';
 import { Interval } from 'math/Interval';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     intersectionCircleEllipse,
@@ -17,7 +17,7 @@ import type { Line } from 'math/Line';
 import type { Circle } from 'math/Circle';
 import type { SceneNode } from 'core/SceneNode';
 
-export class Ellipse implements IShape {
+export class Ellipse implements ShapeLike {
     public readonly collisionType: CollisionType = CollisionType.ellipse;
 
     private readonly _position: Vector;
@@ -118,7 +118,7 @@ export class Ellipse implements IShape {
         return result;
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return intersectionRectEllipse((target as SceneNode).getBounds(), this);
             case CollisionType.rectangle: return intersectionRectEllipse(target as Rectangle, this);
@@ -131,7 +131,7 @@ export class Ellipse implements IShape {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         return null;
     }
 

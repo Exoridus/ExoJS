@@ -1,8 +1,8 @@
 import { Interval } from 'math/Interval';
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import type { IShape } from 'math/IShape';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { ShapeLike } from 'math/ShapeLike';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     getCollisionPolygonCircle,
@@ -23,7 +23,7 @@ import type { Line } from 'math/Line';
 
 let temp: Polygon | null = null;
 
-export class Polygon implements IShape {
+export class Polygon implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.polygon;
 
@@ -181,7 +181,7 @@ export class Polygon implements IShape {
         return intersectionPointPoly(Vector.temp.set(x, y), this);
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return intersectionRectPoly((target as SceneNode).getBounds(), this);
             case CollisionType.rectangle: return intersectionRectPoly(target as Rectangle, this);
@@ -194,7 +194,7 @@ export class Polygon implements IShape {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return getCollisionSat(this, target as SceneNode);
             case CollisionType.rectangle: return getCollisionSat(this, target as Rectangle);

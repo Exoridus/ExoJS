@@ -2,7 +2,7 @@ import { clamp } from 'utils/math';
 import { Sprite } from './sprite/Sprite';
 import { Texture } from './texture/Texture';
 import { Signal } from 'core/Signal';
-import type { IPlaybackOptions } from 'types/types';
+import type { PlaybackOptions } from 'types/types';
 import type { RenderBackend } from './RenderBackend';
 import type { ISamplerOptions } from './texture/Sampler';
 import type { IMedia } from 'types/IMedia';
@@ -28,7 +28,7 @@ export class Video extends Sprite implements IMedia {
     private _muted = false;
     private _audioSetup: IVideoAudioSetup | null = null;
 
-    public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<IPlaybackOptions>, samplerOptions?: Partial<ISamplerOptions>) {
+    public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<ISamplerOptions>) {
         super(new Texture(videoElement, samplerOptions));
 
         const { duration, volume, playbackRate, loop, muted } = videoElement;
@@ -134,7 +134,7 @@ export class Video extends Sprite implements IMedia {
         return this._audioSetup?.gainNode ?? null;
     }
 
-    public play(options?: Partial<IPlaybackOptions>): this {
+    public play(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -147,7 +147,7 @@ export class Video extends Sprite implements IMedia {
         return this;
     }
 
-    public pause(options?: Partial<IPlaybackOptions>): this {
+    public pause(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -160,18 +160,18 @@ export class Video extends Sprite implements IMedia {
         return this;
     }
 
-    public stop(options?: Partial<IPlaybackOptions>): this {
+    public stop(options?: Partial<PlaybackOptions>): this {
         this.pause(options);
         this.currentTime = 0;
 
         return this;
     }
 
-    public toggle(options?: Partial<IPlaybackOptions>): this {
+    public toggle(options?: Partial<PlaybackOptions>): this {
         return this.paused ? this.play(options) : this.pause(options);
     }
 
-    public applyOptions(options: Partial<IPlaybackOptions> = {}): this {
+    public applyOptions(options: Partial<PlaybackOptions> = {}): this {
         const { volume, loop, playbackRate, time, muted } = options;
 
         if (volume !== undefined) {

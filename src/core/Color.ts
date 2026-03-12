@@ -1,7 +1,7 @@
 import { clamp } from 'utils/math';
-import type { ICloneable } from 'types/types';
+import type { Cloneable } from 'types/types';
 
-export class Color implements ICloneable {
+export class Color implements Cloneable {
 
     private _r: number;
     private _g: number;

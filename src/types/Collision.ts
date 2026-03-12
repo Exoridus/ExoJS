@@ -11,18 +11,18 @@ export const enum CollisionType {
     sceneNode,
 }
 
-export interface ICollidable {
+export interface Collidable {
     readonly collisionType: CollisionType;
-    intersectsWith(target: ICollidable): boolean;
-    collidesWith(target: ICollidable): ICollisionResponse | null;
+    intersectsWith(target: Collidable): boolean;
+    collidesWith(target: Collidable): CollisionResponse | null;
     contains(x: number, y: number): boolean;
     getNormals(): Array<Vector>;
     project(axis: Vector, interval?: Interval): Interval;
 }
 
-export interface ICollisionResponse {
-    readonly shapeA: ICollidable;
-    readonly shapeB: ICollidable;
+export interface CollisionResponse {
+    readonly shapeA: Collidable;
+    readonly shapeB: Collidable;
     readonly overlap: number;
     readonly shapeAinB: boolean;
     readonly shapeBinA: boolean;

@@ -1,8 +1,8 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
-import type { IShape } from 'math/IShape';
+import type { ShapeLike } from 'math/ShapeLike';
 import { Interval } from 'math/Interval';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     intersectionLineCircle,
@@ -19,7 +19,7 @@ import type { Ellipse } from 'math/Ellipse';
 
 let temp: Line | null = null;
 
-export class Line implements IShape {
+export class Line implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.line;
 
@@ -118,7 +118,7 @@ export class Line implements IShape {
         return result;
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return intersectionLineRect(this, (target as SceneNode).getBounds());
             case CollisionType.rectangle: return intersectionLineRect(this, target as Rectangle);
@@ -131,7 +131,7 @@ export class Line implements IShape {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         return null;
     }
 

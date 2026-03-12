@@ -1,4 +1,4 @@
-import type { IPlaybackOptions } from 'types/types';
+import type { PlaybackOptions } from 'types/types';
 import { AbstractResourceFactory } from './AbstractResourceFactory';
 import { determineMimeType } from 'utils/resources';
 import { StorageNames } from 'types/types';
@@ -9,7 +9,7 @@ const onceListenerOption = { once: true };
 interface IMusicFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
-    playbackOptions?: Partial<IPlaybackOptions>;
+    playbackOptions?: Partial<PlaybackOptions>;
 }
 
 export class MusicFactory extends AbstractResourceFactory<ArrayBuffer, Music, IMusicFactoryOptions> {

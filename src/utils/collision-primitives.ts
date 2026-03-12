@@ -1,24 +1,24 @@
 import { getDistance, inRange, VoronoiRegion } from 'utils/math';
-import type { IPoint } from 'types/primitives/IPoint';
+import type { PointLike } from 'types/primitives/PointLike';
 
-interface IRectangleLike extends IPoint {
+interface RectangleLikeLike extends PointLike {
     width: number;
     height: number;
 }
 
-interface ICircleLike extends IPoint {
+interface CircleLikeLike extends PointLike {
     radius: number;
 }
 
-interface IEllipseLike extends IPoint {
+interface EllipseLikeLike extends PointLike {
     rx: number;
     ry: number;
 }
 
-interface IPolygonLike {
+interface PolygonLikeLike {
     x: number;
     y: number;
-    points: Array<IPoint>;
+    points: Array<PointLike>;
 }
 
 const epsilon = 1e-10;
@@ -27,14 +27,14 @@ const getCurveSegments = (radiusA: number, radiusB = radiusA): number => (
     Math.max(16, Math.ceil(Math.sqrt(Math.max(radiusA, radiusB)) * 8))
 );
 
-const buildEllipsePoints = ({ x: centerX, y: centerY, rx, ry }: IEllipseLike): Array<IPoint> => {
+const buildEllipsePoints = ({ x: centerX, y: centerY, rx, ry }: EllipseLikeLike): Array<PointLike> => {
     if (rx <= 0 || ry <= 0) {
         return [];
     }
 
     const segments = getCurveSegments(rx, ry);
     const delta = (Math.PI * 2) / segments;
-    const points: Array<IPoint> = [];
+    const points: Array<PointLike> = [];
 
     for (let i = 0; i < segments; i++) {
         const angle = i * delta;
@@ -48,14 +48,14 @@ const buildEllipsePoints = ({ x: centerX, y: centerY, rx, ry }: IEllipseLike): A
     return points;
 };
 
-const buildCirclePoints = ({ x: centerX, y: centerY, radius }: ICircleLike): Array<IPoint> => {
+const buildCirclePoints = ({ x: centerX, y: centerY, radius }: CircleLikeLike): Array<PointLike> => {
     if (radius <= 0) {
         return [];
     }
 
     const segments = getCurveSegments(radius);
     const delta = (Math.PI * 2) / segments;
-    const points: Array<IPoint> = [];
+    const points: Array<PointLike> = [];
 
     for (let i = 0; i < segments; i++) {
         const angle = i * delta;
@@ -69,25 +69,25 @@ const buildCirclePoints = ({ x: centerX, y: centerY, radius }: ICircleLike): Arr
     return points;
 };
 
-const buildRectanglePoints = ({ x, y, width, height }: IRectangleLike): Array<IPoint> => ([
+const buildRectanglePoints = ({ x, y, width, height }: RectangleLikeLike): Array<PointLike> => ([
     { x, y },
     { x: x + width, y },
     { x: x + width, y: y + height },
     { x, y: y + height },
 ]);
 
-const buildPolygonWorldPoints = ({ x: offsetX, y: offsetY, points }: IPolygonLike): Array<IPoint> => (
+const buildPolygonWorldPoints = ({ x: offsetX, y: offsetY, points }: PolygonLikeLike): Array<PointLike> => (
     points.map(({ x, y }) => ({ x: x + offsetX, y: y + offsetY }))
 );
 
-const pointOnSegment = ({ x: px, y: py }: IPoint, { x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint): boolean => (
+const pointOnSegment = ({ x: px, y: py }: PointLike, { x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike): boolean => (
     px <= Math.max(x1, x2) + epsilon
     && px >= Math.min(x1, x2) - epsilon
     && py <= Math.max(y1, y2) + epsilon
     && py >= Math.min(y1, y2) - epsilon
 );
 
-const orientation = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint, { x: x3, y: y3 }: IPoint): number => {
+const orientation = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, { x: x3, y: y3 }: PointLike): number => {
     const determinant = ((y2 - y1) * (x3 - x2)) - ((x2 - x1) * (y3 - y2));
 
     if (Math.abs(determinant) <= epsilon) {
@@ -97,7 +97,7 @@ const orientation = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint, { x: x3
     return determinant > 0 ? 1 : 2;
 };
 
-const segmentsIntersect = (a1: IPoint, a2: IPoint, b1: IPoint, b2: IPoint): boolean => {
+const segmentsIntersect = (a1: PointLike, a2: PointLike, b1: PointLike, b2: PointLike): boolean => {
     const o1 = orientation(a1, a2, b1);
     const o2 = orientation(a1, a2, b2);
     const o3 = orientation(b1, b2, a1);
@@ -126,7 +126,7 @@ const segmentsIntersect = (a1: IPoint, a2: IPoint, b1: IPoint, b2: IPoint): bool
     return false;
 };
 
-const polygonContainsPoint = ({ x, y }: IPoint, points: Array<IPoint>): boolean => {
+const polygonContainsPoint = ({ x, y }: PointLike, points: Array<PointLike>): boolean => {
     const len = points.length;
 
     if (len < 3) {
@@ -147,7 +147,7 @@ const polygonContainsPoint = ({ x, y }: IPoint, points: Array<IPoint>): boolean 
     return inside;
 };
 
-const polygonsIntersect = (polygonA: Array<IPoint>, polygonB: Array<IPoint>): boolean => {
+const polygonsIntersect = (polygonA: Array<PointLike>, polygonB: Array<PointLike>): boolean => {
     if (polygonA.length === 0 || polygonB.length === 0) {
         return false;
     }
@@ -170,11 +170,11 @@ const polygonsIntersect = (polygonA: Array<IPoint>, polygonB: Array<IPoint>): bo
         || polygonContainsPoint(polygonB[0], polygonA);
 };
 
-const intersectionPointPoint = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint, threshold = 0): boolean => (
+const intersectionPointPoint = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0): boolean => (
     getDistance(x1, y1, x2, y2) <= threshold
 );
 
-const intersectionPointLineSegment = ({ x, y }: IPoint, { x: x1, y: y1 }: IPoint, { x: x2, y: y2 }: IPoint, threshold = 0.1): boolean => {
+const intersectionPointLineSegment = ({ x, y }: PointLike, { x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0.1): boolean => {
     const d1 = getDistance(x, y, x1, y1);
     const d2 = getDistance(x, y, x2, y2);
     const d3 = getDistance(x1, y1, x2, y2);
@@ -183,15 +183,15 @@ const intersectionPointLineSegment = ({ x, y }: IPoint, { x: x1, y: y1 }: IPoint
         && (d1 + d2) <= (d3 + threshold);
 };
 
-const intersectionPointRect = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, width, height }: IRectangleLike): boolean => (
+const intersectionPointRect = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2, width, height }: RectangleLikeLike): boolean => (
     inRange(x1, x2, x2 + width) && inRange(y1, y2, y2 + height)
 );
 
-const intersectionPointCircle = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, radius }: ICircleLike): boolean => (
+const intersectionPointCircle = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2, radius }: CircleLikeLike): boolean => (
     radius > 0 && getDistance(x1, y1, x2, y2) <= radius
 );
 
-const intersectionPointEllipse = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, rx, ry }: IEllipseLike): boolean => {
+const intersectionPointEllipse = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2, rx, ry }: EllipseLikeLike): boolean => {
     if (rx <= 0 || ry <= 0) {
         return false;
     }
@@ -202,11 +202,11 @@ const intersectionPointEllipse = ({ x: x1, y: y1 }: IPoint, { x: x2, y: y2, rx, 
     return ((normX * normX) + (normY * normY)) <= 1;
 };
 
-const intersectionPointPoly = (point: IPoint, { points }: IPolygonLike): boolean => (
+const intersectionPointPoly = (point: PointLike, { points }: PolygonLikeLike): boolean => (
     polygonContainsPoint(point, points)
 );
 
-const intersectionLineLineSegments = (a1: IPoint, a2: IPoint, b1: IPoint, b2: IPoint): boolean => {
+const intersectionLineLineSegments = (a1: PointLike, a2: PointLike, b1: PointLike, b2: PointLike): boolean => {
     const denominator = ((a2.x - a1.x) * (b2.y - b1.y)) - ((b2.x - b1.x) * (a2.y - a1.y));
 
     if (Math.abs(denominator) <= epsilon) {
@@ -220,7 +220,7 @@ const intersectionLineLineSegments = (a1: IPoint, a2: IPoint, b1: IPoint, b2: IP
         && uB >= 0 && uB <= 1;
 };
 
-const intersectionRectRect = ({ x: x1, y: y1, width: w1, height: h1 }: IRectangleLike, { x: x2, y: y2, width: w2, height: h2 }: IRectangleLike): boolean => {
+const intersectionRectRect = ({ x: x1, y: y1, width: w1, height: h1 }: RectangleLikeLike, { x: x2, y: y2, width: w2, height: h2 }: RectangleLikeLike): boolean => {
     if (x2 > (x1 + w1) || y2 > (y1 + h1)) {
         return false;
     }

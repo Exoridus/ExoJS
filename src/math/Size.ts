@@ -1,8 +1,8 @@
-import type { ICloneable } from 'types/types';
+import type { Cloneable } from 'types/types';
 
 let temp: Size | null = null;
 
-export class Size implements ICloneable {
+export class Size implements Cloneable {
 
     protected _width: number;
     protected _height: number;

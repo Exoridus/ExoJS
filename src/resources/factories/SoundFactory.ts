@@ -1,11 +1,11 @@
 import { StorageNames } from 'types/types';
-import type { IPlaybackOptions } from 'types/types';
+import type { PlaybackOptions } from 'types/types';
 import { AbstractResourceFactory } from './AbstractResourceFactory';
 import { Sound } from 'audio/Sound';
 import { decodeAudioData } from 'utils/audio-context';
 
 interface ISoundFactoryOptions {
-    playbackOptions?: Partial<IPlaybackOptions>;
+    playbackOptions?: Partial<PlaybackOptions>;
 }
 
 export class SoundFactory extends AbstractResourceFactory<ArrayBuffer, Sound, ISoundFactoryOptions> {

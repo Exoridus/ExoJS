@@ -1,8 +1,8 @@
 import { Rectangle } from 'math/Rectangle';
 import type { SceneNode } from './SceneNode';
-import type { IDestroyable, IWithBoundingBox } from 'types/types';
+import type { Destroyable, HasBoundingBox } from 'types/types';
 
-export class Quadtree implements IWithBoundingBox, IDestroyable {
+export class Quadtree implements HasBoundingBox, Destroyable {
 
     public static maxSceneNodes = 50;
     public static maxLevel = 5;

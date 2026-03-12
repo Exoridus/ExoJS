@@ -1,5 +1,5 @@
 import { degreesToRadians } from 'utils/math';
-import type { ICloneable } from 'types/types';
+import type { Cloneable } from 'types/types';
 
 let temp: Matrix | null = null;
 
@@ -8,7 +8,7 @@ let temp: Matrix | null = null;
  * | c | d | y |
  * | e | f | z |
  */
-export class Matrix implements ICloneable {
+export class Matrix implements Cloneable {
 
     public a: number;
     public b: number;

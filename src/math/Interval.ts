@@ -1,8 +1,8 @@
-import type { ICloneable } from 'types/types';
+import type { Cloneable } from 'types/types';
 
 let temp: Interval | null = null;
 
-export class Interval implements ICloneable {
+export class Interval implements Cloneable {
 
     public min: number;
     public max: number;

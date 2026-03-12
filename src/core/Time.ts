@@ -1,8 +1,8 @@
-import type { ICloneable, TimeInterval } from 'types/types';
+import type { Cloneable, TimeInterval } from 'types/types';
 
 let temp: Time | null = null;
 
-export class Time implements ICloneable {
+export class Time implements Cloneable {
 
     private _milliseconds: number;
 

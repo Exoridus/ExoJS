@@ -1,6 +1,6 @@
 import { AbstractResourceFactory } from './AbstractResourceFactory';
 import type { ISamplerOptions } from 'rendering/texture/Sampler';
-import type { IPlaybackOptions } from 'types/types';
+import type { PlaybackOptions } from 'types/types';
 import { determineMimeType } from 'utils/resources';
 import { StorageNames } from 'types/types';
 import { Video } from 'rendering/Video';
@@ -10,7 +10,7 @@ const onceListenerOption = { once: true };
 interface IVideoFactoryOptions {
     mimeType?: string;
     loadEvent?: string;
-    playbackOptions?: Partial<IPlaybackOptions>;
+    playbackOptions?: Partial<PlaybackOptions>;
     samplerOptions?: Partial<ISamplerOptions>;
 }
 

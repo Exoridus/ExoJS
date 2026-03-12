@@ -1,4 +1,4 @@
-import type { IPlaybackOptions } from 'types/types';
+import type { PlaybackOptions } from 'types/types';
 
 export interface IMedia {
     readonly duration: number;
@@ -12,11 +12,11 @@ export interface IMedia {
     paused: boolean;
     playing: boolean;
 
-    play(options?: Partial<IPlaybackOptions>): this;
-    pause(options?: Partial<IPlaybackOptions>): this;
-    stop(options?: Partial<IPlaybackOptions>): this;
-    toggle(options?: Partial<IPlaybackOptions>): this;
-    applyOptions(options: Partial<IPlaybackOptions>): this;
+    play(options?: Partial<PlaybackOptions>): this;
+    pause(options?: Partial<PlaybackOptions>): this;
+    stop(options?: Partial<PlaybackOptions>): this;
+    toggle(options?: Partial<PlaybackOptions>): this;
+    applyOptions(options: Partial<PlaybackOptions>): this;
     setVolume(volume: number): this;
     setLoop(loop: boolean): this;
     setPlaybackRate(playbackRate: number): this;

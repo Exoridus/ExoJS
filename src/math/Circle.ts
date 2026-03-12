@@ -1,8 +1,8 @@
 import { Vector } from 'math/Vector';
 import { Rectangle } from 'math/Rectangle';
 import { Interval } from 'math/Interval';
-import type { IShape } from 'math/IShape';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { ShapeLike } from 'math/ShapeLike';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     getCollisionCircleCircle,
@@ -22,7 +22,7 @@ import type { Polygon } from 'math/Polygon';
 
 let temp: Circle | null = null;
 
-export class Circle implements IShape {
+export class Circle implements ShapeLike {
 
     public static collisionSegments = 32;
 
@@ -134,7 +134,7 @@ export class Circle implements IShape {
         return intersectionPointCircle(Vector.temp.set(x, y), this);
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return intersectionRectCircle((target as SceneNode).getBounds(), this);
             case CollisionType.rectangle: return intersectionRectCircle(target as Rectangle, this);
@@ -147,7 +147,7 @@ export class Circle implements IShape {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return getCollisionCircleRectangle(this, (target as SceneNode).getBounds());
             case CollisionType.rectangle: return getCollisionCircleRectangle(this, target as Rectangle);

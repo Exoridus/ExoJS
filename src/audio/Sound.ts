@@ -1,5 +1,5 @@
 import { clamp } from 'utils/math';
-import type { IPlaybackOptions } from 'types/types';
+import type { PlaybackOptions } from 'types/types';
 import { AbstractMedia } from 'types/AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
 
@@ -40,7 +40,7 @@ export class Sound extends AbstractMedia {
         return this._audioSetup?.gainNode ?? null;
     }
 
-    public constructor(audioBuffer: AudioBuffer, options?: Partial<IPlaybackOptions>) {
+    public constructor(audioBuffer: AudioBuffer, options?: Partial<PlaybackOptions>) {
         super({
             duration: audioBuffer.duration,
             volume: 1,
@@ -134,7 +134,7 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
-    public play(options?: Partial<IPlaybackOptions>): this {
+    public play(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }
@@ -153,7 +153,7 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
-    public pause(options?: Partial<IPlaybackOptions>): this {
+    public pause(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
         }

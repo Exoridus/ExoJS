@@ -1,4 +1,4 @@
-export interface IEllipse {
+export interface EllipseLike {
     x: number;
     y: number;
     rx: number;

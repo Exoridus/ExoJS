@@ -1,7 +1,7 @@
 import type { Matrix } from 'math/Matrix';
-import type { IShape } from 'math/IShape';
+import type { ShapeLike } from 'math/ShapeLike';
 import { Interval } from 'math/Interval';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     intersectionPointCircle,
@@ -21,7 +21,7 @@ import { AbstractVector } from './AbstractVector';
 
 let temp: Vector | null = null;
 
-export class Vector extends AbstractVector implements IShape {
+export class Vector extends AbstractVector implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.point;
 
@@ -45,7 +45,7 @@ export class Vector extends AbstractVector implements IShape {
         return this;
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
             case CollisionType.sceneNode: return intersectionPointRect(this, (target as SceneNode).getBounds());
             case CollisionType.rectangle: return intersectionPointRect(this, target as Rectangle);
@@ -58,7 +58,7 @@ export class Vector extends AbstractVector implements IShape {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         return null;
     }
 

@@ -10,7 +10,7 @@ export type Mutable<T> = {
 
 export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | null;
 
-export interface IPlaybackOptions {
+export interface PlaybackOptions {
     volume: number;
     playbackRate: number;
     loop: boolean;
@@ -18,16 +18,16 @@ export interface IPlaybackOptions {
     time: number;
 }
 
-export interface ICloneable {
+export interface Cloneable {
     clone(): this;
     copy(source: this): this;
 }
 
-export interface IDestroyable {
+export interface Destroyable {
     destroy(): void;
 }
 
-export interface IWithBoundingBox {
+export interface HasBoundingBox {
     getBounds(): Rectangle;
 }
 

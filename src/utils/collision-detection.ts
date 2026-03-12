@@ -17,19 +17,19 @@ import {
     intersectionRectRect as intersectionPrimitiveRectRect,
     polygonsIntersect,
 } from './collision-primitives';
-import type { ICollidable, ICollisionResponse } from 'types/Collision';
+import type { Collidable, CollisionResponse } from 'types/Collision';
 import type { Circle } from 'math/Circle';
 import type { Ellipse } from 'math/Ellipse';
 import type { Line } from 'math/Line';
 import type { Polygon } from 'math/Polygon';
 import type { Rectangle } from 'math/Rectangle';
-import type { IPoint } from 'types/primitives/IPoint';
+import type { PointLike } from 'types/primitives/PointLike';
 
 /**
  * INTERSECTION
  */
 
-const intersectionSat = (shapeA: ICollidable, shapeB: ICollidable): boolean => {
+const intersectionSat = (shapeA: Collidable, shapeB: Collidable): boolean => {
     const normalsA = shapeA.getNormals();
     const normalsB = shapeB.getNormals();
     const projectionA = new Interval();
@@ -56,27 +56,27 @@ const intersectionSat = (shapeA: ICollidable, shapeB: ICollidable): boolean => {
     return true;
 };
 
-const intersectionPointPoint = (pointA: IPoint, pointB: IPoint, threshold = 0): boolean => (
+const intersectionPointPoint = (pointA: PointLike, pointB: PointLike, threshold = 0): boolean => (
     intersectionPrimitivePointPoint(pointA, pointB, threshold)
 );
 
-const intersectionPointLine = (point: IPoint, line: Line, threshold = 0.1): boolean => (
+const intersectionPointLine = (point: PointLike, line: Line, threshold = 0.1): boolean => (
     intersectionPointLineSegment(point, line.fromPosition, line.toPosition, threshold)
 );
 
-const intersectionPointRect = (point: IPoint, rectangle: Rectangle): boolean => (
+const intersectionPointRect = (point: PointLike, rectangle: Rectangle): boolean => (
     intersectionPrimitivePointRect(point, rectangle)
 );
 
-const intersectionPointCircle = (point: IPoint, circle: Circle): boolean => (
+const intersectionPointCircle = (point: PointLike, circle: Circle): boolean => (
     intersectionPrimitivePointCircle(point, circle)
 );
 
-const intersectionPointEllipse = (point: IPoint, ellipse: Ellipse): boolean => (
+const intersectionPointEllipse = (point: PointLike, ellipse: Ellipse): boolean => (
     intersectionPrimitivePointEllipse(point, ellipse)
 );
 
-const intersectionPointPoly = (point: IPoint, polygon: Polygon): boolean => (
+const intersectionPointPoly = (point: PointLike, polygon: Polygon): boolean => (
     intersectionPrimitivePointPoly(point, polygon)
 );
 
@@ -209,8 +209,8 @@ const intersectionCircleEllipse = (circle: Circle, ellipse: Ellipse): boolean =>
 const shouldExcludeLeftVoronoi = (
     circleX: number,
     circleY: number,
-    prevPoint: IPoint,
-    prevEdge: IPoint,
+    prevPoint: PointLike,
+    prevEdge: PointLike,
     pointX: number,
     pointY: number,
     radius: number,
@@ -229,8 +229,8 @@ const shouldExcludeLeftVoronoi = (
 const shouldExcludeRightVoronoi = (
     circleX: number,
     circleY: number,
-    nextPoint: IPoint,
-    nextEdge: IPoint,
+    nextPoint: PointLike,
+    nextEdge: PointLike,
     pointX: number,
     pointY: number,
     radius: number,
@@ -309,7 +309,7 @@ const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => 
  * COLLISION DETECTION
  */
 
-const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): ICollisionResponse | null => {
+const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): CollisionResponse | null => {
     if ((rectB.left > rectA.right) || (rectB.top > rectA.bottom)) {
         return null;
     }
@@ -332,7 +332,7 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): ICo
     };
 };
 
-const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): ICollisionResponse | null => {
+const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): CollisionResponse | null => {
     const difference = circleB.position.clone().subtract(circleA.x, circleA.y);
     const distance = difference.length;
     const overlap = (circleA.radius + circleB.radius) - distance;
@@ -356,7 +356,7 @@ const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): ICollisionR
     };
 };
 
-const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): ICollisionResponse | null => {
+const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): CollisionResponse | null => {
     const radius = circle.radius;
     const centerWidth = rect.width / 2;
     const centerHeight = rect.height / 2;
@@ -382,7 +382,7 @@ const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = fal
     };
 };
 
-const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): ICollisionResponse | null => {
+const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): CollisionResponse | null => {
     const radius = circle.radius;
     const points = polygon.points;
     const x = circle.x - polygon.x;
@@ -490,7 +490,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
     };
 };
 
-const getCollisionSat = (shapeA: ICollidable, shapeB: ICollidable): ICollisionResponse | null => {
+const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
     const normalsA = shapeA.getNormals();
     const normalsB = shapeB.getNormals();
     const projection = (normalsA[0] || normalsB[0]).clone();

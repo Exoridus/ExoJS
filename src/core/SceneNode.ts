@@ -6,7 +6,7 @@ import { ObservableVector } from 'math/ObservableVector';
 import type { Container } from 'rendering/Container';
 import type { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
-import type { ICollidable, ICollisionResponse} from 'types/Collision';
+import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
 import {
     getCollisionSat,
@@ -21,7 +21,7 @@ import type { Ellipse } from 'math/Ellipse';
 import type { Line } from 'math/Line';
 import type { Polygon } from 'math/Polygon';
 
-export class SceneNode extends Transformable implements ICollidable {
+export class SceneNode extends Transformable implements Collidable {
 
     public readonly collisionType: CollisionType = CollisionType.sceneNode;
 
@@ -115,7 +115,7 @@ export class SceneNode extends Transformable implements ICollidable {
         return this.getBounds().project(axis, result);
     }
 
-    public intersectsWith(target: ICollidable): boolean {
+    public intersectsWith(target: Collidable): boolean {
         if (this.isAlignedBox) {
             return this.getBounds().intersectsWith(target);
         }
@@ -132,7 +132,7 @@ export class SceneNode extends Transformable implements ICollidable {
         }
     }
 
-    public collidesWith(target: ICollidable): ICollisionResponse | null {
+    public collidesWith(target: Collidable): CollisionResponse | null {
         if (this.isAlignedBox) {
             return this.getBounds().collidesWith(target);
         }
