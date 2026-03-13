@@ -8,14 +8,23 @@ The normal rendering flow is now:
 
 1. `Application` owns frame presentation.
 2. `Scene.update(delta)` mutates state.
-3. `Scene.draw(renderBackend)` submits drawables.
+3. `Scene.draw(runtime)` submits drawables.
 4. `Application` calls `display()` on the active render runtime.
 
 Use this in scene code:
 
 ```ts
-public draw(renderBackend: RenderBackend): void {
-    this.root.render(renderBackend);
+public draw(runtime: SceneRenderRuntime): void {
+    this.root.render(runtime);
+}
+```
+
+The `root` container is a structural scene-graph entry point, not an implicit full-scene render. Scenes still keep explicit control over which subtree renders:
+
+```ts
+public draw(runtime: SceneRenderRuntime): void {
+    this.world.render(runtime);
+    this.ui.render(runtime);
 }
 ```
 
@@ -26,8 +35,8 @@ Do not use:
 
 Use drawable submission instead:
 
-- `drawable.render(renderBackend)`
-- `root.render(renderBackend)`
+- `drawable.render(runtime)`
+- `root.render(runtime)`
 
 ## View handling
 
@@ -70,11 +79,11 @@ new Application({ backend: { type: 'auto' } });
 
 ### Rendering
 
-- `IRenderBackend` -> `RenderBackend`
-- `IRenderManager` -> `RenderRuntime`
+- `IRenderBackend` -> `SceneRenderRuntime`
+- `IRenderManager` -> `SceneRenderRuntime`
 - `IRenderer` -> `Renderer`
 - `IWebGpuRenderAccess` -> `WebGpuRenderAccess`
-- `IWebGl2RenderBackend` -> `WebGl2RenderBackend`
+- `IWebGl2RenderBackend` -> `WebGl2RendererRuntime`
 
 ### Resource and media contracts
 

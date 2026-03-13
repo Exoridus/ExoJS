@@ -6,14 +6,15 @@ ExoJS uses a drawable-driven rendering flow.
 
 Normal code should work through drawables and scenes:
 
-- `Scene.draw(renderBackend)`
-- `drawable.render(renderBackend)`
+- `Scene.draw(runtime)`
+- `drawable.render(runtime)`
 - `Application` owns presentation
 
 ## Core rendering contracts
 
-- `RenderBackend`: renderer-facing surface used by drawables and renderers
-- `RenderRuntime`: broader frame/runtime surface used by `Application`
+- `SceneRenderRuntime`: scene-facing runtime used by scenes and drawables
+- `WebGl2RendererRuntime`: WebGL2-specific renderer runtime
+- `WebGpuRendererRuntime`: WebGPU-specific renderer runtime
 - `Renderer`: concrete renderer contract used internally by sprite, primitive, and particle renderers
 
 ## Important notes

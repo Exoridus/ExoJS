@@ -1,12 +1,9 @@
 import { RenderingPrimitives } from 'types/rendering';
 import type { Geometry } from 'rendering/primitives/Geometry';
 import type { Color } from 'core/Color';
-import { Container } from 'rendering/Container';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { PrimitiveRenderer } from 'rendering/primitives/PrimitiveRenderer';
-import { RendererType } from 'rendering/Renderer';
+import { Drawable } from 'rendering/Drawable';
 
-export class DrawableShape extends Container {
+export class DrawableShape extends Drawable {
 
     public readonly geometry: Geometry;
     public readonly drawMode: RenderingPrimitives;
@@ -18,17 +15,6 @@ export class DrawableShape extends Container {
         this.geometry = geometry;
         this.color = color.clone();
         this.drawMode = drawMode;
-    }
-
-    public render(renderManager: RenderBackend): this {
-        if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.Primitive) as PrimitiveRenderer;
-
-            renderManager.setRenderer(renderer);
-            renderer.render(this);
-        }
-
-        return this;
     }
 
     public destroy(): void {

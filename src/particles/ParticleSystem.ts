@@ -1,15 +1,12 @@
 import { Particle } from './Particle';
 import { Rectangle } from 'math/Rectangle';
 import type { Time } from 'core/Time';
-import { Container } from 'rendering/Container';
+import { Drawable } from 'rendering/Drawable';
 import type { Texture } from 'rendering/texture/Texture';
 import type { ParticleEmitter } from 'particles/emitters/ParticleEmitter';
 import type { ParticleAffector } from 'particles/affectors/ParticleAffector';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { ParticleRenderer } from './ParticleRenderer';
-import { RendererType } from 'rendering/Renderer';
 
-export class ParticleSystem extends Container {
+export class ParticleSystem extends Drawable {
 
     private _emitters: Array<ParticleEmitter> = [];
     private _affectors: Array<ParticleAffector> = [];
@@ -231,17 +228,6 @@ export class ParticleSystem extends Container {
 
         if (expireCount > 0) {
             particles.splice(0, expireCount);
-        }
-
-        return this;
-    }
-
-    public render(renderManager: RenderBackend): this {
-        if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.Particle) as ParticleRenderer;
-
-            renderManager.setRenderer(renderer);
-            renderer.render(this);
         }
 
         return this;

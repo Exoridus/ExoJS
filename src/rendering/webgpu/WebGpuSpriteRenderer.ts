@@ -1,13 +1,13 @@
 /// <reference types="@webgpu/types" />
 
-import type { Drawable } from 'rendering/Drawable';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { Renderer } from 'rendering/Renderer';
+import { AbstractWebGpuRenderer } from 'rendering/AbstractWebGpuRenderer';
 import type { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
-import { BlendModes } from 'types/rendering';
+import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
+import type { BlendModes } from 'types/rendering';
+import { getWebGpuBlendState } from './webgpuBlendState';
 
 const spriteShaderSource = `
 struct ProjectionUniforms {
@@ -78,7 +78,7 @@ interface IWebGpuSpriteBatchRange {
     readonly texture: Texture | RenderTexture;
 }
 
-export class WebGpuSpriteRenderer implements Renderer {
+export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     private readonly _drawCalls: Array<IWebGpuSpriteDrawCall> = [];
     private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
@@ -99,12 +99,10 @@ export class WebGpuSpriteRenderer implements Renderer {
     private _uint32View = new Uint32Array(this._vertexData);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    public connect(renderManager: RenderBackend): this {
+    protected onConnect(runtime: WebGpuRendererRuntime): void {
         if (!this._renderManager) {
-            const webGpuRenderManager = renderManager as WebGpuRenderManager;
-
-            this._renderManager = webGpuRenderManager;
-            this._device = webGpuRenderManager.device;
+            this._renderManager = runtime as WebGpuRenderManager;
+            this._device = this._renderManager.device;
             this._shaderModule = this._device.createShaderModule({ code: spriteShaderSource });
 
             this._uniformBindGroupLayout = this._device.createBindGroupLayout({
@@ -152,13 +150,10 @@ export class WebGpuSpriteRenderer implements Renderer {
             });
             this._ensureBatchCapacity(initialBatchCapacity);
         }
-
-        return this;
     }
 
-    public disconnect(): this {
-        this.unbind();
-
+    protected onDisconnect(): void {
+        this.flush();
         this._vertexBuffer?.destroy();
         this._indexBuffer?.destroy();
         this._uniformBuffer?.destroy();
@@ -178,42 +173,21 @@ export class WebGpuSpriteRenderer implements Renderer {
         this._vertexData = new ArrayBuffer(0);
         this._float32View = new Float32Array(this._vertexData);
         this._uint32View = new Uint32Array(this._vertexData);
-
-        return this;
     }
 
-    public bind(): this {
-        if (!this._renderManager || !this._device || !this._uniformBindGroup || !this._vertexBuffer || !this._indexBuffer) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        return this;
-    }
-
-    public unbind(): this {
-        this.flush();
-        this._drawCalls.length = 0;
-
-        return this;
-    }
-
-    public render(drawable: Drawable): this {
+    public render(sprite: Sprite): void {
         const renderManager = this._renderManager;
-
-        if (!renderManager) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        const sprite = drawable as Sprite;
         const texture = sprite.texture;
 
         if (
+            renderManager === null
+            ||
             (!(texture instanceof Texture) && !(texture instanceof RenderTexture))
             || texture.width === 0
             || texture.height === 0
             || (texture instanceof Texture && texture.source === null)
         ) {
-            return this;
+            return;
         }
 
         renderManager.setBlendMode(sprite.blendMode);
@@ -225,11 +199,9 @@ export class WebGpuSpriteRenderer implements Renderer {
             color: sprite.tint.toRgba(),
             blendMode: sprite.blendMode,
         });
-
-        return this;
     }
 
-    public flush(): this {
+    public flush(): void {
         const renderManager = this._renderManager;
         const device = this._device;
         const uniformBuffer = this._uniformBuffer;
@@ -238,11 +210,11 @@ export class WebGpuSpriteRenderer implements Renderer {
         const indexBuffer = this._indexBuffer;
 
         if (!renderManager || !device || !uniformBuffer || !uniformBindGroup || !vertexBuffer || !indexBuffer) {
-            return this;
+            return;
         }
 
         if (this._drawCalls.length === 0 && !renderManager.clearRequested) {
-            return this;
+            return;
         }
 
         const viewMatrix = renderManager.view.getTransform();
@@ -314,8 +286,6 @@ export class WebGpuSpriteRenderer implements Renderer {
         pass.end();
         renderManager.submit(encoder.finish());
         this._drawCalls.length = 0;
-
-        return this;
     }
 
     public destroy(): void {
@@ -456,7 +426,7 @@ export class WebGpuSpriteRenderer implements Renderer {
                 entryPoint: 'fragmentMain',
                 targets: [{
                     format,
-                    blend: this._getBlendState(blendMode),
+                    blend: getWebGpuBlendState(blendMode),
                     writeMask: GPUColorWrite.ALL,
                 }],
             },
@@ -468,75 +438,5 @@ export class WebGpuSpriteRenderer implements Renderer {
         this._pipelines.set(pipelineKey, pipeline);
 
         return pipeline;
-    }
-
-    private _getBlendState(blendMode: BlendModes): GPUBlendState {
-        switch (blendMode) {
-            case BlendModes.Additive:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one',
-                    },
-                };
-            case BlendModes.Subtract:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'zero',
-                        dstFactor: 'one-minus-src',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'zero',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            case BlendModes.Multiply:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'dst',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'dst-alpha',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            case BlendModes.Screen:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            default:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-        }
     }
 }

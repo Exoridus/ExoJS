@@ -1,22 +1,12 @@
 import { SceneNode } from 'core/SceneNode';
 import { Color } from 'core/Color';
 import { BlendModes } from 'types/rendering';
-import type { View } from './View';
-import type { RenderBackend } from './RenderBackend';
+import type { SceneRenderRuntime } from './SceneRenderRuntime';
 
 export class Drawable extends SceneNode {
 
-    private _visible = true;
     private _tint: Color = Color.white.clone();
     private _blendMode: BlendModes = BlendModes.Normal;
-
-    public get visible(): boolean {
-        return this._visible;
-    }
-
-    public set visible(visible: boolean) {
-        this._visible = visible;
-    }
 
     public get tint(): Color {
         return this._tint;
@@ -48,12 +38,12 @@ export class Drawable extends SceneNode {
         return this;
     }
 
-    public render(renderManager: RenderBackend): this {
-        throw new Error('Method not implemented!');
-    }
+    public override render(renderManager: SceneRenderRuntime): this {
+        if (this.visible && this.inView(renderManager.view)) {
+            renderManager.draw(this);
+        }
 
-    public inView(view: View): boolean {
-        return view.getBounds().intersectsWith(this.getBounds());
+        return this;
     }
 
     public destroy(): void {

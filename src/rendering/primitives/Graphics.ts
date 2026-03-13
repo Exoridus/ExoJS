@@ -5,6 +5,7 @@ import { RenderingPrimitives } from 'types/rendering';
 import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from 'utils/geometry';
 import { Vector } from 'math/Vector';
 import { CircleGeometry } from './CircleGeometry';
+import type { SceneNode } from 'core/SceneNode';
 import { DrawableShape } from './DrawableShape';
 
 export class Graphics extends Container {
@@ -40,6 +41,26 @@ export class Graphics extends Container {
 
     public get currentPoint(): Vector {
         return this._currentPoint;
+    }
+
+    public override getChildAt(index: number): DrawableShape {
+        return super.getChildAt(index) as DrawableShape;
+    }
+
+    public override addChild(child: SceneNode): this {
+        if (!(child instanceof DrawableShape)) {
+            throw new Error('Graphics can only contain DrawableShape children.');
+        }
+
+        return super.addChild(child);
+    }
+
+    public override addChildAt(child: SceneNode, index: number): this {
+        if (!(child instanceof DrawableShape)) {
+            throw new Error('Graphics can only contain DrawableShape children.');
+        }
+
+        return super.addChildAt(child, index);
     }
 
     public moveTo(x: number, y: number): this {

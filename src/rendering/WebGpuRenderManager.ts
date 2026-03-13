@@ -4,19 +4,26 @@ import { Color } from 'core/Color';
 import type { Application } from 'core/Application';
 import type { TextureSource } from 'types/types';
 import { BlendModes } from 'types/rendering';
-import { RendererType, type Renderer } from './Renderer';
+import { RenderBackendType } from './RenderBackendType';
+import { RendererRegistry } from './RendererRegistry';
+import type { Drawable } from './Drawable';
+import type { RenderPass } from './RenderPass';
+import type { Renderer } from './Renderer';
 import type { Shader } from './shader/Shader';
 import type { Texture } from './texture/Texture';
 import type { VertexArrayObject } from './VertexArrayObject';
 import type { View } from './View';
-import type { RenderRuntime } from './RenderRuntime';
 import type { WebGpuRenderAccess } from './WebGpuRenderAccess';
+import type { WebGpuRendererRuntime } from './WebGpuRendererRuntime';
 import { RenderTarget } from './RenderTarget';
 import { WebGpuPrimitiveRenderer } from './webgpu/WebGpuPrimitiveRenderer';
 import { WebGpuSpriteRenderer } from './webgpu/WebGpuSpriteRenderer';
 import { WebGpuParticleRenderer } from './webgpu/WebGpuParticleRenderer';
 import { ScaleModes, WrapModes } from 'types/rendering';
 import { RenderTexture } from './texture/RenderTexture';
+import { Sprite } from './sprite/Sprite';
+import { DrawableShape } from './primitives/DrawableShape';
+import { ParticleSystem } from 'particles/ParticleSystem';
 
 interface IManagedWebGpuTextureState {
     texture: GPUTexture;
@@ -31,12 +38,14 @@ interface IManagedWebGpuTextureState {
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 
-export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
+export class WebGpuRenderManager implements WebGpuRenderAccess, WebGpuRendererRuntime {
+
+    public readonly backendType = RenderBackendType.WebGpu;
+    public readonly rendererRegistry = new RendererRegistry<WebGpuRendererRuntime>();
 
     private readonly _canvas: HTMLCanvasElement;
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _clearColor: Color = new Color();
-    private readonly _renderers: Map<RendererType, Renderer> = new Map<RendererType, Renderer>();
     private readonly _textureStates: Map<Texture | RenderTexture, IManagedWebGpuTextureState> = new Map<Texture | RenderTexture, IManagedWebGpuTextureState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
@@ -71,9 +80,9 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
             this._clearColor.copy(clearColor);
         }
 
-        this.addRenderer(RendererType.Primitive, new WebGpuPrimitiveRenderer());
-        this.addRenderer(RendererType.Sprite, new WebGpuSpriteRenderer());
-        this.addRenderer(RendererType.Particle, new WebGpuParticleRenderer());
+        this.rendererRegistry.registerRenderer(DrawableShape, new WebGpuPrimitiveRenderer());
+        this.rendererRegistry.registerRenderer(Sprite, new WebGpuSpriteRenderer());
+        this.rendererRegistry.registerRenderer(ParticleSystem, new WebGpuParticleRenderer());
         this.resize(width, height);
     }
 
@@ -125,30 +134,18 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         return this._initializePromise;
     }
 
-    public getRenderer(_name: RendererType): Renderer {
-        const renderer = this._renderers.get(_name);
+    public draw(drawable: Drawable): this {
+        const renderer = this.rendererRegistry.resolve(drawable);
 
-        if (!renderer) {
-            throw new Error(`WebGPU renderer "${_name}" is not implemented yet.`);
-        }
+        this._setActiveRenderer(renderer);
+        renderer.render(drawable);
 
-        return renderer;
+        return this;
     }
 
-    public setRenderer(renderer: Renderer | null): this {
-        if (this._renderer !== renderer) {
-            if (this._renderer) {
-                this._renderer.unbind();
-                this._renderer = null;
-            }
-
-            if (renderer) {
-                renderer.connect(this);
-                renderer.bind();
-            }
-
-            this._renderer = renderer;
-        }
+    public execute(pass: RenderPass): this {
+        this._flushActiveRenderer();
+        pass.execute(this);
 
         return this;
     }
@@ -216,9 +213,7 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         }
 
         if (this._renderTarget !== nextRenderTarget) {
-            if (this._renderer) {
-                this._renderer.flush();
-            }
+            this._flushActiveRenderer();
 
             if (this._renderTarget !== this._rootRenderTarget) {
                 this._unsubscribeRenderTarget(this._renderTarget);
@@ -265,7 +260,7 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         }
 
         if (this._renderer) {
-            this._renderer.flush();
+            this._flushActiveRenderer();
         } else if (this._clearRequested) {
             const encoder = this._device.createCommandEncoder();
             const pass = encoder.beginRenderPass({
@@ -280,13 +275,8 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
     }
 
     public destroy(): void {
-        this.setRenderer(null);
-
-        for (const renderer of this._renderers.values()) {
-            renderer.destroy();
-        }
-
-        this._renderers.clear();
+        this._setActiveRenderer(null);
+        this.rendererRegistry.destroy();
         this._destroyManagedTextures();
         for (const target of Array.from(this._renderTargetDestroyHandlers.keys())) {
             this._unsubscribeRenderTarget(target);
@@ -307,16 +297,6 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         this._renderTarget = this._rootRenderTarget;
         this._clearColor.destroy();
         this._rootRenderTarget.destroy();
-    }
-
-    public addRenderer(name: RendererType, renderer: Renderer): this {
-        if (this._renderers.has(name)) {
-            throw new Error(`Renderer "${name}" was already added.`);
-        }
-
-        this._renderers.set(name, renderer);
-
-        return this;
     }
 
     public createColorAttachment(): GPURenderPassColorAttachment {
@@ -383,6 +363,17 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         return !(texture instanceof RenderTexture) && texture.premultiplyAlpha;
     }
 
+    private _setActiveRenderer(renderer: Renderer | null): void {
+        if (this._renderer !== renderer) {
+            this._flushActiveRenderer();
+            this._renderer = renderer;
+        }
+    }
+
+    private _flushActiveRenderer(): void {
+        this._renderer?.flush();
+    }
+
     private async _initialize(): Promise<this> {
         const gpuNavigator = this._getGpuNavigator();
 
@@ -416,6 +407,7 @@ export class WebGpuRenderManager implements RenderRuntime, WebGpuRenderAccess {
         this._format = format;
         this._blendMode = BlendModes.Normal;
         this._hasPresentedFrame = false;
+        this.rendererRegistry.connect(this);
         this.resize(this._canvas.width, this._canvas.height);
 
         return this;

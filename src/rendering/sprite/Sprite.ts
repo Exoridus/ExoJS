@@ -1,12 +1,9 @@
-import { Container } from 'rendering/Container';
+import { Drawable } from 'rendering/Drawable';
 import { Rectangle } from 'math/Rectangle';
 import { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
 import type { Texture } from 'rendering/texture/Texture';
 import type { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { SpriteRenderer } from 'rendering/sprite/SpriteRenderer';
-import { RendererType } from 'rendering/Renderer';
 
 export enum SpriteFlags {
     None = 0x00,
@@ -21,7 +18,7 @@ export enum SpriteFlags {
     VertexTint = 0x80,
 }
 
-export class Sprite extends Container {
+export class Sprite extends Drawable {
 
     private _texture: Texture | RenderTexture | null = null;
     private _textureFrame: Rectangle = new Rectangle();
@@ -160,21 +157,6 @@ export class Sprite extends Container {
         }
 
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
-    }
-
-    public render(renderManager: RenderBackend): this {
-        if (this.visible && this.inView(renderManager.view)) {
-            const renderer = renderManager.getRenderer(RendererType.Sprite) as SpriteRenderer;
-
-            renderManager.setRenderer(renderer);
-            renderer.render(this);
-
-            for (const child of this.children) {
-                child.render(renderManager);
-            }
-        }
-
-        return this;
     }
 
     // todo cache this

@@ -1,12 +1,12 @@
 /// <reference types="@webgpu/types" />
 
-import type { Drawable } from 'rendering/Drawable';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { Renderer } from 'rendering/Renderer';
-import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
+import { AbstractWebGpuRenderer } from 'rendering/AbstractWebGpuRenderer';
+import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
 import type { ParticleSystem } from 'particles/ParticleSystem';
 import { Texture } from 'rendering/texture/Texture';
-import { BlendModes } from 'types/rendering';
+import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
+import type { BlendModes } from 'types/rendering';
+import { getWebGpuBlendState } from './webgpuBlendState';
 
 const particleShaderSource = `
 struct ProjectionUniforms {
@@ -74,7 +74,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const staticVertexStrideBytes = 8;
 const instanceWords = 14;
 const instanceStrideBytes = 56;
-const verticesPerParticle = 4;
 const indicesPerParticle = 6;
 const uniformByteLength = 144;
 const initialParticleCapacity = 1;
@@ -89,7 +88,7 @@ const staticIndexData = new Uint16Array([
     0, 2, 3,
 ]);
 
-interface IWebGpuParticleDrawCall {
+interface WebGpuParticleDrawCall {
     readonly texture: Texture;
     readonly vertices: Float32Array;
     readonly texCoords: Uint32Array;
@@ -98,9 +97,8 @@ interface IWebGpuParticleDrawCall {
     readonly blendMode: BlendModes;
 }
 
-export class WebGpuParticleRenderer implements Renderer {
-
-    private readonly _drawCalls: Array<IWebGpuParticleDrawCall> = [];
+export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSystem> {
+    private readonly _drawCalls: Array<WebGpuParticleDrawCall> = [];
     private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -120,71 +118,160 @@ export class WebGpuParticleRenderer implements Renderer {
     private _uint32View = new Uint32Array(this._instanceData);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    public connect(renderManager: RenderBackend): this {
-        if (!this._renderManager) {
-            const webGpuRenderManager = renderManager as WebGpuRenderManager;
+    public render(system: ParticleSystem): void {
+        const runtime = this._renderManager;
+        const texture = system.texture;
 
-            this._renderManager = webGpuRenderManager;
-            this._device = webGpuRenderManager.device;
-            this._shaderModule = this._device.createShaderModule({ code: particleShaderSource });
-            this._uniformBindGroupLayout = this._device.createBindGroupLayout({
-                entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: {
-                        type: 'uniform',
-                    },
-                }],
-            });
-            this._textureBindGroupLayout = this._device.createBindGroupLayout({
-                entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    texture: {
-                        sampleType: 'float',
-                    },
-                }, {
-                    binding: 1,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    sampler: {
-                        type: 'filtering',
-                    },
-                }],
-            });
-            this._pipelineLayout = this._device.createPipelineLayout({
-                bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
-            });
-            this._uniformBuffer = this._device.createBuffer({
-                size: uniformByteLength,
-                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            });
-            this._uniformBindGroup = this._device.createBindGroup({
-                layout: this._uniformBindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: {
-                        buffer: this._uniformBuffer,
-                    },
-                }],
-            });
-            this._staticVertexBuffer = this._device.createBuffer({
-                size: staticVertexData.byteLength,
-                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            });
-            this._device.queue.writeBuffer(this._staticVertexBuffer, 0, staticVertexData.buffer, staticVertexData.byteOffset, staticVertexData.byteLength);
-            this._indexBuffer = this._device.createBuffer({
-                size: staticIndexData.byteLength,
-                usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-            });
-            this._device.queue.writeBuffer(this._indexBuffer, 0, staticIndexData.buffer, staticIndexData.byteOffset, staticIndexData.byteLength);
-            this._ensureCapacity(initialParticleCapacity);
+        if (
+            runtime === null
+            || !(texture instanceof Texture)
+            || texture.source === null
+            || texture.width === 0
+            || texture.height === 0
+            || system.particles.length === 0
+        ) {
+            return;
         }
 
-        return this;
+        runtime.setBlendMode(system.blendMode);
+
+        this._drawCalls.push({
+            texture,
+            vertices: new Float32Array(system.vertices),
+            texCoords: new Uint32Array(system.texCoords),
+            particles: system.particles.slice(),
+            transform: new Float32Array(system.getGlobalTransform().toArray(false)),
+            blendMode: system.blendMode,
+        });
     }
 
-    public disconnect(): this {
-        this.unbind();
+    public flush(): void {
+        const runtime = this._renderManager;
+        const device = this._device;
+        const uniformBuffer = this._uniformBuffer;
+        const uniformBindGroup = this._uniformBindGroup;
+        const staticVertexBuffer = this._staticVertexBuffer;
+        const indexBuffer = this._indexBuffer;
+
+        if (!runtime || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
+            return;
+        }
+
+        if (this._drawCalls.length === 0 && !runtime.clearRequested) {
+            return;
+        }
+
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [runtime.createColorAttachment()],
+        });
+
+        pass.setBindGroup(0, uniformBindGroup);
+
+        for (const drawCall of this._drawCalls) {
+            const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
+            const textureBinding = runtime.getTextureBinding(drawCall.texture);
+            const textureBindGroup = device.createBindGroup({
+                layout: this._textureBindGroupLayout!,
+                entries: [{
+                    binding: 0,
+                    resource: textureBinding.view,
+                }, {
+                    binding: 1,
+                    resource: textureBinding.sampler,
+                }],
+            });
+            const particleCount = drawCall.particles.length;
+
+            this._ensureCapacity(particleCount);
+            this._writeInstanceData(drawCall);
+            this._writeUniformData(runtime, drawCall.transform, drawCall.texture);
+
+            device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
+            device.queue.writeBuffer(
+                uniformBuffer,
+                0,
+                this._uniformData.buffer as ArrayBuffer,
+                this._uniformData.byteOffset,
+                this._uniformData.byteLength
+            );
+
+            pass.setPipeline(pipeline);
+            pass.setBindGroup(1, textureBindGroup);
+            pass.setVertexBuffer(0, staticVertexBuffer);
+            pass.setVertexBuffer(1, this._instanceBuffer!);
+            pass.setIndexBuffer(indexBuffer, 'uint16');
+            pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
+        }
+
+        pass.end();
+        runtime.submit(encoder.finish());
+        this._drawCalls.length = 0;
+    }
+
+    public destroy(): void {
+        this.disconnect();
+    }
+
+    protected onConnect(runtime: WebGpuRendererRuntime): void {
+        this._renderManager = runtime as WebGpuRenderManager;
+        this._device = this._renderManager.device;
+        this._shaderModule = this._device.createShaderModule({ code: particleShaderSource });
+        this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                buffer: {
+                    type: 'uniform',
+                },
+            }],
+        });
+        this._textureBindGroupLayout = this._device.createBindGroupLayout({
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {
+                    sampleType: 'float',
+                },
+            }, {
+                binding: 1,
+                visibility: GPUShaderStage.FRAGMENT,
+                sampler: {
+                    type: 'filtering',
+                },
+            }],
+        });
+        this._pipelineLayout = this._device.createPipelineLayout({
+            bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
+        });
+        this._uniformBuffer = this._device.createBuffer({
+            size: uniformByteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this._uniformBindGroup = this._device.createBindGroup({
+            layout: this._uniformBindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this._uniformBuffer,
+                },
+            }],
+        });
+        this._staticVertexBuffer = this._device.createBuffer({
+            size: staticVertexData.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        this._device.queue.writeBuffer(this._staticVertexBuffer, 0, staticVertexData.buffer, staticVertexData.byteOffset, staticVertexData.byteLength);
+        this._indexBuffer = this._device.createBuffer({
+            size: staticIndexData.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        });
+        this._device.queue.writeBuffer(this._indexBuffer, 0, staticIndexData.buffer, staticIndexData.byteOffset, staticIndexData.byteLength);
+        this._ensureCapacity(initialParticleCapacity);
+    }
+
+    protected onDisconnect(): void {
+        this.flush();
 
         this._staticVertexBuffer?.destroy();
         this._instanceBuffer?.destroy();
@@ -207,121 +294,7 @@ export class WebGpuParticleRenderer implements Renderer {
         this._instanceData = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
         this._float32View = new Float32Array(this._instanceData);
         this._uint32View = new Uint32Array(this._instanceData);
-
-        return this;
-    }
-
-    public bind(): this {
-        if (!this._renderManager || !this._device || !this._uniformBindGroup || !this._staticVertexBuffer || !this._instanceBuffer || !this._indexBuffer) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        return this;
-    }
-
-    public unbind(): this {
-        this.flush();
         this._drawCalls.length = 0;
-
-        return this;
-    }
-
-    public render(drawable: Drawable): this {
-        const renderManager = this._renderManager;
-
-        if (!renderManager) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        const system = drawable as ParticleSystem;
-        const texture = system.texture;
-
-        if (!(texture instanceof Texture) || texture.source === null || texture.width === 0 || texture.height === 0 || system.particles.length === 0) {
-            return this;
-        }
-
-        renderManager.setBlendMode(system.blendMode);
-
-        this._drawCalls.push({
-            texture,
-            vertices: new Float32Array(system.vertices),
-            texCoords: new Uint32Array(system.texCoords),
-            particles: system.particles.slice(),
-            transform: new Float32Array(system.getGlobalTransform().toArray(false)),
-            blendMode: system.blendMode,
-        });
-
-        return this.flush();
-    }
-
-    public flush(): this {
-        const renderManager = this._renderManager;
-        const device = this._device;
-        const uniformBuffer = this._uniformBuffer;
-        const uniformBindGroup = this._uniformBindGroup;
-        const staticVertexBuffer = this._staticVertexBuffer;
-        const indexBuffer = this._indexBuffer;
-
-        if (!renderManager || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
-            return this;
-        }
-
-        if (this._drawCalls.length === 0 && !renderManager.clearRequested) {
-            return this;
-        }
-
-        const encoder = device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-            colorAttachments: [renderManager.createColorAttachment()],
-        });
-
-        pass.setBindGroup(0, uniformBindGroup);
-
-        for (const drawCall of this._drawCalls) {
-            const pipeline = this._getPipeline(drawCall.blendMode, renderManager.renderTargetFormat);
-            const textureBinding = renderManager.getTextureBinding(drawCall.texture);
-            const textureBindGroup = device.createBindGroup({
-                layout: this._textureBindGroupLayout!,
-                entries: [{
-                    binding: 0,
-                    resource: textureBinding.view,
-                }, {
-                    binding: 1,
-                    resource: textureBinding.sampler,
-                }],
-            });
-            const particleCount = drawCall.particles.length;
-
-            this._ensureCapacity(particleCount);
-            this._writeInstanceData(drawCall);
-            this._writeUniformData(renderManager, drawCall.transform, drawCall.texture);
-
-            device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
-            device.queue.writeBuffer(
-                uniformBuffer,
-                0,
-                this._uniformData.buffer as ArrayBuffer,
-                this._uniformData.byteOffset,
-                this._uniformData.byteLength
-            );
-
-            pass.setPipeline(pipeline);
-            pass.setBindGroup(1, textureBindGroup);
-            pass.setVertexBuffer(0, staticVertexBuffer);
-            pass.setVertexBuffer(1, this._instanceBuffer!);
-            pass.setIndexBuffer(indexBuffer, 'uint16');
-            pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
-        }
-
-        pass.end();
-        renderManager.submit(encoder.finish());
-        this._drawCalls.length = 0;
-
-        return this;
-    }
-
-    public destroy(): void {
-        this.disconnect();
     }
 
     private _ensureCapacity(particleCount: number): void {
@@ -355,9 +328,9 @@ export class WebGpuParticleRenderer implements Renderer {
         }
     }
 
-    private _writeUniformData(renderManager: WebGpuRenderManager, transform: Float32Array, texture: Texture): void {
-        const projection = renderManager.view.getTransform().toArray(false);
-        const shouldPremultiplySample = renderManager.shouldPremultiplyTextureSample(texture);
+    private _writeUniformData(runtime: WebGpuRenderManager, transform: Float32Array, texture: Texture): void {
+        const projection = runtime.view.getTransform().toArray(false);
+        const shouldPremultiplySample = runtime.shouldPremultiplyTextureSample(texture);
 
         this._uniformData.set([
             projection[0], projection[1], 0, 0,
@@ -374,7 +347,7 @@ export class WebGpuParticleRenderer implements Renderer {
         ]);
     }
 
-    private _writeInstanceData(drawCall: IWebGpuParticleDrawCall): void {
+    private _writeInstanceData(drawCall: WebGpuParticleDrawCall): void {
         const { vertices, texCoords, particles } = drawCall;
         const quadMinX = vertices[0];
         const quadMinY = vertices[1];
@@ -414,14 +387,10 @@ export class WebGpuParticleRenderer implements Renderer {
             return existingPipeline;
         }
 
-        if (!this._device || !this._shaderModule || !this._pipelineLayout || !this._renderManager) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        const pipeline = this._device.createRenderPipeline({
-            layout: this._pipelineLayout,
+        const pipeline = this._device!.createRenderPipeline({
+            layout: this._pipelineLayout!,
             vertex: {
-                module: this._shaderModule,
+                module: this._shaderModule!,
                 entryPoint: 'vertexMain',
                 buffers: [{
                     arrayStride: staticVertexStrideBytes,
@@ -469,11 +438,11 @@ export class WebGpuParticleRenderer implements Renderer {
                 }],
             },
             fragment: {
-                module: this._shaderModule,
+                module: this._shaderModule!,
                 entryPoint: 'fragmentMain',
                 targets: [{
                     format,
-                    blend: this._getBlendState(blendMode),
+                    blend: getWebGpuBlendState(blendMode),
                     writeMask: GPUColorWrite.ALL,
                 }],
             },
@@ -485,75 +454,5 @@ export class WebGpuParticleRenderer implements Renderer {
         this._pipelines.set(pipelineKey, pipeline);
 
         return pipeline;
-    }
-
-    private _getBlendState(blendMode: BlendModes): GPUBlendState {
-        switch (blendMode) {
-            case BlendModes.Additive:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one',
-                    },
-                };
-            case BlendModes.Subtract:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'zero',
-                        dstFactor: 'one-minus-src',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'zero',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            case BlendModes.Multiply:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'dst',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'dst-alpha',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            case BlendModes.Screen:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            default:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-        }
     }
 }

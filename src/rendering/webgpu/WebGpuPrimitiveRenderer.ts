@@ -1,12 +1,13 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from 'math/Matrix';
-import type { Drawable } from 'rendering/Drawable';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { Renderer } from 'rendering/Renderer';
+import { AbstractWebGpuRenderer } from 'rendering/AbstractWebGpuRenderer';
 import type { DrawableShape } from 'rendering/primitives/DrawableShape';
 import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
-import { BlendModes, RenderingPrimitives } from 'types/rendering';
+import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
+import { RenderingPrimitives } from 'types/rendering';
+import type { BlendModes } from 'types/rendering';
+import { getWebGpuBlendState } from './webgpuBlendState';
 
 const primitiveShaderSource = `
 struct TransformUniforms {
@@ -45,7 +46,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const vertexStrideBytes = 12;
 const transformByteLength = 64;
 
-interface IWebGpuPrimitiveDrawCall {
+interface WebGpuPrimitiveDrawCall {
     readonly vertices: Float32Array;
     readonly indices: Uint16Array;
     readonly color: number;
@@ -54,16 +55,15 @@ interface IWebGpuPrimitiveDrawCall {
     readonly transform: Float32Array;
 }
 
-interface IWebGpuPrimitivePipelineKey {
+interface WebGpuPrimitivePipelineKey {
     readonly drawMode: RenderingPrimitives;
     readonly blendMode: BlendModes;
     readonly format: GPUTextureFormat;
 }
 
-export class WebGpuPrimitiveRenderer implements Renderer {
-
+export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShape> {
     private readonly _combinedTransform: Matrix = new Matrix();
-    private readonly _drawCalls: Array<IWebGpuPrimitiveDrawCall> = [];
+    private readonly _drawCalls: Array<WebGpuPrimitiveDrawCall> = [];
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -81,84 +81,12 @@ export class WebGpuPrimitiveRenderer implements Renderer {
     private _float32View: Float32Array = new Float32Array(this._vertexData);
     private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
 
-    public connect(renderManager: RenderBackend): this {
-        if (!this._renderManager) {
-            const webGpuRenderManager = renderManager as WebGpuRenderManager;
+    public render(shape: DrawableShape): void {
+        const runtime = this._renderManager;
 
-            this._renderManager = webGpuRenderManager;
-            this._device = webGpuRenderManager.device;
-            this._shaderModule = this._device.createShaderModule({ code: primitiveShaderSource });
-            this._bindGroupLayout = this._device.createBindGroupLayout({
-                entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
-                    buffer: {
-                        type: 'uniform',
-                    },
-                }],
-            });
-            this._pipelineLayout = this._device.createPipelineLayout({
-                bindGroupLayouts: [this._bindGroupLayout],
-            });
-            this._uniformBuffer = this._device.createBuffer({
-                size: transformByteLength,
-                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            });
-            this._bindGroup = this._device.createBindGroup({
-                layout: this._bindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: {
-                        buffer: this._uniformBuffer,
-                    },
-                }],
-            });
+        if (runtime === null) {
+            throw new Error('Renderer not connected');
         }
-
-        return this;
-    }
-
-    public disconnect(): this {
-        this.unbind();
-
-        this._destroyBuffers();
-        this._destroyPipelines();
-        this._uniformBuffer?.destroy();
-
-        this._uniformBuffer = null;
-        this._bindGroup = null;
-        this._bindGroupLayout = null;
-        this._pipelineLayout = null;
-        this._shaderModule = null;
-        this._device = null;
-        this._renderManager = null;
-
-        return this;
-    }
-
-    public bind(): this {
-        if (!this._renderManager || !this._device || !this._bindGroup || !this._pipelineLayout || !this._shaderModule) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        return this;
-    }
-
-    public unbind(): this {
-        this.flush();
-        this._drawCalls.length = 0;
-
-        return this;
-    }
-
-    public render(drawable: Drawable): this {
-        const renderManager = this._renderManager;
-
-        if (!renderManager) {
-            throw new Error('Renderer has to be connected first!');
-        }
-
-        const shape = drawable as DrawableShape;
 
         if (
             shape.drawMode !== RenderingPrimitives.Points
@@ -170,10 +98,10 @@ export class WebGpuPrimitiveRenderer implements Renderer {
             throw new Error(`WebGPU primitive renderer does not support draw mode "${shape.drawMode}" yet.`);
         }
 
-        renderManager.setBlendMode(shape.blendMode);
+        runtime.setBlendMode(shape.blendMode);
 
         if (shape.geometry.vertices.length === 0) {
-            return this;
+            return;
         }
 
         this._drawCalls.push({
@@ -182,29 +110,27 @@ export class WebGpuPrimitiveRenderer implements Renderer {
             color: shape.color.toRgba(),
             drawMode: shape.drawMode,
             blendMode: shape.blendMode,
-            transform: this._createTransformData(renderManager, shape),
+            transform: this._createTransformData(runtime, shape),
         });
-
-        return this;
     }
 
-    public flush(): this {
-        const renderManager = this._renderManager;
+    public flush(): void {
+        const runtime = this._renderManager;
         const device = this._device;
         const bindGroup = this._bindGroup;
         const uniformBuffer = this._uniformBuffer;
 
-        if (!renderManager || !device || !bindGroup || !uniformBuffer) {
-            return this;
+        if (!runtime || !device || !bindGroup || !uniformBuffer) {
+            return;
         }
 
-        if (this._drawCalls.length === 0 && !renderManager.clearRequested) {
-            return this;
+        if (this._drawCalls.length === 0 && !runtime.clearRequested) {
+            return;
         }
 
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
-            colorAttachments: [renderManager.createColorAttachment()],
+            colorAttachments: [runtime.createColorAttachment()],
         });
 
         for (const drawCall of this._drawCalls) {
@@ -213,7 +139,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
             const pipeline = this._getPipeline({
                 drawMode: drawCall.drawMode,
                 blendMode: drawCall.blendMode,
-                format: renderManager.renderTargetFormat,
+                format: runtime.renderTargetFormat,
             });
 
             this._ensureVertexCapacity(vertexCount);
@@ -249,10 +175,8 @@ export class WebGpuPrimitiveRenderer implements Renderer {
         }
 
         pass.end();
-        renderManager.submit(encoder.finish());
+        runtime.submit(encoder.finish());
         this._drawCalls.length = 0;
-
-        return this;
     }
 
     public destroy(): void {
@@ -260,9 +184,56 @@ export class WebGpuPrimitiveRenderer implements Renderer {
         this._combinedTransform.destroy();
     }
 
-    private _createTransformData(renderManager: WebGpuRenderManager, shape: DrawableShape): Float32Array {
+    protected onConnect(runtime: WebGpuRendererRuntime): void {
+        this._renderManager = runtime as WebGpuRenderManager;
+        this._device = this._renderManager.device;
+        this._shaderModule = this._device.createShaderModule({ code: primitiveShaderSource });
+        this._bindGroupLayout = this._device.createBindGroupLayout({
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'uniform',
+                },
+            }],
+        });
+        this._pipelineLayout = this._device.createPipelineLayout({
+            bindGroupLayouts: [this._bindGroupLayout],
+        });
+        this._uniformBuffer = this._device.createBuffer({
+            size: transformByteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this._bindGroup = this._device.createBindGroup({
+            layout: this._bindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this._uniformBuffer,
+                },
+            }],
+        });
+    }
+
+    protected onDisconnect(): void {
+        this.flush();
+        this._destroyBuffers();
+        this._pipelines.clear();
+        this._uniformBuffer?.destroy();
+
+        this._uniformBuffer = null;
+        this._bindGroup = null;
+        this._bindGroupLayout = null;
+        this._pipelineLayout = null;
+        this._shaderModule = null;
+        this._device = null;
+        this._renderManager = null;
+        this._drawCalls.length = 0;
+    }
+
+    private _createTransformData(runtime: WebGpuRendererRuntime, shape: DrawableShape): Float32Array {
         const matrix = this._combinedTransform
-            .copy(renderManager.view.getTransform())
+            .copy(runtime.view.getTransform())
             .combine(shape.getGlobalTransform());
 
         return new Float32Array([
@@ -320,7 +291,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
         }
     }
 
-    private _getPipeline(key: IWebGpuPrimitivePipelineKey): GPURenderPipeline {
+    private _getPipeline(key: WebGpuPrimitivePipelineKey): GPURenderPipeline {
         const pipelineKey = `${key.drawMode}:${key.blendMode}:${key.format}`;
         const existingPipeline = this._pipelines.get(pipelineKey);
 
@@ -352,7 +323,7 @@ export class WebGpuPrimitiveRenderer implements Renderer {
                 entryPoint: 'fragmentMain',
                 targets: [{
                     format: key.format,
-                    blend: this._getBlendState(key.blendMode),
+                    blend: getWebGpuBlendState(key.blendMode),
                     writeMask: GPUColorWrite.ALL,
                 }],
             },
@@ -368,76 +339,6 @@ export class WebGpuPrimitiveRenderer implements Renderer {
         this._pipelines.set(pipelineKey, pipeline);
 
         return pipeline;
-    }
-
-    private _getBlendState(blendMode: BlendModes): GPUBlendState {
-        switch (blendMode) {
-            case BlendModes.Additive:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one',
-                    },
-                };
-            case BlendModes.Subtract:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'zero',
-                        dstFactor: 'one-minus-src',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'zero',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            case BlendModes.Multiply:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'dst',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'dst-alpha',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            case BlendModes.Screen:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-            default:
-                return {
-                    color: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        operation: 'add',
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                };
-        }
     }
 
     private _getTopology(drawMode: RenderingPrimitives): GPUPrimitiveTopology {
@@ -464,9 +365,5 @@ export class WebGpuPrimitiveRenderer implements Renderer {
         this._indexBuffer = null;
         this._vertexBufferCapacity = 0;
         this._indexBufferCapacity = 0;
-    }
-
-    private _destroyPipelines(): void {
-        this._pipelines.clear();
     }
 }

@@ -4,7 +4,7 @@ import type { TextStyleOptions } from 'rendering/TextStyle';
 import { TextStyle } from 'rendering/TextStyle';
 import { Rectangle } from 'math/Rectangle';
 import type { SamplerOptions } from 'rendering/texture/Sampler';
-import type { RenderBackend } from 'rendering/RenderBackend';
+import type { SceneRenderRuntime } from './SceneRenderRuntime';
 import { determineFontHeight } from '../utils/rendering';
 
 const newLinePattern = /(?:\r\n|\r|\n)/;
@@ -169,7 +169,7 @@ export class Text extends Sprite {
         return result;
     }
 
-    public render(renderManager: RenderBackend): this {
+    public render(renderManager: SceneRenderRuntime): this {
         if (this.visible) {
             this.updateTexture();
             super.render(renderManager);

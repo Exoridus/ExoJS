@@ -1,30 +1,29 @@
-import type { Renderer } from 'rendering/Renderer';
+import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { Shader } from 'rendering/shader/Shader';
 import { createWebGlShaderRuntime } from 'rendering/shader/WebGL2ShaderRuntime';
 import type { VertexArrayObject, VertexArrayObjectRuntime } from 'rendering/VertexArrayObject';
 import { RenderBuffer, type RenderBufferRuntime } from 'rendering/RenderBuffer';
 import { createQuadIndices } from 'utils/rendering';
 import type { Texture } from 'rendering/texture/Texture';
-import type { BlendModes} from 'types/rendering';
+import type { BlendModes } from 'types/rendering';
 import { BufferTypes, BufferUsage } from 'types/rendering';
 import type { View } from 'rendering/View';
-import type { RenderBackend } from 'rendering/RenderBackend';
-import type { WebGl2RenderBackend } from 'rendering/WebGl2RenderBackend';
+import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import type { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { Drawable } from 'rendering/Drawable';
 
-interface IManagedBufferState {
+interface ManagedBufferState {
     readonly handle: WebGLBuffer;
     dataByteLength: number;
 }
 
 interface RendererConnection {
     readonly gl: WebGL2RenderingContext;
-    readonly buffers: Map<RenderBuffer, IManagedBufferState>;
+    readonly buffers: Map<RenderBuffer, ManagedBufferState>;
     readonly vaoHandle: WebGLVertexArrayObject;
 }
 
-export abstract class AbstractRenderer implements Renderer {
+export abstract class AbstractRenderer extends AbstractWebGl2Renderer<Drawable> {
     protected readonly attributeCount: number;
     protected readonly batchSize: number;
     protected readonly indexData: Uint16Array;
@@ -33,8 +32,6 @@ export abstract class AbstractRenderer implements Renderer {
     protected readonly uint32View: Uint32Array;
     protected readonly shader: Shader;
     protected batchIndex = 0;
-    protected renderManager: WebGl2RenderBackend | null = null;
-    protected gl: WebGL2RenderingContext | null = null;
     protected currentTexture: Texture | RenderTexture | null = null;
     protected currentBlendMode: BlendModes | null = null;
     protected currentView: View | null = null;
@@ -45,6 +42,8 @@ export abstract class AbstractRenderer implements Renderer {
     protected connection: RendererConnection | null = null;
 
     protected constructor(batchSize: number, attributeCount: number, vertexSource: string, fragmentSource: string) {
+        super();
+
         this.batchSize = batchSize;
         this.attributeCount = attributeCount;
         this.vertexData = new ArrayBuffer(batchSize * attributeCount * 4);
@@ -54,100 +53,28 @@ export abstract class AbstractRenderer implements Renderer {
         this.shader = new Shader(vertexSource, fragmentSource);
     }
 
-    public connect(renderManager: WebGl2RenderBackend): this;
-    public connect(renderManager: RenderBackend): this {
-        if (!this.gl) {
-            const webGl2RenderManager = renderManager as WebGl2RenderBackend;
-            const gl = webGl2RenderManager.context;
-
-            this.gl = gl;
-            this.renderManager = webGl2RenderManager;
-
-            this.shader.connect(createWebGlShaderRuntime(gl));
-            this.connection = this.createConnection(gl);
-            this.indexBuffer = new RenderBuffer(BufferTypes.ElementArrayBuffer, this.indexData, BufferUsage.StaticDraw)
-                .connect(this.createBufferRuntime(this.connection));
-            this.vertexBuffer = new RenderBuffer(BufferTypes.ArrayBuffer, this.vertexData, BufferUsage.DynamicDraw)
-                .connect(this.createBufferRuntime(this.connection));
-            this.vao = this.createVao(gl, this.indexBuffer, this.vertexBuffer)
-                .connect(this.createVaoRuntime(this.connection));
-        }
-
-        return this;
-    }
-
-    public disconnect(): this {
-        if (this.gl) {
-            this.unbind();
-
-            this.shader.disconnect();
-
-            this.indexBuffer?.destroy();
-            this.indexBuffer = null;
-
-            this.vertexBuffer?.destroy();
-            this.vertexBuffer = null;
-
-            this.vao?.destroy();
-            this.vao = null;
-
-            this.connection = null;
-            this.renderManager = null;
-            this.gl = null;
-        }
-
-        return this;
-    }
-
-    public bind(): this {
-        if (!this.renderManager) {
-            throw new Error('Renderer has to be connected first!')
-        }
-
-        this.renderManager.setVao(this.vao);
-        this.renderManager.setShader(this.shader);
-
-        return this;
-    }
-
-    public unbind(): this {
-        if (this.renderManager) {
-            this.flush();
-
-            this.renderManager.setShader(null);
-            this.renderManager.setVao(null);
-
-            this.currentTexture = null;
-            this.currentBlendMode = null;
-            this.currentView = null;
-            this.currentViewId = -1;
-        }
-
-        return this;
-    }
-
-    public flush(): this {
-        const renderManager = this.renderManager;
+    public flush(): void {
+        const runtime = this.getRuntimeOrNull();
         const vertexBuffer = this.vertexBuffer;
         const vao = this.vao;
 
-        if (this.batchIndex > 0 && renderManager && vertexBuffer && vao) {
-            const view = renderManager.view;
-
-            if (this.currentView !== view || this.currentViewId !== view.updateId) {
-                this.currentView = view;
-                this.currentViewId = view.updateId;
-                this.updateView(view);
-            }
-
-            this.shader.sync();
-            renderManager.setVao(vao);
-            vertexBuffer.upload(this.float32View.subarray(0, this.batchIndex * this.attributeCount));
-            vao.draw(this.batchIndex * 6, 0);
-            this.batchIndex = 0;
+        if (this.batchIndex === 0 || runtime === null || vertexBuffer === null || vao === null) {
+            return;
         }
 
-        return this;
+        const view = runtime.view;
+
+        if (this.currentView !== view || this.currentViewId !== view.updateId) {
+            this.currentView = view;
+            this.currentViewId = view.updateId;
+            this.updateView(view);
+        }
+
+        this.shader.sync();
+        runtime.bindVertexArrayObject(vao);
+        vertexBuffer.upload(this.float32View.subarray(0, this.batchIndex * this.attributeCount));
+        vao.draw(this.batchIndex * 6, 0);
+        this.batchIndex = 0;
     }
 
     public destroy(): void {
@@ -156,14 +83,46 @@ export abstract class AbstractRenderer implements Renderer {
         this.currentTexture = null;
         this.currentBlendMode = null;
         this.currentView = null;
-        this.renderManager = null;
-        this.gl = null;
         this.connection = null;
     }
 
-    public abstract render(drawable: Drawable): this;
+    protected onConnect(runtime: WebGl2RendererRuntime): void {
+        const gl = runtime.context;
+
+        this.shader.connect(createWebGlShaderRuntime(gl));
+        this.connection = this.createConnection(gl);
+        this.indexBuffer = new RenderBuffer(BufferTypes.ElementArrayBuffer, this.indexData, BufferUsage.StaticDraw)
+            .connect(this.createBufferRuntime(this.connection));
+        this.vertexBuffer = new RenderBuffer(BufferTypes.ArrayBuffer, this.vertexData, BufferUsage.DynamicDraw)
+            .connect(this.createBufferRuntime(this.connection));
+        this.vao = this.createVao(gl, this.indexBuffer, this.vertexBuffer)
+            .connect(this.createVaoRuntime(this.connection));
+    }
+
+    protected onDisconnect(): void {
+        this.flush();
+        this.shader.disconnect();
+
+        this.indexBuffer?.destroy();
+        this.indexBuffer = null;
+
+        this.vertexBuffer?.destroy();
+        this.vertexBuffer = null;
+
+        this.vao?.destroy();
+        this.vao = null;
+
+        this.connection = null;
+        this.currentTexture = null;
+        this.currentBlendMode = null;
+        this.currentView = null;
+        this.currentViewId = -1;
+        this.batchIndex = 0;
+    }
+
+    public abstract render(drawable: Drawable): void;
     protected abstract createVao(gl: WebGL2RenderingContext, indexBuffer: RenderBuffer, vertexBuffer: RenderBuffer): VertexArrayObject;
-    protected abstract updateView(view: View): this;
+    protected abstract updateView(view: View): void;
 
     protected createConnection(gl: WebGL2RenderingContext): RendererConnection {
         const vaoHandle = gl.createVertexArray();
@@ -174,7 +133,7 @@ export abstract class AbstractRenderer implements Renderer {
 
         return {
             gl,
-            buffers: new Map<RenderBuffer, IManagedBufferState>(),
+            buffers: new Map<RenderBuffer, ManagedBufferState>(),
             vaoHandle,
         };
     }

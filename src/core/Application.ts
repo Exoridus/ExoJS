@@ -9,7 +9,7 @@ import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
 import type { Database } from 'types/Database';
-import type { RenderRuntime } from 'rendering/RenderRuntime';
+import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 import type { GamepadDefinition } from 'input/GamepadDefinitions';
 
 export enum ApplicationStatus {
@@ -101,7 +101,7 @@ export class Application {
     private _frameCount = 0;
     private _frameRequest = 0;
     private _backendType: 'webgl2' | 'webgpu';
-    private _renderManager: RenderRuntime;
+    private _renderManager: SceneRenderRuntime;
 
     public constructor(appSettings?: Partial<ApplicationOptions>) {
         this.options = {
@@ -146,7 +146,7 @@ export class Application {
         return this._frameCount;
     }
 
-    public get renderManager(): RenderRuntime {
+    public get renderManager(): SceneRenderRuntime {
         return this._renderManager;
     }
 
@@ -229,7 +229,7 @@ export class Application {
         return this.canUseWebGpu() ? 'webgpu' : 'webgl2';
     }
 
-    private createRenderManager(backendType: 'webgl2' | 'webgpu'): RenderRuntime {
+    private createRenderManager(backendType: 'webgl2' | 'webgpu'): SceneRenderRuntime {
         if (backendType === 'webgpu') {
             return new WebGpuRenderManager(this);
         }

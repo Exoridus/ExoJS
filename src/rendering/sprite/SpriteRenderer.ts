@@ -38,12 +38,12 @@ export class SpriteRenderer extends AbstractRenderer {
 
             if (blendModeChanged) {
                 this.currentBlendMode = blendMode;
-                this.renderManager!.setBlendMode(blendMode);
+                this.getRuntime().setBlendMode(blendMode);
             }
         }
 
         if (texture) {
-            this.renderManager!.setTexture(texture);
+            this.getRuntime().bindTexture(texture);
         }
 
         // X / Y

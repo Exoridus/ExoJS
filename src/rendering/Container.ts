@@ -1,12 +1,12 @@
-import { Drawable } from './Drawable';
+import { SceneNode } from 'core/SceneNode';
 import { removeArrayItems } from 'utils/core';
-import type { RenderBackend } from './RenderBackend';
+import type { SceneRenderRuntime } from './SceneRenderRuntime';
 
-export class Container extends Drawable {
+export class Container extends SceneNode {
 
-    private readonly _children: Array<Drawable> = [];
+    private readonly _children: Array<SceneNode> = [];
 
-    public get children(): Array<Drawable> {
+    public get children(): Array<SceneNode> {
         return this._children;
     }
 
@@ -42,11 +42,11 @@ export class Container extends Drawable {
         return (this.y + this.height - this.origin.y);
     }
 
-    public addChild(child: Drawable): this {
+    public addChild(child: SceneNode): this {
         return this.addChildAt(child, this._children.length);
     }
 
-    public addChildAt(child: Drawable, index: number): this {
+    public addChildAt(child: SceneNode, index: number): this {
         if (index < 0 || index > this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
@@ -55,18 +55,18 @@ export class Container extends Drawable {
             return this;
         }
 
-        if (child.parent) {
-            child.parent.removeChild(child);
+        if (child.parentNode) {
+            child.parentNode.removeChild(child);
         }
 
-        child.parent = this;
+        child.parentNode = this;
 
         this._children.splice(index, 0, child);
 
         return this;
     }
 
-    public swapChildren(firstChild: Drawable, secondChild: Drawable): this {
+    public swapChildren(firstChild: SceneNode, secondChild: SceneNode): this {
         if (firstChild !== secondChild) {
             const firstIndex = this.getChildIndex(firstChild);
             const secondIndex = this.getChildIndex(secondChild);
@@ -78,7 +78,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    public getChildIndex(child: Drawable): number {
+    public getChildIndex(child: SceneNode): number {
         const index = this._children.indexOf(child);
 
         if (index === -1) {
@@ -88,7 +88,7 @@ export class Container extends Drawable {
         return index;
     }
 
-    public setChildIndex(child: Drawable, index: number): this {
+    public setChildIndex(child: SceneNode, index: number): this {
         if (index < 0 || index >= this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
@@ -100,7 +100,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    public getChildAt(index: number): Drawable {
+    public getChildAt(index: number): SceneNode {
         if (index < 0 || index >= this._children.length) {
             throw new Error(`getChildAt: Index (${index}) does not exist.`);
         }
@@ -108,7 +108,7 @@ export class Container extends Drawable {
         return this._children[index];
     }
 
-    public removeChild(child: Drawable): this {
+    public removeChild(child: SceneNode): this {
         const index = this._children.indexOf(child);
 
         if (index !== -1) {
@@ -123,8 +123,8 @@ export class Container extends Drawable {
 
         removeArrayItems(this._children, index, 1);
 
-        if (child && child.parent === this) {
-            child.parent = null;
+        if (child && child.parentNode === this) {
+            child.parentNode = null;
         }
 
         return this;
@@ -140,8 +140,8 @@ export class Container extends Drawable {
         for (let i = begin; i < end; i++) {
             const child = this._children[i];
 
-            if (child && child.parent === this) {
-                child.parent = null;
+            if (child && child.parentNode === this) {
+                child.parentNode = null;
             }
         }
 
@@ -150,7 +150,7 @@ export class Container extends Drawable {
         return this;
     }
 
-    public render(renderManager: RenderBackend): this {
+    public render(renderManager: SceneRenderRuntime): this {
         if (this.visible && this.inView(renderManager.view)) {
             for (const child of this._children) {
                 child.render(renderManager);

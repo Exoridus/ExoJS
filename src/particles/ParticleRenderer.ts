@@ -28,6 +28,7 @@ export class ParticleRenderer extends AbstractRenderer {
         const blendModeChanged = (blendMode !== this.currentBlendMode);
         const float32View = this.float32View;
         const uint32View = this.uint32View;
+        const runtime = this.getRuntime();
 
         // System transform is a uniform, so mixing systems in one batch is invalid.
         this.flush();
@@ -39,11 +40,11 @@ export class ParticleRenderer extends AbstractRenderer {
 
             if (blendModeChanged) {
                 this.currentBlendMode = blendMode;
-                this.renderManager!.setBlendMode(blendMode);
+                runtime.setBlendMode(blendMode);
             }
         }
 
-        this.renderManager!.setTexture(texture);
+        runtime.bindTexture(texture);
 
         this.shader
             .getUniform('u_translation')

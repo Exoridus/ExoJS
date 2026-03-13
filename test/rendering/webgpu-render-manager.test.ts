@@ -1,6 +1,8 @@
 import type { Application } from 'core/Application';
 import { Color } from 'core/Color';
 import { ParticleSystem } from 'particles/ParticleSystem';
+import { Drawable } from 'rendering/Drawable';
+import { RenderBackendType } from 'rendering/RenderBackendType';
 import { Text } from 'rendering/Text';
 import { TextStyle } from 'rendering/TextStyle';
 import { Graphics } from 'rendering/primitives/Graphics';
@@ -10,7 +12,9 @@ import { Sprite } from 'rendering/sprite/Sprite';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
 import { Texture } from 'rendering/texture/Texture';
 import { Video } from 'rendering/Video';
+import type { Renderer } from 'rendering/Renderer';
 import { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
 import { BlendModes, RenderingPrimitives, ScaleModes } from 'types/rendering';
 
 interface IMockWebGpuEnvironment {
@@ -57,6 +61,22 @@ interface IMockTextCanvas {
 interface IMockVideoElement {
     readonly video: HTMLVideoElement;
     setDimensions(width: number, height: number): void;
+}
+
+class CustomDrawableA extends Drawable {
+    public render(renderManager: WebGpuRendererRuntime): this {
+        renderManager.draw(this);
+
+        return this;
+    }
+}
+
+class CustomDrawableB extends Drawable {
+    public render(renderManager: WebGpuRendererRuntime): this {
+        renderManager.draw(this);
+
+        return this;
+    }
 }
 
 const createMockWebGpuEnvironment = (): IMockWebGpuEnvironment => {
@@ -325,7 +345,105 @@ const createMockVideoElement = (): IMockVideoElement => {
     };
 };
 
+const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuRendererRuntime, Target> => ({
+    backendType: RenderBackendType.WebGpu,
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    render: jest.fn(),
+    flush: jest.fn(),
+});
+
 describe('WebGpuRenderManager', () => {
+    test('flushes the active renderer when switching renderer types', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 320,
+                    height: 240,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const firstRenderer = createCustomRenderer<CustomDrawableA>();
+            const secondRenderer = createCustomRenderer<CustomDrawableB>();
+
+            await manager.initialize();
+
+            manager.rendererRegistry.registerRenderer(CustomDrawableA, firstRenderer);
+            manager.rendererRegistry.registerRenderer(CustomDrawableB, secondRenderer);
+
+            manager.draw(new CustomDrawableA());
+            manager.draw(new CustomDrawableB());
+
+            expect(firstRenderer.render).toHaveBeenCalledTimes(1);
+            expect(firstRenderer.flush).toHaveBeenCalledTimes(1);
+            expect(secondRenderer.render).toHaveBeenCalledTimes(1);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('flushes the active renderer before execute(pass)', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 320,
+                    height: 240,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const renderer = createCustomRenderer<CustomDrawableA>();
+            const pass = {
+                execute: jest.fn(),
+            };
+
+            await manager.initialize();
+
+            manager.rendererRegistry.registerRenderer(CustomDrawableA, renderer);
+            manager.draw(new CustomDrawableA());
+            manager.execute(pass);
+
+            expect(renderer.flush).toHaveBeenCalledTimes(1);
+            expect(pass.execute).toHaveBeenCalledWith(manager);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('flushes the active renderer during display()', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 320,
+                    height: 240,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const renderer = createCustomRenderer<CustomDrawableA>();
+
+            await manager.initialize();
+
+            manager.rendererRegistry.registerRenderer(CustomDrawableA, renderer);
+            manager.draw(new CustomDrawableA());
+            manager.display();
+
+            expect(renderer.flush).toHaveBeenCalledTimes(1);
+        } finally {
+            environment.restore();
+        }
+    });
+
     test('initializes the WebGPU canvas/backbuffer from the application size', async () => {
         const environment = createMockWebGpuEnvironment();
 

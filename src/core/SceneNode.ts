@@ -4,10 +4,12 @@ import { Rectangle } from 'math/Rectangle';
 import { Bounds } from './Bounds';
 import { ObservableVector } from 'math/ObservableVector';
 import type { Container } from 'rendering/Container';
+import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 import type { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
 import type { Collidable, CollisionResponse} from 'types/Collision';
 import { CollisionType } from 'types/Collision';
+import type { View } from 'rendering/View';
 import {
     getCollisionSat,
     intersectionLineRect,
@@ -26,10 +28,11 @@ export class SceneNode extends Transformable implements Collidable {
     public readonly collisionType: CollisionType = CollisionType.sceneNode;
 
     protected _bounds = new Bounds();
+    private _visible = true;
     private _globalTransform = new Matrix();
     private _localBounds = new Rectangle();
     private _anchor = new ObservableVector(this._updateOrigin.bind(this), 0, 0);
-    private _parent: Container | null = null;
+    private _parentNode: Container | null = null;
 
     public get anchor(): ObservableVector {
         return this._anchor;
@@ -40,11 +43,27 @@ export class SceneNode extends Transformable implements Collidable {
     }
 
     public get parent(): Container | null {
-        return this._parent;
+        return this._parentNode;
     }
 
     public set parent(parent: Container | null) {
-        this._parent = parent;
+        this._parentNode = parent;
+    }
+
+    public get parentNode(): Container | null {
+        return this._parentNode;
+    }
+
+    public set parentNode(parentNode: Container | null) {
+        this._parentNode = parentNode;
+    }
+
+    public get visible(): boolean {
+        return this._visible;
+    }
+
+    public set visible(visible: boolean) {
+        this._visible = visible;
     }
 
     public get globalTransform(): Matrix {
@@ -88,8 +107,8 @@ export class SceneNode extends Transformable implements Collidable {
     }
 
     public updateParentTransform(): this {
-        if (this._parent) {
-            this._parent?.updateParentTransform();
+        if (this._parentNode) {
+            this._parentNode.updateParentTransform();
         }
 
         this.updateTransform();
@@ -100,8 +119,8 @@ export class SceneNode extends Transformable implements Collidable {
     public getGlobalTransform(): Matrix {
         this._globalTransform.copy(this.getTransform());
 
-        if (this._parent) {
-            this._globalTransform.combine(this._parent.getGlobalTransform());
+        if (this._parentNode) {
+            this._globalTransform.combine(this._parentNode.getGlobalTransform());
         }
 
         return this._globalTransform;
@@ -148,6 +167,14 @@ export class SceneNode extends Transformable implements Collidable {
 
     public contains(x: number, y: number): boolean {
         return this.getBounds().contains(x, y);
+    }
+
+    public inView(view: View): boolean {
+        return view.getBounds().intersectsWith(this.getBounds());
+    }
+
+    public render(_runtime: SceneRenderRuntime): this {
+        return this;
     }
 
     public destroy(): void {

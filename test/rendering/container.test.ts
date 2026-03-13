@@ -1,5 +1,7 @@
 import { Container } from 'rendering/Container';
 import { Drawable } from 'rendering/Drawable';
+import { SceneNode } from 'core/SceneNode';
+import { Graphics } from 'rendering/primitives/Graphics';
 import type { RenderManager } from 'rendering/RenderManager';
 
 class DummyDrawable extends Drawable {
@@ -9,6 +11,20 @@ class DummyDrawable extends Drawable {
 }
 
 describe('Container', () => {
+    test('is a non-renderable scene node, not a drawable', () => {
+        const container = new Container();
+
+        expect(container).toBeInstanceOf(SceneNode);
+        expect(container).not.toBeInstanceOf(Drawable);
+    });
+
+    test('Graphics remains a Container-based grouping node', () => {
+        const graphics = new Graphics();
+
+        expect(graphics).toBeInstanceOf(Container);
+        expect(graphics).not.toBeInstanceOf(Drawable);
+    });
+
     test('swapChildren swaps positions correctly', () => {
         const container = new Container();
         const first = new DummyDrawable();

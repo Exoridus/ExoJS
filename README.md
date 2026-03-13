@@ -68,9 +68,9 @@ class DemoScene extends Scene {
         .drawRect(-64, -64, 128, 128)
         .endFill();
 
-    public override draw(renderBackend: import('exojs').RenderBackend): void {
+    public override draw(runtime: import('exojs').SceneRenderRuntime): void {
         this.graphics.rotation += 0.01;
-        this.graphics.render(renderBackend);
+        this.graphics.render(runtime);
     }
 }
 

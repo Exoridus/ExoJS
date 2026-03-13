@@ -5,18 +5,23 @@ import { RenderTarget } from './RenderTarget';
 import { SpriteRenderer } from './sprite/SpriteRenderer';
 import { ParticleRenderer } from 'particles/ParticleRenderer';
 import { PrimitiveRenderer } from 'rendering/primitives/PrimitiveRenderer';
+import { Sprite } from './sprite/Sprite';
+import { DrawableShape } from './primitives/DrawableShape';
+import { ParticleSystem } from 'particles/ParticleSystem';
 import { Color } from 'core/Color';
 import { canvasSourceToDataUrl } from 'utils/core';
 import { Texture } from './texture/Texture';
 import { RenderTexture } from './texture/RenderTexture';
-import type { Renderer} from 'rendering/Renderer';
-import { RendererType } from 'rendering/Renderer';
-import type { WebGl2RenderBackend } from './WebGl2RenderBackend';
+import { RenderBackendType } from './RenderBackendType';
+import { RendererRegistry } from './RendererRegistry';
+import type { RenderPass } from './RenderPass';
+import type { Drawable } from './Drawable';
+import type { Renderer } from 'rendering/Renderer';
+import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import type { Shader } from './shader/Shader';
 import type { VertexArrayObject } from './VertexArrayObject';
 import type { View } from './View';
 import type { Application } from 'core/Application';
-import type { RenderRuntime } from './RenderRuntime';
 
 const throwOnGlError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
@@ -57,13 +62,15 @@ interface IDestroyListenable {
     removeDestroyListener(listener: () => void): unknown;
 }
 
-export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
+export class RenderManager implements WebGl2RendererRuntime {
+
+    public readonly backendType = RenderBackendType.WebGl2;
+    public readonly rendererRegistry = new RendererRegistry<WebGl2RendererRuntime>();
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _rootRenderTarget: RenderTarget;
     private readonly _onContextLostHandler: () => void;
     private readonly _onContextRestoredHandler: () => void;
-    private readonly _renderers: Map<RendererType, Renderer> = new Map<RendererType, Renderer>();
     private readonly _textureStates: Map<Texture | RenderTexture, IManagedTextureState> = new Map<Texture | RenderTexture, IManagedTextureState>();
     private readonly _renderTargetStates: Map<RenderTarget, IManagedRenderTargetState> = new Map<RenderTarget, IManagedRenderTargetState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
@@ -123,9 +130,10 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         this._setupContext();
         this._addEvents();
 
-        this.addRenderer(RendererType.Sprite, new SpriteRenderer(spriteRendererBatchSize));
-        this.addRenderer(RendererType.Particle, new ParticleRenderer(particleRendererBatchSize));
-        this.addRenderer(RendererType.Primitive, new PrimitiveRenderer(primitiveRendererBatchSize));
+        this.rendererRegistry.registerRenderer(Sprite, new SpriteRenderer(spriteRendererBatchSize));
+        this.rendererRegistry.registerRenderer(ParticleSystem, new ParticleRenderer(particleRendererBatchSize));
+        this.rendererRegistry.registerRenderer(DrawableShape, new PrimitiveRenderer(primitiveRendererBatchSize));
+        this.rendererRegistry.connect(this);
 
         this._bindRenderTarget(this._renderTarget);
         this.setBlendMode(BlendModes.Normal);
@@ -155,14 +163,6 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
 
     public set vao(vao: VertexArrayObject | null) {
         this.setVao(vao);
-    }
-
-    public get renderer(): Renderer | null {
-        return this._renderer;
-    }
-
-    public set renderer(renderer: Renderer | null) {
-        this.setRenderer(renderer);
     }
 
     public get shader(): Shader | null {
@@ -209,6 +209,22 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         return this;
     }
 
+    public draw(drawable: Drawable): this {
+        const renderer = this.rendererRegistry.resolve(drawable);
+
+        this._setActiveRenderer(renderer);
+        renderer.render(drawable);
+
+        return this;
+    }
+
+    public execute(pass: RenderPass): this {
+        this._flushActiveRenderer();
+        pass.execute(this);
+
+        return this;
+    }
+
     public setRenderTarget(target: RenderTarget | null): this {
         const renderTarget = target || this._rootRenderTarget;
 
@@ -228,6 +244,10 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         return this;
     }
 
+    public bindVertexArrayObject(vao: VertexArrayObject | null): this {
+        return this.setVao(vao);
+    }
+
     public setVao(vao: VertexArrayObject | null): this {
         if (this._vao !== vao) {
             if (vao) {
@@ -239,24 +259,6 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
             }
 
             this._vao = vao;
-        }
-
-        return this;
-    }
-
-    public setRenderer(renderer: Renderer | null): this {
-        if (this._renderer !== renderer) {
-            if (this._renderer) {
-                this._renderer.unbind();
-                this._renderer = null;
-            }
-
-            if (renderer) {
-                renderer.connect(this);
-                renderer.bind();
-            }
-
-            this._renderer = renderer;
         }
 
         return this;
@@ -279,6 +281,10 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         return this;
     }
 
+    public bindShader(shader: Shader | null): this {
+        return this.setShader(shader);
+    }
+
     public setTexture(texture: Texture | RenderTexture | null, unit?: number): this {
         if (unit !== undefined) {
             this.setTextureUnit(unit);
@@ -299,6 +305,10 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         this._texture = texture;
 
         return this;
+    }
+
+    public bindTexture(texture: Texture | RenderTexture | null, unit?: number): this {
+        return this.setTexture(texture, unit);
     }
 
     public setBlendMode(blendMode: BlendModes | null): this {
@@ -366,26 +376,6 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         return this;
     }
 
-    public addRenderer(name: RendererType, renderer: Renderer): this {
-        if (this._renderers.has(name)) {
-            throw new Error(`Renderer "${name}" was already added.`);
-        }
-
-        this._renderers.set(name, renderer);
-
-        return this;
-    }
-
-    public getRenderer(name: RendererType): Renderer {
-        const renderer = this._renderers.get(name);
-
-        if (!renderer) {
-            throw new Error(`Could not find renderer "${name}".`);
-        }
-
-        return renderer;
-    }
-
     public clear(color?: Color): this {
         const gl = this._context;
 
@@ -410,10 +400,7 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
     }
 
     public display(): this {
-        if (this._renderer && !this._contextLost) {
-            this._bindRenderTarget(this._renderTarget);
-            this._renderer.flush();
-        }
+        this._flushActiveRenderer();
 
         return this;
     }
@@ -422,16 +409,12 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
         this._removeEvents();
 
         this.setRenderTarget(null);
-        this.setRenderer(null);
+        this._setActiveRenderer(null);
         this.setVao(null);
         this.setShader(null);
         this.setTexture(null);
 
-        for (const renderer of this._renderers.values()) {
-            renderer.destroy();
-        }
-
-        this._renderers.clear();
+        this.rendererRegistry.destroy();
         this._clearColor.destroy();
         this._destroyManagedResources();
         this._rootRenderTarget.destroy();
@@ -643,6 +626,20 @@ export class RenderManager implements WebGl2RenderBackend, RenderRuntime {
 
             this._boundFramebuffer = state.framebuffer;
             state.version = target.version;
+        }
+    }
+
+    private _setActiveRenderer(renderer: Renderer | null): void {
+        if (this._renderer !== renderer) {
+            this._flushActiveRenderer();
+            this._renderer = renderer;
+        }
+    }
+
+    private _flushActiveRenderer(): void {
+        if (this._renderer && !this._contextLost) {
+            this._bindRenderTarget(this._renderTarget);
+            this._renderer.flush();
         }
     }
 

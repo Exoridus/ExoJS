@@ -1,15 +1,22 @@
 import type { Color } from 'core/Color';
-import type { RenderBackend } from './RenderBackend';
+import type { RenderBackendType } from './RenderBackendType';
 import type { RenderTarget } from './RenderTarget';
 import type { View } from './View';
+import type { Drawable } from './Drawable';
+import type { RenderPass } from './RenderPass';
 
-export interface RenderRuntime extends RenderBackend {
+export interface SceneRenderRuntime {
+    readonly backendType: RenderBackendType;
+    readonly view: View;
     readonly renderTarget: RenderTarget;
+
     initialize(): Promise<this>;
     clear(color?: Color): this;
     resize(width: number, height: number): this;
     setView(view: View | null): this;
     setRenderTarget(target: RenderTarget | null): this;
+    draw(drawable: Drawable): this;
+    execute(pass: RenderPass): this;
     display(): this;
     destroy(): void;
 }

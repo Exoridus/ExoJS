@@ -3,7 +3,7 @@ import { Sprite } from './sprite/Sprite';
 import { Texture } from './texture/Texture';
 import { Signal } from 'core/Signal';
 import type { PlaybackOptions } from 'types/types';
-import type { RenderBackend } from './RenderBackend';
+import type { SceneRenderRuntime } from './SceneRenderRuntime';
 import type { SamplerOptions } from './texture/Sampler';
 import type { Media } from 'types/Media';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
@@ -258,7 +258,7 @@ export class Video extends Sprite implements Media {
     }
 
 
-    public render(renderManager: RenderBackend): this {
+    public render(renderManager: SceneRenderRuntime): this {
         this.updateTexture();
         super.render(renderManager);
 
