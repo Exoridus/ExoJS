@@ -61,6 +61,7 @@ interface IMockTextCanvas {
 interface IMockVideoElement {
     readonly video: HTMLVideoElement;
     setDimensions(width: number, height: number): void;
+    setCurrentTime(time: number): void;
 }
 
 class CustomDrawableA extends Drawable {
@@ -302,6 +303,7 @@ const createMockVideoElement = (): IMockVideoElement => {
     const video = document.createElement('video');
     let videoWidth = 0;
     let videoHeight = 0;
+    let currentTime = 0;
 
     Object.defineProperty(video, 'videoWidth', {
         configurable: true,
@@ -335,12 +337,22 @@ const createMockVideoElement = (): IMockVideoElement => {
         writable: true,
         value: false,
     });
+    Object.defineProperty(video, 'currentTime', {
+        configurable: true,
+        get: () => currentTime,
+        set: (value: number) => {
+            currentTime = value;
+        },
+    });
 
     return {
         video,
         setDimensions: (width: number, height: number): void => {
             videoWidth = width;
             videoHeight = height;
+        },
+        setCurrentTime: (time: number): void => {
+            currentTime = time;
         },
     };
 };
@@ -1316,10 +1328,12 @@ describe('WebGpuRenderManager', () => {
             await manager.initialize();
 
             mockVideo.setDimensions(48, 48);
+            mockVideo.setCurrentTime(0);
             manager.clear();
             video.render(manager);
             manager.display();
 
+            mockVideo.setCurrentTime(0.033);
             video.render(manager);
             manager.display();
             video.destroy();
@@ -1366,7 +1380,7 @@ describe('WebGpuRenderManager', () => {
             expect(video.height).toBe(128);
             expect(video.textureFrame.width).toBe(64);
             expect(video.textureFrame.height).toBe(32);
-            expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
+            expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(1);
         } finally {
             environment.restore();
         }

@@ -15,6 +15,11 @@ interface IVideoAudioSetup {
     readonly sourceNode: MediaElementAudioSourceNode;
 }
 
+type FrameCallbackVideoElement = HTMLVideoElement & Partial<{
+    requestVideoFrameCallback: (callback: (now: number, metadata: unknown) => void) => number;
+    cancelVideoFrameCallback: (handle: number) => void;
+}>;
+
 export class Video extends Sprite implements Media {
 
     public readonly onStart = new Signal();
@@ -27,6 +32,12 @@ export class Video extends Sprite implements Media {
     private _loop = false;
     private _muted = false;
     private _audioSetup: IVideoAudioSetup | null = null;
+    private _textureDirty = true;
+    private _lastVideoTime = Number.NaN;
+    private _videoFrameCallbackHandle: number | null = null;
+    private readonly _onMetadataHandler: () => void;
+    private readonly _onResizeHandler: () => void;
+    private readonly _onVideoFrameHandler: (now: number, metadata: unknown) => void;
 
     public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>) {
         super(new Texture(videoElement, samplerOptions));
@@ -39,6 +50,14 @@ export class Video extends Sprite implements Media {
         this._playbackRate = playbackRate;
         this._loop = loop;
         this._muted = muted;
+        this._onMetadataHandler = this._onVideoMetadataUpdated.bind(this);
+        this._onResizeHandler = this._onVideoMetadataUpdated.bind(this);
+        this._onVideoFrameHandler = this._onVideoFrame.bind(this);
+
+        if (this._videoElement.videoWidth === 0 || this._videoElement.videoHeight === 0) {
+            this._videoElement.addEventListener('loadedmetadata', this._onMetadataHandler);
+            this._videoElement.addEventListener('resize', this._onResizeHandler);
+        }
 
         if (playbackOptions) {
             this.applyOptions(playbackOptions);
@@ -49,6 +68,10 @@ export class Video extends Sprite implements Media {
         } else {
             onAudioContextReady.once(this.setupWithAudioContext, this);
         }
+
+        // Initialize frame bounds early when metadata is already available.
+        this.updateTexture();
+        this._requestVideoFrameCallback();
     }
 
     public get videoElement(): HTMLVideoElement {
@@ -259,8 +282,11 @@ export class Video extends Sprite implements Media {
 
 
     public render(renderManager: SceneRenderRuntime): this {
-        this.updateTexture();
-        super.render(renderManager);
+        if (this.visible) {
+            this._markTextureDirtyIfPlaybackAdvanced();
+            this.updateTexture();
+            super.render(renderManager);
+        }
 
         return this;
     }
@@ -268,7 +294,15 @@ export class Video extends Sprite implements Media {
     public updateTexture(): this {
         const texture = this.texture;
 
-        if (!texture) {
+        if (!texture || !this._videoElement) {
+            return this;
+        }
+
+        if (this._videoElement.videoWidth === 0 || this._videoElement.videoHeight === 0) {
+            return this;
+        }
+
+        if (!this._textureDirty) {
             return this;
         }
 
@@ -283,12 +317,17 @@ export class Video extends Sprite implements Media {
             );
         }
 
+        this._textureDirty = false;
+
         return this;
     }
 
     public destroy(): void {
         super.destroy();
         this.stop();
+        this._videoElement.removeEventListener('loadedmetadata', this._onMetadataHandler);
+        this._videoElement.removeEventListener('resize', this._onResizeHandler);
+        this._cancelVideoFrameCallback();
 
         onAudioContextReady.clearByContext(this);
 
@@ -300,6 +339,47 @@ export class Video extends Sprite implements Media {
 
         this.onStart.destroy();
         this.onStop.destroy();
+    }
+
+    private _onVideoMetadataUpdated(): void {
+        this._textureDirty = true;
+        this.updateTexture();
+    }
+
+    private _onVideoFrame(_now: number, _metadata: unknown): void {
+        this._videoFrameCallbackHandle = null;
+        this._textureDirty = true;
+        this._requestVideoFrameCallback();
+    }
+
+    private _markTextureDirtyIfPlaybackAdvanced(): void {
+        const currentTime = this._videoElement.currentTime;
+
+        if (this._lastVideoTime !== currentTime) {
+            this._lastVideoTime = currentTime;
+            this._textureDirty = true;
+        }
+    }
+
+    private _requestVideoFrameCallback(): void {
+        const frameCallbackVideo = this._videoElement as FrameCallbackVideoElement;
+
+        if (!frameCallbackVideo.requestVideoFrameCallback || this._videoFrameCallbackHandle !== null) {
+            return;
+        }
+
+        this._videoFrameCallbackHandle = frameCallbackVideo.requestVideoFrameCallback(this._onVideoFrameHandler);
+    }
+
+    private _cancelVideoFrameCallback(): void {
+        const frameCallbackVideo = this._videoElement as FrameCallbackVideoElement;
+
+        if (!frameCallbackVideo.cancelVideoFrameCallback || this._videoFrameCallbackHandle === null) {
+            return;
+        }
+
+        frameCallbackVideo.cancelVideoFrameCallback(this._videoFrameCallbackHandle);
+        this._videoFrameCallbackHandle = null;
     }
 
     private setupWithAudioContext(audioContext: AudioContext): void {
