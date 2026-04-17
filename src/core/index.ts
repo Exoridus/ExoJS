@@ -1,3 +1,5 @@
+export * from './types';
+export * from './utils';
 export * from './Application';
 export * from './Bounds';
 export * from './Clock';

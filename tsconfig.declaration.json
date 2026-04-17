@@ -1,10 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "module": "amd",
+    "moduleResolution": "node",
     "declaration": true,
     "emitDeclarationOnly": true,
     "incremental": false,
-    "outFile": "dist/exo.d.ts",
-    "types": []
+    "outFile": "dist/exo.d.ts"
   }
 }

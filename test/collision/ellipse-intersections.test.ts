@@ -10,7 +10,7 @@ import {
     intersectionEllipsePoly,
     intersectionLineEllipse,
     intersectionRectEllipse,
-} from 'utils/collision-detection';
+} from 'math/collision-detection';
 
 describe('Ellipse intersections', () => {
     test('line/ellipse intersection works without throwing', () => {

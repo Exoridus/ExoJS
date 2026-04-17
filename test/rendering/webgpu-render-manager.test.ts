@@ -3,21 +3,21 @@ import { Color } from 'core/Color';
 import { ParticleSystem } from 'particles/ParticleSystem';
 import { Drawable } from 'rendering/Drawable';
 import { RenderBackendType } from 'rendering/RenderBackendType';
-import { Text } from 'rendering/Text';
-import { TextStyle } from 'rendering/TextStyle';
+import { Text } from 'rendering/text/Text';
+import { TextStyle } from 'rendering/text/TextStyle';
 import { Graphics } from 'rendering/primitives/Graphics';
 import { Geometry } from 'rendering/primitives/Geometry';
 import { DrawableShape } from 'rendering/primitives/DrawableShape';
 import { Sprite } from 'rendering/sprite/Sprite';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
 import { Texture } from 'rendering/texture/Texture';
-import { Video } from 'rendering/Video';
+import { Video } from 'rendering/video/Video';
 import type { Renderer } from 'rendering/Renderer';
-import { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
-import { BlendModes, RenderingPrimitives, ScaleModes } from 'types/rendering';
+import { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
+import { BlendModes, RenderingPrimitives, ScaleModes } from 'rendering/types';
 
-interface IMockWebGpuEnvironment {
+interface MockWebGpuEnvironment {
     readonly canvas: HTMLCanvasElement;
     readonly context: GPUCanvasContext;
     readonly encoder: {
@@ -48,7 +48,7 @@ interface IMockWebGpuEnvironment {
     restore(): void;
 }
 
-interface IMockTextCanvas {
+interface MockTextCanvas {
     readonly canvas: HTMLCanvasElement;
     readonly context: CanvasRenderingContext2D & {
         clearRect: jest.Mock;
@@ -58,7 +58,7 @@ interface IMockTextCanvas {
     };
 }
 
-interface IMockVideoElement {
+interface MockVideoElement {
     readonly video: HTMLVideoElement;
     setDimensions(width: number, height: number): void;
     setCurrentTime(time: number): void;
@@ -80,7 +80,7 @@ class CustomDrawableB extends Drawable {
     }
 }
 
-const createMockWebGpuEnvironment = (): IMockWebGpuEnvironment => {
+const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     const previousGpu = Object.getOwnPropertyDescriptor(navigator, 'gpu');
     const previousBufferUsage = Object.getOwnPropertyDescriptor(globalThis, 'GPUBufferUsage');
     const previousShaderStage = Object.getOwnPropertyDescriptor(globalThis, 'GPUShaderStage');
@@ -260,7 +260,7 @@ const createMockWebGpuEnvironment = (): IMockWebGpuEnvironment => {
     };
 };
 
-const createMockTextCanvas = (width = 0, height = 0): IMockTextCanvas => {
+const createMockTextCanvas = (width = 0, height = 0): MockTextCanvas => {
     const canvas = document.createElement('canvas');
     const context = {
         font: '',
@@ -299,7 +299,7 @@ const createMockTextCanvas = (width = 0, height = 0): IMockTextCanvas => {
     };
 };
 
-const createMockVideoElement = (): IMockVideoElement => {
+const createMockVideoElement = (): MockVideoElement => {
     const video = document.createElement('video');
     let videoWidth = 0;
     let videoHeight = 0;
@@ -429,7 +429,7 @@ describe('WebGpuRenderManager', () => {
         }
     });
 
-    test('flushes the active renderer during display()', async () => {
+    test('flushes the active renderer during flush()', async () => {
         const environment = createMockWebGpuEnvironment();
 
         try {
@@ -448,7 +448,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.rendererRegistry.registerRenderer(CustomDrawableA, renderer);
             manager.draw(new CustomDrawableA());
-            manager.display();
+            manager.flush();
 
             expect(renderer.flush).toHaveBeenCalledTimes(1);
         } finally {
@@ -530,7 +530,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             graphics.render(manager);
-            manager.display();
+            manager.flush();
             manager.destroy();
 
             expect(environment.encoder.beginRenderPass).toHaveBeenCalledTimes(1);
@@ -568,7 +568,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             graphics.render(manager);
-            manager.display();
+            manager.flush();
 
             const additiveTarget = environment.pipelineDescriptors.find((descriptor) =>
                 Array.from(descriptor.fragment?.targets ?? []).some((target) =>
@@ -608,7 +608,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             graphics.render(manager);
-            manager.display();
+            manager.flush();
 
             const subtractTarget = environment.pipelineDescriptors.find((descriptor) =>
                 Array.from(descriptor.fragment?.targets ?? []).some((target) =>
@@ -646,7 +646,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             shape.render(manager);
-            manager.display();
+            manager.flush();
 
             const pointPipeline = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'point-list');
@@ -680,7 +680,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             shape.render(manager);
-            manager.display();
+            manager.flush();
 
             const linePipeline = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'line-list');
@@ -714,7 +714,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             shape.render(manager);
-            manager.display();
+            manager.flush();
 
             const lineStripPipeline = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'line-strip');
@@ -754,7 +754,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             sprite.render(manager);
-            manager.display();
+            manager.flush();
             manager.destroy();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 1, 0, 0, 0);
@@ -794,7 +794,7 @@ describe('WebGpuRenderManager', () => {
             manager.clear();
             firstSprite.render(manager);
             secondSprite.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
             expect(environment.pass.drawIndexed).toHaveBeenCalledWith(12, 1, 0, 0, 0);
@@ -836,7 +836,7 @@ describe('WebGpuRenderManager', () => {
             manager.clear();
             firstSprite.render(manager);
             secondSprite.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(2);
             expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(6);
@@ -875,7 +875,7 @@ describe('WebGpuRenderManager', () => {
             manager.clear();
             firstSprite.render(manager);
             secondSprite.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
             expect(environment.pass.drawIndexed).toHaveBeenCalledWith(12, 1, 0, 0, 0);
@@ -918,7 +918,7 @@ describe('WebGpuRenderManager', () => {
             firstSprite.render(manager);
             secondSprite.render(manager);
             thirdSprite.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(3);
             expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(6);
@@ -957,7 +957,7 @@ describe('WebGpuRenderManager', () => {
             manager.clear();
             firstSprite.render(manager);
             secondSprite.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(2);
             expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(6);
@@ -993,7 +993,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             sprite.render(manager);
-            manager.display();
+            manager.flush();
 
             const additiveTarget = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'triangle-list'
@@ -1036,7 +1036,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             sprite.render(manager);
-            manager.display();
+            manager.flush();
 
             const multiplyTarget = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'triangle-list'
@@ -1080,7 +1080,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             sprite.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.createTexture.mock.calls.some(([descriptor]) =>
                 descriptor.mipLevelCount === 5
@@ -1123,7 +1123,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             sprite.render(manager);
-            manager.display();
+            manager.flush();
 
             const vertexWrite = environment.queue.writeBuffer.mock.calls[environment.queue.writeBuffer.mock.calls.length - 1];
             const data = new Uint32Array(vertexWrite[2] as ArrayBuffer);
@@ -1159,7 +1159,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             text.render(manager);
-            manager.display();
+            manager.flush();
             manager.destroy();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 1, 0, 0, 0);
@@ -1192,11 +1192,11 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             text.render(manager);
-            manager.display();
+            manager.flush();
 
             text.setText('Hello again');
             text.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
         } finally {
@@ -1227,11 +1227,11 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             text.render(manager);
-            manager.display();
+            manager.flush();
 
             text.setCanvas(replacementCanvas.canvas);
             text.render(manager);
-            manager.display();
+            manager.flush();
 
             const lastCopyCall = environment.queue.copyExternalImageToTexture.mock.calls[environment.queue.copyExternalImageToTexture.mock.calls.length - 1];
 
@@ -1264,7 +1264,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             video.render(manager);
-            manager.display();
+            manager.flush();
             video.destroy();
             manager.destroy();
 
@@ -1296,7 +1296,7 @@ describe('WebGpuRenderManager', () => {
             mockVideo.setDimensions(64, 32);
             manager.clear();
             video.render(manager);
-            manager.display();
+            manager.flush();
             video.destroy();
             manager.destroy();
 
@@ -1331,11 +1331,11 @@ describe('WebGpuRenderManager', () => {
             mockVideo.setCurrentTime(0);
             manager.clear();
             video.render(manager);
-            manager.display();
+            manager.flush();
 
             mockVideo.setCurrentTime(0.033);
             video.render(manager);
-            manager.display();
+            manager.flush();
             video.destroy();
             manager.destroy();
 
@@ -1371,10 +1371,10 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             video.render(manager);
-            manager.display();
+            manager.flush();
 
             video.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(video.width).toBe(256);
             expect(video.height).toBe(128);
@@ -1419,7 +1419,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             system.render(manager);
-            manager.display();
+            manager.flush();
             manager.destroy();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 1, 0, 0, 0);
@@ -1466,7 +1466,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             system.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
             expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 2, 0, 0, 0);
@@ -1505,7 +1505,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             system.render(manager);
-            manager.display();
+            manager.flush();
 
             const additiveTarget = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'triangle-list'
@@ -1552,7 +1552,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             system.render(manager);
-            manager.display();
+            manager.flush();
 
             const screenTarget = environment.pipelineDescriptors.find((descriptor) =>
                 descriptor.primitive?.topology === 'triangle-list'
@@ -1596,7 +1596,7 @@ describe('WebGpuRenderManager', () => {
 
             manager.clear();
             system.render(manager);
-            manager.display();
+            manager.flush();
 
             expect(environment.createBindGroupLayout).toHaveBeenCalledWith(expect.objectContaining({
                 entries: expect.arrayContaining([
@@ -1641,7 +1641,7 @@ describe('WebGpuRenderManager', () => {
             manager.setRenderTarget(null);
             manager.clear(Color.black);
             sprite.render(manager);
-            manager.display();
+            manager.flush();
             manager.destroy();
 
             const vertexWrite = environment.queue.writeBuffer.mock.calls[environment.queue.writeBuffer.mock.calls.length - 1];
@@ -1690,7 +1690,7 @@ describe('WebGpuRenderManager', () => {
             manager.setRenderTarget(null);
             manager.clear(Color.black);
             sprite.render(manager);
-            manager.display();
+            manager.flush();
 
             const targetFormats = environment.pipelineDescriptors
                 .flatMap((descriptor) => Array.from(descriptor.fragment?.targets ?? []))

@@ -1,4 +1,4 @@
-import { ChannelSize } from 'types/input';
+import { ChannelSize } from 'input/types';
 
 import { Gamepad } from 'input/Gamepad';
 import { GamepadChannel } from 'input/GamepadChannels';
@@ -23,7 +23,7 @@ const createNativeGamepad = (id: string, index = 0, buttonValues: number[] = [])
 
 describe('Gamepad', () => {
     test('connect dispatches current gamepad instance', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.Container), new GenericDualAnalogGamepadMapping());
         const onConnect = jest.fn();
 
         gamepad.onConnect.add(onConnect);
@@ -34,7 +34,7 @@ describe('Gamepad', () => {
     });
 
     test('connect refreshes underlying browser gamepad without reconnect event spam', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.Container), new GenericDualAnalogGamepadMapping());
         const onConnect = jest.fn();
         const first = createNativeGamepad('first');
         const second = createNativeGamepad('second');
@@ -48,7 +48,7 @@ describe('Gamepad', () => {
     });
 
     test('disconnect dispatches current gamepad instance', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.Container), new GenericDualAnalogGamepadMapping());
         const onDisconnect = jest.fn();
 
         gamepad.onDisconnect.add(onDisconnect);
@@ -60,7 +60,7 @@ describe('Gamepad', () => {
     });
 
     test('setInfo caches recognition metadata on gamepad instance', () => {
-        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.container), new GenericDualAnalogGamepadMapping());
+        const gamepad = new Gamepad(0, new Float32Array(ChannelSize.Container), new GenericDualAnalogGamepadMapping());
 
         gamepad.setInfo({
             name: 'DualSense Controller',
@@ -81,7 +81,7 @@ describe('Gamepad', () => {
         const nativeGamepad = createNativeGamepad('Vendor: 054c Product: 0ce6', 2);
         const gamepad = new Gamepad(
             nativeGamepad,
-            new Float32Array(ChannelSize.container),
+            new Float32Array(ChannelSize.Container),
             resolveGamepadDefinition(nativeGamepad)
         );
 
@@ -92,7 +92,7 @@ describe('Gamepad', () => {
     });
 
     test('disconnect clears mapped channels for the current gamepad', () => {
-        const channels = new Float32Array(ChannelSize.container);
+        const channels = new Float32Array(ChannelSize.Container);
         const gamepad = new Gamepad(0, channels, new GenericDualAnalogGamepadMapping());
         const buttonSouthChannel = Gamepad.resolveChannelOffset(0, GamepadChannel.ButtonSouth);
 

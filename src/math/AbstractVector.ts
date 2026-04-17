@@ -1,4 +1,4 @@
-import { getDistance } from 'utils/math';
+import { getDistance } from 'math/utils';
 import type { Matrix } from 'math/Matrix';
 
 export abstract class AbstractVector {

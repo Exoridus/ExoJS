@@ -1,4 +1,4 @@
-import { ChannelSize } from 'types/input';
+import { ChannelSize } from 'input/types';
 
 import { GamepadChannel } from 'input/GamepadChannels';
 import { GenericDualAnalogGamepadMapping } from 'input/GenericDualAnalogGamepadMapping';
@@ -29,6 +29,6 @@ describe('GenericDualAnalogGamepadMapping', () => {
         expect(axisChannels.has(GamepadChannel.AuxiliaryAxis2Positive)).toBe(true);
         expect(axisChannels.has(GamepadChannel.AuxiliaryAxis3Negative)).toBe(true);
         expect(axisChannels.has(GamepadChannel.AuxiliaryAxis3Positive)).toBe(true);
-        expect(ChannelSize.gamepad).toBe(64);
+        expect(ChannelSize.Gamepad).toBe(64);
     });
 });

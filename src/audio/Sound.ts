@@ -1,16 +1,16 @@
-import { clamp } from 'utils/math';
-import type { PlaybackOptions } from 'types/types';
-import { AbstractMedia } from 'types/AbstractMedia';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
+import { clamp } from 'math/utils';
+import type { PlaybackOptions } from 'core/types';
+import { AbstractMedia } from 'audio/AbstractMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'audio/audio-context';
 
-interface ISoundAudioSetup {
+interface SoundAudioSetup {
     readonly audioContext: AudioContext;
     readonly gainNode: GainNode;
 }
 
 export class Sound extends AbstractMedia {
     private readonly _audioBuffer: AudioBuffer;
-    private _audioSetup: ISoundAudioSetup | null = null;
+    private _audioSetup: SoundAudioSetup | null = null;
     private _paused = true;
     private _startTime = 0;
     private _currentTime = 0;
@@ -194,7 +194,7 @@ export class Sound extends AbstractMedia {
         this._sourceNode?.disconnect();
     }
 
-    private createSourceNode(setup: ISoundAudioSetup): void {
+    private createSourceNode(setup: SoundAudioSetup): void {
         const { audioContext, gainNode } = setup;
 
         this._sourceNode = audioContext.createBufferSource();

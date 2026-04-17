@@ -1,6 +1,6 @@
 import type { Drawable } from './Drawable';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
-import type { Renderer, DrawableConstructor } from './RendererContract';
+import type { Renderer, DrawableConstructor } from './Renderer';
 
 /**
  * Instance-based renderer registry.

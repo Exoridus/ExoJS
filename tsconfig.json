@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "target": "es2020",
     "lib": ["es2020", "dom", "dom.iterable"],
     "outDir": "dist",
     "baseUrl": "src",
     "sourceMap": true,
-    "allowJs": true,
     "strict": true,
-    "incremental": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
@@ -19,8 +17,7 @@
   ],
   "exclude": [
     "dist",
-    "typings",
     "node_modules",
-    "**/*.spec.ts",
+    "**/*.spec.ts"
   ]
 }

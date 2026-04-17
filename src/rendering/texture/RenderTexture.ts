@@ -1,6 +1,6 @@
-import { isPowerOfTwo } from 'utils/math';
+import { isPowerOfTwo } from 'math/utils';
 import { RenderTarget } from 'rendering/RenderTarget';
-import { ScaleModes, WrapModes } from 'types/rendering';
+import { ScaleModes, WrapModes } from 'rendering/types';
 import type { SamplerOptions } from 'rendering/texture/Sampler';
 
 export class RenderTexture extends RenderTarget {

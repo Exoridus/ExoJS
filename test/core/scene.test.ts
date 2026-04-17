@@ -41,7 +41,7 @@ const createRuntime = (): SceneRenderRuntime => {
         execute() {
             return this;
         },
-        display() {
+        flush() {
             return this;
         },
         destroy() {
@@ -52,13 +52,13 @@ const createRuntime = (): SceneRenderRuntime => {
 
 describe('Scene', () => {
     test('owns a root container by default', () => {
-        const scene = new Scene({});
+        const scene = Scene.create({});
 
         expect(scene.root).toBeInstanceOf(Container);
     });
 
     test('addChild and removeChild delegate to root', () => {
-        const scene = new Scene({});
+        const scene = Scene.create({});
         const child = new DummyDrawable();
 
         scene.addChild(child);
@@ -74,7 +74,7 @@ describe('Scene', () => {
 
     test('draw(runtime) remains the explicit rendering orchestration point', () => {
         const runtime = createRuntime();
-        const scene = new Scene({});
+        const scene = Scene.create({});
         const world = new Container();
         const ui = new Container();
         const worldSprite = new DummyDrawable();

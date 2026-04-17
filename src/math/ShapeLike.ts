@@ -1,5 +1,5 @@
-import type { Collidable } from 'types/Collision';
-import type { Cloneable, Destroyable, HasBoundingBox } from 'types/types';
+import type { Collidable } from 'math/Collision';
+import type { Cloneable, Destroyable, HasBoundingBox } from 'core/types';
 
 export interface ShapeLike extends Collidable, Cloneable, Destroyable, HasBoundingBox {
 

@@ -1,8 +1,8 @@
 import { Signal } from 'core/Signal';
 import { Timer } from 'core/Timer';
-import { milliseconds } from 'utils/core';
+import { milliseconds } from 'core/utils';
 
-import type { Keyboard } from 'types/input';
+import type { Keyboard } from 'input/types';
 import type { GamepadChannel } from './GamepadChannels';
 
 interface InputOptions {

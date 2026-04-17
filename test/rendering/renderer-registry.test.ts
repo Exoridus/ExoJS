@@ -47,7 +47,7 @@ const createRuntime = (): SceneRenderRuntime => {
         execute() {
             return this;
         },
-        display() {
+        flush() {
             return this;
         },
         destroy() {

@@ -3,7 +3,7 @@ import { Color } from 'core/Color';
 import { Time } from 'core/Time';
 import type { ParticleOptions } from './emitters/ParticleOptions';
 import type { ParticleProperties } from 'particles/ParticleProperties';
-import { trimRotation } from 'utils/math';
+import { trimRotation } from 'math/utils';
 
 export class Particle implements ParticleProperties {
     private _totalLifetime = Time.oneSecond.clone();

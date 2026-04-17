@@ -1,9 +1,9 @@
 import { Flags } from 'math/Flags';
 import { Vector } from 'math/Vector';
 import { Signal } from 'core/Signal';
-import { getDistance } from 'utils/math';
-import { stopEvent } from 'utils/core';
-import { ChannelOffset, ChannelSize } from 'types/input';
+import { getDistance } from 'math/utils';
+import { stopEvent } from 'core/utils';
+import { ChannelOffset, ChannelSize } from 'input/types';
 
 import { Gamepad } from './Gamepad';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
@@ -23,12 +23,12 @@ enum InputManagerFlag {
 
 export class InputManager {
     private readonly canvas: HTMLCanvasElement;
-    private readonly channels: Float32Array = new Float32Array(ChannelSize.container);
+    private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
     private readonly inputs = new Set<Input>();
     private readonly pointers: Record<number, Pointer> = {};
     private readonly gamepadsValue: Array<Gamepad> = [];
     private readonly gamepadsByIndex = new Map<number, Gamepad>();
-    private readonly gamepadSlotsActive = new Uint8Array(ChannelSize.category / ChannelSize.gamepad);
+    private readonly gamepadSlotsActive = new Uint8Array(ChannelSize.Category / ChannelSize.Gamepad);
     private readonly wheelOffset = new Vector();
     private readonly flags = new Flags<InputManagerFlag>();
     private readonly channelsPressed: Array<number> = [];
@@ -79,8 +79,8 @@ export class InputManager {
 
     public get pointersInCanvas(): boolean {
         return Object.values(this.pointers).some((pointer) => (
-            pointer.currentState !== PointerState.outsideCanvas
-            && pointer.currentState !== PointerState.cancelled
+            pointer.currentState !== PointerState.OutsideCanvas
+            && pointer.currentState !== PointerState.Cancelled
         ));
     }
 
@@ -182,7 +182,7 @@ export class InputManager {
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
-        const channel = ChannelOffset.keyboard + event.keyCode;
+        const channel = ChannelOffset.Keyboard + event.keyCode;
 
         this.channels[channel] = 1;
         this.channelsPressed.push(channel);
@@ -190,7 +190,7 @@ export class InputManager {
     }
 
     private handleKeyUp(event: KeyboardEvent): void {
-        const channel = ChannelOffset.keyboard + event.keyCode;
+        const channel = ChannelOffset.Keyboard + event.keyCode;
 
         this.channels[channel] = 0;
         this.channelsReleased.push(channel);
@@ -388,23 +388,23 @@ export class InputManager {
         for (const pointer of Object.values(this.pointers)) {
             const { stateFlags } = pointer;
 
-            if (stateFlags.value === PointerStateFlag.none) {
+            if (stateFlags.value === PointerStateFlag.None) {
                 continue;
             }
 
-            if (stateFlags.pop(PointerStateFlag.over)) {
+            if (stateFlags.pop(PointerStateFlag.Over)) {
                 this.onPointerEnter.dispatch(pointer);
             }
 
-            if (stateFlags.pop(PointerStateFlag.down)) {
+            if (stateFlags.pop(PointerStateFlag.Down)) {
                 this.onPointerDown.dispatch(pointer);
             }
 
-            if (stateFlags.pop(PointerStateFlag.move)) {
+            if (stateFlags.pop(PointerStateFlag.Move)) {
                 this.onPointerMove.dispatch(pointer);
             }
 
-            if (stateFlags.pop(PointerStateFlag.up)) {
+            if (stateFlags.pop(PointerStateFlag.Up)) {
                 const { x: startX, y: startY } = pointer.startPos;
 
                 this.onPointerUp.dispatch(pointer);
@@ -420,11 +420,11 @@ export class InputManager {
                 pointer.startPos.set(-1, -1);
             }
 
-            if (stateFlags.pop(PointerStateFlag.cancel)) {
+            if (stateFlags.pop(PointerStateFlag.Cancel)) {
                 this.onPointerCancel.dispatch(pointer);
             }
 
-            if (stateFlags.pop(PointerStateFlag.leave)) {
+            if (stateFlags.pop(PointerStateFlag.Leave)) {
                 this.onPointerLeave.dispatch(pointer);
                 delete this.pointers[pointer.id];
             }

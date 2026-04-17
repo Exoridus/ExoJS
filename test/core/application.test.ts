@@ -16,19 +16,19 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
     };
 };
 
-interface IApplicationTestHarness {
+interface ApplicationTestHarness {
     readonly Application: typeof import('core/Application').Application;
     readonly ApplicationStatus: typeof import('core/Application').ApplicationStatus;
     readonly webglManager: {
         initialize: jest.Mock;
-        display: jest.Mock;
+        flush: jest.Mock;
         resize: jest.Mock;
         destroy: jest.Mock;
         renderTarget: { setView: jest.Mock };
     };
     readonly webgpuManager: {
         initialize: jest.Mock;
-        display: jest.Mock;
+        flush: jest.Mock;
         resize: jest.Mock;
         destroy: jest.Mock;
         renderTarget: { setView: jest.Mock };
@@ -45,17 +45,17 @@ interface IApplicationTestHarness {
 const loadApplicationHarness = (options: {
     webgpuInitialize?: jest.Mock;
     webglInitialize?: jest.Mock;
-} = {}): IApplicationTestHarness => {
+} = {}): ApplicationTestHarness => {
     const webglManager = {
         initialize: options.webglInitialize ?? jest.fn().mockResolvedValue(undefined),
-        display: jest.fn(),
+        flush: jest.fn(),
         resize: jest.fn(),
         destroy: jest.fn(),
         renderTarget: { setView: jest.fn() },
     };
     const webgpuManager = {
         initialize: options.webgpuInitialize ?? jest.fn().mockResolvedValue(undefined),
-        display: jest.fn(),
+        flush: jest.fn(),
         resize: jest.fn(),
         destroy: jest.fn(),
         renderTarget: { setView: jest.fn() },
@@ -78,10 +78,10 @@ const loadApplicationHarness = (options: {
     let ApplicationStatus!: typeof import('core/Application').ApplicationStatus;
 
     jest.resetModules();
-    jest.doMock('rendering/RenderManager', () => ({
-        RenderManager: RenderManagerMock,
+    jest.doMock('rendering/webgl2/WebGl2RenderManager', () => ({
+        WebGl2RenderManager: RenderManagerMock,
     }));
-    jest.doMock('rendering/WebGpuRenderManager', () => ({
+    jest.doMock('rendering/webgpu/WebGpuRenderManager', () => ({
         WebGpuRenderManager: WebGpuRenderManagerMock,
     }));
     jest.doMock('resources/Loader', () => ({
@@ -123,7 +123,7 @@ describe('Application', () => {
         const rawApp = app as unknown as Record<string, unknown>;
         const inputManager = { update: jest.fn() };
         const sceneManager = { update: jest.fn() };
-        const renderManager = { display: jest.fn() };
+        const renderManager = { flush: jest.fn() };
         const frameClock = {
             elapsedTime: { milliseconds: 16 },
             restart: jest.fn(),
@@ -143,7 +143,7 @@ describe('Application', () => {
 
         expect(inputManager.update).toHaveBeenCalledTimes(1);
         expect(sceneManager.update).toHaveBeenCalledTimes(1);
-        expect(renderManager.display).toHaveBeenCalledTimes(1);
+        expect(renderManager.flush).toHaveBeenCalledTimes(1);
         expect(frameClock.restart).toHaveBeenCalledTimes(1);
         expect(rafSpy).toHaveBeenCalledTimes(1);
     });
@@ -283,5 +283,41 @@ describe('Application', () => {
         } finally {
             restoreGpu();
         }
+    });
+
+    test('stop() catches async scene teardown failures instead of leaking rejections', async () => {
+        const { Application, ApplicationStatus } = loadApplicationHarness();
+        const app = Object.create(Application.prototype) as import('core/Application').Application;
+        const rawApp = app as unknown as Record<string, unknown>;
+        const sceneTeardownError = new Error('scene teardown failed');
+        const sceneManager = {
+            setScene: jest.fn().mockRejectedValue(sceneTeardownError),
+        };
+        const activeClock = { stop: jest.fn() };
+        const frameClock = { stop: jest.fn() };
+        const cancelSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        rawApp['_status'] = ApplicationStatus.Running;
+        rawApp['_frameRequest'] = 99;
+        rawApp['sceneManager'] = sceneManager;
+        rawApp['_activeClock'] = activeClock;
+        rawApp['_frameClock'] = frameClock;
+
+        app.stop();
+        await Promise.resolve();
+
+        expect(sceneManager.setScene).toHaveBeenCalledWith(null);
+        expect(cancelSpy).toHaveBeenCalledWith(99);
+        expect(activeClock.stop).toHaveBeenCalledTimes(1);
+        expect(frameClock.stop).toHaveBeenCalledTimes(1);
+        expect(app.status).toBe(ApplicationStatus.Stopped);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            'Application.stop() failed to unload the active scene.',
+            sceneTeardownError,
+        );
+
+        cancelSpy.mockRestore();
+        consoleErrorSpy.mockRestore();
     });
 });

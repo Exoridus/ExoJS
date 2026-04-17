@@ -17,6 +17,6 @@ export interface SceneRenderRuntime {
     setRenderTarget(target: RenderTarget | null): this;
     draw(drawable: Drawable): this;
     execute(pass: RenderPass): this;
-    display(): this;
+    flush(): this;
     destroy(): void;
 }

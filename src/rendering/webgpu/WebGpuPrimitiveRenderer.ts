@@ -1,13 +1,13 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from 'math/Matrix';
-import { AbstractWebGpuRenderer } from 'rendering/AbstractWebGpuRenderer';
+import { AbstractWebGpuRenderer } from 'rendering/webgpu/AbstractWebGpuRenderer';
 import type { DrawableShape } from 'rendering/primitives/DrawableShape';
-import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
-import { RenderingPrimitives } from 'types/rendering';
-import type { BlendModes } from 'types/rendering';
-import { getWebGpuBlendState } from './webgpuBlendState';
+import type { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
+import { RenderingPrimitives } from 'rendering/types';
+import type { BlendModes } from 'rendering/types';
+import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const primitiveShaderSource = `
 struct TransformUniforms {

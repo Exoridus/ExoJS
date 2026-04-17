@@ -1,5 +1,5 @@
 import { SceneNode } from 'core/SceneNode';
-import { removeArrayItems } from 'utils/core';
+import { removeArrayItems } from 'core/utils';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
 
 export class Container extends SceneNode {

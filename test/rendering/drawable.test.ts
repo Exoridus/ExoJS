@@ -2,10 +2,10 @@ import { Drawable } from 'rendering/Drawable';
 import { Container } from 'rendering/Container';
 import { SceneNode } from 'core/SceneNode';
 import type { Color } from 'core/Color';
-import type { RenderManager } from 'rendering/RenderManager';
+import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 
 class DummyDrawable extends Drawable {
-    public render(_renderManager: RenderManager): this {
+    public render(_renderManager: SceneRenderRuntime): this {
         return this;
     }
 }

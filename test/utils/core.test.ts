@@ -9,7 +9,7 @@ describe('utils/core', () => {
         const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
 
         jest.isolateModules(() => {
-            require('utils/core');
+            require('core/utils');
         });
 
         expect(createElementSpy).not.toHaveBeenCalled();
@@ -20,7 +20,7 @@ describe('utils/core', () => {
         const createElementSpy = jest.spyOn(document, 'createElement');
 
         jest.isolateModules(() => {
-            const { supportsCodec } = require('utils/core');
+            const { supportsCodec } = require('core/utils');
 
             supportsCodec('audio/mpeg');
         });
@@ -32,7 +32,7 @@ describe('utils/core', () => {
         const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
 
         jest.isolateModules(() => {
-            const { supportsEventOptions } = require('utils/core');
+            const { supportsEventOptions } = require('core/utils');
 
             expect(addEventListenerSpy).not.toHaveBeenCalled();
             expect(supportsEventOptions()).toBe(true);

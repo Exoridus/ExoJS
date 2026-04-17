@@ -1,10 +1,10 @@
-import { ScaleModes, WrapModes } from 'types/rendering';
-import { isPowerOfTwo } from 'utils/math';
+import { ScaleModes, WrapModes } from 'rendering/types';
+import { isPowerOfTwo } from 'math/utils';
 import { Size } from 'math/Size';
-import { createCanvas } from 'utils/rendering';
+import { createCanvas } from 'rendering/utils';
 import type { SamplerOptions } from './Sampler';
-import { getTextureSourceSize } from 'utils/core';
-import type { TextureSource } from 'types/types';
+import { getTextureSourceSize } from 'core/utils';
+import type { TextureSource } from 'core/types';
 
 export class Texture {
     private static _black: Texture | null = null;

@@ -1,4 +1,4 @@
-import type { ScaleModes, WrapModes } from 'types/rendering';
+import type { ScaleModes, WrapModes } from 'rendering/types';
 
 export interface SamplerOptions {
     scaleMode: ScaleModes;

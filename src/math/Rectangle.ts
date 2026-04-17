@@ -1,16 +1,16 @@
-import { inRange } from 'utils/math';
+import { inRange } from 'math/utils';
 import { Size } from 'math/Size';
 import { Interval } from 'math/Interval';
 import { ObservableVector } from 'math/ObservableVector';
 import type { Matrix } from 'math/Matrix';
 import type { ShapeLike } from 'math/ShapeLike';
-import type { Collidable, CollisionResponse} from 'types/Collision';
-import { CollisionType } from 'types/Collision';
+import type { Collidable, CollisionResponse} from 'math/Collision';
+import { CollisionType } from 'math/Collision';
 import {
     getCollisionCircleRectangle,
     getCollisionRectangleRectangle,
     getCollisionSat,
-} from 'utils/collision-detection';
+} from 'math/collision-detection';
 import {
     intersectionLineRect,
     intersectionPointRect,
@@ -19,7 +19,7 @@ import {
     intersectionRectPoly,
     intersectionRectRect,
     intersectionSat
-} from 'utils/collision-detection';
+} from 'math/collision-detection';
 import type { SceneNode } from 'core/SceneNode';
 import type { Ellipse } from 'math/Ellipse';
 import type { Line } from 'math/Line';
@@ -33,7 +33,7 @@ const tempPoint = new ObservableVector(noop);
 
 export class Rectangle implements ShapeLike {
 
-    public readonly collisionType: CollisionType = CollisionType.rectangle;
+    public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
     private readonly _position: ObservableVector;
     private readonly _size: Size;
@@ -231,29 +231,29 @@ export class Rectangle implements ShapeLike {
 
     public intersectsWith(target: Collidable): boolean {
         switch (target.collisionType) {
-            case CollisionType.sceneNode:
+            case CollisionType.SceneNode:
                 return (target as SceneNode).isAlignedBox
                     ? intersectionRectRect(this, (target as SceneNode).getBounds())
                     : intersectionSat(this, target as SceneNode);
-            case CollisionType.rectangle: return intersectionRectRect(this, target as Rectangle);
-            case CollisionType.polygon: return intersectionRectPoly(this, target as Polygon);
-            case CollisionType.circle: return intersectionRectCircle(this, target as Circle);
-            case CollisionType.ellipse: return intersectionRectEllipse(this, target as Ellipse);
-            case CollisionType.line: return intersectionLineRect(target as Line, this);
-            case CollisionType.point: return intersectionPointRect(target as Vector, this);
+            case CollisionType.Rectangle: return intersectionRectRect(this, target as Rectangle);
+            case CollisionType.Polygon: return intersectionRectPoly(this, target as Polygon);
+            case CollisionType.Circle: return intersectionRectCircle(this, target as Circle);
+            case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
+            case CollisionType.Line: return intersectionLineRect(target as Line, this);
+            case CollisionType.Point: return intersectionPointRect(target as Vector, this);
             default: return false;
         }
     }
 
     public collidesWith(target: Collidable): CollisionResponse | null {
         switch (target.collisionType) {
-            case CollisionType.sceneNode:
+            case CollisionType.SceneNode:
                 return (target as SceneNode).isAlignedBox
                     ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds())
                     : getCollisionSat(this, target as SceneNode);
-            case CollisionType.rectangle: return getCollisionRectangleRectangle(this, target as Rectangle);
-            case CollisionType.polygon: return getCollisionSat(this, target as Polygon);
-            case CollisionType.circle: return getCollisionCircleRectangle(target as Circle, this, true);
+            case CollisionType.Rectangle: return getCollisionRectangleRectangle(this, target as Rectangle);
+            case CollisionType.Polygon: return getCollisionSat(this, target as Polygon);
+            case CollisionType.Circle: return getCollisionCircleRectangle(target as Circle, this, true);
             // case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
             // case CollisionType.Line: return intersectionLineRect(target as Line, this);
             // case CollisionType.Point: return intersectionPointRect(target as Vector, this);

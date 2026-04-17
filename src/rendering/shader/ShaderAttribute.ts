@@ -1,4 +1,4 @@
-import { primitiveByteSizeMapping } from './ShaderMappings';
+import { webGl2PrimitiveByteSizeMapping } from '../webgl2/WebGl2ShaderMappings';
 
 export class ShaderAttribute {
 
@@ -12,7 +12,7 @@ export class ShaderAttribute {
         this.index = index;
         this.name = name;
         this.type = type;
-        this.size = primitiveByteSizeMapping[type];
+        this.size = webGl2PrimitiveByteSizeMapping[type];
     }
 
     public destroy(): void {

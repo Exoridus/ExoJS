@@ -1,14 +1,14 @@
 import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
-import { RenderManager } from 'rendering/RenderManager';
-import { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
+import { WebGl2RenderManager } from 'rendering/webgl2/WebGl2RenderManager';
+import { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
 import { InputManager } from 'input/InputManager';
 import { Loader } from 'resources/Loader';
 import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
-import type { Database } from 'types/Database';
+import type { CacheStore } from 'resources/CacheStore';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 import type { GamepadDefinition } from 'input/GamepadDefinitions';
 
@@ -33,7 +33,7 @@ export interface ApplicationOptions {
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
     requestOptions: RequestInit;
-    database?: Database;
+    cache?: CacheStore | ReadonlyArray<CacheStore>;
     backend?: BackendConfig;
 }
 
@@ -80,7 +80,7 @@ const defaultAppSettings: DefaultApplicationOptions = {
         mode: 'cors',
         cache: 'default',
     },
-    database: undefined,
+    cache: undefined,
     backend: defaultBackendConfig,
 };
 
@@ -116,7 +116,11 @@ export class Application {
             this.canvas.setAttribute('tabindex', '-1');
         }
 
-        this.loader = new Loader(this.options);
+        this.loader = new Loader({
+            resourcePath: this.options.resourcePath,
+            requestOptions: this.options.requestOptions,
+            cache: this.options.cache,
+        });
         this._backendType = this.resolveInitialBackendType();
         this._renderManager = this.createRenderManager(this._backendType);
         this.inputManager = new InputManager(this);
@@ -174,7 +178,7 @@ export class Application {
         if (this._status === ApplicationStatus.Running) {
             this.inputManager.update();
             this.sceneManager.update(this._frameClock.elapsedTime);
-            this.renderManager.display();
+            this.renderManager.flush();
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();
             this._frameCount++;
@@ -187,7 +191,9 @@ export class Application {
         if (this._status === ApplicationStatus.Running) {
             this._status = ApplicationStatus.Halting;
             cancelAnimationFrame(this._frameRequest);
-            this.sceneManager.setScene(null);
+            void this.sceneManager.setScene(null).catch((error: unknown) => {
+                console.error('Application.stop() failed to unload the active scene.', error);
+            });
             this._activeClock.stop();
             this._frameClock.stop();
             this._status = ApplicationStatus.Stopped;
@@ -234,7 +240,7 @@ export class Application {
             return new WebGpuRenderManager(this);
         }
 
-        return new RenderManager(this);
+        return new WebGl2RenderManager(this);
     }
 
     private async initializeRenderManager(): Promise<void> {

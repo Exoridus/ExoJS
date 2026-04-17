@@ -26,20 +26,49 @@ export class SceneManager {
     }
 
     public async setScene(scene: Scene | null): Promise<this> {
-        if (scene !== this._scene) {
-            this._unloadScene();
-
-            this._scene = scene;
-            this.onChangeScene.dispatch(scene);
-
-            if (scene !== null) {
-                scene.app = this._app;
-                await scene.load(this._app.loader);
-                scene.init(await this._app.loader.load());
-
-                this.onStartScene.dispatch(scene);
-            }
+        if (scene === this._scene) {
+            return this;
         }
+
+        await this._unloadScene();
+
+        if (scene === null) {
+            this.onChangeScene.dispatch(null);
+
+            return this;
+        }
+
+        scene.app = this._app;
+
+        try {
+            await scene.load(this._app.loader);
+            await scene.init(this._app.loader);
+        } catch (error) {
+            let cleanupError: unknown = null;
+
+            try {
+                await scene.unload(this._app.loader);
+            } catch (unloadError) {
+                cleanupError = unloadError;
+            }
+
+            scene.destroy();
+
+            if (cleanupError) {
+                const initMessage = error instanceof Error ? error.message : String(error);
+                const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+
+                throw new Error(
+                    `Failed to initialize scene: ${initMessage}. Cleanup also failed: ${cleanupMessage}.`,
+                );
+            }
+
+            throw error;
+        }
+
+        this._scene = scene;
+        this.onChangeScene.dispatch(scene);
+        this.onStartScene.dispatch(scene);
 
         return this;
     }
@@ -55,7 +84,9 @@ export class SceneManager {
     }
 
     public destroy(): void {
-        this._unloadScene();
+        void this._unloadScene().catch((error: unknown) => {
+            console.error('SceneManager.destroy() failed to unload the active scene.', error);
+        });
 
         this.onChangeScene.destroy();
         this.onStartScene.destroy();
@@ -63,14 +94,12 @@ export class SceneManager {
         this.onStopScene.destroy();
     }
 
-    private _unloadScene(): this {
+    private async _unloadScene(): Promise<void> {
         if (this._scene !== null) {
             this.onStopScene.dispatch(this._scene);
-            this._scene.unload();
+            await this._scene.unload(this._app.loader);
             this._scene.destroy();
             this._scene = null;
         }
-
-        return this;
     }
 }

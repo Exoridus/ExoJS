@@ -1,17 +1,17 @@
-import { removeArrayItems } from 'utils/core';
+import { removeArrayItems } from 'core/utils';
 
 type SignalHandler<Args extends Array<unknown>> = (...params: Args) => void | boolean;
 
-interface ISignalBinding<Args extends Array<unknown>> {
+interface SignalBinding<Args extends Array<unknown>> {
     handler: SignalHandler<Args>;
     context?: object;
 }
 
 export class Signal<Args extends Array<unknown> = []> {
 
-    private readonly _bindings = new Array<ISignalBinding<Args>>();
+    private readonly _bindings = new Array<SignalBinding<Args>>();
 
-    public get bindings(): ReadonlyArray<ISignalBinding<Args>> {
+    public get bindings(): ReadonlyArray<SignalBinding<Args>> {
         return this._bindings;
     }
 

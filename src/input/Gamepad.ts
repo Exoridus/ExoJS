@@ -1,5 +1,5 @@
 import { Signal } from 'core/Signal';
-import { ChannelOffset, ChannelSize } from 'types/input';
+import { ChannelOffset, ChannelSize } from 'input/types';
 
 import type { GamepadChannel } from './GamepadChannels';
 
@@ -42,7 +42,7 @@ export class Gamepad {
 
         this.indexValue = index;
         this.channelsValue = channels;
-        this.channelOffset = ChannelOffset.gamepads + (index * ChannelSize.gamepad);
+        this.channelOffset = ChannelOffset.Gamepads + (index * ChannelSize.Gamepad);
         this.mappingValue = gamepad
             ? (mappingOrDefinition as ResolvedGamepadDefinition).mapping
             : mappingOrDefinition as GamepadMapping;
@@ -190,11 +190,11 @@ export class Gamepad {
     }
 
     public resolveChannelOffset(channel: GamepadChannel): number {
-        return this.channelOffset + (channel ^ ChannelOffset.gamepads);
+        return this.channelOffset + (channel ^ ChannelOffset.Gamepads);
     }
 
     public static resolveChannelOffset(gamepadIndex: number, channel: GamepadChannel): number {
-        return ChannelOffset.gamepads + (gamepadIndex * ChannelSize.gamepad) + (channel ^ ChannelOffset.gamepads);
+        return ChannelOffset.Gamepads + (gamepadIndex * ChannelSize.Gamepad) + (channel ^ ChannelOffset.Gamepads);
     }
 
     private clearMappedChannels(): void {

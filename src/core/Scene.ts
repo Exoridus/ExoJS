@@ -1,31 +1,32 @@
 import type { Time } from './Time';
 import type { Loader } from 'resources/Loader';
-import type { ResourceContainer } from 'resources/ResourceContainer';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 import { Container } from 'rendering/Container';
 import type { SceneNode } from './SceneNode';
 import type { Application } from './Application';
 
 export interface SceneData {
-    load?: (loader: Loader) => Promise<void>;
-    init?: (resources: ResourceContainer) => void;
+    load?: (loader: Loader) => Promise<void> | void;
+    init?: (loader: Loader) => Promise<void> | void;
     update?: (delta: Time) => void;
     draw?: (renderManager: SceneRenderRuntime) => void;
-    unload?: () => void;
-    destroy?: () => void;
+    unload?: (loader: Loader) => Promise<void> | void;
 }
+
+export type SceneInstance<T extends SceneData = SceneData> = Scene & T;
 
 export class Scene {
 
     private _app: Application | null = null;
     private readonly _root = new Container();
 
-    public constructor(definition: SceneData) {
-
-        if (definition) {
-            Object.assign(this, definition);
-        }
+    public static create<T extends SceneData>(
+        definition: T & ThisType<SceneInstance<T>>,
+    ): SceneInstance<T> {
+        return Object.assign(new Scene(), definition) as SceneInstance<T>;
     }
+
+    public constructor() {}
 
     public get app(): Application | null {
         return this._app;
@@ -51,24 +52,24 @@ export class Scene {
         return this;
     }
 
-    public async load(loader: Loader): Promise<void> {
-        // do nothing
+    public load(loader: Loader): Promise<void> | void {
+        // override in subclass or via Scene.create()
     }
 
-    public init(resources: ResourceContainer): void {
-        // do nothing
+    public init(loader: Loader): Promise<void> | void {
+        // override in subclass or via Scene.create()
     }
 
     public update(delta: Time): void {
-        // do nothing
+        // override in subclass or via Scene.create()
     }
 
     public draw(renderManager: SceneRenderRuntime): void {
-        // do nothing
+        // override in subclass or via Scene.create()
     }
 
-    public unload(): void {
-        // do nothing
+    public unload(loader: Loader): Promise<void> | void {
+        // override in subclass or via Scene.create()
     }
 
     public destroy(): void {

@@ -1,8 +1,8 @@
 import { Color } from 'core/Color';
 import { Container } from 'rendering/Container';
-import { bezierCurveTo, clamp, quadraticCurveTo, tau } from 'utils/math';
-import { RenderingPrimitives } from 'types/rendering';
-import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from 'utils/geometry';
+import { bezierCurveTo, clamp, quadraticCurveTo, tau } from 'math/utils';
+import { RenderingPrimitives } from 'rendering/types';
+import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from 'math/geometry';
 import { Vector } from 'math/Vector';
 import { CircleGeometry } from './CircleGeometry';
 import type { SceneNode } from 'core/SceneNode';

@@ -1,4 +1,4 @@
-interface IGeometryOptions {
+interface GeometryOptions {
     vertices?: Array<number>;
     indices?: Array<number>;
     points?: Array<number>;
@@ -14,7 +14,7 @@ export class Geometry {
         vertices = [],
         indices = [],
         points = [],
-    }: IGeometryOptions = {}) {
+    }: GeometryOptions = {}) {
         this.vertices = new Float32Array(vertices);
         this.indices = new Uint16Array(indices);
         this.points = points;

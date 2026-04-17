@@ -1,4 +1,4 @@
-import { Video } from 'rendering/Video';
+import { Video } from 'rendering/video/Video';
 
 interface MockVideoElement {
     readonly element: HTMLVideoElement;

@@ -1,13 +1,13 @@
 /// <reference types="@webgpu/types" />
 
-import { AbstractWebGpuRenderer } from 'rendering/AbstractWebGpuRenderer';
+import { AbstractWebGpuRenderer } from 'rendering/webgpu/AbstractWebGpuRenderer';
 import type { Sprite } from 'rendering/sprite/Sprite';
 import { Texture } from 'rendering/texture/Texture';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { WebGpuRenderManager } from 'rendering/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from 'rendering/WebGpuRendererRuntime';
-import type { BlendModes } from 'types/rendering';
-import { getWebGpuBlendState } from './webgpuBlendState';
+import type { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
+import type { BlendModes } from 'rendering/types';
+import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const spriteShaderSource = `
 struct ProjectionUniforms {
@@ -64,7 +64,7 @@ const projectionByteLength = 64;
 const initialBatchCapacity = 32;
 const wordsPerVertex = 6;
 
-interface IWebGpuSpriteDrawCall {
+interface WebGpuSpriteDrawCall {
     readonly texture: Texture | RenderTexture;
     readonly vertices: Float32Array;
     readonly texCoords: Uint32Array;
@@ -72,7 +72,7 @@ interface IWebGpuSpriteDrawCall {
     readonly blendMode: BlendModes;
 }
 
-interface IWebGpuSpriteBatchRange {
+interface WebGpuSpriteBatchRange {
     readonly end: number;
     readonly spriteCount: number;
     readonly texture: Texture | RenderTexture;
@@ -80,7 +80,7 @@ interface IWebGpuSpriteBatchRange {
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
-    private readonly _drawCalls: Array<IWebGpuSpriteDrawCall> = [];
+    private readonly _drawCalls: Array<WebGpuSpriteDrawCall> = [];
     private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -339,7 +339,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         this._indexBuffer = indexBuffer;
     }
 
-    private _writeVertexData(drawCalls: Array<IWebGpuSpriteDrawCall>): void {
+    private _writeVertexData(drawCalls: Array<WebGpuSpriteDrawCall>): void {
         let vertexOffset = 0;
 
         for (const drawCall of drawCalls) {
@@ -358,7 +358,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         }
     }
 
-    private _getBatchRange(start: number): IWebGpuSpriteBatchRange {
+    private _getBatchRange(start: number): WebGpuSpriteBatchRange {
         const drawCall = this._drawCalls[start];
         let end = start + 1;
 

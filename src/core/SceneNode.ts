@@ -7,8 +7,8 @@ import type { Container } from 'rendering/Container';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 import type { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
-import type { Collidable, CollisionResponse} from 'types/Collision';
-import { CollisionType } from 'types/Collision';
+import type { Collidable, CollisionResponse} from 'math/Collision';
+import { CollisionType } from 'math/Collision';
 import type { View } from 'rendering/View';
 import {
     getCollisionSat,
@@ -17,7 +17,7 @@ import {
     intersectionRectCircle,
     intersectionRectEllipse,
     intersectionSat
-} from 'utils/collision-detection';
+} from 'math/collision-detection';
 import type { Circle } from 'math/Circle';
 import type { Ellipse } from 'math/Ellipse';
 import type { Line } from 'math/Line';
@@ -25,7 +25,7 @@ import type { Polygon } from 'math/Polygon';
 
 export class SceneNode extends Transformable implements Collidable {
 
-    public readonly collisionType: CollisionType = CollisionType.sceneNode;
+    public readonly collisionType: CollisionType = CollisionType.SceneNode;
 
     protected _bounds = new Bounds();
     private _visible = true;
@@ -140,13 +140,13 @@ export class SceneNode extends Transformable implements Collidable {
         }
 
         switch (target.collisionType) {
-            case CollisionType.sceneNode: return intersectionSat(this, target as SceneNode);
-            case CollisionType.rectangle: return intersectionSat(this, target as Rectangle);
-            case CollisionType.polygon: return intersectionSat(this, target as Polygon);
-            case CollisionType.circle: return intersectionRectCircle(this.getBounds(), target as Circle);
-            case CollisionType.ellipse: return intersectionRectEllipse(this.getBounds(), target as Ellipse);
-            case CollisionType.line: return intersectionLineRect(target as Line, this.getBounds());
-            case CollisionType.point: return intersectionPointRect(target as Vector, this.getBounds());
+            case CollisionType.SceneNode: return intersectionSat(this, target as SceneNode);
+            case CollisionType.Rectangle: return intersectionSat(this, target as Rectangle);
+            case CollisionType.Polygon: return intersectionSat(this, target as Polygon);
+            case CollisionType.Circle: return intersectionRectCircle(this.getBounds(), target as Circle);
+            case CollisionType.Ellipse: return intersectionRectEllipse(this.getBounds(), target as Ellipse);
+            case CollisionType.Line: return intersectionLineRect(target as Line, this.getBounds());
+            case CollisionType.Point: return intersectionPointRect(target as Vector, this.getBounds());
             default: return false;
         }
     }
@@ -157,10 +157,10 @@ export class SceneNode extends Transformable implements Collidable {
         }
 
         switch (target.collisionType) {
-            case CollisionType.sceneNode: return getCollisionSat(this, target as SceneNode);
-            case CollisionType.rectangle: return getCollisionSat(this, target as Rectangle);
-            case CollisionType.polygon: return getCollisionSat(this, target as Polygon);
-            case CollisionType.circle: return getCollisionSat(this, target as Circle);
+            case CollisionType.SceneNode: return getCollisionSat(this, target as SceneNode);
+            case CollisionType.Rectangle: return getCollisionSat(this, target as Rectangle);
+            case CollisionType.Polygon: return getCollisionSat(this, target as Polygon);
+            case CollisionType.Circle: return getCollisionSat(this, target as Circle);
             default: return null;
         }
     }

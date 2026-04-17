@@ -1,9 +1,9 @@
-import { clamp } from 'utils/math';
-import type { PlaybackOptions } from 'types/types';
-import { AbstractMedia } from 'types/AbstractMedia';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
+import { clamp } from 'math/utils';
+import type { PlaybackOptions } from 'core/types';
+import { AbstractMedia } from 'audio/AbstractMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'audio/audio-context';
 
-interface IMusicAudioSetup {
+interface MusicAudioSetup {
     readonly audioContext: AudioContext;
     readonly gainNode: GainNode;
     readonly sourceNode: MediaElementAudioSourceNode;
@@ -11,7 +11,7 @@ interface IMusicAudioSetup {
 
 export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;
-    private _audioSetup: IMusicAudioSetup | null = null;
+    private _audioSetup: MusicAudioSetup | null = null;
 
     public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
         super(audioElement);

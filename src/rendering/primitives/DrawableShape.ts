@@ -1,4 +1,4 @@
-import { RenderingPrimitives } from 'types/rendering';
+import { RenderingPrimitives } from 'rendering/types';
 import type { Geometry } from 'rendering/primitives/Geometry';
 import type { Color } from 'core/Color';
 import { Drawable } from 'rendering/Drawable';

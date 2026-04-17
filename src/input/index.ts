@@ -1,3 +1,4 @@
+export * from './types';
 export * from './GamepadChannels';
 export * from './GamepadControl';
 export * from './GamepadMapping';

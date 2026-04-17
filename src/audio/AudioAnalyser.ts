@@ -1,5 +1,5 @@
-import type { Media } from 'types/Media';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'utils/audio-context';
+import type { Media } from 'audio/Media';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'audio/audio-context';
 
 export interface AudioAnalyserOptions {
     fftSize: number;

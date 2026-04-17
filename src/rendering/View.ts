@@ -1,7 +1,7 @@
 import { ObservableVector } from 'math/ObservableVector';
 import { Rectangle } from 'math/Rectangle';
 import { Matrix } from 'math/Matrix';
-import { degreesToRadians, trimRotation } from 'utils/math';
+import { degreesToRadians, trimRotation } from 'math/utils';
 import { ObservableSize } from 'math/ObservableSize';
 import { Bounds } from 'core/Bounds';
 import { Flags } from 'math/Flags';

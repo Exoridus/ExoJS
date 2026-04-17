@@ -1,6 +1,6 @@
 import { SceneNode } from 'core/SceneNode';
 import { Color } from 'core/Color';
-import { BlendModes } from 'types/rendering';
+import { BlendModes } from 'rendering/types';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
 
 export class Drawable extends SceneNode {
