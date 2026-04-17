@@ -9,5 +9,6 @@ yarn-error.log*
 pnpm-debug.log*
 .claude/agent-memory/
 .claude/settings.local.json
+.rollup.cache/
 !.gitignore
 !.gitkeep

@@ -141,7 +141,6 @@ Repository-specific contributor guidance:
 
 - AI / agent workflow: [AGENTS.md](AGENTS.md)
 - Claude-specific repo guidance: [CLAUDE.md](CLAUDE.md)
-- AI repository map: [docs/ai/repo-map.md](docs/ai/repo-map.md)
 
 ## Project Links
 

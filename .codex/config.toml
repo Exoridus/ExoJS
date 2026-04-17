@@ -1,5 +1,0 @@
-# Repository-level Codex defaults for ExoJS.
-# Keep this minimal and conservative.
-
-model_reasoning_effort = "high"
-personality = "pragmatic"
