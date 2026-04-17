@@ -176,8 +176,18 @@ export class Application {
 
     public update(): this {
         if (this._status === ApplicationStatus.Running) {
+            const frameDelta = this._frameClock.elapsedTime;
+
             this.inputManager.update();
-            this.sceneManager.update(this._frameClock.elapsedTime);
+            const runtimeView = (this.renderManager as Partial<{
+                view: Partial<{ update(deltaMilliseconds: number): unknown; }>;
+            }>).view;
+
+            if (runtimeView && typeof runtimeView.update === 'function') {
+                runtimeView.update(frameDelta.milliseconds);
+            }
+
+            this.sceneManager.update(frameDelta);
             this.renderManager.flush();
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();

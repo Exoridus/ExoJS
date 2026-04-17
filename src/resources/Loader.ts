@@ -17,9 +17,11 @@ import { SvgFactory } from './factories/SvgFactory';
 import { BinaryFactory } from './factories/BinaryFactory';
 import { WasmFactory } from './factories/WasmFactory';
 import { VttFactory } from './factories/VttFactory';
+import { BundleLoadError, defineAssetManifest } from './AssetManifest';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import type { CacheStore } from './CacheStore';
+import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -69,6 +71,7 @@ export class Loader {
     private readonly _registry = new FactoryRegistry();
     private readonly _resources = new Map<AssetConstructor, Map<string, unknown>>();
     private readonly _manifest = new Map<AssetConstructor, Map<string, ManifestEntry>>();
+    private readonly _bundles = new Map<string, ReadonlyArray<QueueEntry>>();
     private readonly _inFlight = new Map<string, Promise<unknown>>();
     private readonly _typeIds = new WeakMap<AssetConstructor, number>();
     private readonly _preventStoreKeys = new Set<string>();
@@ -86,6 +89,7 @@ export class Loader {
     private _backgroundResolve: (() => void) | null = null;
 
     public readonly onProgress = new Signal<[loaded: number, total: number]>();
+    public readonly onBundleProgress = new Signal<[name: string, loaded: number, total: number]>();
     public readonly onLoaded = new Signal<[type: AssetConstructor, alias: string, resource: unknown]>();
     public readonly onError = new Signal<[type: AssetConstructor, alias: string, error: Error]>();
 
@@ -133,6 +137,114 @@ export class Loader {
         }
 
         return this;
+    }
+
+    public registerManifest(manifest: AssetManifest): this {
+        const normalizedManifest = defineAssetManifest(manifest);
+        const plannedDefinitions = new Map<string, ManifestEntry>();
+        const pendingBundles = new Array<[name: string, entries: Array<QueueEntry>]>();
+
+        for (const [bundleName, bundleEntries] of Object.entries(normalizedManifest.bundles)) {
+            if (this._bundles.has(bundleName)) {
+                throw new Error(`Bundle "${bundleName}" is already registered.`);
+            }
+
+            const normalizedEntries = new Array<QueueEntry>();
+
+            for (const bundleEntry of bundleEntries) {
+                const type = bundleEntry.type as AssetConstructor;
+                const key = this._key(type, bundleEntry.alias);
+                const existingDefinition = plannedDefinitions.get(key) ?? this._getManifestEntry(type, bundleEntry.alias);
+
+                if (
+                    existingDefinition
+                    && !this._isManifestDefinitionEquivalent(existingDefinition, bundleEntry.path, bundleEntry.options)
+                ) {
+                    throw new Error(
+                        `Conflicting asset definition for (${this._describeType(type)}, "${bundleEntry.alias}") while registering bundle "${bundleName}".`,
+                    );
+                }
+
+                plannedDefinitions.set(key, {
+                    path: bundleEntry.path,
+                    options: bundleEntry.options,
+                });
+
+                normalizedEntries.push({
+                    type,
+                    alias: bundleEntry.alias,
+                    path: bundleEntry.path,
+                    options: bundleEntry.options,
+                });
+            }
+
+            pendingBundles.push([bundleName, normalizedEntries]);
+        }
+
+        for (const [bundleName, bundleEntries] of pendingBundles) {
+            for (const entry of bundleEntries) {
+                this._addManifestEntry(entry.type, entry.alias, entry.path, entry.options);
+            }
+
+            this._bundles.set(bundleName, bundleEntries);
+        }
+
+        return this;
+    }
+
+    public async loadBundle(name: string, options: LoadBundleOptions = {}): Promise<void> {
+        const bundle = this._bundles.get(name);
+
+        if (!bundle) {
+            throw new Error(`Unknown bundle "${name}".`);
+        }
+
+        const total = bundle.length;
+        let loaded = 0;
+        const failures = new Array<{
+            type: Loadable;
+            alias: string;
+            error: Error;
+        }>();
+
+        if (total === 0) {
+            this._emitBundleProgress(name, 0, 0, options.onProgress);
+
+            return;
+        }
+
+        await Promise.all(bundle.map(async (entry) => {
+            try {
+                if (options.background) {
+                    await this._loadSingleBackground(entry.type, entry.alias, entry.path, entry.options);
+                } else {
+                    await this._loadSingle(entry.type, entry.alias, entry.options, entry.path);
+                }
+            } catch (error: unknown) {
+                failures.push({
+                    type: entry.type as Loadable,
+                    alias: entry.alias,
+                    error: this._normalizeError(error),
+                });
+            } finally {
+                loaded++;
+                this._emitBundleProgress(name, loaded, total, options.onProgress);
+            }
+        }));
+
+        if (failures.length > 0) {
+            throw new BundleLoadError(name, failures);
+        }
+    }
+
+    public hasBundle(name: string): boolean {
+        const bundle = this._bundles.get(name);
+
+        if (!bundle) {
+            return false;
+        }
+
+        return bundle.every(entry => this._hasResource(entry.type, entry.alias));
     }
 
     // -----------------------------------------------------------------------
@@ -318,10 +430,12 @@ export class Loader {
 
         this._resources.clear();
         this._manifest.clear();
+        this._bundles.clear();
         this._inFlight.clear();
         this._preventStoreKeys.clear();
         this._backgroundQueue.length = 0;
         this.onProgress.destroy();
+        this.onBundleProgress.destroy();
         this.onLoaded.destroy();
         this.onError.destroy();
     }
@@ -357,6 +471,44 @@ export class Loader {
         const resolvedOptions = options ?? entry?.options;
 
         return this._trackInFlight(key, this._fetch(type, alias, path, resolvedOptions));
+    }
+
+    private _loadSingleBackground(
+        type: AssetConstructor,
+        alias: string,
+        path: string,
+        options?: unknown,
+    ): Promise<unknown> {
+        if (this._hasResource(type, alias)) {
+            return Promise.resolve(this._resources.get(type)!.get(alias));
+        }
+
+        const key = this._key(type, alias);
+        const inFlight = this._inFlight.get(key);
+
+        if (inFlight) {
+            return inFlight;
+        }
+
+        if (!this._isQueuedInBackground(type, alias)) {
+            if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+                this._backgroundLoaded = 0;
+                this._backgroundTotal = 0;
+            }
+
+            this._backgroundQueue.push({ type, alias, path, options });
+            this._backgroundTotal++;
+        }
+
+        this._drainBackground();
+
+        const started = this._inFlight.get(key);
+
+        if (started) {
+            return started;
+        }
+
+        return this._waitForBackgroundEntry(type, alias);
     }
 
     private async _fetch(
@@ -449,6 +601,59 @@ export class Loader {
         this._startBackgroundEntry(entry);
     }
 
+    private _isQueuedInBackground(type: AssetConstructor, alias: string): boolean {
+        return this._backgroundQueue.some(entry => entry.type === type && entry.alias === alias);
+    }
+
+    private _waitForBackgroundEntry(type: AssetConstructor, alias: string): Promise<unknown> {
+        if (this._hasResource(type, alias)) {
+            return Promise.resolve(this._resources.get(type)!.get(alias));
+        }
+
+        const key = this._key(type, alias);
+        const inFlight = this._inFlight.get(key);
+
+        if (inFlight) {
+            return inFlight;
+        }
+
+        return new Promise<unknown>((resolve, reject) => {
+            const onLoaded = (loadedType: AssetConstructor, loadedAlias: string, resource: unknown): void => {
+                if (loadedType !== type || loadedAlias !== alias) return;
+
+                cleanup();
+                resolve(resource);
+            };
+            const onError = (errorType: AssetConstructor, errorAlias: string, error: Error): void => {
+                if (errorType !== type || errorAlias !== alias) return;
+
+                cleanup();
+                reject(error);
+            };
+            const cleanup = (): void => {
+                this.onLoaded.remove(onLoaded);
+                this.onError.remove(onError);
+            };
+
+            this.onLoaded.add(onLoaded);
+            this.onError.add(onError);
+
+            const pending = this._inFlight.get(key);
+
+            if (pending) {
+                cleanup();
+                pending.then(resolve, reject);
+
+                return;
+            }
+
+            if (this._hasResource(type, alias)) {
+                cleanup();
+                resolve(this._resources.get(type)!.get(alias));
+            }
+        });
+    }
+
     private _onBackgroundItemDone(): void {
         this.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
 
@@ -494,6 +699,19 @@ export class Loader {
         return trackedPromise;
     }
 
+    private _emitBundleProgress(
+        name: string,
+        loaded: number,
+        total: number,
+        onProgress?: (loaded: number, total: number) => void,
+    ): void {
+        this.onBundleProgress.dispatch(name, loaded, total);
+
+        if (onProgress) {
+            onProgress(loaded, total);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Internal — manifest & storage
     // -----------------------------------------------------------------------
@@ -508,6 +726,85 @@ export class Loader {
 
     private _getManifestEntry(type: AssetConstructor, alias: string): ManifestEntry | undefined {
         return this._manifest.get(type)?.get(alias);
+    }
+
+    private _isManifestDefinitionEquivalent(entry: ManifestEntry, path: string, options?: unknown): boolean {
+        return entry.path === path && this._areOptionsEquivalent(entry.options, options);
+    }
+
+    private _areOptionsEquivalent(left: unknown, right: unknown): boolean {
+        if (Object.is(left, right)) {
+            return true;
+        }
+
+        if (typeof left !== typeof right) {
+            return false;
+        }
+
+        if (left === null || right === null) {
+            return false;
+        }
+
+        if (typeof left !== 'object' || typeof right !== 'object') {
+            return false;
+        }
+
+        if (Array.isArray(left) || Array.isArray(right)) {
+            if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+                return false;
+            }
+
+            for (let i = 0; i < left.length; i++) {
+                if (!this._areOptionsEquivalent(left[i], right[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        const leftPrototype = Object.getPrototypeOf(left);
+        const rightPrototype = Object.getPrototypeOf(right);
+
+        if (leftPrototype !== rightPrototype) {
+            return false;
+        }
+
+        if (
+            leftPrototype !== Object.prototype
+            && leftPrototype !== null
+        ) {
+            return false;
+        }
+
+        const leftObject = left as Record<string, unknown>;
+        const rightObject = right as Record<string, unknown>;
+        const leftKeys = Object.keys(leftObject);
+        const rightKeys = Object.keys(rightObject);
+
+        if (leftKeys.length !== rightKeys.length) {
+            return false;
+        }
+
+        for (const key of leftKeys) {
+            if (!Object.prototype.hasOwnProperty.call(rightObject, key)) {
+                return false;
+            }
+
+            if (!this._areOptionsEquivalent(leftObject[key], rightObject[key])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private _normalizeError(error: unknown): Error {
+        return error instanceof Error ? error : new Error(String(error));
+    }
+
+    private _describeType(type: AssetConstructor): string {
+        return type.name.length > 0 ? type.name : '(anonymous type)';
     }
 
     private _hasResource(type: AssetConstructor, alias: string): boolean {

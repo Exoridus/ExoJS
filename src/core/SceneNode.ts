@@ -33,6 +33,8 @@ export class SceneNode extends Transformable implements Collidable {
     private _localBounds = new Rectangle();
     private _anchor = new ObservableVector(this._updateOrigin.bind(this), 0, 0);
     private _parentNode: Container | null = null;
+    private _zIndex = 0;
+    private _childOrder = 0;
 
     public get anchor(): ObservableVector {
         return this._anchor;
@@ -66,6 +68,21 @@ export class SceneNode extends Transformable implements Collidable {
         this._visible = visible;
     }
 
+    public get zIndex(): number {
+        return this._zIndex;
+    }
+
+    public set zIndex(zIndex: number) {
+        if (this._zIndex !== zIndex) {
+            this._zIndex = zIndex;
+            this._parentNode?.markSortDirty();
+        }
+    }
+
+    public get childOrder(): number {
+        return this._childOrder;
+    }
+
     public get globalTransform(): Matrix {
         return this.getGlobalTransform();
     }
@@ -84,6 +101,12 @@ export class SceneNode extends Transformable implements Collidable {
 
     public setAnchor(x: number, y: number = x): this  {
         this._anchor.set(x, y);
+
+        return this;
+    }
+
+    public setChildOrder(order: number): this {
+        this._childOrder = order;
 
         return this;
     }

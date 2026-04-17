@@ -1,10 +1,12 @@
 import type { PlaybackOptions } from 'core/types';
 import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
-import { Sound } from 'audio/Sound';
+import { Sound, type AudioSpriteClip } from 'audio/Sound';
 import { decodeAudioData } from 'audio/audio-context';
 
 interface SoundFactoryOptions {
     playbackOptions?: Partial<PlaybackOptions>;
+    poolSize?: number;
+    sprites?: Readonly<Record<string, AudioSpriteClip>>;
 }
 
 export class SoundFactory extends AbstractAssetFactory<Sound> {
@@ -18,6 +20,12 @@ export class SoundFactory extends AbstractAssetFactory<Sound> {
     public async create(source: ArrayBuffer, options: SoundFactoryOptions = {}): Promise<Sound> {
         const audioBuffer = await decodeAudioData(source);
 
-        return new Sound(audioBuffer, options.playbackOptions);
+        const sound = new Sound(audioBuffer, {
+            ...options.playbackOptions,
+            poolSize: options.poolSize,
+            sprites: options.sprites,
+        });
+
+        return sound;
     }
 }

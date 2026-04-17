@@ -11,6 +11,7 @@ export * from './shader/ShaderUniform';
 
 export * from './sprite/Sprite';
 export * from './sprite/Spritesheet';
+export * from './sprite/AnimatedSprite';
 
 export * from './text/Text';
 export * from './text/TextStyle';

@@ -66,4 +66,59 @@ describe('Container', () => {
         expect(third.parent).toBe(container);
         expect(container.children.length).toBe(1);
     });
+
+    test('sorts children by zIndex when sortableChildren is enabled', () => {
+        const container = new Container();
+        const first = new DummyDrawable();
+        const second = new DummyDrawable();
+        const third = new DummyDrawable();
+
+        first.zIndex = 10;
+        second.zIndex = 0;
+        third.zIndex = 10;
+
+        container.sortableChildren = true;
+        container.addChild(first);
+        container.addChild(second);
+        container.addChild(third);
+
+        container.sortChildren();
+
+        expect(container.children).toEqual([second, first, third]);
+    });
+
+    test('keeps insertion order when sortableChildren is disabled', () => {
+        const container = new Container();
+        const first = new DummyDrawable();
+        const second = new DummyDrawable();
+
+        first.zIndex = 100;
+        second.zIndex = 0;
+
+        container.addChild(first);
+        container.addChild(second);
+        container.sortChildren();
+
+        expect(container.children).toEqual([first, second]);
+    });
+
+    test('does not resort unchanged trees repeatedly', () => {
+        const container = new Container();
+        const first = new DummyDrawable();
+        const second = new DummyDrawable();
+
+        first.zIndex = 5;
+        second.zIndex = 1;
+
+        container.sortableChildren = true;
+        container.addChild(first);
+        container.addChild(second);
+
+        const sortSpy = jest.spyOn(container.children, 'sort');
+
+        container.sortChildren();
+        container.sortChildren();
+
+        expect(sortSpy).toHaveBeenCalledTimes(1);
+    });
 });

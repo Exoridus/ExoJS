@@ -16,12 +16,18 @@ Advanced backend-specific access lives under dedicated subpaths.
 - Application / Scene / drawable rendering flow
 - Graphics / DrawableShape rendering
 - Sprite rendering
+- Animated sprite clip playback
+- zIndex-based sortable child ordering
 - ParticleSystem rendering
 - Text rendering through the normal texture-backed path
 - Video rendering through the normal texture-backed path
 - RenderTexture / offscreen rendering
+- Scene stacking with overlay/modal/opaque participation modes
+- Fade scene transitions
+- Camera helpers (follow, bounds, shake, zoom)
 - Blend modes including normal, additive, subtract, multiply, and screen
 - Audio playback and analysis
+- Sound pooling and audio sprite clips
 - Resource loading and typed factories
 - IndexedDB-backed persistence support
 - Input handling for pointer and gamepad
@@ -100,6 +106,7 @@ Key pages:
 
 - [Application](docs/api/Application.md)
 - [Examples Migration](docs/api/ExamplesMigration.md)
+- [Game Feel](docs/api/GameFeel.md)
 - [Scene](docs/api/Scene.md)
 - [Loader](docs/api/Loader.md)
 - [Renderer](docs/api/Renderer.md)
@@ -148,4 +155,3 @@ Repository-specific contributor guidance:
 - Issues: https://github.com/Exoridus/ExoJS/issues
 - Examples repository: https://github.com/Exoridus/ExoJS-examples
 - Live examples: https://exoridus.github.io/ExoJS-examples/
-

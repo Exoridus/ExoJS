@@ -123,7 +123,8 @@ describe('Application', () => {
         const rawApp = app as unknown as Record<string, unknown>;
         const inputManager = { update: jest.fn() };
         const sceneManager = { update: jest.fn() };
-        const renderManager = { flush: jest.fn() };
+        const viewUpdate = jest.fn();
+        const renderManager = { flush: jest.fn(), view: { update: viewUpdate } };
         const frameClock = {
             elapsedTime: { milliseconds: 16 },
             restart: jest.fn(),
@@ -143,6 +144,7 @@ describe('Application', () => {
 
         expect(inputManager.update).toHaveBeenCalledTimes(1);
         expect(sceneManager.update).toHaveBeenCalledTimes(1);
+        expect(viewUpdate).toHaveBeenCalledWith(16);
         expect(renderManager.flush).toHaveBeenCalledTimes(1);
         expect(frameClock.restart).toHaveBeenCalledTimes(1);
         expect(rafSpy).toHaveBeenCalledTimes(1);

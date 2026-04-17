@@ -1,4 +1,5 @@
 import { Loader } from 'resources/Loader';
+import { BundleLoadError, defineAssetManifest } from 'resources/AssetManifest';
 import { Json, TextAsset } from 'resources/tokens';
 import type { AssetFactory } from 'resources/AssetFactory';
 import type { CacheStore } from 'resources/CacheStore';
@@ -458,5 +459,448 @@ describe('Loader', () => {
         expect(first).toBeInstanceOf(FirstType);
         expect(second).toBeInstanceOf(SecondType);
         expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    test('registerManifest() registers one manifest without loading', () => {
+        const loader = new Loader({ resourcePath: '/' });
+        const manifest = defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'intro', path: 'intro.txt' },
+                ],
+            },
+        });
+
+        loader.registerManifest(manifest);
+
+        expect(loader.hasBundle('boot')).toBe(false);
+        expect(loader.peek(TextAsset, 'intro')).toBeNull();
+    });
+
+    test('registerManifest() throws when bundle name is already registered', () => {
+        const loader = new Loader({ resourcePath: '/' });
+        const firstManifest = defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'intro', path: 'intro.txt' },
+                ],
+            },
+        });
+        const secondManifest = defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'menu', path: 'menu.txt' },
+                ],
+            },
+        });
+
+        loader.registerManifest(firstManifest);
+
+        expect(() => loader.registerManifest(secondManifest)).toThrow('already registered');
+    });
+
+    test('registerManifest() throws on conflicting (type, alias) across bundles', () => {
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'shared', path: 'shared-a.txt' },
+                ],
+            },
+        }));
+
+        expect(() => loader.registerManifest(defineAssetManifest({
+            bundles: {
+                gameplay: [
+                    { type: TextAsset, alias: 'shared', path: 'shared-b.txt' },
+                ],
+            },
+        }))).toThrow('Conflicting asset definition');
+    });
+
+    test('registerManifest() allows equivalent (type, alias) definitions across bundles', () => {
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    {
+                        type: TextAsset,
+                        alias: 'shared',
+                        path: 'shared.txt',
+                        options: { locale: 'en', retries: [1, 2, 3] },
+                    },
+                ],
+            },
+        }));
+
+        expect(() => loader.registerManifest(defineAssetManifest({
+            bundles: {
+                gameplay: [
+                    {
+                        type: TextAsset,
+                        alias: 'shared',
+                        path: 'shared.txt',
+                        options: { locale: 'en', retries: [1, 2, 3] },
+                    },
+                ],
+            },
+        }))).not.toThrow();
+    });
+
+    test('registerManifest() throws on conflict with prior manual add()', () => {
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.add(TextAsset, { hero: 'hero-v1.txt' });
+
+        expect(() => loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'hero', path: 'hero-v2.txt' },
+                ],
+            },
+        }))).toThrow('Conflicting asset definition');
+    });
+
+    test('loadBundle() loads a known bundle successfully', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'hero', path: 'hero.txt' },
+                    { type: TextAsset, alias: 'menu', path: 'menu.txt' },
+                ],
+            },
+        }));
+        mockFetch();
+
+        await expect(loader.loadBundle('boot')).resolves.toBeUndefined();
+        expect(loader.get(TextAsset, 'hero')).toBe('resource:fresh-source');
+        expect(loader.get(TextAsset, 'menu')).toBe('resource:fresh-source');
+    });
+
+    test('loadBundle() rejects clearly for unknown bundle name', async () => {
+        const loader = new Loader({ resourcePath: '/' });
+
+        await expect(loader.loadBundle('missing')).rejects.toThrow('Unknown bundle');
+    });
+
+    test('repeated loadBundle() calls are safe and do not refetch cached assets', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [{ type: TextAsset, alias: 'hero', path: 'hero.txt' }],
+            },
+        }));
+        mockFetch();
+
+        await loader.loadBundle('boot');
+        await loader.loadBundle('boot');
+
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    test('overlapping bundle loads deduplicate shared assets', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [{ type: TextAsset, alias: 'shared', path: 'shared.txt' }],
+                gameplay: [
+                    { type: TextAsset, alias: 'shared', path: 'shared.txt' },
+                    { type: TextAsset, alias: 'level', path: 'level.txt' },
+                ],
+            },
+        }));
+        mockFetch();
+
+        await Promise.all([
+            loader.loadBundle('boot'),
+            loader.loadBundle('gameplay'),
+        ]);
+
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    test('loadBundle() rejects with BundleLoadError on partial failure', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'ok', path: 'ok.txt' },
+                    { type: TextAsset, alias: 'missing', path: 'missing.txt' },
+                ],
+            },
+        }));
+
+        global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+            const url = typeof input === 'string'
+                ? input
+                : input instanceof URL
+                    ? input.toString()
+                    : input.url;
+
+            if (url.endsWith('/missing.txt')) {
+                return {
+                    ok: false,
+                    status: 404,
+                    statusText: 'Not Found',
+                } as Response;
+            }
+
+            return {
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+            } as Response;
+        });
+
+        let thrown: unknown;
+
+        try {
+            await loader.loadBundle('boot');
+        } catch (error: unknown) {
+            thrown = error;
+        }
+
+        expect(thrown).toBeInstanceOf(BundleLoadError);
+
+        const bundleError = thrown as BundleLoadError;
+
+        expect(bundleError.bundle).toBe('boot');
+        expect(bundleError.failures).toHaveLength(1);
+        expect(bundleError.failures[0].alias).toBe('missing');
+        expect(bundleError.failures[0].type).toBe(TextAsset);
+        expect(bundleError.failures[0].error).toBeInstanceOf(Error);
+    });
+
+    test('successful assets remain cached after partial bundle failure', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'ok', path: 'ok.txt' },
+                    { type: TextAsset, alias: 'missing', path: 'missing.txt' },
+                ],
+            },
+        }));
+
+        global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+            const url = typeof input === 'string'
+                ? input
+                : input instanceof URL
+                    ? input.toString()
+                    : input.url;
+
+            if (url.endsWith('/missing.txt')) {
+                return {
+                    ok: false,
+                    status: 500,
+                    statusText: 'Server Error',
+                } as Response;
+            }
+
+            return {
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+            } as Response;
+        });
+
+        await expect(loader.loadBundle('boot')).rejects.toBeInstanceOf(BundleLoadError);
+        expect(loader.has(TextAsset, 'ok')).toBe(true);
+        expect(loader.has(TextAsset, 'missing')).toBe(false);
+    });
+
+    test('bundle progress callback and signal report expected totals and final completion', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+        const callbackProgress: Array<[number, number]> = [];
+        const signalProgress: Array<[string, number, number]> = [];
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'cached', path: 'cached.txt' },
+                    { type: TextAsset, alias: 'fresh', path: 'fresh.txt' },
+                ],
+            },
+        }));
+        loader.onBundleProgress.add((name, loaded, total) => {
+            signalProgress.push([name, loaded, total]);
+        });
+        mockFetch();
+
+        await loader.load(TextAsset, { cached: 'cached.txt' });
+        await loader.loadBundle('boot', {
+            onProgress: (loaded, total) => {
+                callbackProgress.push([loaded, total]);
+            },
+        });
+
+        expect(callbackProgress).toContainEqual([1, 2]);
+        expect(callbackProgress[callbackProgress.length - 1]).toEqual([2, 2]);
+        expect(signalProgress).toContainEqual(['boot', 1, 2]);
+        expect(signalProgress[signalProgress.length - 1]).toEqual(['boot', 2, 2]);
+    });
+
+    test('background bundle load works', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/', concurrency: 1 });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'a', path: 'a.txt' },
+                    { type: TextAsset, alias: 'b', path: 'b.txt' },
+                ],
+            },
+        }));
+        mockFetch();
+
+        await expect(loader.loadBundle('boot', { background: true })).resolves.toBeUndefined();
+        expect(loader.has(TextAsset, 'a')).toBe(true);
+        expect(loader.has(TextAsset, 'b')).toBe(true);
+    });
+
+    test('foreground load after background bundle queue uses normal priority boost behavior', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/', concurrency: 1 });
+        const firstFetch = createDeferred<Response>();
+        const boostedFetch = createDeferred<Response>();
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'first', path: 'first.txt' },
+                    { type: TextAsset, alias: 'boosted', path: 'boosted.txt' },
+                ],
+            },
+        }));
+
+        global.fetch = jest.fn((input: RequestInfo | URL): Promise<Response> => {
+            const url = typeof input === 'string'
+                ? input
+                : input instanceof URL
+                    ? input.toString()
+                    : input.url;
+
+            if (url.endsWith('/first.txt')) {
+                return firstFetch.promise;
+            }
+
+            if (url.endsWith('/boosted.txt')) {
+                return boostedFetch.promise;
+            }
+
+            throw new Error(`Unexpected fetch url: ${url}`);
+        });
+
+        const bundlePromise = loader.loadBundle('boot', { background: true });
+        let bundleResolved = false;
+
+        bundlePromise.then(() => {
+            bundleResolved = true;
+        });
+
+        const boostedPromise = loader.load(TextAsset, 'boosted');
+
+        boostedFetch.resolve({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+        } as Response);
+
+        await expect(boostedPromise).resolves.toBe('resource:fresh-source');
+        await Promise.resolve();
+        expect(bundleResolved).toBe(false);
+
+        firstFetch.resolve({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+        } as Response);
+
+        await expect(bundlePromise).resolves.toBeUndefined();
+    });
+
+    test('hasBundle() is false for unknown bundle and true after full successful load', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'hero', path: 'hero.txt' },
+                ],
+            },
+        }));
+        mockFetch();
+
+        expect(loader.hasBundle('missing')).toBe(false);
+        expect(loader.hasBundle('boot')).toBe(false);
+
+        await loader.loadBundle('boot');
+
+        expect(loader.hasBundle('boot')).toBe(true);
+    });
+
+    test('hasBundle() stays false after partial bundle failure', async () => {
+        const factory = new MockTextFactory();
+        const loader = new Loader({ resourcePath: '/' });
+
+        loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+        loader.registerManifest(defineAssetManifest({
+            bundles: {
+                boot: [
+                    { type: TextAsset, alias: 'ok', path: 'ok.txt' },
+                    { type: TextAsset, alias: 'bad', path: 'bad.txt' },
+                ],
+            },
+        }));
+
+        global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+            const url = typeof input === 'string'
+                ? input
+                : input instanceof URL
+                    ? input.toString()
+                    : input.url;
+
+            if (url.endsWith('/bad.txt')) {
+                return {
+                    ok: false,
+                    status: 404,
+                    statusText: 'Not Found',
+                } as Response;
+            }
+
+            return {
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+            } as Response;
+        });
+
+        await expect(loader.loadBundle('boot')).rejects.toBeInstanceOf(BundleLoadError);
+        expect(loader.hasBundle('boot')).toBe(false);
     });
 });

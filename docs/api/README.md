@@ -6,6 +6,7 @@ Use these pages as the source of truth for examples and application code:
 
 - [Application](./Application.md)
 - [Examples Migration](./ExamplesMigration.md)
+- [Game Feel](./GameFeel.md)
 - [Scene](./Scene.md)
 - [Loader](./Loader.md)
 - [Renderer](./Renderer.md)

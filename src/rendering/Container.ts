@@ -5,9 +5,23 @@ import type { SceneRenderRuntime } from './SceneRenderRuntime';
 export class Container extends SceneNode {
 
     private readonly _children: Array<SceneNode> = [];
+    private _sortableChildren = false;
+    private _sortDirty = false;
+    private _nextChildOrder = 0;
 
     public get children(): Array<SceneNode> {
         return this._children;
+    }
+
+    public get sortableChildren(): boolean {
+        return this._sortableChildren;
+    }
+
+    public set sortableChildren(sortableChildren: boolean) {
+        if (this._sortableChildren !== sortableChildren) {
+            this._sortableChildren = sortableChildren;
+            this._sortDirty = sortableChildren;
+        }
     }
 
     public get width(): number {
@@ -60,8 +74,10 @@ export class Container extends SceneNode {
         }
 
         child.parentNode = this;
+        child.setChildOrder(this._nextChildOrder++);
 
         this._children.splice(index, 0, child);
+        this.markSortDirty();
 
         return this;
     }
@@ -73,6 +89,7 @@ export class Container extends SceneNode {
 
             this._children[firstIndex] = secondChild;
             this._children[secondIndex] = firstChild;
+            this.markSortDirty();
         }
 
         return this;
@@ -96,6 +113,7 @@ export class Container extends SceneNode {
         removeArrayItems(this._children, this.getChildIndex(child), 1);
 
         this._children.splice(index, 0, child);
+        this.markSortDirty();
 
         return this;
     }
@@ -127,6 +145,8 @@ export class Container extends SceneNode {
             child.parentNode = null;
         }
 
+        this.markSortDirty();
+
         return this;
     }
 
@@ -146,12 +166,15 @@ export class Container extends SceneNode {
         }
 
         removeArrayItems(this._children, begin, range);
+        this.markSortDirty();
 
         return this;
     }
 
     public render(renderManager: SceneRenderRuntime): this {
         if (this.visible && this.inView(renderManager.view)) {
+            this._sortChildrenIfNeeded();
+
             for (const child of this._children) {
                 child.render(renderManager);
             }
@@ -181,5 +204,38 @@ export class Container extends SceneNode {
         this.removeChildren();
 
         super.destroy();
+    }
+
+    public markSortDirty(): this {
+        if (this._sortableChildren) {
+            this._sortDirty = true;
+        }
+
+        return this;
+    }
+
+    public sortChildren(): this {
+        if (!this._sortableChildren || !this._sortDirty || this._children.length <= 1) {
+            this._sortDirty = false;
+
+            return this;
+        }
+
+        this._children.sort((left, right) => {
+            if (left.zIndex === right.zIndex) {
+                return left.childOrder - right.childOrder;
+            }
+
+            return left.zIndex - right.zIndex;
+        });
+        this._sortDirty = false;
+
+        return this;
+    }
+
+    private _sortChildrenIfNeeded(): void {
+        if (this._sortableChildren && this._sortDirty) {
+            this.sortChildren();
+        }
     }
 }

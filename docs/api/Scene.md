@@ -42,7 +42,31 @@ Do not rely on legacy manager-side draw helpers.
 - `init(resources)`
 - `update(delta)`
 - `draw(renderBackend)`
+- `handleInput(event)` for stacked-scene routing
 - `unload()`
 - `destroy()`
 
 `Application` owns frame presentation and backend initialization.
+
+## Scene Stacking
+
+Use `SceneManager` stack operations for overlays/modals instead of replacing every scene:
+
+- `setScene(scene, options?)`
+- `pushScene(scene, options?)`
+- `popScene(options?)`
+
+`pushScene`/`setScene` support:
+
+- `mode: 'overlay' | 'modal' | 'opaque'`
+- `input: 'capture' | 'passthrough' | 'transparent'`
+- `transition: { type: 'fade', duration?, color? }`
+
+You can also set per-scene defaults with:
+
+```ts
+scene.setParticipationPolicy({
+    mode: 'modal',
+    input: 'capture',
+});
+```

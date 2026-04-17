@@ -7,6 +7,7 @@ export * from './CacheFirstStrategy';
 export * from './NetworkOnlyStrategy';
 export * from './IndexedDbStore';
 export * from './FactoryRegistry';
+export * from './AssetManifest';
 export * from './Loader';
 
 export * from './Database';

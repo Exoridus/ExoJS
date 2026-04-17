@@ -32,3 +32,34 @@ or place it in a container and render the container.
 - WebGPU supports the normal built-in sprite path
 - `Text`, `Video`, and `RenderTexture` display all ride on the sprite path
 - batching is internal and not part of the public API contract
+
+## Animated Clips
+
+For clip playback, use `AnimatedSprite`:
+
+```ts
+import { AnimatedSprite } from 'exojs';
+
+animatedSprite.play('walk');
+animatedSprite.pause();
+animatedSprite.resume();
+animatedSprite.stop();
+```
+
+`AnimatedSprite` supports:
+
+- named clips
+- loop / non-loop playback
+- `onFrame` and `onComplete` signals
+- `AnimatedSprite.fromSpritesheet(...)` from spritesheet animation metadata
+
+## zIndex Sorting
+
+Use sortable containers for deterministic draw order:
+
+```ts
+container.sortableChildren = true;
+sprite.zIndex = 10;
+```
+
+When sorting is disabled, insertion order remains the default behavior.
