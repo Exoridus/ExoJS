@@ -1,15 +1,14 @@
-import { AbstractResourceFactory } from './AbstractResourceFactory';
-import { StorageNames } from 'types/types';
+import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
 
-export class JsonFactory extends AbstractResourceFactory<Record<string, unknown>, Record<string, unknown>> {
+export class JsonFactory extends AbstractAssetFactory<unknown> {
 
-    public readonly storageName: StorageNames = StorageNames.json;
+    public readonly storageName = 'json';
 
-    public async process(response: Response): Promise<Record<string, unknown>> {
-        return await response.json() as Record<string, unknown>;
+    public async process(response: Response): Promise<unknown> {
+        return await response.json();
     }
 
-    public async create(source: Record<string, unknown>): Promise<Record<string, unknown>> {
+    public async create(source: unknown): Promise<unknown> {
         return source;
     }
 }

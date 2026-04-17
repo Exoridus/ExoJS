@@ -1,9 +1,8 @@
-import { AbstractResourceFactory } from './AbstractResourceFactory';
-import { StorageNames } from 'types/types';
+import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
 
-export class TextFactory extends AbstractResourceFactory<string, string> {
+export class TextFactory extends AbstractAssetFactory<string> {
 
-    public readonly storageName: StorageNames = StorageNames.text;
+    public readonly storageName = 'text';
 
     public async process(response: Response): Promise<string> {
         return await response.text();

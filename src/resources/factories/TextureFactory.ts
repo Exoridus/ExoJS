@@ -1,34 +1,46 @@
 import { Texture } from 'rendering/texture/Texture';
 import type { SamplerOptions } from 'rendering/texture/Sampler';
-import { AbstractResourceFactory } from './AbstractResourceFactory';
-import { determineMimeType } from 'utils/resources';
-import { StorageNames } from 'types/types';
+import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
+import { determineMimeType } from 'resources/utils';
 
-interface ITextureFactoryOptions {
+interface TextureFactoryOptions {
     mimeType?: string;
     samplerOptions?: SamplerOptions;
 }
 
-export class TextureFactory extends AbstractResourceFactory<ArrayBuffer, Texture, ITextureFactoryOptions> {
+export class TextureFactory extends AbstractAssetFactory<Texture> {
 
-    public readonly storageName: StorageNames = StorageNames.image;
+    public readonly storageName = 'texture';
 
     public async process(response: Response): Promise<ArrayBuffer> {
         return await response.arrayBuffer();
     }
 
-    public async create(source: ArrayBuffer, options: ITextureFactoryOptions = {}): Promise<Texture> {
+    public async create(source: ArrayBuffer, options: TextureFactoryOptions = {}): Promise<Texture> {
         const { mimeType, samplerOptions } = options;
         const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
+        const objectUrl = this.createObjectUrl(blob);
 
         return new Promise((resolve, reject) => {
             const image = new Image();
+            const finalize = (): void => {
+                this.revokeObjectUrl(objectUrl);
+            };
 
-            image.addEventListener('load', () => resolve(new Texture(image, samplerOptions)));
-            image.addEventListener('error', () => reject(Error('Error loading image source.')));
-            image.addEventListener('abort', () => reject(Error('Image loading was canceled.')));
+            image.addEventListener('load', () => {
+                finalize();
+                resolve(new Texture(image, samplerOptions));
+            }, { once: true });
+            image.addEventListener('error', () => {
+                finalize();
+                reject(Error('Error loading image source.'));
+            }, { once: true });
+            image.addEventListener('abort', () => {
+                finalize();
+                reject(Error('Image loading was canceled.'));
+            }, { once: true });
 
-            image.src = this.createObjectUrl(blob);
+            image.src = objectUrl;
         });
     }
 }

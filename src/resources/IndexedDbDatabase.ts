@@ -1,12 +1,18 @@
-import type { Database } from 'types/Database';
-import { supportsIndexedDb } from 'utils/core';
-import { ResourceTypes } from 'types/types';
+import type { Database } from 'resources/Database';
+import { supportsIndexedDb } from 'core/utils';
+
+const defaultStoreNames: ReadonlyArray<string> = [
+    'font', 'video', 'music', 'sound', 'image', 'texture',
+    'text', 'svg', 'json', 'binary', 'wasm', 'vtt',
+];
 
 export class IndexedDbDatabase implements Database {
 
     public readonly name: string;
     public readonly version: number;
 
+    private readonly _storeNames: ReadonlyArray<string>;
+    private readonly _migrations: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean> | undefined;
     private readonly _onCloseHandler: () => void = this.disconnect.bind(this);
     private _connected = false;
     private _database: IDBDatabase | null = null;
@@ -15,43 +21,70 @@ export class IndexedDbDatabase implements Database {
         return this._connected;
     }
 
-    public constructor(name: string, version: number) {
+    public constructor(
+        name: string,
+        version: number = 1,
+        storeNames: ReadonlyArray<string> = defaultStoreNames,
+        migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>,
+    ) {
         if (!supportsIndexedDb) {
             throw new Error('This browser does not support indexedDB!');
         }
 
         this.name = name;
         this.version = version;
+        this._storeNames = storeNames;
+        this._migrations = migrations;
     }
 
-    public async getObjectStore(type: ResourceTypes, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
+    public async getObjectStore(type: string, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
         await this.connect();
 
         return this._database!.transaction([type], transactionMode).objectStore(type);
     }
 
     public async connect(): Promise<boolean> {
+        if (this._connected && this._database) {
+            return true;
+        }
+
         return new Promise((resolve, reject) => {
             const request: IDBOpenDBRequest = indexedDB.open(this.name, this.version);
 
-            request.addEventListener('upgradeneeded', () => {
+            request.addEventListener('upgradeneeded', (event) => {
                 const database = request.result;
                 const transaction = request.transaction!;
                 const currentStores: Array<string> = [...transaction.objectStoreNames];
-                const resourceTypeNames: Array<string> = Object.values(ResourceTypes);
+                const { oldVersion, newVersion } = event as IDBVersionChangeEvent;
 
                 database.addEventListener('error', () => reject(Error('An error occurred while opening the database.')));
                 database.addEventListener('abort', () => reject(Error('The database opening was aborted.')));
 
-                for (const store of currentStores) {
-                    if (!resourceTypeNames.includes(store)) {
-                        database.deleteObjectStore(store);
-                    }
-                }
+                if (this._migrations) {
+                    const migrationKeys = Object.keys(this._migrations)
+                        .map(Number)
+                        .filter(v => v > oldVersion && v <= (newVersion ?? this.version))
+                        .sort((a, b) => a - b);
 
-                for (const type of resourceTypeNames) {
-                    if (!currentStores.includes(type)) {
-                        database.createObjectStore(type, { keyPath: 'name' });
+                    for (const v of migrationKeys) {
+                        const ok = this._migrations[v](database, transaction);
+
+                        if (!ok) {
+                            transaction.abort();
+                            return;
+                        }
+                    }
+                } else {
+                    for (const store of currentStores) {
+                        if (!this._storeNames.includes(store)) {
+                            database.deleteObjectStore(store);
+                        }
+                    }
+
+                    for (const name of this._storeNames) {
+                        if (!currentStores.includes(name)) {
+                            database.createObjectStore(name, { keyPath: 'name' });
+                        }
                     }
                 }
             });
@@ -82,7 +115,7 @@ export class IndexedDbDatabase implements Database {
         return true;
     }
 
-    public async load<T = unknown>(type: ResourceTypes, name: string): Promise<T | null> {
+    public async load<T = unknown>(type: string, name: string): Promise<T | null> {
         const store = await this.getObjectStore(type);
 
         return new Promise((resolve, reject) => {
@@ -93,7 +126,7 @@ export class IndexedDbDatabase implements Database {
         });
     }
 
-    public async save(type: ResourceTypes, name: string, data: unknown): Promise<void> {
+    public async save(type: string, name: string, data: unknown): Promise<void> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
@@ -104,7 +137,7 @@ export class IndexedDbDatabase implements Database {
         });
     }
 
-    public async delete(type: ResourceTypes, name: string): Promise<boolean> {
+    public async delete(type: string, name: string): Promise<boolean> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
@@ -115,7 +148,7 @@ export class IndexedDbDatabase implements Database {
         });
     }
 
-    public async clearStorage(type: ResourceTypes): Promise<boolean> {
+    public async clearStorage(type: string): Promise<boolean> {
         const store = await this.getObjectStore(type, 'readwrite');
 
         return new Promise((resolve, reject) => {
@@ -138,7 +171,12 @@ export class IndexedDbDatabase implements Database {
     }
 
     public destroy(): void {
-        this.disconnect();
+        if (this._database) {
+            this._database.removeEventListener('close', this._onCloseHandler);
+            this._database.removeEventListener('versionchange', this._onCloseHandler);
+            this._database.close();
+        }
         this._database = null;
+        this._connected = false;
     }
 }
