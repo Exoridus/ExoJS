@@ -4,9 +4,6 @@ const GRID_COLUMNS = 34;
 const GRID_ROWS = 20;
 const SPRITE_COUNT = GRID_COLUMNS * GRID_ROWS;
 
-if (!('gpu' in navigator)) {
-    throw new Error('WebGPU is not supported in this browser.');
-}
 const app = new Application({
     width: 800,
     height: 600,

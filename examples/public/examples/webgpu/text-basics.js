@@ -1,8 +1,5 @@
 import { Application, Color, Scene, Text, TextStyle } from 'exojs';
 
-if (!('gpu' in navigator)) {
-    throw new Error('WebGPU is not supported in this browser.');
-}
 const app = new Application({
     width: 800,
     height: 600,
