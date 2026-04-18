@@ -115,8 +115,7 @@ If Rapier is unavailable, creation fails with a clear setup error.
 
 ## Examples
 
-- Canonical typechecked source examples live in [`examples/`](examples/README.md).
-- The runnable live site (Astro + Lit + Monaco preview) lives in [`examples-site/`](examples-site/README.md) and is deployed as the repository's GitHub Pages site at <https://exoridus.github.io/ExoJS/>.
+The runnable live site (Astro + Lit + Monaco preview) lives in [`examples-site/`](examples-site/README.md) and is deployed as the repository's GitHub Pages site at <https://exoridus.github.io/ExoJS/>.
 
 ## Development
 
@@ -125,7 +124,6 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
-npm run typecheck:examples
 npm run verify:package
 npm run perf:benchmark
 ```

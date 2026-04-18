@@ -15,7 +15,6 @@ This directory is the product-facing documentation hub for ExoJS.
 - [Audio: Sound Pooling and Audio Sprites](./audio/audio-workflow.md)
 - [Physics: Optional Rapier Integration](./physics/rapier-integration.md)
 - [Performance and Debugging](./performance/performance-and-debugging.md)
-- [Examples Index](./examples/README.md)
 
 ## API Reference
 

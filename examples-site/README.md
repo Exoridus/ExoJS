@@ -6,12 +6,9 @@ Deployed as the GitHub Pages site for the `exojs` repository.
 
 ## Role in the repository
 
-This app is a sibling of the library, not a second home for examples.
+Runtime-preview example scripts live under [`public/examples/`](./public/examples/) — demo `.js` files loaded at runtime by the Astro + Lit preview frame. See [`public/examples/README.md`](./public/examples/README.md) for layout.
 
-- **Canonical example source-of-truth**: [`../examples/`](../examples/) — focused, typechecked `.ts` snippets that validate the public API via `npm run typecheck:examples` from the repo root.
-- **Runtime-preview examples used by this site**: [`public/examples/`](./public/examples/) — larger demo `.js` files loaded at runtime by the Astro + Lit preview frame. See [`public/examples/README.md`](./public/examples/README.md) for the rule.
-
-This package is **not published to npm**. It lives beside the library to keep the live site in lockstep with the currently released `exojs` package, without a second git repo to coordinate.
+This package is **not published to npm**. It lives beside the library to keep the live site in lockstep with the currently released package, without a second git repo to coordinate.
 
 ## Local development
 

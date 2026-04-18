@@ -81,4 +81,3 @@ const logo = app.loader.get(Texture, 'logo');
 - [Core Concepts](../core-concepts/overview.md)
 - [Assets and bundles](../assets/loader-and-bundles.md)
 - [Scene stacking](../scenes/scene-flow.md)
-- [Examples index](../examples/README.md)
