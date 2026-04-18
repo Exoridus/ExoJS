@@ -906,10 +906,16 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
         vec2<f32>(3.0, -1.0),
         vec2<f32>(-1.0, 3.0)
     );
+    // Y is flipped vs the position array: NDC Y points up, but texture UV
+    // Y points down (UV (0,0) is the top-left of the source). Matching the
+    // two ensures that the output texture's top-left pixel samples from the
+    // source's top-left, so every mip level has the same orientation as the
+    // level above it. Prior to this, odd mip levels were rendered upside
+    // down, producing visible texture flips at view-size doublings.
     var texcoords = array<vec2<f32>, 3>(
-        vec2<f32>(0.0, 0.0),
-        vec2<f32>(2.0, 0.0),
-        vec2<f32>(0.0, 2.0)
+        vec2<f32>(0.0, 1.0),
+        vec2<f32>(2.0, 1.0),
+        vec2<f32>(0.0, -1.0)
     );
     var output: VertexOutput;
 
