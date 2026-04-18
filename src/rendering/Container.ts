@@ -57,8 +57,12 @@ export class Container extends RenderNode {
         return (this.y + this.height - this.origin.y);
     }
 
-    public addChild(child: SceneNode): this {
-        return this.addChildAt(child, this._children.length);
+    public addChild(...children: Array<SceneNode>): this {
+        for (const child of children) {
+            this.addChildAt(child, this._children.length);
+        }
+
+        return this;
     }
 
     public addChildAt(child: SceneNode, index: number): this {
