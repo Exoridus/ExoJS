@@ -26,6 +26,7 @@ app.start(Scene.create({
         this._maxY = height;
         this._addBunnies = false;
         this._stats = this.createStats();
+        this._counter = this.createCounter();
 
         this.app.inputManager.onPointerDown.add(() => {
             this._addBunnies = true;
@@ -63,11 +64,34 @@ app.start(Scene.create({
         return stats;
     },
 
+    createCounter() {
+        // HTML overlay to match the stats.js FPS widget. The count updates
+        // continuously while the pointer is held, but DOM textContent updates
+        // with fixed-width digits don't cause layout reflow — so this is no
+        // heavier than a Text sprite with an invalidated texture cache, and
+        // keeps a render-loop measurement unaffected by GPU text upload cost.
+        const counter = document.createElement('div');
+        counter.style.position = 'absolute';
+        counter.style.top = '52px';
+        counter.style.left = '0';
+        counter.style.padding = '3px 8px';
+        counter.style.background = '#002';
+        counter.style.color = '#0ff';
+        counter.style.font = '9px "Helvetica Neue", Helvetica, Arial, sans-serif';
+        counter.style.fontWeight = 'bold';
+        counter.style.lineHeight = '15px';
+        counter.style.fontVariantNumeric = 'tabular-nums';
+        counter.textContent = 'BUNNIES 0';
+        document.body.appendChild(counter);
+        return counter;
+    },
+
     update() {
         this._stats.begin();
 
         if (this._addBunnies) {
             this.createBunnies(this._addAmount);
+            this._counter.textContent = 'BUNNIES ' + this._bunnies.children.length;
         }
 
         for (const bunny of this._bunnies.children) {
