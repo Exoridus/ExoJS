@@ -85,6 +85,13 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
         },
 
         sync: (): void => {
+            // Bind the program before syncing uniforms. WebGl2RenderManager
+            // does not call bindShader() on the active renderer's shader
+            // during normal draw flow, so sync() is the first entry point
+            // that must establish program binding — otherwise uniform*
+            // targets the wrong (or no) program and the subsequent draw
+            // call fails with "no valid shader program in use".
+            gl.useProgram(program);
             syncUniforms();
         },
 
