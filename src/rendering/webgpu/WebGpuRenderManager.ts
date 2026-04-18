@@ -508,12 +508,11 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
             throw new Error('WebGPU is available, but navigator.gpu.getPreferredCanvasFormat is not implemented.');
         }
 
-        const context = this._canvas.getContext('webgpu');
-
-        if (context === null) {
-            throw new Error('Could not create WebGPU canvas context.');
-        }
-
+        // Request the adapter before acquiring a WebGPU canvas context.
+        // getContext('webgpu') is exclusive per canvas — once it succeeds, the
+        // same canvas can no longer produce a WebGL2 context. Doing it the
+        // other way round means an unavailable adapter still locks the canvas
+        // and breaks the automatic WebGL2 fallback in Application.
         let adapter: GPUAdapter | null = null;
 
         try {
@@ -524,6 +523,12 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
 
         if (adapter === null) {
             throw new Error('Could not acquire a WebGPU adapter.');
+        }
+
+        const context = this._canvas.getContext('webgpu');
+
+        if (context === null) {
+            throw new Error('Could not create WebGPU canvas context.');
         }
 
         if (typeof adapter.requestDevice !== 'function') {
