@@ -4,6 +4,7 @@ import lit from '@astrojs/lit';
 export default defineConfig({
     integrations: [lit()],
     output: 'static',
+    base: '/ExoJS/',
     build: {
         assets: '_astro',
     },
