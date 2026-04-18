@@ -299,22 +299,52 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             return;
         }
 
-        // Grow vertex/index buffers up front for the largest batch in this
-        // flush. _ensureBatchCapacity destroys the old buffers and creates new
-        // ones when capacity grows, so it must not run after setVertexBuffer /
-        // setIndexBuffer — otherwise the pass's bindings point at destroyed
-        // buffers and the submit is invalid.
-        let maxBatchSpriteCount = 0;
-        for (let start = 0; start < this._drawCallCount;) {
-            const batchRange = this._getBatchRange(start);
-            const batchSpriteCount = batchRange.end - batchRange.start;
-            if (batchSpriteCount > maxBatchSpriteCount) {
-                maxBatchSpriteCount = batchSpriteCount;
-            }
-            start = batchRange.end;
+        // Grow vertex/index buffers up front for the TOTAL sprite count. Two
+        // reasons this must happen before the render pass begins:
+        //   1. _ensureBatchCapacity destroys old buffers and creates new ones
+        //      when capacity grows, so running it after setVertexBuffer /
+        //      setIndexBuffer would leave the pass bound to destroyed buffers.
+        //   2. All batches are packed into the vertex buffer at distinct
+        //      sprite offsets, so the buffer must hold every sprite in the
+        //      flush, not just one batch worth.
+        if (this._drawCallCount > 0) {
+            this._ensureBatchCapacity(this._drawCallCount);
         }
-        if (maxBatchSpriteCount > 0) {
-            this._ensureBatchCapacity(maxBatchSpriteCount);
+
+        // Walk the batches once, packing each batch's vertex data into the
+        // CPU-side buffer at its own sprite-aligned offset. Each batch's
+        // metadata is recorded for the draw loop below.
+        //
+        // This replaces an earlier per-batch queue.writeBuffer(..., offset: 0)
+        // pattern where every writeBuffer targeted the same GPU offset. All
+        // writeBuffers in a frame execute before queue.submit(commandBuffer),
+        // so only the last batch's vertex data survived — which meant any
+        // flush containing more than one batch rendered every batch using
+        // the LAST batch's vertices (background vanished, sprites duplicated
+        // at wrong sizes, etc. whenever blend mode / texture slot / pipeline
+        // caused a split into multiple batches).
+        const batchPlan: Array<{
+            firstSprite: number;
+            spriteCount: number;
+            blendMode: BlendModes;
+            textures: Array<Texture | RenderTexture>;
+        }> = [];
+        let packedSpriteCount = 0;
+
+        for (let start = 0; start < this._drawCallCount;) {
+            const batch = this._getBatchRange(start);
+            const spriteCount = batch.end - batch.start;
+
+            this._writeBatchVertexData(batch, packedSpriteCount);
+            batchPlan.push({
+                firstSprite: packedSpriteCount,
+                spriteCount,
+                blendMode: batch.blendMode,
+                textures: batch.textures,
+            });
+
+            packedSpriteCount += spriteCount;
+            start = batch.end;
         }
 
         const viewMatrix = renderManager.view.getTransform();
@@ -347,34 +377,35 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         }
 
         if (this._drawCallCount > 0 && !maskClipsAll) {
+            // Single upload for the whole packed vertex buffer — every batch
+            // reads from its own sprite range via drawIndexed's firstIndex.
+            device.queue.writeBuffer(
+                this._vertexBuffer!,
+                0,
+                this._vertexData,
+                0,
+                packedSpriteCount * spriteVertexCount * vertexStrideBytes,
+            );
+
             pass.setBindGroup(0, uniformBindGroup);
             pass.setVertexBuffer(0, this._vertexBuffer!);
             pass.setIndexBuffer(this._indexBuffer!, 'uint32');
 
-            for (let start = 0; start < this._drawCallCount;) {
-                const batch = this._getBatchRange(start);
-                const pipeline = this._getPipeline(batch.blendMode, renderManager.renderTargetFormat);
-                const spriteCount = batch.end - batch.start;
-
-                this._writeBatchVertexData(batch);
-
-                device.queue.writeBuffer(
-                    this._vertexBuffer!,
-                    0,
-                    this._vertexData,
-                    0,
-                    spriteCount * spriteVertexCount * vertexStrideBytes,
-                );
-
-                const textureBindGroup = this._createTextureBindGroup(device, renderManager, batch.textures);
+            for (const plan of batchPlan) {
+                const pipeline = this._getPipeline(plan.blendMode, renderManager.renderTargetFormat);
+                const textureBindGroup = this._createTextureBindGroup(device, renderManager, plan.textures);
 
                 pass.setPipeline(pipeline);
                 pass.setBindGroup(1, textureBindGroup);
-                pass.drawIndexed(batch.spriteCount * spriteIndexCount, 1, 0, 0, 0);
+                pass.drawIndexed(
+                    plan.spriteCount * spriteIndexCount,
+                    1,
+                    plan.firstSprite * spriteIndexCount,
+                    0,
+                    0,
+                );
                 renderManager.stats.batches++;
                 renderManager.stats.drawCalls++;
-
-                start = batch.end;
             }
         }
 
@@ -434,14 +465,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         this._indexBuffer = indexBuffer;
     }
 
-    private _writeBatchVertexData(batch: WebGpuSpriteBatchRange): void {
+    private _writeBatchVertexData(batch: WebGpuSpriteBatchRange, firstSprite: number): void {
         const renderManager = this._renderManager;
 
         if (!renderManager) {
             return;
         }
 
-        let vertexOffset = 0;
+        let vertexOffset = firstSprite * spriteVertexCount * wordsPerVertex;
 
         for (let drawCallIndex = batch.start; drawCallIndex < batch.end; drawCallIndex++) {
             const drawCall = this._drawCalls[drawCallIndex];
