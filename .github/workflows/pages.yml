@@ -45,29 +45,10 @@ jobs:
         working-directory: examples
         run: npm run build
 
-      - name: Stage Pages artifact (latest/ subpath + root redirect)
-        run: |
-          mkdir -p _site/latest
-          cp -r examples/dist/. _site/latest/
-          cat > _site/index.html <<'HTML'
-          <!DOCTYPE html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <meta http-equiv="refresh" content="0; url=./latest/">
-              <link rel="canonical" href="./latest/">
-              <title>ExoJS Examples</title>
-            </head>
-            <body>
-              <p>Redirecting to the <a href="./latest/">latest</a> examples site&hellip;</p>
-            </body>
-          </html>
-          HTML
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: examples/dist
 
   deploy:
     name: Deploy to GitHub Pages
