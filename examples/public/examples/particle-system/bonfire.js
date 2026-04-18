@@ -29,12 +29,14 @@ app.start(Scene.create({
     },
 
     update(delta) {
-        const { x, y } = this._particleSystem;
         const angle = rand(90, 100) * (Math.PI / 180);
         const speed = rand(60, 80);
 
         this._particleOptions.totalLifetime.copy(seconds(rand(5, 10)));
-        this._particleOptions.position.set(x + rand(-50, 50), y + rand(-10, 10));
+        // Particle positions are LOCAL to the system; the system's own
+        // transform places them in world space. Setting world coordinates
+        // here would double the translation and push the emitter off-screen.
+        this._particleOptions.position.set(rand(-50, 50), rand(-10, 10));
         this._particleOptions.velocity.set(Math.cos(angle) * speed, -Math.sin(angle) * speed);
 
         this._particleSystem.update(delta);
