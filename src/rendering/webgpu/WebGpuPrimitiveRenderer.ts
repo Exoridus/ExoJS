@@ -324,9 +324,16 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     }
 
     private _writeShapeVertices(runtime: WebGpuRendererRuntime, shape: DrawableShape, vertexStart: number): void {
+        // Matrix.combine is `other * this` (see Matrix.rotate and
+        // SceneNode.getGlobalTransform, both of which chain via
+        // local.combine(parent.global) to yield parent.global * local).
+        //
+        // We need view * global applied to a local vertex, so start with
+        // global and combine with view — that gives
+        // _combinedTransform = view * global.
         const matrix = this._combinedTransform
-            .copy(runtime.view.getTransform())
-            .combine(shape.getGlobalTransform());
+            .copy(shape.getGlobalTransform())
+            .combine(runtime.view.getTransform());
 
         // Match the original uniform-based WGSL layout exactly.
         //
