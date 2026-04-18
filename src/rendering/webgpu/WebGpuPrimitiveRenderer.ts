@@ -328,21 +328,36 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             .copy(runtime.view.getTransform())
             .combine(shape.getGlobalTransform());
 
-        // Match the original uniform-based WGSL layout:
-        //   position' = matrix * vec4(position, 0.0, 1.0)
-        // with the column-major matrix previously built in _writeTransformData.
-        // Expanded:
-        //   x' = a*px + c*py
-        //   y' = b*px + d*py
-        //   z' = 0
-        //   w' = x*px + y*py + z
+        // Match the original uniform-based WGSL layout exactly.
+        //
+        // The shader packs the Matrix's 9 fields into a 4x4 mat (column-major
+        // in WGSL):
+        //   col 0 = [a, c, 0, 0]
+        //   col 1 = [b, d, 0, 0]
+        //   col 2 = [0, 0, 1, 0]
+        //   col 3 = [x, y, 0, z]
+        //
+        // Multiplied by vec4(px, py, 0, 1):
+        //   out = col0*px + col1*py + col2*0 + col3*1
+        //   out.x = a*px + b*py + x
+        //   out.y = c*px + d*py + y
+        //   out.z = 0
+        //   out.w = z
+        //
+        // The Matrix class represents the affine matrix in the order
+        //   [a b x]
+        //   [c d y]
+        //   [e f z]
+        // so a/b/c/d are rotation+scale (note: b on the TOP row, c on the
+        // LEFT column, not the other way around) and x/y/z the translation /
+        // w component. Matrix.toArray(false) confirms this layout.
         const a = matrix.a;
         const b = matrix.b;
         const c = matrix.c;
         const d = matrix.d;
         const tx = matrix.x;
         const ty = matrix.y;
-        const tz = matrix.z;
+        const tw = matrix.z;
 
         const color = shape.color.toRgba();
         const vertices = shape.geometry.vertices;
@@ -354,10 +369,10 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             const px = vertices[sourceIndex];
             const py = vertices[sourceIndex + 1];
 
-            this._float32View[targetIndex + 0] = a * px + c * py;
-            this._float32View[targetIndex + 1] = b * px + d * py;
+            this._float32View[targetIndex + 0] = a * px + b * py + tx;
+            this._float32View[targetIndex + 1] = c * px + d * py + ty;
             this._float32View[targetIndex + 2] = 0;
-            this._float32View[targetIndex + 3] = tx * px + ty * py + tz;
+            this._float32View[targetIndex + 3] = tw;
             this._uint32View[targetIndex + 4] = color;
         }
     }
