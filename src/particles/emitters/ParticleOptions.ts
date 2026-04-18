@@ -55,6 +55,17 @@ export class ParticleOptions implements ParticleProperties {
         this._elapsedLifetime.copy(elapsedLifetime);
     }
 
+    /**
+     * Spawn position for particles emitted with these options, expressed in
+     * the owning ParticleSystem's LOCAL coordinate space — the system's own
+     * `getGlobalTransform()` is applied on top during rendering (both the
+     * WebGL2 and WebGPU shaders do `projection * translation * rotated`).
+     *
+     * Setting a world-space value here (e.g. `system.x + offset`) will
+     * double-translate the emitter because the shader will translate again.
+     * For an emitter anchored at the system origin, use small offsets around
+     * `(0, 0)` and position the system itself via `system.setPosition(...)`.
+     */
     public get position(): Vector {
         return this._position;
     }
