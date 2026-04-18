@@ -1,0 +1,34 @@
+{
+  "audio": [
+    "example.ogg"
+  ],
+  "font": [
+    "AndyBold.woff2"
+  ],
+  "image": [
+    "bunny.png",
+    "buttons.png",
+    "explosion.png",
+    "input-prompts-generic.png",
+    "input-prompts-xbox-series.png",
+    "input-prompts-playstation-series.png",
+    "input-prompts-nintendo-switch.png",
+    "particle.png",
+    "rainbow.png",
+    "uv.png"
+  ],
+  "json": [
+    "buttons.json",
+    "explosion.json",
+    "input-prompts-generic.json",
+    "input-prompts-xbox-series.json",
+    "input-prompts-playstation-series.json",
+    "input-prompts-nintendo-switch.json"
+  ],
+  "svg": [
+    "tiger.svg"
+  ],
+  "video": [
+    "example.webm"
+  ]
+}

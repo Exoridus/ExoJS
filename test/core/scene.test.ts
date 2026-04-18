@@ -2,6 +2,7 @@ import { Scene } from 'core/Scene';
 import { Container } from 'rendering/Container';
 import { Drawable } from 'rendering/Drawable';
 import { RenderBackendType } from 'rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
 import { RenderTarget } from 'rendering/RenderTarget';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
@@ -10,9 +11,11 @@ class DummyDrawable extends Drawable {}
 
 const createRuntime = (): SceneRenderRuntime => {
     const renderTarget = new RenderTarget(200, 200, true);
+    const stats = createRenderStats();
 
     return {
         backendType: RenderBackendType.WebGl2,
+        stats,
         renderTarget,
         get view() {
             return renderTarget.view;
@@ -51,6 +54,11 @@ const createRuntime = (): SceneRenderRuntime => {
             return this;
         },
         draw() {
+            return this;
+        },
+        resetStats() {
+            resetRenderStats(stats);
+
             return this;
         },
         execute() {

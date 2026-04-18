@@ -1,24 +1,45 @@
 # Graphics
 
-`Graphics` is the normal immediate-style shape builder that produces drawable primitive content.
+`Graphics` builds primitive shapes and renders them through the normal drawable flow.
 
 ## Responsibilities
 
-- build filled/stroked primitive geometry
-- expose the result through normal drawable rendering
-- work on both WebGL2 and WebGPU through the built-in primitive path
+- build filled and/or stroked shape geometry
+- output `DrawableShape` children internally
+- render on both WebGL2 and WebGPU through the built-in primitive path
 
-## Typical usage
+## Key Properties
+
+- `fillColor`
+- `lineColor`
+- `lineWidth`
+
+## Typical Usage
 
 ```ts
-const graphics = new Graphics()
-  .beginFill(Color.white)
-  .drawRect(0, 0, 128, 128)
-  .endFill()
+import { Graphics, Color } from 'exojs';
+
+const graphics = new Graphics();
+
+graphics.fillColor = Color.white;
+graphics.lineColor = Color.black;
+graphics.lineWidth = 2;
+
+graphics.drawRectangle(0, 0, 128, 128);
+graphics.drawCircle(64, 64, 20);
 ```
+
+## Common Shape Methods
+
+- `drawRectangle(...)`
+- `drawCircle(...)`
+- `drawEllipse(...)`
+- `drawPolygon(...)`
+- `drawLine(...)`
+- `drawPath(...)`
 
 ## Notes
 
-- `Graphics` ultimately renders through the primitive renderer path
-- WebGPU currently supports the normal built-in graphics path
-- the public API does not require backend-specific access
+- `Graphics` is a `Container`; each draw call adds internal `DrawableShape` children.
+- call `clear()` to remove existing shapes and reset state.
+- for deterministic layering among siblings, use `zIndex` + `sortableChildren` on parent containers.

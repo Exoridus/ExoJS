@@ -8,6 +8,8 @@ import { TextStyle } from 'rendering/text/TextStyle';
 import { Graphics } from 'rendering/primitives/Graphics';
 import { Geometry } from 'rendering/primitives/Geometry';
 import { DrawableShape } from 'rendering/primitives/DrawableShape';
+import { Container } from 'rendering/Container';
+import { ColorFilter } from 'rendering/filters/ColorFilter';
 import { Sprite } from 'rendering/sprite/Sprite';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
 import { Texture } from 'rendering/texture/Texture';
@@ -29,6 +31,7 @@ interface MockWebGpuEnvironment {
         setBindGroup: jest.Mock;
         setVertexBuffer: jest.Mock;
         setIndexBuffer: jest.Mock;
+        setScissorRect: jest.Mock;
         draw: jest.Mock;
         drawIndexed: jest.Mock;
         end: jest.Mock;
@@ -91,6 +94,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
         setBindGroup: jest.fn(),
         setVertexBuffer: jest.fn(),
         setIndexBuffer: jest.fn(),
+        setScissorRect: jest.fn(),
         draw: jest.fn(),
         drawIndexed: jest.fn(),
         end: jest.fn(),
@@ -721,6 +725,75 @@ describe('WebGpuRenderManager', () => {
 
             expect(lineStripPipeline).toBeDefined();
             expect(environment.pass.draw).toHaveBeenCalledWith(3);
+            manager.destroy();
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('supports WebGPU primitive line-loop rendering', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const shape = new DrawableShape(new Geometry({
+                vertices: [0, 0, 16, 0, 16, 16],
+            }), Color.red, RenderingPrimitives.LineLoop);
+
+            await manager.initialize();
+
+            manager.clear();
+            shape.render(manager);
+            manager.flush();
+
+            const lineLoopPipeline = environment.pipelineDescriptors.find((descriptor) =>
+                descriptor.primitive?.topology === 'line-strip'
+                && descriptor.primitive.stripIndexFormat === 'uint16');
+
+            expect(lineLoopPipeline).toBeDefined();
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(4);
+            manager.destroy();
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('supports WebGPU primitive triangle-fan rendering', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const shape = new DrawableShape(new Geometry({
+                vertices: [0, 0, 16, 0, 16, 16, 0, 16],
+            }), Color.red, RenderingPrimitives.TriangleFan);
+
+            await manager.initialize();
+
+            manager.clear();
+            shape.render(manager);
+            manager.flush();
+
+            const triangleFanPipeline = environment.pipelineDescriptors.find((descriptor) =>
+                descriptor.primitive?.topology === 'triangle-list');
+
+            expect(triangleFanPipeline).toBeDefined();
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6);
             manager.destroy();
         } finally {
             environment.restore();
@@ -1743,6 +1816,330 @@ describe('WebGpuRenderManager', () => {
 
             expect(targetFormats).toContain('rgba8unorm');
             expect(targetFormats).toContain('bgra8unorm');
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('applies WebGPU filters through render-target passes', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const sourceCanvas = document.createElement('canvas');
+            const texture = new Texture(sourceCanvas);
+            const sprite = new Sprite(texture);
+
+            sourceCanvas.width = 16;
+            sourceCanvas.height = 16;
+            texture.updateSource();
+            sprite.addFilter(new ColorFilter(Color.red));
+
+            await manager.initialize();
+
+            manager.clear();
+            sprite.render(manager);
+            manager.flush();
+
+            expect(environment.encoder.beginRenderPass.mock.calls.length).toBeGreaterThanOrEqual(3);
+            expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(3);
+            sprite.destroy();
+            manager.destroy();
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('applies WebGPU scissor state for masked drawables', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const sourceCanvas = document.createElement('canvas');
+            const texture = new Texture(sourceCanvas);
+            const sprite = new Sprite(texture);
+            const mask = new Sprite(texture);
+
+            sourceCanvas.width = 16;
+            sourceCanvas.height = 16;
+            texture.updateSource();
+
+            mask.setPosition(4, 5);
+            mask.width = 8;
+            mask.height = 8;
+            sprite.mask = mask;
+
+            await manager.initialize();
+
+            manager.clear();
+            sprite.render(manager);
+            manager.flush();
+
+            expect(environment.pass.setScissorRect).toHaveBeenCalled();
+            const scissorCall = environment.pass.setScissorRect.mock.calls[0];
+
+            expect(scissorCall[2]).toBeGreaterThan(0);
+            expect(scissorCall[3]).toBeGreaterThan(0);
+            sprite.destroy();
+            mask.destroy();
+            manager.destroy();
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('reuses WebGPU cache-as-bitmap output until invalidated', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const sourceCanvas = document.createElement('canvas');
+            const texture = new Texture(sourceCanvas);
+            const container = new Container();
+            const sprite = new Sprite(texture);
+
+            sourceCanvas.width = 16;
+            sourceCanvas.height = 16;
+            texture.updateSource();
+
+            container.cacheAsBitmap = true;
+            container.addChild(sprite);
+
+            await manager.initialize();
+
+            manager.clear();
+            container.render(manager);
+            manager.flush();
+            const firstFrameDrawCalls = environment.pass.drawIndexed.mock.calls.length;
+
+            environment.pass.drawIndexed.mockClear();
+            environment.encoder.beginRenderPass.mockClear();
+
+            manager.clear();
+            container.render(manager);
+            manager.flush();
+
+            expect(firstFrameDrawCalls).toBeGreaterThanOrEqual(2);
+            expect(environment.encoder.beginRenderPass).toHaveBeenCalledTimes(1);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
+            sprite.destroy();
+            container.destroy();
+            manager.destroy();
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('tracks sprite batching and draw statistics per frame', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const sourceCanvas = document.createElement('canvas');
+            const texture = new Texture(sourceCanvas);
+            const first = new Sprite(texture);
+            const second = new Sprite(texture);
+
+            sourceCanvas.width = 16;
+            sourceCanvas.height = 16;
+            texture.updateSource();
+            second.x = 20;
+
+            await manager.initialize();
+
+            manager.resetStats();
+            manager.clear();
+            first.render(manager);
+            second.render(manager);
+            manager.flush();
+
+            expect(manager.stats.submittedNodes).toBe(2);
+            expect(manager.stats.culledNodes).toBe(0);
+            expect(manager.stats.batches).toBe(1);
+            expect(manager.stats.drawCalls).toBe(1);
+            expect(manager.stats.renderPasses).toBeGreaterThanOrEqual(1);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('resetStats clears counters and advances frame', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const sourceCanvas = document.createElement('canvas');
+            const texture = new Texture(sourceCanvas);
+            const sprite = new Sprite(texture);
+            const target = new RenderTexture(32, 32);
+
+            sourceCanvas.width = 16;
+            sourceCanvas.height = 16;
+            texture.updateSource();
+
+            await manager.initialize();
+
+            manager.resetStats();
+            const frame = manager.stats.frame;
+
+            manager.setRenderTarget(target);
+            manager.setRenderTarget(null);
+            manager.clear();
+            sprite.render(manager);
+            manager.flush();
+
+            expect(manager.stats.renderTargetChanges).toBe(2);
+            expect(manager.stats.drawCalls).toBeGreaterThan(0);
+            expect(manager.stats.batches).toBeGreaterThan(0);
+
+            manager.resetStats();
+
+            expect(manager.stats.frame).toBe(frame + 1);
+            expect(manager.stats.submittedNodes).toBe(0);
+            expect(manager.stats.culledNodes).toBe(0);
+            expect(manager.stats.drawCalls).toBe(0);
+            expect(manager.stats.batches).toBe(0);
+            expect(manager.stats.renderPasses).toBe(0);
+            expect(manager.stats.renderTargetChanges).toBe(0);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('reports a clear initialization error when preferred canvas format is unavailable', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const gpuNavigator = navigator as Navigator & { gpu?: Partial<GPU>; };
+
+            if (gpuNavigator.gpu) {
+                Object.assign(gpuNavigator.gpu, {
+                    getPreferredCanvasFormat: undefined,
+                });
+            }
+
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+
+            await expect(manager.initialize()).rejects.toThrow('getPreferredCanvasFormat');
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('reports a clear initialization error when requesting a WebGPU device fails', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const gpuNavigator = navigator as Navigator & { gpu?: Partial<GPU>; };
+
+            if (gpuNavigator.gpu) {
+                Object.assign(gpuNavigator.gpu, {
+                    requestAdapter: jest.fn(async () => ({
+                        requestDevice: jest.fn(async () => {
+                            throw new Error('device request denied');
+                        }),
+                    }) as unknown as GPUAdapter),
+                });
+            }
+
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+
+            await expect(manager.initialize()).rejects.toThrow('Failed to request a WebGPU device.');
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('allows retrying WebGPU initialization after a transient adapter failure', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const gpuNavigator = navigator as Navigator & { gpu?: Partial<GPU>; };
+            const originalRequestAdapter = gpuNavigator.gpu?.requestAdapter;
+            let shouldFail = true;
+
+            if (gpuNavigator.gpu && originalRequestAdapter) {
+                Object.assign(gpuNavigator.gpu, {
+                    requestAdapter: jest.fn(async () => {
+                        if (shouldFail) {
+                            shouldFail = false;
+
+                            return null;
+                        }
+
+                        return originalRequestAdapter.call(gpuNavigator.gpu);
+                    }),
+                });
+            }
+
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+
+            await expect(manager.initialize()).rejects.toThrow('Could not acquire a WebGPU adapter.');
+            await expect(manager.initialize()).resolves.toBe(manager);
         } finally {
             environment.restore();
         }

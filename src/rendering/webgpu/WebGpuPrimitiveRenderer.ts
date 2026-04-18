@@ -47,23 +47,30 @@ const vertexStrideBytes = 12;
 const transformByteLength = 64;
 
 interface WebGpuPrimitiveDrawCall {
-    readonly vertices: Float32Array;
-    readonly indices: Uint16Array;
-    readonly color: number;
-    readonly drawMode: RenderingPrimitives;
-    readonly blendMode: BlendModes;
-    readonly transform: Float32Array;
+    shape: DrawableShape;
+    blendMode: BlendModes;
 }
 
 interface WebGpuPrimitivePipelineKey {
-    readonly drawMode: RenderingPrimitives;
+    readonly topology: GPUPrimitiveTopology;
+    readonly usesStripIndex: boolean;
     readonly blendMode: BlendModes;
     readonly format: GPUTextureFormat;
+}
+
+interface ResolvedPrimitiveDrawCall {
+    readonly topology: GPUPrimitiveTopology;
+    readonly usesStripIndex: boolean;
+    readonly vertexCount: number;
+    readonly indices: Uint16Array | null;
+    readonly indexCount: number;
 }
 
 export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShape> {
     private readonly _combinedTransform: Matrix = new Matrix();
     private readonly _drawCalls: Array<WebGpuPrimitiveDrawCall> = [];
+    private _drawCallCount = 0;
+    private readonly _transformData = new Float32Array(transformByteLength / Float32Array.BYTES_PER_ELEMENT);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -80,6 +87,8 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     private _vertexData: ArrayBuffer = new ArrayBuffer(0);
     private _float32View: Float32Array = new Float32Array(this._vertexData);
     private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
+    private _generatedIndexData: Uint16Array = new Uint16Array(0);
+    private _sequentialIndexData: Uint16Array = new Uint16Array(0);
 
     public render(shape: DrawableShape): void {
         const runtime = this._renderManager;
@@ -91,8 +100,10 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         if (
             shape.drawMode !== RenderingPrimitives.Points
             && shape.drawMode !== RenderingPrimitives.Lines
+            && shape.drawMode !== RenderingPrimitives.LineLoop
             && shape.drawMode !== RenderingPrimitives.LineStrip
             && shape.drawMode !== RenderingPrimitives.Triangles
+            && shape.drawMode !== RenderingPrimitives.TriangleFan
             && shape.drawMode !== RenderingPrimitives.TriangleStrip
         ) {
             throw new Error(`WebGPU primitive renderer does not support draw mode "${shape.drawMode}" yet.`);
@@ -103,15 +114,18 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         if (shape.geometry.vertices.length === 0) {
             return;
         }
+        const drawCallIndex = this._drawCallCount++;
+        const drawCall = this._drawCalls[drawCallIndex];
 
-        this._drawCalls.push({
-            vertices: shape.geometry.vertices,
-            indices: shape.geometry.indices,
-            color: shape.color.toRgba(),
-            drawMode: shape.drawMode,
-            blendMode: shape.blendMode,
-            transform: this._createTransformData(runtime, shape),
-        });
+        if (drawCall) {
+            drawCall.shape = shape;
+            drawCall.blendMode = shape.blendMode;
+        } else {
+            this._drawCalls.push({
+                shape,
+                blendMode: shape.blendMode,
+            });
+        }
     }
 
     public flush(): void {
@@ -124,7 +138,7 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             return;
         }
 
-        if (this._drawCalls.length === 0 && !runtime.clearRequested) {
+        if (this._drawCallCount === 0 && !runtime.clearRequested) {
             return;
         }
 
@@ -132,6 +146,7 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         const pass = encoder.beginRenderPass({
             colorAttachments: [runtime.createColorAttachment()],
         });
+        runtime.stats.renderPasses++;
         const scissor = runtime.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
@@ -140,51 +155,69 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         }
 
         if (!maskClipsAll) {
-            for (const drawCall of this._drawCalls) {
-                const vertexCount = drawCall.vertices.length / 2;
-                const indexCount = drawCall.indices.length;
+            for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
+                const drawCall = this._drawCalls[drawCallIndex];
+                const shape = drawCall.shape;
+                const vertices = shape.geometry.vertices;
+                const resolvedDrawCall = this._resolveDrawCall(shape);
+
+                if (resolvedDrawCall === null) {
+                    continue;
+                }
+
                 const pipeline = this._getPipeline({
-                    drawMode: drawCall.drawMode,
+                    topology: resolvedDrawCall.topology,
+                    usesStripIndex: resolvedDrawCall.usesStripIndex,
                     blendMode: drawCall.blendMode,
                     format: runtime.renderTargetFormat,
                 });
 
-                this._ensureVertexCapacity(vertexCount);
-                this._writeVertexData(drawCall.vertices, drawCall.color);
+                this._ensureVertexCapacity(resolvedDrawCall.vertexCount);
+                this._writeVertexData(vertices, shape.color.toRgba());
+                this._writeTransformData(runtime, shape);
 
-                device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, vertexCount * vertexStrideBytes);
+                device.queue.writeBuffer(
+                    this._vertexBuffer!,
+                    0,
+                    this._vertexData,
+                    0,
+                    resolvedDrawCall.vertexCount * vertexStrideBytes
+                );
                 device.queue.writeBuffer(
                     uniformBuffer,
                     0,
-                    drawCall.transform.buffer as ArrayBuffer,
-                    drawCall.transform.byteOffset,
-                    drawCall.transform.byteLength
+                    this._transformData.buffer as ArrayBuffer,
+                    this._transformData.byteOffset,
+                    this._transformData.byteLength
                 );
 
                 pass.setPipeline(pipeline);
                 pass.setBindGroup(0, bindGroup);
                 pass.setVertexBuffer(0, this._vertexBuffer!);
 
-                if (indexCount > 0) {
-                    this._ensureIndexCapacity(indexCount);
+                if (resolvedDrawCall.indices !== null && resolvedDrawCall.indexCount > 0) {
+                    this._ensureIndexCapacity(resolvedDrawCall.indexCount);
                     device.queue.writeBuffer(
                         this._indexBuffer!,
                         0,
-                        drawCall.indices.buffer as ArrayBuffer,
-                        drawCall.indices.byteOffset,
-                        drawCall.indices.byteLength
+                        resolvedDrawCall.indices.buffer as ArrayBuffer,
+                        resolvedDrawCall.indices.byteOffset,
+                        resolvedDrawCall.indexCount * Uint16Array.BYTES_PER_ELEMENT
                     );
                     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
-                    pass.drawIndexed(indexCount);
+                    pass.drawIndexed(resolvedDrawCall.indexCount);
                 } else {
-                    pass.draw(vertexCount);
+                    pass.draw(resolvedDrawCall.vertexCount);
                 }
+
+                runtime.stats.batches++;
+                runtime.stats.drawCalls++;
             }
         }
 
         pass.end();
         runtime.submit(encoder.finish());
-        this._drawCalls.length = 0;
+        this._drawCallCount = 0;
     }
 
     public destroy(): void {
@@ -236,15 +269,15 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         this._shaderModule = null;
         this._device = null;
         this._renderManager = null;
-        this._drawCalls.length = 0;
+        this._drawCallCount = 0;
     }
 
-    private _createTransformData(runtime: WebGpuRendererRuntime, shape: DrawableShape): Float32Array {
+    private _writeTransformData(runtime: WebGpuRendererRuntime, shape: DrawableShape): void {
         const matrix = this._combinedTransform
             .copy(runtime.view.getTransform())
             .combine(shape.getGlobalTransform());
 
-        return new Float32Array([
+        this._transformData.set([
             matrix.a, matrix.c, 0, 0,
             matrix.b, matrix.d, 0, 0,
             0, 0, 1, 0,
@@ -300,14 +333,13 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     }
 
     private _getPipeline(key: WebGpuPrimitivePipelineKey): GPURenderPipeline {
-        const pipelineKey = `${key.drawMode}:${key.blendMode}:${key.format}`;
+        const pipelineKey = `${key.topology}:${key.usesStripIndex ? 1 : 0}:${key.blendMode}:${key.format}`;
         const existingPipeline = this._pipelines.get(pipelineKey);
 
         if (existingPipeline) {
             return existingPipeline;
         }
 
-        const topology = this._getTopology(key.drawMode);
         const pipeline = this._device!.createRenderPipeline({
             layout: this._pipelineLayout!,
             vertex: {
@@ -336,11 +368,8 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                 }],
             },
             primitive: {
-                topology,
-                stripIndexFormat: (
-                    key.drawMode === RenderingPrimitives.TriangleStrip
-                    || key.drawMode === RenderingPrimitives.LineStrip
-                ) ? 'uint16' : undefined,
+                topology: key.topology,
+                stripIndexFormat: key.usesStripIndex ? 'uint16' : undefined,
             },
         });
 
@@ -355,15 +384,142 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                 return 'point-list';
             case RenderingPrimitives.Lines:
                 return 'line-list';
+            case RenderingPrimitives.LineLoop:
             case RenderingPrimitives.LineStrip:
                 return 'line-strip';
             case RenderingPrimitives.Triangles:
+            case RenderingPrimitives.TriangleFan:
                 return 'triangle-list';
             case RenderingPrimitives.TriangleStrip:
                 return 'triangle-strip';
             default:
                 throw new Error(`WebGPU primitive renderer does not support draw mode "${drawMode}" yet.`);
         }
+    }
+
+    private _resolveDrawCall(shape: DrawableShape): ResolvedPrimitiveDrawCall | null {
+        const vertices = shape.geometry.vertices;
+        const vertexCount = vertices.length / 2;
+
+        if (vertexCount === 0) {
+            return null;
+        }
+
+        switch (shape.drawMode) {
+            case RenderingPrimitives.LineLoop:
+                return this._resolveLineLoopDrawCall(shape.geometry.indices, vertexCount);
+            case RenderingPrimitives.TriangleFan:
+                return this._resolveTriangleFanDrawCall(shape.geometry.indices, vertexCount);
+            default: {
+                const indices = shape.geometry.indices;
+                const topology = this._getTopology(shape.drawMode);
+                const indexCount = indices.length;
+                const usesStripIndex = indexCount > 0 && (
+                    shape.drawMode === RenderingPrimitives.LineStrip
+                    || shape.drawMode === RenderingPrimitives.TriangleStrip
+                );
+
+                if (indexCount > 0) {
+                    return {
+                        topology,
+                        usesStripIndex,
+                        vertexCount,
+                        indices,
+                        indexCount,
+                    };
+                }
+
+                return {
+                    topology,
+                    usesStripIndex,
+                    vertexCount,
+                    indices: null,
+                    indexCount: 0,
+                };
+            }
+        }
+    }
+
+    private _resolveLineLoopDrawCall(indices: Uint16Array, vertexCount: number): ResolvedPrimitiveDrawCall | null {
+        const sourceIndices = indices.length > 0 ? indices : this._getSequentialIndices(vertexCount);
+        const sourceCount = sourceIndices.length;
+
+        if (sourceCount < 2) {
+            return null;
+        }
+
+        const loopIndexCount = sourceCount + 1;
+        const generatedIndices = this._ensureGeneratedIndexCapacity(loopIndexCount);
+
+        generatedIndices.set(sourceIndices.subarray(0, sourceCount), 0);
+        generatedIndices[sourceCount] = sourceIndices[0];
+
+        return {
+            topology: 'line-strip',
+            usesStripIndex: true,
+            vertexCount,
+            indices: generatedIndices,
+            indexCount: loopIndexCount,
+        };
+    }
+
+    private _resolveTriangleFanDrawCall(indices: Uint16Array, vertexCount: number): ResolvedPrimitiveDrawCall | null {
+        const sourceIndices = indices.length > 0 ? indices : this._getSequentialIndices(vertexCount);
+        const sourceCount = sourceIndices.length;
+
+        if (sourceCount < 3) {
+            return null;
+        }
+
+        const indexCount = (sourceCount - 2) * 3;
+        const generatedIndices = this._ensureGeneratedIndexCapacity(indexCount);
+        let targetIndex = 0;
+
+        for (let index = 1; index < sourceCount - 1; index++) {
+            generatedIndices[targetIndex++] = sourceIndices[0];
+            generatedIndices[targetIndex++] = sourceIndices[index];
+            generatedIndices[targetIndex++] = sourceIndices[index + 1];
+        }
+
+        return {
+            topology: 'triangle-list',
+            usesStripIndex: false,
+            vertexCount,
+            indices: generatedIndices,
+            indexCount,
+        };
+    }
+
+    private _getSequentialIndices(vertexCount: number): Uint16Array {
+        if (vertexCount > this._sequentialIndexData.length) {
+            let nextLength = Math.max(1, this._sequentialIndexData.length);
+
+            while (nextLength < vertexCount) {
+                nextLength *= 2;
+            }
+
+            this._sequentialIndexData = new Uint16Array(nextLength);
+        }
+
+        for (let index = 0; index < vertexCount; index++) {
+            this._sequentialIndexData[index] = index;
+        }
+
+        return this._sequentialIndexData.subarray(0, vertexCount);
+    }
+
+    private _ensureGeneratedIndexCapacity(indexCount: number): Uint16Array {
+        if (indexCount > this._generatedIndexData.length) {
+            let nextLength = Math.max(1, this._generatedIndexData.length);
+
+            while (nextLength < indexCount) {
+                nextLength *= 2;
+            }
+
+            this._generatedIndexData = new Uint16Array(nextLength);
+        }
+
+        return this._generatedIndexData.subarray(0, indexCount);
     }
 
     private _destroyBuffers(): void {

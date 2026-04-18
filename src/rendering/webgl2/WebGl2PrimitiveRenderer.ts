@@ -113,6 +113,8 @@ export class WebGl2PrimitiveRenderer extends AbstractWebGl2Renderer<DrawableShap
         connection.vertexBuffer.upload(this._float32View.subarray(0, vertexCount * vertexStrideWords));
         connection.indexBuffer.upload(this._indexData.subarray(0, indexCount));
         connection.vao.draw(indexCount, 0, drawMode);
+        runtime.stats.batches++;
+        runtime.stats.drawCalls++;
     }
 
     public flush(): void {

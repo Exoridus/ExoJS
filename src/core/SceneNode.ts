@@ -35,6 +35,7 @@ export class SceneNode extends Transformable implements Collidable {
     private _parentNode: Container | null = null;
     private _zIndex = 0;
     private _childOrder = 0;
+    private _cullable = true;
 
     public get anchor(): ObservableVector {
         return this._anchor;
@@ -83,6 +84,14 @@ export class SceneNode extends Transformable implements Collidable {
         return this._childOrder;
     }
 
+    public get cullable(): boolean {
+        return this._cullable;
+    }
+
+    public set cullable(cullable: boolean) {
+        this._cullable = cullable;
+    }
+
     public get globalTransform(): Matrix {
         return this.getGlobalTransform();
     }
@@ -107,6 +116,12 @@ export class SceneNode extends Transformable implements Collidable {
 
     public setChildOrder(order: number): this {
         this._childOrder = order;
+
+        return this;
+    }
+
+    public setCullable(cullable: boolean): this {
+        this._cullable = cullable;
 
         return this;
     }
@@ -193,6 +208,10 @@ export class SceneNode extends Transformable implements Collidable {
     }
 
     public inView(view: View): boolean {
+        if (!this._cullable) {
+            return true;
+        }
+
         return view.getBounds().intersectsWith(this.getBounds());
     }
 

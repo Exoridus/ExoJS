@@ -1,0 +1,139 @@
+@use "../styles/colors" as *;
+@use "../styles/variables" as *;
+@use "../styles/typography" as *;
+
+:host {
+  display: block;
+  width: max-content;
+  max-width: calc(100vw - 48px);
+  margin: 0 auto;
+  padding: 64px 0 32px;
+  box-sizing: border-box;
+}
+
+@media (max-width: #{$breakpoint-large - 1px}) {
+  :host {
+    padding-top: 32px;
+  }
+}
+
+.preview-wrapper {
+  position: relative;
+  display: block;
+  width: max-content;
+  margin: 0 auto 32px;
+}
+
+.unavailable-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgba($black, 0.88);
+  backdrop-filter: blur(2px);
+}
+
+.unavailable-icon {
+  color: rgba(255, 180, 80, 0.9);
+  flex: 0 0 auto;
+}
+
+.unavailable-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+  color: rgba($white, 0.68);
+}
+
+.error-panel {
+  margin-bottom: 32px;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 131, 131, 0.12);
+  background: rgba(96, 16, 22, 0.14);
+}
+
+.error-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 14px;
+  background: rgba($white, 0.03);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.error-summary-label {
+  color: rgba(255, 223, 223, 0.92);
+}
+
+.error-summary-count {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba($white, 0.12);
+  color: rgba(255, 242, 242, 0.92);
+  font-size: 11px;
+}
+
+.error-body {
+  padding: 0 14px 14px;
+}
+
+.error-item + .error-item {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba($white, 0.08);
+}
+
+.error-item-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 232, 232, 0.94);
+}
+
+.error-details {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba($black, 0.14);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgba(255, 240, 240, 0.78);
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: $font-family-mono;
+}
+
+@media (max-width: #{$breakpoint-desktop - 1px}) {
+  :host {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .preview-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 0 0 16px;
+  }
+}

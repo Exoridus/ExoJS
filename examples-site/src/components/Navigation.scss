@@ -1,0 +1,107 @@
+@use "../styles/colors" as *;
+@use "../styles/typography" as *;
+@use "../styles/mixins" as *;
+
+* {
+  box-sizing: border-box;
+}
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: $navigation-color;
+}
+
+.header {
+  flex: 0 0 auto;
+  padding: 8px 16px 10px;
+}
+
+.heading {
+  min-height: 42px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
+  font-size: 20px;
+  font-weight: $font-weight-medium;
+  color: $text-color;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  margin: 0;
+}
+
+.filter-bar {
+  flex: 0 0 auto;
+  padding: 0 16px 14px;
+  border-bottom: 1px solid rgba($white, 0.06);
+}
+
+.filter-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba($text-color, 0.76);
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba($white, 0.1);
+  background: rgba($white, 0.04);
+  color: $text-color;
+  padding: 0 12px;
+  outline: none;
+
+  &::placeholder {
+    color: rgba($text-color, 0.42);
+  }
+
+  &:focus {
+    border-color: rgba($white, 0.26);
+    background: rgba($white, 0.06);
+  }
+}
+
+.clear-button {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba($white, 0.12);
+  background: rgba($white, 0.06);
+  color: rgba($text-color, 0.88);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba($white, 0.12);
+  }
+}
+
+nav {
+  @include custom-scrollbar;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 6px;
+}
+
+.error {
+  margin: 0;
+  padding: 16px;
+  color: #ffb8b8;
+  line-height: 1.5;
+}

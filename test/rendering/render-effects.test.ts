@@ -3,6 +3,7 @@ import { CallbackRenderPass } from 'rendering/CallbackRenderPass';
 import { Container } from 'rendering/Container';
 import { Drawable } from 'rendering/Drawable';
 import { RenderBackendType } from 'rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
 import { RenderTargetPass } from 'rendering/RenderTargetPass';
 import { RenderTarget } from 'rendering/RenderTarget';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
@@ -47,6 +48,7 @@ const createTexture = (width = 16, height = 16): Texture => {
 const createRuntime = () => {
     const root = new RenderTarget(320, 200, true);
     let currentTarget: RenderTarget = root;
+    const stats = createRenderStats();
     const released: Array<RenderTexture> = [];
     const maskEvents: Array<string> = [];
     const draw = jest.fn(function(this: SceneRenderRuntime) {
@@ -57,6 +59,7 @@ const createRuntime = () => {
     });
     const runtime: SceneRenderRuntime = {
         backendType: RenderBackendType.WebGl2,
+        stats,
         get renderTarget() {
             return currentTarget;
         },
@@ -101,6 +104,11 @@ const createRuntime = () => {
             return this;
         },
         draw,
+        resetStats() {
+            resetRenderStats(stats);
+
+            return this;
+        },
         execute(pass) {
             pass.execute(this);
 

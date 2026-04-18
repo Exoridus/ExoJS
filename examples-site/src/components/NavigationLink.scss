@@ -1,0 +1,71 @@
+@use "../styles/colors" as *;
+
+.link {
+  transition: background-color 120ms cubic-bezier(0, 0, 0.2, 1),
+              border-color 120ms cubic-bezier(0, 0, 0.2, 1);
+  padding: 10px 16px;
+  min-height: 42px;
+  -webkit-tap-highlight-color: $transparent;
+  color: rgba($text-color, 0.76);
+  text-decoration: none;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  border-left: 3px solid transparent;
+
+  &:hover {
+    background-color: rgba($white, 0.12);
+  }
+
+  &:active {
+    background-color: rgba($white, 0.18);
+  }
+
+  &[data-active] {
+    color: $text-color;
+    background-color: rgba($white, 0.16);
+    border-left-color: $accent-highlight;
+  }
+
+  &[data-unavailable] {
+    color: rgba($text-color, 0.48);
+    background-color: rgba($white, 0.02);
+
+    &:hover {
+      background-color: rgba($white, 0.06);
+    }
+  }
+
+  &[data-active][data-unavailable] {
+    color: rgba($text-color, 0.72);
+    background-color: rgba($white, 0.1);
+  }
+}
+
+.title {
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 600;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba($white, 0.08);
+  color: rgba($white, 0.62);
+}

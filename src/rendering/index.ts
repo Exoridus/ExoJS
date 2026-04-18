@@ -49,6 +49,7 @@ export * from './Drawable';
 export * from './RenderNode';
 export * from './RenderBackendType';
 export * from './RenderPass';
+export * from './RenderStats';
 export * from './RenderTarget';
 export * from './RenderTargetPass';
 export * from './CallbackRenderPass';

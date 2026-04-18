@@ -9,7 +9,7 @@
 - own the input manager
 - own the scene manager
 - drive the frame lifecycle
-- present the frame
+- flush/present frames
 
 ## Default backend behavior
 
@@ -51,4 +51,4 @@ await app.start(scene)
 - `resize(width, height)`
 - `destroy()`
 
-`Application` owns frame presentation. Scene code should not call `display()` itself.
+`Application` owns frame presentation. Scene code should submit drawables in `Scene.draw(...)` and should not manage presentation directly.

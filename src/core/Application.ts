@@ -177,6 +177,9 @@ export class Application {
     public update(): this {
         if (this._status === ApplicationStatus.Running) {
             const frameDelta = this._frameClock.elapsedTime;
+            const frameStart = performance.now();
+
+            this.renderManager.resetStats();
 
             this.inputManager.update();
             const runtimeView = (this.renderManager as Partial<{
@@ -189,6 +192,7 @@ export class Application {
 
             this.sceneManager.update(frameDelta);
             this.renderManager.flush();
+            this.renderManager.stats.frameTimeMs = performance.now() - frameStart;
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();
             this._frameCount++;

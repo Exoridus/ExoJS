@@ -6,6 +6,7 @@ import type { TextureSource } from 'core/types';
 import { BlendModes } from 'rendering/types';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
+import { createRenderStats, resetRenderStats } from '../RenderStats';
 import type { Drawable } from '../Drawable';
 import type { RenderPass } from '../RenderPass';
 import type { Renderer } from '../Renderer';
@@ -25,6 +26,7 @@ import { DrawableShape } from '../primitives/DrawableShape';
 import { ParticleSystem } from 'particles/ParticleSystem';
 import { Vector } from 'math/Vector';
 import type { Rectangle } from 'math/Rectangle';
+import type { RenderStats } from '../RenderStats';
 
 interface ManagedWebGpuTextureState {
     texture: GPUTexture;
@@ -77,6 +79,7 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
     private _texture: Texture | RenderTexture | null = null;
     private _clearRequested = false;
     private _hasPresentedFrame = false;
+    private readonly _stats: RenderStats = createRenderStats();
 
     public constructor(app: Application) {
         const {
@@ -139,12 +142,25 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         return this._clearRequested;
     }
 
+    public get stats(): RenderStats {
+        return this._stats;
+    }
+
     public initialize(): Promise<this> {
         if (!this._initializePromise) {
-            this._initializePromise = this._initialize();
+            this._initializePromise = this._initialize().catch((error: unknown) => {
+                this._initializePromise = null;
+                throw error;
+            });
         }
 
         return this._initializePromise;
+    }
+
+    public resetStats(): this {
+        resetRenderStats(this._stats);
+
+        return this;
     }
 
     public draw(drawable: Drawable): this {
@@ -152,12 +168,14 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
 
         this._setActiveRenderer(renderer);
         renderer.render(drawable);
+        this._stats.submittedNodes++;
 
         return this;
     }
 
     public execute(pass: RenderPass): this {
         this._flushActiveRenderer();
+        this._stats.renderPasses++;
         pass.execute(this);
 
         return this;
@@ -233,6 +251,7 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
             }
 
             this._renderTarget = nextRenderTarget;
+            this._stats.renderTargetChanges++;
 
             if (nextRenderTarget !== this._rootRenderTarget) {
                 this._subscribeRenderTarget(nextRenderTarget);
@@ -356,6 +375,7 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
             });
 
             pass.end();
+            this._stats.renderPasses++;
             this.submit(encoder.finish());
         }
 
@@ -480,26 +500,59 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
             throw new Error('This browser does not support WebGPU.');
         }
 
+        if (typeof gpuNavigator.gpu.requestAdapter !== 'function') {
+            throw new Error('WebGPU is available, but navigator.gpu.requestAdapter is not implemented.');
+        }
+
+        if (typeof gpuNavigator.gpu.getPreferredCanvasFormat !== 'function') {
+            throw new Error('WebGPU is available, but navigator.gpu.getPreferredCanvasFormat is not implemented.');
+        }
+
         const context = this._canvas.getContext('webgpu');
 
         if (context === null) {
             throw new Error('Could not create WebGPU canvas context.');
         }
 
-        const adapter = await gpuNavigator.gpu.requestAdapter();
+        let adapter: GPUAdapter | null = null;
+
+        try {
+            adapter = await gpuNavigator.gpu.requestAdapter();
+        } catch (error) {
+            throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
+        }
 
         if (adapter === null) {
             throw new Error('Could not acquire a WebGPU adapter.');
         }
 
-        const device = await adapter.requestDevice();
+        if (typeof adapter.requestDevice !== 'function') {
+            throw new Error('WebGPU adapter does not expose requestDevice().');
+        }
+
+        let device: GPUDevice | null = null;
+
+        try {
+            device = await adapter.requestDevice();
+        } catch (error) {
+            throw this._createInitializationError('Failed to request a WebGPU device.', error);
+        }
+
+        if (device === null) {
+            throw new Error('Could not acquire a WebGPU device.');
+        }
+
         const format = gpuNavigator.gpu.getPreferredCanvasFormat();
 
-        context.configure({
-            device,
-            format,
-            alphaMode: 'opaque',
-        });
+        try {
+            context.configure({
+                device,
+                format,
+                alphaMode: 'opaque',
+            });
+        } catch (error) {
+            throw this._createInitializationError('Failed to configure the WebGPU canvas context.', error);
+        }
 
         this._context = context;
         this._device = device;
@@ -516,6 +569,14 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU; }>;
 
         return gpuNavigator.gpu ? gpuNavigator as Navigator & { gpu: GPU; } : null;
+    }
+
+    private _createInitializationError(message: string, error: unknown): Error {
+        if (error instanceof Error && error.message.length > 0) {
+            return new Error(`${message} ${error.message}`);
+        }
+
+        return new Error(message);
     }
 
     private _destroyManagedTextures(): void {

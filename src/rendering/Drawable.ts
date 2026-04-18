@@ -43,11 +43,19 @@ export class Drawable extends RenderNode {
     }
 
     public override render(renderManager: SceneRenderRuntime): this {
-        if (this.visible && this.inView(renderManager.view)) {
-            this.renderVisualContent(renderManager, () => {
-                renderManager.draw(this);
-            }, this._blendMode);
+        if (!this.visible) {
+            return this;
         }
+
+        if (!this.inView(renderManager.view)) {
+            renderManager.stats.culledNodes++;
+
+            return this;
+        }
+
+        this.renderVisualContent(renderManager, () => {
+            renderManager.draw(this);
+        }, this._blendMode);
 
         return this;
     }

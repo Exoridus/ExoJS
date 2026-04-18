@@ -14,6 +14,7 @@ import { Texture } from '../texture/Texture';
 import { RenderTexture } from '../texture/RenderTexture';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
+import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { Vector } from 'math/Vector';
 import type { Rectangle } from 'math/Rectangle';
 import type { RenderPass } from '../RenderPass';
@@ -24,6 +25,7 @@ import type { Shader } from '../shader/Shader';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 import type { View } from '../View';
 import type { Application } from 'core/Application';
+import type { RenderStats } from '../RenderStats';
 
 const throwOnGlError = (err: number, funcName: string): void => {
     throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
@@ -102,6 +104,7 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
     private _clearColor: Color = new Color();
     private _cursor: string;
     private _boundFramebuffer: WebGLFramebuffer | null = null;
+    private readonly _stats: RenderStats = createRenderStats();
 
     public constructor(app: Application) {
         const {
@@ -175,7 +178,17 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         return this._cursor;
     }
 
+    public get stats(): RenderStats {
+        return this._stats;
+    }
+
     public async initialize(): Promise<this> {
+        return this;
+    }
+
+    public resetStats(): this {
+        resetRenderStats(this._stats);
+
         return this;
     }
 
@@ -184,12 +197,14 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
 
         this._setActiveRenderer(renderer);
         renderer.render(drawable);
+        this._stats.submittedNodes++;
 
         return this;
     }
 
     public execute(pass: RenderPass): this {
         this._flushActiveRenderer();
+        this._stats.renderPasses++;
         pass.execute(this);
 
         return this;
@@ -200,6 +215,7 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
 
         if (this._renderTarget !== renderTarget) {
             this._renderTarget = renderTarget;
+            this._stats.renderTargetChanges++;
         }
 
         this._bindRenderTarget(renderTarget);

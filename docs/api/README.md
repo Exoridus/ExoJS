@@ -1,24 +1,44 @@
-# API Docs
+# API Reference
 
-This directory is the stable reference surface for the normal ExoJS runtime model.
+This directory is the class-oriented API reference for ExoJS.
 
-Use these pages as the source of truth for examples and application code:
+## Core
 
 - [Application](./Application.md)
-- [Examples Migration](./ExamplesMigration.md)
-- [Game Feel](./GameFeel.md)
 - [Scene](./Scene.md)
-- [Loader](./Loader.md)
-- [Renderer](./Renderer.md)
-- [Sprite](./Sprite.md)
-- [Graphics](./Graphics.md)
-- [ParticleSystem](./ParticleSystem.md)
-- [Text](./Text.md)
-- [Video](./Video.md)
-- [RenderTexture](./RenderTexture.md)
 - [Input](./Input.md)
 
-Advanced backend-specific access remains under the package subpaths:
+## Assets and Loading
 
-- `exojs/webgl2`
-- `exojs/webgpu`
+- [Loader](./Loader.md)
+- [Asset Manifests and Bundles](./AssetManifests.md)
+
+## Rendering
+
+- [Renderer Runtime](./Renderer.md)
+- [Sprite](./Sprite.md)
+- [AnimatedSprite](./AnimatedSprite.md)
+- [Graphics](./Graphics.md)
+- [ParticleSystem](./ParticleSystem.md)
+- [RenderTexture](./RenderTexture.md)
+- [Visual Effects (filters/masks/passes/cache)](./VisualEffects.md)
+- [View / Camera](./View.md)
+- [Text](./Text.md)
+- [Video](./Video.md)
+
+## Audio
+
+- [Audio (Sound/Music)](./Audio.md)
+
+## Physics
+
+- [Rapier Physics Integration](./PhysicsRapier.md)
+
+## Performance
+
+- [Render Stats and Benchmark](./Performance.md)
+
+## Migration Notes
+
+- [Examples Migration](./ExamplesMigration.md)
+- [Transform Conventions](../TRANSFORM_CONVENTIONS.md)

@@ -6,13 +6,16 @@ import type { Drawable } from './Drawable';
 import type { RenderPass } from './RenderPass';
 import type { Rectangle } from 'math/Rectangle';
 import type { RenderTexture } from './texture/RenderTexture';
+import type { RenderStats } from './RenderStats';
 
 export interface SceneRenderRuntime {
     readonly backendType: RenderBackendType;
     readonly view: View;
     readonly renderTarget: RenderTarget;
+    readonly stats: RenderStats;
 
     initialize(): Promise<this>;
+    resetStats(): this;
     clear(color?: Color): this;
     resize(width: number, height: number): this;
     setView(view: View | null): this;

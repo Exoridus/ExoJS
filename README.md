@@ -1,157 +1,137 @@
 # ExoJS
 
-ExoJS is a TypeScript-first browser multimedia and rendering framework built around a clean `Application` entrypoint, a scene-driven runtime model, and explicit advanced backend surfaces when you need them.
+ExoJS is a TypeScript-first 2D runtime for browser games and interactive apps. It is designed around explicit scene flow, practical rendering features, and predictable runtime behavior.
 
-The normal user path is package-based ESM usage through `exojs`.
-Advanced backend-specific access lives under dedicated subpaths.
+## Why ExoJS
 
-## Package Surface
+- TypeScript-first API surface with strong runtime contracts
+- Scene and asset workflows built for real game loops
+- Modern rendering stack: WebGPU-first with WebGL2 fallback
+- Practical visuals: filters, masks, render passes, cache-as-bitmap
+- Gameplay tools: animated sprites, scene stacking, camera helpers, audio sprites
+- Performance visibility with built-in render stats and benchmark harness
+- Optional Rapier physics integration without forcing physics on every app
 
-- Core package: `exojs`
-- Advanced WebGL2 surface: `exojs/webgl2`
-- Advanced WebGPU surface: `exojs/webgpu`
+## What Is Shipped Today
 
-## Current Built-In Runtime Features
+- `Application`, `Scene`, and scene-manager lifecycle
+- Typed `Loader` with manifest/bundle workflow (`defineAssetManifest`, `registerManifest`, `loadBundle`)
+- Drawables: `Sprite`, `AnimatedSprite`, `Graphics`, `ParticleSystem`, `Text`, `Video`
+- Scene stacking (`overlay` / `modal` / `opaque`) with input routing and fade transitions
+- View/camera helpers (`follow`, bounds clamp, shake, zoom)
+- Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, masks, cache-as-bitmap)
+- Render stats (`submittedNodes`, `culledNodes`, `drawCalls`, `batches`, `renderPasses`, ...)
+- Optional Rapier adapter (`createRapierPhysicsWorld`)
 
-- Application / Scene / drawable rendering flow
-- Graphics / DrawableShape rendering
-- Sprite rendering
-- Animated sprite clip playback
-- zIndex-based sortable child ordering
-- ParticleSystem rendering
-- Text rendering through the normal texture-backed path
-- Video rendering through the normal texture-backed path
-- RenderTexture / offscreen rendering
-- Scene stacking with overlay/modal/opaque participation modes
-- Fade scene transitions
-- Camera helpers (follow, bounds, shake, zoom)
-- Blend modes including normal, additive, subtract, multiply, and screen
-- Audio playback and analysis
-- Sound pooling and audio sprite clips
-- Resource loading and typed factories
-- IndexedDB-backed persistence support
-- Input handling for pointer and gamepad
-- Collision detection / response utilities
-
-## Backend Model
-
-ExoJS now treats WebGPU as the preferred built-in backend when available, with automatic fallback to WebGL2.
-
-Normal users typically do not need to choose a backend explicitly:
-
-```ts
-import { Application } from 'exojs';
-
-const app = new Application();
-```
-
-If you need to force a backend:
-
-```ts
-import { Application } from 'exojs';
-
-const webGpuApp = new Application({ backend: { type: 'webgpu' } });
-const webGlApp = new Application({ backend: { type: 'webgl2' } });
-const autoApp = new Application({ backend: { type: 'auto' } });
-```
-
-## Quick Start
-
-Install:
+## Installation
 
 ```bash
 npm install exojs
 ```
 
-Minimal example:
+## Quickstart
 
 ```ts
-import { Application, Color, Graphics, Scene } from 'exojs';
+import { Application, Scene, Graphics, Color, type SceneRenderRuntime } from 'exojs';
 
-class DemoScene extends Scene {
-    private readonly graphics = new Graphics()
-        .beginFill(Color.white)
-        .drawRect(-64, -64, 128, 128)
-        .endFill();
+class HelloScene extends Scene {
+    private readonly box = new Graphics();
 
-    public override draw(runtime: import('exojs').SceneRenderRuntime): void {
-        this.graphics.rotation += 0.01;
-        this.graphics.render(runtime);
+    public constructor() {
+        super();
+
+        this.box.fillColor = Color.white;
+        this.box.drawRectangle(-32, -32, 64, 64);
+        this.box.setPosition(400, 300);
+
+        this.addChild(this.box);
+    }
+
+    public override update(delta: import('exojs').Time): void {
+        this.box.rotation += delta.seconds * 45;
+    }
+
+    public override draw(runtime: SceneRenderRuntime): void {
+        this.root.render(runtime);
     }
 }
 
-const app = new Application();
-app.start(new DemoScene());
+const canvas = document.querySelector('canvas');
+
+if (!canvas) {
+    throw new Error('Missing <canvas> element.');
+}
+
+const app = new Application({
+    canvas,
+    width: 800,
+    height: 600,
+    clearColor: Color.cornflowerBlue,
+});
+
+await app.start(new HelloScene());
 ```
+
+## Next Steps
+
+- Documentation hub: [docs/README.md](docs/README.md)
+- Getting started: [docs/getting-started/quickstart.md](docs/getting-started/quickstart.md)
+- Core concepts: [docs/core-concepts/overview.md](docs/core-concepts/overview.md)
+- Assets and bundles: [docs/assets/loader-and-bundles.md](docs/assets/loader-and-bundles.md)
+- Scenes and stack flow: [docs/scenes/scene-flow.md](docs/scenes/scene-flow.md)
+- Rendering and visuals: [docs/rendering/visual-capabilities.md](docs/rendering/visual-capabilities.md)
+- Audio workflow: [docs/audio/audio-workflow.md](docs/audio/audio-workflow.md)
+- Optional physics: [docs/physics/rapier-integration.md](docs/physics/rapier-integration.md)
+- Performance/debugging: [docs/performance/performance-and-debugging.md](docs/performance/performance-and-debugging.md)
+- API reference: [docs/api/README.md](docs/api/README.md)
+- In-repo examples: [examples/README.md](examples/README.md)
+
+## WebGPU and WebGL2
+
+`Application` defaults to backend auto-selection:
+
+- prefers WebGPU when available
+- falls back to WebGL2 if WebGPU is unavailable or initialization fails
+
+You can force backend selection when needed:
+
+```ts
+new Application({ backend: { type: 'webgpu' } });
+new Application({ backend: { type: 'webgl2' } });
+new Application({ backend: { type: 'auto' } });
+```
+
+## Optional Rapier Physics
+
+Rapier integration is opt-in and loaded only when you use it.
+
+```ts
+import { createRapierPhysicsWorld } from 'exojs';
+
+const physics = await createRapierPhysicsWorld({ gravityY: 9.81 });
+```
+
+If Rapier is unavailable, creation fails with a clear setup error.
 
 ## Examples
 
-Primary real-world consumer and validation surface:
-
-- Examples repository: https://github.com/Exoridus/ExoJS-examples
-- Live examples: https://exoridus.github.io/ExoJS-examples/
-
-The examples repository covers:
-
-- normal built-in engine usage
-- advanced backend-specific extension cases
-- WebGL2 and WebGPU validation paths
-- smoke-tested browser consumption through the real package surface
-
-## API Docs
-
-Class-focused runtime docs live under [docs/api](docs/api/README.md).
-
-Key pages:
-
-- [Application](docs/api/Application.md)
-- [Examples Migration](docs/api/ExamplesMigration.md)
-- [Game Feel](docs/api/GameFeel.md)
-- [Scene](docs/api/Scene.md)
-- [Loader](docs/api/Loader.md)
-- [Renderer](docs/api/Renderer.md)
-- [Sprite](docs/api/Sprite.md)
-- [Input](docs/api/Input.md)
-
-## Advanced Backend Access
-
-Use advanced backend-specific APIs only when you actually need them.
-
-WebGL2 advanced surface:
-
-```ts
-import { RenderManager, SpriteRenderer } from 'exojs/webgl2';
-```
-
-WebGPU advanced surface:
-
-```ts
-import { WebGpuRenderManager, type WebGpuRenderAccess } from 'exojs/webgpu';
-```
-
-These subpaths exist for custom renderers and backend-specific systems. They are not required for normal `Application`-centric usage.
+- Canonical typechecked source examples live in [`examples/`](examples/README.md).
+- The runnable live site (Astro + Lit + Monaco preview) lives in [`examples-site/`](examples-site/README.md) and is deployed as the repository's GitHub Pages site at <https://exoridus.github.io/ExoJS/>.
 
 ## Development
-
-Common validation commands:
 
 ```bash
 npm run typecheck
 npm run lint
 npm test
 npm run build
-npm run build:declarations
+npm run typecheck:examples
 npm run verify:package
+npm run perf:benchmark
 ```
 
-Repository-specific contributor guidance:
+## Links
 
-- AI / agent workflow: [AGENTS.md](AGENTS.md)
-- Claude-specific repo guidance: [CLAUDE.md](CLAUDE.md)
-
-## Project Links
-
-- Repository: https://github.com/Exoridus/ExoJS
-- Issues: https://github.com/Exoridus/ExoJS/issues
-- Examples repository: https://github.com/Exoridus/ExoJS-examples
-- Live examples: https://exoridus.github.io/ExoJS-examples/
+- Repository: <https://github.com/Exoridus/ExoJS>
+- Issues: <https://github.com/Exoridus/ExoJS/issues>
+- Changelog: [CHANGELOG.md](CHANGELOG.md)

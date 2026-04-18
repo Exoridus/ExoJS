@@ -1,47 +1,58 @@
-# Renderer
+# Renderer Runtime
 
-ExoJS uses a drawable-driven rendering flow.
+ExoJS uses a drawable-driven rendering model.
 
-## Normal user-facing model
+## Normal User Path
 
-Normal code should work through drawables and scenes:
+Most app code should stay inside:
 
 - `Scene.draw(runtime)`
 - `drawable.render(runtime)`
-- `Application` owns presentation
+- `Application` frame lifecycle
 
-## Core rendering contracts
+## Core Contracts
 
-- `SceneRenderRuntime`: scene-facing runtime used by scenes and drawables
-- `WebGl2RendererRuntime`: WebGL2-specific renderer runtime
-- `WebGpuRendererRuntime`: WebGPU-specific renderer runtime
-- `Renderer`: concrete renderer contract used internally by sprite, primitive, and particle renderers
+- `SceneRenderRuntime`: scene-facing runtime used by scenes/drawables
+- `WebGl2RendererRuntime`: WebGL2 runtime contract
+- `WebGpuRendererRuntime`: WebGPU runtime contract
+- `Renderer`: internal renderer interface for built-in paths
 
-## Important notes
+## Runtime Operations
 
-- `renderManager.draw(...)` is not part of the intended shared model
-- `display()` is owned by `Application`
-- view switching convenience exists on the runtime manager:
-  - `app.renderManager.setView(view)`
-- offscreen switching lives on the runtime manager:
-  - `app.renderManager.setRenderTarget(target)`
+Common runtime operations:
 
-## Phase 2 visual primitives
+- `runtime.clear(color?)`
+- `runtime.setView(view | null)`
+- `runtime.setRenderTarget(target | null)`
+- `runtime.execute(pass)`
+- `runtime.flush()`
 
-- Nodes (`Drawable` and `Container`) now support:
-  - `filters` (ordered filter chain)
-  - `mask` (rectangular mask based on mask node bounds)
-  - `cacheAsBitmap` + `invalidateCache()`
-- Runtime-level composition helpers:
-  - `RenderTargetPass`
-  - `CallbackRenderPass`
-- Temporary render-target lifecycle for advanced workflows:
-  - `runtime.acquireRenderTexture(width, height)`
-  - `runtime.releaseRenderTexture(texture)`
+## Visual Composition Features
 
-## Advanced use
+Render nodes support:
 
-Backend-specific renderer/runtime work lives under:
+- `filters`
+- `mask`
+- `cacheAsBitmap` + `invalidateCache()`
 
-- `exojs/webgl2`
-- `exojs/webgpu`
+Runtime composition helpers:
+
+- `RenderTargetPass`
+- `CallbackRenderPass`
+
+Temporary render textures:
+
+- `runtime.acquireRenderTexture(width, height)`
+- `runtime.releaseRenderTexture(texture)`
+
+## Stats
+
+`runtime.stats` exposes draw-call/batch/pass counters and frame timing fields.
+
+See [Performance](./Performance.md) for details.
+
+## Backend Notes
+
+Backend selection is normally handled by `Application` (`auto` mode by default).
+
+Most projects do not need backend-specific runtime code.

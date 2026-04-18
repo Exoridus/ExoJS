@@ -48,3 +48,12 @@ jobs:
 
       - name: Build declarations
         run: npm run build:declarations
+
+      - name: Typecheck examples
+        run: npm run typecheck:examples
+
+      - name: Verify package entry exports
+        run: npm run verify:exports
+
+      - name: Package dry run
+        run: npm pack --dry-run

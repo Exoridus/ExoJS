@@ -24,6 +24,8 @@ interface ApplicationTestHarness {
         flush: jest.Mock;
         resize: jest.Mock;
         destroy: jest.Mock;
+        resetStats: jest.Mock;
+        stats: { frameTimeMs: number; };
         renderTarget: { setView: jest.Mock };
     };
     readonly webgpuManager: {
@@ -31,6 +33,8 @@ interface ApplicationTestHarness {
         flush: jest.Mock;
         resize: jest.Mock;
         destroy: jest.Mock;
+        resetStats: jest.Mock;
+        stats: { frameTimeMs: number; };
         renderTarget: { setView: jest.Mock };
     };
     readonly RenderManagerMock: jest.Mock;
@@ -51,6 +55,8 @@ const loadApplicationHarness = (options: {
         flush: jest.fn(),
         resize: jest.fn(),
         destroy: jest.fn(),
+        resetStats: jest.fn().mockReturnThis(),
+        stats: { frameTimeMs: 0 },
         renderTarget: { setView: jest.fn() },
     };
     const webgpuManager = {
@@ -58,6 +64,8 @@ const loadApplicationHarness = (options: {
         flush: jest.fn(),
         resize: jest.fn(),
         destroy: jest.fn(),
+        resetStats: jest.fn().mockReturnThis(),
+        stats: { frameTimeMs: 0 },
         renderTarget: { setView: jest.fn() },
     };
     const sceneManager = {
@@ -124,7 +132,12 @@ describe('Application', () => {
         const inputManager = { update: jest.fn() };
         const sceneManager = { update: jest.fn() };
         const viewUpdate = jest.fn();
-        const renderManager = { flush: jest.fn(), view: { update: viewUpdate } };
+        const renderManager = {
+            flush: jest.fn(),
+            resetStats: jest.fn().mockReturnThis(),
+            stats: { frameTimeMs: 0 },
+            view: { update: viewUpdate },
+        };
         const frameClock = {
             elapsedTime: { milliseconds: 16 },
             restart: jest.fn(),
@@ -145,7 +158,9 @@ describe('Application', () => {
         expect(inputManager.update).toHaveBeenCalledTimes(1);
         expect(sceneManager.update).toHaveBeenCalledTimes(1);
         expect(viewUpdate).toHaveBeenCalledWith(16);
+        expect(renderManager.resetStats).toHaveBeenCalledTimes(1);
         expect(renderManager.flush).toHaveBeenCalledTimes(1);
+        expect(renderManager.stats.frameTimeMs).toBeGreaterThanOrEqual(0);
         expect(frameClock.restart).toHaveBeenCalledTimes(1);
         expect(rafSpy).toHaveBeenCalledTimes(1);
     });

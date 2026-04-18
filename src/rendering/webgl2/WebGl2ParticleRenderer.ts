@@ -44,7 +44,9 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2BatchedRenderer {
             }
         }
 
-        runtime.bindTexture(texture);
+        if (textureChanged) {
+            runtime.bindTexture(texture);
+        }
 
         this.shader
             .getUniform('u_translation')

@@ -28,6 +28,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2BatchedRenderer {
         const index = flush ? 0 : (this.batchIndex * this.attributeCount);
         const float32View = this.float32View;
         const uint32View = this.uint32View;
+        const runtime = this.getRuntime();
 
         if (flush) {
             this.flush();
@@ -38,12 +39,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2BatchedRenderer {
 
             if (blendModeChanged) {
                 this.currentBlendMode = blendMode;
-                this.getRuntime().setBlendMode(blendMode);
+                runtime.setBlendMode(blendMode);
             }
         }
 
-        if (texture) {
-            this.getRuntime().bindTexture(texture);
+        if (textureChanged && texture) {
+            runtime.bindTexture(texture);
         }
 
         // X / Y

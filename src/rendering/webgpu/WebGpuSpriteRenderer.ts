@@ -127,11 +127,10 @@ const wordsPerVertex = vertexStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const maxBatchTextures = 8;
 
 interface WebGpuSpriteDrawCall {
-    readonly texture: Texture | RenderTexture;
-    readonly vertices: Float32Array;
-    readonly texCoords: Uint32Array;
-    readonly color: number;
-    readonly blendMode: BlendModes;
+    sprite: Sprite;
+    texture: Texture | RenderTexture;
+    color: number;
+    blendMode: BlendModes;
 }
 
 interface WebGpuSpriteBatchRange {
@@ -146,6 +145,7 @@ interface WebGpuSpriteBatchRange {
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     private readonly _drawCalls: Array<WebGpuSpriteDrawCall> = [];
+    private _drawCallCount = 0;
     private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -238,6 +238,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         this._vertexData = new ArrayBuffer(0);
         this._float32View = new Float32Array(this._vertexData);
         this._uint32View = new Uint32Array(this._vertexData);
+        this._drawCallCount = 0;
     }
 
     public render(sprite: Sprite): void {
@@ -256,14 +257,22 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         }
 
         renderManager.setBlendMode(sprite.blendMode);
+        const drawCallIndex = this._drawCallCount++;
+        const drawCall = this._drawCalls[drawCallIndex];
 
-        this._drawCalls.push({
-            texture,
-            vertices: new Float32Array(sprite.vertices),
-            texCoords: new Uint32Array(sprite.texCoords),
-            color: sprite.tint.toRgba(),
-            blendMode: sprite.blendMode,
-        });
+        if (drawCall) {
+            drawCall.sprite = sprite;
+            drawCall.texture = texture;
+            drawCall.color = sprite.tint.toRgba();
+            drawCall.blendMode = sprite.blendMode;
+        } else {
+            this._drawCalls.push({
+                sprite,
+                texture,
+                color: sprite.tint.toRgba(),
+                blendMode: sprite.blendMode,
+            });
+        }
     }
 
     public flush(): void {
@@ -278,7 +287,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             return;
         }
 
-        if (this._drawCalls.length === 0 && !renderManager.clearRequested) {
+        if (this._drawCallCount === 0 && !renderManager.clearRequested) {
             return;
         }
 
@@ -303,6 +312,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         const pass = encoder.beginRenderPass({
             colorAttachments: [renderManager.createColorAttachment()],
         });
+        renderManager.stats.renderPasses++;
         const scissor = renderManager.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
@@ -310,12 +320,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
         }
 
-        if (this._drawCalls.length > 0 && !maskClipsAll) {
+        if (this._drawCallCount > 0 && !maskClipsAll) {
             pass.setBindGroup(0, uniformBindGroup);
             pass.setVertexBuffer(0, this._vertexBuffer!);
             pass.setIndexBuffer(this._indexBuffer!, 'uint32');
 
-            for (let start = 0; start < this._drawCalls.length;) {
+            for (let start = 0; start < this._drawCallCount;) {
                 const batch = this._getBatchRange(start);
                 const pipeline = this._getPipeline(batch.blendMode, renderManager.renderTargetFormat);
                 const spriteCount = batch.end - batch.start;
@@ -336,6 +346,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 pass.setPipeline(pipeline);
                 pass.setBindGroup(1, textureBindGroup);
                 pass.drawIndexed(batch.spriteCount * spriteIndexCount, 1, 0, 0, 0);
+                renderManager.stats.batches++;
+                renderManager.stats.drawCalls++;
 
                 start = batch.end;
             }
@@ -343,7 +355,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
         pass.end();
         renderManager.submit(encoder.finish());
-        this._drawCalls.length = 0;
+        this._drawCallCount = 0;
     }
 
     public destroy(): void {
@@ -410,13 +422,15 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             const drawCall = this._drawCalls[drawCallIndex];
             const textureSlot = batch.textureSlots.get(drawCall.texture) ?? 0;
             const premultiplySample = renderManager.shouldPremultiplyTextureSample(drawCall.texture) ? 1 : 0;
+            const vertices = drawCall.sprite.vertices;
+            const texCoords = drawCall.sprite.texCoords;
 
             for (let i = 0; i < spriteVertexCount; i++) {
                 const vertexIndex = i * 2;
-                const packedTexCoord = drawCall.texCoords[i];
+                const packedTexCoord = texCoords[i];
 
-                this._float32View[vertexOffset] = drawCall.vertices[vertexIndex];
-                this._float32View[vertexOffset + 1] = drawCall.vertices[vertexIndex + 1];
+                this._float32View[vertexOffset] = vertices[vertexIndex];
+                this._float32View[vertexOffset + 1] = vertices[vertexIndex + 1];
                 this._float32View[vertexOffset + 2] = (packedTexCoord & 0xFFFF) / 65535;
                 this._float32View[vertexOffset + 3] = ((packedTexCoord >>> 16) & 0xFFFF) / 65535;
                 this._uint32View[vertexOffset + 4] = drawCall.color;
@@ -436,7 +450,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         textureSlots.set(drawCall.texture, 0);
         textures.push(drawCall.texture);
 
-        while (end < this._drawCalls.length) {
+        while (end < this._drawCallCount) {
             const nextDrawCall = this._drawCalls[end];
 
             if (nextDrawCall.blendMode !== drawCall.blendMode) {

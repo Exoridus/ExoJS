@@ -178,15 +178,23 @@ export class Container extends RenderNode {
     }
 
     public render(renderManager: SceneRenderRuntime): this {
-        if (this.visible && this.inView(renderManager.view)) {
-            this.renderVisualContent(renderManager, () => {
-                this._sortChildrenIfNeeded();
-
-                for (const child of this._children) {
-                    child.render(renderManager);
-                }
-            });
+        if (!this.visible || this._children.length === 0) {
+            return this;
         }
+
+        if (!this.inView(renderManager.view)) {
+            renderManager.stats.culledNodes++;
+
+            return this;
+        }
+
+        this.renderVisualContent(renderManager, () => {
+            this._sortChildrenIfNeeded();
+
+            for (const child of this._children) {
+                child.render(renderManager);
+            }
+        });
 
         return this;
     }

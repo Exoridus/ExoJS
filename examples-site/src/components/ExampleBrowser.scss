@@ -1,0 +1,82 @@
+@use "../styles/variables" as *;
+@use "../styles/mixins" as *;
+
+* {
+  box-sizing: border-box;
+}
+
+:host {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  flex-direction: row;
+  position: relative;
+}
+
+// Sidebar — desktop: docked with max-width collapse animation
+.side-content {
+  flex: 0 0 auto;
+  width: $navigation-width;
+  max-width: $navigation-width;
+  overflow: hidden;
+  transition: max-width 200ms ease-in-out;
+}
+
+// Right column: header + scrollable content
+.right-column {
+  flex: 1 0 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-content {
+  @include custom-scrollbar;
+  flex: 1 0 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+// Backdrop: only rendered when sidebar is open, only visible on mobile
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  background: rgba(0, 0, 0, 0.5);
+
+  @media (min-width: $breakpoint-desktop) {
+    display: none;
+  }
+}
+
+// Suppress all sidebar transitions while crossing breakpoints
+:host([data-resizing]) .side-content {
+  transition: none;
+}
+
+// Desktop: collapse sidebar via max-width when closed
+@media (min-width: $breakpoint-desktop) {
+  .side-content:not([data-open]) {
+    max-width: 0;
+    overflow: hidden;
+  }
+}
+
+// Mobile: sidebar becomes a fixed overlay
+@media (max-width: #{$breakpoint-desktop - 1px}) {
+  .side-content {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 200;
+    max-width: $navigation-width;
+    transform: translateX(0);
+    transition: transform 200ms ease-in-out;
+
+    &:not([data-open]) {
+      transform: translateX(-100%);
+    }
+  }
+}

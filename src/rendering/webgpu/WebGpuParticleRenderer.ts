@@ -89,16 +89,14 @@ const staticIndexData = new Uint16Array([
 ]);
 
 interface WebGpuParticleDrawCall {
-    readonly texture: Texture;
-    readonly vertices: Float32Array;
-    readonly texCoords: Uint32Array;
-    readonly particles: ParticleSystem['particles'];
-    readonly transform: Float32Array;
-    readonly blendMode: BlendModes;
+    system: ParticleSystem;
+    texture: Texture;
+    blendMode: BlendModes;
 }
 
 export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSystem> {
     private readonly _drawCalls: Array<WebGpuParticleDrawCall> = [];
+    private _drawCallCount = 0;
     private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -134,15 +132,20 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         }
 
         runtime.setBlendMode(system.blendMode);
+        const drawCallIndex = this._drawCallCount++;
+        const drawCall = this._drawCalls[drawCallIndex];
 
-        this._drawCalls.push({
-            texture,
-            vertices: new Float32Array(system.vertices),
-            texCoords: new Uint32Array(system.texCoords),
-            particles: system.particles.slice(),
-            transform: new Float32Array(system.getGlobalTransform().toArray(false)),
-            blendMode: system.blendMode,
-        });
+        if (drawCall) {
+            drawCall.system = system;
+            drawCall.texture = texture;
+            drawCall.blendMode = system.blendMode;
+        } else {
+            this._drawCalls.push({
+                system,
+                texture,
+                blendMode: system.blendMode,
+            });
+        }
     }
 
     public flush(): void {
@@ -157,7 +160,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             return;
         }
 
-        if (this._drawCalls.length === 0 && !runtime.clearRequested) {
+        if (this._drawCallCount === 0 && !runtime.clearRequested) {
             return;
         }
 
@@ -165,6 +168,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         const pass = encoder.beginRenderPass({
             colorAttachments: [runtime.createColorAttachment()],
         });
+        runtime.stats.renderPasses++;
         const scissor = runtime.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
@@ -175,7 +179,15 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         if (!maskClipsAll) {
             pass.setBindGroup(0, uniformBindGroup);
 
-            for (const drawCall of this._drawCalls) {
+            for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
+                const drawCall = this._drawCalls[drawCallIndex];
+                const system = drawCall.system;
+                const particleCount = system.particles.length;
+
+                if (particleCount === 0) {
+                    continue;
+                }
+
                 const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
                 const textureBinding = runtime.getTextureBinding(drawCall.texture);
                 const textureBindGroup = device.createBindGroup({
@@ -188,11 +200,10 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
                         resource: textureBinding.sampler,
                     }],
                 });
-                const particleCount = drawCall.particles.length;
 
                 this._ensureCapacity(particleCount);
-                this._writeInstanceData(drawCall);
-                this._writeUniformData(runtime, drawCall.transform, drawCall.texture);
+                this._writeInstanceData(system.vertices, system.texCoords, system.particles);
+                this._writeUniformData(runtime, system, drawCall.texture);
 
                 device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
                 device.queue.writeBuffer(
@@ -209,12 +220,14 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
                 pass.setVertexBuffer(1, this._instanceBuffer!);
                 pass.setIndexBuffer(indexBuffer, 'uint16');
                 pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
+                runtime.stats.batches++;
+                runtime.stats.drawCalls++;
             }
         }
 
         pass.end();
         runtime.submit(encoder.finish());
-        this._drawCalls.length = 0;
+        this._drawCallCount = 0;
     }
 
     public destroy(): void {
@@ -302,7 +315,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         this._instanceData = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
         this._float32View = new Float32Array(this._instanceData);
         this._uint32View = new Uint32Array(this._instanceData);
-        this._drawCalls.length = 0;
+        this._drawCallCount = 0;
     }
 
     private _ensureCapacity(particleCount: number): void {
@@ -336,8 +349,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         }
     }
 
-    private _writeUniformData(runtime: WebGpuRenderManager, transform: Float32Array, texture: Texture): void {
+    private _writeUniformData(runtime: WebGpuRenderManager, system: ParticleSystem, texture: Texture): void {
         const projection = runtime.view.getTransform().toArray(false);
+        const transform = system.getGlobalTransform().toArray(false);
         const shouldPremultiplySample = runtime.shouldPremultiplyTextureSample(texture);
 
         this._uniformData.set([
@@ -355,8 +369,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         ]);
     }
 
-    private _writeInstanceData(drawCall: WebGpuParticleDrawCall): void {
-        const { vertices, texCoords, particles } = drawCall;
+    private _writeInstanceData(vertices: Float32Array, texCoords: Uint32Array, particles: ParticleSystem['particles']): void {
         const quadMinX = vertices[0];
         const quadMinY = vertices[1];
         const quadSizeX = vertices[2] - vertices[0];

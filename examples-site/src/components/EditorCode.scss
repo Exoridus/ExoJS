@@ -1,0 +1,190 @@
+@use "../styles/colors" as *;
+@use "../styles/variables" as *;
+
+exo-code-editor {
+  display: block;
+  width: min(#{$preview-width}, calc(100vw - 48px));
+  margin: 0 auto;
+  height: auto;
+  position: relative;
+  overflow: visible;
+  border-radius: 12px;
+  border: 1px solid rgba($white, 0.09);
+  background: rgba($white, 0.05);
+  box-shadow: 0 18px 42px rgba($black, 0.18);
+  box-sizing: border-box;
+}
+
+.editor-shell {
+  position: relative;
+}
+
+.editor-host {
+  width: 100%;
+  min-height: 360px;
+  height: 480px;
+}
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(20, 20, 20, 0.42);
+  backdrop-filter: blur(1px);
+}
+
+.diagnostics {
+  margin-left: 8px;
+  font-size: 12px;
+  line-height: 1;
+  color: rgba($white, 0.62);
+}
+
+.menu-anchor {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.auto-button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba($white, 0.42);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out, color 100ms ease-in-out, border-color 100ms ease-in-out;
+
+  &:hover {
+    background-color: rgba($white, 0.06);
+    color: rgba($white, 0.72);
+  }
+
+  &--active {
+    background-color: rgba($white, 0.1);
+    border-color: rgba($white, 0.15);
+    color: rgba($white, 0.9);
+  }
+}
+
+.more-button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba($white, 0.68);
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out, color 100ms ease-in-out;
+
+  &:hover,
+  &[data-open] {
+    background-color: rgba($white, 0.08);
+    color: rgba($white, 0.92);
+  }
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  min-width: 140px;
+  padding: 4px;
+  background: $navigation-color;
+  border: 1px solid rgba($white, 0.1);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba($black, 0.4);
+  box-sizing: border-box;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba($white, 0.82);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 80ms ease-in-out;
+
+  &:hover {
+    background-color: rgba($white, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.36;
+    cursor: default;
+  }
+
+  &[data-variant="danger"] {
+    color: rgba(255, 160, 160, 0.9);
+  }
+}
+
+.file-input {
+  display: none;
+}
+
+.monaco-error-zone {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 16px;
+  height: 22px;
+  font-size: 11.5px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  line-height: 22px;
+  overflow: hidden;
+  color: rgba(255, 140, 140, 0.88);
+  border-left: 2px solid rgba(255, 100, 100, 0.5);
+  background: rgba(180, 30, 30, 0.12);
+  box-sizing: border-box;
+
+  &--warning {
+    color: rgba(255, 210, 120, 0.88);
+    border-left-color: rgba(255, 190, 60, 0.5);
+    background: rgba(160, 120, 20, 0.1);
+  }
+}
+
+.monaco-error-zone__msg {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: #{$breakpoint-desktop - 1px}) {
+  exo-code-editor {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}

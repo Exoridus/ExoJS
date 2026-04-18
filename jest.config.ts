@@ -7,7 +7,7 @@ const config: Config = {
     setupFilesAfterEnv: ['<rootDir>/test/setup-env.ts'],
     moduleFileExtensions: ['ts', 'js', 'json'],
     moduleNameMapper: {
-        '^(audio|core|input|math|particles|rendering|resources|vendor)/(.*)$': '<rootDir>/src/$1/$2',
+        '^(audio|core|input|math|particles|physics|rendering|resources|vendor)/(.*)$': '<rootDir>/src/$1/$2',
         '\\.(vert|frag)$': '<rootDir>/test/mocks/text-file.ts',
     },
     transform: {

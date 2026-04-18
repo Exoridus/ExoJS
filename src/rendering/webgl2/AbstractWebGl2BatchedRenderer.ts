@@ -74,6 +74,8 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
         runtime.bindVertexArrayObject(vao);
         vertexBuffer.upload(this.float32View.subarray(0, this.batchIndex * this.attributeCount));
         vao.draw(this.batchIndex * 6, 0);
+        runtime.stats.batches++;
+        runtime.stats.drawCalls++;
         this.batchIndex = 0;
     }
 

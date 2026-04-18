@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+    <head>
+        <style>
+            body, html {
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+            }
+            canvas {
+                transform: translateZ(0);
+                width: 100%;
+                height: 100%;
+                outline-style: none;
+            }
+        </style>
+        <script>
+            (function () {
+                var params = new URLSearchParams(window.location.search);
+                var noCache = encodeURIComponent(params.get('no-cache') || String(Date.now()));
+                var importMap = {
+                    imports: {
+                        'exojs': './vendor/exojs/exo.esm.js?no-cache=' + noCache,
+                        '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache
+                    }
+                };
+                var script = document.createElement('script');
+
+                script.type = 'importmap';
+                script.textContent = JSON.stringify(importMap);
+                document.currentScript.after(script);
+            })();
+        </script>
+        <script src="vendor/stats.min.js"></script>
+    </head>
+    <body></body>
+</html>

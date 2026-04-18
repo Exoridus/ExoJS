@@ -1,0 +1,124 @@
+@use "../styles/colors" as *;
+@use "../styles/variables" as *;
+@use "../styles/typography" as *;
+
+:host {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 $header-height;
+  height: $header-height;
+  padding: 0 16px;
+  background-color: $navigation-color;
+  border-bottom: 1px solid rgba($white, 0.06);
+  box-sizing: border-box;
+}
+
+.menu-button {
+  appearance: none;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba($white, 0.72);
+  cursor: pointer;
+  transition: background-color 120ms ease-in-out, color 120ms ease-in-out;
+
+  &:hover {
+    background-color: rgba($white, 0.1);
+    color: $white;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($accent-color, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  color: rgba($white, 0.84);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Modal
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-card {
+  width: min(480px, 100%);
+  background: #1a1c24;
+  border-radius: 14px;
+  border: 1px solid rgba($white, 0.1);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid rgba($white, 0.08);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: $font-weight-bold;
+  color: rgba($white, 0.96);
+}
+
+.modal-body {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: rgba($white, 0.68);
+}
+
+.modal-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 20px 20px;
+}
+
+.modal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  color: rgba($white, 0.72);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  transition: background-color 100ms ease-in-out, color 100ms ease-in-out;
+
+  &:hover {
+    background-color: rgba($white, 0.07);
+    color: rgba($white, 0.96);
+  }
+}

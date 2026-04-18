@@ -1,5 +1,6 @@
 import { Drawable } from 'rendering/Drawable';
 import { RenderBackendType } from 'rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
 import { RendererRegistry } from 'rendering/RendererRegistry';
 import { RenderTarget } from 'rendering/RenderTarget';
 import { RenderTexture } from 'rendering/texture/RenderTexture';
@@ -17,8 +18,10 @@ class DerivedDrawable extends BaseDrawable {
 
 const createRuntime = (): SceneRenderRuntime => {
     const renderTarget = new RenderTarget(100, 100, true);
+    const stats = createRenderStats();
     const runtime: SceneRenderRuntime = {
         backendType: RenderBackendType.WebGl2,
+        stats,
         renderTarget,
         get view() {
             return renderTarget.view;
@@ -57,6 +60,11 @@ const createRuntime = (): SceneRenderRuntime => {
             return this;
         },
         draw() {
+            return this;
+        },
+        resetStats() {
+            resetRenderStats(stats);
+
             return this;
         },
         execute() {

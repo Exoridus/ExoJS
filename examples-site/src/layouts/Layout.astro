@@ -1,0 +1,44 @@
+---
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+
+interface Props {
+    title?: string;
+}
+
+const { title = 'ExoJS Examples' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+    </head>
+    <body>
+        <slot />
+    </body>
+</html>
+
+<style is:global>
+    html {
+        font-size: 14px;
+        font-family: 'Inter', Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        font-size: 14px;
+        color: #ffffff;
+        font-weight: 400;
+        background-color: #131313;
+        background-size: cover;
+        line-height: 20px;
+        margin: 0;
+    }
+</style>

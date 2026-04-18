@@ -1,162 +1,67 @@
 # Examples Migration
 
-This page summarizes the ExoJS refactors that examples and integration code need to follow.
+This page captures practical migration notes from older ExoJS usage patterns to the current runtime model.
 
-## Rendering flow
+## Rendering Flow
 
-The normal rendering flow is now:
+Current model:
 
-1. `Application` owns frame presentation.
-2. `Scene.update(delta)` mutates state.
-3. `Scene.draw(runtime)` submits drawables.
-4. `Application` calls `display()` on the active render runtime.
+1. `Application` drives frame lifecycle
+2. `Scene.update(delta)` mutates state
+3. `Scene.draw(runtime)` submits drawables
+4. `Application` flushes/presents through the active backend runtime
 
-Use this in scene code:
+Scene code should render via drawables:
 
 ```ts
-public draw(runtime: SceneRenderRuntime): void {
+public override draw(runtime: import('exojs').SceneRenderRuntime): void {
     this.root.render(runtime);
 }
 ```
 
-The `root` container is a structural scene-graph entry point, not an implicit full-scene render. Scenes still keep explicit control over which subtree renders:
+## Backend Selection
 
-```ts
-public draw(runtime: SceneRenderRuntime): void {
-    this.world.render(runtime);
-    this.ui.render(runtime);
-}
-```
-
-Do not use:
-
-- `renderManager.draw(...)`
-- `renderManager.display()` from scene code
-
-Use drawable submission instead:
-
-- `drawable.render(runtime)`
-- `root.render(runtime)`
-
-## View handling
-
-View switching now has a stable runtime convenience:
-
-```ts
-app.renderManager.setView(view);
-```
-
-This forwards to the current render target:
-
-```ts
-app.renderManager.renderTarget.setView(view);
-```
-
-## Backend selection
-
-`new Application()` now defaults to automatic backend selection:
+`Application` now defaults to auto backend mode:
 
 - prefer WebGPU when available
-- fall back to WebGL2 when WebGPU is unavailable or initialization fails
+- fallback to WebGL2 on unavailable/failed WebGPU initialization
 
-Explicit backend selection still works:
+Explicit backend forcing remains available.
+
+## Scene Stacking Instead of Replace-Only Flow
+
+Use `pushScene`/`popScene` for overlays and pause menus rather than replacing every scene:
 
 ```ts
-new Application({ backend: { type: 'webgpu' } });
-new Application({ backend: { type: 'webgl2' } });
-new Application({ backend: { type: 'auto' } });
+await app.sceneManager.pushScene(new PauseScene(), { mode: 'modal' });
+await app.sceneManager.popScene();
 ```
 
-## Updated public type names
+## Loader Bundles
 
-### Core
+For larger projects, replace hand-maintained preload lists with manifest bundles:
 
-- `IApplicationOptions` -> `ApplicationOptions`
-- `IWebGl2BackendConfig` -> `WebGl2BackendConfig`
-- `IWebGpuBackendConfig` -> `WebGpuBackendConfig`
-- `IAutoBackendConfig` -> `AutoBackendConfig`
-- `ISceneData` -> `SceneData`
+```ts
+loader.registerManifest(manifest);
+await loader.loadBundle('boot');
+```
 
-### Rendering
+## Visual Composition
 
-- `IRenderBackend` -> `SceneRenderRuntime`
-- `IRenderManager` -> `SceneRenderRuntime`
-- `IRenderer` -> `Renderer`
-- `IWebGpuRenderAccess` -> `WebGpuRenderAccess`
-- `IWebGl2RenderBackend` -> `WebGl2RendererRuntime`
+Prefer built-in node/runtime features over custom backend hacks:
 
-### Resource and media contracts
+- `filters`
+- `mask`
+- `cacheAsBitmap`
+- `RenderTargetPass`
 
-- `IDatabase` -> `Database`
-- `IResourceFactory` -> `ResourceFactory`
-- `IMedia` -> `Media`
-- `IAbstractMediaInitialState` -> `AbstractMediaInitialState`
+## Audio Workflow
 
-### Foundational math and shape contracts
+Use `Sound` pooling and audio sprites for frequent UI/gameplay SFX.
 
-- `ICloneable` -> `Cloneable`
-- `IDestroyable` -> `Destroyable`
-- `IWithBoundingBox` -> `HasBoundingBox`
-- `ICollidable` -> `Collidable`
-- `ICollisionResponse` -> `CollisionResponse`
-- `IShape` -> `ShapeLike`
-- `IPoint` -> `PointLike`
-- `ILine` -> `LineLike`
-- `IRectangle` -> `RectangleLike`
-- `ICircle` -> `CircleLike`
-- `IEllipse` -> `EllipseLike`
-- `IPolygon` -> `PolygonLike`
-- `IPlaybackOptions` -> `PlaybackOptions`
+## Migration Strategy
 
-### Remaining option/runtime contracts cleaned up in this pass
-
-- `IAudioAnalyserOptions` -> `AudioAnalyserOptions`
-- `ILoaderOptions` -> `LoaderOptions`
-- `IResourceQueueItem` -> `ResourceQueueItem`
-- `IResourceTypeMap` -> `ResourceTypeMap`
-- `IFontFactoryOptions` -> `FontFactoryOptions`
-- `ICreateCanvasOptions` -> `CreateCanvasOptions`
-- `ITextStyleOptions` -> `TextStyleOptions`
-- `ISamplerOptions` -> `SamplerOptions`
-- `ISpritesheetFrame` -> `SpritesheetFrame`
-- `ISpritesheetData` -> `SpritesheetData`
-- `IShaderRuntime` -> `ShaderRuntime`
-- `IRenderBufferRuntime` -> `RenderBufferRuntime`
-- `IVertexArrayObjectRuntime` -> `VertexArrayObjectRuntime`
-- `IParticleProperties` -> `ParticleProperties`
-- `IParticleEmitter` -> `ParticleEmitter`
-- `IParticleAffector` -> `ParticleAffector`
-
-## Enum casing updates
-
-Non-input public enum members now use PascalCase consistently.
-
-Examples and integrations should update member access accordingly:
-
-- `BlendModes.Normal`
-- `RendererType.Sprite`
-- `RenderingPrimitives.Triangles`
-- `ScaleModes.Linear`
-- `WrapModes.ClampToEdge`
-- `ApplicationStatus.Running`
-
-## Input / gamepad changes
-
-The input layer now uses ordered `GamepadDefinition[]` resolution.
-
-Use:
-
-- `gamepadDefinitions`
-
-Do not use the removed older gamepad mapping/profile configuration path.
-
-Canonical generic gamepad channel names are now the intended public surface:
-
-- `ButtonSouth`
-- `ButtonEast`
-- `ButtonWest`
-- `ButtonNorth`
-- `LeftStickX`
-- `RightStickY`
-
-Avoid platform-specific alias naming in new examples.
+- migrate one scene at a time
+- keep scene logic in `Scene` lifecycle methods
+- keep rendering explicit (`drawable.render(runtime)`)
+- verify with `npm test` and `npm run perf:benchmark`

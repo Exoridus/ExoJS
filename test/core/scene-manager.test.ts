@@ -40,6 +40,8 @@ const createApplicationStub = (): Application & {
     renderManager: {
         view: { getBounds: () => Rectangle; };
         draw: jest.Mock;
+        stats: { culledNodes: number; };
+        resetStats: jest.Mock;
     };
 } => {
     const bounds = new Rectangle(0, 0, 320, 180);
@@ -52,12 +54,16 @@ const createApplicationStub = (): Application & {
                 getBounds: () => bounds,
             },
             draw: jest.fn().mockReturnThis(),
+            stats: { culledNodes: 0 },
+            resetStats: jest.fn().mockReturnThis(),
         },
     } as unknown as Application & {
         inputManager: InputManagerStub;
         renderManager: {
             view: { getBounds: () => Rectangle; };
             draw: jest.Mock;
+            stats: { culledNodes: number; };
+            resetStats: jest.Mock;
         };
     };
 };
