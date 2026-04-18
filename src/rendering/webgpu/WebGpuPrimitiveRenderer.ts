@@ -138,6 +138,18 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         const scissor = runtime.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
+        // TEMP DIAGNOSTIC — log once per second.
+        const nowMs = performance.now();
+        // eslint-disable-next-line
+        (this as any)._lastLogMs = (this as any)._lastLogMs ?? 0;
+        // eslint-disable-next-line
+        const shouldLog = nowMs - (this as any)._lastLogMs > 1000;
+        if (shouldLog) {
+            // eslint-disable-next-line
+            (this as any)._lastLogMs = nowMs;
+            console.log('[PrimitiveRenderer.flush] drawCallCount=', this._drawCallCount, 'maskClipsAll=', maskClipsAll);
+        }
+
         interface PrimitiveDrawPlan {
             readonly pipeline: GPURenderPipeline;
             readonly vertexByteOffset: number;
@@ -183,7 +195,15 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
 
                 totalVertices += resolved.vertexCount;
                 totalIndices += resolved.indexCount;
+
+                if (shouldLog) {
+                    console.log('  draw', drawCallIndex, 'shape=', shape.constructor.name, 'topology=', resolved.topology, 'usesStripIndex=', resolved.usesStripIndex, 'vertexCount=', resolved.vertexCount, 'indexCount=', resolved.indexCount, 'color=', '#' + shape.color.toRgba().toString(16).padStart(8, '0'));
+                }
             }
+        }
+
+        if (shouldLog) {
+            console.log('  totalVertices=', totalVertices, 'totalIndices=', totalIndices, 'plan.length=', plan.length);
         }
 
         // If nothing will actually render, still honor a pending clear with
