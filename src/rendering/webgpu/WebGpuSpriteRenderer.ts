@@ -299,6 +299,24 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             return;
         }
 
+        // Grow vertex/index buffers up front for the largest batch in this
+        // flush. _ensureBatchCapacity destroys the old buffers and creates new
+        // ones when capacity grows, so it must not run after setVertexBuffer /
+        // setIndexBuffer — otherwise the pass's bindings point at destroyed
+        // buffers and the submit is invalid.
+        let maxBatchSpriteCount = 0;
+        for (let start = 0; start < this._drawCallCount;) {
+            const batchRange = this._getBatchRange(start);
+            const batchSpriteCount = batchRange.end - batchRange.start;
+            if (batchSpriteCount > maxBatchSpriteCount) {
+                maxBatchSpriteCount = batchSpriteCount;
+            }
+            start = batchRange.end;
+        }
+        if (maxBatchSpriteCount > 0) {
+            this._ensureBatchCapacity(maxBatchSpriteCount);
+        }
+
         const viewMatrix = renderManager.view.getTransform();
 
         this._projectionData.set([
@@ -338,7 +356,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 const pipeline = this._getPipeline(batch.blendMode, renderManager.renderTargetFormat);
                 const spriteCount = batch.end - batch.start;
 
-                this._ensureBatchCapacity(spriteCount);
                 this._writeBatchVertexData(batch);
 
                 device.queue.writeBuffer(
@@ -388,7 +405,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         });
         const indexData = new Uint32Array(nextCapacity * spriteIndexCount);
         const indexBuffer = this._device.createBuffer({
-            size: indexData.byteLength * Uint32Array.BYTES_PER_ELEMENT,
+            size: indexData.byteLength,
             usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         });
 
