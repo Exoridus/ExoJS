@@ -80,38 +80,46 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     return output;
 }
 
-fn sampleTexture(slot: u32, uv: vec2<f32>) -> vec4<f32> {
+fn sampleTexture(slot: u32, uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32> {
     switch slot {
         case 0u: {
-            return textureSample(spriteTexture0, spriteSampler0, uv);
+            return textureSampleGrad(spriteTexture0, spriteSampler0, uv, ddx, ddy);
         }
         case 1u: {
-            return textureSample(spriteTexture1, spriteSampler1, uv);
+            return textureSampleGrad(spriteTexture1, spriteSampler1, uv, ddx, ddy);
         }
         case 2u: {
-            return textureSample(spriteTexture2, spriteSampler2, uv);
+            return textureSampleGrad(spriteTexture2, spriteSampler2, uv, ddx, ddy);
         }
         case 3u: {
-            return textureSample(spriteTexture3, spriteSampler3, uv);
+            return textureSampleGrad(spriteTexture3, spriteSampler3, uv, ddx, ddy);
         }
         case 4u: {
-            return textureSample(spriteTexture4, spriteSampler4, uv);
+            return textureSampleGrad(spriteTexture4, spriteSampler4, uv, ddx, ddy);
         }
         case 5u: {
-            return textureSample(spriteTexture5, spriteSampler5, uv);
+            return textureSampleGrad(spriteTexture5, spriteSampler5, uv, ddx, ddy);
         }
         case 6u: {
-            return textureSample(spriteTexture6, spriteSampler6, uv);
+            return textureSampleGrad(spriteTexture6, spriteSampler6, uv, ddx, ddy);
         }
         default: {
-            return textureSample(spriteTexture7, spriteSampler7, uv);
+            return textureSampleGrad(spriteTexture7, spriteSampler7, uv, ddx, ddy);
         }
     }
 }
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let sample = sampleTexture(input.textureSlot, input.texcoord);
+    // Compute screen-space derivatives in uniform control flow before the
+    // per-slot switch. WGSL requires textureSample (implicit LOD) to run in
+    // uniform control flow, which multi-texture batching breaks because the
+    // slot varies per fragment. textureSampleGrad takes explicit derivatives
+    // and is valid regardless of control-flow uniformity, while preserving
+    // mipmap-correct LOD when sprites use mipmapped textures.
+    let ddx = dpdx(input.texcoord);
+    let ddy = dpdy(input.texcoord);
+    let sample = sampleTexture(input.textureSlot, input.texcoord, ddx, ddy);
     let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), input.premultiplySample == 1u);
 
     return resolvedSample * input.color;
