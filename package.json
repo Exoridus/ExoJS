@@ -1,7 +1,7 @@
 {
-  "name": "exojs",
-  "description": "A lightweight, flexibile and powerful multimedia framework.",
-  "version": "2.0.0",
+  "name": "@codexo/exojs",
+  "description": "A lightweight, flexible and powerful multimedia framework.",
+  "version": "2.1.0",
   "files": [
     "dist/esm/",
     "dist/exo.esm.js",
@@ -13,7 +13,8 @@
     "dist/exo.global.min.js",
     "dist/exo.global.min.js.map",
     "dist/exo.d.ts",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "main": "./dist/exo.esm.js",
   "module": "./dist/esm/index.js",
@@ -25,24 +26,32 @@
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && tsx node_modules/rollup/dist/bin/rollup -c && tsc -p tsconfig.declaration.json",
     "build:declarations": "tsc -p tsconfig.declaration.json",
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw",
-    "verify:package": "npm run build && npm pack --dry-run",
+    "typecheck:examples": "tsc -p tsconfig.examples.json --noEmit",
+    "verify:exports": "node ./scripts/verify-exports.mjs",
+    "verify:package": "npm run build && npm run typecheck:examples && npm run verify:exports && npm pack --dry-run",
+    "verify:release": "npm run typecheck && npm run lint && npm test && npm run verify:package",
     "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
+    "perf:benchmark": "tsx test/perf/rendering-benchmark.ts",
     "prepare": "husky",
     "commit": "gitmoji -c"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://github.com/Exoridus/ExoJS",
   "repository": {
     "type": "git",
@@ -78,5 +87,13 @@
   },
   "dependencies": {
     "earcut": "^2.2.4"
+  },
+  "peerDependencies": {
+    "@dimforge/rapier2d-compat": "*"
+  },
+  "peerDependenciesMeta": {
+    "@dimforge/rapier2d-compat": {
+      "optional": true
+    }
   }
 }
