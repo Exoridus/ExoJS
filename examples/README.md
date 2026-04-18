@@ -1,4 +1,4 @@
-# ExoJS Examples Site
+# ExoJS Examples
 
 Browser-runnable companion app for the ExoJS library. Bundles a set of small demos, shows the source in an in-browser Monaco editor, and renders the selected example in a live preview frame.
 

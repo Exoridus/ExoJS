@@ -37,18 +37,18 @@ jobs:
       - name: Build library
         run: npm run build
 
-      - name: Install examples-site dependencies
-        working-directory: examples-site
+      - name: Install examples dependencies
+        working-directory: examples
         run: npm install --no-audit --fund=false
 
       - name: Build examples site
-        working-directory: examples-site
+        working-directory: examples
         run: npm run build
 
       - name: Stage Pages artifact (latest/ subpath + root redirect)
         run: |
           mkdir -p _site/latest
-          cp -r examples-site/dist/. _site/latest/
+          cp -r examples/dist/. _site/latest/
           cat > _site/index.html <<'HTML'
           <!DOCTYPE html>
           <html lang="en">

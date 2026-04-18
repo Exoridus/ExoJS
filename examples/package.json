@@ -1,5 +1,5 @@
 {
-  "name": "@exojs/examples-site",
+  "name": "@exojs/examples",
   "private": true,
   "description": "Browser-runnable examples site for ExoJS (sibling app; not published to npm).",
   "version": "0.0.0",

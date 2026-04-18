@@ -115,7 +115,7 @@ If Rapier is unavailable, creation fails with a clear setup error.
 
 ## Examples
 
-The runnable live site (Astro + Lit + Monaco preview) lives in [`examples-site/`](examples-site/README.md) and is deployed as the repository's GitHub Pages site at <https://exoridus.github.io/ExoJS/>.
+The runnable live site (Astro + Lit + Monaco preview) lives in [`examples/`](examples/README.md) and is deployed as the repository's GitHub Pages site at <https://exoridus.github.io/ExoJS/>.
 
 ## Development
 
