@@ -10,15 +10,8 @@ import type { BlendModes } from 'rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const primitiveShaderSource = `
-struct TransformUniforms {
-    matrix: mat4x4<f32>,
-};
-
-@group(0) @binding(0)
-var<uniform> uniforms: TransformUniforms;
-
 struct VertexInput {
-    @location(0) position: vec2<f32>,
+    @location(0) position: vec4<f32>,
     @location(1) color: vec4<f32>,
 };
 
@@ -31,7 +24,7 @@ struct VertexOutput {
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
-    output.position = uniforms.matrix * vec4<f32>(input.position, 0.0, 1.0);
+    output.position = input.position;
     output.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
 
     return output;
@@ -43,13 +36,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const vertexStrideBytes = 12;
-const transformByteLength = 64;
-// WebGPU's minUniformBufferOffsetAlignment is at most 256 on all hardware we
-// target, so using it as a fixed stride lets one uniform buffer hold every
-// drawcall's transform and be bound with dynamic offsets.
-const uniformAlignmentBytes = 256;
-const uniformAlignmentFloats = uniformAlignmentBytes / Float32Array.BYTES_PER_ELEMENT;
+// 4 floats (pre-transformed clip-space position) + 1 u32 (color) = 20 bytes.
+// The CPU applies (view * shape.globalTransform) to each vertex before writing
+// it into the vertex buffer, so the shader outputs the position as-is. This
+// matches the sprite renderer's approach and eliminates the need for a per-
+// drawcall uniform binding.
+const vertexStrideBytes = 20;
+const wordsPerVertex = vertexStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
 interface WebGpuPrimitiveDrawCall {
     shape: DrawableShape;
@@ -75,21 +68,16 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     private readonly _combinedTransform: Matrix = new Matrix();
     private readonly _drawCalls: Array<WebGpuPrimitiveDrawCall> = [];
     private _drawCallCount = 0;
-    private _transformData: Float32Array = new Float32Array(0);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
     private _renderManager: WebGpuRenderManager | null = null;
     private _device: GPUDevice | null = null;
     private _shaderModule: GPUShaderModule | null = null;
-    private _bindGroupLayout: GPUBindGroupLayout | null = null;
     private _pipelineLayout: GPUPipelineLayout | null = null;
-    private _uniformBuffer: GPUBuffer | null = null;
-    private _bindGroup: GPUBindGroup | null = null;
     private _vertexBuffer: GPUBuffer | null = null;
     private _indexBuffer: GPUBuffer | null = null;
     private _vertexBufferCapacity = 0;
     private _indexBufferCapacity = 0;
-    private _uniformBufferCapacity = 0;
     private _vertexData: ArrayBuffer = new ArrayBuffer(0);
     private _float32View: Float32Array = new Float32Array(this._vertexData);
     private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
@@ -156,24 +144,23 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             readonly vertexCount: number;
             readonly indexByteOffset: number;
             readonly indexCount: number;
-            readonly uniformByteOffset: number;
         }
 
-        // Phase 1: resolve drawcalls, compute total resource needs, and
-        // record each drawcall's offset into the packed buffers.
+        // Phase 1: resolve drawcalls and record each one's offsets into the
+        // shared packed buffers. Transform gets baked into the vertex data
+        // during phase 2 so no per-drawcall uniform binding is needed.
         const plan: Array<PrimitiveDrawPlan> = [];
+        const resolvedDrawCalls: Array<ResolvedPrimitiveDrawCall | null> = [];
         let totalVertices = 0;
         let totalIndices = 0;
 
         if (this._drawCallCount > 0 && !maskClipsAll) {
-            // Ensure CPU-side packed buffers are sized first so subsequent
-            // writes don't reallocate mid-walk.
-            this._ensureUniformCapacity(this._drawCallCount);
-
             for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
                 const drawCall = this._drawCalls[drawCallIndex];
                 const shape = drawCall.shape;
                 const resolved = this._resolveDrawCall(shape);
+
+                resolvedDrawCalls.push(resolved);
 
                 if (resolved === null) {
                     continue;
@@ -186,14 +173,12 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                     format: runtime.renderTargetFormat,
                 });
 
-                const planIndex = plan.length;
                 plan.push({
                     pipeline,
                     vertexByteOffset: totalVertices * vertexStrideBytes,
                     vertexCount: resolved.vertexCount,
                     indexByteOffset: totalIndices * Uint16Array.BYTES_PER_ELEMENT,
                     indexCount: resolved.indexCount,
-                    uniformByteOffset: planIndex * uniformAlignmentBytes,
                 });
 
                 totalVertices += resolved.vertexCount;
@@ -218,10 +203,10 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             return;
         }
 
-        // Phase 2: pre-size GPU-side buffers for the totals across all
-        // planned draws before any writeBuffer. This keeps ensureVertexCapacity
-        // and ensureIndexCapacity off the hot inner-loop path and means no
-        // live buffer reference gets destroyed after the pass starts.
+        // Phase 2: size GPU buffers for the whole-frame totals, then pack
+        // every drawcall's CPU-side data. _writeShapeVertices applies
+        // (view * shape.globalTransform) per-vertex so the shader simply
+        // outputs input.position unchanged.
         this._ensureVertexCapacity(totalVertices);
         if (totalIndices > 0) {
             this._ensureIndexCapacity(totalIndices);
@@ -232,21 +217,22 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             }
         }
 
-        // Phase 3: pack every drawcall's CPU-side data into the shared
-        // buffers. Writing all drawcalls first, then uploading once per
-        // buffer, avoids the queue.writeBuffer-to-same-offset clobber that
-        // any per-drawcall approach hits inside a single submit.
         {
             let vOffset = 0;
             let iOffset = 0;
-            for (let i = 0; i < plan.length; i++) {
+            let planIndex = 0;
+
+            for (let i = 0; i < this._drawCallCount; i++) {
+                const resolved = resolvedDrawCalls[i];
+
+                if (resolved === null) {
+                    continue;
+                }
+
                 const drawCall = this._drawCalls[i];
                 const shape = drawCall.shape;
-                const resolved = this._resolveDrawCall(shape);
-                if (resolved === null) continue;
 
-                this._writeVertexData(shape.geometry.vertices, shape.color.toRgba(), vOffset);
-                this._writeTransformData(runtime, shape, i);
+                this._writeShapeVertices(runtime, shape, vOffset);
 
                 if (resolved.indices !== null && resolved.indexCount > 0) {
                     this._packedIndexData.set(resolved.indices.subarray(0, resolved.indexCount), iOffset);
@@ -254,24 +240,17 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                 }
 
                 vOffset += resolved.vertexCount;
+                planIndex++;
             }
         }
 
-        // Phase 4: three single writeBuffer uploads cover the entire frame
-        // for this renderer.
+        // Phase 3: single writeBuffer per GPU buffer covers the whole frame.
         device.queue.writeBuffer(
             this._vertexBuffer!,
             0,
             this._vertexData,
             0,
             totalVertices * vertexStrideBytes,
-        );
-        device.queue.writeBuffer(
-            this._uniformBuffer!,
-            0,
-            this._transformData.buffer as ArrayBuffer,
-            this._transformData.byteOffset,
-            plan.length * uniformAlignmentBytes,
         );
         if (totalIndices > 0) {
             device.queue.writeBuffer(
@@ -283,10 +262,9 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             );
         }
 
-        // Phase 5: single render pass. Per-draw state is swapped via dynamic
-        // bind-group offsets (transform) plus setVertexBuffer / setIndexBuffer
-        // offsets (vertex and index subranges). drawIndexed/draw counts refer
-        // to those subranges, not the whole packed buffer.
+        // Phase 4: single render pass. Per-draw state is just pipeline and
+        // vertex/index subrange offsets — the transform has already been
+        // baked into the vertex data.
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
             colorAttachments: [runtime.createColorAttachment()],
@@ -299,7 +277,6 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
 
         for (const planned of plan) {
             pass.setPipeline(planned.pipeline);
-            pass.setBindGroup(0, this._bindGroup!, [planned.uniformByteOffset]);
             pass.setVertexBuffer(0, this._vertexBuffer!, planned.vertexByteOffset);
 
             if (planned.indexCount > 0) {
@@ -327,33 +304,18 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         this._renderManager = runtime as WebGpuRenderManager;
         this._device = this._renderManager.device;
         this._shaderModule = this._device.createShaderModule({ code: primitiveShaderSource });
-        this._bindGroupLayout = this._device.createBindGroupLayout({
-            entries: [{
-                binding: 0,
-                visibility: GPUShaderStage.VERTEX,
-                buffer: {
-                    type: 'uniform',
-                    hasDynamicOffset: true,
-                    minBindingSize: transformByteLength,
-                },
-            }],
-        });
+        // Transform is applied per-vertex on the CPU, so no uniform binding
+        // is needed — the shader outputs input.position directly.
         this._pipelineLayout = this._device.createPipelineLayout({
-            bindGroupLayouts: [this._bindGroupLayout],
+            bindGroupLayouts: [],
         });
-        // Uniform buffer and bindGroup are (re)created lazily on demand in
-        // _ensureUniformCapacity so they can scale with drawcall count.
     }
 
     protected onDisconnect(): void {
         this.flush();
         this._destroyBuffers();
         this._pipelines.clear();
-        this._uniformBuffer?.destroy();
 
-        this._uniformBuffer = null;
-        this._bindGroup = null;
-        this._bindGroupLayout = null;
         this._pipelineLayout = null;
         this._shaderModule = null;
         this._device = null;
@@ -361,64 +323,42 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         this._drawCallCount = 0;
     }
 
-    private _writeTransformData(runtime: WebGpuRendererRuntime, shape: DrawableShape, drawIndex: number): void {
+    private _writeShapeVertices(runtime: WebGpuRendererRuntime, shape: DrawableShape, vertexStart: number): void {
         const matrix = this._combinedTransform
             .copy(runtime.view.getTransform())
             .combine(shape.getGlobalTransform());
 
-        const base = drawIndex * uniformAlignmentFloats;
-        const td = this._transformData;
+        // Match the original uniform-based WGSL layout:
+        //   position' = matrix * vec4(position, 0.0, 1.0)
+        // with the column-major matrix previously built in _writeTransformData.
+        // Expanded:
+        //   x' = a*px + c*py
+        //   y' = b*px + d*py
+        //   z' = 0
+        //   w' = x*px + y*py + z
+        const a = matrix.a;
+        const b = matrix.b;
+        const c = matrix.c;
+        const d = matrix.d;
+        const tx = matrix.x;
+        const ty = matrix.y;
+        const tz = matrix.z;
 
-        td[base + 0] = matrix.a;  td[base + 1] = matrix.c;  td[base + 2] = 0;         td[base + 3] = 0;
-        td[base + 4] = matrix.b;  td[base + 5] = matrix.d;  td[base + 6] = 0;         td[base + 7] = 0;
-        td[base + 8] = 0;         td[base + 9] = 0;         td[base + 10] = 1;        td[base + 11] = 0;
-        td[base + 12] = matrix.x; td[base + 13] = matrix.y; td[base + 14] = 0;        td[base + 15] = matrix.z;
-    }
-
-    private _writeVertexData(vertices: Float32Array, color: number, vertexStart: number): void {
+        const color = shape.color.toRgba();
+        const vertices = shape.geometry.vertices;
         const vertexCount = vertices.length / 2;
 
         for (let i = 0; i < vertexCount; i++) {
             const sourceIndex = i * 2;
-            const targetIndex = (vertexStart + i) * 3;
+            const targetIndex = (vertexStart + i) * wordsPerVertex;
+            const px = vertices[sourceIndex];
+            const py = vertices[sourceIndex + 1];
 
-            this._float32View[targetIndex] = vertices[sourceIndex];
-            this._float32View[targetIndex + 1] = vertices[sourceIndex + 1];
-            this._uint32View[targetIndex + 2] = color;
-        }
-    }
-
-    private _ensureUniformCapacity(drawCount: number): void {
-        const requiredBytes = drawCount * uniformAlignmentBytes;
-
-        if (requiredBytes > this._transformData.byteLength) {
-            const byteLength = Math.max(
-                requiredBytes,
-                this._transformData.byteLength === 0 ? uniformAlignmentBytes : this._transformData.byteLength * 2,
-            );
-            this._transformData = new Float32Array(byteLength / Float32Array.BYTES_PER_ELEMENT);
-        }
-
-        if (requiredBytes > this._uniformBufferCapacity) {
-            this._uniformBuffer?.destroy();
-            this._uniformBufferCapacity = Math.max(
-                requiredBytes,
-                this._uniformBufferCapacity === 0 ? uniformAlignmentBytes : this._uniformBufferCapacity * 2,
-            );
-            this._uniformBuffer = this._device!.createBuffer({
-                size: this._uniformBufferCapacity,
-                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            });
-            this._bindGroup = this._device!.createBindGroup({
-                layout: this._bindGroupLayout!,
-                entries: [{
-                    binding: 0,
-                    resource: {
-                        buffer: this._uniformBuffer,
-                        size: transformByteLength,
-                    },
-                }],
-            });
+            this._float32View[targetIndex + 0] = a * px + c * py;
+            this._float32View[targetIndex + 1] = b * px + d * py;
+            this._float32View[targetIndex + 2] = 0;
+            this._float32View[targetIndex + 3] = tx * px + ty * py + tz;
+            this._uint32View[targetIndex + 4] = color;
         }
     }
 
@@ -474,10 +414,10 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                     attributes: [{
                         shaderLocation: 0,
                         offset: 0,
-                        format: 'float32x2',
+                        format: 'float32x4',
                     }, {
                         shaderLocation: 1,
-                        offset: 8,
+                        offset: 16,
                         format: 'unorm8x4',
                     }],
                 }],
