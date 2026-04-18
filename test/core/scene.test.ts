@@ -3,6 +3,7 @@ import { Container } from 'rendering/Container';
 import { Drawable } from 'rendering/Drawable';
 import { RenderBackendType } from 'rendering/RenderBackendType';
 import { RenderTarget } from 'rendering/RenderTarget';
+import { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 
 class DummyDrawable extends Drawable {}
@@ -33,6 +34,20 @@ const createRuntime = (): SceneRenderRuntime => {
             return this;
         },
         setRenderTarget() {
+            return this;
+        },
+        pushMask() {
+            return this;
+        },
+        popMask() {
+            return this;
+        },
+        acquireRenderTexture(width: number, height: number) {
+            return new RenderTexture(width, height);
+        },
+        releaseRenderTexture(texture: RenderTexture) {
+            texture.destroy();
+
             return this;
         },
         draw() {

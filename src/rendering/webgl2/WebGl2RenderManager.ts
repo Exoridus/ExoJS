@@ -14,6 +14,8 @@ import { Texture } from '../texture/Texture';
 import { RenderTexture } from '../texture/RenderTexture';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
+import { Vector } from 'math/Vector';
+import type { Rectangle } from 'math/Rectangle';
 import type { RenderPass } from '../RenderPass';
 import type { Drawable } from '../Drawable';
 import type { Renderer } from '../Renderer';
@@ -57,6 +59,13 @@ interface ManagedRenderTargetState {
     attachedTexture: WebGLTexture | null;
 }
 
+interface PixelMaskState {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 interface DestroyListenable {
     addDestroyListener(listener: () => void): unknown;
     removeDestroyListener(listener: () => void): unknown;
@@ -75,6 +84,11 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
     private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
+    private readonly _temporaryRenderTextures: Array<RenderTexture> = [];
+    private readonly _maskStack: Array<Rectangle> = [];
+    private readonly _maskPixelStack: Array<PixelMaskState> = [];
+    private readonly _maskPointA: Vector = new Vector();
+    private readonly _maskPointB: Vector = new Vector();
 
     private _canvas: HTMLCanvasElement;
     private _contextLost: boolean;
@@ -189,6 +203,67 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         }
 
         this._bindRenderTarget(renderTarget);
+
+        return this;
+    }
+
+    public pushMask(maskBounds: Rectangle): this {
+        this._flushActiveRenderer();
+
+        this._maskStack.push(maskBounds.clone());
+
+        const nextMask = this._toMaskPixels(maskBounds);
+        const previousMask = this._maskPixelStack.length > 0
+            ? this._maskPixelStack[this._maskPixelStack.length - 1]
+            : null;
+        const resolvedMask = previousMask ? this._intersectMasks(previousMask, nextMask) : nextMask;
+
+        this._maskPixelStack.push(resolvedMask);
+        this._applyMaskState();
+
+        return this;
+    }
+
+    public popMask(): this {
+        if (this._maskStack.length === 0) {
+            return this;
+        }
+
+        this._flushActiveRenderer();
+
+        const removedMask = this._maskStack.pop();
+
+        if (removedMask) {
+            removedMask.destroy();
+        }
+
+        this._maskPixelStack.pop();
+        this._applyMaskState();
+
+        return this;
+    }
+
+    public acquireRenderTexture(width: number, height: number): RenderTexture {
+        for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
+            const texture = this._temporaryRenderTextures[index];
+
+            if (texture.width === width && texture.height === height) {
+                this._temporaryRenderTextures.splice(index, 1);
+
+                return texture;
+            }
+        }
+
+        return new RenderTexture(width, height);
+    }
+
+    public releaseRenderTexture(texture: RenderTexture): this {
+        if (this._temporaryRenderTextures.includes(texture)) {
+            return this;
+        }
+
+        texture.setView(null);
+        this._temporaryRenderTextures.push(texture);
 
         return this;
     }
@@ -360,6 +435,16 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         this.rendererRegistry.destroy();
         this._clearColor.destroy();
         this._destroyManagedResources();
+        this._destroyTemporaryRenderTextures();
+
+        for (const mask of this._maskStack) {
+            mask.destroy();
+        }
+
+        this._maskStack.length = 0;
+        this._maskPixelStack.length = 0;
+        this._maskPointA.destroy();
+        this._maskPointB.destroy();
         this._rootRenderTarget.destroy();
 
         this._vao = null;
@@ -443,6 +528,14 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         for (const texture of Array.from(this._textureStates.keys())) {
             this._evictTexture(texture, false);
         }
+    }
+
+    private _destroyTemporaryRenderTextures(): void {
+        for (const texture of this._temporaryRenderTextures) {
+            texture.destroy();
+        }
+
+        this._temporaryRenderTextures.length = 0;
     }
 
     private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
@@ -570,6 +663,10 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
             this._boundFramebuffer = state.framebuffer;
             state.version = target.version;
         }
+
+        if (this._maskPixelStack.length > 0) {
+            this._applyMaskState();
+        }
     }
 
     private _setActiveRenderer(renderer: Renderer | null): void {
@@ -645,5 +742,59 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         }
 
         return state;
+    }
+
+    private _toMaskPixels(maskBounds: Rectangle): PixelMaskState {
+        const topLeft = this._renderTarget.mapCoordsToPixel(this._maskPointA.set(maskBounds.left, maskBounds.top));
+        const bottomRight = this._renderTarget.mapCoordsToPixel(this._maskPointB.set(maskBounds.right, maskBounds.bottom));
+        const minX = Math.min(topLeft.x, bottomRight.x);
+        const maxX = Math.max(topLeft.x, bottomRight.x);
+        const minY = Math.min(topLeft.y, bottomRight.y);
+        const maxY = Math.max(topLeft.y, bottomRight.y);
+        const targetWidth = this._renderTarget.width;
+        const targetHeight = this._renderTarget.height;
+        const x = Math.max(0, Math.min(targetWidth, Math.floor(minX)));
+        const right = Math.max(0, Math.min(targetWidth, Math.ceil(maxX)));
+        const yTop = Math.max(0, Math.min(targetHeight, Math.floor(minY)));
+        const bottom = Math.max(0, Math.min(targetHeight, Math.ceil(maxY)));
+        const width = Math.max(0, right - x);
+        const height = Math.max(0, bottom - yTop);
+        const y = Math.max(0, targetHeight - bottom);
+
+        return {
+            x,
+            y,
+            width,
+            height,
+        };
+    }
+
+    private _intersectMasks(first: PixelMaskState, second: PixelMaskState): PixelMaskState {
+        const left = Math.max(first.x, second.x);
+        const bottom = Math.max(first.y, second.y);
+        const right = Math.min(first.x + first.width, second.x + second.width);
+        const top = Math.min(first.y + first.height, second.y + second.height);
+
+        return {
+            x: left,
+            y: bottom,
+            width: Math.max(0, right - left),
+            height: Math.max(0, top - bottom),
+        };
+    }
+
+    private _applyMaskState(): void {
+        const gl = this._context;
+
+        if (this._maskPixelStack.length === 0) {
+            gl.disable(gl.SCISSOR_TEST);
+
+            return;
+        }
+
+        const mask = this._maskPixelStack[this._maskPixelStack.length - 1];
+
+        gl.enable(gl.SCISSOR_TEST);
+        gl.scissor(mask.x, mask.y, mask.width, mask.height);
     }
 }

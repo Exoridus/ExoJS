@@ -26,6 +26,19 @@ Normal code should work through drawables and scenes:
 - offscreen switching lives on the runtime manager:
   - `app.renderManager.setRenderTarget(target)`
 
+## Phase 2 visual primitives
+
+- Nodes (`Drawable` and `Container`) now support:
+  - `filters` (ordered filter chain)
+  - `mask` (rectangular mask based on mask node bounds)
+  - `cacheAsBitmap` + `invalidateCache()`
+- Runtime-level composition helpers:
+  - `RenderTargetPass`
+  - `CallbackRenderPass`
+- Temporary render-target lifecycle for advanced workflows:
+  - `runtime.acquireRenderTexture(width, height)`
+  - `runtime.releaseRenderTexture(texture)`
+
 ## Advanced use
 
 Backend-specific renderer/runtime work lives under:

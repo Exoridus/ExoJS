@@ -2,6 +2,7 @@ import { Drawable } from 'rendering/Drawable';
 import { RenderBackendType } from 'rendering/RenderBackendType';
 import { RendererRegistry } from 'rendering/RendererRegistry';
 import { RenderTarget } from 'rendering/RenderTarget';
+import { RenderTexture } from 'rendering/texture/RenderTexture';
 import type { Renderer } from 'rendering/Renderer';
 import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
 
@@ -39,6 +40,20 @@ const createRuntime = (): SceneRenderRuntime => {
             return this;
         },
         setRenderTarget() {
+            return this;
+        },
+        pushMask() {
+            return this;
+        },
+        popMask() {
+            return this;
+        },
+        acquireRenderTexture(width: number, height: number) {
+            return new RenderTexture(width, height);
+        },
+        releaseRenderTexture(texture: RenderTexture) {
+            texture.destroy();
+
             return this;
         },
         draw() {

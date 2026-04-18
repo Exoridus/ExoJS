@@ -165,43 +165,51 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         const pass = encoder.beginRenderPass({
             colorAttachments: [runtime.createColorAttachment()],
         });
+        const scissor = runtime.getScissorRect();
+        const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-        pass.setBindGroup(0, uniformBindGroup);
+        if (scissor !== null && !maskClipsAll) {
+            pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
+        }
 
-        for (const drawCall of this._drawCalls) {
-            const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
-            const textureBinding = runtime.getTextureBinding(drawCall.texture);
-            const textureBindGroup = device.createBindGroup({
-                layout: this._textureBindGroupLayout!,
-                entries: [{
-                    binding: 0,
-                    resource: textureBinding.view,
-                }, {
-                    binding: 1,
-                    resource: textureBinding.sampler,
-                }],
-            });
-            const particleCount = drawCall.particles.length;
+        if (!maskClipsAll) {
+            pass.setBindGroup(0, uniformBindGroup);
 
-            this._ensureCapacity(particleCount);
-            this._writeInstanceData(drawCall);
-            this._writeUniformData(runtime, drawCall.transform, drawCall.texture);
+            for (const drawCall of this._drawCalls) {
+                const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
+                const textureBinding = runtime.getTextureBinding(drawCall.texture);
+                const textureBindGroup = device.createBindGroup({
+                    layout: this._textureBindGroupLayout!,
+                    entries: [{
+                        binding: 0,
+                        resource: textureBinding.view,
+                    }, {
+                        binding: 1,
+                        resource: textureBinding.sampler,
+                    }],
+                });
+                const particleCount = drawCall.particles.length;
 
-            device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
-            device.queue.writeBuffer(
-                uniformBuffer,
-                0,
-                this._uniformData.buffer as ArrayBuffer,
-                this._uniformData.byteOffset,
-                this._uniformData.byteLength
-            );
+                this._ensureCapacity(particleCount);
+                this._writeInstanceData(drawCall);
+                this._writeUniformData(runtime, drawCall.transform, drawCall.texture);
 
-            pass.setPipeline(pipeline);
-            pass.setBindGroup(1, textureBindGroup);
-            pass.setVertexBuffer(0, staticVertexBuffer);
-            pass.setVertexBuffer(1, this._instanceBuffer!);
-            pass.setIndexBuffer(indexBuffer, 'uint16');
-            pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
+                device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
+                device.queue.writeBuffer(
+                    uniformBuffer,
+                    0,
+                    this._uniformData.buffer as ArrayBuffer,
+                    this._uniformData.byteOffset,
+                    this._uniformData.byteLength
+                );
+
+                pass.setPipeline(pipeline);
+                pass.setBindGroup(1, textureBindGroup);
+                pass.setVertexBuffer(0, staticVertexBuffer);
+                pass.setVertexBuffer(1, this._instanceBuffer!);
+                pass.setIndexBuffer(indexBuffer, 'uint16');
+                pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
+            }
         }
 
         pass.end();

@@ -804,7 +804,7 @@ describe('WebGpuRenderManager', () => {
         }
     });
 
-    test('flushes WebGPU sprite batches when the texture changes', async () => {
+    test('batches WebGPU sprites across texture changes when blend mode matches', async () => {
         const environment = createMockWebGpuEnvironment();
 
         try {
@@ -838,9 +838,8 @@ describe('WebGpuRenderManager', () => {
             secondSprite.render(manager);
             manager.flush();
 
-            expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(2);
-            expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(6);
-            expect(environment.pass.drawIndexed.mock.calls[1][0]).toBe(6);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(12, 1, 0, 0, 0);
             expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
         } finally {
             environment.restore();
@@ -884,7 +883,7 @@ describe('WebGpuRenderManager', () => {
         }
     });
 
-    test('does not batch interleaved multi-texture WebGPU sprites across texture changes', async () => {
+    test('batches interleaved multi-texture WebGPU sprites into one draw when within texture slot budget', async () => {
         const environment = createMockWebGpuEnvironment();
 
         try {
@@ -920,10 +919,55 @@ describe('WebGpuRenderManager', () => {
             thirdSprite.render(manager);
             manager.flush();
 
-            expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(3);
-            expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(6);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(18, 1, 0, 0, 0);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('splits WebGPU sprite batches when the texture slot budget is exceeded', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuRenderManager(app);
+            const sprites: Array<Sprite> = [];
+
+            for (let index = 0; index < 9; index++) {
+                const canvas = document.createElement('canvas');
+
+                canvas.width = 16;
+                canvas.height = 16;
+
+                const texture = new Texture(canvas);
+                const sprite = new Sprite(texture);
+
+                texture.updateSource();
+                sprite.x = index * 4;
+                sprites.push(sprite);
+            }
+
+            await manager.initialize();
+
+            manager.clear();
+
+            for (const sprite of sprites) {
+                sprite.render(manager);
+            }
+
+            manager.flush();
+
+            expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(2);
+            expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(48);
             expect(environment.pass.drawIndexed.mock.calls[1][0]).toBe(6);
-            expect(environment.pass.drawIndexed.mock.calls[2][0]).toBe(6);
         } finally {
             environment.restore();
         }

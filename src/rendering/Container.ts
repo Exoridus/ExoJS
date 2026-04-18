@@ -1,8 +1,9 @@
-import { SceneNode } from 'core/SceneNode';
 import { removeArrayItems } from 'core/utils';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
+import type { SceneNode } from 'core/SceneNode';
+import { RenderNode } from './RenderNode';
 
-export class Container extends SceneNode {
+export class Container extends RenderNode {
 
     private readonly _children: Array<SceneNode> = [];
     private _sortableChildren = false;
@@ -78,6 +79,7 @@ export class Container extends SceneNode {
 
         this._children.splice(index, 0, child);
         this.markSortDirty();
+        this.invalidateCache();
 
         return this;
     }
@@ -90,6 +92,7 @@ export class Container extends SceneNode {
             this._children[firstIndex] = secondChild;
             this._children[secondIndex] = firstChild;
             this.markSortDirty();
+            this.invalidateCache();
         }
 
         return this;
@@ -114,6 +117,7 @@ export class Container extends SceneNode {
 
         this._children.splice(index, 0, child);
         this.markSortDirty();
+        this.invalidateCache();
 
         return this;
     }
@@ -146,6 +150,7 @@ export class Container extends SceneNode {
         }
 
         this.markSortDirty();
+        this.invalidateCache();
 
         return this;
     }
@@ -167,17 +172,20 @@ export class Container extends SceneNode {
 
         removeArrayItems(this._children, begin, range);
         this.markSortDirty();
+        this.invalidateCache();
 
         return this;
     }
 
     public render(renderManager: SceneRenderRuntime): this {
         if (this.visible && this.inView(renderManager.view)) {
-            this._sortChildrenIfNeeded();
+            this.renderVisualContent(renderManager, () => {
+                this._sortChildrenIfNeeded();
 
-            for (const child of this._children) {
-                child.render(renderManager);
-            }
+                for (const child of this._children) {
+                    child.render(renderManager);
+                }
+            });
         }
 
         return this;
@@ -229,6 +237,7 @@ export class Container extends SceneNode {
             return left.zIndex - right.zIndex;
         });
         this._sortDirty = false;
+        this.invalidateCache();
 
         return this;
     }

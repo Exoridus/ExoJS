@@ -46,10 +46,17 @@ export * from './webgpu/WebGpuSpriteRenderer';
 export * from './types';
 export * from './Container';
 export * from './Drawable';
+export * from './RenderNode';
 export * from './RenderBackendType';
 export * from './RenderPass';
 export * from './RenderTarget';
+export * from './RenderTargetPass';
+export * from './CallbackRenderPass';
 export * from './Renderer';
 export * from './RendererRegistry';
 export * from './SceneRenderRuntime';
 export * from './View';
+
+export * from './filters/Filter';
+export * from './filters/BlurFilter';
+export * from './filters/ColorFilter';

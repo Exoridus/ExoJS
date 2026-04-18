@@ -18,15 +18,45 @@ struct ProjectionUniforms {
 var<uniform> projection: ProjectionUniforms;
 
 @group(1) @binding(0)
-var spriteTexture: texture_2d<f32>;
+var spriteTexture0: texture_2d<f32>;
 @group(1) @binding(1)
-var spriteSampler: sampler;
+var spriteTexture1: texture_2d<f32>;
+@group(1) @binding(2)
+var spriteTexture2: texture_2d<f32>;
+@group(1) @binding(3)
+var spriteTexture3: texture_2d<f32>;
+@group(1) @binding(4)
+var spriteTexture4: texture_2d<f32>;
+@group(1) @binding(5)
+var spriteTexture5: texture_2d<f32>;
+@group(1) @binding(6)
+var spriteTexture6: texture_2d<f32>;
+@group(1) @binding(7)
+var spriteTexture7: texture_2d<f32>;
+
+@group(1) @binding(8)
+var spriteSampler0: sampler;
+@group(1) @binding(9)
+var spriteSampler1: sampler;
+@group(1) @binding(10)
+var spriteSampler2: sampler;
+@group(1) @binding(11)
+var spriteSampler3: sampler;
+@group(1) @binding(12)
+var spriteSampler4: sampler;
+@group(1) @binding(13)
+var spriteSampler5: sampler;
+@group(1) @binding(14)
+var spriteSampler6: sampler;
+@group(1) @binding(15)
+var spriteSampler7: sampler;
 
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(1) texcoord: vec2<f32>,
     @location(2) color: vec4<f32>,
     @location(3) premultiplySample: u32,
+    @location(4) textureSlot: u32,
 };
 
 struct VertexOutput {
@@ -34,6 +64,7 @@ struct VertexOutput {
     @location(0) texcoord: vec2<f32>,
     @location(1) color: vec4<f32>,
     @location(2) @interpolate(flat) premultiplySample: u32,
+    @location(3) @interpolate(flat) textureSlot: u32,
 };
 
 @vertex
@@ -44,25 +75,56 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.texcoord = input.texcoord;
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
     output.premultiplySample = input.premultiplySample;
+    output.textureSlot = input.textureSlot;
 
     return output;
 }
 
+fn sampleTexture(slot: u32, uv: vec2<f32>) -> vec4<f32> {
+    switch slot {
+        case 0u: {
+            return textureSample(spriteTexture0, spriteSampler0, uv);
+        }
+        case 1u: {
+            return textureSample(spriteTexture1, spriteSampler1, uv);
+        }
+        case 2u: {
+            return textureSample(spriteTexture2, spriteSampler2, uv);
+        }
+        case 3u: {
+            return textureSample(spriteTexture3, spriteSampler3, uv);
+        }
+        case 4u: {
+            return textureSample(spriteTexture4, spriteSampler4, uv);
+        }
+        case 5u: {
+            return textureSample(spriteTexture5, spriteSampler5, uv);
+        }
+        case 6u: {
+            return textureSample(spriteTexture6, spriteSampler6, uv);
+        }
+        default: {
+            return textureSample(spriteTexture7, spriteSampler7, uv);
+        }
+    }
+}
+
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let sample = textureSample(spriteTexture, spriteSampler, input.texcoord);
+    let sample = sampleTexture(input.textureSlot, input.texcoord);
     let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), input.premultiplySample == 1u);
 
     return resolvedSample * input.color;
 }
 `;
 
-const vertexStrideBytes = 24;
+const vertexStrideBytes = 28;
 const spriteVertexCount = 4;
 const spriteIndexCount = 6;
 const projectionByteLength = 64;
 const initialBatchCapacity = 32;
-const wordsPerVertex = 6;
+const wordsPerVertex = vertexStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
+const maxBatchTextures = 8;
 
 interface WebGpuSpriteDrawCall {
     readonly texture: Texture | RenderTexture;
@@ -73,9 +135,12 @@ interface WebGpuSpriteDrawCall {
 }
 
 interface WebGpuSpriteBatchRange {
+    readonly start: number;
     readonly end: number;
     readonly spriteCount: number;
-    readonly texture: Texture | RenderTexture;
+    readonly blendMode: BlendModes;
+    readonly textures: Array<Texture | RenderTexture>;
+    readonly textureSlots: Map<Texture | RenderTexture, number>;
 }
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
@@ -116,20 +181,20 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             });
             this._textureBindGroupLayout = this._device.createBindGroupLayout({
                 entries: [
-                    {
-                        binding: 0,
+                    ...Array.from({ length: maxBatchTextures }, (_, index) => ({
+                        binding: index,
                         visibility: GPUShaderStage.FRAGMENT,
                         texture: {
-                            sampleType: 'float',
+                            sampleType: 'float' as const,
                         },
-                    },
-                    {
-                        binding: 1,
+                    })),
+                    ...Array.from({ length: maxBatchTextures }, (_, index) => ({
+                        binding: maxBatchTextures + index,
                         visibility: GPUShaderStage.FRAGMENT,
                         sampler: {
-                            type: 'filtering',
+                            type: 'filtering' as const,
                         },
-                    }
+                    })),
                 ],
             });
             this._pipelineLayout = this._device.createPipelineLayout({
@@ -234,50 +299,43 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             this._projectionData.byteLength
         );
 
-        if (this._drawCalls.length > 0) {
-            this._ensureBatchCapacity(this._drawCalls.length);
-            this._writeVertexData(this._drawCalls);
-
-            device.queue.writeBuffer(
-                this._vertexBuffer!,
-                0,
-                this._vertexData,
-                0,
-                this._drawCalls.length * spriteVertexCount * vertexStrideBytes
-            );
-        }
-
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
             colorAttachments: [renderManager.createColorAttachment()],
         });
+        const scissor = renderManager.getScissorRect();
+        const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-        if (this._drawCalls.length > 0) {
+        if (scissor !== null && !maskClipsAll) {
+            pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
+        }
+
+        if (this._drawCalls.length > 0 && !maskClipsAll) {
             pass.setBindGroup(0, uniformBindGroup);
             pass.setVertexBuffer(0, this._vertexBuffer!);
             pass.setIndexBuffer(this._indexBuffer!, 'uint32');
 
             for (let start = 0; start < this._drawCalls.length;) {
                 const batch = this._getBatchRange(start);
-                const pipeline = this._getPipeline(this._drawCalls[start].blendMode, renderManager.renderTargetFormat);
-                const textureBinding = renderManager.getTextureBinding(batch.texture);
-                const textureBindGroup = device.createBindGroup({
-                    layout: this._textureBindGroupLayout!,
-                    entries: [
-                        {
-                            binding: 0,
-                            resource: textureBinding.view,
-                        },
-                        {
-                            binding: 1,
-                            resource: textureBinding.sampler,
-                        }
-                    ],
-                });
+                const pipeline = this._getPipeline(batch.blendMode, renderManager.renderTargetFormat);
+                const spriteCount = batch.end - batch.start;
+
+                this._ensureBatchCapacity(spriteCount);
+                this._writeBatchVertexData(batch);
+
+                device.queue.writeBuffer(
+                    this._vertexBuffer!,
+                    0,
+                    this._vertexData,
+                    0,
+                    spriteCount * spriteVertexCount * vertexStrideBytes,
+                );
+
+                const textureBindGroup = this._createTextureBindGroup(device, renderManager, batch.textures);
 
                 pass.setPipeline(pipeline);
                 pass.setBindGroup(1, textureBindGroup);
-                pass.drawIndexed(batch.spriteCount * spriteIndexCount, 1, start * spriteIndexCount, 0, 0);
+                pass.drawIndexed(batch.spriteCount * spriteIndexCount, 1, 0, 0, 0);
 
                 start = batch.end;
             }
@@ -339,10 +397,20 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         this._indexBuffer = indexBuffer;
     }
 
-    private _writeVertexData(drawCalls: Array<WebGpuSpriteDrawCall>): void {
+    private _writeBatchVertexData(batch: WebGpuSpriteBatchRange): void {
+        const renderManager = this._renderManager;
+
+        if (!renderManager) {
+            return;
+        }
+
         let vertexOffset = 0;
 
-        for (const drawCall of drawCalls) {
+        for (let drawCallIndex = batch.start; drawCallIndex < batch.end; drawCallIndex++) {
+            const drawCall = this._drawCalls[drawCallIndex];
+            const textureSlot = batch.textureSlots.get(drawCall.texture) ?? 0;
+            const premultiplySample = renderManager.shouldPremultiplyTextureSample(drawCall.texture) ? 1 : 0;
+
             for (let i = 0; i < spriteVertexCount; i++) {
                 const vertexIndex = i * 2;
                 const packedTexCoord = drawCall.texCoords[i];
@@ -352,7 +420,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 this._float32View[vertexOffset + 2] = (packedTexCoord & 0xFFFF) / 65535;
                 this._float32View[vertexOffset + 3] = ((packedTexCoord >>> 16) & 0xFFFF) / 65535;
                 this._uint32View[vertexOffset + 4] = drawCall.color;
-                this._uint32View[vertexOffset + 5] = this._renderManager!.shouldPremultiplyTextureSample(drawCall.texture) ? 1 : 0;
+                this._uint32View[vertexOffset + 5] = premultiplySample;
+                this._uint32View[vertexOffset + 6] = textureSlot;
                 vertexOffset += wordsPerVertex;
             }
         }
@@ -360,7 +429,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     private _getBatchRange(start: number): WebGpuSpriteBatchRange {
         const drawCall = this._drawCalls[start];
+        const textureSlots = new Map<Texture | RenderTexture, number>();
+        const textures = new Array<Texture | RenderTexture>();
         let end = start + 1;
+
+        textureSlots.set(drawCall.texture, 0);
+        textures.push(drawCall.texture);
 
         while (end < this._drawCalls.length) {
             const nextDrawCall = this._drawCalls[end];
@@ -369,7 +443,16 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 break;
             }
 
-            if (nextDrawCall.texture !== drawCall.texture) {
+            if (!textureSlots.has(nextDrawCall.texture)) {
+                if (textures.length >= maxBatchTextures) {
+                    break;
+                }
+
+                textureSlots.set(nextDrawCall.texture, textures.length);
+                textures.push(nextDrawCall.texture);
+            }
+
+            if (textureSlots.size > maxBatchTextures) {
                 break;
             }
 
@@ -377,10 +460,52 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         }
 
         return {
+            start,
             end,
             spriteCount: end - start,
-            texture: drawCall.texture,
+            blendMode: drawCall.blendMode,
+            textures,
+            textureSlots,
         };
+    }
+
+    private _createTextureBindGroup(
+        device: GPUDevice,
+        renderManager: WebGpuRenderManager,
+        textures: Array<Texture | RenderTexture>,
+    ): GPUBindGroup {
+        const fallbackTexture = textures[0];
+        const fallbackBinding = renderManager.getTextureBinding(fallbackTexture);
+        const entries: Array<GPUBindGroupEntry> = [];
+        const resolvedBindings = new Array<ReturnType<WebGpuRenderManager['getTextureBinding']>>(maxBatchTextures);
+
+        for (let index = 0; index < maxBatchTextures; index++) {
+            const texture = textures[index] ?? fallbackTexture;
+            const textureBinding = texture === fallbackTexture
+                ? fallbackBinding
+                : renderManager.getTextureBinding(texture);
+
+            resolvedBindings[index] = textureBinding;
+        }
+
+        for (let index = 0; index < maxBatchTextures; index++) {
+            entries.push({
+                binding: index,
+                resource: resolvedBindings[index].view,
+            });
+        }
+
+        for (let index = 0; index < maxBatchTextures; index++) {
+            entries.push({
+                binding: maxBatchTextures + index,
+                resource: resolvedBindings[index].sampler,
+            });
+        }
+
+        return device.createBindGroup({
+            layout: this._textureBindGroupLayout!,
+            entries,
+        });
     }
 
     private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
@@ -417,6 +542,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                     }, {
                         shaderLocation: 3,
                         offset: 20,
+                        format: 'uint32',
+                    }, {
+                        shaderLocation: 4,
+                        offset: 24,
                         format: 'uint32',
                     }],
                 }],

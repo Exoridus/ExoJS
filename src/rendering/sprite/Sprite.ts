@@ -4,6 +4,7 @@ import { Vector } from 'math/Vector';
 import { Interval } from 'math/Interval';
 import type { Texture } from 'rendering/texture/Texture';
 import type { RenderTexture } from 'rendering/texture/RenderTexture';
+import { RenderNode } from 'rendering/RenderNode';
 
 export enum SpriteFlags {
     None = 0x00,
@@ -118,6 +119,7 @@ export class Sprite extends Drawable {
         if (this._texture !== texture) {
             this._texture = texture;
             this.updateTexture();
+            this.invalidateCache();
         }
 
         return this;
@@ -127,6 +129,7 @@ export class Sprite extends Drawable {
         if (this._texture) {
             this._texture.updateSource();
             this.resetTextureFrame();
+            this.invalidateCache();
         }
 
         return this;
@@ -147,6 +150,8 @@ export class Sprite extends Drawable {
             this.width = width;
             this.height = height;
         }
+
+        this.invalidateCache();
 
         return this;
     }
@@ -209,3 +214,5 @@ export class Sprite extends Drawable {
         this._texture = null;
     }
 }
+
+RenderNode.setInternalSpriteFactory(() => new Sprite(null));

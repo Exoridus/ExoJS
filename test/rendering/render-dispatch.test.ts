@@ -9,6 +9,7 @@ import { Texture } from 'rendering/texture/Texture';
 import { Container } from 'rendering/Container';
 import { DrawableShape } from 'rendering/primitives/DrawableShape';
 import { Geometry } from 'rendering/primitives/Geometry';
+import { RenderTexture } from 'rendering/texture/RenderTexture';
 
 const createRuntime = () => {
     const renderTarget = new RenderTarget(200, 200, true);
@@ -38,6 +39,20 @@ const createRuntime = () => {
             return this;
         },
         setRenderTarget() {
+            return this;
+        },
+        pushMask() {
+            return this;
+        },
+        popMask() {
+            return this;
+        },
+        acquireRenderTexture(width: number, height: number) {
+            return new RenderTexture(width, height);
+        },
+        releaseRenderTexture(texture: RenderTexture) {
+            texture.destroy();
+
             return this;
         },
         draw,

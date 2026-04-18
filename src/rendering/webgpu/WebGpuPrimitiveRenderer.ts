@@ -132,45 +132,53 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         const pass = encoder.beginRenderPass({
             colorAttachments: [runtime.createColorAttachment()],
         });
+        const scissor = runtime.getScissorRect();
+        const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-        for (const drawCall of this._drawCalls) {
-            const vertexCount = drawCall.vertices.length / 2;
-            const indexCount = drawCall.indices.length;
-            const pipeline = this._getPipeline({
-                drawMode: drawCall.drawMode,
-                blendMode: drawCall.blendMode,
-                format: runtime.renderTargetFormat,
-            });
+        if (scissor !== null && !maskClipsAll) {
+            pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
+        }
 
-            this._ensureVertexCapacity(vertexCount);
-            this._writeVertexData(drawCall.vertices, drawCall.color);
+        if (!maskClipsAll) {
+            for (const drawCall of this._drawCalls) {
+                const vertexCount = drawCall.vertices.length / 2;
+                const indexCount = drawCall.indices.length;
+                const pipeline = this._getPipeline({
+                    drawMode: drawCall.drawMode,
+                    blendMode: drawCall.blendMode,
+                    format: runtime.renderTargetFormat,
+                });
 
-            device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, vertexCount * vertexStrideBytes);
-            device.queue.writeBuffer(
-                uniformBuffer,
-                0,
-                drawCall.transform.buffer as ArrayBuffer,
-                drawCall.transform.byteOffset,
-                drawCall.transform.byteLength
-            );
+                this._ensureVertexCapacity(vertexCount);
+                this._writeVertexData(drawCall.vertices, drawCall.color);
 
-            pass.setPipeline(pipeline);
-            pass.setBindGroup(0, bindGroup);
-            pass.setVertexBuffer(0, this._vertexBuffer!);
-
-            if (indexCount > 0) {
-                this._ensureIndexCapacity(indexCount);
+                device.queue.writeBuffer(this._vertexBuffer!, 0, this._vertexData, 0, vertexCount * vertexStrideBytes);
                 device.queue.writeBuffer(
-                    this._indexBuffer!,
+                    uniformBuffer,
                     0,
-                    drawCall.indices.buffer as ArrayBuffer,
-                    drawCall.indices.byteOffset,
-                    drawCall.indices.byteLength
+                    drawCall.transform.buffer as ArrayBuffer,
+                    drawCall.transform.byteOffset,
+                    drawCall.transform.byteLength
                 );
-                pass.setIndexBuffer(this._indexBuffer!, 'uint16');
-                pass.drawIndexed(indexCount);
-            } else {
-                pass.draw(vertexCount);
+
+                pass.setPipeline(pipeline);
+                pass.setBindGroup(0, bindGroup);
+                pass.setVertexBuffer(0, this._vertexBuffer!);
+
+                if (indexCount > 0) {
+                    this._ensureIndexCapacity(indexCount);
+                    device.queue.writeBuffer(
+                        this._indexBuffer!,
+                        0,
+                        drawCall.indices.buffer as ArrayBuffer,
+                        drawCall.indices.byteOffset,
+                        drawCall.indices.byteLength
+                    );
+                    pass.setIndexBuffer(this._indexBuffer!, 'uint16');
+                    pass.drawIndexed(indexCount);
+                } else {
+                    pass.draw(vertexCount);
+                }
             }
         }
 
