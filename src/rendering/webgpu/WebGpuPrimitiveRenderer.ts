@@ -142,81 +142,112 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             return;
         }
 
-        const encoder = device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-            colorAttachments: [runtime.createColorAttachment()],
-        });
-        runtime.stats.renderPasses++;
         const scissor = runtime.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-        if (scissor !== null && !maskClipsAll) {
-            pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-        }
-
-        if (!maskClipsAll) {
-            for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
-                const drawCall = this._drawCalls[drawCallIndex];
-                const shape = drawCall.shape;
-                const vertices = shape.geometry.vertices;
-                const resolvedDrawCall = this._resolveDrawCall(shape);
-
-                if (resolvedDrawCall === null) {
-                    continue;
-                }
-
-                const pipeline = this._getPipeline({
-                    topology: resolvedDrawCall.topology,
-                    usesStripIndex: resolvedDrawCall.usesStripIndex,
-                    blendMode: drawCall.blendMode,
-                    format: runtime.renderTargetFormat,
+        // If no drawcalls will actually render, still honor a pending clear
+        // with a single empty pass so createColorAttachment consumes the
+        // clear state exactly once.
+        if (this._drawCallCount === 0 || maskClipsAll) {
+            if (runtime.clearRequested) {
+                const encoder = device.createCommandEncoder();
+                const pass = encoder.beginRenderPass({
+                    colorAttachments: [runtime.createColorAttachment()],
                 });
-
-                this._ensureVertexCapacity(resolvedDrawCall.vertexCount);
-                this._writeVertexData(vertices, shape.color.toRgba());
-                this._writeTransformData(runtime, shape);
-
-                device.queue.writeBuffer(
-                    this._vertexBuffer!,
-                    0,
-                    this._vertexData,
-                    0,
-                    resolvedDrawCall.vertexCount * vertexStrideBytes
-                );
-                device.queue.writeBuffer(
-                    uniformBuffer,
-                    0,
-                    this._transformData.buffer as ArrayBuffer,
-                    this._transformData.byteOffset,
-                    this._transformData.byteLength
-                );
-
-                pass.setPipeline(pipeline);
-                pass.setBindGroup(0, bindGroup);
-                pass.setVertexBuffer(0, this._vertexBuffer!);
-
-                if (resolvedDrawCall.indices !== null && resolvedDrawCall.indexCount > 0) {
-                    this._ensureIndexCapacity(resolvedDrawCall.indexCount);
-                    device.queue.writeBuffer(
-                        this._indexBuffer!,
-                        0,
-                        resolvedDrawCall.indices.buffer as ArrayBuffer,
-                        resolvedDrawCall.indices.byteOffset,
-                        resolvedDrawCall.indexCount * Uint16Array.BYTES_PER_ELEMENT
-                    );
-                    pass.setIndexBuffer(this._indexBuffer!, 'uint16');
-                    pass.drawIndexed(resolvedDrawCall.indexCount);
-                } else {
-                    pass.draw(resolvedDrawCall.vertexCount);
-                }
-
-                runtime.stats.batches++;
-                runtime.stats.drawCalls++;
+                runtime.stats.renderPasses++;
+                pass.end();
+                runtime.submit(encoder.finish());
             }
+            this._drawCallCount = 0;
+            return;
         }
 
-        pass.end();
-        runtime.submit(encoder.finish());
+        // One command encoder / pass per shape. Each shape writes its own
+        // vertex data, transform uniform, and (optionally) index data — all
+        // at offset 0 of their respective buffers. Packing them into a
+        // single pass would let every writeBuffer serialize before submit,
+        // so earlier shapes would render using the LAST shape's vertex /
+        // uniform data. Additionally, _ensureVertexCapacity and
+        // _ensureIndexCapacity destroy and recreate buffers on growth; one
+        // submit per shape keeps pass bindings from pointing at destroyed
+        // buffers.
+        for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
+            const drawCall = this._drawCalls[drawCallIndex];
+            const shape = drawCall.shape;
+            const vertices = shape.geometry.vertices;
+            const resolvedDrawCall = this._resolveDrawCall(shape);
+
+            if (resolvedDrawCall === null) {
+                continue;
+            }
+
+            const pipeline = this._getPipeline({
+                topology: resolvedDrawCall.topology,
+                usesStripIndex: resolvedDrawCall.usesStripIndex,
+                blendMode: drawCall.blendMode,
+                format: runtime.renderTargetFormat,
+            });
+
+            this._ensureVertexCapacity(resolvedDrawCall.vertexCount);
+            this._writeVertexData(vertices, shape.color.toRgba());
+            this._writeTransformData(runtime, shape);
+
+            device.queue.writeBuffer(
+                this._vertexBuffer!,
+                0,
+                this._vertexData,
+                0,
+                resolvedDrawCall.vertexCount * vertexStrideBytes
+            );
+            device.queue.writeBuffer(
+                uniformBuffer,
+                0,
+                this._transformData.buffer as ArrayBuffer,
+                this._transformData.byteOffset,
+                this._transformData.byteLength
+            );
+
+            const hasIndices = resolvedDrawCall.indices !== null && resolvedDrawCall.indexCount > 0;
+
+            if (hasIndices) {
+                this._ensureIndexCapacity(resolvedDrawCall.indexCount);
+                device.queue.writeBuffer(
+                    this._indexBuffer!,
+                    0,
+                    resolvedDrawCall.indices!.buffer as ArrayBuffer,
+                    resolvedDrawCall.indices!.byteOffset,
+                    resolvedDrawCall.indexCount * Uint16Array.BYTES_PER_ELEMENT
+                );
+            }
+
+            const encoder = device.createCommandEncoder();
+            const pass = encoder.beginRenderPass({
+                colorAttachments: [runtime.createColorAttachment()],
+            });
+            runtime.stats.renderPasses++;
+
+            if (scissor !== null) {
+                pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
+            }
+
+            pass.setPipeline(pipeline);
+            pass.setBindGroup(0, bindGroup);
+            pass.setVertexBuffer(0, this._vertexBuffer!);
+
+            if (hasIndices) {
+                pass.setIndexBuffer(this._indexBuffer!, 'uint16');
+                pass.drawIndexed(resolvedDrawCall.indexCount);
+            } else {
+                pass.draw(resolvedDrawCall.vertexCount);
+            }
+
+            runtime.stats.batches++;
+            runtime.stats.drawCalls++;
+
+            pass.end();
+            runtime.submit(encoder.finish());
+        }
+
         this._drawCallCount = 0;
     }
 

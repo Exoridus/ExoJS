@@ -164,69 +164,94 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             return;
         }
 
-        const encoder = device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-            colorAttachments: [runtime.createColorAttachment()],
-        });
-        runtime.stats.renderPasses++;
         const scissor = runtime.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-        if (scissor !== null && !maskClipsAll) {
-            pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-        }
-
-        if (!maskClipsAll) {
-            pass.setBindGroup(0, uniformBindGroup);
-
-            for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
-                const drawCall = this._drawCalls[drawCallIndex];
-                const system = drawCall.system;
-                const particleCount = system.particles.length;
-
-                if (particleCount === 0) {
-                    continue;
-                }
-
-                const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
-                const textureBinding = runtime.getTextureBinding(drawCall.texture);
-                const textureBindGroup = device.createBindGroup({
-                    layout: this._textureBindGroupLayout!,
-                    entries: [{
-                        binding: 0,
-                        resource: textureBinding.view,
-                    }, {
-                        binding: 1,
-                        resource: textureBinding.sampler,
-                    }],
+        // If no drawcalls will actually render (none queued, or the scissor
+        // clips everything), but a clear is pending, open a single empty
+        // pass so createColorAttachment consumes the clear state.
+        if (this._drawCallCount === 0 || maskClipsAll) {
+            if (runtime.clearRequested) {
+                const encoder = device.createCommandEncoder();
+                const pass = encoder.beginRenderPass({
+                    colorAttachments: [runtime.createColorAttachment()],
                 });
-
-                this._ensureCapacity(particleCount);
-                this._writeInstanceData(system.vertices, system.texCoords, system.particles);
-                this._writeUniformData(runtime, system, drawCall.texture);
-
-                device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
-                device.queue.writeBuffer(
-                    uniformBuffer,
-                    0,
-                    this._uniformData.buffer as ArrayBuffer,
-                    this._uniformData.byteOffset,
-                    this._uniformData.byteLength
-                );
-
-                pass.setPipeline(pipeline);
-                pass.setBindGroup(1, textureBindGroup);
-                pass.setVertexBuffer(0, staticVertexBuffer);
-                pass.setVertexBuffer(1, this._instanceBuffer!);
-                pass.setIndexBuffer(indexBuffer, 'uint16');
-                pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
-                runtime.stats.batches++;
-                runtime.stats.drawCalls++;
+                runtime.stats.renderPasses++;
+                pass.end();
+                runtime.submit(encoder.finish());
             }
+            this._drawCallCount = 0;
+            return;
         }
 
-        pass.end();
-        runtime.submit(encoder.finish());
+        // One command encoder / pass per drawcall. Each particle system's
+        // queue.writeBuffer calls target offset 0 of the instance and uniform
+        // buffers — a single pass with multiple systems would see all
+        // writeBuffers serialize before submit, leaving only the last
+        // system's data in those buffers and making every earlier draw read
+        // the wrong data. Also: _ensureCapacity may destroy and recreate the
+        // instance buffer on growth; keeping one drawcall per pass means
+        // that destroy happens strictly between submits, so no pass holds a
+        // reference to a buffer that has since been destroyed.
+        for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
+            const drawCall = this._drawCalls[drawCallIndex];
+            const system = drawCall.system;
+            const particleCount = system.particles.length;
+
+            if (particleCount === 0) {
+                continue;
+            }
+
+            const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
+            const textureBinding = runtime.getTextureBinding(drawCall.texture);
+            const textureBindGroup = device.createBindGroup({
+                layout: this._textureBindGroupLayout!,
+                entries: [{
+                    binding: 0,
+                    resource: textureBinding.view,
+                }, {
+                    binding: 1,
+                    resource: textureBinding.sampler,
+                }],
+            });
+
+            this._ensureCapacity(particleCount);
+            this._writeInstanceData(system.vertices, system.texCoords, system.particles);
+            this._writeUniformData(runtime, system, drawCall.texture);
+
+            device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
+            device.queue.writeBuffer(
+                uniformBuffer,
+                0,
+                this._uniformData.buffer as ArrayBuffer,
+                this._uniformData.byteOffset,
+                this._uniformData.byteLength
+            );
+
+            const encoder = device.createCommandEncoder();
+            const pass = encoder.beginRenderPass({
+                colorAttachments: [runtime.createColorAttachment()],
+            });
+            runtime.stats.renderPasses++;
+
+            if (scissor !== null) {
+                pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
+            }
+
+            pass.setBindGroup(0, uniformBindGroup);
+            pass.setPipeline(pipeline);
+            pass.setBindGroup(1, textureBindGroup);
+            pass.setVertexBuffer(0, staticVertexBuffer);
+            pass.setVertexBuffer(1, this._instanceBuffer!);
+            pass.setIndexBuffer(indexBuffer, 'uint16');
+            pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
+            runtime.stats.batches++;
+            runtime.stats.drawCalls++;
+
+            pass.end();
+            runtime.submit(encoder.finish());
+        }
+
         this._drawCallCount = 0;
     }
 
