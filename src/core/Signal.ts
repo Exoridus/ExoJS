@@ -66,7 +66,12 @@ export class Signal<Args extends Array<unknown> = []> {
 
     public dispatch(...params: Args): this {
         if (this._bindings.length) {
-            for (const binding of this._bindings) {
+            // Snapshot bindings because handlers may mutate the array mid-dispatch
+            // (notably `once()` wrappers that remove themselves), which would otherwise
+            // cause the iterator to skip the binding shifted into the vacated slot.
+            const bindings = this._bindings.slice();
+
+            for (const binding of bindings) {
                 if (binding.handler.call(binding.context, ...params) === false) {
                     break;
                 }
