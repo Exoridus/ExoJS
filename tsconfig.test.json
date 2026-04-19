@@ -2,6 +2,6 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "allowJs": true,
-    "types": ["jest", "node"]
+    "types": ["jest", "node", "jsdom", "@webgpu/types", "css-font-loading-module"]
   }
 }
