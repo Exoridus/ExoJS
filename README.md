@@ -128,6 +128,8 @@ npm run verify:package
 npm run perf:benchmark
 ```
 
+Internal imports use the `@/*` path alias (mapped to `src/*`) — the same convention used by Vite, Next.js, and other modern TypeScript setups. Building the library requires TypeScript 6.
+
 ## Links
 
 - Repository: <https://github.com/Exoridus/ExoJS>
