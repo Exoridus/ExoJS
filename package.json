@@ -12,7 +12,6 @@
     "dist/exo.global.js.map",
     "dist/exo.global.min.js",
     "dist/exo.global.min.js.map",
-    "dist/exo.d.ts",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -31,8 +30,7 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npm run clean && tsx node_modules/rollup/dist/bin/rollup -c && tsc -p tsconfig.declaration.json",
-    "build:declarations": "tsc -p tsconfig.declaration.json",
+    "build": "npm run clean && tsx node_modules/rollup/dist/bin/rollup -c",
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw",
     "verify:exports": "node ./scripts/verify-exports.mjs",
     "verify:package": "npm run build && npm run verify:exports && npm pack --dry-run",
