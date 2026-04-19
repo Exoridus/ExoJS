@@ -21,6 +21,15 @@ export default defineConfig([
       },
     },
     rules: {
+      // ESLint 10 promoted these two to the `recommended` preset. Both have
+      // a high false-positive rate against the math/rendering code in this
+      // repo (intentional staging assignments that are consumed in later
+      // branches, re-throw wrappers that deliberately suppress the inner
+      // cause to keep the public message stable). Disable at the repo level
+      // until they're revisited case-by-case.
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off',
+
       'no-template-curly-in-string': 'error',
       'init-declarations': 'error',
       'no-label-var': 'error',

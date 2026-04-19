@@ -18,6 +18,11 @@ const config: Config = {
             },
         ],
     },
+    // earcut 3 ships as ESM only. Jest does not transform node_modules by
+    // default, so let ts-jest transpile earcut (and any other ESM-only dep
+    // that lands here) alongside our own sources. Scope this list narrowly
+    // so the overwhelming majority of node_modules stays un-transformed.
+    transformIgnorePatterns: ['/node_modules/(?!(earcut)/)'],
 };
 
 export default config;
