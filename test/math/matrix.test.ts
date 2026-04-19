@@ -1,4 +1,4 @@
-import { Matrix } from 'math/Matrix';
+import { Matrix } from '@/math/Matrix';
 
 describe('Matrix', () => {
     test('uses a valid identity matrix constant', () => {

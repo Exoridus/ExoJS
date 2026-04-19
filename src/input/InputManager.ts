@@ -1,15 +1,15 @@
-import { Flags } from 'math/Flags';
-import { Vector } from 'math/Vector';
-import { Signal } from 'core/Signal';
-import { getDistance } from 'math/utils';
-import { stopEvent } from 'core/utils';
-import { ChannelOffset, ChannelSize } from 'input/types';
+import { Flags } from '@/math/Flags';
+import { Vector } from '@/math/Vector';
+import { Signal } from '@/core/Signal';
+import { getDistance } from '@/math/utils';
+import { stopEvent } from '@/core/utils';
+import { ChannelOffset, ChannelSize } from '@/input/types';
 
 import { Gamepad } from './Gamepad';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDefinitions';
 
-import type { Application } from 'core/Application';
+import type { Application } from '@/core/Application';
 import type { GamepadDefinition, BrowserGamepad } from './GamepadDefinitions';
 import type { Input } from './Input';
 

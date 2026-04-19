@@ -10,29 +10,29 @@ export class ObservableSize extends Size {
         this._callback = callback;
     }
 
-    public get width(): number {
+    public override get width(): number {
         return this._width;
     }
 
-    public set width(width: number) {
+    public override set width(width: number) {
         if (this._width !== width) {
             this._width = width;
             this._callback();
         }
     }
 
-    public get height(): number {
+    public override get height(): number {
         return this._height;
     }
 
-    public set height(height: number) {
+    public override set height(height: number) {
         if (this._height !== height) {
             this._height = height;
             this._callback();
         }
     }
 
-    public set(width: number = this._width, height: number = this._height): this {
+    public override set(width: number = this._width, height: number = this._height): this {
         if (this._width !== width || this._height !== height) {
             this._width = width;
             this._height = height;
@@ -42,27 +42,27 @@ export class ObservableSize extends Size {
         return this;
     }
 
-    public add(x: number, y: number = x): this {
+    public override add(x: number, y: number = x): this {
         return this.set(this._width + x, this._height + y);
     }
 
-    public subtract(x: number, y: number = x): this {
+    public override subtract(x: number, y: number = x): this {
         return this.set(this._width - x, this._height - y);
     }
 
-    public scale(x: number, y: number = x): this {
+    public override scale(x: number, y: number = x): this {
         return this.set(this._width * x, this._height * y);
     }
 
-    public divide(x: number, y: number = x): this {
+    public override divide(x: number, y: number = x): this {
         return this.set(this._width / x, this._height / y);
     }
 
-    public copy(size: Size): this {
+    public override copy(size: Size): this {
         return this.set(size.width, size.height);
     }
 
-    public clone(): this {
+    public override clone(): this {
         return new ObservableSize(this._callback, this._width, this._height) as this;
     }
 }

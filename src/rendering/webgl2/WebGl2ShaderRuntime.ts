@@ -2,9 +2,9 @@ import type { Shader, ShaderRuntime } from '../shader/Shader';
 import { ShaderAttribute } from '../shader/ShaderAttribute';
 import { ShaderUniform } from '../shader/ShaderUniform';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
-import { ShaderPrimitives } from 'rendering/types';
+import { ShaderPrimitives } from '@/rendering/types';
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './WebGl2ShaderMappings';
-import type { TypedArray } from 'core/types';
+import type { TypedArray } from '@/core/types';
 
 type UniformUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => void;
 

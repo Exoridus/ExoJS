@@ -1,5 +1,5 @@
-import { getDistance } from 'math/utils';
-import type { Matrix } from 'math/Matrix';
+import { getDistance } from '@/math/utils';
+import type { Matrix } from '@/math/Matrix';
 
 export abstract class AbstractVector {
     public abstract x: number;

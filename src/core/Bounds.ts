@@ -1,5 +1,5 @@
-import { Rectangle } from 'math/Rectangle';
-import type { Matrix } from 'math/Matrix';
+import { Rectangle } from '@/math/Rectangle';
+import type { Matrix } from '@/math/Matrix';
 
 export class Bounds {
 

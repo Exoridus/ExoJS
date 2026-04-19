@@ -32,8 +32,8 @@ export interface GamepadDescriptor {
 }
 
 export interface GamepadDefinition {
-    ids?: string | Array<string>;
-    name?: string;
+    ids?: string | Array<string> | undefined;
+    name?: string | undefined;
     resolve: (descriptor: GamepadDescriptor) => GamepadDefinitionResult;
 }
 

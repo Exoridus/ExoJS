@@ -1,6 +1,6 @@
-import { defineAssetManifest } from 'resources/AssetManifest';
-import { TextAsset } from 'resources/tokens';
-import type { AssetManifest } from 'resources/AssetManifest';
+import { defineAssetManifest } from '@/resources/AssetManifest';
+import { TextAsset } from '@/resources/tokens';
+import type { AssetManifest } from '@/resources/AssetManifest';
 
 class DummyAsset {}
 

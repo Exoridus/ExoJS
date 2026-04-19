@@ -17,8 +17,8 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 };
 
 interface ApplicationTestHarness {
-    readonly Application: typeof import('core/Application').Application;
-    readonly ApplicationStatus: typeof import('core/Application').ApplicationStatus;
+    readonly Application: typeof import('@/core/Application').Application;
+    readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
     readonly webglManager: {
         initialize: jest.Mock;
         flush: jest.Mock;
@@ -82,28 +82,28 @@ const loadApplicationHarness = (options: {
     };
     const RenderManagerMock = jest.fn(() => webglManager);
     const WebGpuRenderManagerMock = jest.fn(() => webgpuManager);
-    let Application!: typeof import('core/Application').Application;
-    let ApplicationStatus!: typeof import('core/Application').ApplicationStatus;
+    let Application!: typeof import('@/core/Application').Application;
+    let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
 
     jest.resetModules();
-    jest.doMock('rendering/webgl2/WebGl2RenderManager', () => ({
+    jest.doMock('@/rendering/webgl2/WebGl2RenderManager', () => ({
         WebGl2RenderManager: RenderManagerMock,
     }));
-    jest.doMock('rendering/webgpu/WebGpuRenderManager', () => ({
+    jest.doMock('@/rendering/webgpu/WebGpuRenderManager', () => ({
         WebGpuRenderManager: WebGpuRenderManagerMock,
     }));
-    jest.doMock('resources/Loader', () => ({
+    jest.doMock('@/resources/Loader', () => ({
         Loader: jest.fn(() => loader),
     }));
-    jest.doMock('input/InputManager', () => ({
+    jest.doMock('@/input/InputManager', () => ({
         InputManager: jest.fn(() => inputManager),
     }));
-    jest.doMock('core/SceneManager', () => ({
+    jest.doMock('@/core/SceneManager', () => ({
         SceneManager: jest.fn(() => sceneManager),
     }));
 
     jest.isolateModules(() => {
-        const module = require('core/Application') as typeof import('core/Application');
+        const module = require('@/core/Application') as typeof import('@/core/Application');
         Application = module.Application;
         ApplicationStatus = module.ApplicationStatus;
     });
@@ -127,7 +127,7 @@ describe('Application', () => {
 
     test('update flushes renderer once per frame while running', () => {
         const { Application, ApplicationStatus } = loadApplicationHarness();
-        const app = Object.create(Application.prototype) as import('core/Application').Application;
+        const app = Object.create(Application.prototype) as import('@/core/Application').Application;
         const rawApp = app as unknown as Record<string, unknown>;
         const inputManager = { update: jest.fn() };
         const sceneManager = { update: jest.fn() };
@@ -237,7 +237,7 @@ describe('Application', () => {
                 canvas: document.createElement('canvas'),
             });
 
-            await app.start({} as import('core/Scene').Scene);
+            await app.start({} as import('@/core/Scene').Scene);
 
             expect(WebGpuRenderManagerMock).toHaveBeenCalledTimes(1);
             expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
@@ -269,7 +269,7 @@ describe('Application', () => {
                 backend: { type: 'webgpu' },
             });
 
-            await expect(app.start({} as import('core/Scene').Scene)).rejects.toThrow(webgpuError);
+            await expect(app.start({} as import('@/core/Scene').Scene)).rejects.toThrow(webgpuError);
             expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
             expect(webgpuManager.destroy).not.toHaveBeenCalled();
             expect(RenderManagerMock).not.toHaveBeenCalled();
@@ -304,7 +304,7 @@ describe('Application', () => {
 
     test('stop() catches async scene teardown failures instead of leaking rejections', async () => {
         const { Application, ApplicationStatus } = loadApplicationHarness();
-        const app = Object.create(Application.prototype) as import('core/Application').Application;
+        const app = Object.create(Application.prototype) as import('@/core/Application').Application;
         const rawApp = app as unknown as Record<string, unknown>;
         const sceneTeardownError = new Error('scene teardown failed');
         const sceneManager = {

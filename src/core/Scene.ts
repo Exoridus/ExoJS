@@ -1,11 +1,11 @@
 import type { Time } from './Time';
-import type { Loader } from 'resources/Loader';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
-import { Container } from 'rendering/Container';
+import type { Loader } from '@/resources/Loader';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import { Container } from '@/rendering/Container';
 import type { SceneNode } from './SceneNode';
 import type { Application } from './Application';
-import type { Pointer } from 'input/Pointer';
-import type { Vector } from 'math/Vector';
+import type { Pointer } from '@/input/Pointer';
+import type { Vector } from '@/math/Vector';
 
 export type SceneStackMode = 'overlay' | 'modal' | 'opaque';
 export type SceneInputMode = 'capture' | 'passthrough' | 'transparent';

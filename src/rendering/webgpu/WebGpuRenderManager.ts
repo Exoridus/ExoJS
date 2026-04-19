@@ -1,9 +1,9 @@
 /// <reference types="@webgpu/types" />
 
-import { Color } from 'core/Color';
-import type { Application } from 'core/Application';
-import type { TextureSource } from 'core/types';
-import { BlendModes } from 'rendering/types';
+import { Color } from '@/core/Color';
+import type { Application } from '@/core/Application';
+import type { TextureSource } from '@/core/types';
+import { BlendModes } from '@/rendering/types';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
@@ -19,13 +19,13 @@ import { RenderTarget } from '../RenderTarget';
 import { WebGpuPrimitiveRenderer } from './WebGpuPrimitiveRenderer';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
-import { ScaleModes, WrapModes } from 'rendering/types';
+import { ScaleModes, WrapModes } from '@/rendering/types';
 import { RenderTexture } from '../texture/RenderTexture';
 import { Sprite } from '../sprite/Sprite';
 import { DrawableShape } from '../primitives/DrawableShape';
-import { ParticleSystem } from 'particles/ParticleSystem';
-import { Vector } from 'math/Vector';
-import type { Rectangle } from 'math/Rectangle';
+import { ParticleSystem } from '@/particles/ParticleSystem';
+import { Vector } from '@/math/Vector';
+import type { Rectangle } from '@/math/Rectangle';
 import type { RenderStats } from '../RenderStats';
 
 interface ManagedWebGpuTextureState {

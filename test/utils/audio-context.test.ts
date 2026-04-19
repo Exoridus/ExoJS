@@ -57,7 +57,7 @@ describe('utils/audio-context', () => {
         const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
         jest.isolateModules(() => {
-            require('audio/audio-context');
+            require('@/audio/audio-context');
         });
 
         expect(audioContextCreations).toBe(0);
@@ -100,7 +100,7 @@ describe('utils/audio-context', () => {
         const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
         jest.isolateModules(() => {
-            const { onAudioContextReady } = require('audio/audio-context');
+            const { onAudioContextReady } = require('@/audio/audio-context');
 
             onAudioContextReady.once(() => undefined);
         });

@@ -1,7 +1,7 @@
-import { Color } from 'core/Color';
-import { Signal } from 'core/Signal';
-import type { SceneNode } from 'core/SceneNode';
-import { Graphics } from 'rendering/primitives/Graphics';
+import { Color } from '@/core/Color';
+import { Signal } from '@/core/Signal';
+import type { SceneNode } from '@/core/SceneNode';
+import { Graphics } from '@/rendering/primitives/Graphics';
 
 const rapierModuleName = '@dimforge/rapier2d-compat';
 const maxCollisionGroup = 15;
@@ -117,7 +117,7 @@ interface RapierWorldLike {
 }
 
 interface RapierModuleLike {
-    init?: () => Promise<void> | void;
+    init?: (() => Promise<void> | void) | undefined;
     readonly vector2: new (x: number, y: number) => RapierVectorLike;
     readonly worldConstructor: new (gravity: RapierVectorLike) => RapierWorldLike;
     readonly eventQueueConstructor: new (autoDrain: boolean) => RapierEventQueueLike;
@@ -131,15 +131,15 @@ interface RapierModuleLike {
         cuboid(halfWidth: number, halfHeight: number): RapierColliderDescLike;
         ball(radius: number): RapierColliderDescLike;
     };
-    readonly activeCollisionEvents?: number;
+    readonly activeCollisionEvents?: number | undefined;
 }
 
 export type RapierModuleLoader = () => Promise<unknown>;
 
 export interface RapierPhysicsWorldOptions {
-    readonly gravityX?: number;
-    readonly gravityY?: number;
-    readonly moduleLoader?: RapierModuleLoader;
+    readonly gravityX?: number | undefined;
+    readonly gravityY?: number | undefined;
+    readonly moduleLoader?: RapierModuleLoader | undefined;
 }
 
 const defaultDebugDrawOptions = {
@@ -423,6 +423,7 @@ export class RapierPhysicsWorld {
 
             throw new Error(
                 `Rapier physics module is unavailable. Install "${rapierModuleName}" or provide a custom module loader. Original error: ${message}`,
+                { cause: error },
             );
         }
 

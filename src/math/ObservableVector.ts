@@ -1,4 +1,4 @@
-import { AbstractVector } from 'math/AbstractVector';
+import { AbstractVector } from '@/math/AbstractVector';
 
 export class ObservableVector extends AbstractVector {
 
@@ -36,19 +36,19 @@ export class ObservableVector extends AbstractVector {
         }
     }
 
-    public set direction(angle: number) {
+    public override set direction(angle: number) {
         const length = this.length;
 
         this.set(Math.cos(angle) * length, Math.sin(angle) * length);
     }
 
-    public set length(magnitude: number) {
+    public override set length(magnitude: number) {
         const direction = this.direction;
 
         this.set(Math.cos(direction) * magnitude, Math.sin(direction) * magnitude);
     }
 
-    public set(x: number = this._x, y: number = this._y): this {
+    public override set(x: number = this._x, y: number = this._y): this {
         if (this._x !== x || this._y !== y) {
             this._x = x;
             this._y = y;
@@ -58,11 +58,11 @@ export class ObservableVector extends AbstractVector {
         return this;
     }
 
-    public add(x: number, y: number = x): this {
+    public override add(x: number, y: number = x): this {
         return this.set(this._x + x, this._y + y);
     }
 
-    public subtract(x: number, y: number = x): this {
+    public override subtract(x: number, y: number = x): this {
         return this.set(this._x - x, this._y - y);
     }
 
@@ -70,7 +70,7 @@ export class ObservableVector extends AbstractVector {
         return this.set(this._x * x, this._y * y);
     }
 
-    public divide(x: number, y: number = x): this {
+    public override divide(x: number, y: number = x): this {
         if (x !== 0 && y !== 0) {
             return this.set(this._x / x, this._y / y);
         }

@@ -1,13 +1,13 @@
-import { Interval } from 'math/Interval';
-import { Vector } from 'math/Vector';
-import { Rectangle } from 'math/Rectangle';
-import type { ShapeLike } from 'math/ShapeLike';
-import type { Collidable, CollisionResponse} from 'math/Collision';
-import { CollisionType } from 'math/Collision';
+import { Interval } from '@/math/Interval';
+import { Vector } from '@/math/Vector';
+import { Rectangle } from '@/math/Rectangle';
+import type { ShapeLike } from '@/math/ShapeLike';
+import type { Collidable, CollisionResponse} from '@/math/Collision';
+import { CollisionType } from '@/math/Collision';
 import {
     getCollisionPolygonCircle,
     getCollisionSat,
-} from 'math/collision-detection';
+} from '@/math/collision-detection';
 import {
     intersectionCirclePoly,
     intersectionEllipsePoly,
@@ -15,11 +15,11 @@ import {
     intersectionPointPoly,
     intersectionPolyPoly,
     intersectionRectPoly,
-} from 'math/collision-detection';
-import type { SceneNode } from 'core/SceneNode';
-import type { Circle } from 'math/Circle';
-import type { Ellipse } from 'math/Ellipse';
-import type { Line } from 'math/Line';
+} from '@/math/collision-detection';
+import type { SceneNode } from '@/core/SceneNode';
+import type { Circle } from '@/math/Circle';
+import type { Ellipse } from '@/math/Ellipse';
+import type { Line } from '@/math/Line';
 
 let temp: Polygon | null = null;
 

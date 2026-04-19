@@ -1,6 +1,6 @@
-import { Vector } from 'math/Vector';
-import { Size } from 'math/Size';
-import { Flags } from 'math/Flags';
+import { Vector } from '@/math/Vector';
+import { Size } from '@/math/Size';
+import { Flags } from '@/math/Flags';
 
 export enum PointerStateFlag {
     None = 0,

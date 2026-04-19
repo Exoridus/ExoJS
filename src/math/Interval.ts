@@ -1,4 +1,4 @@
-import type { Cloneable } from 'core/types';
+import type { Cloneable } from '@/core/types';
 
 let temp: Interval | null = null;
 

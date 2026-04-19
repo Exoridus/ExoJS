@@ -1,4 +1,4 @@
-import { RenderingPrimitives, ShaderPrimitives } from 'rendering/types';
+import { RenderingPrimitives, ShaderPrimitives } from '@/rendering/types';
 import type { ShaderAttribute } from '../shader/ShaderAttribute';
 import type { WebGl2RenderBuffer } from './WebGl2RenderBuffer';
 

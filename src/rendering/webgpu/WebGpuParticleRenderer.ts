@@ -1,11 +1,11 @@
 /// <reference types="@webgpu/types" />
 
-import { AbstractWebGpuRenderer } from 'rendering/webgpu/AbstractWebGpuRenderer';
-import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
-import type { ParticleSystem } from 'particles/ParticleSystem';
-import { Texture } from 'rendering/texture/Texture';
-import type { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
-import type { BlendModes } from 'rendering/types';
+import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
+import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import type { ParticleSystem } from '@/particles/ParticleSystem';
+import { Texture } from '@/rendering/texture/Texture';
+import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
+import type { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const particleShaderSource = `

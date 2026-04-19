@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
 export class SvgFactory extends AbstractAssetFactory<HTMLImageElement> {
 

@@ -1,4 +1,4 @@
-import type { PointLike } from 'math/PointLike';
+import type { PointLike } from '@/math/PointLike';
 
 export interface PolygonLike {
     x: number;

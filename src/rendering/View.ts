@@ -1,10 +1,10 @@
-import { ObservableVector } from 'math/ObservableVector';
-import { Rectangle } from 'math/Rectangle';
-import { Matrix } from 'math/Matrix';
-import { clamp, degreesToRadians, trimRotation } from 'math/utils';
-import { ObservableSize } from 'math/ObservableSize';
-import { Bounds } from 'core/Bounds';
-import { Flags } from 'math/Flags';
+import { ObservableVector } from '@/math/ObservableVector';
+import { Rectangle } from '@/math/Rectangle';
+import { Matrix } from '@/math/Matrix';
+import { clamp, degreesToRadians, trimRotation } from '@/math/utils';
+import { ObservableSize } from '@/math/ObservableSize';
+import { Bounds } from '@/core/Bounds';
+import { Flags } from '@/math/Flags';
 
 export enum ViewFlags {
     None = 0x00,

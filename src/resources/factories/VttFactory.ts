@@ -1,4 +1,4 @@
-import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
+import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
 const parseTimestamp = (value: string): number => {
     const parts = value.split(':');

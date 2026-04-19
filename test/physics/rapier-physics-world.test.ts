@@ -1,10 +1,10 @@
-import { Drawable } from 'rendering/Drawable';
-import { Graphics } from 'rendering/primitives/Graphics';
+import { Drawable } from '@/rendering/Drawable';
+import { Graphics } from '@/rendering/primitives/Graphics';
 import {
     createRapierPhysicsWorld,
     type PhysicsBodyType,
     type RapierModuleLoader,
-} from 'physics/RapierPhysicsWorld';
+} from '@/physics/RapierPhysicsWorld';
 
 type FakeBodyType = 'dynamic' | 'static' | 'kinematic';
 type FakeShapeType = 'box' | 'circle';

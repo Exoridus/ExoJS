@@ -1,16 +1,16 @@
 import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
-import { WebGl2RenderManager } from 'rendering/webgl2/WebGl2RenderManager';
-import { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
-import { InputManager } from 'input/InputManager';
-import { Loader } from 'resources/Loader';
+import { WebGl2RenderManager } from '@/rendering/webgl2/WebGl2RenderManager';
+import { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
+import { InputManager } from '@/input/InputManager';
+import { Loader } from '@/resources/Loader';
 import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
-import type { CacheStore } from 'resources/CacheStore';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
-import type { GamepadDefinition } from 'input/GamepadDefinitions';
+import type { CacheStore } from '@/resources/CacheStore';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { GamepadDefinition } from '@/input/GamepadDefinitions';
 
 export enum ApplicationStatus {
     Loading = 1,
@@ -33,7 +33,7 @@ export interface ApplicationOptions {
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
     requestOptions: RequestInit;
-    cache?: CacheStore | ReadonlyArray<CacheStore>;
+    cache?: CacheStore | ReadonlyArray<CacheStore> | undefined;
     backend?: BackendConfig;
 }
 

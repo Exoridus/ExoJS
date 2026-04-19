@@ -1,5 +1,5 @@
-import { Rectangle } from 'math/Rectangle';
-import { View } from 'rendering/View';
+import { Rectangle } from '@/math/Rectangle';
+import { View } from '@/rendering/View';
 
 describe('View', () => {
     test('follow updates center toward target', () => {

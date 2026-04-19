@@ -3,7 +3,7 @@ import { Shader } from '../shader/Shader';
 import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 import type { WebGl2RenderBuffer, WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
-import { BufferTypes, BufferUsage } from 'rendering/types';
+import { BufferTypes, BufferUsage } from '@/rendering/types';
 import type { View } from '../View';
 import { WebGl2RenderBuffer as Buffer } from './WebGl2RenderBuffer';
 import type { DrawableShape } from '../primitives/DrawableShape';

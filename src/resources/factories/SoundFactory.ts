@@ -1,7 +1,7 @@
-import type { PlaybackOptions } from 'core/types';
-import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
-import { Sound, type AudioSpriteClip } from 'audio/Sound';
-import { decodeAudioData } from 'audio/audio-context';
+import type { PlaybackOptions } from '@/core/types';
+import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { Sound, type AudioSpriteClip } from '@/audio/Sound';
+import { decodeAudioData } from '@/audio/audio-context';
 
 interface SoundFactoryOptions {
     playbackOptions?: Partial<PlaybackOptions>;

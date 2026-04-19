@@ -21,14 +21,26 @@ export default defineConfig([
       },
     },
     rules: {
-      // ESLint 10 promoted these two to the `recommended` preset. Both have
-      // a high false-positive rate against the math/rendering code in this
-      // repo (intentional staging assignments that are consumed in later
-      // branches, re-throw wrappers that deliberately suppress the inner
-      // cause to keep the public message stable). Disable at the repo level
-      // until they're revisited case-by-case.
+      // ESLint 10 promoted `no-useless-assignment` to recommended. It catches
+      // real dead stores, but also flags idiomatic safety-net initializers
+      // in hot math/rendering paths (loop-scope accumulators, try/catch
+      // placeholders, if/else-assigned variables that TS strict mode
+      // requires to be definitely assigned). Keeping off repo-wide; the
+      // sibling rule `preserve-caught-error` stays on.
       'no-useless-assignment': 'off',
-      'preserve-caught-error': 'off',
+
+      // Block the old bare-specifier path style so new imports stick to the
+      // @/-prefixed convention. Equivalent npm-name collision risk (audio,
+      // core, math, etc.) is what motivated the migration in the first place.
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: [
+            'audio/*', 'core/*', 'input/*', 'math/*', 'particles/*',
+            'physics/*', 'rendering/*', 'resources/*', 'vendor/*',
+          ],
+          message: "Internal imports use the '@/' prefix — e.g. '@/core/X' instead of 'core/X'.",
+        }],
+      }],
 
       'no-template-curly-in-string': 'error',
       'init-declarations': 'error',

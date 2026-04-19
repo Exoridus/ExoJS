@@ -1,5 +1,5 @@
-import { Shader } from 'rendering/shader/Shader';
-import { ShaderAttribute } from 'rendering/shader/ShaderAttribute';
+import { Shader } from '@/rendering/shader/Shader';
+import { ShaderAttribute } from '@/rendering/shader/ShaderAttribute';
 
 describe('Shader runtime ordering', () => {
     it('initializes runtime reflection during connect so attributes are available before bind', () => {

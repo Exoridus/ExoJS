@@ -1,10 +1,10 @@
-import { removeArrayItems } from 'core/utils';
+import { removeArrayItems } from '@/core/utils';
 
 type SignalHandler<Args extends Array<unknown>> = (...params: Args) => void | boolean;
 
 interface SignalBinding<Args extends Array<unknown>> {
     handler: SignalHandler<Args>;
-    context?: object;
+    context?: object | undefined;
 }
 
 export class Signal<Args extends Array<unknown> = []> {

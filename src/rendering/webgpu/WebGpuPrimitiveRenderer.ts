@@ -1,12 +1,12 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from 'math/Matrix';
-import { AbstractWebGpuRenderer } from 'rendering/webgpu/AbstractWebGpuRenderer';
-import type { DrawableShape } from 'rendering/primitives/DrawableShape';
-import type { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
-import { RenderingPrimitives } from 'rendering/types';
-import type { BlendModes } from 'rendering/types';
+import { Matrix } from '@/math/Matrix';
+import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
+import type { DrawableShape } from '@/rendering/primitives/DrawableShape';
+import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import { RenderingPrimitives } from '@/rendering/types';
+import type { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const primitiveShaderSource = `
@@ -453,10 +453,9 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                     writeMask: GPUColorWrite.ALL,
                 }],
             },
-            primitive: {
-                topology: key.topology,
-                stripIndexFormat: key.usesStripIndex ? 'uint16' : undefined,
-            },
+            primitive: key.usesStripIndex
+                ? { topology: key.topology, stripIndexFormat: 'uint16' }
+                : { topology: key.topology },
         });
 
         this._pipelines.set(pipelineKey, pipeline);

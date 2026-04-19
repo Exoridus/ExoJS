@@ -1,5 +1,5 @@
-import { Signal } from 'core/Signal';
-import { ChannelOffset, ChannelSize } from 'input/types';
+import { Signal } from '@/core/Signal';
+import { ChannelOffset, ChannelSize } from '@/input/types';
 
 import type { GamepadChannel } from './GamepadChannels';
 

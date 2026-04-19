@@ -1,8 +1,8 @@
-import { Vector } from 'math/Vector';
-import { Color } from 'core/Color';
-import { Time } from 'core/Time';
-import type { ParticleProperties } from 'particles/ParticleProperties';
-import { trimRotation } from 'math/utils';
+import { Vector } from '@/math/Vector';
+import { Color } from '@/core/Color';
+import { Time } from '@/core/Time';
+import type { ParticleProperties } from '@/particles/ParticleProperties';
+import { trimRotation } from '@/math/utils';
 
 export class ParticleOptions implements ParticleProperties {
     private readonly _totalLifetime: Time;

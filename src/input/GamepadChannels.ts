@@ -1,4 +1,4 @@
-import { ChannelOffset } from 'input/types';
+import { ChannelOffset } from '@/input/types';
 
 export enum GamepadChannel {
     ButtonSouth = ChannelOffset.Gamepads + 0,

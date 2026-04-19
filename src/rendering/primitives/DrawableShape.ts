@@ -1,7 +1,7 @@
-import { RenderingPrimitives } from 'rendering/types';
-import type { Geometry } from 'rendering/primitives/Geometry';
-import type { Color } from 'core/Color';
-import { Drawable } from 'rendering/Drawable';
+import { RenderingPrimitives } from '@/rendering/types';
+import type { Geometry } from '@/rendering/primitives/Geometry';
+import type { Color } from '@/core/Color';
+import { Drawable } from '@/rendering/Drawable';
 
 export class DrawableShape extends Drawable {
 
@@ -17,7 +17,7 @@ export class DrawableShape extends Drawable {
         this.drawMode = drawMode;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this.color.destroy();

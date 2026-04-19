@@ -1,7 +1,7 @@
-import { Texture } from 'rendering/texture/Texture';
-import type { SamplerOptions } from 'rendering/texture/Sampler';
-import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
-import { determineMimeType } from 'resources/utils';
+import { Texture } from '@/rendering/texture/Texture';
+import type { SamplerOptions } from '@/rendering/texture/Sampler';
+import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
+import { determineMimeType } from '@/resources/utils';
 
 interface TextureFactoryOptions {
     mimeType?: string;

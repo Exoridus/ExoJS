@@ -1,11 +1,11 @@
-import { Container } from 'rendering/Container';
-import { Drawable } from 'rendering/Drawable';
-import { SceneNode } from 'core/SceneNode';
-import { Graphics } from 'rendering/primitives/Graphics';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
+import { Container } from '@/rendering/Container';
+import { Drawable } from '@/rendering/Drawable';
+import { SceneNode } from '@/core/SceneNode';
+import { Graphics } from '@/rendering/primitives/Graphics';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
 
 class DummyDrawable extends Drawable {
-    public render(_renderManager: SceneRenderRuntime): this {
+    public override render(_renderManager: SceneRenderRuntime): this {
         return this;
     }
 }

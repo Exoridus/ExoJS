@@ -1,5 +1,5 @@
-import { clamp } from 'math/utils';
-import type { Cloneable } from 'core/types';
+import { clamp } from '@/math/utils';
+import type { Cloneable } from '@/core/types';
 
 export class Color implements Cloneable {
 

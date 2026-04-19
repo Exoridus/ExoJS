@@ -1,4 +1,4 @@
-import { clamp } from 'math/utils';
+import { clamp } from '@/math/utils';
 
 import type { GamepadChannel } from './GamepadChannels';
 

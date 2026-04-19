@@ -1,7 +1,7 @@
-import { clamp } from 'math/utils';
-import type { PlaybackOptions } from 'core/types';
-import { AbstractMedia } from 'audio/AbstractMedia';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'audio/audio-context';
+import { clamp } from '@/math/utils';
+import type { PlaybackOptions } from '@/core/types';
+import { AbstractMedia } from '@/audio/AbstractMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
 
 interface MusicAudioSetup {
     readonly audioContext: AudioContext;
@@ -131,7 +131,7 @@ export class Music extends AbstractMedia {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         onAudioContextReady.clearByContext(this);

@@ -1,12 +1,12 @@
 /// <reference types="@webgpu/types" />
 
-import { AbstractWebGpuRenderer } from 'rendering/webgpu/AbstractWebGpuRenderer';
-import type { Sprite } from 'rendering/sprite/Sprite';
-import { Texture } from 'rendering/texture/Texture';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
-import type { BlendModes } from 'rendering/types';
+import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
+import type { Sprite } from '@/rendering/sprite/Sprite';
+import { Texture } from '@/rendering/texture/Texture';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import type { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const spriteShaderSource = `

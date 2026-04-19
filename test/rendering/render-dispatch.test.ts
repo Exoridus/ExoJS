@@ -1,16 +1,16 @@
-import { Color } from 'core/Color';
-import { ParticleSystem } from 'particles/ParticleSystem';
-import { Drawable } from 'rendering/Drawable';
-import { RenderBackendType } from 'rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
-import { RenderTarget } from 'rendering/RenderTarget';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
-import { Sprite } from 'rendering/sprite/Sprite';
-import { Texture } from 'rendering/texture/Texture';
-import { Container } from 'rendering/Container';
-import { DrawableShape } from 'rendering/primitives/DrawableShape';
-import { Geometry } from 'rendering/primitives/Geometry';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
+import { Color } from '@/core/Color';
+import { ParticleSystem } from '@/particles/ParticleSystem';
+import { Drawable } from '@/rendering/Drawable';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
+import { RenderTarget } from '@/rendering/RenderTarget';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import { Sprite } from '@/rendering/sprite/Sprite';
+import { Texture } from '@/rendering/texture/Texture';
+import { Container } from '@/rendering/Container';
+import { DrawableShape } from '@/rendering/primitives/DrawableShape';
+import { Geometry } from '@/rendering/primitives/Geometry';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
 
 const createRuntime = () => {
     const renderTarget = new RenderTarget(200, 200, true);
@@ -88,7 +88,7 @@ const createTexture = (): Texture => {
 };
 
 class ChildDrawable extends Drawable {
-    public render(renderManager: SceneRenderRuntime): this {
+    public override render(renderManager: SceneRenderRuntime): this {
         renderManager.draw(this);
 
         return this;

@@ -1,7 +1,7 @@
-import { isPowerOfTwo } from 'math/utils';
-import { RenderTarget } from 'rendering/RenderTarget';
-import { ScaleModes, WrapModes } from 'rendering/types';
-import type { SamplerOptions } from 'rendering/texture/Sampler';
+import { isPowerOfTwo } from '@/math/utils';
+import { RenderTarget } from '@/rendering/RenderTarget';
+import { ScaleModes, WrapModes } from '@/rendering/types';
+import type { SamplerOptions } from '@/rendering/texture/Sampler';
 
 export class RenderTexture extends RenderTarget {
 
@@ -143,7 +143,7 @@ export class RenderTexture extends RenderTarget {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this._source = null;

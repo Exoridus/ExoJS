@@ -1,4 +1,4 @@
-import { FontFactory } from 'resources/factories/FontFactory';
+import { FontFactory } from '@/resources/factories/FontFactory';
 
 describe('FontFactory', () => {
     test('rejects clearly when font data is too short', async () => {

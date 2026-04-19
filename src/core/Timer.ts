@@ -1,5 +1,5 @@
 import { Clock } from './Clock';
-import { Time } from 'core/Time';
+import { Time } from '@/core/Time';
 
 export class Timer extends Clock {
 

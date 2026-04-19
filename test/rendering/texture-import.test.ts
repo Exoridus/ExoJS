@@ -1,4 +1,4 @@
-describe('rendering/texture/Texture import behavior', () => {
+describe('@/rendering/texture/Texture import behavior', () => {
     afterEach(() => {
         jest.restoreAllMocks();
         jest.resetModules();
@@ -8,7 +8,7 @@ describe('rendering/texture/Texture import behavior', () => {
         const createElementSpy = jest.spyOn(document, 'createElement');
 
         jest.isolateModules(() => {
-            require('rendering/texture/Texture');
+            require('@/rendering/texture/Texture');
         });
 
         expect(createElementSpy).not.toHaveBeenCalled();
@@ -18,7 +18,7 @@ describe('rendering/texture/Texture import behavior', () => {
         const createElementSpy = jest.spyOn(document, 'createElement');
 
         jest.isolateModules(() => {
-            const { Texture } = require('rendering/texture/Texture');
+            const { Texture } = require('@/rendering/texture/Texture');
 
             expect(createElementSpy).not.toHaveBeenCalled();
 

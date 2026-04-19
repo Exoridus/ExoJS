@@ -1,8 +1,8 @@
-import { InputManager } from 'input/InputManager';
-import { Gamepad } from 'input/Gamepad';
-import { GamepadChannel } from 'input/GamepadChannels';
-import { GamepadMappingFamily } from 'input/GamepadMapping';
-import type { Application } from 'core/Application';
+import { InputManager } from '@/input/InputManager';
+import { Gamepad } from '@/input/Gamepad';
+import { GamepadChannel } from '@/input/GamepadChannels';
+import { GamepadMappingFamily } from '@/input/GamepadMapping';
+import type { Application } from '@/core/Application';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 

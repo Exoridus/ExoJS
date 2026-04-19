@@ -1,10 +1,10 @@
-import { Drawable } from 'rendering/Drawable';
-import { Rectangle } from 'math/Rectangle';
-import { Vector } from 'math/Vector';
-import { Interval } from 'math/Interval';
-import type { Texture } from 'rendering/texture/Texture';
-import type { RenderTexture } from 'rendering/texture/RenderTexture';
-import { RenderNode } from 'rendering/RenderNode';
+import { Drawable } from '@/rendering/Drawable';
+import { Rectangle } from '@/math/Rectangle';
+import { Vector } from '@/math/Vector';
+import { Interval } from '@/math/Interval';
+import type { Texture } from '@/rendering/texture/Texture';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { RenderNode } from '@/rendering/RenderNode';
 
 export enum SpriteFlags {
     None = 0x00,
@@ -165,7 +165,7 @@ export class Sprite extends Drawable {
     }
 
     // todo cache this
-    public getNormals(): Array<Vector> {
+    public override getNormals(): Array<Vector> {
         const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
 
         return [
@@ -176,7 +176,7 @@ export class Sprite extends Drawable {
         ];
     }
 
-    public project(axis: Vector, result: Interval = new Interval()): Interval {
+    public override project(axis: Vector, result: Interval = new Interval()): Interval {
         const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
         const proj1 = axis.dot(x1, y1);
         const proj2 = axis.dot(x2, y2);
@@ -189,7 +189,7 @@ export class Sprite extends Drawable {
         );
     }
 
-    public contains(x: number, y: number): boolean {
+    public override contains(x: number, y: number): boolean {
         if ((this.rotation % 90 === 0)) {
             return this.getBounds().contains(x, y);
         }
@@ -207,7 +207,7 @@ export class Sprite extends Drawable {
             && (dotB > 0) && (dotB <= lenB);
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this._textureFrame.destroy();

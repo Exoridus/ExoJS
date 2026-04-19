@@ -1,8 +1,8 @@
-import { Loader } from 'resources/Loader';
-import { BundleLoadError, defineAssetManifest } from 'resources/AssetManifest';
-import { Json, TextAsset } from 'resources/tokens';
-import type { AssetFactory } from 'resources/AssetFactory';
-import type { CacheStore } from 'resources/CacheStore';
+import { Loader } from '@/resources/Loader';
+import { BundleLoadError, defineAssetManifest } from '@/resources/AssetManifest';
+import { Json, TextAsset } from '@/resources/tokens';
+import type { AssetFactory } from '@/resources/AssetFactory';
+import type { CacheStore } from '@/resources/CacheStore';
 
 class MockTextFactory implements AssetFactory<string> {
     public readonly storageName = 'text';

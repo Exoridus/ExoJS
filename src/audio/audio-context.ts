@@ -1,4 +1,4 @@
-import { Signal } from 'core/Signal';
+import { Signal } from '@/core/Signal';
 
 interface AudioContextEventTarget {
     addEventListener?: (type: string, listener: () => void) => void;

@@ -1,4 +1,4 @@
-import { Ellipse } from 'math/Ellipse';
+import { Ellipse } from '@/math/Ellipse';
 
 describe('Ellipse', () => {
     test('returns bounds using diameter', () => {

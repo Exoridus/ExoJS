@@ -1,8 +1,8 @@
-import type { Matrix } from 'math/Matrix';
-import type { ShapeLike } from 'math/ShapeLike';
-import { Interval } from 'math/Interval';
-import type { Collidable, CollisionResponse} from 'math/Collision';
-import { CollisionType } from 'math/Collision';
+import type { Matrix } from '@/math/Matrix';
+import type { ShapeLike } from '@/math/ShapeLike';
+import { Interval } from '@/math/Interval';
+import type { Collidable, CollisionResponse} from '@/math/Collision';
+import { CollisionType } from '@/math/Collision';
 import {
     intersectionPointCircle,
     intersectionPointEllipse,
@@ -10,13 +10,13 @@ import {
     intersectionPointPoint,
     intersectionPointPoly,
     intersectionPointRect
-} from 'math/collision-detection';
-import { Rectangle } from 'math/Rectangle';
-import type { Polygon } from 'math/Polygon';
-import type { Circle } from 'math/Circle';
-import type { Ellipse } from 'math/Ellipse';
-import type { Line } from 'math/Line';
-import type { SceneNode } from 'core/SceneNode';
+} from '@/math/collision-detection';
+import { Rectangle } from '@/math/Rectangle';
+import type { Polygon } from '@/math/Polygon';
+import type { Circle } from '@/math/Circle';
+import type { Ellipse } from '@/math/Ellipse';
+import type { Line } from '@/math/Line';
+import type { SceneNode } from '@/core/SceneNode';
 import { AbstractVector } from './AbstractVector';
 
 let temp: Vector | null = null;

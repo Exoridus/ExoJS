@@ -1,5 +1,5 @@
-import type { Database } from 'resources/Database';
-import { supportsIndexedDb } from 'core/utils';
+import type { Database } from '@/resources/Database';
+import { supportsIndexedDb } from '@/core/utils';
 
 const defaultStoreNames: ReadonlyArray<string> = [
     'font', 'video', 'music', 'sound', 'image', 'texture',

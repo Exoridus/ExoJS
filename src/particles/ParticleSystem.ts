@@ -1,10 +1,10 @@
 import { Particle } from './Particle';
-import { Rectangle } from 'math/Rectangle';
-import type { Time } from 'core/Time';
-import { Drawable } from 'rendering/Drawable';
-import type { Texture } from 'rendering/texture/Texture';
-import type { ParticleEmitter } from 'particles/emitters/ParticleEmitter';
-import type { ParticleAffector } from 'particles/affectors/ParticleAffector';
+import { Rectangle } from '@/math/Rectangle';
+import type { Time } from '@/core/Time';
+import { Drawable } from '@/rendering/Drawable';
+import type { Texture } from '@/rendering/texture/Texture';
+import type { ParticleEmitter } from '@/particles/emitters/ParticleEmitter';
+import type { ParticleAffector } from '@/particles/affectors/ParticleAffector';
 
 export class ParticleSystem extends Drawable {
 
@@ -233,7 +233,7 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this.clearEmitters();

@@ -1,6 +1,6 @@
-import { GamepadPromptLayouts } from 'input/GamepadPromptLayouts';
-import { GamepadChannel } from 'input/GamepadChannels';
-import { GamepadMappingFamily } from 'input/GamepadMapping';
+import { GamepadPromptLayouts } from '@/input/GamepadPromptLayouts';
+import { GamepadChannel } from '@/input/GamepadChannels';
+import { GamepadMappingFamily } from '@/input/GamepadMapping';
 
 describe('GamepadPromptLayouts', () => {
     test('exposes stable control keys and base positions', () => {

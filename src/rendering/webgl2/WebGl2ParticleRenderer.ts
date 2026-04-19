@@ -1,6 +1,6 @@
 import type { WebGl2RenderBuffer } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
-import type { ParticleSystem } from 'particles/ParticleSystem';
+import type { ParticleSystem } from '@/particles/ParticleSystem';
 import vertexSource from './glsl/particle.vert';
 import fragmentSource from './glsl/particle.frag';
 import { AbstractWebGl2BatchedRenderer } from './AbstractWebGl2BatchedRenderer';

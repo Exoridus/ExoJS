@@ -1,10 +1,10 @@
-import { Signal } from 'core/Signal';
-import type { Time } from 'core/Time';
-import type { Rectangle } from 'math/Rectangle';
+import { Signal } from '@/core/Signal';
+import type { Time } from '@/core/Time';
+import type { Rectangle } from '@/math/Rectangle';
 import { Sprite } from './Sprite';
 import type { Spritesheet } from './Spritesheet';
-import type { Texture } from 'rendering/texture/Texture';
-import type { RenderTexture } from 'rendering/texture/RenderTexture';
+import type { Texture } from '@/rendering/texture/Texture';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 
 export interface AnimatedSpriteClipDefinition {
     readonly frames: ReadonlyArray<Rectangle>;

@@ -1,11 +1,11 @@
-import { Color } from 'core/Color';
-import { Container } from 'rendering/Container';
-import { bezierCurveTo, clamp, quadraticCurveTo, tau } from 'math/utils';
-import { RenderingPrimitives } from 'rendering/types';
-import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from 'math/geometry';
-import { Vector } from 'math/Vector';
+import { Color } from '@/core/Color';
+import { Container } from '@/rendering/Container';
+import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '@/math/utils';
+import { RenderingPrimitives } from '@/rendering/types';
+import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
+import { Vector } from '@/math/Vector';
 import { CircleGeometry } from './CircleGeometry';
-import type { SceneNode } from 'core/SceneNode';
+import type { SceneNode } from '@/core/SceneNode';
 import { DrawableShape } from './DrawableShape';
 
 export class Graphics extends Container {
@@ -271,7 +271,7 @@ export class Graphics extends Container {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this.clear();

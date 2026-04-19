@@ -1,5 +1,5 @@
-import { determineMimeType } from 'resources/utils';
-import { AbstractAssetFactory } from 'resources/AbstractAssetFactory';
+import { determineMimeType } from '@/resources/utils';
+import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
 interface ImageFactoryOptions {
     mimeType?: string;

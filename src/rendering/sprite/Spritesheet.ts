@@ -1,5 +1,5 @@
 import type { Texture } from '../texture/Texture';
-import { Rectangle } from 'math/Rectangle';
+import { Rectangle } from '@/math/Rectangle';
 import { Sprite } from './Sprite';
 
 export interface SpritesheetFrame {

@@ -3,10 +3,10 @@ import { Shader } from '../shader/Shader';
 import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
 import type { WebGl2VertexArrayObject, WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
-import { createQuadIndices } from 'rendering/utils';
+import { createQuadIndices } from '@/rendering/utils';
 import type { Texture } from '../texture/Texture';
-import type { BlendModes } from 'rendering/types';
-import { BufferTypes, BufferUsage } from 'rendering/types';
+import type { BlendModes } from '@/rendering/types';
+import { BufferTypes, BufferUsage } from '@/rendering/types';
 import type { View } from '../View';
 import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import type { RenderTexture } from '../texture/RenderTexture';
@@ -122,7 +122,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
         this.batchIndex = 0;
     }
 
-    public abstract render(drawable: Drawable): void;
+    public abstract override render(drawable: Drawable): void;
     protected abstract createVao(gl: WebGL2RenderingContext, indexBuffer: WebGl2RenderBuffer, vertexBuffer: WebGl2RenderBuffer): WebGl2VertexArrayObject;
     protected abstract updateView(view: View): void;
 

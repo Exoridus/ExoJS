@@ -1,4 +1,4 @@
-import type { BlendModes } from 'rendering/types';
+import type { BlendModes } from '@/rendering/types';
 import type { RenderBackendType } from '../RenderBackendType';
 import type { SceneRenderRuntime } from '../SceneRenderRuntime';
 import type { Shader } from '../shader/Shader';

@@ -1,11 +1,11 @@
-import { Scene } from 'core/Scene';
-import { Container } from 'rendering/Container';
-import { Drawable } from 'rendering/Drawable';
-import { RenderBackendType } from 'rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
-import { RenderTarget } from 'rendering/RenderTarget';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
+import { Scene } from '@/core/Scene';
+import { Container } from '@/rendering/Container';
+import { Drawable } from '@/rendering/Drawable';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
+import { RenderTarget } from '@/rendering/RenderTarget';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
 
 class DummyDrawable extends Drawable {}
 

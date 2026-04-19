@@ -1,6 +1,6 @@
-import { Rectangle } from 'math/Rectangle';
+import { Rectangle } from '@/math/Rectangle';
 import type { SceneNode } from './SceneNode';
-import type { Destroyable, HasBoundingBox } from 'core/types';
+import type { Destroyable, HasBoundingBox } from '@/core/types';
 
 export class Quadtree implements HasBoundingBox, Destroyable {
 

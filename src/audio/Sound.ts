@@ -1,7 +1,7 @@
-import { clamp } from 'math/utils';
-import type { PlaybackOptions } from 'core/types';
-import { AbstractMedia } from 'audio/AbstractMedia';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'audio/audio-context';
+import { clamp } from '@/math/utils';
+import type { PlaybackOptions } from '@/core/types';
+import { AbstractMedia } from '@/audio/AbstractMedia';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
 
 interface SoundAudioSetup {
     readonly audioContext: AudioContext;
@@ -10,10 +10,10 @@ interface SoundAudioSetup {
 
 interface QueuedPooledPlay {
     readonly offset: number;
-    readonly duration?: number;
+    readonly duration?: number | undefined;
     readonly loop: boolean;
-    readonly loopStart?: number;
-    readonly loopEnd?: number;
+    readonly loopStart?: number | undefined;
+    readonly loopEnd?: number | undefined;
     readonly playbackRate: number;
 }
 
@@ -30,8 +30,8 @@ export interface AudioSpriteClip {
 }
 
 export interface SoundOptions extends Partial<PlaybackOptions> {
-    poolSize?: number;
-    sprites?: Readonly<Record<string, AudioSpriteClip>>;
+    poolSize?: number | undefined;
+    sprites?: Readonly<Record<string, AudioSpriteClip>> | undefined;
 }
 
 export class Sound extends AbstractMedia {
@@ -375,7 +375,7 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         onAudioContextReady.clearByContext(this);

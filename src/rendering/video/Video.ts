@@ -1,13 +1,13 @@
-import { clamp } from 'math/utils';
+import { clamp } from '@/math/utils';
 import { Sprite } from '../sprite/Sprite';
 import { Texture } from '../texture/Texture';
-import { Signal } from 'core/Signal';
-import type { PlaybackOptions } from 'core/types';
+import { Signal } from '@/core/Signal';
+import type { PlaybackOptions } from '@/core/types';
 import type { SceneRenderRuntime } from '../SceneRenderRuntime';
 import type { SamplerOptions } from '../texture/Sampler';
-import type { Media } from 'audio/Media';
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from 'audio/audio-context';
-import { Rectangle } from 'math/Rectangle';
+import type { Media } from '@/audio/Media';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
+import { Rectangle } from '@/math/Rectangle';
 
 interface VideoAudioSetup {
     readonly audioContext: AudioContext;
@@ -281,7 +281,7 @@ export class Video extends Sprite implements Media {
     }
 
 
-    public render(renderManager: SceneRenderRuntime): this {
+    public override render(renderManager: SceneRenderRuntime): this {
         if (this.visible) {
             this._markTextureDirtyIfPlaybackAdvanced();
             this.updateTexture();
@@ -291,7 +291,7 @@ export class Video extends Sprite implements Media {
         return this;
     }
 
-    public updateTexture(): this {
+    public override updateTexture(): this {
         const texture = this.texture;
 
         if (!texture || !this._videoElement) {
@@ -322,7 +322,7 @@ export class Video extends Sprite implements Media {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
         this.stop();
         this._videoElement.removeEventListener('loadedmetadata', this._onMetadataHandler);

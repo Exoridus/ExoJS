@@ -1,14 +1,14 @@
 import { Signal } from './Signal';
 import { Color } from './Color';
-import { DrawableShape } from 'rendering/primitives/DrawableShape';
-import { Geometry } from 'rendering/primitives/Geometry';
-import { RenderingPrimitives } from 'rendering/types';
+import { DrawableShape } from '@/rendering/primitives/DrawableShape';
+import { Geometry } from '@/rendering/primitives/Geometry';
+import { RenderingPrimitives } from '@/rendering/types';
 import type { Time } from './Time';
 import type { Application } from './Application';
-import type { Pointer } from 'input/Pointer';
-import type { Vector } from 'math/Vector';
+import type { Pointer } from '@/input/Pointer';
+import type { Vector } from '@/math/Vector';
 import type { Scene, SceneInputEvent, SceneInputMode, SceneParticipationPolicy, SceneStackMode } from './Scene';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
 
 interface ResolvedSceneParticipationPolicy {
     readonly mode: SceneStackMode;
@@ -239,6 +239,7 @@ export class SceneManager {
 
                 throw new Error(
                     `Failed to initialize scene: ${initMessage}. Cleanup also failed: ${cleanupMessage}.`,
+                    { cause: error },
                 );
             }
 

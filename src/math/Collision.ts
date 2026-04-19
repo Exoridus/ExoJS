@@ -1,5 +1,5 @@
-import type { Vector } from 'math/Vector';
-import type { Interval } from 'math/Interval';
+import type { Vector } from '@/math/Vector';
+import type { Interval } from '@/math/Interval';
 
 export const enum CollisionType {
     Point,

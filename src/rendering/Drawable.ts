@@ -1,5 +1,5 @@
-import { Color } from 'core/Color';
-import { BlendModes } from 'rendering/types';
+import { Color } from '@/core/Color';
+import { BlendModes } from '@/rendering/types';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
 import { RenderNode } from './RenderNode';
 
@@ -60,7 +60,7 @@ export class Drawable extends RenderNode {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this._tint.destroy();

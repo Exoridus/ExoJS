@@ -1,4 +1,4 @@
-import { ShaderPrimitives } from 'rendering/types';
+import { ShaderPrimitives } from '@/rendering/types';
 
 export const webGl2PrimitiveByteSizeMapping: Record<number, number> = {
     [ShaderPrimitives.Float]: 1,

@@ -1,6 +1,6 @@
-import { ArcadeStickGamepadMapping } from 'input/ArcadeStickGamepadMapping';
-import { GamepadMappingFamily } from 'input/GamepadMapping';
-import { GamepadChannel } from 'input/GamepadChannels';
+import { ArcadeStickGamepadMapping } from '@/input/ArcadeStickGamepadMapping';
+import { GamepadMappingFamily } from '@/input/GamepadMapping';
+import { GamepadChannel } from '@/input/GamepadChannels';
 
 describe('specialized gamepad mappings', () => {
     test('arcade stick mapping keeps the fight-stick surface explicit and axis-free', () => {

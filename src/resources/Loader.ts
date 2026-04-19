@@ -1,8 +1,8 @@
-import { Signal } from 'core/Signal';
-import { Texture } from 'rendering/texture/Texture';
-import { Music } from 'audio/Music';
-import { Sound } from 'audio/Sound';
-import { Video } from 'rendering/video/Video';
+import { Signal } from '@/core/Signal';
+import { Texture } from '@/rendering/texture/Texture';
+import { Music } from '@/audio/Music';
+import { Sound } from '@/audio/Sound';
+import { Video } from '@/rendering/video/Video';
 import { Json, TextAsset, SvgAsset, VttAsset } from './tokens';
 import { FactoryRegistry } from './FactoryRegistry';
 import { FontFactory } from './factories/FontFactory';
@@ -40,10 +40,10 @@ export type LoadReturn<T> =
     never;
 
 export interface LoaderOptions {
-    resourcePath?: string;
-    requestOptions?: RequestInit;
-    cache?: CacheStore | ReadonlyArray<CacheStore>;
-    concurrency?: number;
+    resourcePath?: string | undefined;
+    requestOptions?: RequestInit | undefined;
+    cache?: CacheStore | ReadonlyArray<CacheStore> | undefined;
+    concurrency?: number | undefined;
 }
 
 // ---------------------------------------------------------------------------

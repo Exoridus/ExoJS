@@ -1,5 +1,5 @@
-import { Circle } from 'math/Circle';
-import { Vector } from 'math/Vector';
+import { Circle } from '@/math/Circle';
+import { Vector } from '@/math/Vector';
 
 describe('Circle', () => {
     test('projects correctly on an axis', () => {

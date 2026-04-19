@@ -1,9 +1,9 @@
-import { Vector } from 'math/Vector';
-import { Rectangle } from 'math/Rectangle';
-import { Interval } from 'math/Interval';
-import type { ShapeLike } from 'math/ShapeLike';
-import type { Collidable, CollisionResponse} from 'math/Collision';
-import { CollisionType } from 'math/Collision';
+import { Vector } from '@/math/Vector';
+import { Rectangle } from '@/math/Rectangle';
+import { Interval } from '@/math/Interval';
+import type { ShapeLike } from '@/math/ShapeLike';
+import type { Collidable, CollisionResponse} from '@/math/Collision';
+import { CollisionType } from '@/math/Collision';
 import {
     getCollisionCircleCircle,
     getCollisionCircleRectangle,
@@ -14,11 +14,11 @@ import {
     intersectionLineCircle,
     intersectionPointCircle,
     intersectionRectCircle
-} from 'math/collision-detection';
-import type { SceneNode } from 'core/SceneNode';
-import type { Line } from 'math/Line';
-import type { Ellipse } from 'math/Ellipse';
-import type { Polygon } from 'math/Polygon';
+} from '@/math/collision-detection';
+import type { SceneNode } from '@/core/SceneNode';
+import type { Line } from '@/math/Line';
+import type { Ellipse } from '@/math/Ellipse';
+import type { Polygon } from '@/math/Polygon';
 
 let temp: Circle | null = null;
 

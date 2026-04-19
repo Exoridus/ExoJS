@@ -1,15 +1,15 @@
-import { Transformable } from 'math/Transformable';
-import { Matrix } from 'math/Matrix';
-import { Rectangle } from 'math/Rectangle';
+import { Transformable } from '@/math/Transformable';
+import { Matrix } from '@/math/Matrix';
+import { Rectangle } from '@/math/Rectangle';
 import { Bounds } from './Bounds';
-import { ObservableVector } from 'math/ObservableVector';
-import type { Container } from 'rendering/Container';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
-import type { Vector } from 'math/Vector';
-import { Interval } from 'math/Interval';
-import type { Collidable, CollisionResponse} from 'math/Collision';
-import { CollisionType } from 'math/Collision';
-import type { View } from 'rendering/View';
+import { ObservableVector } from '@/math/ObservableVector';
+import type { Container } from '@/rendering/Container';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { Vector } from '@/math/Vector';
+import { Interval } from '@/math/Interval';
+import type { Collidable, CollisionResponse} from '@/math/Collision';
+import { CollisionType } from '@/math/Collision';
+import type { View } from '@/rendering/View';
 import {
     getCollisionSat,
     intersectionLineRect,
@@ -17,11 +17,11 @@ import {
     intersectionRectCircle,
     intersectionRectEllipse,
     intersectionSat
-} from 'math/collision-detection';
-import type { Circle } from 'math/Circle';
-import type { Ellipse } from 'math/Ellipse';
-import type { Line } from 'math/Line';
-import type { Polygon } from 'math/Polygon';
+} from '@/math/collision-detection';
+import type { Circle } from '@/math/Circle';
+import type { Ellipse } from '@/math/Ellipse';
+import type { Line } from '@/math/Line';
+import type { Polygon } from '@/math/Polygon';
 
 export class SceneNode extends Transformable implements Collidable {
 
@@ -219,7 +219,7 @@ export class SceneNode extends Transformable implements Collidable {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         super.destroy();
 
         this._globalTransform.destroy();

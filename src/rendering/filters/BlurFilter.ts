@@ -1,9 +1,9 @@
-import { Color } from 'core/Color';
-import { BlendModes } from 'rendering/types';
-import { Sprite } from 'rendering/sprite/Sprite';
-import { RenderTargetPass } from 'rendering/RenderTargetPass';
-import type { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
+import { Color } from '@/core/Color';
+import { BlendModes } from '@/rendering/types';
+import { Sprite } from '@/rendering/sprite/Sprite';
+import { RenderTargetPass } from '@/rendering/RenderTargetPass';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
 import { Filter } from './Filter';
 
 export interface BlurFilterOptions {

@@ -1,4 +1,4 @@
-import type { Color } from 'core/Color';
+import type { Color } from '@/core/Color';
 import type { View } from './View';
 import type { RenderTarget } from './RenderTarget';
 import type { RenderPass } from './RenderPass';

@@ -1,4 +1,4 @@
-describe('core/Application import behavior', () => {
+describe('@/core/Application import behavior', () => {
     afterEach(() => {
         jest.restoreAllMocks();
         jest.resetModules();
@@ -8,7 +8,7 @@ describe('core/Application import behavior', () => {
         const createElementSpy = jest.spyOn(document, 'createElement');
 
         jest.isolateModules(() => {
-            require('core/Application');
+            require('@/core/Application');
         });
 
         expect(createElementSpy).not.toHaveBeenCalled();

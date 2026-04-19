@@ -1,9 +1,9 @@
-import { Sprite } from 'rendering/sprite/Sprite';
-import { Texture } from 'rendering/texture/Texture';
+import { Sprite } from '@/rendering/sprite/Sprite';
+import { Texture } from '@/rendering/texture/Texture';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import { Rectangle } from 'math/Rectangle';
-import type { SamplerOptions } from 'rendering/texture/Sampler';
+import { Rectangle } from '@/math/Rectangle';
+import type { SamplerOptions } from '@/rendering/texture/Sampler';
 import type { SceneRenderRuntime } from '../SceneRenderRuntime';
 import { determineFontHeight } from '../utils';
 
@@ -81,7 +81,7 @@ export class Text extends Sprite {
         return this;
     }
 
-    public updateTexture(): this {
+    public override updateTexture(): this {
         if (this._style && (this._dirty || this._style.dirty)) {
             const canvas = this._canvas,
                 context = this._context,
@@ -169,7 +169,7 @@ export class Text extends Sprite {
         return result;
     }
 
-    public render(renderManager: SceneRenderRuntime): this {
+    public override render(renderManager: SceneRenderRuntime): this {
         if (this.visible) {
             this.updateTexture();
             super.render(renderManager);

@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import { BlendModes } from 'rendering/types';
+import { BlendModes } from '@/rendering/types';
 
 /**
  * Returns the GPUBlendState for a given ExoJS blend mode.

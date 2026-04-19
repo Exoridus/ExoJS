@@ -1,10 +1,10 @@
-import type { Color } from 'core/Color';
+import type { Color } from '@/core/Color';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RenderTarget } from './RenderTarget';
 import type { View } from './View';
 import type { Drawable } from './Drawable';
 import type { RenderPass } from './RenderPass';
-import type { Rectangle } from 'math/Rectangle';
+import type { Rectangle } from '@/math/Rectangle';
 import type { RenderTexture } from './texture/RenderTexture';
 import type { RenderStats } from './RenderStats';
 

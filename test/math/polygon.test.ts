@@ -1,5 +1,5 @@
-import { Polygon } from 'math/Polygon';
-import { Vector } from 'math/Vector';
+import { Polygon } from '@/math/Polygon';
+import { Vector } from '@/math/Vector';
 
 describe('Polygon', () => {
     test('setPoints handles shrinking point arrays safely', () => {

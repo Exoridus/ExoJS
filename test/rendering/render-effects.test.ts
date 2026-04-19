@@ -1,19 +1,19 @@
-import { Color } from 'core/Color';
-import { CallbackRenderPass } from 'rendering/CallbackRenderPass';
-import { Container } from 'rendering/Container';
-import { Drawable } from 'rendering/Drawable';
-import { RenderBackendType } from 'rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
-import { RenderTargetPass } from 'rendering/RenderTargetPass';
-import { RenderTarget } from 'rendering/RenderTarget';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
-import { Sprite } from 'rendering/sprite/Sprite';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import { Texture } from 'rendering/texture/Texture';
-import { View } from 'rendering/View';
-import { Filter } from 'rendering/filters/Filter';
-import { BlurFilter } from 'rendering/filters/BlurFilter';
-import { ColorFilter } from 'rendering/filters/ColorFilter';
+import { Color } from '@/core/Color';
+import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
+import { Container } from '@/rendering/Container';
+import { Drawable } from '@/rendering/Drawable';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
+import { RenderTargetPass } from '@/rendering/RenderTargetPass';
+import { RenderTarget } from '@/rendering/RenderTarget';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import { Sprite } from '@/rendering/sprite/Sprite';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { Texture } from '@/rendering/texture/Texture';
+import { View } from '@/rendering/View';
+import { Filter } from '@/rendering/filters/Filter';
+import { BlurFilter } from '@/rendering/filters/BlurFilter';
+import { ColorFilter } from '@/rendering/filters/ColorFilter';
 
 class TestDrawable extends Drawable {}
 

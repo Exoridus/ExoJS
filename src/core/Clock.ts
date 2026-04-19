@@ -1,5 +1,5 @@
 import { Time } from './Time';
-import { getPreciseTime } from 'core/utils';
+import { getPreciseTime } from '@/core/utils';
 
 export class Clock {
 

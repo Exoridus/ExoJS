@@ -1,23 +1,23 @@
-import type { Application } from 'core/Application';
-import { Color } from 'core/Color';
-import { ParticleSystem } from 'particles/ParticleSystem';
-import { Drawable } from 'rendering/Drawable';
-import { RenderBackendType } from 'rendering/RenderBackendType';
-import { Text } from 'rendering/text/Text';
-import { TextStyle } from 'rendering/text/TextStyle';
-import { Graphics } from 'rendering/primitives/Graphics';
-import { Geometry } from 'rendering/primitives/Geometry';
-import { DrawableShape } from 'rendering/primitives/DrawableShape';
-import { Container } from 'rendering/Container';
-import { ColorFilter } from 'rendering/filters/ColorFilter';
-import { Sprite } from 'rendering/sprite/Sprite';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import { Texture } from 'rendering/texture/Texture';
-import { Video } from 'rendering/video/Video';
-import type { Renderer } from 'rendering/Renderer';
-import { WebGpuRenderManager } from 'rendering/webgpu/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from 'rendering/webgpu/WebGpuRendererRuntime';
-import { BlendModes, RenderingPrimitives, ScaleModes } from 'rendering/types';
+import type { Application } from '@/core/Application';
+import { Color } from '@/core/Color';
+import { ParticleSystem } from '@/particles/ParticleSystem';
+import { Drawable } from '@/rendering/Drawable';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { Text } from '@/rendering/text/Text';
+import { TextStyle } from '@/rendering/text/TextStyle';
+import { Graphics } from '@/rendering/primitives/Graphics';
+import { Geometry } from '@/rendering/primitives/Geometry';
+import { DrawableShape } from '@/rendering/primitives/DrawableShape';
+import { Container } from '@/rendering/Container';
+import { ColorFilter } from '@/rendering/filters/ColorFilter';
+import { Sprite } from '@/rendering/sprite/Sprite';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { Texture } from '@/rendering/texture/Texture';
+import { Video } from '@/rendering/video/Video';
+import type { Renderer } from '@/rendering/Renderer';
+import { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
+import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import { BlendModes, RenderingPrimitives, ScaleModes } from '@/rendering/types';
 
 interface MockWebGpuEnvironment {
     readonly canvas: HTMLCanvasElement;
@@ -68,7 +68,7 @@ interface MockVideoElement {
 }
 
 class CustomDrawableA extends Drawable {
-    public render(renderManager: WebGpuRendererRuntime): this {
+    public override render(renderManager: WebGpuRendererRuntime): this {
         renderManager.draw(this);
 
         return this;
@@ -76,7 +76,7 @@ class CustomDrawableA extends Drawable {
 }
 
 class CustomDrawableB extends Drawable {
-    public render(renderManager: WebGpuRendererRuntime): this {
+    public override render(renderManager: WebGpuRendererRuntime): this {
         renderManager.draw(this);
 
         return this;

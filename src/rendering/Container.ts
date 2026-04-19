@@ -1,6 +1,6 @@
-import { removeArrayItems } from 'core/utils';
+import { removeArrayItems } from '@/core/utils';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
-import type { SceneNode } from 'core/SceneNode';
+import type { SceneNode } from '@/core/SceneNode';
 import { RenderNode } from './RenderNode';
 
 export class Container extends RenderNode {
@@ -181,7 +181,7 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public render(renderManager: SceneRenderRuntime): this {
+    public override render(renderManager: SceneRenderRuntime): this {
         if (!this.visible || this._children.length === 0) {
             return this;
         }
@@ -203,11 +203,11 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public contains(x: number, y: number): boolean {
+    public override contains(x: number, y: number): boolean {
         return this._children.some((child) => child.contains(x, y));
     }
 
-    public updateBounds(): this {
+    public override updateBounds(): this {
         this._bounds.reset()
             .addRect(this.getLocalBounds(), this.getGlobalTransform());
 
@@ -220,7 +220,7 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         this.removeChildren();
 
         super.destroy();

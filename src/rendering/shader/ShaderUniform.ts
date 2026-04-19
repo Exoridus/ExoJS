@@ -1,4 +1,4 @@
-import type { TypedArray } from 'core/types';
+import type { TypedArray } from '@/core/types';
 
 export class ShaderUniform {
 

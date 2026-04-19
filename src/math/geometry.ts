@@ -1,7 +1,7 @@
 import earcut from 'earcut';
-import { Geometry } from 'rendering/primitives/Geometry';
-import { Vector } from 'math/Vector';
-import { tau } from 'math/utils';
+import { Geometry } from '@/rendering/primitives/Geometry';
+import { Vector } from '@/math/Vector';
+import { tau } from '@/math/utils';
 
 export const buildLine = (startX: number, startY: number, endX: number, endY: number, width: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
     const points = [startX, startY, endX, endY];

@@ -1,4 +1,4 @@
-import type { TypedEnum } from 'core/types';
+import type { TypedEnum } from '@/core/types';
 
 export class Flags<T extends TypedEnum<T, number>> {
 

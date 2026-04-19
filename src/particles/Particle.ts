@@ -1,9 +1,9 @@
-import { Vector } from 'math/Vector';
-import { Color } from 'core/Color';
-import { Time } from 'core/Time';
+import { Vector } from '@/math/Vector';
+import { Color } from '@/core/Color';
+import { Time } from '@/core/Time';
 import type { ParticleOptions } from './emitters/ParticleOptions';
-import type { ParticleProperties } from 'particles/ParticleProperties';
-import { trimRotation } from 'math/utils';
+import type { ParticleProperties } from '@/particles/ParticleProperties';
+import { trimRotation } from '@/math/utils';
 
 export class Particle implements ParticleProperties {
     private _totalLifetime = Time.oneSecond.clone();

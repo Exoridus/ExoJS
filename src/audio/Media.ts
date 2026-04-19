@@ -1,4 +1,4 @@
-import type { PlaybackOptions } from 'core/types';
+import type { PlaybackOptions } from '@/core/types';
 
 export interface Media {
     readonly duration: number;

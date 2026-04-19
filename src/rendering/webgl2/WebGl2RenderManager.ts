@@ -1,22 +1,22 @@
 import WebGLDebugUtils from '../../vendor/webgl-debug';
 
-import { BlendModes } from 'rendering/types';
+import { BlendModes } from '@/rendering/types';
 import { RenderTarget } from '../RenderTarget';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
 import { WebGl2PrimitiveRenderer } from './WebGl2PrimitiveRenderer';
 import { Sprite } from '../sprite/Sprite';
 import { DrawableShape } from '../primitives/DrawableShape';
-import { ParticleSystem } from 'particles/ParticleSystem';
-import { Color } from 'core/Color';
-import { canvasSourceToDataUrl } from 'core/utils';
+import { ParticleSystem } from '@/particles/ParticleSystem';
+import { Color } from '@/core/Color';
+import { canvasSourceToDataUrl } from '@/core/utils';
 import { Texture } from '../texture/Texture';
 import { RenderTexture } from '../texture/RenderTexture';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
-import { Vector } from 'math/Vector';
-import type { Rectangle } from 'math/Rectangle';
+import { Vector } from '@/math/Vector';
+import type { Rectangle } from '@/math/Rectangle';
 import type { RenderPass } from '../RenderPass';
 import type { Drawable } from '../Drawable';
 import type { Renderer } from '../Renderer';
@@ -24,7 +24,7 @@ import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import type { Shader } from '../shader/Shader';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 import type { View } from '../View';
-import type { Application } from 'core/Application';
+import type { Application } from '@/core/Application';
 import type { RenderStats } from '../RenderStats';
 
 const throwOnGlError = (err: number, funcName: string): void => {

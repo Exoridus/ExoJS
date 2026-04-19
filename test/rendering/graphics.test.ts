@@ -1,4 +1,4 @@
-import { Graphics } from 'rendering/primitives/Graphics';
+import { Graphics } from '@/rendering/primitives/Graphics';
 
 describe('Graphics', () => {
     test('drawArc appends a path and updates current point', () => {

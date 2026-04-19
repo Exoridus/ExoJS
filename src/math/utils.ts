@@ -1,4 +1,4 @@
-import type { Vector } from 'math/Vector';
+import type { Vector } from '@/math/Vector';
 
 export const tau = Math.PI * 2;
 
@@ -59,15 +59,15 @@ export const bezierCurveTo = (
 ): Array<number> => {
     path.push(fromX, fromY);
 
-    for (let i = 1, j = 0, dt1 = 0, dt2 = 0, dt3 = 0, t2 = 0, t3 = 0; i <= len; i++) {
-        j = i / len;
+    for (let i = 1; i <= len; i++) {
+        const j = i / len;
 
-        dt1 = (1 - j);
-        dt2 = dt1 * dt1;
-        dt3 = dt2 * dt1;
+        const dt1 = (1 - j);
+        const dt2 = dt1 * dt1;
+        const dt3 = dt2 * dt1;
 
-        t2 = j * j;
-        t3 = t2 * j;
+        const t2 = j * j;
+        const t3 = t2 * j;
 
         path.push(
             (dt3 * fromX) + (3 * dt2 * j * cpX1) + (3 * dt1 * t2 * cpX2) + (t3 * toX),

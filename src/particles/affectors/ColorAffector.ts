@@ -1,7 +1,7 @@
-import type { ParticleAffector } from 'particles/affectors/ParticleAffector';
-import type { Color } from 'core/Color';
-import type { Particle } from 'particles/Particle';
-import type { Time } from 'core/Time';
+import type { ParticleAffector } from '@/particles/affectors/ParticleAffector';
+import type { Color } from '@/core/Color';
+import type { Particle } from '@/particles/Particle';
+import type { Time } from '@/core/Time';
 
 export class ColorAffector implements ParticleAffector {
 

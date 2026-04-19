@@ -2,33 +2,30 @@
   "compilerOptions": {
     "module": "esnext",
     "moduleResolution": "bundler",
-    "target": "es2020",
-    "lib": ["es2020", "dom", "dom.iterable"],
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "audio/*": ["./src/audio/*"],
-      "core/*": ["./src/core/*"],
-      "input/*": ["./src/input/*"],
-      "math/*": ["./src/math/*"],
-      "particles/*": ["./src/particles/*"],
-      "physics/*": ["./src/physics/*"],
-      "rendering/*": ["./src/rendering/*"],
-      "resources/*": ["./src/resources/*"],
-      "vendor/*": ["./src/vendor/*"]
+      "@/*": ["./src/*"]
     },
     "sourceMap": true,
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
     "dist",
-    "node_modules",
-    "**/*.spec.ts"
+    "node_modules"
   ]
 }

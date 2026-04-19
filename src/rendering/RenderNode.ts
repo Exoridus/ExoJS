@@ -1,12 +1,12 @@
-import { SceneNode } from 'core/SceneNode';
-import { Color } from 'core/Color';
-import { Rectangle } from 'math/Rectangle';
-import { BlendModes } from 'rendering/types';
-import { View } from 'rendering/View';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import { RenderTargetPass } from 'rendering/RenderTargetPass';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
-import type { Filter } from 'rendering/filters/Filter';
+import { SceneNode } from '@/core/SceneNode';
+import { Color } from '@/core/Color';
+import { Rectangle } from '@/math/Rectangle';
+import { BlendModes } from '@/rendering/types';
+import { View } from '@/rendering/View';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import { RenderTargetPass } from '@/rendering/RenderTargetPass';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { Filter } from '@/rendering/filters/Filter';
 
 interface DestroyableFilter {
     destroy(): void;

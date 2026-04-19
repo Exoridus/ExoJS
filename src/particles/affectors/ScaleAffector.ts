@@ -1,7 +1,7 @@
-import type { ParticleAffector } from 'particles/affectors/ParticleAffector';
-import { Vector } from 'math/Vector';
-import type { Time } from 'core/Time';
-import type { Particle } from 'particles/Particle';
+import type { ParticleAffector } from '@/particles/affectors/ParticleAffector';
+import { Vector } from '@/math/Vector';
+import type { Time } from '@/core/Time';
+import type { Particle } from '@/particles/Particle';
 
 export class ScaleAffector implements ParticleAffector {
 

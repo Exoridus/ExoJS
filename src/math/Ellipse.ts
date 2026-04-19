@@ -1,9 +1,9 @@
-import { Vector } from 'math/Vector';
-import { Rectangle } from 'math/Rectangle';
-import type { ShapeLike } from 'math/ShapeLike';
-import { Interval } from 'math/Interval';
-import type { Collidable, CollisionResponse} from 'math/Collision';
-import { CollisionType } from 'math/Collision';
+import { Vector } from '@/math/Vector';
+import { Rectangle } from '@/math/Rectangle';
+import type { ShapeLike } from '@/math/ShapeLike';
+import { Interval } from '@/math/Interval';
+import type { Collidable, CollisionResponse} from '@/math/Collision';
+import { CollisionType } from '@/math/Collision';
 import {
     intersectionCircleEllipse,
     intersectionEllipseEllipse,
@@ -11,11 +11,11 @@ import {
     intersectionLineEllipse,
     intersectionPointEllipse,
     intersectionRectEllipse
-} from 'math/collision-detection';
-import type { Polygon } from 'math/Polygon';
-import type { Line } from 'math/Line';
-import type { Circle } from 'math/Circle';
-import type { SceneNode } from 'core/SceneNode';
+} from '@/math/collision-detection';
+import type { Polygon } from '@/math/Polygon';
+import type { Line } from '@/math/Line';
+import type { Circle } from '@/math/Circle';
+import type { SceneNode } from '@/core/SceneNode';
 
 export class Ellipse implements ShapeLike {
     public readonly collisionType: CollisionType = CollisionType.Ellipse;

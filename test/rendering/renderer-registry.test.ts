@@ -1,14 +1,14 @@
-import { Drawable } from 'rendering/Drawable';
-import { RenderBackendType } from 'rendering/RenderBackendType';
-import { createRenderStats, resetRenderStats } from 'rendering/RenderStats';
-import { RendererRegistry } from 'rendering/RendererRegistry';
-import { RenderTarget } from 'rendering/RenderTarget';
-import { RenderTexture } from 'rendering/texture/RenderTexture';
-import type { Renderer } from 'rendering/Renderer';
-import type { SceneRenderRuntime } from 'rendering/SceneRenderRuntime';
+import { Drawable } from '@/rendering/Drawable';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
+import { RendererRegistry } from '@/rendering/RendererRegistry';
+import { RenderTarget } from '@/rendering/RenderTarget';
+import { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { Renderer } from '@/rendering/Renderer';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
 
 class BaseDrawable extends Drawable {
-    public render(_renderManager: SceneRenderRuntime): this {
+    public override render(_renderManager: SceneRenderRuntime): this {
         return this;
     }
 }
