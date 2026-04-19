@@ -5,6 +5,7 @@
     "target": "es2020",
     "lib": ["es2020", "dom", "dom.iterable"],
     "outDir": "dist",
+    "rootDir": "src",
     "paths": {
       "audio/*": ["./src/audio/*"],
       "core/*": ["./src/core/*"],

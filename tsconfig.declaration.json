@@ -6,6 +6,8 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "incremental": false,
-    "outFile": "dist/exo.d.ts"
+    "outFile": "dist/exo.d.ts",
+    "rootDir": "src",
+    "ignoreDeprecations": "6.0"
   }
 }
