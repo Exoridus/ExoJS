@@ -67,7 +67,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
     "@webgpu/types": "^0.1.69",
-    "eslint": "^9.39.4",
+    "eslint": "^10.2.1",
     "gitmoji-cli": "^9.7.0",
     "globals": "^17.5.0",
     "husky": "^9.1.7",
