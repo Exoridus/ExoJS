@@ -453,9 +453,10 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                     writeMask: GPUColorWrite.ALL,
                 }],
             },
-            primitive: key.usesStripIndex
-                ? { topology: key.topology, stripIndexFormat: 'uint16' }
-                : { topology: key.topology },
+            primitive: {
+                topology: key.topology,
+                stripIndexFormat: key.usesStripIndex ? 'uint16' : undefined,
+            },
         });
 
         this._pipelines.set(pipelineKey, pipeline);

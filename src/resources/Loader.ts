@@ -40,10 +40,10 @@ export type LoadReturn<T> =
     never;
 
 export interface LoaderOptions {
-    resourcePath?: string | undefined;
-    requestOptions?: RequestInit | undefined;
-    cache?: CacheStore | ReadonlyArray<CacheStore> | undefined;
-    concurrency?: number | undefined;
+    resourcePath?: string;
+    requestOptions?: RequestInit;
+    cache?: CacheStore | ReadonlyArray<CacheStore>;
+    concurrency?: number;
 }
 
 // ---------------------------------------------------------------------------

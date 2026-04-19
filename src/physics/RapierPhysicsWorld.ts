@@ -117,7 +117,7 @@ interface RapierWorldLike {
 }
 
 interface RapierModuleLike {
-    init?: (() => Promise<void> | void) | undefined;
+    init?: () => Promise<void> | void;
     readonly vector2: new (x: number, y: number) => RapierVectorLike;
     readonly worldConstructor: new (gravity: RapierVectorLike) => RapierWorldLike;
     readonly eventQueueConstructor: new (autoDrain: boolean) => RapierEventQueueLike;
@@ -131,15 +131,15 @@ interface RapierModuleLike {
         cuboid(halfWidth: number, halfHeight: number): RapierColliderDescLike;
         ball(radius: number): RapierColliderDescLike;
     };
-    readonly activeCollisionEvents?: number | undefined;
+    readonly activeCollisionEvents?: number;
 }
 
 export type RapierModuleLoader = () => Promise<unknown>;
 
 export interface RapierPhysicsWorldOptions {
-    readonly gravityX?: number | undefined;
-    readonly gravityY?: number | undefined;
-    readonly moduleLoader?: RapierModuleLoader | undefined;
+    readonly gravityX?: number;
+    readonly gravityY?: number;
+    readonly moduleLoader?: RapierModuleLoader;
 }
 
 const defaultDebugDrawOptions = {

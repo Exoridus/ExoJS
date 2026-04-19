@@ -18,8 +18,7 @@
     "verbatimModuleSyntax": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "exactOptionalPropertyTypes": true
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "src/**/*"

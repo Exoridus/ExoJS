@@ -10,10 +10,10 @@ interface SoundAudioSetup {
 
 interface QueuedPooledPlay {
     readonly offset: number;
-    readonly duration?: number | undefined;
+    readonly duration?: number;
     readonly loop: boolean;
-    readonly loopStart?: number | undefined;
-    readonly loopEnd?: number | undefined;
+    readonly loopStart?: number;
+    readonly loopEnd?: number;
     readonly playbackRate: number;
 }
 
@@ -30,8 +30,8 @@ export interface AudioSpriteClip {
 }
 
 export interface SoundOptions extends Partial<PlaybackOptions> {
-    poolSize?: number | undefined;
-    sprites?: Readonly<Record<string, AudioSpriteClip>> | undefined;
+    poolSize?: number;
+    sprites?: Readonly<Record<string, AudioSpriteClip>>;
 }
 
 export class Sound extends AbstractMedia {

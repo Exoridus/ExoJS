@@ -33,7 +33,7 @@ export interface ApplicationOptions {
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
     requestOptions: RequestInit;
-    cache?: CacheStore | ReadonlyArray<CacheStore> | undefined;
+    cache?: CacheStore | ReadonlyArray<CacheStore>;
     backend?: BackendConfig;
 }
 

@@ -4,7 +4,7 @@ type SignalHandler<Args extends Array<unknown>> = (...params: Args) => void | bo
 
 interface SignalBinding<Args extends Array<unknown>> {
     handler: SignalHandler<Args>;
-    context?: object | undefined;
+    context?: object;
 }
 
 export class Signal<Args extends Array<unknown> = []> {
