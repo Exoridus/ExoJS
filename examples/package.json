@@ -22,7 +22,7 @@
     "@astrojs/check": "^0.9.8",
     "@astrojs/lit": "^4.3.0",
     "@types/node": "^22.19.17",
-    "astro": "^6.1.8",
+    "astro": "^6.1.9",
     "lit": "^3.3.2",
     "playwright": "^1.59.1",
     "sass": "^1.99.0",
