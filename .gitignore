@@ -1,0 +1,15 @@
+.idea
+.vscode
+node_modules
+dist/*
+coverage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.claude/
+.codex/
+.workspace/
+.rollup.cache/
+!.gitignore
+!.gitkeep

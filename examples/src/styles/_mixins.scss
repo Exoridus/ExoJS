@@ -1,0 +1,31 @@
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-button {
+    width: 0;
+    height: 0;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb,
+  &::-webkit-scrollbar-thumb:hover,
+  &::-webkit-scrollbar-thumb:active {
+    background: rgba(255, 255, 255, 0.1);
+    border: 0 none;
+    border-radius: 0;
+  }
+
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-track:hover,
+  &::-webkit-scrollbar-track:active {
+    background: transparent;
+    border: 0 none;
+    border-radius: 0;
+  }
+}

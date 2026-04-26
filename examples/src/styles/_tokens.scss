@@ -1,0 +1,50 @@
+// Design tokens for the ExoJS Examples app.
+// Source of truth for surfaces, foreground colors, accent, and semantic
+// signals. _colors.scss aliases legacy variable names forward onto these.
+
+// Surface ladder — dark-first, cool near-black temperature.
+$bg-0: #07090b;        // app background
+$bg-1: #0c0f13;        // docked panels (header, sidebar)
+$bg-2: #12161b;        // elevated panels (editor card, menus)
+$bg-3: #181d24;        // hover state
+$bg-4: #1f2630;        // active / selected state
+
+// Lines
+$line:        rgba(255, 255, 255, 0.06);
+$line-strong: rgba(255, 255, 255, 0.10);
+
+// Foreground
+$fg-0: #e8ecf0;        // primary text
+$fg-1: #aab1b9;        // secondary text
+$fg-2: #6b7380;        // tertiary / meta
+$fg-3: #454c56;        // disabled
+
+// Accent — phosphor green. Technical, readable on dark, reads as "exo".
+$ex-400: #a8ffc8;
+$ex-500: #7af5a8;
+$ex-600: #3fd184;
+$ex-700: #1aa864;
+$ex-glow: rgba(122, 245, 168, 0.22);
+
+// Semantic
+$warn: #f2c96b;
+$err:  #ff7d7d;
+$info: #8cc6ff;
+
+// Version tracks (consumed by the VersionPill in a later ticket)
+$v-stable: $ex-500;
+$v-beta:   $warn;
+$v-legacy: #8a94a0;
+
+// Radii
+$r-sm: 4px;
+$r-md: 6px;
+$r-lg: 10px;
+$r-xl: 14px;
+
+// Density
+$row-h: 28px;
+
+// Shadow
+$shadow-pop: 0 24px 60px -20px rgba(0, 0, 0, 0.6),
+             0 2px 0 rgba(255, 255, 255, 0.04) inset;

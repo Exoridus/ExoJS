@@ -1,0 +1,237 @@
+import { Transformable } from '@/math/Transformable';
+import { Matrix } from '@/math/Matrix';
+import { Rectangle } from '@/math/Rectangle';
+import { Bounds } from './Bounds';
+import { ObservableVector } from '@/math/ObservableVector';
+import type { Container } from '@/rendering/Container';
+import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { Vector } from '@/math/Vector';
+import { Interval } from '@/math/Interval';
+import type { Collidable, CollisionResponse} from '@/math/Collision';
+import { CollisionType } from '@/math/Collision';
+import type { View } from '@/rendering/View';
+import {
+    getCollisionSat,
+    intersectionLineRect,
+    intersectionPointRect,
+    intersectionRectCircle,
+    intersectionRectEllipse,
+    intersectionSat
+} from '@/math/collision-detection';
+import type { Circle } from '@/math/Circle';
+import type { Ellipse } from '@/math/Ellipse';
+import type { Line } from '@/math/Line';
+import type { Polygon } from '@/math/Polygon';
+
+export class SceneNode extends Transformable implements Collidable {
+
+    public readonly collisionType: CollisionType = CollisionType.SceneNode;
+
+    protected _bounds = new Bounds();
+    private _visible = true;
+    private _globalTransform = new Matrix();
+    private _localBounds = new Rectangle();
+    private _anchor = new ObservableVector(this._updateOrigin.bind(this), 0, 0);
+    private _parentNode: Container | null = null;
+    private _zIndex = 0;
+    private _childOrder = 0;
+    private _cullable = true;
+
+    public get anchor(): ObservableVector {
+        return this._anchor;
+    }
+
+    public set anchor(anchor: ObservableVector) {
+        this._anchor.copy(anchor);
+    }
+
+    public get parent(): Container | null {
+        return this._parentNode;
+    }
+
+    public set parent(parent: Container | null) {
+        this._parentNode = parent;
+    }
+
+    public get parentNode(): Container | null {
+        return this._parentNode;
+    }
+
+    public set parentNode(parentNode: Container | null) {
+        this._parentNode = parentNode;
+    }
+
+    public get visible(): boolean {
+        return this._visible;
+    }
+
+    public set visible(visible: boolean) {
+        this._visible = visible;
+    }
+
+    public get zIndex(): number {
+        return this._zIndex;
+    }
+
+    public set zIndex(zIndex: number) {
+        if (this._zIndex !== zIndex) {
+            this._zIndex = zIndex;
+            this._parentNode?.markSortDirty();
+        }
+    }
+
+    public get childOrder(): number {
+        return this._childOrder;
+    }
+
+    public get cullable(): boolean {
+        return this._cullable;
+    }
+
+    public set cullable(cullable: boolean) {
+        this._cullable = cullable;
+    }
+
+    public get globalTransform(): Matrix {
+        return this.getGlobalTransform();
+    }
+
+    public get localBounds(): Rectangle {
+        return this.getLocalBounds();
+    }
+
+    public get bounds(): Rectangle {
+        return this.getBounds();
+    }
+
+    public get isAlignedBox(): boolean {
+        return this.rotation % 90 === 0;
+    }
+
+    public setAnchor(x: number, y: number = x): this  {
+        this._anchor.set(x, y);
+
+        return this;
+    }
+
+    public setChildOrder(order: number): this {
+        this._childOrder = order;
+
+        return this;
+    }
+
+    public setCullable(cullable: boolean): this {
+        this._cullable = cullable;
+
+        return this;
+    }
+
+    public getLocalBounds(): Rectangle {
+        return this._localBounds;
+    }
+
+    public getBounds(): Rectangle {
+        this.updateParentTransform();
+        this.updateBounds();
+
+        return this._bounds.getRect();
+    }
+
+    public updateBounds(): this {
+        this._bounds.reset()
+            .addRect(this.getLocalBounds(), this.getGlobalTransform());
+
+        return this;
+    }
+
+    public updateParentTransform(): this {
+        if (this._parentNode) {
+            this._parentNode.updateParentTransform();
+        }
+
+        this.updateTransform();
+
+        return this;
+    }
+
+    public getGlobalTransform(): Matrix {
+        this._globalTransform.copy(this.getTransform());
+
+        if (this._parentNode) {
+            this._globalTransform.combine(this._parentNode.getGlobalTransform());
+        }
+
+        return this._globalTransform;
+    }
+
+    public getNormals(): Array<Vector> {
+        return this.getBounds().getNormals();
+    }
+
+    public project(axis: Vector, result: Interval = new Interval()): Interval {
+        return this.getBounds().project(axis, result);
+    }
+
+    public intersectsWith(target: Collidable): boolean {
+        if (this.isAlignedBox) {
+            return this.getBounds().intersectsWith(target);
+        }
+
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return intersectionSat(this, target as SceneNode);
+            case CollisionType.Rectangle: return intersectionSat(this, target as Rectangle);
+            case CollisionType.Polygon: return intersectionSat(this, target as Polygon);
+            case CollisionType.Circle: return intersectionRectCircle(this.getBounds(), target as Circle);
+            case CollisionType.Ellipse: return intersectionRectEllipse(this.getBounds(), target as Ellipse);
+            case CollisionType.Line: return intersectionLineRect(target as Line, this.getBounds());
+            case CollisionType.Point: return intersectionPointRect(target as Vector, this.getBounds());
+            default: return false;
+        }
+    }
+
+    public collidesWith(target: Collidable): CollisionResponse | null {
+        if (this.isAlignedBox) {
+            return this.getBounds().collidesWith(target);
+        }
+
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return getCollisionSat(this, target as SceneNode);
+            case CollisionType.Rectangle: return getCollisionSat(this, target as Rectangle);
+            case CollisionType.Polygon: return getCollisionSat(this, target as Polygon);
+            case CollisionType.Circle: return getCollisionSat(this, target as Circle);
+            default: return null;
+        }
+    }
+
+    public contains(x: number, y: number): boolean {
+        return this.getBounds().contains(x, y);
+    }
+
+    public inView(view: View): boolean {
+        if (!this._cullable) {
+            return true;
+        }
+
+        return view.getBounds().intersectsWith(this.getBounds());
+    }
+
+    public render(_runtime: SceneRenderRuntime): this {
+        return this;
+    }
+
+    public override destroy(): void {
+        super.destroy();
+
+        this._globalTransform.destroy();
+        this._localBounds.destroy();
+        this._bounds.destroy();
+        this._anchor.destroy();
+    }
+
+    private _updateOrigin(): void {
+        const { x, y } = this._anchor;
+        const { width, height } = this.getBounds();
+
+        this.setOrigin(width * x, height * y);
+    }
+}

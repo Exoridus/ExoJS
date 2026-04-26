@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+    <head>
+        <style>
+            body, html {
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+            }
+            canvas {
+                transform: translateZ(0);
+                width: 100%;
+                height: 100%;
+                outline-style: none;
+            }
+        </style>
+        <script>
+            (function () {
+                var params = new URLSearchParams(window.location.search);
+                var noCache = encodeURIComponent(params.get('no-cache') || String(Date.now()));
+
+                // Phase 2: select the ExoJS runtime that matches the version
+                // the parent app is on. The parent threads ?v=<id> through
+                // EditorPreview.buildIframeUrl. We sanitize aggressively
+                // because the value lands inside an import-map URL — anything
+                // that could escape into a path traversal or a non-string
+                // injection must be rejected. On a missing or unsafe id we
+                // fall back to the flat vendor path so legacy bookmarks and
+                // direct opens of preview.html (no parent shell) keep working
+                // until P2-09 retires the flat tree.
+                var rawVersion = params.get('v') || '';
+                var safeVersion = /^[A-Za-z0-9._-]+$/.test(rawVersion) ? rawVersion : '';
+
+                var exoEntry = safeVersion
+                    ? './vendor/exojs/' + safeVersion + '/exo.esm.js?no-cache=' + noCache
+                    : './vendor/exojs/exo.esm.js?no-cache=' + noCache;
+
+                var importMap = {
+                    imports: {
+                        'exojs': exoEntry,
+                        '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache
+                    }
+                };
+                var script = document.createElement('script');
+
+                script.type = 'importmap';
+                script.textContent = JSON.stringify(importMap);
+                document.currentScript.after(script);
+            })();
+        </script>
+        <link rel="icon" type="image/svg+xml" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.ico">
+    </head>
+    <body></body>
+</html>

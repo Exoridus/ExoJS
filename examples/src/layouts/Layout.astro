@@ -1,0 +1,105 @@
+---
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+
+interface Props {
+    title?: string;
+}
+
+const { title = 'ExoJS Examples' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}favicon.svg`} />
+        <link rel="icon" type="image/png" sizes="96x96" href={`${import.meta.env.BASE_URL}favicon-96x96.png`} />
+        <link rel="shortcut icon" href={`${import.meta.env.BASE_URL}favicon.ico`} />
+        <link rel="apple-touch-icon" sizes="180x180" href={`${import.meta.env.BASE_URL}apple-touch-icon.png`} />
+        <link rel="manifest" href={`${import.meta.env.BASE_URL}site.webmanifest`} />
+        <title>{title}</title>
+    </head>
+    <body>
+        <a class="skip-link" href="#main-content">Skip to main content</a>
+        <slot />
+    </body>
+</html>
+
+<style is:global>
+    html {
+        font-size: 14px;
+        font-family: 'Inter', Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        /* Token values mirror examples/src/styles/_tokens.scss. */
+        color-scheme: dark;
+    }
+
+    body {
+        font-size: 14px;
+        color: #e8ecf0;
+        font-weight: 400;
+        background-color: #07090b;
+        background-size: cover;
+        line-height: 20px;
+        margin: 0;
+    }
+
+    /* Visually hidden until focused. Lets keyboard users bypass the sidebar
+       and jump straight into the editor/preview area. */
+    .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 2000;
+        padding: 8px 14px;
+        border-radius: 6px;
+        background: #12161b;
+        color: #e8ecf0;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        transform: translateY(-200%);
+        transition: transform 120ms ease-out;
+    }
+    .skip-link:focus,
+    .skip-link:focus-visible {
+        transform: translateY(0);
+        outline: 2px solid rgba(122, 245, 168, 0.6);
+        outline-offset: 2px;
+    }
+
+    /* The skip-link target is a viewport-wide wrapper. A default focus
+       outline here would draw around the whole app, which is ugly and
+       redundant — real focus rings appear once the user tabs into the
+       interactive shadow tree. */
+    #main-content:focus,
+    #main-content:focus-visible {
+        outline: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .skip-link {
+            transition: none;
+        }
+
+        /* Defensive baseline so any component without an explicit
+           prefers-reduced-motion override still honours the user's
+           preference. Per-component rules remain authoritative when
+           they apply. */
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+</style>

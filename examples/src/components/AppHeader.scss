@@ -1,0 +1,59 @@
+@use "../styles/colors" as *;
+@use "../styles/tokens" as *;
+@use "../styles/variables" as *;
+@use "../styles/typography" as *;
+
+:host {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 $header-height;
+  height: $header-height;
+  padding: 0 12px 0 16px;
+  background-color: $bg-1;
+  border-bottom: 1px solid $line;
+  box-sizing: border-box;
+}
+
+exo-version-pill {
+  flex: 0 0 auto;
+}
+
+.menu-button {
+  appearance: none;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: $r-md;
+  background: transparent;
+  color: $fg-1;
+  cursor: pointer;
+  transition: background-color 120ms ease-in-out, color 120ms ease-in-out;
+
+  &:hover {
+    background-color: $bg-3;
+    color: $fg-0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  color: $fg-0;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

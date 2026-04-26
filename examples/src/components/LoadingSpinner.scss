@@ -1,0 +1,54 @@
+@use "../styles/colors" as *;
+
+@keyframes dash-loading {
+  0% {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+  }
+
+  50% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -35;
+  }
+
+  100% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -124;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.indicator {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  display: inline-block;
+}
+
+.centered {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
+.spinner {
+  width: 100px;
+  height: 100px;
+  animation: spin 3s linear infinite;
+  position: relative;
+}
+
+.path {
+  animation: dash-loading 1.5s ease-in-out infinite;
+  fill: $transparent;
+  stroke: $accent-color;
+  stroke-dasharray: 1, 200;
+  stroke-dashoffset: 0;
+  stroke-width: 6;
+  stroke-miterlimit: 20;
+  stroke-linecap: round;
+}

@@ -1,0 +1,128 @@
+@use "../styles/colors" as *;
+@use "../styles/tokens" as *;
+@use "../styles/typography" as *;
+@use "../styles/mixins" as *;
+
+* {
+  box-sizing: border-box;
+}
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: $bg-1;
+  border-right: 1px solid $line;
+}
+
+.header {
+  flex: 0 0 auto;
+  padding: 10px 16px 8px;
+}
+
+.heading {
+  min-height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
+  font-size: 15px;
+  font-weight: $font-weight-medium;
+  color: $fg-0;
+  letter-spacing: -0.005em;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  margin: 0;
+}
+
+.filter-bar {
+  flex: 0 0 auto;
+  padding: 4px 16px 14px;
+  border-bottom: 1px solid $line;
+}
+
+.filter-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $fg-2;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  border-radius: $r-md;
+  border: 1px solid $line-strong;
+  background: $bg-2;
+  color: $fg-0;
+  padding: 0 10px;
+  outline: none;
+  transition: border-color 120ms ease-in-out, background-color 120ms ease-in-out;
+
+  &::placeholder {
+    color: $fg-2;
+  }
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  &:focus {
+    border-color: rgba($ex-500, 0.5);
+    background: $bg-3;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($ex-500, 0.25);
+  }
+}
+
+.clear-button {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: $r-md;
+  border: 1px solid $line-strong;
+  background: $bg-2;
+  color: $fg-1;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 120ms ease-in-out, color 120ms ease-in-out;
+
+  &:hover {
+    background: $bg-3;
+    color: $fg-0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+nav {
+  @include custom-scrollbar;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
+.error {
+  margin: 0;
+  padding: 16px;
+  color: $err;
+  line-height: 1.5;
+}

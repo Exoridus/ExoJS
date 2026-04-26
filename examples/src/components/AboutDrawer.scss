@@ -1,0 +1,349 @@
+@use "../styles/colors" as *;
+@use "../styles/tokens" as *;
+@use "../styles/typography" as *;
+@use "../styles/mixins" as *;
+
+* {
+  box-sizing: border-box;
+}
+
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 200ms ease-in-out;
+
+  &[data-open] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: $bg-1;
+  border-left: 1px solid $line-strong;
+  box-shadow: $shadow-pop;
+  transform: translateX(calc(100% + 40px));
+  transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  outline: none;
+
+  @include custom-scrollbar;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &[data-open] {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .drawer {
+    width: 100vw;
+    border-left: 0;
+  }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid $line;
+}
+
+.hero {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hero-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: $font-weight-bold;
+  letter-spacing: -0.01em;
+  color: $fg-0;
+}
+
+.hero-subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: $fg-1;
+}
+
+.close {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: -4px -4px 0 0;
+  border: 0;
+  border-radius: $r-md;
+  background: transparent;
+  color: $fg-1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms ease-in-out, color 120ms ease-in-out;
+
+  &:hover {
+    background-color: $bg-3;
+    color: $fg-0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+.section {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid $line;
+
+  &:last-of-type {
+    border-bottom: 0;
+    padding-bottom: 28px;
+  }
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $fg-2;
+}
+
+.rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 26px;
+}
+
+.row-key {
+  margin: 0;
+  color: $fg-2;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.row-value {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: $fg-0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.row-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding: 2px 8px;
+  border: 1px solid $line;
+  border-radius: $r-sm;
+  background: $bg-2;
+  font-family: $font-family-mono;
+  font-size: 12px;
+  color: $fg-0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.row-link {
+  color: $fg-1;
+  font-family: $font-family-mono;
+  font-size: 12px;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba($ex-500, 0.4);
+  padding-bottom: 1px;
+  transition: color 120ms ease-in-out, border-color 120ms ease-in-out;
+
+  &:hover {
+    color: $ex-500;
+    border-bottom-color: $ex-500;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+    border-radius: $r-sm;
+  }
+}
+
+.row-copy {
+  appearance: none;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid $line-strong;
+  border-radius: $r-sm;
+  background: transparent;
+  color: $fg-1;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out,
+              color 100ms ease-in-out,
+              border-color 100ms ease-in-out;
+
+  &:hover {
+    background: $bg-3;
+    color: $fg-0;
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+  }
+
+  &[data-copied] {
+    color: $ex-500;
+    border-color: rgba($ex-500, 0.4);
+    background: rgba($ex-500, 0.06);
+  }
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin: 0 -10px;
+  border-radius: $r-md;
+  color: $fg-0;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 100ms ease-in-out, color 100ms ease-in-out;
+
+  &:hover {
+    background: $bg-3;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+  }
+
+  & > svg {
+    flex: 0 0 auto;
+    color: $fg-2;
+    transition: color 100ms ease-in-out;
+  }
+
+  &:hover > svg {
+    color: $ex-500;
+  }
+}
+
+.shortcuts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shortcut {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.shortcut-keys {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid $line-strong;
+  border-bottom-width: 2px;
+  border-radius: $r-sm;
+  font-family: $font-family-mono;
+  font-size: 10.5px;
+  color: $fg-1;
+  background: $bg-2;
+}
+
+.shortcut-sep {
+  color: $fg-2;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.shortcut-plus {
+  color: $fg-2;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.shortcut-label {
+  margin: 0;
+  color: $fg-1;
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .drawer {
+    transition: none;
+  }
+}

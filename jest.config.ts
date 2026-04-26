@@ -1,0 +1,28 @@
+import type { Config } from 'jest';
+
+const config: Config = {
+    testEnvironment: 'jsdom',
+    roots: ['<rootDir>/test'],
+    testMatch: ['**/*.test.ts'],
+    setupFilesAfterEnv: ['<rootDir>/test/setup-env.ts'],
+    moduleFileExtensions: ['ts', 'js', 'json'],
+    moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '\\.(vert|frag)$': '<rootDir>/test/mocks/text-file.ts',
+    },
+    transform: {
+        '^.+\\.[tj]s$': [
+            'ts-jest',
+            {
+                tsconfig: 'tsconfig.test.json',
+            },
+        ],
+    },
+    // earcut 3 ships as ESM only. Jest does not transform node_modules by
+    // default, so let ts-jest transpile earcut (and any other ESM-only dep
+    // that lands here) alongside our own sources. Scope this list narrowly
+    // so the overwhelming majority of node_modules stays un-transformed.
+    transformIgnorePatterns: ['/node_modules/(?!(earcut)/)'],
+};
+
+export default config;

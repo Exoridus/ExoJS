@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { ExampleBrowser } from '../components/ExampleBrowser';
+---
+
+<Layout title="ExoJS Examples">
+    <!-- Skip-link target — light-DOM wrapper that's focusable so Skip-to-main-content
+         actually lands on something keyboard-traversable. Focus then tabs into the
+         shadow tree of <example-browser> as normal. -->
+    <div id="main-content" tabindex="-1">
+        <ExampleBrowser client:only="lit" />
+    </div>
+</Layout>

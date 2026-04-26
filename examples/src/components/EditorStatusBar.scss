@@ -1,0 +1,101 @@
+@use "../styles/colors" as *;
+@use "../styles/tokens" as *;
+@use "../styles/typography" as *;
+
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  padding: 4px 14px;
+  box-sizing: border-box;
+  background: $bg-1;
+  border-top: 1px solid $line;
+  color: $fg-2;
+  font-family: $font-family-mono;
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+.left,
+.right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.left {
+  flex: 0 0 auto;
+}
+
+.right {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.chip--lang {
+  color: $fg-1;
+
+  .lang-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: $ex-500;
+    box-shadow: 0 0 4px rgba($ex-500, 0.4);
+  }
+}
+
+.chip--cursor {
+  color: $fg-1;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip--selection {
+  color: $fg-2;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip--encoding {
+  color: $fg-3;
+}
+
+.chip--dirty {
+  color: $fg-2;
+
+  &[data-dirty="true"] {
+    color: $warn;
+  }
+}
+
+.dirty-dot {
+  font-size: 12px;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  :host {
+    padding: 4px 10px;
+    gap: 8px;
+  }
+
+  .chip--encoding {
+    display: none;
+  }
+
+  .chip--selection {
+    display: none;
+  }
+}

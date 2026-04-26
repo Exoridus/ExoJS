@@ -1,0 +1,11 @@
+{
+  "latestStable": "0.4.0",
+  "versions": [
+    {
+      "id": "0.4.0",
+      "track": "stable",
+      "summary": "Pre-1.0 reset",
+      "latest": true
+    }
+  ]
+}

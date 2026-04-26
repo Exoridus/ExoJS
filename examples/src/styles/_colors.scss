@@ -1,0 +1,20 @@
+// Legacy color variables, now resolved to entries in _tokens.scss.
+// Keeping the old names keeps every existing component SCSS compiling
+// while the app picks up the new palette in a single hop. New rules
+// should prefer the token names directly (via @use "../styles/tokens").
+
+@forward "./tokens";
+@use "./tokens" as *;
+
+$transparent: rgba(0, 0, 0, 0);
+$white: #ffffff;
+$black: #000000;
+$yellow: #ffff00;
+
+$body-color:           $bg-0;
+$navigation-color:     $bg-1;
+$text-color:           $fg-0;
+$text-secondary-color: $fg-1;
+$text-disabled-color:  $fg-3;
+$accent-color:         $ex-500;
+$accent-highlight:     $ex-400;

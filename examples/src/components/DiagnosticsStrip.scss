@@ -1,0 +1,180 @@
+@use "../styles/colors" as *;
+@use "../styles/tokens" as *;
+@use "../styles/typography" as *;
+@use "../styles/variables" as *;
+
+* {
+  box-sizing: border-box;
+}
+
+// Empty by default — only laid out when the host carries diagnostics. Phase 1
+// uses the `has-diagnostics` reflected attribute so the negative top margin
+// (which tucks the strip up under the preview frame) only applies when there
+// is actually a strip to show.
+:host {
+  display: none;
+}
+
+:host([has-diagnostics]) {
+  display: block;
+  width: min(#{$preview-width}, calc(100vw - 48px));
+  margin: -16px auto 16px;
+}
+
+@media (max-width: #{$breakpoint-desktop - 1px}) {
+  :host([has-diagnostics]) {
+    width: 100%;
+    max-width: none;
+    margin: 0 0 12px;
+  }
+}
+
+.strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 6px 12px 6px 14px;
+  border-radius: $r-md;
+  border: 1px solid $line-strong;
+  background: $bg-2;
+  color: $fg-1;
+  font-size: 12px;
+  line-height: 1.35;
+  animation: diag-enter 140ms ease-out;
+
+  &[data-severity="error"] {
+    border-color: rgba($err, 0.45);
+    background: rgba($err, 0.06);
+  }
+
+  &[data-severity="warning"] {
+    border-color: rgba($warn, 0.4);
+    background: rgba($warn, 0.05);
+  }
+
+  &[data-severity="info"],
+  &[data-severity="hint"] {
+    border-color: rgba($info, 0.3);
+    background: rgba($info, 0.04);
+  }
+}
+
+.severity-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: $info;
+
+  &[data-severity="error"]   { background: $err;  box-shadow: 0 0 6px rgba($err, 0.5); }
+  &[data-severity="warning"] { background: $warn; box-shadow: 0 0 6px rgba($warn, 0.45); }
+  &[data-severity="info"]    { background: $info; }
+  &[data-severity="hint"]    { background: $fg-2; }
+}
+
+.counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  font-family: $font-family-mono;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: $fg-1;
+
+  &--error   { color: $err; }
+  &--warning { color: $warn; }
+  &--info    { color: $info; }
+}
+
+.separator {
+  flex: 0 0 auto;
+  color: $fg-3;
+}
+
+.message {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: $fg-0;
+}
+
+.code {
+  flex: 0 0 auto;
+  font-family: $font-family-mono;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 1px 6px;
+  border-radius: $r-sm;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid $line-strong;
+  color: $fg-1;
+
+  .strip[data-severity="error"]   & { color: $err;  border-color: rgba($err, 0.4); }
+  .strip[data-severity="warning"] & { color: $warn; border-color: rgba($warn, 0.4); }
+}
+
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jump {
+  appearance: none;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid $line-strong;
+  border-radius: $r-sm;
+  background: transparent;
+  color: $fg-1;
+  font-family: $font-family-mono;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 100ms ease-in-out,
+              color 100ms ease-in-out,
+              border-color 100ms ease-in-out;
+
+  &:hover {
+    background: $bg-3;
+    color: $fg-0;
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes diag-enter {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip {
+    animation: none;
+  }
+
+  .jump {
+    transition: none;
+  }
+}

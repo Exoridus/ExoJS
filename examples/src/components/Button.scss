@@ -1,0 +1,58 @@
+@use "../styles/colors" as *;
+@use "../styles/tokens" as *;
+@use "../styles/typography" as *;
+
+.button {
+  transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+  height: 32px;
+  min-width: 56px;
+  padding: 0 10px;
+  letter-spacing: 0.4px;
+  font-size: 12px;
+  border-radius: var(--button-radius, #{$r-md});
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  text-align: center;
+  font-weight: $font-weight-medium;
+  position: relative;
+  border: 0 none;
+  outline: none;
+  background-color: $transparent;
+  color: $ex-500;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    background-color: $bg-3;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($ex-500, 0.55);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    background-color: $bg-4;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+  }
+}
+
+.danger {
+  color: $err;
+
+  &:hover,
+  &:focus {
+    background-color: rgba($err, 0.14);
+  }
+
+  &:active {
+    background-color: rgba($err, 0.22);
+  }
+}
