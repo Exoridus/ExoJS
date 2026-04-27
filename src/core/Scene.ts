@@ -2,7 +2,7 @@ import type { Time } from './Time';
 import type { Loader } from '@/resources/Loader';
 import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
 import { Container } from '@/rendering/Container';
-import type { SceneNode } from './SceneNode';
+import type { RenderNode } from '@/rendering/RenderNode';
 import type { Application } from './Application';
 import type { Pointer } from '@/input/Pointer';
 import type { Vector } from '@/math/Vector';
@@ -62,6 +62,19 @@ export class Scene {
         this._app = app;
     }
 
+    /**
+     * Structural root container for this scene's hierarchy.
+     *
+     * `Scene.root` is an **ownership and traversal anchor**, not an
+     * automatic render-authoritative root. The framework never calls
+     * `root.render(runtime)` for you. `Scene.draw(runtime)` is the
+     * explicit orchestration point — see {@link Scene.draw}.
+     *
+     * The root exists eagerly so `addChild` / `removeChild` can proxy
+     * to a known container, and so transform/bounds traversal has a
+     * stable parent. Selecting what to render each frame remains the
+     * scene's responsibility.
+     */
     public get root(): Container {
         return this._root;
     }
@@ -82,13 +95,13 @@ export class Scene {
         this._inputMode = mode;
     }
 
-    public addChild(child: SceneNode): this {
+    public addChild(child: RenderNode): this {
         this._root.addChild(child);
 
         return this;
     }
 
-    public removeChild(child: SceneNode): this {
+    public removeChild(child: RenderNode): this {
         this._root.removeChild(child);
 
         return this;
@@ -125,6 +138,21 @@ export class Scene {
         // override in subclass or via Scene.create()
     }
 
+    /**
+     * Explicit per-frame rendering entry point. Override to choose
+     * what gets rendered.
+     *
+     * The default body is intentionally empty: `Scene` does not
+     * automatically traverse {@link Scene.root}. Auto-rendering the
+     * full hierarchy would conflict with ExoJS's "explicit instead of
+     * implicit" identity. Users decide which subtree(s) render each
+     * frame — `this.root.render(runtime)` is one common pattern, but
+     * selective rendering (e.g. `world.render(runtime)` while skipping
+     * `ui` for a given frame) is equally valid and intentionally
+     * supported.
+     *
+     * @see Scene.root for why root is structural, not render-authoritative.
+     */
     public draw(renderManager: SceneRenderRuntime): void {
         // override in subclass or via Scene.create()
     }

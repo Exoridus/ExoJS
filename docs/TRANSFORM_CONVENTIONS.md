@@ -26,8 +26,9 @@ This document defines the expected local/global transform behavior for this code
   - or use `globalMatrix.getInverse(...)` then `transform(...)`.
 
 ### Transform sources
-- `Transformable` owns position, rotation, scale, origin and caches transform values with dirty flags.
-- `SceneNode` layers parent/global composition on top of `Transformable`.
+- `SceneNode` owns position, rotation, scale, origin and caches transform values with internal dirty flags.
+- `SceneNode.getGlobalTransform()` composes the local transform with the parent chain to produce world-space transforms.
+- The transform fields and accessors live directly on `SceneNode`. There is no separate public `Transformable` class.
 
 ## Rules for new code
 1. Do not mix composition order across modules.

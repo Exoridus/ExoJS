@@ -1,16 +1,15 @@
 import { removeArrayItems } from '@/core/utils';
 import type { SceneRenderRuntime } from './SceneRenderRuntime';
-import type { SceneNode } from '@/core/SceneNode';
 import { RenderNode } from './RenderNode';
 
 export class Container extends RenderNode {
 
-    private readonly _children: Array<SceneNode> = [];
+    private readonly _children: Array<RenderNode> = [];
     private _sortableChildren = false;
     private _sortDirty = false;
     private _nextChildOrder = 0;
 
-    public get children(): Array<SceneNode> {
+    public get children(): Array<RenderNode> {
         return this._children;
     }
 
@@ -57,7 +56,7 @@ export class Container extends RenderNode {
         return (this.y + this.height - this.origin.y);
     }
 
-    public addChild(...children: Array<SceneNode>): this {
+    public addChild(...children: Array<RenderNode>): this {
         for (const child of children) {
             this.addChildAt(child, this._children.length);
         }
@@ -65,7 +64,7 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public addChildAt(child: SceneNode, index: number): this {
+    public addChildAt(child: RenderNode, index: number): this {
         if (index < 0 || index > this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
@@ -88,7 +87,7 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public swapChildren(firstChild: SceneNode, secondChild: SceneNode): this {
+    public swapChildren(firstChild: RenderNode, secondChild: RenderNode): this {
         if (firstChild !== secondChild) {
             const firstIndex = this.getChildIndex(firstChild);
             const secondIndex = this.getChildIndex(secondChild);
@@ -102,7 +101,7 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public getChildIndex(child: SceneNode): number {
+    public getChildIndex(child: RenderNode): number {
         const index = this._children.indexOf(child);
 
         if (index === -1) {
@@ -112,7 +111,7 @@ export class Container extends RenderNode {
         return index;
     }
 
-    public setChildIndex(child: SceneNode, index: number): this {
+    public setChildIndex(child: RenderNode, index: number): this {
         if (index < 0 || index >= this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
         }
@@ -126,7 +125,7 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public getChildAt(index: number): SceneNode {
+    public getChildAt(index: number): RenderNode {
         if (index < 0 || index >= this._children.length) {
             throw new Error(`getChildAt: Index (${index}) does not exist.`);
         }
@@ -134,7 +133,7 @@ export class Container extends RenderNode {
         return this._children[index];
     }
 
-    public removeChild(child: SceneNode): this {
+    public removeChild(child: RenderNode): this {
         const index = this._children.indexOf(child);
 
         if (index !== -1) {

@@ -5,7 +5,7 @@ import { RenderingPrimitives } from '@/rendering/types';
 import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
 import { Vector } from '@/math/Vector';
 import { CircleGeometry } from './CircleGeometry';
-import type { SceneNode } from '@/core/SceneNode';
+import type { RenderNode } from '@/rendering/RenderNode';
 import { DrawableShape } from './DrawableShape';
 
 export class Graphics extends Container {
@@ -47,7 +47,7 @@ export class Graphics extends Container {
         return super.getChildAt(index) as DrawableShape;
     }
 
-    public override addChild(child: SceneNode): this {
+    public override addChild(child: RenderNode): this {
         if (!(child instanceof DrawableShape)) {
             throw new Error('Graphics can only contain DrawableShape children.');
         }
@@ -55,7 +55,7 @@ export class Graphics extends Container {
         return super.addChild(child);
     }
 
-    public override addChildAt(child: SceneNode, index: number): this {
+    public override addChildAt(child: RenderNode, index: number): this {
         if (!(child instanceof DrawableShape)) {
             throw new Error('Graphics can only contain DrawableShape children.');
         }

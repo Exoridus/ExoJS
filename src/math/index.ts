@@ -23,5 +23,4 @@ export * from './ObservableVector';
 export * from './Random';
 export * from './Segment';
 export * from './Size';
-export * from './Transformable';
 export * from './PolarVector';
