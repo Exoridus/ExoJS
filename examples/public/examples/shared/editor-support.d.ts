@@ -24,6 +24,10 @@ declare global {
 }
 
 declare module "@codexo/exojs" {
+    export interface Scene {
+        [key: string]: any;
+    }
+
     export abstract class Json {
         private readonly __exoJsonToken: never;
     }
