@@ -2,6 +2,7 @@ import { Color } from '@/core/Color';
 import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
+import { Rectangle } from '@/math/Rectangle';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
@@ -50,7 +51,8 @@ const createRuntime = () => {
     let currentTarget: RenderTarget = root;
     const stats = createRenderStats();
     const released: Array<RenderTexture> = [];
-    const maskEvents: Array<string> = [];
+    const clipEvents: Array<string> = [];
+    const clipBoundsCalls: Array<Rectangle> = [];
     const draw = jest.fn(function(this: SceneRenderRuntime) {
         return this;
     });
@@ -85,13 +87,19 @@ const createRuntime = () => {
 
             return this;
         },
-        pushMask() {
-            maskEvents.push('push');
+        pushScissorRect(bounds) {
+            clipEvents.push('push');
+            clipBoundsCalls.push(bounds);
 
             return this;
         },
-        popMask() {
-            maskEvents.push('pop');
+        popScissorRect() {
+            clipEvents.push('pop');
+
+            return this;
+        },
+        composeWithAlphaMask() {
+            clipEvents.push('compose');
 
             return this;
         },
@@ -131,7 +139,8 @@ const createRuntime = () => {
         draw,
         clear,
         released,
-        maskEvents,
+        clipEvents,
+        clipBoundsCalls,
         root,
     };
 };
@@ -234,41 +243,65 @@ describe('render effects', () => {
         texture.destroy();
     });
 
-    test('routes mask push/pop around masked renders', () => {
-        const { runtime, maskEvents } = createRuntime();
-        const texture = createTexture();
+    test('routes clipBounds push/pop around clipped renders', () => {
+        const { runtime, clipEvents, clipBoundsCalls } = createRuntime();
         const drawable = new TestDrawable();
-        const mask = new Sprite(texture);
+        const bounds = new Rectangle(5, 8, 32, 24);
 
-        mask.x = 5;
-        mask.y = 8;
-        drawable.mask = mask;
+        drawable.mask =bounds;
         drawable.render(runtime);
 
-        expect(maskEvents).toEqual(['push', 'pop']);
-
-        mask.destroy();
-        texture.destroy();
+        expect(clipEvents).toEqual(['push', 'pop']);
+        expect(clipBoundsCalls).toHaveLength(1);
+        expect(clipBoundsCalls[0]).toBe(bounds);
     });
 
-    test('nested masks produce balanced push/pop ordering', () => {
-        const { runtime, maskEvents } = createRuntime();
-        const texture = createTexture();
+    test('nested clipBounds produce balanced push/pop ordering', () => {
+        const { runtime, clipEvents } = createRuntime();
         const container = new Container();
         const child = new TestDrawable();
-        const containerMask = new Sprite(texture);
-        const childMask = new Sprite(texture);
 
-        container.mask = containerMask;
-        child.mask = childMask;
+        container.mask =new Rectangle(0, 0, 100, 100);
+        child.mask =new Rectangle(10, 10, 40, 40);
         container.addChild(child);
         container.render(runtime);
 
-        expect(maskEvents).toEqual(['push', 'push', 'pop', 'pop']);
+        expect(clipEvents).toEqual(['push', 'push', 'pop', 'pop']);
+    });
 
-        containerMask.destroy();
-        childMask.destroy();
-        texture.destroy();
+    test('null clipBounds skips push/pop entirely', () => {
+        const { runtime, clipEvents } = createRuntime();
+        const drawable = new TestDrawable();
+
+        drawable.mask =null;
+        drawable.render(runtime);
+
+        expect(clipEvents).toEqual([]);
+    });
+
+    test('clipBounds = node.getBounds() is a snapshot, not a live binding', () => {
+        const { runtime, clipBoundsCalls } = createRuntime();
+        const drawable = new TestDrawable();
+        const source = new Sprite(createTexture(40, 30));
+
+        source.setPosition(20, 30);
+
+        const snapshotRect = source.getBounds().clone();
+
+        drawable.mask =snapshotRect;
+
+        // Mutate the source AFTER assigning its bounds snapshot.
+        source.setPosition(500, 500);
+
+        drawable.render(runtime);
+
+        // The captured rectangle still reflects the original position; the
+        // mask was never bound to the source node — clipBounds holds a Rectangle.
+        expect(clipBoundsCalls[0]).toBe(snapshotRect);
+        expect(clipBoundsCalls[0].x).toBe(snapshotRect.x);
+        expect(clipBoundsCalls[0].y).toBe(snapshotRect.y);
+
+        source.destroy();
     });
 
     test('RenderTargetPass restores render target and view after execution', () => {

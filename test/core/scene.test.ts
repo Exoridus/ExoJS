@@ -39,10 +39,13 @@ const createRuntime = (): SceneRenderRuntime => {
         setRenderTarget() {
             return this;
         },
-        pushMask() {
+        pushScissorRect() {
             return this;
         },
-        popMask() {
+        popScissorRect() {
+            return this;
+        },
+        composeWithAlphaMask() {
             return this;
         },
         acquireRenderTexture(width: number, height: number) {
@@ -95,6 +98,15 @@ describe('Scene', () => {
         expect(child.parentNode).toBeNull();
     });
 
+    // CONTRACT — do not weaken without an explicit identity decision.
+    //
+    // Scene.root is a structural ownership/traversal anchor. The
+    // framework must never auto-render it. This test pins down the
+    // "explicit instead of implicit" identity rule: Scene.draw is the
+    // user's selection point, and rendering happens only when the user
+    // calls render() on the chosen subtree.
+    //
+    // See docs/api/Scene.md#scene-root-contract.
     test('draw(runtime) remains the explicit rendering orchestration point', () => {
         const runtime = createRuntime();
         const scene = Scene.create({});

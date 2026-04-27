@@ -3,6 +3,7 @@ import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { BlendModes } from '@/rendering/types';
 import { View } from '@/rendering/View';
+import type { Texture } from '@/rendering/texture/Texture';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
@@ -29,6 +30,36 @@ const isDestroyableFilter = (filter: Filter): filter is Filter & DestroyableFilt
     'destroy' in filter && typeof (filter as Partial<DestroyableFilter>).destroy === 'function'
 );
 
+/**
+ * Acceptable mask sources for {@link RenderNode.mask}.
+ *
+ * - `Rectangle` — solid axis-aligned mask. The fastest path: implemented
+ *   internally via GPU scissor / clip rect; no intermediate render
+ *   targets are required.
+ * - `Texture` — uses the texture's alpha channel as the mask. Stretched
+ *   to fit the masked node's local bounds. The texture is sampled with
+ *   no transform of its own; if you need transform/anchor/scale, use a
+ *   `Sprite(texture)` as the mask source instead.
+ * - `RenderTexture` — same alpha-mask semantics as `Texture` for a
+ *   dynamic/offscreen source.
+ * - `RenderNode` — the mask node's full visual output (after its own
+ *   transform, filters, cacheAsBitmap, etc.) is rendered into an
+ *   intermediate render texture and used as the alpha mask. Acceptable
+ *   sources include `Sprite`, `Graphics`, `Container`, and any other
+ *   class that extends `RenderNode`. Bare `SceneNode` instances are
+ *   structural-only and rejected at compile time.
+ * - `null` — no mask.
+ *
+ * Cost summary: `Rectangle` is O(1) GPU state. The other sources require
+ * one or two intermediate render textures plus an alpha-composite pass.
+ */
+export type MaskSource =
+    | Rectangle
+    | Texture
+    | RenderTexture
+    | RenderNode
+    | null;
+
 export abstract class RenderNode extends SceneNode {
 
     private static _spriteFactory: (() => RenderNodeSpriteLike) | null = null;
@@ -37,7 +68,7 @@ export abstract class RenderNode extends SceneNode {
     private readonly _cacheBounds: Rectangle = new Rectangle();
     private _cacheSprite: RenderNodeSpriteLike | null = null;
     private _captureView: View | null = null;
-    private _mask: SceneNode | null = null;
+    private _mask: MaskSource = null;
     private _cacheAsBitmap = false;
     private _cacheDirty = true;
     private _cacheTexture: RenderTexture | null = null;
@@ -50,16 +81,30 @@ export abstract class RenderNode extends SceneNode {
         this.setFilters(filters);
     }
 
-    public get mask(): SceneNode | null {
+    /**
+     * The mask source that controls visibility of this node's render
+     * output. See {@link MaskSource} for accepted source types and their
+     * semantics. Setting to `null` removes any active mask.
+     *
+     * Setting a `RenderNode` that is `this` is rejected (a node cannot
+     * mask itself); other cycles (mask of mask of self) are not detected.
+     */
+    public get mask(): MaskSource {
         return this._mask;
     }
 
-    public set mask(mask: SceneNode | null) {
+    public set mask(mask: MaskSource) {
+        if (mask === this) {
+            throw new Error('A RenderNode cannot use itself as its own mask source.');
+        }
+
         if (this._mask !== mask) {
             this._mask = mask;
             this.invalidateCache();
         }
     }
+
+    public abstract render(runtime: SceneRenderRuntime): this;
 
     public get cacheAsBitmap(): boolean {
         return this._cacheAsBitmap;
@@ -134,7 +179,7 @@ export abstract class RenderNode extends SceneNode {
         const needsBitmapCache = this._cacheAsBitmap;
 
         if (!hasFilters && !needsBitmapCache) {
-            this._withMask(runtime, renderContent);
+            this._withMask(runtime, renderContent, blendMode);
 
             return;
         }
@@ -159,7 +204,7 @@ export abstract class RenderNode extends SceneNode {
         if (needsBitmapCache && !shouldRefreshCache && this._cacheTexture !== null) {
             this._withMask(runtime, () => {
                 this._drawTexture(runtime, this._cacheTexture as RenderTexture, left, top, width, height, blendMode);
-            });
+            }, blendMode);
 
             return;
         }
@@ -204,7 +249,7 @@ export abstract class RenderNode extends SceneNode {
 
             this._withMask(runtime, () => {
                 this._drawTexture(runtime, finalTexture, left, top, width, height, blendMode);
-            });
+            }, blendMode);
         } finally {
             for (const texture of temporaryTextures) {
                 runtime.releaseRenderTexture(texture);
@@ -232,26 +277,103 @@ export abstract class RenderNode extends SceneNode {
         this._mask = null;
     }
 
-    private _withMask(runtime: SceneRenderRuntime, callback: () => void): void {
-        if (this._mask === null) {
+    private _withMask(
+        runtime: SceneRenderRuntime,
+        callback: () => void,
+        blendMode: BlendModes = BlendModes.Normal,
+    ): void {
+        const mask = this._mask;
+
+        if (mask === null) {
             callback();
 
             return;
         }
 
-        const maskBounds = this._mask.getBounds();
+        // Fast path: rectangle mask uses GPU scissor.
+        if (mask instanceof Rectangle) {
+            if (mask.width <= 0 || mask.height <= 0) {
+                return;
+            }
 
-        if (maskBounds.width <= 0 || maskBounds.height <= 0) {
+            runtime.pushScissorRect(mask);
+
+            try {
+                callback();
+            } finally {
+                runtime.popScissorRect();
+            }
+
             return;
         }
 
-        runtime.pushMask(maskBounds);
+        // Alpha-mask paths: Texture, RenderTexture, or RenderNode source.
+        // Strategy:
+        //   1. Render `callback` (the masked content) into an intermediate
+        //      contentTexture.
+        //   2. Resolve the mask into a texture: Texture/RenderTexture used
+        //      directly; RenderNode rendered into a maskTexture first.
+        //   3. Compose contentTexture * mask.alpha into the active target at the
+        //      content's world-space position.
+        //   4. Release intermediates.
+        const contentBounds = this.getBounds();
+
+        if (contentBounds.width <= 0 || contentBounds.height <= 0) {
+            return;
+        }
+
+        const left = Math.floor(contentBounds.left);
+        const top = Math.floor(contentBounds.top);
+        const width = Math.max(1, Math.ceil(contentBounds.width));
+        const height = Math.max(1, Math.ceil(contentBounds.height));
+
+        const contentTexture = runtime.acquireRenderTexture(width, height);
+        const releasePool: Array<RenderTexture> = [contentTexture];
 
         try {
-            callback();
+            this._renderContentToTexture(runtime, contentTexture, left, top, width, height, callback);
+
+            const maskTexture = this._resolveMaskTexture(runtime, mask, width, height, releasePool);
+
+            runtime.composeWithAlphaMask(contentTexture, maskTexture, left, top, width, height, blendMode);
         } finally {
-            runtime.popMask();
+            for (const texture of releasePool) {
+                runtime.releaseRenderTexture(texture);
+            }
         }
+    }
+
+    private _resolveMaskTexture(
+        runtime: SceneRenderRuntime,
+        mask: Texture | RenderTexture | RenderNode,
+        width: number,
+        height: number,
+        releasePool: Array<RenderTexture>,
+    ): Texture | RenderTexture {
+        if (mask instanceof RenderNode) {
+            // Render the mask node's full visual output into an
+            // intermediate render texture sized to match the masked
+            // content. The mask node renders with its own transform; the
+            // intermediate is positioned over the masked content's
+            // world-space bounds so the resulting texture uses the
+            // masked content's local UV space.
+            const maskTexture = runtime.acquireRenderTexture(width, height);
+
+            releasePool.push(maskTexture);
+
+            const contentBounds = this.getBounds();
+            const left = Math.floor(contentBounds.left);
+            const top = Math.floor(contentBounds.top);
+
+            this._renderContentToTexture(runtime, maskTexture, left, top, width, height, () => {
+                mask.render(runtime);
+            });
+
+            return maskTexture;
+        }
+
+        // mask is Texture or RenderTexture — use directly.
+        return mask;
     }
 
     private _renderContentToTexture(

@@ -19,6 +19,7 @@ import { RenderTarget } from '../RenderTarget';
 import { WebGpuPrimitiveRenderer } from './WebGpuPrimitiveRenderer';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
+import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 import { RenderTexture } from '../texture/RenderTexture';
 import { Sprite } from '../sprite/Sprite';
@@ -39,7 +40,7 @@ interface ManagedWebGpuTextureState {
     hasContent: boolean;
 }
 
-interface PixelMaskState {
+interface PixelClipBoundsState {
     x: number;
     y: number;
     width: number;
@@ -60,10 +61,12 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
     private readonly _temporaryRenderTextures: Array<RenderTexture> = [];
-    private readonly _maskStack: Array<Rectangle> = [];
-    private readonly _maskPixelStack: Array<PixelMaskState> = [];
-    private readonly _maskPointA: Vector = new Vector();
-    private readonly _maskPointB: Vector = new Vector();
+    private readonly _clipBoundsStack: Array<Rectangle> = [];
+    private readonly _clipPixelStack: Array<PixelClipBoundsState> = [];
+    private readonly _clipPointA: Vector = new Vector();
+    private readonly _clipPointB: Vector = new Vector();
+    private readonly _maskCompositor: WebGpuMaskCompositor = new WebGpuMaskCompositor();
+    private _maskCompositorConnected = false;
     private _mipmapShaderModule: GPUShaderModule | null = null;
     private _mipmapBindGroupLayout: GPUBindGroupLayout | null = null;
     private _mipmapPipelineLayout: GPUPipelineLayout | null = null;
@@ -261,52 +264,78 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         return this;
     }
 
-    public pushMask(maskBounds: Rectangle): this {
+    public pushScissorRect(bounds: Rectangle): this {
         this._flushActiveRenderer();
 
-        this._maskStack.push(maskBounds.clone());
+        this._clipBoundsStack.push(bounds.clone());
 
-        const nextMask = this._toMaskPixels(maskBounds);
-        const previousMask = this._maskPixelStack.length > 0
-            ? this._maskPixelStack[this._maskPixelStack.length - 1]
+        const nextClip = this._toClipPixels(bounds);
+        const previousClip = this._clipPixelStack.length > 0
+            ? this._clipPixelStack[this._clipPixelStack.length - 1]
             : null;
-        const resolvedMask = previousMask ? this._intersectMasks(previousMask, nextMask) : nextMask;
+        const resolvedClip = previousClip ? this._intersectClips(previousClip, nextClip) : nextClip;
 
-        this._maskPixelStack.push(resolvedMask);
+        this._clipPixelStack.push(resolvedClip);
 
         return this;
     }
 
-    public popMask(): this {
-        if (this._maskStack.length === 0) {
+    public composeWithAlphaMask(
+        content: Texture | RenderTexture,
+        mask: Texture | RenderTexture,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        blendMode: BlendModes,
+    ): this {
+        if (width <= 0 || height <= 0) {
+            return this;
+        }
+
+        this._flushActiveRenderer();
+        this._setActiveRenderer(null);
+
+        if (!this._maskCompositorConnected) {
+            this._maskCompositor.connect(this.device);
+            this._maskCompositorConnected = true;
+        }
+
+        this._maskCompositor.compose(this, content, mask, x, y, width, height, blendMode);
+
+        return this;
+    }
+
+    public popScissorRect(): this {
+        if (this._clipBoundsStack.length === 0) {
             return this;
         }
 
         this._flushActiveRenderer();
 
-        const removedMask = this._maskStack.pop();
+        const removedClip = this._clipBoundsStack.pop();
 
-        if (removedMask) {
-            removedMask.destroy();
+        if (removedClip) {
+            removedClip.destroy();
         }
 
-        this._maskPixelStack.pop();
+        this._clipPixelStack.pop();
 
         return this;
     }
 
-    public getScissorRect(): PixelMaskState | null {
-        if (this._maskPixelStack.length === 0) {
+    public getScissorRect(): PixelClipBoundsState | null {
+        if (this._clipPixelStack.length === 0) {
             return null;
         }
 
-        const mask = this._maskPixelStack[this._maskPixelStack.length - 1];
+        const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
 
         return {
-            x: mask.x,
-            y: mask.y,
-            width: mask.width,
-            height: mask.height,
+            x: clip.x,
+            y: clip.y,
+            width: clip.width,
+            height: clip.height,
         };
     }
 
@@ -388,14 +417,19 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         this._destroyManagedTextures();
         this._destroyTemporaryRenderTextures();
 
-        for (const mask of this._maskStack) {
-            mask.destroy();
+        for (const clipBounds of this._clipBoundsStack) {
+            clipBounds.destroy();
         }
 
-        this._maskStack.length = 0;
-        this._maskPixelStack.length = 0;
-        this._maskPointA.destroy();
-        this._maskPointB.destroy();
+        this._clipBoundsStack.length = 0;
+        this._clipPixelStack.length = 0;
+        this._clipPointA.destroy();
+        this._clipPointB.destroy();
+
+        if (this._maskCompositorConnected) {
+            this._maskCompositor.disconnect();
+            this._maskCompositorConnected = false;
+        }
 
         for (const target of Array.from(this._renderTargetDestroyHandlers.keys())) {
             this._unsubscribeRenderTarget(target);
@@ -739,9 +773,9 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         }
     }
 
-    private _toMaskPixels(maskBounds: Rectangle): PixelMaskState {
-        const topLeft = this._renderTarget.mapCoordsToPixel(this._maskPointA.set(maskBounds.left, maskBounds.top));
-        const bottomRight = this._renderTarget.mapCoordsToPixel(this._maskPointB.set(maskBounds.right, maskBounds.bottom));
+    private _toClipPixels(bounds: Rectangle): PixelClipBoundsState {
+        const topLeft = this._renderTarget.mapCoordsToPixel(this._clipPointA.set(bounds.left, bounds.top));
+        const bottomRight = this._renderTarget.mapCoordsToPixel(this._clipPointB.set(bounds.right, bounds.bottom));
         const minX = Math.min(topLeft.x, bottomRight.x);
         const maxX = Math.max(topLeft.x, bottomRight.x);
         const minY = Math.min(topLeft.y, bottomRight.y);
@@ -758,7 +792,7 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         return { x, y, width, height };
     }
 
-    private _intersectMasks(first: PixelMaskState, second: PixelMaskState): PixelMaskState {
+    private _intersectClips(first: PixelClipBoundsState, second: PixelClipBoundsState): PixelClipBoundsState {
         const left = Math.max(first.x, second.x);
         const top = Math.max(first.y, second.y);
         const right = Math.min(first.x + first.width, second.x + second.width);

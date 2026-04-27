@@ -5,6 +5,7 @@ import { RenderTarget } from '../RenderTarget';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
 import { WebGl2PrimitiveRenderer } from './WebGl2PrimitiveRenderer';
+import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { Sprite } from '../sprite/Sprite';
 import { DrawableShape } from '../primitives/DrawableShape';
 import { ParticleSystem } from '@/particles/ParticleSystem';
@@ -61,7 +62,7 @@ interface ManagedRenderTargetState {
     attachedTexture: WebGLTexture | null;
 }
 
-interface PixelMaskState {
+interface PixelClipBoundsState {
     x: number;
     y: number;
     width: number;
@@ -87,10 +88,12 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
     private readonly _temporaryRenderTextures: Array<RenderTexture> = [];
-    private readonly _maskStack: Array<Rectangle> = [];
-    private readonly _maskPixelStack: Array<PixelMaskState> = [];
-    private readonly _maskPointA: Vector = new Vector();
-    private readonly _maskPointB: Vector = new Vector();
+    private readonly _clipBoundsStack: Array<Rectangle> = [];
+    private readonly _clipPixelStack: Array<PixelClipBoundsState> = [];
+    private readonly _clipPointA: Vector = new Vector();
+    private readonly _clipPointB: Vector = new Vector();
+    private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
+    private _maskCompositorConnected = false;
 
     private _canvas: HTMLCanvasElement;
     private _contextLost: boolean;
@@ -223,38 +226,66 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         return this;
     }
 
-    public pushMask(maskBounds: Rectangle): this {
+    public pushScissorRect(bounds: Rectangle): this {
         this._flushActiveRenderer();
 
-        this._maskStack.push(maskBounds.clone());
+        this._clipBoundsStack.push(bounds.clone());
 
-        const nextMask = this._toMaskPixels(maskBounds);
-        const previousMask = this._maskPixelStack.length > 0
-            ? this._maskPixelStack[this._maskPixelStack.length - 1]
+        const nextClip = this._toClipPixels(bounds);
+        const previousClip = this._clipPixelStack.length > 0
+            ? this._clipPixelStack[this._clipPixelStack.length - 1]
             : null;
-        const resolvedMask = previousMask ? this._intersectMasks(previousMask, nextMask) : nextMask;
+        const resolvedClip = previousClip ? this._intersectClips(previousClip, nextClip) : nextClip;
 
-        this._maskPixelStack.push(resolvedMask);
-        this._applyMaskState();
+        this._clipPixelStack.push(resolvedClip);
+        this._applyClipState();
 
         return this;
     }
 
-    public popMask(): this {
-        if (this._maskStack.length === 0) {
+    public popScissorRect(): this {
+        if (this._clipBoundsStack.length === 0) {
             return this;
         }
 
         this._flushActiveRenderer();
 
-        const removedMask = this._maskStack.pop();
+        const removedClip = this._clipBoundsStack.pop();
 
-        if (removedMask) {
-            removedMask.destroy();
+        if (removedClip) {
+            removedClip.destroy();
         }
 
-        this._maskPixelStack.pop();
-        this._applyMaskState();
+        this._clipPixelStack.pop();
+        this._applyClipState();
+
+        return this;
+    }
+
+    public composeWithAlphaMask(
+        content: Texture | RenderTexture,
+        mask: Texture | RenderTexture,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        blendMode: BlendModes,
+    ): this {
+        if (width <= 0 || height <= 0) {
+            return this;
+        }
+
+        // Flush any in-progress drawable batch so the compositor draws on
+        // top of fully-committed render state, not in the middle of a batch.
+        this._flushActiveRenderer();
+        this._setActiveRenderer(null);
+
+        if (!this._maskCompositorConnected) {
+            this._maskCompositor.connect(this);
+            this._maskCompositorConnected = true;
+        }
+
+        this._maskCompositor.compose(this, content, mask, x, y, width, height, blendMode);
 
         return this;
     }
@@ -453,14 +484,19 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         this._destroyManagedResources();
         this._destroyTemporaryRenderTextures();
 
-        for (const mask of this._maskStack) {
-            mask.destroy();
+        for (const clipBounds of this._clipBoundsStack) {
+            clipBounds.destroy();
         }
 
-        this._maskStack.length = 0;
-        this._maskPixelStack.length = 0;
-        this._maskPointA.destroy();
-        this._maskPointB.destroy();
+        this._clipBoundsStack.length = 0;
+        this._clipPixelStack.length = 0;
+        this._clipPointA.destroy();
+        this._clipPointB.destroy();
+
+        if (this._maskCompositorConnected) {
+            this._maskCompositor.disconnect();
+            this._maskCompositorConnected = false;
+        }
         this._rootRenderTarget.destroy();
 
         this._vao = null;
@@ -680,8 +716,8 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
             state.version = target.version;
         }
 
-        if (this._maskPixelStack.length > 0) {
-            this._applyMaskState();
+        if (this._clipPixelStack.length > 0) {
+            this._applyClipState();
         }
     }
 
@@ -760,9 +796,9 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         return state;
     }
 
-    private _toMaskPixels(maskBounds: Rectangle): PixelMaskState {
-        const topLeft = this._renderTarget.mapCoordsToPixel(this._maskPointA.set(maskBounds.left, maskBounds.top));
-        const bottomRight = this._renderTarget.mapCoordsToPixel(this._maskPointB.set(maskBounds.right, maskBounds.bottom));
+    private _toClipPixels(bounds: Rectangle): PixelClipBoundsState {
+        const topLeft = this._renderTarget.mapCoordsToPixel(this._clipPointA.set(bounds.left, bounds.top));
+        const bottomRight = this._renderTarget.mapCoordsToPixel(this._clipPointB.set(bounds.right, bounds.bottom));
         const minX = Math.min(topLeft.x, bottomRight.x);
         const maxX = Math.max(topLeft.x, bottomRight.x);
         const minY = Math.min(topLeft.y, bottomRight.y);
@@ -785,7 +821,7 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         };
     }
 
-    private _intersectMasks(first: PixelMaskState, second: PixelMaskState): PixelMaskState {
+    private _intersectClips(first: PixelClipBoundsState, second: PixelClipBoundsState): PixelClipBoundsState {
         const left = Math.max(first.x, second.x);
         const bottom = Math.max(first.y, second.y);
         const right = Math.min(first.x + first.width, second.x + second.width);
@@ -799,18 +835,18 @@ export class WebGl2RenderManager implements WebGl2RendererRuntime {
         };
     }
 
-    private _applyMaskState(): void {
+    private _applyClipState(): void {
         const gl = this._context;
 
-        if (this._maskPixelStack.length === 0) {
+        if (this._clipPixelStack.length === 0) {
             gl.disable(gl.SCISSOR_TEST);
 
             return;
         }
 
-        const mask = this._maskPixelStack[this._maskPixelStack.length - 1];
+        const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
 
         gl.enable(gl.SCISSOR_TEST);
-        gl.scissor(mask.x, mask.y, mask.width, mask.height);
+        gl.scissor(clip.x, clip.y, clip.width, clip.height);
     }
 }

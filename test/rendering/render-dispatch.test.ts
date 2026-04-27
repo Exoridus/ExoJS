@@ -44,10 +44,13 @@ const createRuntime = () => {
         setRenderTarget() {
             return this;
         },
-        pushMask() {
+        pushScissorRect() {
             return this;
         },
-        popMask() {
+        popScissorRect() {
+            return this;
+        },
+        composeWithAlphaMask() {
             return this;
         },
         acquireRenderTexture(width: number, height: number) {

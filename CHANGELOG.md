@@ -4,6 +4,72 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Two focused breaking changes targeted at the next pre-1.0 minor: a hierarchy-semantics boundary slice (per `.workspace/reviews/opus-pre-1.0-architecture-review/09-b1-implementation-rfc.md`), and a unified mask API with full multi-source support (per `.workspace/reviews/opus-pre-1.0-architecture-review/10-mask-api-decision.md`). No aliases. No version assigned yet.
+
+### Removed
+
+- **`Transformable` class and `TransformableFlags` enum.** Inlined into `SceneNode`. `SceneNode` now owns its transform fields and accessors (`position`, `x`, `y`, `rotation`, `scale`, `origin`, `setPosition`, `setRotation`, `setScale`, `setOrigin`, `move`, `rotate`, `getTransform`, `updateTransform`, `flags`) directly. The public surface shrinks by two symbols. `Flags<T>` (the generic class) remains public.
+- **`SceneNode.render(runtime)` no-op.** Render belongs to `RenderNode` and below; bare `SceneNode` no longer pretends to participate in the render pass.
+
+### Changed
+
+- **`RenderNode.render(runtime)` is now `abstract`.** All concrete subclasses (`Drawable`, `Container`, `Graphics`, `Sprite`, `AnimatedSprite`, `Text`, `Video`, `ParticleSystem`, `DrawableShape`) already implement it. The abstract declaration removes the SceneNode-render lie.
+- **`RenderNode.mask` is now the unified visual masking API**, accepting any `MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null`. The behavior depends on the source:
+  - `Rectangle` — fast axis-aligned scissor clip (O(1) GPU state). The most common case for UI panels and viewport regions.
+  - `Texture` / `RenderTexture` — uses the texture's alpha channel as the mask, stretched to fit the masked node's local bounds. The texture has no transform of its own; for transform/scale/rotation control over the mask source, use a `Sprite(texture)` instead.
+  - `RenderNode` (`Sprite`, `Graphics`, `Container`, etc.) — the node's full visual output (with its own transform, filters, cacheAsBitmap) is rendered into an intermediate render texture and used as the alpha mask. Bare `SceneNode` instances are rejected at compile time because they are structural-only.
+  - `null` — no mask.
+
+  Setting `node.mask = node` (self-mask) throws at runtime.
+- **`SceneRenderRuntime` mask primitives renamed** to match the new vocabulary:
+  - `pushMask(maskBounds)` / `popMask()` → `pushScissorRect(bounds)` / `popScissorRect()` (lower-level scissor primitive used internally by the `Rectangle` mask path).
+  - New `composeWithAlphaMask(content, mask, x, y, width, height, blendMode)` — used internally by the Texture/RenderTexture/RenderNode mask paths.
+  - Backend implementations: `WebGl2MaskCompositor` (new) and `WebGpuMaskCompositor` (new) implement the alpha-compose pipeline. Each owns its own shader/pipeline, lazily initialized on first use, disconnected on manager destroy. Pipelines are cached per (target format, blend mode) on the WebGPU side.
+- **`Container._children` narrowed to `Array<RenderNode>`.** `addChild`, `addChildAt`, `removeChild`, `swapChildren`, `getChildIndex`, `setChildIndex`, `getChildAt`, and `Scene.addChild`/`removeChild` now require `RenderNode` instances. Bare `SceneNode` instances cannot be added to a container at compile time. (Previous behavior added them as no-op render nodes; observable behavior was unchanged for any code that already added Drawable/Container/Graphics/Sprite/etc.)
+
+### Added
+
+- **`MaskSource` type alias** is exported from the package root: `Rectangle | Texture | RenderTexture | RenderNode | null`. This is the public type for `RenderNode.mask`.
+- **Root export runtime snapshot gate** (`test/core/root-index-snapshot.test.ts`). Captures every runtime-visible export name from `src/index.ts` and compares against a committed Jest snapshot. CI fails on any unintentional addition or removal.
+- **Root export type-level inventory** (`test/core/root-index-type-inventory.test.ts`). Enumerates all exported symbols — including interfaces and type aliases erased at runtime — with their kind annotations.
+- **RenderNode/SceneNode contract tests** (`test/rendering/render-node.test.ts`). Pin down the `SceneNode` is structural-only / `RenderNode.render` is abstract / `Container.addChild` rejects non-`RenderNode` contracts.
+- **MaskSource union tests** (`test/rendering/mask-source.test.ts`). 12 tests covering: Rectangle scissor routing, nested rectangles, zero-size and null masks; Texture / RenderTexture / Sprite / Graphics / Container as alpha-mask sources; bare `SceneNode` rejected at compile time; self-mask rejected at runtime; mask reassignment to null.
+
+### Migration
+
+| Before (0.4.x) | After |
+|---|---|
+| `import { Transformable } from '@codexo/exojs'`; `class X extends Transformable` | `import { SceneNode } from '@codexo/exojs'`; `class X extends SceneNode` |
+| `import { TransformableFlags } from '@codexo/exojs'` | Internal flag enum is no longer public; use SceneNode's high-level transform accessors instead. |
+| `node.mask = anyShapeNode` *(silently clipped to bounding rect)* | `node.mask = anyShapeNode` *(now a real shape mask via alpha compositing — except bare SceneNode which is rejected at compile time)* |
+| Want fast axis-aligned clipping? | `node.mask = new Rectangle(x, y, w, h)` |
+| Want to clip with a texture's alpha channel? | `node.mask = texture` or `node.mask = renderTexture` |
+| Want a transformed/positioned alpha mask? | `node.mask = new Sprite(texture)` (Sprite's transform/position/scale apply to the mask source) |
+| `runtime.pushMask(rect)` / `runtime.popMask()` | `runtime.pushScissorRect(rect)` / `runtime.popScissorRect()` (renamed; behavior unchanged) |
+| `class Group extends SceneNode { override render() {...} }` | `class Group extends RenderNode { override render() {...} }` |
+| `class CustomContainer extends Container { override addChild(child: SceneNode) {...} }` | `class CustomContainer extends Container { override addChild(child: RenderNode) {...} }` |
+
+No deprecated aliases are provided. The migration is mechanical and the project is pre-1.0 with explicit "may break between minors" policy.
+
+### Performance notes
+
+- `mask = Rectangle` is O(1) GPU scissor — free at scale.
+- `mask = Texture` / `mask = RenderTexture` adds one intermediate render texture acquire and one composite pass per masked render.
+- `mask = RenderNode` adds a second intermediate render texture acquire (to bake the mask node's visual output) plus the composite pass — so two extra passes per masked render. Use sparingly for high-frequency draws; consider `cacheAsBitmap` on the masked content.
+
+### Added
+
+- **Root export runtime snapshot gate** (`test/core/root-index-snapshot.test.ts`). Captures every runtime-visible export name from `src/index.ts` and compares against a committed Jest snapshot. CI fails on any unintentional addition or removal, making future root changes deliberate. Update with `npx jest root-index-snapshot --updateSnapshot`. After this slice, the snapshot drops `Transformable` and `TransformableFlags`.
+- **Root export type-level inventory** (`test/core/root-index-type-inventory.test.ts`). Uses the TypeScript compiler API to enumerate all exported symbols — including interfaces and type aliases erased at runtime — with their kind annotations (`class`, `interface`, `type alias`, etc.). Complements the runtime snapshot by covering the full TypeScript-visible surface.
+- **RenderNode/SceneNode contract tests** (`test/rendering/render-node.test.ts`). Pins down: (1) bare `SceneNode` has no `render` method; (2) `RenderNode.render` is abstract; (3) `Drawable.render` submits via `runtime.draw(this)`; (4) `Container.render` traverses children; (5) `Container.addChild` rejects non-`RenderNode` values at compile time.
+
+### Notes
+
+- The single dominant import model is intentional: `import { Application, Sprite } from '@codexo/exojs'` and `import * as Exo from '@codexo/exojs'` align with the IIFE/global bundle (`Exo.Application`, `Exo.Sprite`). Subpath exports are deferred until a stable API boundary warrants them.
+- `SceneNode` is now a concrete structural class — transform, hierarchy, collision, culling. `RenderNode` (abstract) is the render-capable base. Every render-participating class extends `RenderNode`; bare `SceneNode` instances are valid as user-defined data nodes but cannot be added to containers.
+
 ## [0.4.0] - 2026-04-26
 
 Pre-1.0 versioning reset. The active development line moves from `2.1.2` to `0.4.0` to honestly reflect that the public API is not yet stable. No runtime behavior change relative to the previous head — this release marks a versioning policy shift, not a code rewrite.
@@ -13,7 +79,9 @@ Pre-1.0 versioning reset. The active development line moves from `2.1.2` to `0.4
 - The `2.x` releases (`2.0.0`, `2.1.0`, `2.1.1`, `2.1.2`) remain published on npm as a historical line and will be deprecated with a pointer to the `0.x` line.
 - New work happens on the `0.x` line. Expect breaking changes between `0.x` minors as the scene graph, renderer, and resource boundaries continue to evolve.
 - `1.0.0` will mark the first stable public API contract. Until then, treat any minor version as potentially breaking and pin exact versions in downstream experiments.
-- Past CHANGELOG entries for `2.x` are preserved below as the historical record of work that landed in those releases.
+- Current package identity for the reset line is `@codexo/exojs`. Historical `2.x` release notes may reference the legacy package/import name, old example layout, old scripts, or the former `master` branch target.
+- The `2.1.0` View camera note below used the old working name `setBoundsConstraint`; the current API is `setBounds(...)` / `clearBounds()`.
+- Past CHANGELOG entries for `2.x` are otherwise preserved below as the historical record of work that landed in those releases.
 
 ## [2.1.2] - 2026-04-19
 

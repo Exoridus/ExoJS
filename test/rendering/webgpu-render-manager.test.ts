@@ -9,6 +9,7 @@ import { Graphics } from '@/rendering/primitives/Graphics';
 import { Geometry } from '@/rendering/primitives/Geometry';
 import { DrawableShape } from '@/rendering/primitives/DrawableShape';
 import { Container } from '@/rendering/Container';
+import { Rectangle } from '@/math/Rectangle';
 import { ColorFilter } from '@/rendering/filters/ColorFilter';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
@@ -1874,16 +1875,12 @@ describe('WebGpuRenderManager', () => {
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
-            const mask = new Sprite(texture);
 
             sourceCanvas.width = 16;
             sourceCanvas.height = 16;
             texture.updateSource();
 
-            mask.setPosition(4, 5);
-            mask.width = 8;
-            mask.height = 8;
-            sprite.mask = mask;
+            sprite.mask = new Rectangle(4, 5, 8, 8);
 
             await manager.initialize();
 
@@ -1897,7 +1894,6 @@ describe('WebGpuRenderManager', () => {
             expect(scissorCall[2]).toBeGreaterThan(0);
             expect(scissorCall[3]).toBeGreaterThan(0);
             sprite.destroy();
-            mask.destroy();
             manager.destroy();
         } finally {
             environment.restore();

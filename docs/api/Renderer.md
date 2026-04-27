@@ -1,6 +1,6 @@
 # Renderer Runtime
 
-ExoJS uses a drawable-driven rendering model.
+ExoJS uses explicit scene submission with runtime-owned renderer dispatch.
 
 ## Normal User Path
 
@@ -15,7 +15,7 @@ Most app code should stay inside:
 - `SceneRenderRuntime`: scene-facing runtime used by scenes/drawables
 - `WebGl2RendererRuntime`: WebGL2 runtime contract
 - `WebGpuRendererRuntime`: WebGPU runtime contract
-- `Renderer`: internal renderer interface for built-in paths
+- `Renderer`: renderer interface used by runtime registries
 
 ## Runtime Operations
 
@@ -32,7 +32,7 @@ Common runtime operations:
 Render nodes support:
 
 - `filters`
-- `mask`
+- `mask` (accepts `Rectangle`, `Texture`, `RenderTexture`, or any `RenderNode`)
 - `cacheAsBitmap` + `invalidateCache()`
 
 Runtime composition helpers:

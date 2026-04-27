@@ -7,7 +7,7 @@ ExoJS supports practical 2D visual workflows on top of the default sprite/primit
 Apply one or more filters to any `RenderNode` (`Drawable` or `Container`).
 
 ```ts
-import { BlurFilter, ColorFilter, Color } from 'exojs';
+import { BlurFilter, ColorFilter, Color } from '@codexo/exojs';
 
 sprite.addFilter(new BlurFilter({ radius: 3, quality: 1 }));
 sprite.addFilter(new ColorFilter(new Color(255, 180, 180, 1)));
@@ -15,25 +15,40 @@ sprite.addFilter(new ColorFilter(new Color(255, 180, 180, 1)));
 
 Filters execute in declaration order.
 
-## Masks
+## Mask
 
-Masks are rectangular and based on the mask node bounds.
+`RenderNode.mask` accepts a unified `MaskSource` union. The source type
+determines the implementation path and cost:
 
 ```ts
-const mask = new Sprite(maskTexture);
-mask.setPosition(100, 40);
-mask.width = 200;
-mask.height = 120;
+import { Rectangle, Sprite, Texture } from '@codexo/exojs';
 
-content.mask = mask;
+// Rectangle — O(1) GPU scissor. Cheap. The most common case.
+panel.mask = new Rectangle(100, 40, 200, 120);
+
+// Texture — stretched-fit alpha mask. One extra render pass.
+content.mask = alphaTexture;
+
+// Sprite (or any RenderNode) — full visual mask with transform. Two
+// extra render passes. Use sparingly or combine with cacheAsBitmap.
+content.mask = circularReveal;
 ```
+
+Bare `SceneNode` instances are not valid mask sources because they are
+structural-only. Use `Sprite`, `Graphics`, `Container`, or any other
+`RenderNode` subclass.
+
+Setting `node.mask = node` (self-mask) throws at runtime.
+
+For full per-source semantics see
+[Visual Effects → Mask](../api/VisualEffects.md#mask).
 
 ## Render Targets and Passes
 
 Use `RenderTexture` and `RenderTargetPass` for explicit offscreen workflows.
 
 ```ts
-import { RenderTexture, RenderTargetPass, Color } from 'exojs';
+import { RenderTexture, RenderTargetPass, Color } from '@codexo/exojs';
 
 const target = new RenderTexture(512, 512);
 
@@ -57,6 +72,9 @@ uiPanel.cacheAsBitmap = true;
 uiPanel.invalidateCache();
 ```
 
+Especially useful in combination with non-Rectangle masks. Caching the
+masked content amortizes the alpha-compose pass across frames.
+
 ## zIndex and Sorting
 
 Enable deterministic ordering with `sortableChildren`:
@@ -77,3 +95,9 @@ Visual features are intended to behave coherently on both backends:
 
 - WebGPU (preferred)
 - WebGL2 (fallback)
+
+Both backends implement the alpha-mask compose pipeline via dedicated
+single-quad two-texture compositors (`WebGl2MaskCompositor`,
+`WebGpuMaskCompositor`). The WebGL2 compositor uses a small custom
+GLSL shader pair; the WebGPU compositor uses a WGSL shader with cached
+pipelines per (target format, blend mode).
