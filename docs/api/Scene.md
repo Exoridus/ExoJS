@@ -5,11 +5,11 @@
 ## Responsibilities
 
 - load resources through `load(loader)`
-- initialize state through `init(resources)`
+- initialize state through `init(loader)`
 - update simulation through `update(delta)`
 - issue rendering work through `draw(runtime)`
 - own a structural `root` container for scene-graph composition
-- release scene-owned state through `unload()` and `destroy()`
+- release scene-owned state through `unload(loader)` and `destroy()`
 
 ## Rendering contract
 
@@ -36,14 +36,37 @@ public override draw(runtime: SceneRenderRuntime): void {
 
 Do not rely on legacy manager-side draw helpers.
 
+## Scene root contract
+
+`Scene.root` is a **structural ownership and traversal anchor**, not an
+automatic render-authoritative root. Specifically:
+
+- `root` is created eagerly so `addChild` / `removeChild` always have a
+  parent to delegate to and so transform/bounds traversal has a stable
+  upward path.
+- `root` does **not** render automatically. The framework never calls
+  `root.render(runtime)`. The default `Scene.draw` body is empty.
+- Choosing what to render each frame is the scene's responsibility. Calling
+  `this.root.render(runtime)` from `draw` is the convenient default.
+  Rendering only a chosen subtree (e.g. `this.world.render(runtime)`) is
+  equally valid and intentionally supported.
+- Building hierarchies without `Scene.root` is also valid: own your own
+  `Container` instances, render them directly from `draw`. `Scene.root` is
+  a default, not a mandate.
+
+This separation is deliberate and aligns with the project identity rule
+that explicit draw orchestration must not be replaced by implicit
+full-tree rendering. The contract is verified by
+`test/core/scene.test.ts:98-121`.
+
 ## Lifecycle
 
 - `load(loader)`
-- `init(resources)`
+- `init(loader)`
 - `update(delta)`
-- `draw(renderBackend)`
+- `draw(runtime)`
 - `handleInput(event)` for stacked-scene routing
-- `unload()`
+- `unload(loader)`
 - `destroy()`
 
 `Application` owns frame presentation and backend initialization.

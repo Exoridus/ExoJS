@@ -16,10 +16,27 @@ A scene can implement:
 The common draw pattern is:
 
 ```ts
-public override draw(runtime: import('exojs').SceneRenderRuntime): void {
+public override draw(runtime: import('@codexo/exojs').SceneRenderRuntime): void {
     this.root.render(runtime);
 }
 ```
+
+`Scene.root` is the scene's structural root container. It is owned by
+the scene for child-management (`addChild` / `removeChild`) and stable
+transform parenting. **It is not rendered automatically** — the call
+above is what makes `root` render. Splitting the tree into multiple
+top-level containers and rendering only a subset is intentionally
+supported:
+
+```ts
+public override draw(runtime: import('@codexo/exojs').SceneRenderRuntime): void {
+    this.world.render(runtime);
+    // ui intentionally not rendered this frame
+}
+```
+
+See [the Scene API reference](../api/Scene.md#scene-root-contract) for
+the full root contract.
 
 ## Replace vs Stack
 
@@ -72,7 +89,7 @@ scene.setParticipationPolicy({
 `setScene`, `pushScene`, and `popScene` accept fade transitions:
 
 ```ts
-import { Color } from 'exojs';
+import { Color } from '@codexo/exojs';
 
 await app.sceneManager.setScene(new GameOverScene(), {
     transition: {
@@ -88,7 +105,7 @@ await app.sceneManager.setScene(new GameOverScene(), {
 Use the active view from `app.renderManager.view`:
 
 ```ts
-import { Rectangle } from 'exojs';
+import { Rectangle } from '@codexo/exojs';
 
 const view = app.renderManager.view;
 
