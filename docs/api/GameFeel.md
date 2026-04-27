@@ -5,7 +5,7 @@ This page summarizes the gameplay-facing APIs added in the game-feel wave.
 ## AnimatedSprite
 
 ```ts
-import { AnimatedSprite } from 'exojs';
+import { AnimatedSprite } from '@codexo/exojs';
 
 sprite.play('walk');
 sprite.pause();

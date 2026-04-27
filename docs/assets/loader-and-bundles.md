@@ -5,7 +5,7 @@ ExoJS loader supports both direct typed loads and a manifest/bundle workflow.
 ## Direct Typed Loads
 
 ```ts
-import { Texture, Json } from 'exojs';
+import { Texture, Json } from '@codexo/exojs';
 
 await loader.load(Texture, { hero: 'sprites/hero.png', bg: 'bg.png' });
 const hero = loader.get(Texture, 'hero');
@@ -16,7 +16,7 @@ const config = await loader.load<{ speed: number }>(Json, 'config/game.json');
 ## Define and Register a Manifest
 
 ```ts
-import { defineAssetManifest, Texture, Sound } from 'exojs';
+import { defineAssetManifest, Texture, Sound } from '@codexo/exojs';
 
 const manifest = defineAssetManifest({
     bundles: {

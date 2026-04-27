@@ -20,7 +20,7 @@ interface AssetManifest {
 ## Define and Register
 
 ```ts
-import { defineAssetManifest, Texture, Sound } from 'exojs';
+import { defineAssetManifest, Texture, Sound } from '@codexo/exojs';
 
 const manifest = defineAssetManifest({
     bundles: {

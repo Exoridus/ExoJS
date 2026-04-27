@@ -17,7 +17,7 @@
 ## Typical Usage
 
 ```ts
-import { Graphics, Color } from 'exojs';
+import { Graphics, Color } from '@codexo/exojs';
 
 const graphics = new Graphics();
 

@@ -5,8 +5,10 @@ This guide takes you from zero to a running ExoJS scene.
 ## 1. Install
 
 ```bash
-npm install exojs
+npm install @codexo/exojs
 ```
+
+ExoJS is currently ESM-first. Use `import` syntax; CommonJS `require()` is not a supported path on the pre-1.0 line.
 
 ## 2. Create a Canvas
 
@@ -17,7 +19,7 @@ npm install exojs
 ## 3. Create a Scene and Start the App
 
 ```ts
-import { Application, Scene, Graphics, Color, type SceneRenderRuntime } from 'exojs';
+import { Application, Scene, Graphics, Color, type SceneRenderRuntime } from '@codexo/exojs';
 
 class HelloScene extends Scene {
     private readonly spinner = new Graphics();
@@ -32,7 +34,7 @@ class HelloScene extends Scene {
         this.addChild(this.spinner);
     }
 
-    public override update(delta: import('exojs').Time): void {
+    public override update(delta: import('@codexo/exojs').Time): void {
         this.spinner.rotation += delta.seconds * 45;
     }
 
@@ -60,7 +62,7 @@ await app.start(new HelloScene());
 ## 4. Load Assets (Bundle Workflow)
 
 ```ts
-import { defineAssetManifest, Texture } from 'exojs';
+import { defineAssetManifest, Texture } from '@codexo/exojs';
 
 const manifest = defineAssetManifest({
     bundles: {

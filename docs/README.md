@@ -22,6 +22,7 @@ This directory is the product-facing documentation hub for ExoJS.
 
 ## Notes
 
-- ExoJS is currently documented as a package-first workflow through `exojs`.
+- ExoJS is currently documented as a package-first workflow through `@codexo/exojs`.
+- ExoJS currently ships as an ESM-first package. Use `import` syntax in docs/examples.
 - WebGPU and WebGL2 are backend implementation details for most users.
 - Physics integration is optional and only loaded when used.

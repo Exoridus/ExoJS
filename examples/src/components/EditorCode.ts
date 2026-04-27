@@ -888,7 +888,7 @@ export class EditorCode extends LitElement {
   //      cross-module symbols may not resolve.
   //
   // Either path also pulls `module-shims.d.ts`, which declares the ambient
-  // `exojs` module re-exporting from the typings tree. If neither manifest
+  // `@codexo/exojs` module re-exporting from the typings tree. If neither manifest
   // nor `exo.d.ts` is reachable for the requested version, we fall back to
   // the flat vendor path (`vendor/exojs/`) as a last resort. Failing that,
   // we return an empty list — the editor stays usable, just without
@@ -902,7 +902,7 @@ export class EditorCode extends LitElement {
     // Versioned snapshot wasn't reachable — try the flat vendor path so
     // direct opens / pre-cutover deployments still get IntelliSense.
     console.warn(
-      `[EditorCode] Versioned typings missing for exojs@${versionId}; falling back to flat vendor path.`
+      `[EditorCode] Versioned typings missing for @codexo/exojs@${versionId}; falling back to flat vendor path.`
     );
     return this._loadExoJsTypingsFromBase('vendor/exojs/');
   }
@@ -915,12 +915,42 @@ export class EditorCode extends LitElement {
       const shimsContent = await this._fetchTextFile(buildPublicUrl(`${baseUrl}module-shims.d.ts`));
       libs.push({
         content: shimsContent,
-        filePath: 'file:///node_modules/exojs/dist/module-shims.d.ts',
+        filePath: 'file:///node_modules/@codexo/exojs/dist/module-shims.d.ts',
       });
     } catch {
       // Missing shims means no ambient module declaration — ExoJS imports
       // will lack typings. Continue so any usable .d.ts files we find still
       // reach Monaco.
+    }
+
+    // monaco-registry.json: virtual package.json for proper node_modules
+    // resolution. Monaco uses classic `node` resolution which reads package.json
+    // `types` fields — it does NOT use the `exports` field. The registry
+    // supplies a virtual package.json so `@codexo/exojs` resolves to
+    // `dist/esm/index.d.ts` via the `types` field rather than falling back to
+    // the ambient module-shims.d.ts declaration. Any subpath shims in the
+    // registry (empty while the library has no public subpaths) are also applied.
+    try {
+      const registryResp = await fetch(buildPublicUrl(`${baseUrl}monaco-registry.json`), { cache: 'no-cache' });
+      if (registryResp.ok) {
+        const reg = await registryResp.json() as Record<string, unknown>;
+        if (typeof reg['packageJson'] === 'string') {
+          libs.push({
+            content: reg['packageJson'],
+            filePath: 'file:///node_modules/@codexo/exojs/package.json',
+          });
+        }
+        const shims = reg['subpathShims'];
+        if (Array.isArray(shims)) {
+          for (const shim of shims as Record<string, unknown>[]) {
+            if (typeof shim['virtualPath'] === 'string' && typeof shim['content'] === 'string') {
+              libs.push({ content: shim['content'], filePath: shim['virtualPath'] });
+            }
+          }
+        }
+      }
+    } catch {
+      // Registry unavailable — root falls back to ambient module-shims.d.ts
     }
 
     const manifest = await this._fetchTypingsManifest(`${baseUrl}esm-typings.json`);
@@ -931,7 +961,7 @@ export class EditorCode extends LitElement {
             const content = await this._fetchTextFile(buildPublicUrl(`${baseUrl}esm/${rel}`));
             return {
               content,
-              filePath: `file:///node_modules/exojs/dist/esm/${rel}`,
+              filePath: `file:///node_modules/@codexo/exojs/dist/esm/${rel}`,
             } satisfies ExtraLib;
           } catch {
             return null;
@@ -949,7 +979,7 @@ export class EditorCode extends LitElement {
       const content = await this._fetchTextFile(buildPublicUrl(`${baseUrl}exo.d.ts`));
       libs.push({
         content,
-        filePath: 'file:///node_modules/exojs/dist/exo.d.ts',
+        filePath: 'file:///node_modules/@codexo/exojs/dist/exo.d.ts',
       });
     } catch {
       // No usable declarations at all under this base.

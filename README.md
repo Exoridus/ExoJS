@@ -11,7 +11,7 @@ ExoJS is **pre-1.0**. The public API is still under active design — scene grap
 - TypeScript-first API surface with strong runtime contracts
 - Scene and asset workflows built for real game loops
 - Modern rendering stack: WebGPU-first with WebGL2 fallback
-- Practical visuals: filters, masks, render passes, cache-as-bitmap
+- Practical visuals: filters, rectangular bounds masks, render passes, cache-as-bitmap
 - Gameplay tools: animated sprites, scene stacking, camera helpers, audio sprites
 - Performance visibility with built-in render stats and benchmark harness
 - Optional Rapier physics integration without forcing physics on every app
@@ -23,20 +23,23 @@ ExoJS is **pre-1.0**. The public API is still under active design — scene grap
 - Drawables: `Sprite`, `AnimatedSprite`, `Graphics`, `ParticleSystem`, `Text`, `Video`
 - Scene stacking (`overlay` / `modal` / `opaque`) with input routing and fade transitions
 - View/camera helpers (`follow`, bounds clamp, shake, zoom)
-- Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, masks, cache-as-bitmap)
+- Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, rectangular bounds masks, cache-as-bitmap)
 - Render stats (`submittedNodes`, `culledNodes`, `drawCalls`, `batches`, `renderPasses`, ...)
 - Optional Rapier adapter (`createRapierPhysicsWorld`)
 
 ## Installation
 
 ```bash
-npm install exojs
+npm install @codexo/exojs
 ```
+
+ExoJS currently publishes an ESM-first package shape. Use `import` syntax with modern bundlers/runtime tooling.
+CommonJS `require()` usage is not part of the supported contract for this pre-1.0 line.
 
 ## Quickstart
 
 ```ts
-import { Application, Scene, Graphics, Color, type SceneRenderRuntime } from 'exojs';
+import { Application, Scene, Graphics, Color, type SceneRenderRuntime } from '@codexo/exojs';
 
 class HelloScene extends Scene {
     private readonly box = new Graphics();
@@ -51,7 +54,7 @@ class HelloScene extends Scene {
         this.addChild(this.box);
     }
 
-    public override update(delta: import('exojs').Time): void {
+    public override update(delta: import('@codexo/exojs').Time): void {
         this.box.rotation += delta.seconds * 45;
     }
 
@@ -110,12 +113,34 @@ new Application({ backend: { type: 'auto' } });
 Rapier integration is opt-in and loaded only when you use it.
 
 ```ts
-import { createRapierPhysicsWorld } from 'exojs';
+import { createRapierPhysicsWorld } from '@codexo/exojs';
 
 const physics = await createRapierPhysicsWorld({ gravityY: 9.81 });
 ```
 
 If Rapier is unavailable, creation fails with a clear setup error.
+
+### Physics scope policy
+
+ExoJS ships **one** physics adapter: Rapier. The integration is intentionally
+narrow:
+
+- Physics is **optional**. `@dimforge/rapier2d-compat` is a peer dependency
+  marked `optional`. Apps that do not call `createRapierPhysicsWorld` never
+  load it and never pay for it at runtime.
+- Rendering, application, and core scene code **do not** depend on physics.
+  The adapter binds Rapier bodies to scene nodes from the outside; the core
+  has no knowledge of physics.
+- ExoJS is **not** a physics-engine abstraction layer. There is no
+  `PhysicsWorld` interface that spans multiple backends, and no plan to
+  add one. If you need a different physics library, integrate it directly
+  in your app code without library involvement.
+- A second physics adapter (Box2D, Matter.js, Planck, etc.) is **not** on
+  the 1.0 roadmap and will not be accepted as a contribution. The honesty
+  rule that applies to rendering backends applies here too: one chosen
+  physics, not a fake-universal physics layer.
+
+For full integration details see [docs/physics/rapier-integration.md](docs/physics/rapier-integration.md).
 
 ## Examples
 

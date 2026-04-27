@@ -41,7 +41,7 @@ loader.unloadAll();
 ## Asset manifests and bundles (MVP)
 
 ```ts
-import { Loader, Texture, Sound, defineAssetManifest } from 'exojs';
+import { Loader, Texture, Sound, defineAssetManifest } from '@codexo/exojs';
 
 const manifest = defineAssetManifest({
     bundles: {

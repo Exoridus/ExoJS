@@ -1,8 +1,8 @@
 // Phase 2 — non-browser smoke tests for the versioned examples tree.
 //
 // These tests run against the static build output (dist/) without spinning up
-// a browser. They guard the Phase 2 data layout so legacy fallbacks and new
-// versioned snapshots stay in lock-step until the cutover slice (P2-09).
+// a browser. They guard the versioned examples layout so flat fallbacks and
+// versioned snapshots stay in lock-step while fallback support remains active.
 //
 // Run after `npm run build` (or `npx astro build`).
 
@@ -96,12 +96,11 @@ test(`every entry in versions/${CURRENT_VERSION}/examples.json has a matching .j
     );
 });
 
-test(`legacy flat tree still ships under examples/ for fallback runtime paths`, () => {
-    // Until P2-09 cuts over, the runtime still loads from the flat paths.
-    // This test must keep passing through P2-02..P2-08; only P2-09 deletes
-    // the flat tree and updates the assertion accordingly.
+test(`flat fallback tree still ships under examples/ for direct-open runtime paths`, () => {
+    // The flat tree remains a compatibility fallback for direct preview.html
+    // opens and older deployed shells.
     const flatCatalogPath = path.join(examplesDistDir, 'examples.json');
-    assert.ok(fs.existsSync(flatCatalogPath), 'Legacy flat examples.json must still ship until cutover (P2-09).');
+    assert.ok(fs.existsSync(flatCatalogPath), 'Flat fallback examples.json must still ship while fallback support remains active.');
 
     const catalog = readJson(flatCatalogPath);
     const missing = [];
@@ -137,10 +136,10 @@ test('versioned tree does not absorb the shared/ helpers (those stay top-level)'
 });
 
 // --------------------------------------------------------------------------
-// P2-02: vendor-sync writes both the flat path (legacy fallback) and a
-// versioned snapshot keyed by the in-development library version. Until the
-// cutover slice (P2-09), both paths must ship and the versioned snapshot
-// must be byte-identical to the flat copy.
+// Vendor-sync writes both the flat path (fallback) and a versioned snapshot
+// keyed by the in-development library version. While fallback support remains
+// active, both paths must ship and the versioned snapshot must be byte-identical
+// to the flat copy.
 // --------------------------------------------------------------------------
 
 const vendorDistDir = path.join(distDir, 'vendor', 'exojs');
@@ -149,7 +148,7 @@ const versionedVendorDistDir = path.join(vendorDistDir, CURRENT_VERSION);
 test(`vendor-sync emits the runtime ESM bundle to vendor/exojs/${CURRENT_VERSION}/ in dist`, () => {
     assert.ok(
         fs.existsSync(path.join(vendorDistDir, 'exo.esm.js')),
-        'Legacy flat vendor/exojs/exo.esm.js must still ship until cutover (P2-09).'
+        'Flat fallback vendor/exojs/exo.esm.js must still ship while fallback support remains active.'
     );
     assert.ok(
         fs.existsSync(path.join(versionedVendorDistDir, 'exo.esm.js')),
@@ -159,7 +158,7 @@ test(`vendor-sync emits the runtime ESM bundle to vendor/exojs/${CURRENT_VERSION
     // Sourcemaps mirror the bundle in both locations.
     assert.ok(
         fs.existsSync(path.join(vendorDistDir, 'exo.esm.js.map')),
-        'Legacy flat vendor/exojs/exo.esm.js.map missing.'
+        'Flat fallback vendor/exojs/exo.esm.js.map missing.'
     );
     assert.ok(
         fs.existsSync(path.join(versionedVendorDistDir, 'exo.esm.js.map')),
@@ -183,10 +182,9 @@ test(`versioned vendor snapshot mirrors the flat exo.esm.js byte-for-byte`, () =
 });
 
 // --------------------------------------------------------------------------
-// P2-03: the example store is now version-keyed. Catalog and source URLs
-// resolve under `examples/versions/<id>/...`. Until the cutover slice
-// (P2-09), the legacy flat tree still ships, but the runtime no longer
-// reaches it — these tests pin the new code paths into the bundle.
+// The example store is version-keyed. Catalog and source URLs resolve under
+// `examples/versions/<id>/...`. The flat fallback tree still ships, but normal
+// version-aware navigation no longer reaches it.
 // --------------------------------------------------------------------------
 
 const ASTRO_DIR = path.join(distDir, '_astro');
@@ -234,10 +232,10 @@ test('version-aware example store wiring ships in the bundle', () => {
 });
 
 // --------------------------------------------------------------------------
-// P2-04: the preview iframe loads the ExoJS runtime from the version that
-// matches the active example. preview.html reads `v` from URLSearchParams,
-// validates it, and rewrites its import map to vendor/exojs/<v>/exo.esm.js.
-// The flat vendor path stays as fallback until P2-09.
+// The preview iframe loads the ExoJS runtime from the version that matches the
+// active example. preview.html reads `v` from URLSearchParams, validates it,
+// and rewrites its import map to vendor/exojs/<v>/exo.esm.js. The flat vendor
+// path stays as a direct-open fallback.
 // --------------------------------------------------------------------------
 
 const PREVIEW_HTML_PATH = path.join(distDir, 'preview.html');
@@ -285,8 +283,8 @@ test('preview.html builds versioned vendor path AND keeps a flat fallback', () =
         'preview.html does not concatenate vendor/exojs/ with the sanitised version id.'
     );
 
-    // Flat fallback — what a missing or unsafe v lands on. Must keep
-    // shipping until P2-09 retires the flat tree.
+    // Flat fallback — what a missing or unsafe v lands on while direct-open
+    // fallback support remains active.
     assert.match(
         html,
         /['"]\.\/vendor\/exojs\/exo\.esm\.js/,
@@ -360,10 +358,10 @@ test('vendor sync ships exo.d.ts and module-shims.d.ts at versioned path', () =>
     assert.ok(fs.existsSync(exoDts), `vendor/exojs/${CURRENT_VERSION}/exo.d.ts missing — typings entry point not normalised.`);
     assert.ok(fs.existsSync(moduleShims), `vendor/exojs/${CURRENT_VERSION}/module-shims.d.ts missing.`);
 
-    // Module-shims must declare the ambient `exojs` module so Monaco can
-    // resolve `import { Foo } from 'exojs'`.
+    // Module-shims must declare the public package module so Monaco can
+    // resolve `import { Foo } from '@codexo/exojs'`.
     const shimsContent = fs.readFileSync(moduleShims, 'utf8');
-    assert.match(shimsContent, /declare\s+module\s+["']exojs["']/, 'module-shims.d.ts no longer declares ambient exojs module.');
+    assert.match(shimsContent, /declare\s+module\s+["']@codexo\/exojs["']/, 'module-shims.d.ts no longer declares the public package module.');
 });
 
 test('shared examples typings are NOT versioned (stay top-level)', () => {
@@ -452,7 +450,7 @@ test('missing-example toast copy ships for explicit version-change fallback', ()
     // The user-visible string the missing-example toast renders. Pinned so
     // a refactor can't silently strip the fallback path.
     assert.ok(
-        bundle.includes("isn't available in exojs@"),
+        bundle.includes("isn't available in @codexo/exojs@"),
         `Missing-example fallback toast text not found in bundle.`
     );
 

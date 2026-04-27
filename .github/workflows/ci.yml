@@ -51,3 +51,52 @@ jobs:
 
       - name: Package dry run
         run: npm pack --dry-run
+
+  examples-smoke:
+    name: Examples smoke (bundle + catalog)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/package-lock.json
+
+      # Root install + build are required because examples/package.json
+      # depends on the library via "file:.." and the vendor:sync script
+      # reads from the local dist/ tree.
+      - name: Install root dependencies
+        run: npm ci --ignore-scripts --no-audit --fund=false
+
+      - name: Build library
+        run: npm run build
+
+      - name: Install examples dependencies
+        working-directory: examples
+        run: npm ci --ignore-scripts --no-audit --fund=false
+
+      # Examples build = vendor:sync + astro build. Both smoke suites
+      # depend on the produced dist/ tree.
+      - name: Build examples
+        working-directory: examples
+        run: npm run build
+
+      # Phase 1 + Phase 2 bundle smoke: pure file-system / built-bundle
+      # text checks. No browser, no network. Cheap and deterministic.
+      - name: Examples bundle smoke (phase1 + phase2)
+        working-directory: examples
+        run: npm run test:smoke:bundle
+
+      # Catalog metadata + backend policy: source-text checks against
+      # examples/public/examples/. Also no browser despite living in
+      # dist-open.smoke.test.mjs (Playwright-using tests are filtered
+      # out by --test-name-pattern).
+      - name: Examples catalog smoke (backend policy + entries)
+        working-directory: examples
+        run: npm run test:smoke:catalog

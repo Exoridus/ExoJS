@@ -29,7 +29,7 @@ new Application({ backend: { type: 'auto' } })
 ## Typical usage
 
 ```ts
-import { Application } from 'exojs'
+import { Application } from '@codexo/exojs'
 
 const app = new Application()
 await app.start(scene)

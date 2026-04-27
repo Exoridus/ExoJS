@@ -248,7 +248,7 @@ export class ExampleBrowser extends LitElement {
       : undefined;
 
     showToast(
-      `"${missingPath}" isn't available in exojs@${currentVersionId}`,
+      `"${missingPath}" isn't available in @codexo/exojs@${currentVersionId}`,
       action ? { action } : undefined,
     );
   }
@@ -331,7 +331,7 @@ export class ExampleBrowser extends LitElement {
     storeSelectedVersion(id);
     writeUrlState({ version: id });
 
-    showToast(`Switched to exojs@${id}`);
+    showToast(`Switched to @codexo/exojs@${id}`);
 
     void this._ensureExamplesLoaded(id);
   }

@@ -2,7 +2,7 @@
 
 Browser-runnable companion app for the ExoJS library. Bundles a set of small demos, shows the source in an in-browser Monaco editor, and renders the selected example in a live preview frame.
 
-Deployed as the GitHub Pages site for the `exojs` repository.
+Deployed as the GitHub Pages site for the ExoJS repository.
 
 ## Role in the repository
 
@@ -16,7 +16,7 @@ From this folder:
 
 ```bash
 npm install
-npm run vendor:sync      # copies the locally built exojs into public/vendor/
+npm run vendor:sync      # copies the locally built @codexo/exojs into public/vendor/
 npm run dev              # starts the Astro dev server
 ```
 
@@ -48,5 +48,5 @@ This site is deployed by the `.github/workflows/pages.yml` workflow in the repo 
 
 - `src/` — example browser UI (Astro + Lit components)
 - `public/` — static assets, vendor shims, and runtime-preview example scripts
-- `scripts/` — vendor-sync helpers (exojs, Monaco, Kenney input prompts)
+- `scripts/` — vendor-sync helpers (@codexo/exojs, Monaco, Kenney input prompts)
 - `tests/` — Playwright-backed smoke test for the built site

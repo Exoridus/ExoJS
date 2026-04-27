@@ -5,7 +5,7 @@ ExoJS provides `Sound` and `Music` for common game-audio usage.
 ## Basic Sound Playback
 
 ```ts
-import { Sound } from 'exojs';
+import { Sound } from '@codexo/exojs';
 
 const click = loader.get(Sound, 'click');
 click.play();
@@ -38,7 +38,7 @@ click.playSprite('confirm');
 Use `Music` for long-form tracks and standard media controls.
 
 ```ts
-import { Music } from 'exojs';
+import { Music } from '@codexo/exojs';
 
 const theme = loader.get(Music, 'theme');
 theme.setLoop(true).play();

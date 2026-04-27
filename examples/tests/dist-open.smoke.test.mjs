@@ -416,7 +416,7 @@ const assertMonacoExoPackageSupport = async (page) => {
         }
 
         const supportSource = [
-            "import * as Exo from 'exojs';",
+            "import * as Exo from '@codexo/exojs';",
             '',
             'const app = new Exo.Application({ width: 64, height: 64, clearColor: Exo.Color.black });',
             'const webGl2RenderManagerCtor = Exo.WebGl2RenderManager;',
@@ -467,16 +467,16 @@ const assertMonacoExoPackageSupport = async (page) => {
     });
 
     assert.deepEqual(diagnostics.markers, [], `Monaco emitted ExoJS diagnostics: ${JSON.stringify(diagnostics.markers)}`);
-    assert.equal(diagnostics.exoHasApplication, true, 'Monaco completions did not expose exojs.Application.');
+    assert.equal(diagnostics.exoHasApplication, true, 'Monaco completions did not expose @codexo/exojs.Application.');
     assert.equal(
         diagnostics.webGl2HasRenderManager,
         true,
-        'Monaco symbol info did not expose exojs.WebGl2RenderManager.'
+        'Monaco symbol info did not expose @codexo/exojs.WebGl2RenderManager.'
     );
     assert.equal(
         diagnostics.webGpuHasRenderManager,
         true,
-        'Monaco symbol info did not expose exojs.WebGpuRenderManager.'
+        'Monaco symbol info did not expose @codexo/exojs.WebGpuRenderManager.'
     );
 };
 
@@ -591,8 +591,8 @@ test('backend policy stays aligned: normal examples use default backend, webgpu 
         const examplePath = path.join(projectRoot, 'public', 'examples', route.path);
         const source = fs.readFileSync(examplePath, 'utf8');
         const hasExplicitWebGpuBackend = source.includes(`backend: { type: 'webgpu' }`);
-        const importsWebGpuSubpath = source.includes(`from 'exojs/webgpu'`) || source.includes(`from "exojs/webgpu"`);
-        const importsWebGl2Subpath = source.includes(`from 'exojs/webgl2'`) || source.includes(`from "exojs/webgl2"`);
+        const importsWebGpuSubpath = source.includes(`from '@codexo/exojs/webgpu'`) || source.includes(`from "@codexo/exojs/webgpu"`);
+        const importsWebGl2Subpath = source.includes(`from '@codexo/exojs/webgl2'`) || source.includes(`from "@codexo/exojs/webgl2"`);
 
         if (route.section === 'webgpu') {
             if (!hasExplicitWebGpuBackend) {
@@ -600,7 +600,7 @@ test('backend policy stays aligned: normal examples use default backend, webgpu 
             }
 
             if (route.routeHash !== '#webgpu/custom-triangle-renderer.js' && importsWebGpuSubpath) {
-                policyViolations.push(`${route.routeHash}: unexpected raw exojs/webgpu import`);
+                policyViolations.push(`${route.routeHash}: unexpected raw @codexo/exojs/webgpu import`);
             }
 
             if (!['webgpu', 'advanced'].includes(route.backend)) {
@@ -619,11 +619,11 @@ test('backend policy stays aligned: normal examples use default backend, webgpu 
         }
 
         if (importsWebGpuSubpath) {
-            policyViolations.push(`${route.routeHash}: normal example should not import exojs/webgpu`);
+            policyViolations.push(`${route.routeHash}: normal example should not import @codexo/exojs/webgpu`);
         }
 
         if (importsWebGl2Subpath) {
-            policyViolations.push(`${route.routeHash}: normal example should not import exojs/webgl2`);
+            policyViolations.push(`${route.routeHash}: normal example should not import @codexo/exojs/webgl2`);
         }
     }
 
@@ -674,7 +674,7 @@ test('Monaco renders hover and suggest widgets at usable widths', async () => {
                 }
 
                 const lines = model.getLinesContent();
-                lines[0] = "import { Application,, Color, Scene, Sprite } from 'exojs';";
+                lines[0] = "import { Application,, Color, Scene, Sprite } from '@codexo/exojs';";
                 editor.setValue(lines.join('\n'));
                 editor.setPosition({ lineNumber: 1, column: 22 });
                 editor.focus();

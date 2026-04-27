@@ -40,7 +40,7 @@ export class PreviewToolbar extends LitElement {
       </div>
       <div class="actions">
         ${this.version
-          ? html`<span class="version" title="ExoJS runtime version">exojs@${this.version}</span>`
+          ? html`<span class="version" title="ExoJS runtime version">@codexo/exojs@${this.version}</span>`
           : nothing}
         <button
           class="reload"

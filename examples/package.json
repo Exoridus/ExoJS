@@ -1,5 +1,5 @@
 {
-  "name": "@exojs/examples",
+  "name": "@codexo/exojs-examples",
   "private": true,
   "description": "Browser-runnable examples site for ExoJS (sibling app; not published to npm).",
   "version": "0.0.0",
@@ -15,6 +15,9 @@
     "build": "npm run vendor:sync && astro build",
     "preview": "astro preview",
     "test:dist": "npm run build && node --test tests/dist-open.smoke.test.mjs",
+    "test:smoke:bundle": "node --test tests/phase1-bundle.smoke.test.mjs tests/phase2-bundle.smoke.test.mjs",
+    "test:smoke:catalog": "node --test --test-name-pattern=\"backend policy|catalog entries exist\" tests/dist-open.smoke.test.mjs",
+    "test:smoke": "npm run test:smoke:bundle && npm run test:smoke:catalog",
     "check-ts": "astro check && tsc --noEmit --pretty"
   },
   "devDependencies": {
@@ -31,7 +34,7 @@
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
-    "exojs": "file:..",
+    "@codexo/exojs": "file:..",
     "monaco-editor": "0.55.1"
   }
 }

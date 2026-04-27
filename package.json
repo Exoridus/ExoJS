@@ -1,7 +1,8 @@
 {
   "name": "@codexo/exojs",
-  "description": "A lightweight, flexible and powerful multimedia framework.",
+  "description": "A TypeScript-first browser 2D runtime for games and interactive apps.",
   "version": "0.4.0",
+  "type": "module",
   "files": [
     "dist/esm/",
     "dist/exo.esm.js",
@@ -19,7 +20,19 @@
   "module": "./dist/esm/index.js",
   "browser": "./dist/exo.esm.js",
   "types": "./dist/esm/index.d.ts",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/esm/rendering/sprite/Sprite.js"
+  ],
+  "keywords": [
+    "2d",
+    "browser",
+    "canvas",
+    "games",
+    "rendering",
+    "typescript",
+    "webgl2",
+    "webgpu"
+  ],
   "exports": {
     ".": {
       "types": "./dist/esm/index.d.ts",
@@ -33,7 +46,7 @@
     "build": "npm run clean && tsx node_modules/rollup/dist/bin/rollup -c",
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw",
     "verify:exports": "node ./scripts/verify-exports.mjs",
-    "verify:package": "npm run build && npm run verify:exports && npm pack --dry-run",
+    "verify:package": "npm run build && npm run verify:exports && npm pack --dry-run --ignore-scripts",
     "verify:release": "npm run typecheck && npm run lint && npm test && npm run verify:package",
     "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
@@ -50,6 +63,9 @@
     "access": "public"
   },
   "homepage": "https://github.com/Exoridus/ExoJS",
+  "bugs": {
+    "url": "https://github.com/Exoridus/ExoJS/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Exoridus/ExoJS.git"

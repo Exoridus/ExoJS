@@ -43,10 +43,9 @@ export class EditorPreview extends LitElement {
       return html`<exo-spinner centered></exo-spinner>`;
     }
 
-    // Phase 2: pass the selected version through to preview.html so it can
-    // build a versioned import map (`vendor/exojs/<v>/exo.esm.js`). Omit the
-    // key when empty so the URL stays clean and preview.html's fallback
-    // (flat vendor path) kicks in until P2-09 retires the flat tree.
+    // Pass the selected version through to preview.html so it can build a
+    // versioned import map (`vendor/exojs/<v>/exo.esm.js`). Omit the key when
+    // empty so direct preview.html opens can use the flat vendor fallback.
     const params: UrlParams = { 'no-cache': this._updateId };
     if (this.selectedVersionId) {
       params.v = this.selectedVersionId;

@@ -21,7 +21,7 @@ This directory is the class-oriented API reference for ExoJS.
 - [Graphics](./Graphics.md)
 - [ParticleSystem](./ParticleSystem.md)
 - [RenderTexture](./RenderTexture.md)
-- [Visual Effects (filters/masks/passes/cache)](./VisualEffects.md)
+- [Visual Effects (filters/mask/passes/cache)](./VisualEffects.md)
 - [View / Camera](./View.md)
 - [Text](./Text.md)
 - [Video](./Video.md)

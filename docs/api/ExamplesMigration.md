@@ -14,7 +14,7 @@ Current model:
 Scene code should render via drawables:
 
 ```ts
-public override draw(runtime: import('exojs').SceneRenderRuntime): void {
+public override draw(runtime: import('@codexo/exojs').SceneRenderRuntime): void {
     this.root.render(runtime);
 }
 ```

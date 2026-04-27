@@ -5,7 +5,7 @@
 ## Clip Definition
 
 ```ts
-import { AnimatedSprite } from 'exojs';
+import { AnimatedSprite } from '@codexo/exojs';
 
 const sprite = new AnimatedSprite(texture, {
     walk: {

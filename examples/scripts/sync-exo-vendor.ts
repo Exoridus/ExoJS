@@ -6,9 +6,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
+const scopedPackageRoot = path.resolve(projectRoot, 'node_modules', '@codexo', 'exojs');
+const legacyPackageRoot = path.resolve(projectRoot, 'node_modules', 'exojs');
 const packageRoot = process.env.EXOJS_PACKAGE_PATH
     ? path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH)
-    : path.resolve(projectRoot, 'node_modules', 'exojs');
+    : fs.existsSync(scopedPackageRoot)
+        ? scopedPackageRoot
+        : legacyPackageRoot;
 const sourceDistDir = path.resolve(packageRoot, 'dist');
 
 const flatTargetDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs');
@@ -24,11 +28,14 @@ const requiredArtifacts = [
 // `exo.d.ts` is generated from whatever declaration source the library
 // ships — sometimes a bundled top-level file, sometimes derived from the
 // dist/esm tree. `esm-typings.json` is the manifest of declaration files
-// that Monaco walks at runtime.
+// that Monaco walks at runtime. `monaco-registry.json` provides a virtual
+// package.json and subpath shim entries for proper node_modules resolution
+// in Monaco's TypeScript worker.
 const generatedTypingsFiles = [
     'exo.d.ts',
     'module-shims.d.ts',
     'esm-typings.json',
+    'monaco-registry.json',
 ];
 
 // Top-level entries this script owns under `public/vendor/exojs/`. Anything
@@ -42,19 +49,83 @@ const flatManagedEntries: ReadonlyArray<{ name: string; type: 'file' | 'dir' }> 
     { name: 'esm', type: 'dir' as const },
 ];
 
-// module-shims declares an ambient `exojs` module re-exporting from the
+// module-shims declares the public package module re-exporting from the
 // declaration tree's index. The relative path resolves against the
 // virtual filesystem path Monaco gets when EditorCode registers this
 // file as an extra lib.
-const moduleShims = `declare module "exojs" {
+const moduleShims = `declare module "@codexo/exojs" {
     export * from "./esm/index";
 }
 `;
 
+// Virtual node_modules layout emitted for Monaco's TypeScript worker. Monaco
+// uses classic `node` resolution (no exports-field support), so we supply a
+// virtual package.json at the package root whose `types` field guides
+// root-import resolution to `dist/esm/index.d.ts`. If the library ever adds
+// public subpath exports, this function will also generate shim `.d.ts` files
+// for each subpath so they resolve correctly under node resolution.
+interface MonacoShimEntry {
+    virtualPath: string;
+    content: string;
+}
+
+interface MonacoRegistry {
+    packageJson: string;
+    subpathShims: ReadonlyArray<MonacoShimEntry>;
+}
+
+const buildMonacoRegistry = (version: string): MonacoRegistry => {
+    const sourcePackageJsonPath = path.resolve(packageRoot, 'package.json');
+    const sourcePackageJson = JSON.parse(fs.readFileSync(sourcePackageJsonPath, 'utf8')) as {
+        exports?: Record<string, Record<string, string | undefined> | string>;
+    };
+
+    const packageJson = JSON.stringify({
+        name: '@codexo/exojs',
+        version,
+        types: './dist/esm/index.d.ts',
+    });
+
+    const subpathShims: MonacoShimEntry[] = [];
+    const pkgVirtualRoot = '/node_modules/@codexo/exojs';
+
+    for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
+        if (subpathKey === '.' || subpathKey === './package.json') continue;
+
+        const typesPath = typeof conditions === 'object' && conditions !== null
+            ? conditions['types']
+            : undefined;
+
+        if (typeof typesPath !== 'string' || !typesPath.startsWith('./dist/esm/')) continue;
+
+        // './dist/esm/input/gamepad-mappings.d.ts' → 'dist/esm/input/gamepad-mappings'
+        const targetRelToRoot = typesPath.slice(2).replace(/\.d\.ts$/, '');
+        // './backend/webgl2' → 'backend/webgl2'
+        const subpath = subpathKey.slice(2);
+
+        const shimVirtualPath = `file://${pkgVirtualRoot}/${subpath}.d.ts`;
+
+        // Compute relative path from the shim's virtual dir to the target.
+        // E.g. shim at /backend/webgl2.d.ts, dir=/backend, target=dist/esm/backend/webgl2
+        // → '../dist/esm/backend/webgl2'
+        const shimDir = path.posix.dirname(`${pkgVirtualRoot}/${subpath}.d.ts`);
+        const targetAbs = `${pkgVirtualRoot}/${targetRelToRoot}`;
+        let relPath = path.posix.relative(shimDir, targetAbs);
+        if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+
+        subpathShims.push({
+            virtualPath: shimVirtualPath,
+            content: `export * from '${relPath}';\n`,
+        });
+    }
+
+    return { packageJson, subpathShims };
+};
+
 const ensureSourcePackage = (): void => {
     if (!fs.existsSync(sourceDistDir)) {
         throw new Error(
-            `[vendor:sync] Missing ExoJS package dist at ${sourceDistDir}. Install dependencies and ensure the local exojs package is built.`
+            `[vendor:sync] Missing ExoJS package dist at ${sourceDistDir}. Install dependencies and ensure the local @codexo/exojs package is built.`
         );
     }
 };
@@ -167,9 +238,8 @@ const copyDeclarationTree = (sourceEsmDir: string, destEsmDir: string): string[]
 //      that re-exports from `./esm/index`, and emit `esm-typings.json`
 //      so the editor can enumerate every `.d.ts` at runtime.
 //
-// If neither source exists we warn and skip — Monaco will still work, just
-// without ExoJS-aware IntelliSense. Per phase2-architecture.md, this is
-// the documented graceful degradation.
+// If neither source exists we warn and skip. Monaco will still work, just
+// without ExoJS-aware IntelliSense.
 const syncTypings = (): void => {
     const sourceFlatDts = path.resolve(sourceDistDir, 'exo.d.ts');
     const sourceEsmDir = path.resolve(sourceDistDir, 'esm');
@@ -200,7 +270,7 @@ const syncTypings = (): void => {
                 '// The library does not ship a single bundled exo.d.ts at the dist root,',
                 '// so this stub re-exports from the per-module declaration tree under',
                 '// ./esm. Monaco resolves the relative path against this file\'s virtual',
-                '// path (file:///node_modules/exojs/dist/exo.d.ts) and lands in the tree',
+                '// path (file:///node_modules/@codexo/exojs/dist/exo.d.ts) and lands in the tree',
                 '// shipped to ./esm by the same sync run.',
                 'export * from \'./esm/index\';',
                 '',
@@ -282,6 +352,13 @@ const syncVendor = (): void => {
     fs.writeFileSync(
         path.resolve(flatTargetDir, 'module-shims.d.ts'),
         moduleShims,
+        'utf8'
+    );
+
+    const registry = buildMonacoRegistry(versionId);
+    fs.writeFileSync(
+        path.resolve(flatTargetDir, 'monaco-registry.json'),
+        JSON.stringify(registry, null, 2) + '\n',
         'utf8'
     );
 

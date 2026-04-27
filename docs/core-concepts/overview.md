@@ -32,11 +32,15 @@ The default scene graph root is `scene.root` (`Container`).
 - `Drawable` = renderable node (`Sprite`, `DrawableShape`, `ParticleSystem`, etc.)
 - `Container` = structural node containing children
 
-Common node features:
+Common scene-node features:
 
-- transform/origin/tint
+- transform/origin
 - visibility
 - `zIndex` ordering via `sortableChildren`
+
+Renderable nodes add visual state:
+
+- `tint` and `blendMode`
 - optional `filters`, `mask`, and `cacheAsBitmap`
 
 ## Loader

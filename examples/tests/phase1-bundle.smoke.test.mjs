@@ -114,7 +114,7 @@ test('phase 1 hooks ship as bundle text — toast, jump, refresh, persistence', 
 
     const expectedSymbols = [
         // Toast feedback for explicit version switches.
-        'Switched to exojs',
+        'Switched to @codexo/exojs',
         // Editor public API used by the diagnostics strip + preview toolbar.
         'jumpToLine',
         'triggerRefresh',

@@ -22,7 +22,7 @@
 Use it through the normal scene flow:
 
 ```ts
-sprite.render(renderBackend)
+sprite.render(runtime)
 ```
 
 or place it in a container and render the container.
@@ -38,7 +38,7 @@ or place it in a container and render the container.
 For clip playback, use `AnimatedSprite`:
 
 ```ts
-import { AnimatedSprite } from 'exojs';
+import { AnimatedSprite } from '@codexo/exojs';
 
 animatedSprite.play('walk');
 animatedSprite.pause();
