@@ -11,7 +11,7 @@ ExoJS is **pre-1.0**. The public API is still under active design — scene grap
 - TypeScript-first API surface with strong runtime contracts
 - Scene and asset workflows built for real game loops
 - Modern rendering stack: WebGPU-first with WebGL2 fallback
-- Practical visuals: filters, rectangular bounds masks, render passes, cache-as-bitmap
+- Practical visuals: filters, masks, render passes, cache-as-bitmap
 - Gameplay tools: animated sprites, scene stacking, camera helpers, audio sprites
 - Performance visibility with built-in render stats and benchmark harness
 - Optional Rapier physics integration without forcing physics on every app
@@ -23,7 +23,7 @@ ExoJS is **pre-1.0**. The public API is still under active design — scene grap
 - Drawables: `Sprite`, `AnimatedSprite`, `Graphics`, `ParticleSystem`, `Text`, `Video`
 - Scene stacking (`overlay` / `modal` / `opaque`) with input routing and fade transitions
 - View/camera helpers (`follow`, bounds clamp, shake, zoom)
-- Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, rectangular bounds masks, cache-as-bitmap)
+- Rendering composition primitives (`RenderTexture`, `RenderTargetPass`, filter chains, visual masks, cache-as-bitmap)
 - Render stats (`submittedNodes`, `culledNodes`, `drawCalls`, `batches`, `renderPasses`, ...)
 - Optional Rapier adapter (`createRapierPhysicsWorld`)
 

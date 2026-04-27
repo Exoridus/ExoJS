@@ -5,25 +5,23 @@
 
 :host {
   display: block;
-  width: max-content;
-  max-width: calc(100vw - 48px);
+  width: 100%;
   margin: 0 auto;
-  padding: 64px 0 32px;
+  padding: 24px 0 32px;
   box-sizing: border-box;
 }
 
 @media (max-width: #{$breakpoint-large - 1px}) {
   :host {
-    padding-top: 32px;
+    padding-top: 16px;
   }
 }
 
 .preview-frame {
   display: flex;
   flex-direction: column;
-  width: max-content;
-  max-width: 100%;
-  margin: 0 auto 32px;
+  width: 100%;
+  margin: 0 auto 16px;
   background: $bg-2;
   border: 1px solid $line-strong;
   border-radius: $r-xl;
@@ -42,7 +40,7 @@ exo-preview-toolbar {
   justify-content: center;
   align-items: flex-start;
   min-height: 200px;
-  background: $bg-0;
+  background: $bg-2;
 }
 
 // Editor frame owns the card chrome (border / radius / bg / shadow) that used
@@ -51,7 +49,7 @@ exo-preview-toolbar {
 .editor-frame {
   display: flex;
   flex-direction: column;
-  width: min(#{$preview-width}, calc(100vw - 48px));
+  width: 100%;
   margin: 0 auto;
   background: $bg-2;
   border: 1px solid $line-strong;

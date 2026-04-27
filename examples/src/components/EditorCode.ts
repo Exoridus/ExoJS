@@ -910,26 +910,24 @@ export class EditorCode extends LitElement {
   private async _loadExoJsTypingsFromBase(baseUrl: string): Promise<ReadonlyArray<ExtraLib>> {
     const libs: ExtraLib[] = [];
 
-    // module-shims.d.ts is small and always shipped by the sync.
-    try {
-      const shimsContent = await this._fetchTextFile(buildPublicUrl(`${baseUrl}module-shims.d.ts`));
-      libs.push({
-        content: shimsContent,
-        filePath: 'file:///node_modules/@codexo/exojs/dist/module-shims.d.ts',
-      });
-    } catch {
-      // Missing shims means no ambient module declaration — ExoJS imports
-      // will lack typings. Continue so any usable .d.ts files we find still
-      // reach Monaco.
-    }
-
-    // monaco-registry.json: virtual package.json for proper node_modules
-    // resolution. Monaco uses classic `node` resolution which reads package.json
-    // `types` fields — it does NOT use the `exports` field. The registry
-    // supplies a virtual package.json so `@codexo/exojs` resolves to
-    // `dist/esm/index.d.ts` via the `types` field rather than falling back to
-    // the ambient module-shims.d.ts declaration. Any subpath shims in the
-    // registry (empty while the library has no public subpaths) are also applied.
+    // Virtual package.json for Monaco's TypeScript node-module resolution.
+    // Monaco uses the classic `node` resolution algorithm (no `exports`-field
+    // support), so a synthetic package.json with a `types` field is required
+    // for `@codexo/exojs` to resolve to its declaration tree.  Subpath shims
+    // (empty while the library has no public subpaths) are applied on top.
+    //
+    // IMPORTANT: the virtual package.json is loaded BEFORE the manifest so it
+    // is always present in the manifest-driven path.  Loading module-shims.d.ts
+    // alongside the full declaration tree would create an ambient
+    // `declare module "@codexo/exojs"` (a global-script `.d.ts` has no top-level
+    // exports, so its `declare module` block is an *ambient* declaration, not a
+    // module augmentation).  That ambient declaration overrides the
+    // package.json-based resolution and produces an empty module because the
+    // re-export chain inside a `declare module` block cannot follow relative
+    // paths into the extra-libs virtual FS.  editor-support.d.ts, by contrast,
+    // ends with `export {}` and is therefore a module, so its
+    // `declare module "@codexo/exojs"` block is a proper augmentation that adds
+    // to the resolved module rather than replacing it.
     try {
       const registryResp = await fetch(buildPublicUrl(`${baseUrl}monaco-registry.json`), { cache: 'no-cache' });
       if (registryResp.ok) {
@@ -950,9 +948,12 @@ export class EditorCode extends LitElement {
         }
       }
     } catch {
-      // Registry unavailable — root falls back to ambient module-shims.d.ts
+      // Registry unavailable — falls back to ambient module-shims.d.ts below.
     }
 
+    // Manifest-driven path (preferred).  Load the full declaration tree and
+    // return alongside the virtual package.json.  module-shims.d.ts is
+    // intentionally NOT included here — see the note above.
     const manifest = await this._fetchTypingsManifest(`${baseUrl}esm-typings.json`);
     if (manifest && manifest.length > 0) {
       const treeLibs = await Promise.all(
@@ -974,7 +975,20 @@ export class EditorCode extends LitElement {
       return libs;
     }
 
-    // No manifest — fall back to single-file legacy shape.
+    // Single-file fallback (legacy shape, no manifest).  The ambient
+    // `declare module "@codexo/exojs"` in module-shims.d.ts is used here to
+    // wire the package identifier to exo.d.ts when no full declaration tree
+    // and no functional virtual package.json are available.
+    try {
+      const shimsContent = await this._fetchTextFile(buildPublicUrl(`${baseUrl}module-shims.d.ts`));
+      libs.push({
+        content: shimsContent,
+        filePath: 'file:///node_modules/@codexo/exojs/dist/module-shims.d.ts',
+      });
+    } catch {
+      // Missing shims — ExoJS imports will lack typings.
+    }
+
     try {
       const content = await this._fetchTextFile(buildPublicUrl(`${baseUrl}exo.d.ts`));
       libs.push({
@@ -1039,6 +1053,12 @@ export class EditorCode extends LitElement {
       noImplicitThis: false,
       strict: false,
       target: tsApi.ScriptTarget.ES2020,
+      // ExoJS declaration files contain @/* path aliases (emitted verbatim by
+      // the TypeScript compiler from the source path alias). Map them to the
+      // virtual extra-lib paths so cross-module type references resolve in Monaco
+      // and do not degrade to `any`.
+      baseUrl: 'file:///',
+      paths: { '@/*': ['node_modules/@codexo/exojs/dist/esm/*'] },
     };
     const jsDiagnosticsOptions = {
       diagnosticCodesToIgnore: [7044],
