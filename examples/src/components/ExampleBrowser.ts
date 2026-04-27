@@ -26,7 +26,6 @@ import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support'
 import { appInfo } from '../lib/app-info';
 import {
   loadStoredVersion,
-  readLegacyHash,
   readUrlState,
   storeSelectedVersion,
   writeUrlState,
@@ -205,8 +204,7 @@ export class ExampleBrowser extends LitElement {
 
     const versionId = selected.id;
     const urlState = readUrlState();
-    const legacyHash = readLegacyHash();
-    const requestedPath = urlState.example ?? legacyHash;
+    const requestedPath = urlState.example ?? null;
 
     const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
     const fellBack = requestedPath !== null && requested === null;
@@ -218,7 +216,7 @@ export class ExampleBrowser extends LitElement {
       const nextExample = example?.path ?? null;
       const current = readUrlState();
 
-      if (current.example !== nextExample || current.version !== versionId || legacyHash !== null) {
+      if (current.example !== nextExample || current.version !== versionId) {
         writeUrlState(
           { example: nextExample, version: versionId },
           { replace: true },

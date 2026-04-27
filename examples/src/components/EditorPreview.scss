@@ -5,6 +5,7 @@
   width: calc(var(--canvas-w, #{$preview-width}) * var(--preview-zoom, 1));
   height: calc(var(--canvas-h, #{$preview-height}) * var(--preview-zoom, 1));
   position: relative;
+  background: #0b0d12;
 }
 
 .preview {
@@ -12,4 +13,5 @@
   height: var(--canvas-h, 100%);
   border: 0;
   zoom: var(--preview-zoom, 1);
+  background: #0b0d12;
 }

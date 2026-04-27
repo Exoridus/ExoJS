@@ -104,6 +104,17 @@
       "tags": [
         "svg"
       ]
+    },
+    {
+      "slug": "masks",
+      "path": "rendering/masks.js",
+      "title": "Masks",
+      "description": "Clips a sprite with an animated Rectangle mask using the unified MaskSource API.",
+      "backend": "core",
+      "tags": [
+        "mask",
+        "sprite"
+      ]
     }
   ],
   "webgpu": [
