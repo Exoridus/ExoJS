@@ -1,4 +1,4 @@
-import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from 'exojs';
+import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const GRID_COLUMNS = 32;
 const GRID_ROWS = 18;

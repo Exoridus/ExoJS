@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Spritesheet, Texture, Json } from 'exojs';
+import { Application, Color, Scene, Spritesheet, Texture, Json } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,
@@ -18,7 +18,7 @@ app.start(Scene.create({
     init(loader) {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'explosion');
-        /** @type {import('exojs').SpritesheetData} */
+        /** @type {import('@codexo/exojs').SpritesheetData} */
         const data = loader.get(Json, 'explosion');
 
         this._spritesheet = new Spritesheet(texture, data);

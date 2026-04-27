@@ -1,4 +1,4 @@
-import { Application, Color, Scene, ParticleOptions, ColorAffector, UniversalEmitter, ParticleSystem, BlendModes, rand, seconds, Texture } from 'exojs';
+import { Application, Color, Scene, ParticleOptions, ColorAffector, UniversalEmitter, ParticleSystem, BlendModes, rand, seconds, Texture } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

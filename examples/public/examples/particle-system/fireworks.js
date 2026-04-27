@@ -1,4 +1,4 @@
-import { Application, Color, seconds, Time, PolarVector, rand, Scene, Size, ParticleOptions, Vector, ParticleSystem, Timer, Texture } from 'exojs';
+import { Application, Color, seconds, Time, PolarVector, rand, Scene, Size, ParticleOptions, Vector, ParticleSystem, Timer, Texture } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,
@@ -63,7 +63,7 @@ class FireworkEmitter {
 class FireworkAffector {
 
     /**
-     * @param {import('exojs').Particle} particle
+     * @param {import('@codexo/exojs').Particle} particle
      * @param {Time} delta
      * @returns {FireworkAffector}
      */

@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Container, Sprite, Timer, milliseconds, Random, Texture } from 'exojs';
+import { Application, Color, Scene, Container, Sprite, Timer, milliseconds, Random, Texture } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

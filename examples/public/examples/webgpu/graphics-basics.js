@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, Scene } from 'exojs';
+import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

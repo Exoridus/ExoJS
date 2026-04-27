@@ -1,4 +1,4 @@
-import { Application, Color, Scene, AudioAnalyser, Texture, Sprite, Time, Music } from 'exojs';
+import { Application, Color, Scene, AudioAnalyser, Texture, Sprite, Time, Music } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

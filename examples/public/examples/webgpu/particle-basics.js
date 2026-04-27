@@ -10,7 +10,7 @@ import {
     UniversalEmitter,
     Vector,
     seconds,
-} from 'exojs';
+} from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

@@ -1,4 +1,4 @@
-import { Application, Color, Scene, ScaleModes, Sprite, BlendModes, Text, Texture } from 'exojs';
+import { Application, Color, Scene, ScaleModes, Sprite, BlendModes, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

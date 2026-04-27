@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Spritesheet, lerp, Container, GamepadChannel, Vector, Texture, Json } from 'exojs';
+import { Application, Color, Scene, Spritesheet, lerp, Container, GamepadChannel, Vector, Texture, Json } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,

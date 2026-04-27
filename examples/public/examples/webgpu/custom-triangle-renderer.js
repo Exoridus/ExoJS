@@ -1,4 +1,4 @@
-import { Application, Color, Scene, WebGpuRenderManager } from 'exojs';
+import { Application, Color, Scene, WebGpuRenderManager } from '@codexo/exojs';
 
 const TRIANGLE_VERTICES = new Float32Array([
     0.0, 0.72, 1.0, 0.38, 0.23,
