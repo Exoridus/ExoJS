@@ -5,7 +5,7 @@
 
 :host {
   display: block;
-  width: 100%;
+  width: min(100%, #{$workbench-width});
   margin: 0 auto;
   padding: 24px 0 32px;
   box-sizing: border-box;
