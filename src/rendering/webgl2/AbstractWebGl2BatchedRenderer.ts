@@ -208,6 +208,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
                         }
 
                         gl.enableVertexAttribArray(attribute.location);
+                        gl.vertexAttribDivisor(attribute.location, attribute.divisor);
                     }
 
                     if (vao.indexBuffer) {
@@ -227,6 +228,15 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
                     gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
                 } else {
                     gl.drawArrays(type, start, size);
+                }
+            },
+            drawInstanced: (vao: WebGl2VertexArrayObject, count: number, start: number, instanceCount: number, type: number): void => {
+                const gl = connection.gl;
+
+                if (vao.indexBuffer) {
+                    gl.drawElementsInstanced(type, count, gl.UNSIGNED_SHORT, start, instanceCount);
+                } else {
+                    gl.drawArraysInstanced(type, start, count, instanceCount);
                 }
             },
             destroy: (vao: WebGl2VertexArrayObject): void => {

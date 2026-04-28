@@ -1,67 +1,102 @@
-import { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
-import type { WebGl2RenderBuffer } from './WebGl2RenderBuffer';
+import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
+import { Shader } from '../shader/Shader';
+import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
+import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 import type { Sprite } from '../sprite/Sprite';
-import { AbstractWebGl2BatchedRenderer } from './AbstractWebGl2BatchedRenderer';
-import type { View } from '../View';
-import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import type { Texture } from '../texture/Texture';
 import type { RenderTexture } from '../texture/RenderTexture';
+import type { View } from '../View';
+import type { BlendModes } from '@/rendering/types';
+import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import vertexSource from './glsl/sprite.vert';
 import fragmentSource from './glsl/sprite.frag';
 
 /**
- * Multi-texture sprite batching for WebGL2.
+ * Instanced sprite renderer for WebGL2.
  *
- * Each batch carries up to {@link maxBatchTextures} textures bound to
- * texture units 0..N-1. Per-vertex `a_textureSlot` selects which sampler
- * the fragment shader reads from. A batch flushes when the batch buffer
- * fills, the blend mode changes, or all texture slots are taken and a
- * new texture arrives.
+ * Each batch issues a single `drawArraysInstanced(TRIANGLE_STRIP, 0, 4, N)`
+ * with no per-vertex buffer — `gl_VertexID` 0..3 selects which corner of
+ * the quad each invocation is computing. All per-sprite data lives in a
+ * single per-instance buffer (divisor = 1).
  *
- * Vertex layout (20 bytes per vertex, 5 attributes × 4 verts per quad):
- *   - position    vec2 f32  (offset 0,  8 bytes)
- *   - texcoord    u16x2     (offset 8,  4 bytes, normalised UV)
- *   - color       u8x4      (offset 12, 4 bytes, normalised RGBA)
- *   - textureSlot u32       (offset 16, 4 bytes)
+ * Per-instance layout (56 bytes per sprite, 6 attributes):
+ * ```
+ *   localBounds    f32x4       (offset  0, 16 bytes)  — left, top, right, bottom
+ *   transformAB    f32x3       (offset 16, 12 bytes)  — first  row of 2D affine
+ *   transformCD    f32x3       (offset 28, 12 bytes)  — second row of 2D affine
+ *   uvBounds       u16x4 norm  (offset 40,  8 bytes)  — uMin, vMin, uMax, vMax
+ *   color          u8x4  norm  (offset 48,  4 bytes)  — RGBA tint
+ *   textureSlot    u32         (offset 52,  4 bytes)  — multi-texture slot
+ * ```
+ *
+ * vs. the previous per-vertex layout (80 bytes per quad), this saves
+ * roughly 30% bandwidth and ~75% of the CPU writes per sprite — the
+ * vertex shader expands one instance into four corners on the GPU
+ * instead of the CPU duplicating the same color/slot/transform across
+ * four vertex entries.
  */
 
 const maxBatchTextures = 8;
-const attributesPerQuad = 20;
-const attributesPerVertex = attributesPerQuad / 4;
+const instanceStrideBytes = 56;
+const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
-export class WebGl2SpriteRenderer extends AbstractWebGl2BatchedRenderer {
+interface SpriteRendererConnection {
+    readonly gl: WebGL2RenderingContext;
+    readonly buffers: Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number; }>;
+    readonly vaoHandle: WebGLVertexArrayObject;
+}
+
+export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
+
+    private readonly _shader: Shader;
+    private readonly _batchSize: number;
+    private readonly _instanceData: ArrayBuffer;
+    private readonly _instanceFloat32: Float32Array;
+    private readonly _instanceUint32: Uint32Array;
 
     private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
     private readonly _textureSlots: Map<Texture | RenderTexture, number> = new Map();
     private _slotCount = 0;
 
+    private _instanceCount = 0;
+    private _currentBlendMode: BlendModes | null = null;
+    private _currentView: View | null = null;
+    private _currentViewId = -1;
+
+    private _instanceBuffer: WebGl2RenderBuffer | null = null;
+    private _vao: WebGl2VertexArrayObject | null = null;
+    private _connection: SpriteRendererConnection | null = null;
+
     public constructor(batchSize: number) {
-        super(batchSize, attributesPerQuad, vertexSource, fragmentSource);
+        super();
+
+        this._batchSize = batchSize;
+        this._shader = new Shader(vertexSource, fragmentSource);
+        this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
+        this._instanceFloat32 = new Float32Array(this._instanceData);
+        this._instanceUint32 = new Uint32Array(this._instanceData);
     }
 
-    public override render(sprite: Sprite): this {
-        const { texture, blendMode, tint, vertices, texCoords } = sprite;
+    public render(sprite: Sprite): this {
+        const texture = sprite.texture;
 
-        // Sprites without a texture are not drawable in this pipeline:
-        // every sample slot maps to a real texture binding, and the
-        // shader unconditionally samples one of them. Skip silently —
-        // matches the implicit no-op of the pre-multi-texture path,
-        // where a null texture also produced no draw.
         if (texture === null) {
             return this;
         }
 
         const runtime = this.getRuntime();
-        const batchFull = (this.batchIndex >= this.batchSize);
-        const blendModeChanged = (blendMode !== this.currentBlendMode);
+        const blendMode = sprite.blendMode;
+        const batchFull = this._instanceCount >= this._batchSize;
+        const blendModeChanged = blendMode !== this._currentBlendMode;
         const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
-        const flush = batchFull || blendModeChanged || slotExhausted;
 
-        if (flush) {
+        if (batchFull || blendModeChanged || slotExhausted) {
             this.flush();
 
             if (blendModeChanged) {
-                this.currentBlendMode = blendMode;
+                this._currentBlendMode = blendMode;
                 runtime.setBlendMode(blendMode);
             }
         }
@@ -75,51 +110,134 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2BatchedRenderer {
             runtime.bindTexture(texture, slot);
         }
 
-        const index = this.batchIndex * this.attributeCount;
-        const float32View = this.float32View;
-        const uint32View = this.uint32View;
-        const packedColor = tint.toRgba();
+        const offset = this._instanceCount * wordsPerInstance;
+        const f32 = this._instanceFloat32;
+        const u32 = this._instanceUint32;
 
-        // Vertex 0
-        float32View[index + 0] = vertices[0];
-        float32View[index + 1] = vertices[1];
-        uint32View[index + 2] = texCoords[0];
-        uint32View[index + 3] = packedColor;
-        uint32View[index + 4] = slot;
+        // localBounds: left, top, right, bottom (offset 0..3)
+        const bounds = sprite.getLocalBounds();
 
-        // Vertex 1
-        float32View[index + 5] = vertices[2];
-        float32View[index + 6] = vertices[3];
-        uint32View[index + 7] = texCoords[1];
-        uint32View[index + 8] = packedColor;
-        uint32View[index + 9] = slot;
+        f32[offset + 0] = bounds.left;
+        f32[offset + 1] = bounds.top;
+        f32[offset + 2] = bounds.right;
+        f32[offset + 3] = bounds.bottom;
 
-        // Vertex 2
-        float32View[index + 10] = vertices[4];
-        float32View[index + 11] = vertices[5];
-        uint32View[index + 12] = texCoords[2];
-        uint32View[index + 13] = packedColor;
-        uint32View[index + 14] = slot;
+        // transform rows (offset 4..6 = AB, 7..9 = CD)
+        const transform = sprite.getGlobalTransform();
 
-        // Vertex 3
-        float32View[index + 15] = vertices[6];
-        float32View[index + 16] = vertices[7];
-        uint32View[index + 17] = texCoords[3];
-        uint32View[index + 18] = packedColor;
-        uint32View[index + 19] = slot;
+        f32[offset + 4] = transform.a;
+        f32[offset + 5] = transform.b;
+        f32[offset + 6] = transform.x;
+        f32[offset + 7] = transform.c;
+        f32[offset + 8] = transform.d;
+        f32[offset + 9] = transform.y;
 
-        this.batchIndex++;
+        // uvBounds at offset 10 — 8 bytes = 2 u32 slots, normalised u16x4.
+        // Pack (uMin, vMin, uMax, vMax) into two uint32s, with flipY swap
+        // applied at pack time so the shader can stay flip-agnostic.
+        const frame = sprite.textureFrame;
+        const texWidth = texture.width;
+        const texHeight = texture.height;
+        // Clamp to 16-bit unsigned range for normalisation.
+        const uMin = (frame.left   / texWidth)  * 0xFFFF & 0xFFFF;
+        const uMax = (frame.right  / texWidth)  * 0xFFFF & 0xFFFF;
+        const vMinRaw = (frame.top    / texHeight) * 0xFFFF & 0xFFFF;
+        const vMaxRaw = (frame.bottom / texHeight) * 0xFFFF & 0xFFFF;
+        const vMin = texture.flipY ? vMaxRaw : vMinRaw;
+        const vMax = texture.flipY ? vMinRaw : vMaxRaw;
+
+        u32[offset + 10] = uMin | (vMin << 16);
+        u32[offset + 11] = uMax | (vMax << 16);
+
+        // color (u8x4 packed) at word 12
+        u32[offset + 12] = sprite.tint.toRgba();
+
+        // textureSlot (u32) at word 13
+        u32[offset + 13] = slot;
+
+        this._instanceCount++;
 
         return this;
     }
 
-    public override flush(): void {
-        super.flush();
+    public flush(): void {
+        const runtime = this.getRuntimeOrNull();
+        const instanceBuffer = this._instanceBuffer;
+        const vao = this._vao;
 
-        // Slot reservations are batch-scoped: every flush starts a new
-        // batch with zero textures bound. We don't gl.bindTexture(null)
-        // each slot — leaving stale handles bound is harmless, the next
-        // batch will overwrite them as it claims slots.
+        if (this._instanceCount === 0 || runtime === null || instanceBuffer === null || vao === null) {
+            this._resetSlots();
+
+            return;
+        }
+
+        const view = runtime.view;
+
+        if (this._currentView !== view || this._currentViewId !== view.updateId) {
+            this._currentView = view;
+            this._currentViewId = view.updateId;
+            this._shader
+                .getUniform('u_projection')
+                .setValue(view.getTransform().toArray(false));
+        }
+
+        this._shader.sync();
+        runtime.bindVertexArrayObject(vao);
+        instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
+        vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
+        runtime.stats.batches++;
+        runtime.stats.drawCalls++;
+        this._instanceCount = 0;
+
+        this._resetSlots();
+    }
+
+    protected onConnect(runtime: WebGl2RendererRuntime): void {
+        const gl = runtime.context;
+
+        this._shader.connect(createWebGl2ShaderRuntime(gl));
+        this._connection = this._createConnection(gl);
+        this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw)
+            .connect(this._createBufferRuntime(this._connection));
+        this._shader.sync();
+
+        this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_localBounds'),  gl.FLOAT,          false, instanceStrideBytes,  0, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformAB'),  gl.FLOAT,          false, instanceStrideBytes, 16, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_transformCD'),  gl.FLOAT,          false, instanceStrideBytes, 28, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'),     gl.UNSIGNED_SHORT, true,  instanceStrideBytes, 40, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'),        gl.UNSIGNED_BYTE,  true,  instanceStrideBytes, 48, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'),  gl.UNSIGNED_INT,   false, instanceStrideBytes, 52, true,  1)
+            .connect(this._createVaoRuntime(this._connection));
+
+        // Pin the per-slot sampler uniforms to texture units 0..N-1.
+        const samplerUnit = new Int32Array(1);
+
+        for (let i = 0; i < maxBatchTextures; i++) {
+            samplerUnit[0] = i;
+            this._shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
+        }
+    }
+
+    protected onDisconnect(): void {
+        this._shader.disconnect();
+        this._instanceBuffer?.destroy();
+        this._instanceBuffer = null;
+        this._vao?.destroy();
+        this._vao = null;
+        this._connection = null;
+        this._currentBlendMode = null;
+        this._currentView = null;
+        this._currentViewId = -1;
+        this._instanceCount = 0;
+    }
+
+    public destroy(): void {
+        this.disconnect();
+        this._shader.destroy();
+    }
+
+    private _resetSlots(): void {
         if (this._slotCount > 0) {
             for (let i = 0; i < this._slotCount; i++) {
                 this._activeTextures[i] = null;
@@ -130,39 +248,98 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2BatchedRenderer {
         }
     }
 
-    protected override onConnect(runtime: WebGl2RendererRuntime): void {
-        super.onConnect(runtime);
+    private _createConnection(gl: WebGL2RenderingContext): SpriteRendererConnection {
+        const vaoHandle = gl.createVertexArray();
 
-        // Pin each `u_textureN` sampler uniform to its matching texture
-        // unit so the fragment shader's per-slot if-chain reads from the
-        // unit the renderer's bindTexture(unit) calls will populate.
-        // (The base class already triggered shader.sync() before VAO
-        // setup, so the uniform table is populated by the time we get
-        // here.)
-        const samplerUnit = new Int32Array(1);
-
-        for (let i = 0; i < maxBatchTextures; i++) {
-            samplerUnit[0] = i;
-            this.shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
+        if (vaoHandle === null) {
+            throw new Error('WebGl2SpriteRenderer: could not create vertex array object.');
         }
+
+        return {
+            gl,
+            buffers: new Map(),
+            vaoHandle,
+        };
     }
 
-    protected createVao(gl: WebGL2RenderingContext, indexBuffer: WebGl2RenderBuffer, vertexBuffer: WebGl2RenderBuffer): WebGl2VertexArrayObject {
-        const stride = attributesPerVertex * Uint32Array.BYTES_PER_ELEMENT;
+    private _createBufferRuntime(connection: SpriteRendererConnection): WebGl2RenderBufferRuntime {
+        const handle = connection.gl.createBuffer();
 
-        return new WebGl2VertexArrayObject()
-            .addIndex(indexBuffer)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'),    gl.FLOAT,          false, stride, 0)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_texcoord'),    gl.UNSIGNED_SHORT, true,  stride, 8)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_color'),       gl.UNSIGNED_BYTE,  true,  stride, 12)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT,   false, stride, 16, true);
+        if (handle === null) {
+            throw new Error('WebGl2SpriteRenderer: could not create render buffer.');
+        }
+
+        return {
+            bind: (buffer): void => {
+                connection.gl.bindBuffer(buffer.type, handle);
+            },
+            upload: (buffer, offset): void => {
+                const gl = connection.gl;
+                const data = buffer.data;
+                const state = connection.buffers.get(buffer);
+
+                gl.bindBuffer(buffer.type, handle);
+
+                if (state && state.dataByteLength >= data.byteLength) {
+                    gl.bufferSubData(buffer.type, offset, data);
+                    state.dataByteLength = data.byteLength;
+                } else {
+                    gl.bufferData(buffer.type, data, buffer.usage);
+                    connection.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+                }
+            },
+            destroy: (buffer): void => {
+                connection.gl.deleteBuffer(handle);
+                connection.buffers.delete(buffer);
+                buffer.disconnect();
+            },
+        };
     }
 
-    protected updateView(view: View): this {
-        this.shader
-            .getUniform('u_projection')
-            .setValue(view.getTransform().toArray(false));
+    private _createVaoRuntime(connection: SpriteRendererConnection): WebGl2VertexArrayObjectRuntime {
+        let appliedVersion = -1;
 
-        return this;
+        return {
+            bind: (vao): void => {
+                const gl = connection.gl;
+
+                gl.bindVertexArray(connection.vaoHandle);
+
+                if (appliedVersion !== vao.version) {
+                    let lastBuffer: WebGl2RenderBuffer | null = null;
+
+                    for (const attribute of vao.attributes) {
+                        if (lastBuffer !== attribute.buffer) {
+                            attribute.buffer.bind();
+                            lastBuffer = attribute.buffer;
+                        }
+
+                        if (attribute.integer) {
+                            gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
+                        } else {
+                            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+                        }
+
+                        gl.enableVertexAttribArray(attribute.location);
+                        gl.vertexAttribDivisor(attribute.location, attribute.divisor);
+                    }
+
+                    appliedVersion = vao.version;
+                }
+            },
+            unbind: (): void => {
+                connection.gl.bindVertexArray(null);
+            },
+            draw: (vao, size, start, type): void => {
+                connection.gl.drawArrays(type, start, size);
+            },
+            drawInstanced: (_vao, count, start, instanceCount, type): void => {
+                connection.gl.drawArraysInstanced(type, start, count, instanceCount);
+            },
+            destroy: (vao): void => {
+                connection.gl.deleteVertexArray(connection.vaoHandle);
+                vao.disconnect();
+            },
+        };
     }
 }
