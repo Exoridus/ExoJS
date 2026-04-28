@@ -92,7 +92,7 @@ export class SceneManager {
     }
 
     public get scene(): Scene | null {
-        return this._stack.length > 0 ? this._stack[this._stack.length - 1].scene : null;
+        return this._stack.at(-1)?.scene ?? null;
     }
 
     public set scene(scene: Scene | null) {
@@ -159,7 +159,11 @@ export class SceneManager {
                 return;
             }
 
-            const removed = this._stack[this._stack.length - 1];
+            const removed = this._stack.at(-1);
+
+            if (!removed) {
+                return;
+            }
 
             await this._disposeScene(removed.scene);
             this._stack.pop();
@@ -267,7 +271,11 @@ export class SceneManager {
             return;
         }
 
-        const activeEntry = this._stack[this._stack.length - 1];
+        const activeEntry = this._stack.at(-1);
+
+        if (!activeEntry) {
+            return;
+        }
 
         for (let index = this._stack.length - 2; index >= 0; index--) {
             await this._disposeScene(this._stack[index].scene);

@@ -76,7 +76,7 @@ describe('SceneManager', () => {
     test('keeps scene unset and cleans up when load() fails', async () => {
         const manager = new SceneManager(createApplicationStub());
         const unload = jest.fn(async () => undefined);
-        const scene = Scene.create({
+        const scene = new Scene({
             async load() {
                 throw new Error('load failed');
             },
@@ -99,7 +99,7 @@ describe('SceneManager', () => {
         const manager = new SceneManager(createApplicationStub());
         const load = jest.fn(async () => undefined);
         const unload = jest.fn(async () => undefined);
-        const scene = Scene.create({
+        const scene = new Scene({
             load,
             async init() {
                 throw new Error('init failed');
@@ -122,7 +122,7 @@ describe('SceneManager', () => {
 
     test('surfaces both init and cleanup errors when recovery unload fails', async () => {
         const manager = new SceneManager(createApplicationStub());
-        const scene = Scene.create({
+        const scene = new Scene({
             async init() {
                 throw new Error('init failed');
             },
@@ -145,7 +145,7 @@ describe('SceneManager', () => {
         const unload = jest.fn(async () => {
             throw new Error('unload failed');
         });
-        const scene = Scene.create({
+        const scene = new Scene({
             async load() {
                 // noop
             },
@@ -178,14 +178,14 @@ describe('SceneManager', () => {
         const baseUnload = jest.fn(async () => undefined);
         const overlayUpdate = jest.fn();
         const overlayUnload = jest.fn(async () => undefined);
-        const base = Scene.create({
+        const base = new Scene({
             load: baseLoad,
             init: baseInit,
             update: baseUpdate,
             draw: baseDraw,
             unload: baseUnload,
         });
-        const overlay = Scene.create({
+        const overlay = new Scene({
             update: overlayUpdate,
             unload: overlayUnload,
         });
@@ -215,8 +215,8 @@ describe('SceneManager', () => {
         const baseDraw = jest.fn();
         const overlayUpdate = jest.fn();
         const overlayDraw = jest.fn();
-        const base = Scene.create({ update: baseUpdate, draw: baseDraw });
-        const overlay = Scene.create({ update: overlayUpdate, draw: overlayDraw });
+        const base = new Scene({ update: baseUpdate, draw: baseDraw });
+        const overlay = new Scene({ update: overlayUpdate, draw: overlayDraw });
 
         await manager.setScene(base);
         await manager.pushScene(overlay, { mode: 'overlay', input: 'passthrough' });
@@ -234,8 +234,8 @@ describe('SceneManager', () => {
         const baseDraw = jest.fn();
         const modalUpdate = jest.fn();
         const modalDraw = jest.fn();
-        const base = Scene.create({ update: baseUpdate, draw: baseDraw });
-        const modal = Scene.create({ update: modalUpdate, draw: modalDraw });
+        const base = new Scene({ update: baseUpdate, draw: baseDraw });
+        const modal = new Scene({ update: modalUpdate, draw: modalDraw });
 
         await manager.setScene(base);
         await manager.pushScene(modal, { mode: 'modal', input: 'capture' });
@@ -253,8 +253,8 @@ describe('SceneManager', () => {
         const baseDraw = jest.fn();
         const opaqueUpdate = jest.fn();
         const opaqueDraw = jest.fn();
-        const base = Scene.create({ update: baseUpdate, draw: baseDraw });
-        const opaque = Scene.create({ update: opaqueUpdate, draw: opaqueDraw });
+        const base = new Scene({ update: baseUpdate, draw: baseDraw });
+        const opaque = new Scene({ update: opaqueUpdate, draw: opaqueDraw });
 
         await manager.setScene(base);
         await manager.pushScene(opaque, { mode: 'opaque', input: 'capture' });
@@ -273,16 +273,16 @@ describe('SceneManager', () => {
         const captureInput = jest.fn();
         const passthroughInput = jest.fn();
         const transparentInput = jest.fn();
-        const base = Scene.create({
+        const base = new Scene({
             handleInput: baseInput,
         });
-        const capture = Scene.create({
+        const capture = new Scene({
             handleInput: captureInput,
         });
-        const passthrough = Scene.create({
+        const passthrough = new Scene({
             handleInput: passthroughInput,
         });
-        const transparent = Scene.create({
+        const transparent = new Scene({
             handleInput: transparentInput,
         });
 
@@ -309,8 +309,8 @@ describe('SceneManager', () => {
         const manager = new SceneManager(createApplicationStub());
         const baseUnload = jest.fn(async () => undefined);
         const failedUnload = jest.fn(async () => undefined);
-        const base = Scene.create({ unload: baseUnload });
-        const failingOverlay = Scene.create({
+        const base = new Scene({ unload: baseUnload });
+        const failingOverlay = new Scene({
             async init() {
                 throw new Error('overlay init failed');
             },
@@ -329,8 +329,8 @@ describe('SceneManager', () => {
     test('single-scene setScene flow still works with stack-enabled manager', async () => {
         const manager = new SceneManager(createApplicationStub());
         const firstUnload = jest.fn(async () => undefined);
-        const first = Scene.create({ unload: firstUnload });
-        const second = Scene.create({});
+        const first = new Scene({ unload: firstUnload });
+        const second = new Scene({});
 
         await manager.setScene(first);
         await manager.setScene(second);
@@ -343,8 +343,8 @@ describe('SceneManager', () => {
     test('fade transition runs and completes around setScene', async () => {
         const app = createApplicationStub();
         const manager = new SceneManager(app);
-        const first = Scene.create({});
-        const second = Scene.create({});
+        const first = new Scene({});
+        const second = new Scene({});
 
         await manager.setScene(first);
 
@@ -377,13 +377,13 @@ describe('SceneManager', () => {
 
     test('transition failure rejects and leaves manager in a valid state', async () => {
         const manager = new SceneManager(createApplicationStub());
-        const first = Scene.create({});
-        const failing = Scene.create({
+        const first = new Scene({});
+        const failing = new Scene({
             async init() {
                 throw new Error('transition target failed');
             },
         });
-        const fallback = Scene.create({});
+        const fallback = new Scene({});
 
         await manager.setScene(first);
 

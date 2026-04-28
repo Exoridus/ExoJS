@@ -25,9 +25,9 @@ declare global {
 
 // Playground-only augmentation — not shipped with the library.
 // Adds a permissive index signature to Scene so that JavaScript examples using
-// Scene.create() can freely read/write dynamic state fields (e.g. this._bunny)
-// without TypeScript errors. TypeScript examples should instead use a class
-// that extends Scene and declares fields explicitly.
+// `new Scene({ ... })` can freely read/write dynamic state fields (e.g.
+// this._bunny) without TypeScript errors. TypeScript examples should instead
+// use a class that extends Scene and declares fields explicitly.
 declare module "@codexo/exojs" {
     export interface Scene {
         [key: string]: any;

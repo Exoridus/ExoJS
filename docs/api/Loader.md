@@ -86,16 +86,36 @@ Bundle notes:
 ## Scene integration
 
 ```ts
-const scene = Scene.create({
-    async load(loader) {
+class GameScene extends Scene {
+    private _sprite!: Sprite;
+
+    public override async load(loader: Loader): Promise<void> {
         await loader.load(Texture, { hero: 'hero.png' });
         await loader.load(Sound, { jump: 'jump.wav' });
-    },
-    init(loader) {
+    }
+
+    public override init(loader: Loader): void {
         this._sprite = new Sprite(loader.get(Texture, 'hero'));
-    },
-    unload(loader) {
+    }
+
+    public override unload(loader: Loader): void {
         loader.unloadAll();
+    }
+}
+
+const scene = new GameScene();
+```
+
+For small stateless scenes a typed definition object also works:
+
+```ts
+const scene = new Scene({
+    async load(loader) {
+        await loader.load(Texture, { hero: 'hero.png' });
+    },
+    draw(runtime) {
+        runtime.clear();
+        this.root.render(runtime);
     },
 });
 ```

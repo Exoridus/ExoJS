@@ -8,10 +8,10 @@ ExoJS targets TypeScript-first development but the playground runs JavaScript in
 
 ### JavaScript examples (quick examples)
 
-JavaScript examples use `Scene.create()` with dynamic state attached to `this`. This is the natural pattern for short, self-contained playground snippets where TypeScript strict-mode overhead would obscure the concept being demonstrated.
+JavaScript examples use `new Scene({ ... })` with dynamic state attached to `this`. This is the natural pattern for short, self-contained playground snippets where TypeScript strict-mode overhead would obscure the concept being demonstrated.
 
 ```js
-app.start(Scene.create({
+app.start(new Scene({
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/bunny.png' });
     },
@@ -102,7 +102,7 @@ Named classes are preferred when:
 
 ## Why class fields matter
 
-`Scene.create()` attaches state to `this` dynamically. At runtime this works fine, but TypeScript does not see the field declarations — every access is `any`. The `noImplicitAny: false` playground setting suppresses the errors, but autocomplete still shows `any` rather than the actual type.
+The `new Scene({ ... })` form attaches state to `this` dynamically. At runtime this works fine, but TypeScript only sees fields declared inside the definition object — anything assigned to `this.foo` from inside a method body is invisible to the type system. The `noImplicitAny: false` playground setting suppresses the resulting errors, but autocomplete still shows `any` rather than the actual type.
 
 Class fields eliminate this:
 
@@ -117,7 +117,7 @@ Every method that reads `this.bunny` gets full type inference, completion, and h
 
 ## Current state
 
-All existing examples are JavaScript using `Scene.create()`. The broad `any` shim remains in place for these examples because the alternative — rewriting every example as a TS class — is out of scope for this pass.
+All existing examples are JavaScript using `new Scene({ ... })`. The broad `any` shim remains in place for these examples because the alternative — rewriting every example as a TS class — is out of scope for this pass.
 
 The `any` shim (`noImplicitAny: false`, `noImplicitThis: false`, `checkJs: true` with code 7044 suppressed) is a deliberate tradeoff for JS playground ergonomics. It is not the final story for TypeScript users. New TS examples should use the anonymous-class or named-class patterns above and should not rely on the shim.
 

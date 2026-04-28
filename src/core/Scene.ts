@@ -37,29 +37,39 @@ export interface SceneData {
     unload?: (loader: Loader) => Promise<void> | void;
 }
 
-export type SceneInstance<T extends SceneData = SceneData> = Scene & T;
+export type SceneInstance<T extends SceneData = SceneData> = Scene<T> & T;
 
-export class Scene {
+/**
+ * A scene's lifecycle host. Two creation paths are supported:
+ *
+ *   - `new Scene()` — empty scene; override later or use as a stub.
+ *   - `new Scene({ update() { ... } })` — typed definition object whose
+ *     method bodies see `this` as `Scene<T> & T` via `ThisType<>`.
+ *
+ * The class is generic over the definition's own-property shape so
+ * plain-object users can declare local state in the literal and access it
+ * from `this` inside method bodies. For richer scenarios — private state,
+ * constructor logic, stronger IntelliSense — extend the class instead.
+ */
+export class Scene<T extends SceneData = SceneData> {
 
-    private _app: Application | null = null;
-    private readonly _root = new Container();
-    private _stackMode: SceneStackMode = 'overlay';
-    private _inputMode: SceneInputMode = 'capture';
+    #app: Application | null = null;
+    readonly #root = new Container();
+    #stackMode: SceneStackMode = 'overlay';
+    #inputMode: SceneInputMode = 'capture';
 
-    public static create<T extends SceneData>(
-        definition: T & ThisType<SceneInstance<T>>,
-    ): SceneInstance<T> {
-        return Object.assign(new Scene(), definition) as SceneInstance<T>;
+    public constructor(definition?: T & ThisType<Scene<T> & T>) {
+        if (definition) {
+            Object.assign(this, definition);
+        }
     }
 
-    public constructor() {}
-
     public get app(): Application | null {
-        return this._app;
+        return this.#app;
     }
 
     public set app(app: Application | null) {
-        this._app = app;
+        this.#app = app;
     }
 
     /**
@@ -76,44 +86,44 @@ export class Scene {
      * scene's responsibility.
      */
     public get root(): Container {
-        return this._root;
+        return this.#root;
     }
 
     public get stackMode(): SceneStackMode {
-        return this._stackMode;
+        return this.#stackMode;
     }
 
     public set stackMode(mode: SceneStackMode) {
-        this._stackMode = mode;
+        this.#stackMode = mode;
     }
 
     public get inputMode(): SceneInputMode {
-        return this._inputMode;
+        return this.#inputMode;
     }
 
     public set inputMode(mode: SceneInputMode) {
-        this._inputMode = mode;
+        this.#inputMode = mode;
     }
 
     public addChild(child: RenderNode): this {
-        this._root.addChild(child);
+        this.#root.addChild(child);
 
         return this;
     }
 
     public removeChild(child: RenderNode): this {
-        this._root.removeChild(child);
+        this.#root.removeChild(child);
 
         return this;
     }
 
     public setParticipationPolicy(policy: SceneParticipationPolicy): this {
         if (policy.mode) {
-            this._stackMode = policy.mode;
+            this.#stackMode = policy.mode;
         }
 
         if (policy.input) {
-            this._inputMode = policy.input;
+            this.#inputMode = policy.input;
         }
 
         return this;
@@ -121,21 +131,21 @@ export class Scene {
 
     public getParticipationPolicy(): SceneParticipationPolicy {
         return {
-            mode: this._stackMode,
-            input: this._inputMode,
+            mode: this.#stackMode,
+            input: this.#inputMode,
         };
     }
 
     public load(loader: Loader): Promise<void> | void {
-        // override in subclass or via Scene.create()
+        // override in subclass or via new Scene({ ... })
     }
 
     public init(loader: Loader): Promise<void> | void {
-        // override in subclass or via Scene.create()
+        // override in subclass or via new Scene({ ... })
     }
 
     public update(delta: Time): void {
-        // override in subclass or via Scene.create()
+        // override in subclass or via new Scene({ ... })
     }
 
     /**
@@ -154,20 +164,19 @@ export class Scene {
      * @see Scene.root for why root is structural, not render-authoritative.
      */
     public draw(renderManager: SceneRenderRuntime): void {
-        // override in subclass or via Scene.create()
+        // override in subclass or via new Scene({ ... })
     }
 
     public handleInput(_event: SceneInputEvent): boolean | void {
-        // override in subclass or via Scene.create()
+        // override in subclass or via new Scene({ ... })
     }
 
     public unload(loader: Loader): Promise<void> | void {
-        // override in subclass or via Scene.create()
+        // override in subclass or via new Scene({ ... })
     }
 
     public destroy(): void {
-        this._root.destroy();
-        this._app = null;
+        this.#root.destroy();
+        this.#app = null;
     }
 }
-

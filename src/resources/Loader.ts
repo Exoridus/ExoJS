@@ -551,9 +551,11 @@ export class Loader {
         source = await factory.process(response);
 
         const resource = await factory.create(source, options).catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : String(error);
+            const cause = error instanceof Error ? error : new Error(String(error));
 
-            throw new Error(`Failed to create "${alias}" from "${url}": ${message}`);
+            throw new Error(`Failed to create "${alias}" from "${url}": ${cause.message}`, {
+                cause,
+            });
         });
 
         // Write to caches
@@ -787,7 +789,7 @@ export class Loader {
         }
 
         for (const key of leftKeys) {
-            if (!Object.prototype.hasOwnProperty.call(rightObject, key)) {
+            if (!Object.hasOwn(rightObject, key)) {
                 return false;
             }
 

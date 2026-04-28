@@ -1,0 +1,331 @@
+{
+  "rendering": [
+    {
+      "slug": "sprite",
+      "path": "rendering/sprite.js",
+      "title": "Sprite",
+      "description": "Displays a single texture-backed sprite with basic transforms.",
+      "backend": "core",
+      "tags": [
+        "sprite"
+      ]
+    },
+    {
+      "slug": "spritesheet",
+      "path": "rendering/spritesheet.js",
+      "title": "Spritesheet",
+      "description": "Loads atlas frames from a spritesheet and renders them as sprites.",
+      "backend": "core",
+      "tags": [
+        "atlas",
+        "sprite"
+      ]
+    },
+    {
+      "slug": "container",
+      "path": "rendering/container.js",
+      "title": "Container",
+      "description": "Groups sprites in containers and animates the hierarchy.",
+      "backend": "core",
+      "tags": [
+        "container",
+        "sprite"
+      ]
+    },
+    {
+      "slug": "blendmodes",
+      "path": "rendering/blendmodes.js",
+      "title": "Blendmodes",
+      "description": "Shows built-in blend modes on overlapping sprites.",
+      "backend": "core",
+      "tags": [
+        "blend",
+        "sprite"
+      ]
+    },
+    {
+      "slug": "tinted-sprites",
+      "path": "rendering/tinted-sprites.js",
+      "title": "Tinted Sprites",
+      "description": "Applies tint colors to multiple sprites from one texture.",
+      "backend": "core",
+      "tags": [
+        "tint",
+        "sprite"
+      ]
+    },
+    {
+      "slug": "view-handling",
+      "path": "rendering/view-handling.js",
+      "title": "View Handling",
+      "description": "Moves and zooms the active view over a larger scene.",
+      "backend": "core",
+      "tags": [
+        "camera"
+      ]
+    },
+    {
+      "slug": "render-to-texture",
+      "path": "rendering/render-to-texture.js",
+      "title": "Render To Texture",
+      "description": "Renders a container into a texture and reuses it as a sprite.",
+      "backend": "core",
+      "tags": [
+        "rendertexture",
+        "sprite"
+      ]
+    },
+    {
+      "slug": "display-text",
+      "path": "rendering/display-text.js",
+      "title": "Display Text",
+      "description": "Draws styled text using loaded font assets.",
+      "backend": "core",
+      "tags": [
+        "text"
+      ]
+    },
+    {
+      "slug": "display-video",
+      "path": "rendering/display-video.js",
+      "title": "Display Video",
+      "description": "Displays a video drawable in the scene graph and toggles playback.",
+      "backend": "core",
+      "tags": [
+        "video"
+      ]
+    },
+    {
+      "slug": "display-svg",
+      "path": "rendering/display-svg.js",
+      "title": "Display SVG",
+      "description": "Loads and renders SVG content as a drawable texture.",
+      "backend": "core",
+      "tags": [
+        "svg"
+      ]
+    },
+    {
+      "slug": "masks",
+      "path": "rendering/masks.js",
+      "title": "Masks",
+      "description": "Clips a sprite with an animated Rectangle mask using the unified MaskSource API.",
+      "backend": "core",
+      "tags": [
+        "mask",
+        "sprite"
+      ]
+    }
+  ],
+  "webgpu": [
+    {
+      "slug": "additive-particles",
+      "path": "webgpu/additive-particles.js",
+      "title": "Additive Particles",
+      "description": "Uses built-in additive particle blending on the WebGPU path.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "particles",
+        "blend"
+      ]
+    },
+    {
+      "slug": "multi-texture-sprite-stress",
+      "path": "webgpu/multi-texture-sprite-stress.js",
+      "title": "Multi-Texture Sprite Stress",
+      "description": "Stresses WebGPU sprite batching with many interleaved textures.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "sprite",
+        "stress"
+      ]
+    },
+    {
+      "slug": "particle-stress",
+      "path": "webgpu/particle-stress.js",
+      "title": "Particle Stress",
+      "description": "Exercises dense particle rendering on the built-in WebGPU path.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "particles",
+        "stress"
+      ]
+    },
+    {
+      "slug": "sprite-stress",
+      "path": "webgpu/sprite-stress.js",
+      "title": "Sprite Stress",
+      "description": "Exercises single-texture sprite batching on the built-in WebGPU path.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "sprite",
+        "stress"
+      ]
+    },
+    {
+      "slug": "video-basics",
+      "path": "webgpu/video-basics.js",
+      "title": "Video Basics",
+      "description": "Displays a looping video through the built-in WebGPU drawable path.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "video"
+      ]
+    },
+    {
+      "slug": "rendertexture-basics",
+      "path": "webgpu/rendertexture-basics.js",
+      "title": "RenderTexture Basics",
+      "description": "Renders offscreen into a texture and displays it through a sprite on WebGPU.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "rendertexture"
+      ]
+    },
+    {
+      "slug": "graphics-basics",
+      "path": "webgpu/graphics-basics.js",
+      "title": "Graphics Basics",
+      "description": "Draws built-in Graphics shapes on the official WebGPU path.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "graphics"
+      ]
+    },
+    {
+      "slug": "particle-basics",
+      "path": "webgpu/particle-basics.js",
+      "title": "Particle Basics",
+      "description": "Shows built-in particle emission, motion, scale, and tint on WebGPU.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "particles"
+      ]
+    },
+    {
+      "slug": "sprite-basics",
+      "path": "webgpu/sprite-basics.js",
+      "title": "Sprite Basics",
+      "description": "Renders textured sprites and cropped texture frames on WebGPU.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "sprite"
+      ]
+    },
+    {
+      "slug": "text-basics",
+      "path": "webgpu/text-basics.js",
+      "title": "Text Basics",
+      "description": "Renders built-in text with size, stroke, multiline, and wrap on WebGPU.",
+      "backend": "webgpu",
+      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
+      "tags": [
+        "webgpu",
+        "text"
+      ]
+    },
+    {
+      "slug": "custom-triangle-renderer",
+      "path": "webgpu/custom-triangle-renderer.js",
+      "title": "Custom Triangle Renderer",
+      "description": "Builds a custom WebGPU triangle renderer through the advanced extension path.",
+      "backend": "advanced",
+      "unsupportedNote": "This advanced example requires browser WebGPU support and will not run on unsupported environments.",
+      "notes": [
+        "Advanced backend-specific example."
+      ],
+      "tags": [
+        "webgpu",
+        "advanced"
+      ]
+    }
+  ],
+  "input": [
+    {
+      "slug": "gamepad",
+      "path": "input/gamepad.js",
+      "title": "Gamepad",
+      "description": "Reads controller input and visualizes connected gamepad controls.",
+      "backend": "core",
+      "tags": [
+        "input",
+        "gamepad"
+      ]
+    }
+  ],
+  "collision-detection": [
+    {
+      "slug": "rectangles",
+      "path": "collision-detection/rectangles.js",
+      "title": "Rectangles",
+      "description": "Highlights overlap between rotating rectangle-like sprites.",
+      "backend": "core",
+      "tags": [
+        "collision"
+      ]
+    }
+  ],
+  "particle-system": [
+    {
+      "slug": "bonfire",
+      "path": "particle-system/bonfire.js",
+      "title": "Bonfire",
+      "description": "Builds a layered bonfire effect with the particle system.",
+      "backend": "core",
+      "tags": [
+        "particles"
+      ]
+    },
+    {
+      "slug": "fireworks",
+      "path": "particle-system/fireworks.js",
+      "title": "Fireworks",
+      "description": "Launches fireworks bursts with emitters and particle affectors.",
+      "backend": "core",
+      "tags": [
+        "particles"
+      ]
+    }
+  ],
+  "extras": [
+    {
+      "slug": "audio-visualisation",
+      "path": "extras/audio-visualisation.js",
+      "title": "Audio Visualisation",
+      "description": "Draws waveform and frequency data into a texture-backed canvas.",
+      "backend": "core",
+      "tags": [
+        "audio"
+      ]
+    },
+    {
+      "slug": "benchmark",
+      "path": "extras/benchmark.js",
+      "title": "Benchmark",
+      "description": "Spawns many sprites to stress rendering throughput interactively.",
+      "backend": "core",
+      "tags": [
+        "sprite",
+        "stress"
+      ]
+    }
+  ]
+}

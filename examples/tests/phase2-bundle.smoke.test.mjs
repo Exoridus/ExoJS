@@ -18,7 +18,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const distDir = path.join(projectRoot, 'dist');
 const examplesDistDir = path.join(distDir, 'examples');
 
-const CURRENT_VERSION = '0.4.0';
+const CURRENT_VERSION = '0.5.0';
 
 function readJson(filePath) {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));

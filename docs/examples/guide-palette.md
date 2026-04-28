@@ -19,7 +19,7 @@ Each example is tagged **JS**, **TS**, or **Both**:
 
 | Tag | Pattern | When to use |
 |-----|---------|-------------|
-| `JS` | `Scene.create()` with dynamic `this._field` state | Quick playground demos; existing examples |
+| `JS` | `new Scene({ ... })` with dynamic `this._field` state | Quick playground demos; existing examples |
 | `TS` | `new class extends Scene { private field!: Type }` or named class | Typed scene state, guide examples, richer IntelliSense |
 | `Both` | A paired JS + TS version | High-traffic examples where both audiences land |
 
