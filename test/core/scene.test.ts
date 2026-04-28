@@ -5,11 +5,11 @@ import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 
 class DummyDrawable extends Drawable {}
 
-const createRuntime = (): SceneRenderRuntime => {
+const createRuntime = (): RenderBackend => {
     const renderTarget = new RenderTarget(200, 200, true);
     const stats = createRenderStats();
 
@@ -122,8 +122,8 @@ describe('Scene', () => {
         scene.addChild(world);
         scene.addChild(ui);
 
-        scene.draw = (renderManager): void => {
-            world.render(renderManager);
+        scene.draw = (backend): void => {
+            world.render(backend);
         };
 
         scene.draw(runtime);

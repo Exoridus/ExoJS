@@ -128,8 +128,8 @@ app.start(new Scene({
         this.particleSystem.update(delta);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this.particleSystem.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this.particleSystem.render(backend);
     },
 }));

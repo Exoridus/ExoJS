@@ -1,10 +1,10 @@
 import { Shader } from '../shader/Shader';
-import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
+import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { BufferTypes, BufferUsage } from '@/rendering/types';
 import type { BlendModes } from '@/rendering/types';
-import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
+import type { WebGl2Backend } from './WebGl2Backend';
 import type { Texture } from '../texture/Texture';
 import type { RenderTexture } from '../texture/RenderTexture';
 import vertexSource from './glsl/mask-compose.vert';
@@ -24,7 +24,7 @@ const vertexStrideBytes = 16;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 /**
- * Single-quad two-texture compositor used by `WebGl2RenderManager.composeWithAlphaMask`.
+ * Single-quad two-texture compositor used by `WebGl2Backend.composeWithAlphaMask`.
  *
  * Renders the content texture onto the active render target with each
  * output texel's alpha multiplied by the mask texture's alpha at the
@@ -45,19 +45,19 @@ export class WebGl2MaskCompositor {
     private readonly _maskSamplerSlot: Int32Array = new Int32Array([1]);
     private _connection: MaskCompositorConnection | null = null;
 
-    public connect(runtime: WebGl2RendererRuntime): void {
+    public connect(backend: WebGl2Backend): void {
         if (this._connection !== null) {
             return;
         }
 
-        const gl = runtime.context;
+        const gl = backend.context;
         const vaoHandle = gl.createVertexArray();
 
         if (vaoHandle === null) {
             throw new Error('WebGl2MaskCompositor: could not create vertex array object.');
         }
 
-        this._shader.connect(createWebGl2ShaderRuntime(gl));
+        this._shader.connect(createWebGl2ShaderProgram(gl));
 
         const bufferHandles = new Map<WebGl2RenderBuffer, WebGLBuffer>();
         const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw)
@@ -94,7 +94,7 @@ export class WebGl2MaskCompositor {
     }
 
     public compose(
-        runtime: WebGl2RendererRuntime,
+        backend: WebGl2Backend,
         content: Texture | RenderTexture,
         mask: Texture | RenderTexture,
         x: number,
@@ -117,9 +117,9 @@ export class WebGl2MaskCompositor {
 
         // Bind the compositor program. Setting projection + sampler uniforms
         // each call because they need to match the current render target.
-        runtime.bindShader(this._shader);
+        backend.bindShader(this._shader);
 
-        const view = runtime.view;
+        const view = backend.view;
         const projection = view.getTransform().toArray(false);
 
         this._shader.getUniform('u_projection').setValue(projection);
@@ -127,20 +127,20 @@ export class WebGl2MaskCompositor {
         this._shader.getUniform('u_mask').setValue(this._maskSamplerSlot);
         this._shader.sync();
 
-        runtime.bindTexture(content, 0);
-        runtime.bindTexture(mask, 1);
-        runtime.setBlendMode(blendMode);
+        backend.bindTexture(content, 0);
+        backend.bindTexture(mask, 1);
+        backend.setBlendMode(blendMode);
 
-        runtime.bindVertexArrayObject(connection.vao);
+        backend.bindVertexArrayObject(connection.vao);
         connection.vertexBuffer.upload(this._float32View);
         connection.vao.draw(6, 0);
 
-        runtime.stats.batches++;
-        runtime.stats.drawCalls++;
+        backend.stats.batches++;
+        backend.stats.drawCalls++;
 
         // Reset the active texture unit to 0 to avoid leaking unit 1 into
         // subsequent renderer state.
-        runtime.bindTexture(null, 1);
+        backend.bindTexture(null, 1);
     }
 
     private _writeQuadVertices(left: number, top: number, right: number, bottom: number): void {

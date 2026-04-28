@@ -87,13 +87,13 @@ app.start(new Scene({
         ]);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
+    draw(backend) {
+        backend.clear();
 
-        renderManager.setView(this._camera);
-        this._sprite.render(renderManager);
+        backend.setView(this._camera);
+        this._sprite.render(backend);
 
-        renderManager.setView(null);
-        this._info.render(renderManager);
+        backend.setView(null);
+        this._info.render(backend);
     },
 }));

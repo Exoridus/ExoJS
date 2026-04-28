@@ -82,12 +82,12 @@ app.start(new Scene({
         ));
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._headline.render(renderManager);
-        this._subhead.render(renderManager);
-        this._multiline.render(renderManager);
-        this._wrapped.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._headline.render(backend);
+        this._subhead.render(backend);
+        this._multiline.render(backend);
+        this._wrapped.render(backend);
     },
 
     unload() {

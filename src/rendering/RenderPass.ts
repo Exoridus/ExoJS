@@ -1,5 +1,5 @@
-import type { SceneRenderRuntime } from './SceneRenderRuntime';
+import type { RenderBackend } from './RenderBackend';
 
 export interface RenderPass {
-    execute(runtime: SceneRenderRuntime): void;
+    execute(backend: RenderBackend): void;
 }

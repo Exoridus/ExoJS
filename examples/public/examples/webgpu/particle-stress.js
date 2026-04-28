@@ -140,11 +140,11 @@ app.start(new Scene({
         }
     },
 
-    draw(renderManager) {
-        renderManager.clear();
+    draw(backend) {
+        backend.clear();
 
         for (const system of this._particleSystems) {
-            system.instance.render(renderManager);
+            system.instance.render(backend);
         }
 
     },

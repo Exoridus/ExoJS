@@ -2,10 +2,10 @@ import { Drawable } from '@/rendering/Drawable';
 import { Container } from '@/rendering/Container';
 import { SceneNode } from '@/core/SceneNode';
 import type { Color } from '@/core/Color';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 
 class DummyDrawable extends Drawable {
-    public override render(_renderManager: SceneRenderRuntime): this {
+    public override render(_backend: RenderBackend): this {
         return this;
     }
 }

@@ -6,12 +6,12 @@ import { createRenderStats, resetRenderStats } from '../../src/rendering/RenderS
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
 import { RenderTexture } from '../../src/rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from '../../src/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '../../src/rendering/RenderBackend';
 
 interface BenchmarkScenario {
     readonly name: string;
     readonly root: Container;
-    beforeFrame(frame: number, runtime: SceneRenderRuntime): void;
+    beforeFrame(frame: number, runtime: RenderBackend): void;
 }
 
 interface BenchmarkResult {
@@ -27,7 +27,7 @@ const frameCount = 240;
 const viewportWidth = 800;
 const viewportHeight = 600;
 
-const createRuntime = (): SceneRenderRuntime => {
+const createRuntime = (): RenderBackend => {
     const renderTarget = new RenderTarget(viewportWidth, viewportHeight, true);
     const stats = createRenderStats();
 

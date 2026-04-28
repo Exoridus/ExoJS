@@ -1,7 +1,7 @@
 import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
-import { WebGl2RenderManager } from '@/rendering/webgl2/WebGl2RenderManager';
-import { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
+import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
+import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { InputManager } from '@/input/InputManager';
 import { Loader } from '@/resources/Loader';
 import { Signal } from './Signal';
@@ -9,7 +9,7 @@ import { Color } from './Color';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
 import type { CacheStore } from '@/resources/CacheStore';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { GamepadDefinition } from '@/input/GamepadDefinitions';
 
 export enum ApplicationStatus {
@@ -101,7 +101,7 @@ export class Application {
     private _frameCount = 0;
     private _frameRequest = 0;
     private _backendType: 'webgl2' | 'webgpu';
-    private _renderManager: SceneRenderRuntime;
+    private _backend: RenderBackend;
 
     public constructor(appSettings?: Partial<ApplicationOptions>) {
         this.options = {
@@ -122,7 +122,7 @@ export class Application {
             cache: this.options.cache,
         });
         this._backendType = this.resolveInitialBackendType();
-        this._renderManager = this.createRenderManager(this._backendType);
+        this._backend = this.createBackend(this._backendType);
         this.inputManager = new InputManager(this);
         this.sceneManager = new SceneManager(this);
         this._updateHandler = this.update.bind(this);
@@ -150,8 +150,8 @@ export class Application {
         return this._frameCount;
     }
 
-    public get renderManager(): SceneRenderRuntime {
-        return this._renderManager;
+    public get backend(): RenderBackend {
+        return this._backend;
     }
 
     public async start(scene: Scene): Promise<this> {
@@ -179,10 +179,10 @@ export class Application {
             const frameDelta = this._frameClock.elapsedTime;
             const frameStart = performance.now();
 
-            this.renderManager.resetStats();
+            this.backend.resetStats();
 
             this.inputManager.update();
-            const runtimeView = (this.renderManager as Partial<{
+            const runtimeView = (this.backend as Partial<{
                 view: Partial<{ update(deltaMilliseconds: number): unknown; }>;
             }>).view;
 
@@ -191,8 +191,8 @@ export class Application {
             }
 
             this.sceneManager.update(frameDelta);
-            this.renderManager.flush();
-            this.renderManager.stats.frameTimeMs = performance.now() - frameStart;
+            this.backend.flush();
+            this.backend.stats.frameTimeMs = performance.now() - frameStart;
             this._frameRequest = requestAnimationFrame(this._updateHandler);
             this._frameClock.restart();
             this._frameCount++;
@@ -217,7 +217,7 @@ export class Application {
     }
 
     public resize(width: number, height: number): this {
-        this.renderManager.resize(width, height);
+        this.backend.resize(width, height);
         this.onResize.dispatch(width, height, this);
 
         return this;
@@ -227,7 +227,7 @@ export class Application {
         this.stop();
         this.loader.destroy();
         this.inputManager.destroy();
-        this._renderManager.destroy();
+        this._backend.destroy();
         this.sceneManager.destroy();
         this._startupClock.destroy();
         this._activeClock.destroy();
@@ -249,26 +249,26 @@ export class Application {
         return this.canUseWebGpu() ? 'webgpu' : 'webgl2';
     }
 
-    private createRenderManager(backendType: 'webgl2' | 'webgpu'): SceneRenderRuntime {
+    private createBackend(backendType: 'webgl2' | 'webgpu'): RenderBackend {
         if (backendType === 'webgpu') {
-            return new WebGpuRenderManager(this);
+            return new WebGpuBackend(this);
         }
 
-        return new WebGl2RenderManager(this);
+        return new WebGl2Backend(this);
     }
 
     private async initializeRenderManager(): Promise<void> {
         try {
-            await this._renderManager.initialize();
+            await this._backend.initialize();
         } catch (error) {
             if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
                 throw error;
             }
 
-            this._renderManager.destroy();
+            this._backend.destroy();
             this._backendType = 'webgl2';
-            this._renderManager = this.createRenderManager(this._backendType);
-            await this._renderManager.initialize();
+            this._backend = this.createBackend(this._backendType);
+            await this._backend.initialize();
         }
     }
 

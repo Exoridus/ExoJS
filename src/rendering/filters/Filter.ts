@@ -1,9 +1,9 @@
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 
 export abstract class Filter {
     public abstract apply(
-        runtime: SceneRenderRuntime,
+        backend: RenderBackend,
         input: RenderTexture,
         output: RenderTexture,
     ): void;

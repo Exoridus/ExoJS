@@ -14,7 +14,7 @@ import type { Shader } from '../shader/Shader';
 import type { Texture } from '../texture/Texture';
 import type { WebGl2VertexArrayObject } from '../webgl2/WebGl2VertexArrayObject';
 import type { View } from '../View';
-import type { WebGpuRendererRuntime } from './WebGpuRendererRuntime';
+import type { RenderBackend } from '../RenderBackend';
 import { RenderTarget } from '../RenderTarget';
 import { WebGpuPrimitiveRenderer } from './WebGpuPrimitiveRenderer';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
@@ -49,10 +49,10 @@ interface PixelClipBoundsState {
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 
-export class WebGpuRenderManager implements WebGpuRendererRuntime {
+export class WebGpuBackend implements RenderBackend {
 
     public readonly backendType = RenderBackendType.WebGpu;
-    public readonly rendererRegistry = new RendererRegistry<WebGpuRendererRuntime>();
+    public readonly rendererRegistry = new RendererRegistry<WebGpuBackend>();
 
     private readonly _canvas: HTMLCanvasElement;
     private readonly _rootRenderTarget: RenderTarget;

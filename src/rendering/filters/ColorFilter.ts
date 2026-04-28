@@ -3,7 +3,7 @@ import { BlendModes } from '@/rendering/types';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Filter } from './Filter';
 
 export class ColorFilter extends Filter {
@@ -21,7 +21,7 @@ export class ColorFilter extends Filter {
         return this._color;
     }
 
-    public apply(runtime: SceneRenderRuntime, input: RenderTexture, output: RenderTexture): void {
+    public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
         this._sprite
             .setTexture(input)
             .setBlendMode(BlendModes.Normal)
@@ -33,9 +33,9 @@ export class ColorFilter extends Filter {
         this._sprite.width = output.width;
         this._sprite.height = output.height;
 
-        runtime.execute(new RenderTargetPass(
+        backend.execute(new RenderTargetPass(
             () => {
-                this._sprite.render(runtime);
+                this._sprite.render(backend);
             },
             {
                 target: output,

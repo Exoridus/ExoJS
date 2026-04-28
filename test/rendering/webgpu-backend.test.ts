@@ -16,8 +16,7 @@ import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
 import type { Renderer } from '@/rendering/Renderer';
-import { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { BlendModes, RenderingPrimitives, ScaleModes } from '@/rendering/types';
 
 interface MockWebGpuEnvironment {
@@ -69,16 +68,16 @@ interface MockVideoElement {
 }
 
 class CustomDrawableA extends Drawable {
-    public override render(renderManager: WebGpuRendererRuntime): this {
-        renderManager.draw(this);
+    public override render(backend: WebGpuBackend): this {
+        backend.draw(this);
 
         return this;
     }
 }
 
 class CustomDrawableB extends Drawable {
-    public override render(renderManager: WebGpuRendererRuntime): this {
-        renderManager.draw(this);
+    public override render(backend: WebGpuBackend): this {
+        backend.draw(this);
 
         return this;
     }
@@ -362,7 +361,7 @@ const createMockVideoElement = (): MockVideoElement => {
     };
 };
 
-const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuRendererRuntime, Target> => ({
+const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuBackend, Target> => ({
     backendType: RenderBackendType.WebGpu,
     connect: jest.fn(),
     disconnect: jest.fn(),
@@ -370,7 +369,7 @@ const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuRendere
     flush: jest.fn(),
 });
 
-describe('WebGpuRenderManager', () => {
+describe('WebGpuBackend', () => {
     test('flushes the active renderer when switching renderer types', async () => {
         const environment = createMockWebGpuEnvironment();
 
@@ -383,7 +382,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const firstRenderer = createCustomRenderer<CustomDrawableA>();
             const secondRenderer = createCustomRenderer<CustomDrawableB>();
 
@@ -415,7 +414,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const renderer = createCustomRenderer<CustomDrawableA>();
             const pass = {
                 execute: jest.fn(),
@@ -446,7 +445,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const renderer = createCustomRenderer<CustomDrawableA>();
 
             await manager.initialize();
@@ -473,7 +472,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             expect(environment.canvas.width).toBe(640);
             expect(environment.canvas.height).toBe(360);
@@ -501,7 +500,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             await manager.initialize();
 
@@ -525,7 +524,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const graphics = new Graphics();
 
             graphics.fillColor = Color.red;
@@ -562,7 +561,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const graphics = new Graphics();
 
             graphics.fillColor = Color.red;
@@ -602,7 +601,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const graphics = new Graphics();
 
             graphics.fillColor = Color.red;
@@ -642,7 +641,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 16],
             }), Color.red, RenderingPrimitives.Points);
@@ -676,7 +675,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 16],
             }), Color.red, RenderingPrimitives.Lines);
@@ -710,7 +709,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 16, 32, 8],
             }), Color.red, RenderingPrimitives.LineStrip);
@@ -744,7 +743,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 0, 16, 16],
             }), Color.red, RenderingPrimitives.LineLoop);
@@ -779,7 +778,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const shape = new DrawableShape(new Geometry({
                 vertices: [0, 0, 16, 0, 16, 16, 0, 16],
             }), Color.red, RenderingPrimitives.TriangleFan);
@@ -813,7 +812,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -852,7 +851,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const firstSprite = new Sprite(texture);
@@ -890,7 +889,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const firstCanvas = document.createElement('canvas');
             const secondCanvas = document.createElement('canvas');
             const firstTexture = new Texture(firstCanvas);
@@ -932,7 +931,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const firstCanvas = document.createElement('canvas');
             const texture = new Texture(firstCanvas);
             const firstSprite = new Sprite(texture);
@@ -969,7 +968,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const firstCanvas = document.createElement('canvas');
             const secondCanvas = document.createElement('canvas');
             const firstTexture = new Texture(firstCanvas);
@@ -1012,7 +1011,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sprites: Array<Sprite> = [];
 
             for (let index = 0; index < 9; index++) {
@@ -1059,7 +1058,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const firstSprite = new Sprite(texture);
@@ -1097,7 +1096,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -1140,7 +1139,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -1183,7 +1182,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -1227,7 +1226,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -1265,7 +1264,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const text = new Text('Hello WebGPU', new TextStyle({
                 fill: 'white',
                 stroke: 'black',
@@ -1301,7 +1300,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const text = new Text('Hello', new TextStyle({
                 fill: 'white',
             }), undefined, textCanvas.canvas);
@@ -1336,7 +1335,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const text = new Text('Canvas swap', new TextStyle({
                 fill: 'white',
             }), undefined, initialCanvas.canvas);
@@ -1375,7 +1374,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const video = new Video(mockVideo.video);
 
             await manager.initialize();
@@ -1406,7 +1405,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const video = new Video(mockVideo.video);
 
             await manager.initialize();
@@ -1440,7 +1439,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const video = new Video(mockVideo.video);
 
             await manager.initialize();
@@ -1477,7 +1476,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             mockVideo.setDimensions(64, 32);
 
@@ -1516,7 +1515,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const system = new ParticleSystem(texture);
@@ -1560,7 +1559,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const system = new ParticleSystem(texture);
@@ -1605,7 +1604,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const system = new ParticleSystem(texture);
@@ -1652,7 +1651,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const system = new ParticleSystem(texture);
@@ -1699,7 +1698,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const system = new ParticleSystem(texture);
@@ -1741,7 +1740,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const renderTexture = new RenderTexture(64, 64);
             const graphics = new Graphics();
             const sprite = new Sprite(renderTexture);
@@ -1787,7 +1786,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const renderTexture = new RenderTexture(64, 64);
             const graphics = new Graphics();
             const sourceCanvas = document.createElement('canvas');
@@ -1834,7 +1833,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -1871,7 +1870,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -1912,7 +1911,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const container = new Container();
@@ -1962,7 +1961,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const first = new Sprite(texture);
@@ -2003,7 +2002,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
             const sprite = new Sprite(texture);
@@ -2062,7 +2061,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             await expect(manager.initialize()).rejects.toThrow('getPreferredCanvasFormat');
         } finally {
@@ -2094,7 +2093,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             await expect(manager.initialize()).rejects.toThrow('Failed to request a WebGPU device.');
         } finally {
@@ -2132,7 +2131,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             await expect(manager.initialize()).rejects.toThrow('Could not acquire a WebGPU adapter.');
             await expect(manager.initialize()).resolves.toBe(manager);
@@ -2153,7 +2152,7 @@ describe('WebGpuRenderManager', () => {
                     clearColor: Color.black,
                 },
             } as unknown as Application;
-            const manager = new WebGpuRenderManager(app);
+            const manager = new WebGpuBackend(app);
 
             await manager.initialize();
 

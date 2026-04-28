@@ -37,8 +37,8 @@ interface ApplicationTestHarness {
         stats: { frameTimeMs: number; };
         renderTarget: { setView: jest.Mock };
     };
-    readonly RenderManagerMock: jest.Mock;
-    readonly WebGpuRenderManagerMock: jest.Mock;
+    readonly BackendMock: jest.Mock;
+    readonly WebGpuBackendMock: jest.Mock;
     readonly sceneManager: {
         update: jest.Mock;
         setScene: jest.Mock;
@@ -80,17 +80,17 @@ const loadApplicationHarness = (options: {
     const loader = {
         destroy: jest.fn(),
     };
-    const RenderManagerMock = jest.fn(() => webglManager);
-    const WebGpuRenderManagerMock = jest.fn(() => webgpuManager);
+    const BackendMock = jest.fn(() => webglManager);
+    const WebGpuBackendMock = jest.fn(() => webgpuManager);
     let Application!: typeof import('@/core/Application').Application;
     let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
 
     jest.resetModules();
-    jest.doMock('@/rendering/webgl2/WebGl2RenderManager', () => ({
-        WebGl2RenderManager: RenderManagerMock,
+    jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+        WebGl2Backend: BackendMock,
     }));
-    jest.doMock('@/rendering/webgpu/WebGpuRenderManager', () => ({
-        WebGpuRenderManager: WebGpuRenderManagerMock,
+    jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+        WebGpuBackend: WebGpuBackendMock,
     }));
     jest.doMock('@/resources/Loader', () => ({
         Loader: jest.fn(() => loader),
@@ -113,8 +113,8 @@ const loadApplicationHarness = (options: {
         ApplicationStatus,
         webglManager,
         webgpuManager,
-        RenderManagerMock,
-        WebGpuRenderManagerMock,
+        BackendMock,
+        WebGpuBackendMock,
         sceneManager,
     };
 };
@@ -132,7 +132,7 @@ describe('Application', () => {
         const inputManager = { update: jest.fn() };
         const sceneManager = { update: jest.fn() };
         const viewUpdate = jest.fn();
-        const renderManager = {
+        const backend = {
             flush: jest.fn(),
             resetStats: jest.fn().mockReturnThis(),
             stats: { frameTimeMs: 0 },
@@ -146,7 +146,7 @@ describe('Application', () => {
         rawApp['_status'] = ApplicationStatus.Running;
         rawApp['inputManager'] = inputManager;
         rawApp['sceneManager'] = sceneManager;
-        rawApp['_renderManager'] = renderManager;
+        rawApp['_backend'] = backend;
         rawApp['_frameClock'] = frameClock;
         rawApp['_updateHandler'] = jest.fn();
         rawApp['_frameCount'] = 0;
@@ -158,9 +158,9 @@ describe('Application', () => {
         expect(inputManager.update).toHaveBeenCalledTimes(1);
         expect(sceneManager.update).toHaveBeenCalledTimes(1);
         expect(viewUpdate).toHaveBeenCalledWith(16);
-        expect(renderManager.resetStats).toHaveBeenCalledTimes(1);
-        expect(renderManager.flush).toHaveBeenCalledTimes(1);
-        expect(renderManager.stats.frameTimeMs).toBeGreaterThanOrEqual(0);
+        expect(backend.resetStats).toHaveBeenCalledTimes(1);
+        expect(backend.flush).toHaveBeenCalledTimes(1);
+        expect(backend.stats.frameTimeMs).toBeGreaterThanOrEqual(0);
         expect(frameClock.restart).toHaveBeenCalledTimes(1);
         expect(rafSpy).toHaveBeenCalledTimes(1);
     });
@@ -169,14 +169,14 @@ describe('Application', () => {
         const restoreGpu = setNavigatorGpu({});
 
         try {
-            const { Application, RenderManagerMock, WebGpuRenderManagerMock } = loadApplicationHarness();
+            const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
 
             new Application({
                 canvas: document.createElement('canvas'),
             });
 
-            expect(WebGpuRenderManagerMock).toHaveBeenCalledTimes(1);
-            expect(RenderManagerMock).not.toHaveBeenCalled();
+            expect(WebGpuBackendMock).toHaveBeenCalledTimes(1);
+            expect(BackendMock).not.toHaveBeenCalled();
         } finally {
             restoreGpu();
         }
@@ -186,14 +186,14 @@ describe('Application', () => {
         const restoreGpu = setNavigatorGpu(undefined);
 
         try {
-            const { Application, RenderManagerMock, WebGpuRenderManagerMock } = loadApplicationHarness();
+            const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
 
             new Application({
                 canvas: document.createElement('canvas'),
             });
 
-            expect(RenderManagerMock).toHaveBeenCalledTimes(1);
-            expect(WebGpuRenderManagerMock).not.toHaveBeenCalled();
+            expect(BackendMock).toHaveBeenCalledTimes(1);
+            expect(WebGpuBackendMock).not.toHaveBeenCalled();
         } finally {
             restoreGpu();
         }
@@ -203,15 +203,15 @@ describe('Application', () => {
         const restoreGpu = setNavigatorGpu({});
 
         try {
-            const { Application, RenderManagerMock, WebGpuRenderManagerMock } = loadApplicationHarness();
+            const { Application, BackendMock, WebGpuBackendMock } = loadApplicationHarness();
 
             new Application({
                 canvas: document.createElement('canvas'),
                 backend: { type: 'webgl2' },
             });
 
-            expect(RenderManagerMock).toHaveBeenCalledTimes(1);
-            expect(WebGpuRenderManagerMock).not.toHaveBeenCalled();
+            expect(BackendMock).toHaveBeenCalledTimes(1);
+            expect(WebGpuBackendMock).not.toHaveBeenCalled();
         } finally {
             restoreGpu();
         }
@@ -229,8 +229,8 @@ describe('Application', () => {
                 Application,
                 webglManager,
                 webgpuManager,
-                RenderManagerMock,
-                WebGpuRenderManagerMock,
+                BackendMock,
+                WebGpuBackendMock,
                 sceneManager,
             } = loadApplicationHarness({ webgpuInitialize, webglInitialize });
             const app = new Application({
@@ -239,13 +239,13 @@ describe('Application', () => {
 
             await app.start({} as import('@/core/Scene').Scene);
 
-            expect(WebGpuRenderManagerMock).toHaveBeenCalledTimes(1);
+            expect(WebGpuBackendMock).toHaveBeenCalledTimes(1);
             expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
             expect(webgpuManager.destroy).toHaveBeenCalledTimes(1);
-            expect(RenderManagerMock).toHaveBeenCalledTimes(1);
+            expect(BackendMock).toHaveBeenCalledTimes(1);
             expect(webglManager.initialize).toHaveBeenCalledTimes(1);
             expect(sceneManager.setScene).toHaveBeenCalledTimes(1);
-            expect(app.renderManager).toBe(webglManager);
+            expect(app.backend).toBe(webglManager);
         } finally {
             restoreGpu();
             rafSpy.mockRestore();
@@ -262,7 +262,7 @@ describe('Application', () => {
             const {
                 Application,
                 webgpuManager,
-                RenderManagerMock,
+                BackendMock,
             } = loadApplicationHarness({ webgpuInitialize });
             const app = new Application({
                 canvas: document.createElement('canvas'),
@@ -272,14 +272,14 @@ describe('Application', () => {
             await expect(app.start({} as import('@/core/Scene').Scene)).rejects.toThrow(webgpuError);
             expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
             expect(webgpuManager.destroy).not.toHaveBeenCalled();
-            expect(RenderManagerMock).not.toHaveBeenCalled();
+            expect(BackendMock).not.toHaveBeenCalled();
         } finally {
             restoreGpu();
             rafSpy.mockRestore();
         }
     });
 
-    test('renderManager exposes a renderTarget on both backend paths', () => {
+    test('backend exposes a renderTarget on both backend paths', () => {
         const restoreGpu = setNavigatorGpu({});
 
         try {
@@ -293,10 +293,10 @@ describe('Application', () => {
                 backend: { type: 'webgl2' },
             });
 
-            expect(webgpuApp.renderManager.renderTarget).toBeDefined();
-            expect(typeof webgpuApp.renderManager.renderTarget.setView).toBe('function');
-            expect(webglApp.renderManager.renderTarget).toBeDefined();
-            expect(typeof webglApp.renderManager.renderTarget.setView).toBe('function');
+            expect(webgpuApp.backend.renderTarget).toBeDefined();
+            expect(typeof webgpuApp.backend.renderTarget.setView).toBe('function');
+            expect(webglApp.backend.renderTarget).toBeDefined();
+            expect(typeof webglApp.backend.renderTarget.setView).toBe('function');
         } finally {
             restoreGpu();
         }

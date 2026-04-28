@@ -30,17 +30,17 @@ export * from './webgl2/WebGl2ShaderMappings';
 export * from './webgl2/WebGl2VertexArrayObject';
 export * from './webgl2/WebGl2ParticleRenderer';
 export * from './webgl2/WebGl2PrimitiveRenderer';
-export type { WebGl2RendererRuntime } from './webgl2/WebGl2RendererRuntime';
-export * from './webgl2/WebGl2RenderManager';
-export * from './webgl2/WebGl2ShaderRuntime';
+export type { WebGl2Backend } from './webgl2/WebGl2Backend';
+export * from './webgl2/WebGl2Backend';
+export * from './webgl2/WebGl2ShaderProgram';
 export * from './webgl2/WebGl2SpriteRenderer';
 
 export * from './webgpu/AbstractWebGpuRenderer';
 export * from './webgpu/WebGpuBlendState';
 export * from './webgpu/WebGpuParticleRenderer';
 export * from './webgpu/WebGpuPrimitiveRenderer';
-export type { WebGpuRendererRuntime } from './webgpu/WebGpuRendererRuntime';
-export * from './webgpu/WebGpuRenderManager';
+export type { WebGpuBackend } from './webgpu/WebGpuBackend';
+export * from './webgpu/WebGpuBackend';
 export * from './webgpu/WebGpuSpriteRenderer';
 
 export * from './types';
@@ -55,7 +55,7 @@ export * from './RenderTargetPass';
 export * from './CallbackRenderPass';
 export * from './Renderer';
 export * from './RendererRegistry';
-export * from './SceneRenderRuntime';
+export * from './RenderBackend';
 export * from './View';
 
 export * from './filters/Filter';

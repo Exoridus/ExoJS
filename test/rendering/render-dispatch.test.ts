@@ -4,7 +4,7 @@ import { Drawable } from '@/rendering/Drawable';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { Container } from '@/rendering/Container';
@@ -15,10 +15,10 @@ import { RenderTexture } from '@/rendering/texture/RenderTexture';
 const createRuntime = () => {
     const renderTarget = new RenderTarget(200, 200, true);
     const stats = createRenderStats();
-    const draw = jest.fn(function(this: SceneRenderRuntime) {
+    const draw = jest.fn(function(this: RenderBackend) {
         return this;
     });
-    const runtime: SceneRenderRuntime = {
+    const runtime: RenderBackend = {
         backendType: RenderBackendType.WebGl2,
         stats,
         renderTarget,
@@ -91,8 +91,8 @@ const createTexture = (): Texture => {
 };
 
 class ChildDrawable extends Drawable {
-    public override render(renderManager: SceneRenderRuntime): this {
-        renderManager.draw(this);
+    public override render(backend: RenderBackend): this {
+        backend.draw(this);
 
         return this;
     }

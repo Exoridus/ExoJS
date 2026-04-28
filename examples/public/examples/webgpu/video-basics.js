@@ -39,9 +39,9 @@ app.start(new Scene({
         this._video.setScale(scale);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._video.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._video.render(backend);
 
     },
 

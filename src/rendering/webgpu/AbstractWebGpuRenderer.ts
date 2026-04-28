@@ -3,67 +3,67 @@
 import { RenderBackendType } from '../RenderBackendType';
 import type { Drawable } from '../Drawable';
 import type { Renderer } from '../Renderer';
-import type { WebGpuRendererRuntime } from './WebGpuRendererRuntime';
+import type { WebGpuBackend } from './WebGpuBackend';
 
 /**
  * Base class for WebGPU renderers.
  *
  * Manages the connect/disconnect lifecycle and provides a safe
- * `getRuntime()` accessor that throws if the renderer is not connected.
+ * `getBackend()` accessor that throws if the renderer is not connected.
  *
  * Subclasses must implement:
- * - onConnect(runtime): set up GPU resources (shader modules, pipelines, buffers)
+ * - onConnect(backend): set up GPU resources (shader modules, pipelines, buffers)
  * - onDisconnect(): tear down GPU resources
  * - render(drawable): collect draw call data for the given drawable
  * - flush(): encode and submit command buffers for all collected draw calls
  */
-export abstract class AbstractWebGpuRenderer<Target extends Drawable> implements Renderer<WebGpuRendererRuntime, Target> {
+export abstract class AbstractWebGpuRenderer<Target extends Drawable> implements Renderer<WebGpuBackend, Target> {
 
     public readonly backendType = RenderBackendType.WebGpu;
 
-    private _runtime: WebGpuRendererRuntime | null = null;
+    protected _backend: WebGpuBackend | null = null;
 
-    public connect(runtime: WebGpuRendererRuntime): void {
-        if (this._runtime !== null) {
+    public connect(backend: WebGpuBackend): void {
+        if (this._backend !== null) {
             return;
         }
 
-        if (runtime.backendType !== RenderBackendType.WebGpu) {
+        if (backend.backendType !== RenderBackendType.WebGpu) {
             throw new Error(
-                `${this.constructor.name} requires a WebGPU runtime, `
-                + `but received backendType ${String(runtime.backendType)}.`,
+                `${this.constructor.name} requires a WebGPU backend, `
+                + `but received backendType ${String(backend.backendType)}.`,
             );
         }
 
-        this._runtime = runtime;
-        this.onConnect(runtime);
+        this._backend = backend;
+        this.onConnect(backend);
     }
 
     public disconnect(): void {
-        if (this._runtime === null) {
+        if (this._backend === null) {
             return;
         }
 
         this.flush();
         this.onDisconnect();
-        this._runtime = null;
+        this._backend = null;
     }
 
     public abstract render(drawable: Target): void;
     public abstract flush(): void;
 
-    protected abstract onConnect(runtime: WebGpuRendererRuntime): void;
+    protected abstract onConnect(backend: WebGpuBackend): void;
     protected abstract onDisconnect(): void;
 
-    protected getRuntime(): WebGpuRendererRuntime {
-        if (this._runtime === null) {
-            throw new Error(`${this.constructor.name} is not connected to a runtime.`);
+    protected getBackend(): WebGpuBackend {
+        if (this._backend === null) {
+            throw new Error(`${this.constructor.name} is not connected to a backend.`);
         }
 
-        return this._runtime;
+        return this._backend;
     }
 
-    protected getRuntimeOrNull(): WebGpuRendererRuntime | null {
-        return this._runtime;
+    protected getBackendOrNull(): WebGpuBackend | null {
+        return this._backend;
     }
 }

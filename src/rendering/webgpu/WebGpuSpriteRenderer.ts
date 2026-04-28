@@ -4,8 +4,7 @@ import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRendere
 import type { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
@@ -159,7 +158,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
 
-    private _renderManager: WebGpuRenderManager | null = null;
     private _device: GPUDevice | null = null;
     private _shaderModule: GPUShaderModule | null = null;
     private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
@@ -181,13 +179,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     private _instanceCount = 0;
     private _currentBlendMode: BlendModes | null = null;
 
-    protected onConnect(runtime: WebGpuRendererRuntime): void {
-        if (this._renderManager) {
+    protected onConnect(backend: WebGpuBackend): void {
+        if (this._device) {
             return;
         }
 
-        this._renderManager = runtime as WebGpuRenderManager;
-        this._device = this._renderManager.device;
+        this._device = backend.device;
         this._shaderModule = this._device.createShaderModule({ code: spriteShaderSource });
 
         this._uniformBindGroupLayout = this._device.createBindGroupLayout({
@@ -258,7 +255,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         this._uniformBindGroupLayout = null;
         this._shaderModule = null;
         this._device = null;
-        this._renderManager = null;
+        this._backend = null;
         this._instanceCapacity = 0;
         this._instanceData = new ArrayBuffer(0);
         this._instanceFloat32 = new Float32Array(this._instanceData);
@@ -269,12 +266,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     public render(sprite: Sprite): void {
-        const renderManager = this._renderManager;
+        const backend = this._backend;
         const texture = sprite.texture;
 
         // Same early-out conditions as the deferred renderer used to apply.
         if (
-            renderManager === null
+            backend === null
             || (!(texture instanceof Texture) && !(texture instanceof RenderTexture))
             || texture.width === 0
             || texture.height === 0
@@ -295,7 +292,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         }
 
         this._currentBlendMode = blendMode;
-        renderManager.setBlendMode(blendMode);
+        backend.setBlendMode(blendMode);
 
         // Resolve / assign texture slot.
         let slot = this._textureSlots.get(texture);
@@ -306,7 +303,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             this._activeTextures[slot] = texture;
         }
 
-        const premultiplySample = renderManager.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+        const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
         const packedSlotFlags = slot | (premultiplySample << 8);
 
         // Ensure capacity covers the new entry BEFORE packing — otherwise the
@@ -318,20 +315,20 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     public flush(): void {
-        const renderManager = this._renderManager;
+        const backend = this._backend;
         const device = this._device;
         const uniformBuffer = this._uniformBuffer;
         const uniformBindGroup = this._uniformBindGroup;
 
-        if (!renderManager || !device || !uniformBuffer || !uniformBindGroup) {
+        if (!backend || !device || !uniformBuffer || !uniformBindGroup) {
             return;
         }
 
-        if (this._instanceCount === 0 && !renderManager.clearRequested) {
+        if (this._instanceCount === 0 && !backend.clearRequested) {
             return;
         }
 
-        const viewMatrix = renderManager.view.getTransform();
+        const viewMatrix = backend.view.getTransform();
 
         this._projectionData.set([
             viewMatrix.a, viewMatrix.c, 0, 0,
@@ -350,11 +347,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
-            colorAttachments: [renderManager.createColorAttachment()],
+            colorAttachments: [backend.createColorAttachment()],
         });
-        renderManager.stats.renderPasses++;
+        backend.stats.renderPasses++;
 
-        const scissor = renderManager.getScissorRect();
+        const scissor = backend.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
         if (scissor !== null && !maskClipsAll) {
@@ -370,8 +367,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 this._instanceCount * instanceStrideBytes,
             );
 
-            const pipeline = this._getPipeline(this._currentBlendMode, renderManager.renderTargetFormat);
-            const textureBindGroup = this._createTextureBindGroup(device, renderManager);
+            const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat);
+            const textureBindGroup = this._createTextureBindGroup(device, backend);
 
             pass.setPipeline(pipeline);
             pass.setBindGroup(0, uniformBindGroup);
@@ -380,12 +377,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             pass.setIndexBuffer(this._indexBuffer, 'uint16');
             pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
 
-            renderManager.stats.batches++;
-            renderManager.stats.drawCalls++;
+            backend.stats.batches++;
+            backend.stats.drawCalls++;
         }
 
         pass.end();
-        renderManager.submit(encoder.finish());
+        backend.submit(encoder.finish());
 
         this._instanceCount = 0;
         this._resetSlots();
@@ -539,21 +536,21 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         }
     }
 
-    private _createTextureBindGroup(device: GPUDevice, renderManager: WebGpuRenderManager): GPUBindGroup {
+    private _createTextureBindGroup(device: GPUDevice, backend: WebGpuBackend): GPUBindGroup {
         // Slots beyond the active count get the slot-0 texture as a filler so
         // the bind-group layout always sees N valid texture views and samplers.
         // The fragment shader's switch only ever dispatches to the active slot
         // count, so unsampled fillers cost nothing visually.
         const fallbackTexture = this._activeTextures[0] ?? Texture.empty;
-        const fallbackBinding = renderManager.getTextureBinding(fallbackTexture);
-        const resolvedBindings = new Array<ReturnType<WebGpuRenderManager['getTextureBinding']>>(maxBatchTextures);
+        const fallbackBinding = backend.getTextureBinding(fallbackTexture);
+        const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(maxBatchTextures);
 
         for (let i = 0; i < maxBatchTextures; i++) {
             const texture = this._activeTextures[i] ?? fallbackTexture;
 
             resolvedBindings[i] = texture === fallbackTexture
                 ? fallbackBinding
-                : renderManager.getTextureBinding(texture);
+                : backend.getTextureBinding(texture);
         }
 
         const entries: Array<GPUBindGroupEntry> = [];
@@ -586,7 +583,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             return existingPipeline;
         }
 
-        if (!this._device || !this._shaderModule || !this._pipelineLayout || !this._renderManager) {
+        if (!this._device || !this._shaderModule || !this._pipelineLayout || !this._backend) {
             throw new Error('Renderer has to be connected first!');
         }
 

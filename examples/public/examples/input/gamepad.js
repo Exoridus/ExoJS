@@ -49,10 +49,10 @@ app.start(new Scene({
         }
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._status.render(renderManager);
-        this._container.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._status.render(backend);
+        this._container.render(backend);
     },
 
     handleGamepadConnected(gamepad) {

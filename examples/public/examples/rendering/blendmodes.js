@@ -90,11 +90,11 @@ app.start(new Scene({
         this._ticker += delta.seconds;
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._background.render(renderManager);
-        this._leftBunny.render(renderManager);
-        this._rightBunny.render(renderManager);
-        this._info.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._background.render(backend);
+        this._leftBunny.render(backend);
+        this._rightBunny.render(backend);
+        this._info.render(backend);
     },
 }));

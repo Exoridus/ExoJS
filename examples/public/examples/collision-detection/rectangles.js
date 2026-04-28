@@ -59,9 +59,9 @@ app.start(new Scene({
         }
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._boxA.render(renderManager);
-        this._boxB.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._boxA.render(backend);
+        this._boxB.render(backend);
     },
 }));

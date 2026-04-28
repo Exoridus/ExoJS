@@ -6,11 +6,11 @@ import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { SceneNode } from '@/core/SceneNode';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 
 class TestDrawable extends Drawable {}
 
-const createRuntime = (): SceneRenderRuntime => {
+const createRuntime = (): RenderBackend => {
     const renderTarget = new RenderTarget(200, 200, true);
     const stats = createRenderStats();
 

@@ -1,5 +1,5 @@
 import type { Drawable } from './Drawable';
-import type { SceneRenderRuntime } from './SceneRenderRuntime';
+import type { RenderBackend } from './RenderBackend';
 import type { Renderer, DrawableConstructor } from './Renderer';
 
 /**
@@ -15,15 +15,15 @@ import type { Renderer, DrawableConstructor } from './Renderer';
  * Used internally by backend managers. Exposed publicly for advanced
  * custom renderer registration.
  */
-export class RendererRegistry<Runtime extends SceneRenderRuntime> {
+export class RendererRegistry<Runtime extends RenderBackend> {
 
     private readonly _renderers = new Map<DrawableConstructor, Renderer<Runtime, Drawable>>();
-    private _runtime: Runtime | null = null;
+    private _backend: Runtime | null = null;
 
     /**
      * Register a renderer for a specific drawable type.
      *
-     * If the registry is already connected to a runtime, the renderer
+     * If the registry is already connected to a backend, the renderer
      * is connected immediately. Registration must happen before the
      * first draw call for the given drawable type.
      *
@@ -41,8 +41,8 @@ export class RendererRegistry<Runtime extends SceneRenderRuntime> {
         // guarantees the correct drawable type is always paired at lookup.
         this._renderers.set(drawableType, renderer as Renderer<Runtime, Drawable>);
 
-        if (this._runtime !== null) {
-            (renderer as Renderer<Runtime, Drawable>).connect(this._runtime);
+        if (this._backend !== null) {
+            (renderer as Renderer<Runtime, Drawable>).connect(this._backend);
         }
     }
 
@@ -80,25 +80,25 @@ export class RendererRegistry<Runtime extends SceneRenderRuntime> {
     }
 
     /**
-     * Connect all registered renderers to the given runtime.
+     * Connect all registered renderers to the given backend.
      */
-    public connect(runtime: Runtime): void {
-        this._runtime = runtime;
+    public connect(backend: Runtime): void {
+        this._backend = backend;
 
         for (const renderer of this._renderers.values()) {
-            renderer.connect(runtime);
+            renderer.connect(backend);
         }
     }
 
     /**
-     * Disconnect all registered renderers from the current runtime.
+     * Disconnect all registered renderers from the current backend.
      */
     public disconnect(): void {
         for (const renderer of this._renderers.values()) {
             renderer.disconnect();
         }
 
-        this._runtime = null;
+        this._backend = null;
     }
 
     /**

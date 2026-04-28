@@ -8,7 +8,7 @@ import type { Application } from './Application';
 import type { Pointer } from '@/input/Pointer';
 import type { Vector } from '@/math/Vector';
 import type { Scene, SceneInputEvent, SceneInputMode, SceneParticipationPolicy, SceneStackMode } from './Scene';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 
 interface ResolvedSceneParticipationPolicy {
     readonly mode: SceneStackMode;
@@ -52,9 +52,9 @@ interface ActiveFadeTransition {
 }
 
 class TransitionOverlayShape extends DrawableShape {
-    public override render(renderManager: SceneRenderRuntime): this {
+    public override render(backend: RenderBackend): this {
         if (this.visible) {
-            renderManager.draw(this);
+            backend.draw(this);
         }
 
         return this;
@@ -183,7 +183,7 @@ export class SceneManager {
         }
 
         for (const scene of drawScenes) {
-            scene.draw(this._app.renderManager);
+            scene.draw(this._app.backend);
         }
 
         const transitionAlpha = this._getTransitionAlpha();
@@ -574,8 +574,8 @@ export class SceneManager {
     private _renderTransitionOverlay(alpha: number): void {
         const transition = this._transition;
         const overlayColor = transition ? transition.color : Color.black;
-        const runtime = this._app.renderManager;
-        const bounds = runtime.view.getBounds();
+        const backend = this._app.backend;
+        const bounds = backend.view.getBounds();
         const vertices = this._transitionOverlay.geometry.vertices;
 
         vertices[0] = bounds.left;
@@ -588,6 +588,6 @@ export class SceneManager {
         vertices[7] = bounds.bottom;
 
         this._transitionOverlay.color.set(overlayColor.r, overlayColor.g, overlayColor.b, Math.max(0, Math.min(1, alpha)));
-        this._transitionOverlay.render(runtime);
+        this._transitionOverlay.render(backend);
     }
 }

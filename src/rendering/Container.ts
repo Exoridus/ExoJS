@@ -1,5 +1,5 @@
 import { removeArrayItems } from '@/core/utils';
-import type { SceneRenderRuntime } from './SceneRenderRuntime';
+import type { RenderBackend } from './RenderBackend';
 import { RenderNode } from './RenderNode';
 
 export class Container extends RenderNode {
@@ -180,22 +180,22 @@ export class Container extends RenderNode {
         return this;
     }
 
-    public override render(renderManager: SceneRenderRuntime): this {
+    public override render(backend: RenderBackend): this {
         if (!this.visible || this._children.length === 0) {
             return this;
         }
 
-        if (!this.inView(renderManager.view)) {
-            renderManager.stats.culledNodes++;
+        if (!this.inView(backend.view)) {
+            backend.stats.culledNodes++;
 
             return this;
         }
 
-        this.renderVisualContent(renderManager, () => {
+        this.renderVisualContent(backend, () => {
             this._sortChildrenIfNeeded();
 
             for (const child of this._children) {
-                child.render(renderManager);
+                child.render(backend);
             }
         });
 

@@ -88,9 +88,9 @@ app.start(new Scene({
         }
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._spriteLayer.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._spriteLayer.render(backend);
 
     },
 

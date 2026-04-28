@@ -6,7 +6,7 @@ import { View } from '@/rendering/View';
 import type { Texture } from '@/rendering/texture/Texture';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { Filter } from '@/rendering/filters/Filter';
 
 interface DestroyableFilter {
@@ -22,7 +22,7 @@ interface RenderNodeSpriteLike {
     setPosition(x: number, y: number): this;
     setRotation(rotation: number): this;
     setScale(x: number, y?: number): this;
-    render(runtime: SceneRenderRuntime): this;
+    render(backend: RenderBackend): this;
     destroy(): void;
 }
 
@@ -104,7 +104,7 @@ export abstract class RenderNode extends SceneNode {
         }
     }
 
-    public abstract render(runtime: SceneRenderRuntime): this;
+    public abstract render(backend: RenderBackend): this;
 
     public get cacheAsBitmap(): boolean {
         return this._cacheAsBitmap;
@@ -171,7 +171,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     protected renderVisualContent(
-        runtime: SceneRenderRuntime,
+        backend: RenderBackend,
         renderContent: () => void,
         blendMode: BlendModes = BlendModes.Normal,
     ): void {
@@ -179,7 +179,7 @@ export abstract class RenderNode extends SceneNode {
         const needsBitmapCache = this._cacheAsBitmap;
 
         if (!hasFilters && !needsBitmapCache) {
-            this._withMask(runtime, renderContent, blendMode);
+            this._withMask(backend, renderContent, blendMode);
 
             return;
         }
@@ -202,8 +202,8 @@ export abstract class RenderNode extends SceneNode {
         );
 
         if (needsBitmapCache && !shouldRefreshCache && this._cacheTexture !== null) {
-            this._withMask(runtime, () => {
-                this._drawTexture(runtime, this._cacheTexture as RenderTexture, left, top, width, height, blendMode);
+            this._withMask(backend, () => {
+                this._drawTexture(backend, this._cacheTexture as RenderTexture, left, top, width, height, blendMode);
             }, blendMode);
 
             return;
@@ -215,13 +215,13 @@ export abstract class RenderNode extends SceneNode {
         try {
             const sourceTexture = (needsBitmapCache && !hasFilters)
                 ? cacheTexture as RenderTexture
-                : runtime.acquireRenderTexture(width, height);
+                : backend.acquireRenderTexture(width, height);
 
             if (sourceTexture !== cacheTexture) {
                 temporaryTextures.push(sourceTexture);
             }
 
-            this._renderContentToTexture(runtime, sourceTexture, left, top, width, height, renderContent);
+            this._renderContentToTexture(backend, sourceTexture, left, top, width, height, renderContent);
 
             let finalTexture = sourceTexture;
 
@@ -230,13 +230,13 @@ export abstract class RenderNode extends SceneNode {
                     const isLast = index === this._filters.length - 1;
                     const output = (isLast && needsBitmapCache)
                         ? cacheTexture as RenderTexture
-                        : runtime.acquireRenderTexture(width, height);
+                        : backend.acquireRenderTexture(width, height);
 
                     if (output !== cacheTexture) {
                         temporaryTextures.push(output);
                     }
 
-                    this._filters[index].apply(runtime, finalTexture, output);
+                    this._filters[index].apply(backend, finalTexture, output);
                     finalTexture = output;
                 }
             }
@@ -247,12 +247,12 @@ export abstract class RenderNode extends SceneNode {
                 this._cacheDirty = false;
             }
 
-            this._withMask(runtime, () => {
-                this._drawTexture(runtime, finalTexture, left, top, width, height, blendMode);
+            this._withMask(backend, () => {
+                this._drawTexture(backend, finalTexture, left, top, width, height, blendMode);
             }, blendMode);
         } finally {
             for (const texture of temporaryTextures) {
-                runtime.releaseRenderTexture(texture);
+                backend.releaseRenderTexture(texture);
             }
         }
     }
@@ -278,7 +278,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     private _withMask(
-        runtime: SceneRenderRuntime,
+        backend: RenderBackend,
         callback: () => void,
         blendMode: BlendModes = BlendModes.Normal,
     ): void {
@@ -296,12 +296,12 @@ export abstract class RenderNode extends SceneNode {
                 return;
             }
 
-            runtime.pushScissorRect(mask);
+            backend.pushScissorRect(mask);
 
             try {
                 callback();
             } finally {
-                runtime.popScissorRect();
+                backend.popScissorRect();
             }
 
             return;
@@ -327,24 +327,24 @@ export abstract class RenderNode extends SceneNode {
         const width = Math.max(1, Math.ceil(contentBounds.width));
         const height = Math.max(1, Math.ceil(contentBounds.height));
 
-        const contentTexture = runtime.acquireRenderTexture(width, height);
+        const contentTexture = backend.acquireRenderTexture(width, height);
         const releasePool: Array<RenderTexture> = [contentTexture];
 
         try {
-            this._renderContentToTexture(runtime, contentTexture, left, top, width, height, callback);
+            this._renderContentToTexture(backend, contentTexture, left, top, width, height, callback);
 
-            const maskTexture = this._resolveMaskTexture(runtime, mask, width, height, releasePool);
+            const maskTexture = this._resolveMaskTexture(backend, mask, width, height, releasePool);
 
-            runtime.composeWithAlphaMask(contentTexture, maskTexture, left, top, width, height, blendMode);
+            backend.composeWithAlphaMask(contentTexture, maskTexture, left, top, width, height, blendMode);
         } finally {
             for (const texture of releasePool) {
-                runtime.releaseRenderTexture(texture);
+                backend.releaseRenderTexture(texture);
             }
         }
     }
 
     private _resolveMaskTexture(
-        runtime: SceneRenderRuntime,
+        backend: RenderBackend,
         mask: Texture | RenderTexture | RenderNode,
         width: number,
         height: number,
@@ -357,7 +357,7 @@ export abstract class RenderNode extends SceneNode {
             // intermediate is positioned over the masked content's
             // world-space bounds so the resulting texture uses the
             // masked content's local UV space.
-            const maskTexture = runtime.acquireRenderTexture(width, height);
+            const maskTexture = backend.acquireRenderTexture(width, height);
 
             releasePool.push(maskTexture);
 
@@ -365,8 +365,8 @@ export abstract class RenderNode extends SceneNode {
             const left = Math.floor(contentBounds.left);
             const top = Math.floor(contentBounds.top);
 
-            this._renderContentToTexture(runtime, maskTexture, left, top, width, height, () => {
-                mask.render(runtime);
+            this._renderContentToTexture(backend, maskTexture, left, top, width, height, () => {
+                mask.render(backend);
             });
 
             return maskTexture;
@@ -377,7 +377,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     private _renderContentToTexture(
-        runtime: SceneRenderRuntime,
+        backend: RenderBackend,
         target: RenderTexture,
         left: number,
         top: number,
@@ -391,7 +391,7 @@ export abstract class RenderNode extends SceneNode {
             this._captureView.reset(left + (width / 2), top + (height / 2), width, height);
         }
 
-        runtime.execute(new RenderTargetPass(
+        backend.execute(new RenderTargetPass(
             () => {
                 renderContent();
             },
@@ -404,7 +404,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     private _drawTexture(
-        runtime: SceneRenderRuntime,
+        backend: RenderBackend,
         texture: RenderTexture,
         x: number,
         y: number,
@@ -424,7 +424,7 @@ export abstract class RenderNode extends SceneNode {
 
         sprite.width = width;
         sprite.height = height;
-        sprite.render(runtime);
+        sprite.render(backend);
     }
 
     private _ensureCacheTexture(width: number, height: number): RenderTexture {

@@ -5,7 +5,7 @@ import type { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import type { Texture } from '@/rendering/texture/Texture';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { WebGpuRenderManager } from './WebGpuRenderManager';
+import type { WebGpuBackend } from './WebGpuBackend';
 
 const compositorShaderSource = `
 struct ProjectionUniforms {
@@ -61,7 +61,7 @@ const projectionUniformBytes = 64;
 
 /**
  * Single-quad two-texture compositor used by
- * `WebGpuRenderManager.composeWithAlphaMask`. Renders the content texture
+ * `WebGpuBackend.composeWithAlphaMask`. Renders the content texture
  * onto the active render target with each output texel's alpha multiplied
  * by the mask texture's alpha. Both textures are sampled with stretched-fit
  * UVs over the destination rectangle.
@@ -166,7 +166,7 @@ export class WebGpuMaskCompositor {
     }
 
     public compose(
-        manager: WebGpuRenderManager,
+        manager: WebGpuBackend,
         content: Texture | RenderTexture,
         mask: Texture | RenderTexture,
         x: number,

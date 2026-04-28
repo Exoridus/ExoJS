@@ -1,6 +1,6 @@
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { Shader } from '../shader/Shader';
-import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
+import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
@@ -8,7 +8,7 @@ import type { ParticleSystem } from '@/particles/ParticleSystem';
 import type { Texture } from '../texture/Texture';
 import type { View } from '../View';
 import type { BlendModes } from '@/rendering/types';
-import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
+import type { WebGl2Backend } from './WebGl2Backend';
 import vertexSource from './glsl/particle.vert';
 import fragmentSource from './glsl/particle.frag';
 
@@ -82,7 +82,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     }
 
     public render(system: ParticleSystem): this {
-        const runtime = this.getRuntime();
+        const backend = this.getBackend();
         const { texture, particles, blendMode } = system;
         const textureChanged = texture !== this._currentTexture;
         const blendModeChanged = blendMode !== this._currentBlendMode;
@@ -94,12 +94,12 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
         if (textureChanged) {
             this._currentTexture = texture;
-            runtime.bindTexture(texture);
+            backend.bindTexture(texture);
         }
 
         if (blendModeChanged) {
             this._currentBlendMode = blendMode;
-            runtime.setBlendMode(blendMode);
+            backend.setBlendMode(blendMode);
         }
 
         // System-level uniforms are set before packing so the eventual
@@ -139,16 +139,16 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     }
 
     public flush(): void {
-        const runtime = this.getRuntimeOrNull();
+        const backend = this.getBackendOrNull();
         const instanceBuffer = this._instanceBuffer;
         const indexBuffer = this._indexBuffer;
         const vao = this._vao;
 
-        if (this._instanceCount === 0 || runtime === null || instanceBuffer === null || indexBuffer === null || vao === null) {
+        if (this._instanceCount === 0 || backend === null || instanceBuffer === null || indexBuffer === null || vao === null) {
             return;
         }
 
-        const view = runtime.view;
+        const view = backend.view;
 
         if (this._currentView !== view || this._currentViewId !== view.updateId) {
             this._currentView = view;
@@ -159,19 +159,19 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
         }
 
         this._shader.sync();
-        runtime.bindVertexArrayObject(vao);
+        backend.bindVertexArrayObject(vao);
         instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
         vao.drawInstanced(indicesPerQuad, 0, this._instanceCount, RenderingPrimitives.Triangles);
-        runtime.stats.batches++;
-        runtime.stats.drawCalls++;
+        backend.stats.batches++;
+        backend.stats.drawCalls++;
 
         this._instanceCount = 0;
     }
 
-    protected onConnect(runtime: WebGl2RendererRuntime): void {
-        const gl = runtime.context;
+    protected onConnect(backend: WebGl2Backend): void {
+        const gl = backend.context;
 
-        this._shader.connect(createWebGl2ShaderRuntime(gl));
+        this._shader.connect(createWebGl2ShaderProgram(gl));
         this._connection = this._createConnection(gl);
 
         this._indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw)

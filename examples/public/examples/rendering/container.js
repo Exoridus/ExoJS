@@ -47,9 +47,9 @@ app.start(new Scene({
         this._bunnies.rotate(delta.seconds * 36);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._rainbow.render(renderManager);
-        this._bunnies.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._rainbow.render(backend);
+        this._bunnies.render(backend);
     },
 }));

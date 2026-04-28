@@ -3,7 +3,7 @@ import { BlendModes } from '@/rendering/types';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Filter } from './Filter';
 
 export interface BlurFilterOptions {
@@ -41,7 +41,7 @@ export class BlurFilter extends Filter {
         this._quality = Math.max(1, Math.floor(quality));
     }
 
-    public apply(runtime: SceneRenderRuntime, input: RenderTexture, output: RenderTexture): void {
+    public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
         const radius = this._radius;
         const quality = this._quality;
         const steps = Math.max(1, quality * 2 + 1);
@@ -58,10 +58,10 @@ export class BlurFilter extends Filter {
         this._sprite.width = output.width;
         this._sprite.height = output.height;
 
-        runtime.execute(new RenderTargetPass(
+        backend.execute(new RenderTargetPass(
             () => {
                 if (radius <= 0) {
-                    this._sprite.setPosition(0, 0).render(runtime);
+                    this._sprite.setPosition(0, 0).render(backend);
 
                     return;
                 }
@@ -70,8 +70,8 @@ export class BlurFilter extends Filter {
                     const t = steps === 1 ? 0 : step / (steps - 1);
                     const offset = (t * 2 - 1) * radius;
 
-                    this._sprite.setPosition(offset, 0).render(runtime);
-                    this._sprite.setPosition(0, offset).render(runtime);
+                    this._sprite.setPosition(offset, 0).render(backend);
+                    this._sprite.setPosition(0, offset).render(backend);
                 }
             },
             {

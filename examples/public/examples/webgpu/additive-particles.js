@@ -60,9 +60,9 @@ app.start(new Scene({
         this._particleSystem.update(delta);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._particleSystem.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._particleSystem.render(backend);
 
     },
 

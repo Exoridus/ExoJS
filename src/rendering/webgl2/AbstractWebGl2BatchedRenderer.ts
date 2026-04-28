@@ -1,6 +1,6 @@
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { Shader } from '../shader/Shader';
-import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
+import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import type { WebGl2VertexArrayObject, WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { createQuadIndices } from '@/rendering/utils';
@@ -8,7 +8,7 @@ import type { Texture } from '../texture/Texture';
 import type { BlendModes } from '@/rendering/types';
 import { BufferTypes, BufferUsage } from '@/rendering/types';
 import type { View } from '../View';
-import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
+import type { WebGl2Backend } from './WebGl2Backend';
 import type { RenderTexture } from '../texture/RenderTexture';
 import type { Drawable } from '../Drawable';
 
@@ -54,15 +54,15 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
     }
 
     public flush(): void {
-        const runtime = this.getRuntimeOrNull();
+        const backend = this.getBackendOrNull();
         const vertexBuffer = this.vertexBuffer;
         const vao = this.vao;
 
-        if (this.batchIndex === 0 || runtime === null || vertexBuffer === null || vao === null) {
+        if (this.batchIndex === 0 || backend === null || vertexBuffer === null || vao === null) {
             return;
         }
 
-        const view = runtime.view;
+        const view = backend.view;
 
         if (this.currentView !== view || this.currentViewId !== view.updateId) {
             this.currentView = view;
@@ -71,11 +71,11 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
         }
 
         this.shader.sync();
-        runtime.bindVertexArrayObject(vao);
+        backend.bindVertexArrayObject(vao);
         vertexBuffer.upload(this.float32View.subarray(0, this.batchIndex * this.attributeCount));
         vao.draw(this.batchIndex * 6, 0);
-        runtime.stats.batches++;
-        runtime.stats.drawCalls++;
+        backend.stats.batches++;
+        backend.stats.drawCalls++;
         this.batchIndex = 0;
     }
 
@@ -88,8 +88,8 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
         this.connection = null;
     }
 
-    protected onConnect(runtime: WebGl2RendererRuntime): void {
-        const gl = runtime.context;
+    protected onConnect(backend: WebGl2Backend): void {
+        const gl = backend.context;
 
         // Order matters here: shader.connect() issues compile/link to the
         // GL driver but defers the COMPILE_STATUS / LINK_STATUS query (and
@@ -99,7 +99,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
         // Once we need attribute locations (createVao), we sync — at which
         // point compile is hopefully already finished and the eventual
         // blocking status query becomes a no-op.
-        this.shader.connect(createWebGl2ShaderRuntime(gl));
+        this.shader.connect(createWebGl2ShaderProgram(gl));
         this.connection = this.createConnection(gl);
         this.indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this.indexData, BufferUsage.StaticDraw)
             .connect(this.createBufferRuntime(this.connection));

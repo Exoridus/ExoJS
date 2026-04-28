@@ -1,10 +1,9 @@
 /// <reference types="@webgpu/types" />
 
 import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
-import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
 import { Texture } from '@/rendering/texture/Texture';
-import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
 import type { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
@@ -103,7 +102,6 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     private _drawCallCount = 0;
     private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
 
-    private _renderManager: WebGpuRenderManager | null = null;
     private _device: GPUDevice | null = null;
     private _shaderModule: GPUShaderModule | null = null;
     private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
@@ -121,11 +119,11 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
     public render(system: ParticleSystem): void {
-        const runtime = this._renderManager;
+        const backend = this._backend;
         const texture = system.texture;
 
         if (
-            runtime === null
+            backend === null
             || !(texture instanceof Texture)
             || texture.source === null
             || texture.width === 0
@@ -135,7 +133,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             return;
         }
 
-        runtime.setBlendMode(system.blendMode);
+        backend.setBlendMode(system.blendMode);
         const drawCallIndex = this._drawCallCount++;
         const drawCall = this._drawCalls[drawCallIndex];
 
@@ -153,36 +151,36 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     }
 
     public flush(): void {
-        const runtime = this._renderManager;
+        const backend = this._backend;
         const device = this._device;
         const uniformBuffer = this._uniformBuffer;
         const uniformBindGroup = this._uniformBindGroup;
         const staticVertexBuffer = this._staticVertexBuffer;
         const indexBuffer = this._indexBuffer;
 
-        if (!runtime || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
+        if (!backend || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
             return;
         }
 
-        if (this._drawCallCount === 0 && !runtime.clearRequested) {
+        if (this._drawCallCount === 0 && !backend.clearRequested) {
             return;
         }
 
-        const scissor = runtime.getScissorRect();
+        const scissor = backend.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
         // If no drawcalls will actually render (none queued, or the scissor
         // clips everything), but a clear is pending, open a single empty
         // pass so createColorAttachment consumes the clear state.
         if (this._drawCallCount === 0 || maskClipsAll) {
-            if (runtime.clearRequested) {
+            if (backend.clearRequested) {
                 const encoder = device.createCommandEncoder();
                 const pass = encoder.beginRenderPass({
-                    colorAttachments: [runtime.createColorAttachment()],
+                    colorAttachments: [backend.createColorAttachment()],
                 });
-                runtime.stats.renderPasses++;
+                backend.stats.renderPasses++;
                 pass.end();
-                runtime.submit(encoder.finish());
+                backend.submit(encoder.finish());
             }
             this._drawCallCount = 0;
             return;
@@ -206,8 +204,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
                 continue;
             }
 
-            const pipeline = this._getPipeline(drawCall.blendMode, runtime.renderTargetFormat);
-            const textureBinding = runtime.getTextureBinding(drawCall.texture);
+            const pipeline = this._getPipeline(drawCall.blendMode, backend.renderTargetFormat);
+            const textureBinding = backend.getTextureBinding(drawCall.texture);
             const textureBindGroup = device.createBindGroup({
                 layout: this._textureBindGroupLayout!,
                 entries: [{
@@ -221,7 +219,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
             this._ensureCapacity(particleCount);
             this._writeInstanceData(system.vertices, system.texCoords, system.particles);
-            this._writeUniformData(runtime, system, drawCall.texture);
+            this._writeUniformData(backend, system, drawCall.texture);
 
             device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
             device.queue.writeBuffer(
@@ -234,9 +232,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
             const encoder = device.createCommandEncoder();
             const pass = encoder.beginRenderPass({
-                colorAttachments: [runtime.createColorAttachment()],
+                colorAttachments: [backend.createColorAttachment()],
             });
-            runtime.stats.renderPasses++;
+            backend.stats.renderPasses++;
 
             if (scissor !== null) {
                 pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
@@ -249,11 +247,11 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             pass.setVertexBuffer(1, this._instanceBuffer!);
             pass.setIndexBuffer(indexBuffer, 'uint16');
             pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
-            runtime.stats.batches++;
-            runtime.stats.drawCalls++;
+            backend.stats.batches++;
+            backend.stats.drawCalls++;
 
             pass.end();
-            runtime.submit(encoder.finish());
+            backend.submit(encoder.finish());
         }
 
         this._drawCallCount = 0;
@@ -263,9 +261,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         this.disconnect();
     }
 
-    protected onConnect(runtime: WebGpuRendererRuntime): void {
-        this._renderManager = runtime as WebGpuRenderManager;
-        this._device = this._renderManager.device;
+    protected onConnect(backend: WebGpuBackend): void {
+        this._backend = backend as WebGpuBackend;
+        this._device = this._backend.device;
         this._shaderModule = this._device.createShaderModule({ code: particleShaderSource });
         this._uniformBindGroupLayout = this._device.createBindGroupLayout({
             entries: [{
@@ -339,7 +337,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         this._uniformBindGroupLayout = null;
         this._shaderModule = null;
         this._device = null;
-        this._renderManager = null;
+        this._backend = null;
         this._instanceBufferByteLength = 0;
         this._instanceData = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
         this._float32View = new Float32Array(this._instanceData);
@@ -378,10 +376,10 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         }
     }
 
-    private _writeUniformData(runtime: WebGpuRenderManager, system: ParticleSystem, texture: Texture): void {
-        const projection = runtime.view.getTransform().toArray(false);
+    private _writeUniformData(backend: WebGpuBackend, system: ParticleSystem, texture: Texture): void {
+        const projection = backend.view.getTransform().toArray(false);
         const transform = system.getGlobalTransform().toArray(false);
-        const shouldPremultiplySample = runtime.shouldPremultiplyTextureSample(texture);
+        const shouldPremultiplySample = backend.shouldPremultiplyTextureSample(texture);
         const vertices = system.vertices;
         const texCoords = system.texCoords;
         const quadMinX = vertices[0];

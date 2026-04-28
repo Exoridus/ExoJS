@@ -1,6 +1,6 @@
 import { Color } from '@/core/Color';
 import { BlendModes } from '@/rendering/types';
-import type { SceneRenderRuntime } from './SceneRenderRuntime';
+import type { RenderBackend } from './RenderBackend';
 import { RenderNode } from './RenderNode';
 
 export class Drawable extends RenderNode {
@@ -42,19 +42,19 @@ export class Drawable extends RenderNode {
         return this;
     }
 
-    public override render(renderManager: SceneRenderRuntime): this {
+    public override render(backend: RenderBackend): this {
         if (!this.visible) {
             return this;
         }
 
-        if (!this.inView(renderManager.view)) {
-            renderManager.stats.culledNodes++;
+        if (!this.inView(backend.view)) {
+            backend.stats.culledNodes++;
 
             return this;
         }
 
-        this.renderVisualContent(renderManager, () => {
-            renderManager.draw(this);
+        this.renderVisualContent(backend, () => {
+            backend.draw(this);
         }, this._blendMode);
 
         return this;

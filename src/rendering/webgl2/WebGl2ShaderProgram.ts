@@ -1,4 +1,4 @@
-import type { Shader, ShaderRuntime } from '../shader/Shader';
+import type { Shader, ShaderProgram } from '../shader/Shader';
 import { ShaderAttribute } from '../shader/ShaderAttribute';
 import { ShaderUniform } from '../shader/ShaderUniform';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
@@ -46,7 +46,7 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
     [ShaderPrimitives.Sampler2D]: (gl, location, value): void => { gl.uniform1i(location, value[0]); },
 };
 
-export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRuntime {
+export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext): ShaderProgram {
     let program: WebGLProgram | null = null;
     let vertexShader: WebGLShader | null = null;
     let fragmentShader: WebGLShader | null = null;
@@ -150,7 +150,7 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
         },
 
         sync: (): void => {
-            // Bind the program before syncing uniforms. WebGl2RenderManager
+            // Bind the program before syncing uniforms. WebGl2Backend
             // does not call bindShader() on the active renderer's shader
             // during normal draw flow, so sync() is the first entry point
             // that must establish program binding — otherwise uniform*

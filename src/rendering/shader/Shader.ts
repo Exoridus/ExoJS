@@ -1,7 +1,7 @@
 import type { ShaderAttribute } from './ShaderAttribute';
 import type { ShaderUniform } from './ShaderUniform';
 
-export interface ShaderRuntime {
+export interface ShaderProgram {
     initialize(shader: Shader): void;
     bind(shader: Shader): void;
     unbind(shader: Shader): void;
@@ -16,7 +16,7 @@ export class Shader {
 
     private readonly _vertexSource: string;
     private readonly _fragmentSource: string;
-    private _runtime: ShaderRuntime | null = null;
+    private _program: ShaderProgram | null = null;
 
     public constructor(vertexSource: string, fragmentSource: string) {
         this._vertexSource = vertexSource;
@@ -31,15 +31,15 @@ export class Shader {
         return this._fragmentSource;
     }
 
-    public connect(runtime: ShaderRuntime): this {
-        this._runtime = runtime;
-        runtime.initialize(this);
+    public connect(program: ShaderProgram): this {
+        this._program = program;
+        program.initialize(this);
 
         return this;
     }
 
     public disconnect(): this {
-        this._runtime = null;
+        this._program = null;
         this.attributes.clear();
         this.uniforms.clear();
 
@@ -47,19 +47,19 @@ export class Shader {
     }
 
     public bind(): this {
-        this._runtime?.bind(this);
+        this._program?.bind(this);
 
         return this;
     }
 
     public unbind(): this {
-        this._runtime?.unbind(this);
+        this._program?.unbind(this);
 
         return this;
     }
 
     public sync(): this {
-        this._runtime?.sync(this);
+        this._program?.sync(this);
 
         return this;
     }
@@ -85,8 +85,8 @@ export class Shader {
     }
 
     public destroy(): void {
-        this._runtime?.destroy(this);
-        this._runtime = null;
+        this._program?.destroy(this);
+        this._program = null;
         this.attributes.clear();
         this.uniforms.clear();
     }

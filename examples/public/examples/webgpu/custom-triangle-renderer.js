@@ -1,4 +1,4 @@
-import { Application, Color, Scene, WebGpuRenderManager } from '@codexo/exojs';
+import { Application, Color, Scene, WebGpuBackend } from '@codexo/exojs';
 
 const TRIANGLE_VERTICES = new Float32Array([
     0.0, 0.72, 1.0, 0.38, 0.23,
@@ -33,13 +33,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 class CustomTriangleRenderer {
 
-    constructor(renderManager) {
-        if (!(renderManager instanceof WebGpuRenderManager)) {
-            throw new Error('This example requires ExoJS to provide a WebGpuRenderManager.');
+    constructor(backend) {
+        if (!(backend instanceof WebGpuBackend)) {
+            throw new Error('This example requires ExoJS to provide a WebGpuBackend.');
         }
 
-        this._renderManager = renderManager;
-        this._device = renderManager.device;
+        this._renderManager = backend;
+        this._device = backend.device;
         this._pipeline = this._createPipeline();
         this._vertexBuffer = this._createVertexBuffer();
     }
@@ -141,7 +141,7 @@ document.body.append(app.canvas);
 app.start(new Scene({
 
     init() {
-        this._triangleRenderer = new CustomTriangleRenderer(this.app.renderManager);
+        this._triangleRenderer = new CustomTriangleRenderer(this.app.backend);
     },
 
     draw() {

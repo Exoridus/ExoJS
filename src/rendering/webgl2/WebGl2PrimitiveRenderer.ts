@@ -1,13 +1,13 @@
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { Shader } from '../shader/Shader';
-import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
+import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 import type { WebGl2RenderBuffer, WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { BufferTypes, BufferUsage } from '@/rendering/types';
 import type { View } from '../View';
 import { WebGl2RenderBuffer as Buffer } from './WebGl2RenderBuffer';
 import type { DrawableShape } from '../primitives/DrawableShape';
-import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
+import type { WebGl2Backend } from './WebGl2Backend';
 import vertexSource from './glsl/primitive.vert';
 import fragmentSource from './glsl/primitive.frag';
 
@@ -60,7 +60,7 @@ export class WebGl2PrimitiveRenderer extends AbstractWebGl2Renderer<DrawableShap
             throw new Error('Renderer not connected');
         }
 
-        const runtime = this.getRuntime();
+        const backend = this.getBackend();
         const { geometry, drawMode, color, blendMode } = shape;
         const vertices = geometry.vertices;
         const sourceIndices = geometry.indices;
@@ -76,10 +76,10 @@ export class WebGl2PrimitiveRenderer extends AbstractWebGl2Renderer<DrawableShap
 
         if (blendMode !== this._currentBlendMode) {
             this._currentBlendMode = blendMode;
-            runtime.setBlendMode(blendMode);
+            backend.setBlendMode(blendMode);
         }
 
-        const view = runtime.view;
+        const view = backend.view;
 
         if (this._currentView !== view || this._viewId !== view.updateId) {
             this._currentView = view;
@@ -109,12 +109,12 @@ export class WebGl2PrimitiveRenderer extends AbstractWebGl2Renderer<DrawableShap
         }
 
         this._shader.sync();
-        runtime.bindVertexArrayObject(connection.vao);
+        backend.bindVertexArrayObject(connection.vao);
         connection.vertexBuffer.upload(this._float32View.subarray(0, vertexCount * vertexStrideWords));
         connection.indexBuffer.upload(this._indexData.subarray(0, indexCount));
         connection.vao.draw(indexCount, 0, drawMode);
-        runtime.stats.batches++;
-        runtime.stats.drawCalls++;
+        backend.stats.batches++;
+        backend.stats.drawCalls++;
     }
 
     public flush(): void {
@@ -128,11 +128,11 @@ export class WebGl2PrimitiveRenderer extends AbstractWebGl2Renderer<DrawableShap
         this._currentView = null;
     }
 
-    protected onConnect(runtime: WebGl2RendererRuntime): void {
-        const gl = runtime.context;
+    protected onConnect(backend: WebGl2Backend): void {
+        const gl = backend.context;
         const vaoHandle = gl.createVertexArray();
 
-        this._shader.connect(createWebGl2ShaderRuntime(gl));
+        this._shader.connect(createWebGl2ShaderProgram(gl));
 
         if (vaoHandle === null) {
             throw new Error('Could not create vertex array object.');

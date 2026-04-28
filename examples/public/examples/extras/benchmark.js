@@ -154,9 +154,9 @@ app.start(new Scene({
         }
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._bunnies.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._bunnies.render(backend);
 
         this._stats.end();
     },

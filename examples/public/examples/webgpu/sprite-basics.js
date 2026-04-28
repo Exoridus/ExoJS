@@ -56,9 +56,9 @@ app.start(new Scene({
         this._croppedBobbingSprite.rotate(delta.seconds * -42);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._spriteLayer.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._spriteLayer.render(backend);
 
     },
 

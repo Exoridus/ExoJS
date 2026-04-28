@@ -24,8 +24,8 @@ app.start(new Scene({
         this._tiger.setPosition(width / 2 | 0, height / 2 | 0);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._tiger.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._tiger.render(backend);
     },
 }));

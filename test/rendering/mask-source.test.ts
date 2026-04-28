@@ -10,7 +10,7 @@ import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { BlendModes } from '@/rendering/types';
 
 class TestDrawable extends Drawable {
@@ -35,7 +35,7 @@ interface MaskComposeCall {
 }
 
 interface MockRuntime {
-    runtime: SceneRenderRuntime;
+    runtime: RenderBackend;
     scissorEvents: Array<string>;
     composeCalls: Array<MaskComposeCall>;
     drawCalls: Array<unknown>;
@@ -49,7 +49,7 @@ const createRuntime = (): MockRuntime => {
     const composeCalls: Array<MaskComposeCall> = [];
     const drawCalls: Array<unknown> = [];
 
-    const runtime: SceneRenderRuntime = {
+    const runtime: RenderBackend = {
         backendType: RenderBackendType.WebGl2,
         stats,
         get renderTarget() {

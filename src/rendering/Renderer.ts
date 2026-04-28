@@ -1,14 +1,14 @@
 import type { RenderBackendType } from './RenderBackendType';
 import type { Drawable } from './Drawable';
-import type { SceneRenderRuntime } from './SceneRenderRuntime';
+import type { RenderBackend } from './RenderBackend';
 
 export interface Renderer<
-    Runtime extends SceneRenderRuntime = SceneRenderRuntime,
+    Runtime extends RenderBackend = RenderBackend,
     Target extends Drawable = Drawable,
 > {
     readonly backendType: RenderBackendType;
 
-    connect(runtime: Runtime): void;
+    connect(backend: Runtime): void;
     disconnect(): void;
     render(drawable: Target): void;
     flush(): void;

@@ -419,11 +419,11 @@ const assertMonacoExoPackageSupport = async (page) => {
             "import * as Exo from '@codexo/exojs';",
             '',
             'const app = new Exo.Application({ width: 64, height: 64, clearColor: Exo.Color.black });',
-            'const webGl2RenderManagerCtor = Exo.WebGl2RenderManager;',
-            'const webGpuRenderManagerCtor = Exo.WebGpuRenderManager;',
+            'const webGl2BackendCtor = Exo.WebGl2Backend;',
+            'const webGpuBackendCtor = Exo.WebGpuBackend;',
             'app.canvas;',
-            'webGl2RenderManagerCtor;',
-            'webGpuRenderManagerCtor;',
+            'webGl2BackendCtor;',
+            'webGpuBackendCtor;',
             '',
         ].join('\n');
 
@@ -437,16 +437,16 @@ const assertMonacoExoPackageSupport = async (page) => {
         const worker = await workerFactory(resource);
         const fullText = model.getValue();
         const applicationOffset = fullText.indexOf('Application') + 2;
-        const webGl2RenderManagerOffset = fullText.indexOf('WebGl2RenderManager') + 2;
-        const webGpuRenderManagerOffset = fullText.indexOf('WebGpuRenderManager') + 2;
+        const webGl2BackendOffset = fullText.indexOf('WebGl2Backend') + 2;
+        const webGpuBackendOffset = fullText.indexOf('WebGpuBackend') + 2;
         const applicationQuickInfo = await worker.getQuickInfoAtPosition(resource.toString(), applicationOffset);
-        const webGl2RenderManagerQuickInfo = await worker.getQuickInfoAtPosition(
+        const webGl2BackendQuickInfo = await worker.getQuickInfoAtPosition(
             resource.toString(),
-            webGl2RenderManagerOffset
+            webGl2BackendOffset
         );
-        const webGpuRenderManagerQuickInfo = await worker.getQuickInfoAtPosition(
+        const webGpuBackendQuickInfo = await worker.getQuickInfoAtPosition(
             resource.toString(),
-            webGpuRenderManagerOffset
+            webGpuBackendOffset
         );
 
         return {
@@ -457,11 +457,11 @@ const assertMonacoExoPackageSupport = async (page) => {
                 startColumn: marker.startColumn,
             })),
             exoHasApplication: !!applicationQuickInfo?.displayParts?.some((part) => part.text.includes('Application')),
-            webGl2HasRenderManager: !!webGl2RenderManagerQuickInfo?.displayParts?.some(
-                (part) => part.text.includes('WebGl2RenderManager')
+            webGl2HasBackend: !!webGl2BackendQuickInfo?.displayParts?.some(
+                (part) => part.text.includes('WebGl2Backend')
             ),
-            webGpuHasRenderManager: !!webGpuRenderManagerQuickInfo?.displayParts?.some(
-                (part) => part.text.includes('WebGpuRenderManager')
+            webGpuHasBackend: !!webGpuBackendQuickInfo?.displayParts?.some(
+                (part) => part.text.includes('WebGpuBackend')
             ),
         };
     });
@@ -469,14 +469,14 @@ const assertMonacoExoPackageSupport = async (page) => {
     assert.deepEqual(diagnostics.markers, [], `Monaco emitted ExoJS diagnostics: ${JSON.stringify(diagnostics.markers)}`);
     assert.equal(diagnostics.exoHasApplication, true, 'Monaco completions did not expose @codexo/exojs.Application.');
     assert.equal(
-        diagnostics.webGl2HasRenderManager,
+        diagnostics.webGl2HasBackend,
         true,
-        'Monaco symbol info did not expose @codexo/exojs.WebGl2RenderManager.'
+        'Monaco symbol info did not expose @codexo/exojs.WebGl2Backend.'
     );
     assert.equal(
-        diagnostics.webGpuHasRenderManager,
+        diagnostics.webGpuHasBackend,
         true,
-        'Monaco symbol info did not expose @codexo/exojs.WebGpuRenderManager.'
+        'Monaco symbol info did not expose @codexo/exojs.WebGpuBackend.'
     );
 };
 
@@ -650,7 +650,7 @@ test('Monaco does not emit stale diagnostics for valid example scene patterns', 
                 'Argument of type \'"music"\' is not assignable to parameter of type \'ResourceTypes\'',
                 'Property \'_music\' does not exist on type \'SceneData\'',
                 'Property \'app\' does not exist on type \'SceneData\'',
-                'Property \'clear\' does not exist on type \'SceneRenderRuntime\'',
+                'Property \'clear\' does not exist on type \'RenderBackend\'',
             ]);
         },
     });

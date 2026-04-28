@@ -1,6 +1,6 @@
 import type { Time } from './Time';
 import type { Loader } from '@/resources/Loader';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Container } from '@/rendering/Container';
 import type { RenderNode } from '@/rendering/RenderNode';
 import type { Application } from './Application';
@@ -32,7 +32,7 @@ export interface SceneData {
     load?: (loader: Loader) => Promise<void> | void;
     init?: (loader: Loader) => Promise<void> | void;
     update?: (delta: Time) => void;
-    draw?: (renderManager: SceneRenderRuntime) => void;
+    draw?: (backend: RenderBackend) => void;
     handleInput?: (event: SceneInputEvent) => boolean | void;
     unload?: (loader: Loader) => Promise<void> | void;
 }
@@ -77,7 +77,7 @@ export class Scene<T extends SceneData = SceneData> {
      *
      * `Scene.root` is an **ownership and traversal anchor**, not an
      * automatic render-authoritative root. The framework never calls
-     * `root.render(runtime)` for you. `Scene.draw(runtime)` is the
+     * `root.render(backend)` for you. `Scene.draw(backend)` is the
      * explicit orchestration point — see {@link Scene.draw}.
      *
      * The root exists eagerly so `addChild` / `removeChild` can proxy
@@ -156,14 +156,14 @@ export class Scene<T extends SceneData = SceneData> {
      * automatically traverse {@link Scene.root}. Auto-rendering the
      * full hierarchy would conflict with ExoJS's "explicit instead of
      * implicit" identity. Users decide which subtree(s) render each
-     * frame — `this.root.render(runtime)` is one common pattern, but
-     * selective rendering (e.g. `world.render(runtime)` while skipping
+     * frame — `this.root.render(backend)` is one common pattern, but
+     * selective rendering (e.g. `world.render(backend)` while skipping
      * `ui` for a given frame) is equally valid and intentionally
      * supported.
      *
      * @see Scene.root for why root is structural, not render-authoritative.
      */
-    public draw(renderManager: SceneRenderRuntime): void {
+    public draw(backend: RenderBackend): void {
         // override in subclass or via new Scene({ ... })
     }
 

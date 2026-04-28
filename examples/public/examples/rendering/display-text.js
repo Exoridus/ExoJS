@@ -39,8 +39,8 @@ app.start(new Scene({
             .rotate(delta.seconds * 36);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._text.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._text.render(backend);
     },
 }));

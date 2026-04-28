@@ -5,10 +5,10 @@ import { RendererRegistry } from '@/rendering/RendererRegistry';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Renderer } from '@/rendering/Renderer';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 
 class BaseDrawable extends Drawable {
-    public override render(_renderManager: SceneRenderRuntime): this {
+    public override render(_backend: RenderBackend): this {
         return this;
     }
 }
@@ -16,10 +16,10 @@ class BaseDrawable extends Drawable {
 class DerivedDrawable extends BaseDrawable {
 }
 
-const createRuntime = (): SceneRenderRuntime => {
+const createRuntime = (): RenderBackend => {
     const renderTarget = new RenderTarget(100, 100, true);
     const stats = createRenderStats();
-    const runtime: SceneRenderRuntime = {
+    const runtime: RenderBackend = {
         backendType: RenderBackendType.WebGl2,
         stats,
         renderTarget,
@@ -84,7 +84,7 @@ const createRuntime = (): SceneRenderRuntime => {
     return runtime;
 };
 
-const createRenderer = (): Renderer<SceneRenderRuntime, BaseDrawable> => ({
+const createRenderer = (): Renderer<RenderBackend, BaseDrawable> => ({
     backendType: RenderBackendType.WebGl2,
     connect: jest.fn(),
     disconnect: jest.fn(),
@@ -94,7 +94,7 @@ const createRenderer = (): Renderer<SceneRenderRuntime, BaseDrawable> => ({
 
 describe('RendererRegistry', () => {
     test('rejects duplicate renderer registration for the same drawable type', () => {
-        const registry = new RendererRegistry<SceneRenderRuntime>();
+        const registry = new RendererRegistry<RenderBackend>();
 
         registry.registerRenderer(BaseDrawable, createRenderer());
 
@@ -104,7 +104,7 @@ describe('RendererRegistry', () => {
     });
 
     test('throws a clear error when no renderer is registered', () => {
-        const registry = new RendererRegistry<SceneRenderRuntime>();
+        const registry = new RendererRegistry<RenderBackend>();
 
         expect(() => {
             registry.resolve(new BaseDrawable());
@@ -112,7 +112,7 @@ describe('RendererRegistry', () => {
     });
 
     test('resolves the nearest registered prototype renderer', () => {
-        const registry = new RendererRegistry<SceneRenderRuntime>();
+        const registry = new RendererRegistry<RenderBackend>();
         const renderer = createRenderer();
 
         registry.registerRenderer(BaseDrawable, renderer);
@@ -121,7 +121,7 @@ describe('RendererRegistry', () => {
     });
 
     test('connects newly registered renderers immediately when already connected', () => {
-        const registry = new RendererRegistry<SceneRenderRuntime>();
+        const registry = new RendererRegistry<RenderBackend>();
         const runtime = createRuntime();
         const renderer = createRenderer();
 

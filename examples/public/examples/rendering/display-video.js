@@ -25,8 +25,8 @@ app.start(new Scene({
         this.app.inputManager.onPointerTap.add(() => this._video.toggle());
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._video.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._video.render(backend);
     },
 }));

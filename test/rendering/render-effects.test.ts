@@ -7,7 +7,7 @@ import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTarget } from '@/rendering/RenderTarget';
-import type { SceneRenderRuntime } from '@/rendering/SceneRenderRuntime';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
@@ -31,7 +31,7 @@ class RecordingFilter extends Filter {
         this._events = events;
     }
 
-    public apply(_runtime: SceneRenderRuntime, _input: RenderTexture, _output: RenderTexture): void {
+    public apply(_runtime: RenderBackend, _input: RenderTexture, _output: RenderTexture): void {
         this._events.push(this._id);
         this.calls();
     }
@@ -53,13 +53,13 @@ const createRuntime = () => {
     const released: Array<RenderTexture> = [];
     const clipEvents: Array<string> = [];
     const clipBoundsCalls: Array<Rectangle> = [];
-    const draw = jest.fn(function(this: SceneRenderRuntime) {
+    const draw = jest.fn(function(this: RenderBackend) {
         return this;
     });
-    const clear = jest.fn(function(this: SceneRenderRuntime) {
+    const clear = jest.fn(function(this: RenderBackend) {
         return this;
     });
-    const runtime: SceneRenderRuntime = {
+    const runtime: RenderBackend = {
         backendType: RenderBackendType.WebGl2,
         stats,
         get renderTarget() {

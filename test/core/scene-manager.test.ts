@@ -37,7 +37,7 @@ const createInputManagerStub = (): InputManagerStub => ({
 
 const createApplicationStub = (): Application & {
     inputManager: InputManagerStub;
-    renderManager: {
+    backend: {
         view: { getBounds: () => Rectangle; };
         draw: jest.Mock;
         stats: { culledNodes: number; };
@@ -49,7 +49,7 @@ const createApplicationStub = (): Application & {
     return {
         loader: {},
         inputManager: createInputManagerStub(),
-        renderManager: {
+        backend: {
             view: {
                 getBounds: () => bounds,
             },
@@ -59,7 +59,7 @@ const createApplicationStub = (): Application & {
         },
     } as unknown as Application & {
         inputManager: InputManagerStub;
-        renderManager: {
+        backend: {
             view: { getBounds: () => Rectangle; };
             draw: jest.Mock;
             stats: { culledNodes: number; };
@@ -372,7 +372,7 @@ describe('SceneManager', () => {
         expect(transitionSettled).toBe(true);
         await expect(transitionPromise).resolves.toBe(manager);
         expect(manager.scene).toBe(second);
-        expect(app.renderManager.draw).toHaveBeenCalled();
+        expect(app.backend.draw).toHaveBeenCalled();
     });
 
     test('transition failure rejects and leaves manager in a valid state', async () => {

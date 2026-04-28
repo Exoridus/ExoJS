@@ -50,9 +50,9 @@ app.start(new Scene({
         this._rectMask.y = (height / 2 + Math.sin(this._time * 1.4) * r - 55) | 0;
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._rectSprite.render(renderManager);
-        this._gfxSprite.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._rectSprite.render(backend);
+        this._gfxSprite.render(backend);
     },
 }));

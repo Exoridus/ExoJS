@@ -21,7 +21,7 @@ import type { Rectangle } from '@/math/Rectangle';
 import type { RenderPass } from '../RenderPass';
 import type { Drawable } from '../Drawable';
 import type { Renderer } from '../Renderer';
-import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
+import type { RenderBackend } from '../RenderBackend';
 import type { Shader } from '../shader/Shader';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 import type { View } from '../View';
@@ -74,10 +74,10 @@ interface DestroyListenable {
     removeDestroyListener(listener: () => void): unknown;
 }
 
-export class WebGl2RenderManager implements WebGl2RendererRuntime {
+export class WebGl2Backend implements RenderBackend {
 
     public readonly backendType = RenderBackendType.WebGl2;
-    public readonly rendererRegistry = new RendererRegistry<WebGl2RendererRuntime>();
+    public readonly rendererRegistry = new RendererRegistry<WebGl2Backend>();
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _rootRenderTarget: RenderTarget;

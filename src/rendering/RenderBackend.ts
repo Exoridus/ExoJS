@@ -10,7 +10,7 @@ import type { RenderTexture } from './texture/RenderTexture';
 import type { RenderStats } from './RenderStats';
 import type { BlendModes } from './types';
 
-export interface SceneRenderRuntime {
+export interface RenderBackend {
     readonly backendType: RenderBackendType;
     readonly view: View;
     readonly renderTarget: RenderTarget;

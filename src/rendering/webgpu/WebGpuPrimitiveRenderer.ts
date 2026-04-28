@@ -3,8 +3,7 @@
 import { Matrix } from '@/math/Matrix';
 import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
 import type { DrawableShape } from '@/rendering/primitives/DrawableShape';
-import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
-import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
+import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { RenderingPrimitives } from '@/rendering/types';
 import type { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
@@ -70,7 +69,6 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     private _drawCallCount = 0;
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    private _renderManager: WebGpuRenderManager | null = null;
     private _device: GPUDevice | null = null;
     private _shaderModule: GPUShaderModule | null = null;
     private _pipelineLayout: GPUPipelineLayout | null = null;
@@ -86,9 +84,9 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     private _sequentialIndexData: Uint16Array = new Uint16Array(0);
 
     public render(shape: DrawableShape): void {
-        const runtime = this._renderManager;
+        const backend = this._backend;
 
-        if (runtime === null) {
+        if (backend === null) {
             throw new Error('Renderer not connected');
         }
 
@@ -104,7 +102,7 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
             throw new Error(`WebGPU primitive renderer does not support draw mode "${shape.drawMode}" yet.`);
         }
 
-        runtime.setBlendMode(shape.blendMode);
+        backend.setBlendMode(shape.blendMode);
 
         if (shape.geometry.vertices.length === 0) {
             return;
@@ -124,18 +122,18 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
     }
 
     public flush(): void {
-        const runtime = this._renderManager;
+        const backend = this._backend;
         const device = this._device;
 
-        if (!runtime || !device) {
+        if (!backend || !device) {
             return;
         }
 
-        if (this._drawCallCount === 0 && !runtime.clearRequested) {
+        if (this._drawCallCount === 0 && !backend.clearRequested) {
             return;
         }
 
-        const scissor = runtime.getScissorRect();
+        const scissor = backend.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
         interface PrimitiveDrawPlan {
@@ -170,7 +168,7 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                     topology: resolved.topology,
                     usesStripIndex: resolved.usesStripIndex,
                     blendMode: drawCall.blendMode,
-                    format: runtime.renderTargetFormat,
+                    format: backend.renderTargetFormat,
                 });
 
                 plan.push({
@@ -190,14 +188,14 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         // a single empty pass so createColorAttachment consumes the clear
         // state exactly once.
         if (plan.length === 0) {
-            if (runtime.clearRequested) {
+            if (backend.clearRequested) {
                 const encoder = device.createCommandEncoder();
                 const pass = encoder.beginRenderPass({
-                    colorAttachments: [runtime.createColorAttachment()],
+                    colorAttachments: [backend.createColorAttachment()],
                 });
-                runtime.stats.renderPasses++;
+                backend.stats.renderPasses++;
                 pass.end();
-                runtime.submit(encoder.finish());
+                backend.submit(encoder.finish());
             }
             this._drawCallCount = 0;
             return;
@@ -232,7 +230,7 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                 const drawCall = this._drawCalls[i];
                 const shape = drawCall.shape;
 
-                this._writeShapeVertices(runtime, shape, vOffset);
+                this._writeShapeVertices(backend, shape, vOffset);
 
                 if (resolved.indices !== null && resolved.indexCount > 0) {
                     this._packedIndexData.set(resolved.indices.subarray(0, resolved.indexCount), iOffset);
@@ -267,9 +265,9 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         // baked into the vertex data.
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
-            colorAttachments: [runtime.createColorAttachment()],
+            colorAttachments: [backend.createColorAttachment()],
         });
-        runtime.stats.renderPasses++;
+        backend.stats.renderPasses++;
 
         if (scissor !== null) {
             pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
@@ -286,12 +284,12 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
                 pass.draw(planned.vertexCount);
             }
 
-            runtime.stats.batches++;
-            runtime.stats.drawCalls++;
+            backend.stats.batches++;
+            backend.stats.drawCalls++;
         }
 
         pass.end();
-        runtime.submit(encoder.finish());
+        backend.submit(encoder.finish());
         this._drawCallCount = 0;
     }
 
@@ -300,9 +298,9 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         this._combinedTransform.destroy();
     }
 
-    protected onConnect(runtime: WebGpuRendererRuntime): void {
-        this._renderManager = runtime as WebGpuRenderManager;
-        this._device = this._renderManager.device;
+    protected onConnect(backend: WebGpuBackend): void {
+        this._backend = backend as WebGpuBackend;
+        this._device = this._backend.device;
         this._shaderModule = this._device.createShaderModule({ code: primitiveShaderSource });
         // Transform is applied per-vertex on the CPU, so no uniform binding
         // is needed — the shader outputs input.position directly.
@@ -319,11 +317,11 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         this._pipelineLayout = null;
         this._shaderModule = null;
         this._device = null;
-        this._renderManager = null;
+        this._backend = null;
         this._drawCallCount = 0;
     }
 
-    private _writeShapeVertices(runtime: WebGpuRendererRuntime, shape: DrawableShape, vertexStart: number): void {
+    private _writeShapeVertices(backend: WebGpuBackend, shape: DrawableShape, vertexStart: number): void {
         // Matrix.combine is `other * this` (see Matrix.rotate and
         // SceneNode.getGlobalTransform, both of which chain via
         // local.combine(parent.global) to yield parent.global * local).
@@ -333,7 +331,7 @@ export class WebGpuPrimitiveRenderer extends AbstractWebGpuRenderer<DrawableShap
         // _combinedTransform = view * global.
         const matrix = this._combinedTransform
             .copy(shape.getGlobalTransform())
-            .combine(runtime.view.getTransform());
+            .combine(backend.view.getTransform());
 
         // Match the original uniform-based WGSL layout exactly.
         //

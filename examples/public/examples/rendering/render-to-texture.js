@@ -43,22 +43,22 @@ app.start(new Scene({
     },
 
     createRenderTexture(container) {
-        const renderManager = this.app.renderManager;
+        const backend = this.app.backend;
         const renderTexture = new RenderTexture(Math.ceil(container.width), Math.ceil(container.height));
 
-        renderManager.setRenderTarget(renderTexture);
+        backend.setRenderTarget(renderTexture);
 
-        renderManager.clear();
-        container.render(renderManager);
+        backend.clear();
+        container.render(backend);
 
-        renderManager.setRenderTarget(null);
+        backend.setRenderTarget(null);
 
         return renderTexture;
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._container.render(renderManager);
-        this._renderSprite.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._container.render(backend);
+        this._renderSprite.render(backend);
     },
 }));

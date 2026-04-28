@@ -67,14 +67,14 @@ app.start(new Scene({
         this._displaySprite.setScale(displayScale);
     },
 
-    draw(renderManager) {
-        renderManager.setRenderTarget(this._offscreenTexture);
-        renderManager.clear(new Color(0.02, 0.03, 0.06, 1));
-        this._offscreenRoot.render(renderManager);
+    draw(backend) {
+        backend.setRenderTarget(this._offscreenTexture);
+        backend.clear(new Color(0.02, 0.03, 0.06, 1));
+        this._offscreenRoot.render(backend);
 
-        renderManager.setRenderTarget(null);
-        renderManager.clear();
-        this._displaySprite.render(renderManager);
+        backend.setRenderTarget(null);
+        backend.clear();
+        this._displaySprite.render(backend);
     },
 
     unload() {

@@ -37,8 +37,8 @@ app.start(new Scene({
         this._sprite = this._spritesheet.getFrameSprite(`explosion-${this._frame}`);
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._sprite.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._sprite.render(backend);
     },
 }));

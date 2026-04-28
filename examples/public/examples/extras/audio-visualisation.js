@@ -97,7 +97,7 @@ app.start(new Scene({
         this._values[3] = high / len;
     },
 
-    draw(renderManager) {
+    draw(backend) {
         if (this._music.paused) {
             return;
         }
@@ -136,7 +136,7 @@ app.start(new Scene({
 
         this._screen.updateTexture();
 
-        renderManager.clear();
-        this._screen.render(renderManager);
+        backend.clear();
+        this._screen.render(backend);
     },
 }));

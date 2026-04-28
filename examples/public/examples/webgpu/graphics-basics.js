@@ -47,9 +47,9 @@ app.start(new Scene({
         this._circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
     },
 
-    draw(renderManager) {
-        renderManager.clear();
-        this._sceneRoot.render(renderManager);
+    draw(backend) {
+        backend.clear();
+        this._sceneRoot.render(backend);
 
     },
 
