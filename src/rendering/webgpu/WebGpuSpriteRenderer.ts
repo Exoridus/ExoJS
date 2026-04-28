@@ -51,20 +51,16 @@ var spriteSampler6: sampler;
 @group(1) @binding(15)
 var spriteSampler7: sampler;
 
-// Per-vertex layout (24 bytes):
-//   location 0: position f32x2     (offset 0,  8 bytes)
-//   location 1: texcoord f32x2     (offset 8,  8 bytes)
-//   location 2: color    unorm8x4  (offset 16, 4 bytes)
-//   location 3: packed   u32       (offset 20, 4 bytes)
-//
-// The packed u32 carries:
-//   bits 0..7  — textureSlot (0..7 for the 8-slot multi-texture batch)
-//   bit  8     — premultiplyAlpha sample flag (1 = source alpha is straight)
+// Per-instance vertex layout (56 bytes per sprite). The four corners
+// of the quad are derived from @builtin(vertex_index) 0..3 inside the
+// vertex shader — there is no per-vertex stream.
 struct VertexInput {
-    @location(0) position: vec2<f32>,
-    @location(1) texcoord: vec2<f32>,
-    @location(2) color: vec4<f32>,
-    @location(3) packedSlotFlags: u32,
+    @location(0) localBounds: vec4<f32>,        // left, top, right, bottom (local space)
+    @location(1) transformAB: vec3<f32>,        // first  row of 2D affine
+    @location(2) transformCD: vec3<f32>,        // second row of 2D affine
+    @location(3) uvBounds: vec4<f32>,           // uMin, vMin, uMax, vMax (CPU pre-swaps for flipY)
+    @location(4) color: vec4<f32>,              // RGBA tint
+    @location(5) packedSlotFlags: u32,          // bits 0..7 = slot, bit 8 = premultiply
 };
 
 struct VertexOutput {
@@ -76,11 +72,26 @@ struct VertexOutput {
 };
 
 @vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
+fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
     var output: VertexOutput;
 
-    output.position = projection.matrix * vec4<f32>(input.position, 0.0, 1.0);
-    output.texcoord = input.texcoord;
+    // vid 0..3 → corners in TL, TR, BR, BL order (matches the static index
+    // buffer [0,1,2,0,2,3] used for indexed triangle-list drawing).
+    let cornerX = ((vid + 1u) >> 1u) & 1u;
+    let cornerY = vid >> 1u;
+
+    let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
+    let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
+
+    let worldX = input.transformAB.x * localX + input.transformAB.y * localY + input.transformAB.z;
+    let worldY = input.transformCD.x * localX + input.transformCD.y * localY + input.transformCD.z;
+
+    output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
+
+    let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
+    let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
+    output.texcoord = vec2<f32>(u, v);
+
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
     output.textureSlot = input.packedSlotFlags & 0xFFu;
     output.premultiplySample = (input.packedSlotFlags >> 8u) & 1u;
@@ -134,34 +145,18 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const vertexStrideBytes = 24;
-const spriteVertexCount = 4;
-const spriteIndexCount = 6;
+const instanceStrideBytes = 56;
+const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const projectionByteLength = 64;
 const initialBatchCapacity = 32;
-const wordsPerVertex = vertexStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const maxBatchTextures = 8;
-
-interface WebGpuSpriteDrawCall {
-    sprite: Sprite;
-    texture: Texture | RenderTexture;
-    color: number;
-    blendMode: BlendModes;
-}
-
-interface WebGpuSpriteBatchRange {
-    readonly start: number;
-    readonly end: number;
-    readonly spriteCount: number;
-    readonly blendMode: BlendModes;
-    readonly textures: Array<Texture | RenderTexture>;
-    readonly textureSlots: Map<Texture | RenderTexture, number>;
-}
+const indicesPerSprite = 6;
+// Static index buffer: two triangles forming a quad, vertex IDs 0..3 in
+// TL/TR/BR/BL order so the WGSL `cornerX/cornerY` derivation matches.
+const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
-    private readonly _drawCalls: Array<WebGpuSpriteDrawCall> = [];
-    private _drawCallCount = 0;
     private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
 
     private _renderManager: WebGpuRenderManager | null = null;
@@ -172,75 +167,89 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     private _pipelineLayout: GPUPipelineLayout | null = null;
     private _uniformBuffer: GPUBuffer | null = null;
     private _uniformBindGroup: GPUBindGroup | null = null;
-    private _vertexBuffer: GPUBuffer | null = null;
     private _indexBuffer: GPUBuffer | null = null;
-    private _vertexCapacity = 0;
-    private _vertexData: ArrayBuffer = new ArrayBuffer(0);
-    private _float32View = new Float32Array(this._vertexData);
-    private _uint32View = new Uint32Array(this._vertexData);
+    private _instanceBuffer: GPUBuffer | null = null;
+    private _instanceCapacity = 0;
+    private _instanceData: ArrayBuffer = new ArrayBuffer(0);
+    private _instanceFloat32 = new Float32Array(this._instanceData);
+    private _instanceUint32 = new Uint32Array(this._instanceData);
     private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    protected onConnect(runtime: WebGpuRendererRuntime): void {
-        if (!this._renderManager) {
-            this._renderManager = runtime as WebGpuRenderManager;
-            this._device = this._renderManager.device;
-            this._shaderModule = this._device.createShaderModule({ code: spriteShaderSource });
+    private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
+    private readonly _textureSlots: Map<Texture | RenderTexture, number> = new Map();
+    private _slotCount = 0;
+    private _instanceCount = 0;
+    private _currentBlendMode: BlendModes | null = null;
 
-            this._uniformBindGroupLayout = this._device.createBindGroupLayout({
-                entries: [{
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
-                    buffer: {
-                        type: 'uniform',
-                    },
-                }],
-            });
-            this._textureBindGroupLayout = this._device.createBindGroupLayout({
-                entries: [
-                    ...Array.from({ length: maxBatchTextures }, (_, index) => ({
-                        binding: index,
-                        visibility: GPUShaderStage.FRAGMENT,
-                        texture: {
-                            sampleType: 'float' as const,
-                        },
-                    })),
-                    ...Array.from({ length: maxBatchTextures }, (_, index) => ({
-                        binding: maxBatchTextures + index,
-                        visibility: GPUShaderStage.FRAGMENT,
-                        sampler: {
-                            type: 'filtering' as const,
-                        },
-                    })),
-                ],
-            });
-            this._pipelineLayout = this._device.createPipelineLayout({
-                bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
-            });
-            this._uniformBuffer = this._device.createBuffer({
-                size: projectionByteLength,
-                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            });
-            this._uniformBindGroup = this._device.createBindGroup({
-                layout: this._uniformBindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: {
-                        buffer: this._uniformBuffer,
-                    },
-                }],
-            });
-            this._ensureBatchCapacity(initialBatchCapacity);
+    protected onConnect(runtime: WebGpuRendererRuntime): void {
+        if (this._renderManager) {
+            return;
         }
+
+        this._renderManager = runtime as WebGpuRenderManager;
+        this._device = this._renderManager.device;
+        this._shaderModule = this._device.createShaderModule({ code: spriteShaderSource });
+
+        this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'uniform',
+                },
+            }],
+        });
+        this._textureBindGroupLayout = this._device.createBindGroupLayout({
+            entries: [
+                ...Array.from({ length: maxBatchTextures }, (_, index) => ({
+                    binding: index,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: {
+                        sampleType: 'float' as const,
+                    },
+                })),
+                ...Array.from({ length: maxBatchTextures }, (_, index) => ({
+                    binding: maxBatchTextures + index,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: {
+                        type: 'filtering' as const,
+                    },
+                })),
+            ],
+        });
+        this._pipelineLayout = this._device.createPipelineLayout({
+            bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
+        });
+        this._uniformBuffer = this._device.createBuffer({
+            size: projectionByteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this._uniformBindGroup = this._device.createBindGroup({
+            layout: this._uniformBindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this._uniformBuffer,
+                },
+            }],
+        });
+
+        // Static index buffer for the quad. Allocated once at connect; its
+        // contents never change.
+        this._indexBuffer = this._device.createBuffer({
+            size: quadIndices.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        });
+        this._device.queue.writeBuffer(this._indexBuffer, 0, quadIndices.buffer as ArrayBuffer, quadIndices.byteOffset, quadIndices.byteLength);
     }
 
     protected onDisconnect(): void {
-        this.flush();
-        this._vertexBuffer?.destroy();
+        this._instanceBuffer?.destroy();
         this._indexBuffer?.destroy();
         this._uniformBuffer?.destroy();
 
         this._pipelines.clear();
-        this._vertexBuffer = null;
+        this._instanceBuffer = null;
         this._indexBuffer = null;
         this._uniformBindGroup = null;
         this._uniformBuffer = null;
@@ -250,21 +259,23 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         this._shaderModule = null;
         this._device = null;
         this._renderManager = null;
-        this._vertexCapacity = 0;
-        this._vertexData = new ArrayBuffer(0);
-        this._float32View = new Float32Array(this._vertexData);
-        this._uint32View = new Uint32Array(this._vertexData);
-        this._drawCallCount = 0;
+        this._instanceCapacity = 0;
+        this._instanceData = new ArrayBuffer(0);
+        this._instanceFloat32 = new Float32Array(this._instanceData);
+        this._instanceUint32 = new Uint32Array(this._instanceData);
+        this._instanceCount = 0;
+        this._currentBlendMode = null;
+        this._resetSlots();
     }
 
     public render(sprite: Sprite): void {
         const renderManager = this._renderManager;
         const texture = sprite.texture;
 
+        // Same early-out conditions as the deferred renderer used to apply.
         if (
             renderManager === null
-            ||
-            (!(texture instanceof Texture) && !(texture instanceof RenderTexture))
+            || (!(texture instanceof Texture) && !(texture instanceof RenderTexture))
             || texture.width === 0
             || texture.height === 0
             || (texture instanceof Texture && texture.source === null)
@@ -272,23 +283,38 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             return;
         }
 
-        renderManager.setBlendMode(sprite.blendMode);
-        const drawCallIndex = this._drawCallCount++;
-        const drawCall = this._drawCalls[drawCallIndex];
+        const blendMode = sprite.blendMode;
 
-        if (drawCall) {
-            drawCall.sprite = sprite;
-            drawCall.texture = texture;
-            drawCall.color = sprite.tint.toRgba();
-            drawCall.blendMode = sprite.blendMode;
-        } else {
-            this._drawCalls.push({
-                sprite,
-                texture,
-                color: sprite.tint.toRgba(),
-                blendMode: sprite.blendMode,
-            });
+        // Flush triggers: blend-mode change, instance buffer full at current
+        // capacity (we'll grow on next render), or texture-slot exhaustion.
+        const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
+        const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
+
+        if (blendModeChanged || slotExhausted) {
+            this.flush();
         }
+
+        this._currentBlendMode = blendMode;
+        renderManager.setBlendMode(blendMode);
+
+        // Resolve / assign texture slot.
+        let slot = this._textureSlots.get(texture);
+
+        if (slot === undefined) {
+            slot = this._slotCount++;
+            this._textureSlots.set(texture, slot);
+            this._activeTextures[slot] = texture;
+        }
+
+        const premultiplySample = renderManager.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+        const packedSlotFlags = slot | (premultiplySample << 8);
+
+        // Ensure capacity covers the new entry BEFORE packing — otherwise the
+        // typed-array writes in _packInstance silently fall off the end of a
+        // too-small buffer.
+        this._ensureInstanceCapacity(this._instanceCount + 1);
+        this._packInstance(sprite, texture, packedSlotFlags);
+        this._instanceCount++;
     }
 
     public flush(): void {
@@ -296,63 +322,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         const device = this._device;
         const uniformBuffer = this._uniformBuffer;
         const uniformBindGroup = this._uniformBindGroup;
-        const vertexBuffer = this._vertexBuffer;
-        const indexBuffer = this._indexBuffer;
 
-        if (!renderManager || !device || !uniformBuffer || !uniformBindGroup || !vertexBuffer || !indexBuffer) {
+        if (!renderManager || !device || !uniformBuffer || !uniformBindGroup) {
             return;
         }
 
-        if (this._drawCallCount === 0 && !renderManager.clearRequested) {
+        if (this._instanceCount === 0 && !renderManager.clearRequested) {
             return;
-        }
-
-        // Grow vertex/index buffers up front for the TOTAL sprite count. Two
-        // reasons this must happen before the render pass begins:
-        //   1. _ensureBatchCapacity destroys old buffers and creates new ones
-        //      when capacity grows, so running it after setVertexBuffer /
-        //      setIndexBuffer would leave the pass bound to destroyed buffers.
-        //   2. All batches are packed into the vertex buffer at distinct
-        //      sprite offsets, so the buffer must hold every sprite in the
-        //      flush, not just one batch worth.
-        if (this._drawCallCount > 0) {
-            this._ensureBatchCapacity(this._drawCallCount);
-        }
-
-        // Walk the batches once, packing each batch's vertex data into the
-        // CPU-side buffer at its own sprite-aligned offset. Each batch's
-        // metadata is recorded for the draw loop below.
-        //
-        // This replaces an earlier per-batch queue.writeBuffer(..., offset: 0)
-        // pattern where every writeBuffer targeted the same GPU offset. All
-        // writeBuffers in a frame execute before queue.submit(commandBuffer),
-        // so only the last batch's vertex data survived — which meant any
-        // flush containing more than one batch rendered every batch using
-        // the LAST batch's vertices (background vanished, sprites duplicated
-        // at wrong sizes, etc. whenever blend mode / texture slot / pipeline
-        // caused a split into multiple batches).
-        const batchPlan: Array<{
-            firstSprite: number;
-            spriteCount: number;
-            blendMode: BlendModes;
-            textures: Array<Texture | RenderTexture>;
-        }> = [];
-        let packedSpriteCount = 0;
-
-        for (let start = 0; start < this._drawCallCount;) {
-            const batch = this._getBatchRange(start);
-            const spriteCount = batch.end - batch.start;
-
-            this._writeBatchVertexData(batch, packedSpriteCount);
-            batchPlan.push({
-                firstSprite: packedSpriteCount,
-                spriteCount,
-                blendMode: batch.blendMode,
-                textures: batch.textures,
-            });
-
-            packedSpriteCount += spriteCount;
-            start = batch.end;
         }
 
         const viewMatrix = renderManager.view.getTransform();
@@ -369,7 +345,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             0,
             this._projectionData.buffer as ArrayBuffer,
             this._projectionData.byteOffset,
-            this._projectionData.byteLength
+            this._projectionData.byteLength,
         );
 
         const encoder = device.createCommandEncoder();
@@ -377,6 +353,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             colorAttachments: [renderManager.createColorAttachment()],
         });
         renderManager.stats.renderPasses++;
+
         const scissor = renderManager.getScissorRect();
         const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
@@ -384,208 +361,39 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
         }
 
-        if (this._drawCallCount > 0 && !maskClipsAll) {
-            // Single upload for the whole packed vertex buffer — every batch
-            // reads from its own sprite range via drawIndexed's firstIndex.
+        if (this._instanceCount > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null) {
             device.queue.writeBuffer(
-                this._vertexBuffer!,
+                this._instanceBuffer,
                 0,
-                this._vertexData,
+                this._instanceData,
                 0,
-                packedSpriteCount * spriteVertexCount * vertexStrideBytes,
+                this._instanceCount * instanceStrideBytes,
             );
 
+            const pipeline = this._getPipeline(this._currentBlendMode, renderManager.renderTargetFormat);
+            const textureBindGroup = this._createTextureBindGroup(device, renderManager);
+
+            pass.setPipeline(pipeline);
             pass.setBindGroup(0, uniformBindGroup);
-            pass.setVertexBuffer(0, this._vertexBuffer!);
-            pass.setIndexBuffer(this._indexBuffer!, 'uint32');
+            pass.setBindGroup(1, textureBindGroup);
+            pass.setVertexBuffer(0, this._instanceBuffer);
+            pass.setIndexBuffer(this._indexBuffer, 'uint16');
+            pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
 
-            for (const plan of batchPlan) {
-                const pipeline = this._getPipeline(plan.blendMode, renderManager.renderTargetFormat);
-                const textureBindGroup = this._createTextureBindGroup(device, renderManager, plan.textures);
-
-                pass.setPipeline(pipeline);
-                pass.setBindGroup(1, textureBindGroup);
-                pass.drawIndexed(
-                    plan.spriteCount * spriteIndexCount,
-                    1,
-                    plan.firstSprite * spriteIndexCount,
-                    0,
-                    0,
-                );
-                renderManager.stats.batches++;
-                renderManager.stats.drawCalls++;
-            }
+            renderManager.stats.batches++;
+            renderManager.stats.drawCalls++;
         }
 
         pass.end();
         renderManager.submit(encoder.finish());
-        this._drawCallCount = 0;
+
+        this._instanceCount = 0;
+        this._resetSlots();
+        this._currentBlendMode = null;
     }
 
     public destroy(): void {
         this.disconnect();
-    }
-
-    private _ensureBatchCapacity(spriteCount: number): void {
-        if (!this._device || spriteCount <= this._vertexCapacity) {
-            return;
-        }
-
-        let nextCapacity = Math.max(this._vertexCapacity, initialBatchCapacity);
-
-        while (nextCapacity < spriteCount) {
-            nextCapacity *= 2;
-        }
-
-        const vertexData = new ArrayBuffer(nextCapacity * spriteVertexCount * vertexStrideBytes);
-        const vertexBuffer = this._device.createBuffer({
-            size: vertexData.byteLength,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        });
-        const indexData = new Uint32Array(nextCapacity * spriteIndexCount);
-        const indexBuffer = this._device.createBuffer({
-            size: indexData.byteLength,
-            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-        });
-
-        for (let spriteIndex = 0; spriteIndex < nextCapacity; spriteIndex++) {
-            const baseVertex = spriteIndex * spriteVertexCount;
-            const targetIndex = spriteIndex * spriteIndexCount;
-
-            indexData[targetIndex] = baseVertex;
-            indexData[targetIndex + 1] = baseVertex + 1;
-            indexData[targetIndex + 2] = baseVertex + 2;
-            indexData[targetIndex + 3] = baseVertex;
-            indexData[targetIndex + 4] = baseVertex + 2;
-            indexData[targetIndex + 5] = baseVertex + 3;
-        }
-
-        this._device.queue.writeBuffer(indexBuffer, 0, indexData.buffer, indexData.byteOffset, indexData.byteLength);
-
-        this._vertexBuffer?.destroy();
-        this._indexBuffer?.destroy();
-
-        this._vertexCapacity = nextCapacity;
-        this._vertexData = vertexData;
-        this._float32View = new Float32Array(vertexData);
-        this._uint32View = new Uint32Array(vertexData);
-        this._vertexBuffer = vertexBuffer;
-        this._indexBuffer = indexBuffer;
-    }
-
-    private _writeBatchVertexData(batch: WebGpuSpriteBatchRange, firstSprite: number): void {
-        const renderManager = this._renderManager;
-
-        if (!renderManager) {
-            return;
-        }
-
-        let vertexOffset = firstSprite * spriteVertexCount * wordsPerVertex;
-
-        for (let drawCallIndex = batch.start; drawCallIndex < batch.end; drawCallIndex++) {
-            const drawCall = this._drawCalls[drawCallIndex];
-            const textureSlot = batch.textureSlots.get(drawCall.texture) ?? 0;
-            const premultiplySample = renderManager.shouldPremultiplyTextureSample(drawCall.texture) ? 1 : 0;
-            const vertices = drawCall.sprite.vertices;
-            const texCoords = drawCall.sprite.texCoords;
-
-            for (let i = 0; i < spriteVertexCount; i++) {
-                const vertexIndex = i * 2;
-                const packedTexCoord = texCoords[i];
-
-                this._float32View[vertexOffset] = vertices[vertexIndex];
-                this._float32View[vertexOffset + 1] = vertices[vertexIndex + 1];
-                this._float32View[vertexOffset + 2] = (packedTexCoord & 0xFFFF) / 65535;
-                this._float32View[vertexOffset + 3] = ((packedTexCoord >>> 16) & 0xFFFF) / 65535;
-                this._uint32View[vertexOffset + 4] = drawCall.color;
-                // Pack textureSlot (bits 0-7) and premultiplySample flag (bit 8)
-                // into a single uint32 attribute. Saves 4 bytes per vertex
-                // (28 → 24) and one shaderLocation slot.
-                this._uint32View[vertexOffset + 5] = textureSlot | (premultiplySample << 8);
-                vertexOffset += wordsPerVertex;
-            }
-        }
-    }
-
-    private _getBatchRange(start: number): WebGpuSpriteBatchRange {
-        const drawCall = this._drawCalls[start];
-        const textureSlots = new Map<Texture | RenderTexture, number>();
-        const textures = new Array<Texture | RenderTexture>();
-        let end = start + 1;
-
-        textureSlots.set(drawCall.texture, 0);
-        textures.push(drawCall.texture);
-
-        while (end < this._drawCallCount) {
-            const nextDrawCall = this._drawCalls[end];
-
-            if (nextDrawCall.blendMode !== drawCall.blendMode) {
-                break;
-            }
-
-            if (!textureSlots.has(nextDrawCall.texture)) {
-                if (textures.length >= maxBatchTextures) {
-                    break;
-                }
-
-                textureSlots.set(nextDrawCall.texture, textures.length);
-                textures.push(nextDrawCall.texture);
-            }
-
-            if (textureSlots.size > maxBatchTextures) {
-                break;
-            }
-
-            end++;
-        }
-
-        return {
-            start,
-            end,
-            spriteCount: end - start,
-            blendMode: drawCall.blendMode,
-            textures,
-            textureSlots,
-        };
-    }
-
-    private _createTextureBindGroup(
-        device: GPUDevice,
-        renderManager: WebGpuRenderManager,
-        textures: Array<Texture | RenderTexture>,
-    ): GPUBindGroup {
-        const fallbackTexture = textures[0];
-        const fallbackBinding = renderManager.getTextureBinding(fallbackTexture);
-        const entries: Array<GPUBindGroupEntry> = [];
-        const resolvedBindings = new Array<ReturnType<WebGpuRenderManager['getTextureBinding']>>(maxBatchTextures);
-
-        for (let index = 0; index < maxBatchTextures; index++) {
-            const texture = textures[index] ?? fallbackTexture;
-            const textureBinding = texture === fallbackTexture
-                ? fallbackBinding
-                : renderManager.getTextureBinding(texture);
-
-            resolvedBindings[index] = textureBinding;
-        }
-
-        for (let index = 0; index < maxBatchTextures; index++) {
-            entries.push({
-                binding: index,
-                resource: resolvedBindings[index].view,
-            });
-        }
-
-        for (let index = 0; index < maxBatchTextures; index++) {
-            entries.push({
-                binding: maxBatchTextures + index,
-                resource: resolvedBindings[index].sampler,
-            });
-        }
-
-        return device.createBindGroup({
-            layout: this._textureBindGroupLayout!,
-            entries,
-        });
     }
 
     /**
@@ -606,11 +414,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             return;
         }
 
-        // createRenderPipelineAsync is the documented WebGPU API for
-        // non-blocking pipeline creation. If the underlying device doesn't
-        // expose it (older browsers, headless test mocks, etc.) we leave
-        // every (blendMode, format) combination to the synchronous lazy
-        // path in _getPipeline.
         if (typeof device.createRenderPipelineAsync !== 'function') {
             return;
         }
@@ -646,6 +449,135 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         await Promise.all(promises);
     }
 
+    private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, packedSlotFlags: number): void {
+        const offset = this._instanceCount * wordsPerInstance;
+        const f32 = this._instanceFloat32;
+        const u32 = this._instanceUint32;
+
+        const bounds = sprite.getLocalBounds();
+
+        f32[offset + 0] = bounds.left;
+        f32[offset + 1] = bounds.top;
+        f32[offset + 2] = bounds.right;
+        f32[offset + 3] = bounds.bottom;
+
+        const transform = sprite.getGlobalTransform();
+
+        f32[offset + 4] = transform.a;
+        f32[offset + 5] = transform.b;
+        f32[offset + 6] = transform.x;
+        f32[offset + 7] = transform.c;
+        f32[offset + 8] = transform.d;
+        f32[offset + 9] = transform.y;
+
+        // uvBounds: u16x4 normalised, packed into two u32 slots. The CPU
+        // applies the flipY swap so the shader stays orientation-agnostic.
+        const frame = sprite.textureFrame;
+        const texWidth = texture.width;
+        const texHeight = texture.height;
+        const uMin = ((frame.left   / texWidth)  * 0xFFFF) & 0xFFFF;
+        const uMax = ((frame.right  / texWidth)  * 0xFFFF) & 0xFFFF;
+        const vMinRaw = ((frame.top    / texHeight) * 0xFFFF) & 0xFFFF;
+        const vMaxRaw = ((frame.bottom / texHeight) * 0xFFFF) & 0xFFFF;
+        const flipY = texture instanceof Texture && texture.flipY;
+        const vMin = flipY ? vMaxRaw : vMinRaw;
+        const vMax = flipY ? vMinRaw : vMaxRaw;
+
+        u32[offset + 10] = uMin | (vMin << 16);
+        u32[offset + 11] = uMax | (vMax << 16);
+
+        u32[offset + 12] = sprite.tint.toRgba();
+        u32[offset + 13] = packedSlotFlags;
+    }
+
+    private _ensureInstanceCapacity(instanceCount: number): void {
+        if (!this._device || instanceCount <= this._instanceCapacity) {
+            return;
+        }
+
+        let nextCapacity = Math.max(this._instanceCapacity, initialBatchCapacity);
+
+        while (nextCapacity < instanceCount) {
+            nextCapacity *= 2;
+        }
+
+        const oldData = this._instanceData;
+        // Preserve any already-packed instances. _instanceCount is bounded by
+        // the previous capacity, but oldData may be the initial 0-byte buffer
+        // — clamp to its actual byteLength to avoid out-of-range typed-array
+        // construction.
+        const carryBytes = Math.min(this._instanceCount * instanceStrideBytes, oldData.byteLength);
+
+        const instanceData = new ArrayBuffer(nextCapacity * instanceStrideBytes);
+
+        if (carryBytes > 0) {
+            new Uint8Array(instanceData).set(new Uint8Array(oldData, 0, carryBytes));
+        }
+
+        const instanceBuffer = this._device.createBuffer({
+            size: instanceData.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+
+        this._instanceBuffer?.destroy();
+
+        this._instanceCapacity = nextCapacity;
+        this._instanceData = instanceData;
+        this._instanceFloat32 = new Float32Array(instanceData);
+        this._instanceUint32 = new Uint32Array(instanceData);
+        this._instanceBuffer = instanceBuffer;
+    }
+
+    private _resetSlots(): void {
+        if (this._slotCount > 0) {
+            for (let i = 0; i < this._slotCount; i++) {
+                this._activeTextures[i] = null;
+            }
+
+            this._textureSlots.clear();
+            this._slotCount = 0;
+        }
+    }
+
+    private _createTextureBindGroup(device: GPUDevice, renderManager: WebGpuRenderManager): GPUBindGroup {
+        // Slots beyond the active count get the slot-0 texture as a filler so
+        // the bind-group layout always sees N valid texture views and samplers.
+        // The fragment shader's switch only ever dispatches to the active slot
+        // count, so unsampled fillers cost nothing visually.
+        const fallbackTexture = this._activeTextures[0] ?? Texture.empty;
+        const fallbackBinding = renderManager.getTextureBinding(fallbackTexture);
+        const resolvedBindings = new Array<ReturnType<WebGpuRenderManager['getTextureBinding']>>(maxBatchTextures);
+
+        for (let i = 0; i < maxBatchTextures; i++) {
+            const texture = this._activeTextures[i] ?? fallbackTexture;
+
+            resolvedBindings[i] = texture === fallbackTexture
+                ? fallbackBinding
+                : renderManager.getTextureBinding(texture);
+        }
+
+        const entries: Array<GPUBindGroupEntry> = [];
+
+        for (let i = 0; i < maxBatchTextures; i++) {
+            entries.push({
+                binding: i,
+                resource: resolvedBindings[i].view,
+            });
+        }
+
+        for (let i = 0; i < maxBatchTextures; i++) {
+            entries.push({
+                binding: maxBatchTextures + i,
+                resource: resolvedBindings[i].sampler,
+            });
+        }
+
+        return device.createBindGroup({
+            layout: this._textureBindGroupLayout!,
+            entries,
+        });
+    }
+
     private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
         const pipelineKey = `${blendMode}:${format}`;
         const existingPipeline = this._pipelines.get(pipelineKey);
@@ -658,10 +590,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             throw new Error('Renderer has to be connected first!');
         }
 
-        // Synchronous fallback for blend-mode/format combinations that
-        // weren't pre-warmed. The implementation may still service the
-        // request in the background, but the calling render pass will
-        // block until the pipeline is ready.
         const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(blendMode, format));
 
         this._pipelines.set(pipelineKey, pipeline);
@@ -680,22 +608,31 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 module: this._shaderModule,
                 entryPoint: 'vertexMain',
                 buffers: [{
-                    arrayStride: vertexStrideBytes,
+                    arrayStride: instanceStrideBytes,
+                    stepMode: 'instance',
                     attributes: [{
                         shaderLocation: 0,
                         offset: 0,
-                        format: 'float32x2',
+                        format: 'float32x4',
                     }, {
                         shaderLocation: 1,
-                        offset: 8,
-                        format: 'float32x2',
+                        offset: 16,
+                        format: 'float32x3',
                     }, {
                         shaderLocation: 2,
-                        offset: 16,
-                        format: 'unorm8x4',
+                        offset: 28,
+                        format: 'float32x3',
                     }, {
                         shaderLocation: 3,
-                        offset: 20,
+                        offset: 40,
+                        format: 'unorm16x4',
+                    }, {
+                        shaderLocation: 4,
+                        offset: 48,
+                        format: 'unorm8x4',
+                    }, {
+                        shaderLocation: 5,
+                        offset: 52,
                         format: 'uint32',
                     }],
                 }],

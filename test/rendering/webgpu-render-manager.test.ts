@@ -871,7 +871,7 @@ describe('WebGpuRenderManager', () => {
             manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(12, 1, 0, 0, 0);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 2, 0, 0, 0);
             expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(1);
         } finally {
             environment.restore();
@@ -913,7 +913,7 @@ describe('WebGpuRenderManager', () => {
             manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(12, 1, 0, 0, 0);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 2, 0, 0, 0);
             expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
         } finally {
             environment.restore();
@@ -951,7 +951,7 @@ describe('WebGpuRenderManager', () => {
             manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(12, 1, 0, 0, 0);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 2, 0, 0, 0);
         } finally {
             environment.restore();
         }
@@ -994,7 +994,7 @@ describe('WebGpuRenderManager', () => {
             manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(1);
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(18, 1, 0, 0, 0);
+            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 3, 0, 0, 0);
         } finally {
             environment.restore();
         }
@@ -1040,8 +1040,8 @@ describe('WebGpuRenderManager', () => {
             manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(2);
-            expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(48);
-            expect(environment.pass.drawIndexed.mock.calls[1][0]).toBe(6);
+            expect(environment.pass.drawIndexed.mock.calls[0][1]).toBe(8);
+            expect(environment.pass.drawIndexed.mock.calls[1][1]).toBe(1);
         } finally {
             environment.restore();
         }
@@ -1078,8 +1078,8 @@ describe('WebGpuRenderManager', () => {
             manager.flush();
 
             expect(environment.pass.drawIndexed).toHaveBeenCalledTimes(2);
-            expect(environment.pass.drawIndexed.mock.calls[0][0]).toBe(6);
-            expect(environment.pass.drawIndexed.mock.calls[1][0]).toBe(6);
+            expect(environment.pass.drawIndexed.mock.calls[0][1]).toBe(1);
+            expect(environment.pass.drawIndexed.mock.calls[1][1]).toBe(1);
         } finally {
             environment.restore();
         }
