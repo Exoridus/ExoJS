@@ -4,6 +4,77 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-04-28
+
+Rendering-pipeline performance pass. No public API changes; all
+optimisations are internal to the renderer subsystem.
+
+### Changed
+
+- **WebGL2 sprite batching is now multi-texture.** A single batch can
+  bind up to eight textures (units 0..7); each vertex carries a uint
+  texture-slot attribute and the fragment shader's per-slot if-chain
+  selects the right sampler. Previously every texture change forced a
+  flush, capping multi-atlas scenes at roughly one batch per texture.
+  The vertex stride grows from 16 to 20 bytes (the new u32 slot at
+  offset 16 is the only addition); position, packed UV, and packed
+  RGBA8 tint are unchanged. Batches still flush on buffer-full,
+  blend-mode change, and now slot exhaustion (more than eight
+  textures in one batch).
+- **WebGPU sprite vertex layout compacted from 28 to 24 bytes.** The
+  per-vertex `premultiplyAlpha` flag and `textureSlot` index
+  previously took one u32 attribute each; they are now packed into a
+  single u32 with the slot in bits 0..7 and the flag in bit 8. The
+  WGSL vertex shader unpacks via bit ops. 16 bytes saved per sprite.
+- **Async-compile path now syncs the shader between buffer setup and
+  attribute lookup.** The 0.5.0+slice-C deferral of attribute /
+  uniform extraction from `initialize()` to first `sync()` broke
+  connect-time `getAttribute()` callers under a real WebGL2 context
+  (jest mocks didn't exercise that code path). Fixed in
+  `AbstractWebGl2BatchedRenderer`, `WebGl2PrimitiveRenderer`, and
+  `WebGl2MaskCompositor`. The driver still gets a parallel-compile
+  window between `shader.connect()` and `shader.sync()` thanks to
+  KHR_parallel_shader_compile; the eventual blocking status query is
+  a no-op when compile already finished.
+
+### Added
+
+- **`WebGl2SpriteRenderer.prewarmPipelines` equivalent for WebGPU.**
+  `WebGpuSpriteRenderer.prewarmPipelines(formats)` calls
+  `createRenderPipelineAsync` for every BlendMode × format combo in
+  parallel during render-manager init. The first draw of every common
+  blend mode no longer blocks on synchronous pipeline creation.
+  Renderers without a `prewarmPipelines` method continue to create
+  pipelines lazily on first use; the pre-warm fallback gracefully
+  no-ops when `createRenderPipelineAsync` isn't available (older
+  browsers, headless test mocks).
+- **`KHR_parallel_shader_compile` opt-in for WebGL2 shader compile.**
+  When the extension is present (Chrome / Edge / Firefox by default,
+  Safari since 17) the GL driver may compile shaders on a worker
+  thread; status queries are deferred to the first `sync()` call so
+  the main thread doesn't block on compile.
+- **`ShaderPrimitives.UnsignedInt`, `UnsignedIntVec2..4`** with their
+  byte-size and array-constructor mappings, so `getActiveAttrib` /
+  `getActiveUniform` on a `uint` shader slot resolves correctly. The
+  enum gains four members; the runtime export inventory is unchanged.
+- **`WebGl2VertexArrayObject.addAttribute(..., integer)`** parameter
+  routes integer-typed shader inputs (`uint`, `uvec`) to
+  `vertexAttribIPointer` rather than `vertexAttribPointer`, so the
+  shader receives the raw integer value instead of a coerced float.
+- **`RendererRegistry.renderers()`** iterator exposes the registered
+  renderers so backend managers can dispatch optional lifecycle hooks
+  (such as the WebGPU pipeline pre-warm above) without per-renderer
+  private-field reach-ins.
+
+### Performance notes
+
+- Sprite-heavy scenes with multiple atlases see a draw-call reduction
+  proportional to atlas count (up to 8×) on WebGL2.
+- WebGPU sprite vertex bandwidth is reduced 14% (16 bytes per sprite).
+- First-frame stutter from JIT shader / pipeline compilation is
+  largely eliminated when KHR_parallel_shader_compile (WebGL2) or
+  `createRenderPipelineAsync` (WebGPU) is supported.
+
 ## [0.5.0] - 2026-04-28
 
 Three focused breaking changes targeted at the first pre-1.0 minor: a hierarchy-semantics boundary slice (per `.workspace/reviews/opus-pre-1.0-architecture-review/09-b1-implementation-rfc.md`), a unified mask API with full multi-source support (per `.workspace/reviews/opus-pre-1.0-architecture-review/10-mask-api-decision.md`), and a Scene API simplification that collapses the static factory into the constructor. No aliases.
