@@ -51,12 +51,20 @@ var spriteSampler6: sampler;
 @group(1) @binding(15)
 var spriteSampler7: sampler;
 
+// Per-vertex layout (24 bytes):
+//   location 0: position f32x2     (offset 0,  8 bytes)
+//   location 1: texcoord f32x2     (offset 8,  8 bytes)
+//   location 2: color    unorm8x4  (offset 16, 4 bytes)
+//   location 3: packed   u32       (offset 20, 4 bytes)
+//
+// The packed u32 carries:
+//   bits 0..7  — textureSlot (0..7 for the 8-slot multi-texture batch)
+//   bit  8     — premultiplyAlpha sample flag (1 = source alpha is straight)
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(1) texcoord: vec2<f32>,
     @location(2) color: vec4<f32>,
-    @location(3) premultiplySample: u32,
-    @location(4) textureSlot: u32,
+    @location(3) packedSlotFlags: u32,
 };
 
 struct VertexOutput {
@@ -74,8 +82,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.position = projection.matrix * vec4<f32>(input.position, 0.0, 1.0);
     output.texcoord = input.texcoord;
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
-    output.premultiplySample = input.premultiplySample;
-    output.textureSlot = input.textureSlot;
+    output.textureSlot = input.packedSlotFlags & 0xFFu;
+    output.premultiplySample = (input.packedSlotFlags >> 8u) & 1u;
 
     return output;
 }
@@ -126,7 +134,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const vertexStrideBytes = 28;
+const vertexStrideBytes = 24;
 const spriteVertexCount = 4;
 const spriteIndexCount = 6;
 const projectionByteLength = 64;
@@ -490,8 +498,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 this._float32View[vertexOffset + 2] = (packedTexCoord & 0xFFFF) / 65535;
                 this._float32View[vertexOffset + 3] = ((packedTexCoord >>> 16) & 0xFFFF) / 65535;
                 this._uint32View[vertexOffset + 4] = drawCall.color;
-                this._uint32View[vertexOffset + 5] = premultiplySample;
-                this._uint32View[vertexOffset + 6] = textureSlot;
+                // Pack textureSlot (bits 0-7) and premultiplySample flag (bit 8)
+                // into a single uint32 attribute. Saves 4 bytes per vertex
+                // (28 → 24) and one shaderLocation slot.
+                this._uint32View[vertexOffset + 5] = textureSlot | (premultiplySample << 8);
                 vertexOffset += wordsPerVertex;
             }
         }
@@ -686,10 +696,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                     }, {
                         shaderLocation: 3,
                         offset: 20,
-                        format: 'uint32',
-                    }, {
-                        shaderLocation: 4,
-                        offset: 24,
                         format: 'uint32',
                     }],
                 }],

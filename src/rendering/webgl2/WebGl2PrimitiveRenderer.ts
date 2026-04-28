@@ -143,6 +143,11 @@ export class WebGl2PrimitiveRenderer extends AbstractWebGl2Renderer<DrawableShap
             .connect(this._createBufferRuntime(gl, buffers));
         const vertexBuffer = new Buffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw)
             .connect(this._createBufferRuntime(gl, buffers));
+        // Force shader finalize so the attribute table is populated. The
+        // async-compile path defers attribute extraction from initialize()
+        // to first sync(); without this nudge, getAttribute() below would
+        // throw "Attribute 'a_position' is not available".
+        this._shader.sync();
         const vao = new WebGl2VertexArrayObject()
             .addIndex(indexBuffer)
             .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)

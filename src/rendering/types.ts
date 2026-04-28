@@ -61,6 +61,11 @@ export enum ShaderPrimitives {
     IntVec3 = 0x8B54,
     IntVec4 = 0x8B55,
 
+    UnsignedInt = 0x1405,
+    UnsignedIntVec2 = 0x8DC6,
+    UnsignedIntVec3 = 0x8DC7,
+    UnsignedIntVec4 = 0x8DC8,
+
     Float = 0x1406,
     FloatVec2 = 0x8B50,
     FloatVec3 = 0x8B51,

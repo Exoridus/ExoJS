@@ -65,6 +65,11 @@ export class WebGl2MaskCompositor {
         const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw)
             .connect(this._createBufferRuntime(gl, bufferHandles));
 
+        // Force shader finalize so getAttribute() below sees a populated
+        // attribute table; the async-compile path defers extraction until
+        // the first sync() call.
+        this._shader.sync();
+
         const vao = new WebGl2VertexArrayObject()
             .addIndex(indexBuffer)
             .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)

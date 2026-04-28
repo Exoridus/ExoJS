@@ -10,6 +10,13 @@ interface VaoAttribute {
     readonly normalized: boolean;
     readonly stride: number;
     readonly start: number;
+    /**
+     * When true, the attribute is bound via `vertexAttribIPointer` so the
+     * shader receives the raw integer value (not normalised, not converted
+     * to float). Used for `uint`/`ivec`-typed shader inputs such as a
+     * batched-sprite texture-slot index.
+     */
+    readonly integer: boolean;
 }
 
 export interface WebGl2VertexArrayObjectRuntime {
@@ -71,10 +78,10 @@ export class WebGl2VertexArrayObject {
         return this;
     }
 
-    public addAttribute(buffer: WebGl2RenderBuffer, attribute: ShaderAttribute, type: number = ShaderPrimitives.Float, normalized = false, stride = 0, start = 0): this {
+    public addAttribute(buffer: WebGl2RenderBuffer, attribute: ShaderAttribute, type: number = ShaderPrimitives.Float, normalized = false, stride = 0, start = 0, integer = false): this {
         const { location, size } = attribute;
 
-        this._attributes.push({ buffer, location, size, type, normalized, stride, start });
+        this._attributes.push({ buffer, location, size, type, normalized, stride, start, integer });
         this._version++;
 
         return this;

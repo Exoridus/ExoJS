@@ -91,12 +91,21 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
     protected onConnect(runtime: WebGl2RendererRuntime): void {
         const gl = runtime.context;
 
+        // Order matters here: shader.connect() issues compile/link to the
+        // GL driver but defers the COMPILE_STATUS / LINK_STATUS query (and
+        // attribute / uniform extraction) until shader.sync(). With
+        // KHR_parallel_shader_compile the driver may service compile on
+        // a worker thread in parallel with the buffer setup that follows.
+        // Once we need attribute locations (createVao), we sync — at which
+        // point compile is hopefully already finished and the eventual
+        // blocking status query becomes a no-op.
         this.shader.connect(createWebGl2ShaderRuntime(gl));
         this.connection = this.createConnection(gl);
         this.indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this.indexData, BufferUsage.StaticDraw)
             .connect(this.createBufferRuntime(this.connection));
         this.vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this.vertexData, BufferUsage.DynamicDraw)
             .connect(this.createBufferRuntime(this.connection));
+        this.shader.sync();
         this.vao = this.createVao(gl, this.indexBuffer, this.vertexBuffer)
             .connect(this.createVaoRuntime(this.connection));
     }
@@ -192,7 +201,12 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
                             lastBuffer = attribute.buffer;
                         }
 
-                        gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+                        if (attribute.integer) {
+                            gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
+                        } else {
+                            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+                        }
+
                         gl.enableVertexAttribArray(attribute.location);
                     }
 

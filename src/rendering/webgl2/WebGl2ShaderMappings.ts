@@ -11,6 +11,11 @@ export const webGl2PrimitiveByteSizeMapping: Record<number, number> = {
     [ShaderPrimitives.IntVec3]: 3,
     [ShaderPrimitives.IntVec4]: 4,
 
+    [ShaderPrimitives.UnsignedInt]: 1,
+    [ShaderPrimitives.UnsignedIntVec2]: 2,
+    [ShaderPrimitives.UnsignedIntVec3]: 3,
+    [ShaderPrimitives.UnsignedIntVec4]: 4,
+
     [ShaderPrimitives.Bool]: 1,
     [ShaderPrimitives.BoolVec2]: 2,
     [ShaderPrimitives.BoolVec3]: 3,
@@ -34,6 +39,11 @@ export const webGl2PrimitiveArrayConstructors: Record<number, Float32ArrayConstr
     [ShaderPrimitives.IntVec3]: Int32Array,
     [ShaderPrimitives.IntVec4]: Int32Array,
 
+    [ShaderPrimitives.UnsignedInt]: Int32Array,
+    [ShaderPrimitives.UnsignedIntVec2]: Int32Array,
+    [ShaderPrimitives.UnsignedIntVec3]: Int32Array,
+    [ShaderPrimitives.UnsignedIntVec4]: Int32Array,
+
     [ShaderPrimitives.Bool]: Uint8Array,
     [ShaderPrimitives.BoolVec2]: Uint8Array,
     [ShaderPrimitives.BoolVec3]: Uint8Array,
@@ -56,6 +66,11 @@ export const webGl2PrimitiveTypeNames: Record<number, string> = {
     [ShaderPrimitives.IntVec2]: 'INT_VEC2',
     [ShaderPrimitives.IntVec3]: 'INT_VEC3',
     [ShaderPrimitives.IntVec4]: 'INT_VEC4',
+
+    [ShaderPrimitives.UnsignedInt]: 'UNSIGNED_INT',
+    [ShaderPrimitives.UnsignedIntVec2]: 'UNSIGNED_INT_VEC2',
+    [ShaderPrimitives.UnsignedIntVec3]: 'UNSIGNED_INT_VEC3',
+    [ShaderPrimitives.UnsignedIntVec4]: 'UNSIGNED_INT_VEC4',
 
     [ShaderPrimitives.Bool]: 'BOOL',
     [ShaderPrimitives.BoolVec2]: 'BOOL_VEC2',
