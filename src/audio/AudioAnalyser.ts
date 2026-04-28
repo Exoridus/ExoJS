@@ -23,7 +23,6 @@ export class AudioAnalyser {
     private readonly _preciseFrequencyData: Float32Array<ArrayBuffer>;
 
     private _analyser: AnalyserNode | null = null;
-    private _audioContext: AudioContext | null = null;
     private _analyserTarget: AudioNode | null = null;
 
     public constructor(media: Media, options: Partial<AudioAnalyserOptions> = {}) {
@@ -109,7 +108,6 @@ export class AudioAnalyser {
     }
 
     private setupWithAudioContext(audioContext: AudioContext): void {
-        this._audioContext = audioContext;
         this._analyser = audioContext.createAnalyser();
         this._analyser.fftSize = this._fftSize;
         this._analyser.minDecibels = this._minDecibels;

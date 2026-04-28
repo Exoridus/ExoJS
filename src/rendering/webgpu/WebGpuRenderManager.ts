@@ -78,7 +78,6 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
     private _initializePromise: Promise<this> | null = null;
     private _renderTarget: RenderTarget;
     private _renderer: Renderer | null = null;
-    private _blendMode: BlendModes | null = null;
     private _texture: Texture | RenderTexture | null = null;
     private _clearRequested = false;
     private _hasPresentedFrame = false;
@@ -211,8 +210,6 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
 
     public setBlendMode(blendMode: BlendModes | null): this {
         if (blendMode === null) {
-            this._blendMode = null;
-
             return this;
         }
 
@@ -225,8 +222,6 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         ) {
             throw new Error(`WebGPU blend mode "${blendMode}" is not implemented yet.`);
         }
-
-        this._blendMode = blendMode;
 
         return this;
     }
@@ -596,7 +591,6 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         this._context = context;
         this._device = device;
         this._format = format;
-        this._blendMode = BlendModes.Normal;
         this._hasPresentedFrame = false;
         this.rendererRegistry.connect(this);
         this.resize(this._canvas.width, this._canvas.height);

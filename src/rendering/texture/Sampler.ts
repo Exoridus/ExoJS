@@ -14,20 +14,19 @@ export class Sampler {
     private readonly _sampler: WebGLSampler | null;
     private _scaleMode: ScaleModes;
     private _wrapMode: WrapModes;
-    private _premultiplyAlpha: boolean;
-    private _generateMipMap: boolean;
-    private _flipY: boolean;
 
     public constructor(gl: WebGL2RenderingContext, options: SamplerOptions) {
-        const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = options;
+        const { scaleMode, wrapMode } = options;
 
         this._context = gl;
         this._sampler = gl.createSampler();
         this._scaleMode = scaleMode;
         this._wrapMode = wrapMode;
-        this._premultiplyAlpha = premultiplyAlpha;
-        this._generateMipMap = generateMipMap;
-        this._flipY = flipY;
+
+        // SamplerOptions also carries premultiplyAlpha / generateMipMap /
+        // flipY for the Texture's pixel-store path; the GL sampler object
+        // itself only cares about scale and wrap modes, so we don't store
+        // the texture-level fields here.
 
         this.updateWrapModeParameters();
         this.updateScaleModeParameters();
