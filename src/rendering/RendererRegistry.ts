@@ -46,6 +46,15 @@ export class RendererRegistry<Runtime extends SceneRenderRuntime> {
         }
     }
 
+    /**
+     * Iterate all registered renderers. Used by managers to dispatch
+     * lifecycle hooks (e.g. WebGPU pipeline pre-warmup) to whichever
+     * renderers expose them.
+     */
+    public renderers(): Iterable<Renderer<Runtime, Drawable>> {
+        return this._renderers.values();
+    }
+
     public resolve(drawable: Drawable): Renderer<Runtime, Drawable> {
         let constructor = drawable.constructor as DrawableConstructor | null;
         let renderer: Renderer<Runtime, Drawable> | undefined = undefined;

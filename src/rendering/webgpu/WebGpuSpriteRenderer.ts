@@ -6,7 +6,7 @@ import { Texture } from '@/rendering/texture/Texture';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { WebGpuRenderManager } from '@/rendering/webgpu/WebGpuRenderManager';
 import type { WebGpuRendererRuntime } from '@/rendering/webgpu/WebGpuRendererRuntime';
-import type { BlendModes } from '@/rendering/types';
+import { BlendModes } from '@/rendering/types';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const spriteShaderSource = `
@@ -578,6 +578,64 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         });
     }
 
+    /**
+     * Pre-create render pipelines for every blend-mode × target-format
+     * combination this renderer can produce, asynchronously and in
+     * parallel. Called from the render manager's init path so by the time
+     * the first frame draws, all pipelines exist in cache.
+     *
+     * Without prewarm, the first draw of any new (blendMode, format)
+     * combination would fall back to the synchronous _getPipeline() path,
+     * which blocks while the WebGPU implementation compiles WGSL and
+     * sets up the pipeline state object — typically tens of milliseconds.
+     */
+    public async prewarmPipelines(formats: ReadonlyArray<GPUTextureFormat>): Promise<void> {
+        const device = this._device;
+
+        if (!device || !this._shaderModule || !this._pipelineLayout) {
+            return;
+        }
+
+        // createRenderPipelineAsync is the documented WebGPU API for
+        // non-blocking pipeline creation. If the underlying device doesn't
+        // expose it (older browsers, headless test mocks, etc.) we leave
+        // every (blendMode, format) combination to the synchronous lazy
+        // path in _getPipeline.
+        if (typeof device.createRenderPipelineAsync !== 'function') {
+            return;
+        }
+
+        const blendModes: ReadonlyArray<BlendModes> = [
+            BlendModes.Normal,
+            BlendModes.Additive,
+            BlendModes.Subtract,
+            BlendModes.Multiply,
+            BlendModes.Screen,
+        ];
+
+        const promises: Array<Promise<void>> = [];
+
+        for (const blendMode of blendModes) {
+            for (const format of formats) {
+                const pipelineKey = `${blendMode}:${format}`;
+
+                if (this._pipelines.has(pipelineKey)) {
+                    continue;
+                }
+
+                const promise = device
+                    .createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format))
+                    .then((pipeline) => {
+                        this._pipelines.set(pipelineKey, pipeline);
+                    });
+
+                promises.push(promise);
+            }
+        }
+
+        await Promise.all(promises);
+    }
+
     private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
         const pipelineKey = `${blendMode}:${format}`;
         const existingPipeline = this._pipelines.get(pipelineKey);
@@ -590,7 +648,23 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             throw new Error('Renderer has to be connected first!');
         }
 
-        const pipeline = this._device.createRenderPipeline({
+        // Synchronous fallback for blend-mode/format combinations that
+        // weren't pre-warmed. The implementation may still service the
+        // request in the background, but the calling render pass will
+        // block until the pipeline is ready.
+        const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(blendMode, format));
+
+        this._pipelines.set(pipelineKey, pipeline);
+
+        return pipeline;
+    }
+
+    private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipelineDescriptor {
+        if (!this._shaderModule || !this._pipelineLayout) {
+            throw new Error('Renderer has to be connected first!');
+        }
+
+        return {
             layout: this._pipelineLayout,
             vertex: {
                 module: this._shaderModule,
@@ -632,10 +706,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             primitive: {
                 topology: 'triangle-list',
             },
-        });
-
-        this._pipelines.set(pipelineKey, pipeline);
-
-        return pipeline;
+        };
     }
 }

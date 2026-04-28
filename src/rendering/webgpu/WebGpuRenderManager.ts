@@ -601,7 +601,31 @@ export class WebGpuRenderManager implements WebGpuRendererRuntime {
         this.rendererRegistry.connect(this);
         this.resize(this._canvas.width, this._canvas.height);
 
+        // Kick off async pipeline pre-warm for any renderer that supports
+        // it. Each renderer creates its full set of (blendMode × format)
+        // pipelines via createRenderPipelineAsync in parallel, so the first
+        // draw call of every blend mode does not have to block on synchronous
+        // pipeline creation. Renderers without a prewarmPipelines method
+        // continue to create pipelines lazily on first use.
+        const prewarmFormats: ReadonlyArray<GPUTextureFormat> = [format, managedTextureFormat];
+
+        await this._prewarmRendererPipelines(prewarmFormats);
+
         return this;
+    }
+
+    private async _prewarmRendererPipelines(formats: ReadonlyArray<GPUTextureFormat>): Promise<void> {
+        const promises: Array<Promise<void>> = [];
+
+        for (const renderer of this.rendererRegistry.renderers()) {
+            const candidate = renderer as Partial<{ prewarmPipelines(formats: ReadonlyArray<GPUTextureFormat>): Promise<void>; }>;
+
+            if (typeof candidate.prewarmPipelines === 'function') {
+                promises.push(candidate.prewarmPipelines(formats));
+            }
+        }
+
+        await Promise.all(promises);
     }
 
     private _getGpuNavigator(): (Navigator & { gpu: GPU; }) | null {

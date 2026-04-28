@@ -14,6 +14,15 @@ interface ManagedUniform {
     readonly uniform: ShaderUniform;
 }
 
+interface ParallelCompileExtension {
+    // Naming-convention exception: this is a verbatim WebGL extension constant
+    // exposed by the driver under its spec-defined uppercase name.
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    readonly COMPLETION_STATUS_KHR: number;
+}
+
+const completionStatusEnumKhr = 0x91B1;
+
 const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
     [ShaderPrimitives.Float]: (gl, location, value): void => { gl.uniform1f(location, value[0]); },
     [ShaderPrimitives.FloatVec2]: (gl, location, value): void => { gl.uniform2fv(location, value); },
@@ -41,21 +50,76 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
     let program: WebGLProgram | null = null;
     let vertexShader: WebGLShader | null = null;
     let fragmentShader: WebGLShader | null = null;
+    let pendingShader: Shader | null = null;
     const managedUniforms: Array<ManagedUniform> = [];
     const uniformBlocks: Array<WebGl2ShaderBlock> = [];
+
+    // Detect KHR_parallel_shader_compile. When present, the GL driver may
+    // compile shaders on a worker thread; we can poll completion via
+    // COMPLETION_STATUS_KHR without blocking. When absent, the very first
+    // call to gl.getShaderParameter(COMPILE_STATUS) blocks until the driver
+    // finishes compilation.
+    //
+    // Either way, this runtime defers the actual COMPILE_STATUS / LINK_STATUS
+    // queries (and the attribute/uniform extraction that depends on them)
+    // from initialize() to bind()/sync(). That way the driver gets the entire
+    // window between renderer setup and first draw to compile in the
+    // background. With the extension, that window is non-blocking; without
+    // it, the eventual blocking query is hopefully a no-op because the work
+    // already finished during asset loading or scene init.
+    const parallelExt = gl.getExtension('KHR_parallel_shader_compile') as ParallelCompileExtension | null;
+    const completionStatus = parallelExt?.COMPLETION_STATUS_KHR ?? completionStatusEnumKhr;
 
     function initialize(shader: Shader): void {
         if (program) {
             return;
         }
 
+        // Issue compile + link without querying status. The driver may
+        // service these on a worker; we'll collect the result at first bind.
         vertexShader = compileShader(gl, gl.VERTEX_SHADER, shader.vertexSource);
         fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, shader.fragmentSource);
         program = linkProgram(gl, vertexShader, fragmentShader);
 
-        extractAttributes(gl, program, shader);
-        extractUniforms(gl, program, shader, managedUniforms);
+        pendingShader = shader;
+    }
+
+    function finalize(): void {
+        if (pendingShader === null || program === null || vertexShader === null || fragmentShader === null) {
+            return;
+        }
+
+        // With the KHR extension we can poll completion non-blockingly
+        // before the actual status queries (which would otherwise block).
+        // Without the extension we simply skip the poll and let the status
+        // query block on its own (today's behaviour).
+        if (parallelExt !== null) {
+            void gl.getProgramParameter(program, completionStatus);
+        }
+
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(vertexShader);
+
+            throw new Error(`Vertex shader compilation failed: ${log}`);
+        }
+
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(fragmentShader);
+
+            throw new Error(`Fragment shader compilation failed: ${log}`);
+        }
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            const log = gl.getProgramInfoLog(program);
+
+            throw new Error(`Shader program linking failed: ${log}`);
+        }
+
+        extractAttributes(gl, program, pendingShader);
+        extractUniforms(gl, program, pendingShader, managedUniforms);
         extractUniformBlocks(gl, program, uniformBlocks);
+
+        pendingShader = null;
     }
 
     function syncUniforms(): void {
@@ -75,6 +139,7 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
         initialize,
         bind: (shader: Shader): void => {
             initialize(shader);
+            finalize();
 
             gl.useProgram(program);
             syncUniforms();
@@ -91,6 +156,7 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
             // that must establish program binding — otherwise uniform*
             // targets the wrong (or no) program and the subsequent draw
             // call fails with "no valid shader program in use".
+            finalize();
             gl.useProgram(program);
             syncUniforms();
         },
@@ -107,6 +173,7 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
             vertexShader = null;
             fragmentShader = null;
             program = null;
+            pendingShader = null;
             managedUniforms.length = 0;
             uniformBlocks.length = 0;
 
@@ -114,6 +181,11 @@ export function createWebGl2ShaderRuntime(gl: WebGL2RenderingContext): ShaderRun
         },
     };
 }
+
+// compileShader / linkProgram intentionally do NOT query COMPILE_STATUS or
+// LINK_STATUS here — those queries block on driver completion. Status checks
+// happen in finalize() at first bind, after the driver has had time to
+// compile in the background (especially with KHR_parallel_shader_compile).
 
 function compileShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
     const shader = gl.createShader(type);
@@ -124,12 +196,6 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
 
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const log = gl.getShaderInfoLog(shader);
-        gl.deleteShader(shader);
-        throw new Error(`Shader compilation failed: ${log}`);
-    }
 
     return shader;
 }
@@ -144,14 +210,6 @@ function linkProgram(gl: WebGL2RenderingContext, vertexShader: WebGLShader, frag
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const log = gl.getProgramInfoLog(program);
-        gl.detachShader(program, vertexShader);
-        gl.detachShader(program, fragmentShader);
-        gl.deleteProgram(program);
-        throw new Error(`Shader program linking failed: ${log}`);
-    }
 
     return program;
 }
