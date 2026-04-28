@@ -13,6 +13,8 @@ struct ProjectionUniforms {
     projection: mat4x4<f32>,
     translation: mat4x4<f32>,
     flags: vec4<f32>,
+    localBounds: vec4<f32>,    // quadMin.xy, quadSize.xy
+    uvBounds: vec4<f32>,       // uvMin.xy, uvMax.xy
 };
 
 @group(0) @binding(0)
@@ -24,16 +26,13 @@ var particleTexture: texture_2d<f32>;
 @group(1) @binding(1)
 var particleSampler: sampler;
 
+// Per-instance attributes (one entry per particle, 24 bytes total).
 struct VertexInput {
-    @location(0) unitPosition: vec2<f32>,
-    @location(1) quadMin: vec2<f32>,
-    @location(2) quadSize: vec2<f32>,
-    @location(3) uvMin: vec2<f32>,
-    @location(4) uvMax: vec2<f32>,
-    @location(5) translation: vec2<f32>,
-    @location(6) scale: vec2<f32>,
-    @location(7) rotation: f32,
-    @location(8) color: vec4<f32>,
+    @location(0) unitPosition: vec2<f32>,    // per-vertex (static unit quad)
+    @location(1) translation: vec2<f32>,
+    @location(2) scale: vec2<f32>,
+    @location(3) rotation: f32,
+    @location(4) color: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -44,7 +43,12 @@ struct VertexOutput {
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
-    let localPosition = input.quadMin + (input.unitPosition * input.quadSize);
+    let quadMin = uniforms.localBounds.xy;
+    let quadSize = uniforms.localBounds.zw;
+    let uvMin = uniforms.uvBounds.xy;
+    let uvMax = uniforms.uvBounds.zw;
+
+    let localPosition = quadMin + (input.unitPosition * quadSize);
     let radians = radians(input.rotation);
     let sinValue = sin(radians);
     let cosValue = cos(radians);
@@ -56,7 +60,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
     output.position = uniforms.projection * uniforms.translation * vec4<f32>(rotated, 0.0, 1.0);
-    output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * input.unitPosition);
+    output.texcoord = uvMin + ((uvMax - uvMin) * input.unitPosition);
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
 
     return output;
@@ -72,10 +76,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 `;
 
 const staticVertexStrideBytes = 8;
-const instanceWords = 14;
-const instanceStrideBytes = 56;
+const instanceWords = 6;
+const instanceStrideBytes = 24;
 const indicesPerParticle = 6;
-const uniformByteLength = 144;
+const uniformByteLength = 176;
 const initialParticleCapacity = 1;
 const staticVertexData = new Float32Array([
     0, 0,
@@ -378,6 +382,16 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         const projection = runtime.view.getTransform().toArray(false);
         const transform = system.getGlobalTransform().toArray(false);
         const shouldPremultiplySample = runtime.shouldPremultiplyTextureSample(texture);
+        const vertices = system.vertices;
+        const texCoords = system.texCoords;
+        const quadMinX = vertices[0];
+        const quadMinY = vertices[1];
+        const quadSizeX = vertices[2] - vertices[0];
+        const quadSizeY = vertices[3] - vertices[1];
+        const uvMinX = (texCoords[0] & 0xFFFF) / 0xFFFF;
+        const uvMinY = ((texCoords[0] >>> 16) & 0xFFFF) / 0xFFFF;
+        const uvMaxX = (texCoords[2] & 0xFFFF) / 0xFFFF;
+        const uvMaxY = ((texCoords[2] >>> 16) & 0xFFFF) / 0xFFFF;
 
         this._uniformData.set([
             projection[0], projection[1], 0, 0,
@@ -391,37 +405,23 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             transform[6], transform[7], 0, transform[8],
 
             shouldPremultiplySample ? 1 : 0, 0, 0, 0,
+
+            quadMinX, quadMinY, quadSizeX, quadSizeY,
+            uvMinX, uvMinY, uvMaxX, uvMaxY,
         ]);
     }
 
-    private _writeInstanceData(vertices: Float32Array, texCoords: Uint32Array, particles: ParticleSystem['particles']): void {
-        const quadMinX = vertices[0];
-        const quadMinY = vertices[1];
-        const quadSizeX = vertices[2] - vertices[0];
-        const quadSizeY = vertices[3] - vertices[1];
-        const uvMinX = (texCoords[0] & 0xFFFF) / 65535;
-        const uvMinY = ((texCoords[0] >>> 16) & 0xFFFF) / 65535;
-        const uvMaxX = (texCoords[2] & 0xFFFF) / 65535;
-        const uvMaxY = ((texCoords[2] >>> 16) & 0xFFFF) / 65535;
-
+    private _writeInstanceData(_vertices: Float32Array, _texCoords: Uint32Array, particles: ParticleSystem['particles']): void {
         for (let particleIndex = 0; particleIndex < particles.length; particleIndex++) {
             const particle = particles[particleIndex];
             const targetIndex = particleIndex * instanceWords;
 
-            this._float32View[targetIndex] = quadMinX;
-            this._float32View[targetIndex + 1] = quadMinY;
-            this._float32View[targetIndex + 2] = quadSizeX;
-            this._float32View[targetIndex + 3] = quadSizeY;
-            this._float32View[targetIndex + 4] = uvMinX;
-            this._float32View[targetIndex + 5] = uvMinY;
-            this._float32View[targetIndex + 6] = uvMaxX;
-            this._float32View[targetIndex + 7] = uvMaxY;
-            this._float32View[targetIndex + 8] = particle.position.x;
-            this._float32View[targetIndex + 9] = particle.position.y;
-            this._float32View[targetIndex + 10] = particle.scale.x;
-            this._float32View[targetIndex + 11] = particle.scale.y;
-            this._float32View[targetIndex + 12] = particle.rotation;
-            this._uint32View[targetIndex + 13] = particle.tint.toRgba();
+            this._float32View[targetIndex + 0] = particle.position.x;
+            this._float32View[targetIndex + 1] = particle.position.y;
+            this._float32View[targetIndex + 2] = particle.scale.x;
+            this._float32View[targetIndex + 3] = particle.scale.y;
+            this._float32View[targetIndex + 4] = particle.rotation;
+            this._uint32View[targetIndex + 5] = particle.tint.toRgba();
         }
     }
 
@@ -459,26 +459,10 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
                     }, {
                         shaderLocation: 3,
                         offset: 16,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 4,
-                        offset: 24,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 5,
-                        offset: 32,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 6,
-                        offset: 40,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 7,
-                        offset: 48,
                         format: 'float32',
                     }, {
-                        shaderLocation: 8,
-                        offset: 52,
+                        shaderLocation: 4,
+                        offset: 20,
                         format: 'unorm8x4',
                     }],
                 }],

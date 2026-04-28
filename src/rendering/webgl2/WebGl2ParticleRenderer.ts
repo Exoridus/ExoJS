@@ -1,133 +1,358 @@
-import type { WebGl2RenderBuffer } from './WebGl2RenderBuffer';
-import { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
+import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
+import { Shader } from '../shader/Shader';
+import { createWebGl2ShaderRuntime } from './WebGl2ShaderRuntime';
+import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
+import type { Texture } from '../texture/Texture';
+import type { View } from '../View';
+import type { BlendModes } from '@/rendering/types';
+import type { WebGl2RendererRuntime } from './WebGl2RendererRuntime';
 import vertexSource from './glsl/particle.vert';
 import fragmentSource from './glsl/particle.frag';
-import { AbstractWebGl2BatchedRenderer } from './AbstractWebGl2BatchedRenderer';
-import type { View } from '../View';
 
-export class WebGl2ParticleRenderer extends AbstractWebGl2BatchedRenderer {
+/**
+ * Instanced particle renderer for WebGL2.
+ *
+ * One ParticleSystem = one batch. Each `render(system)` flushes any
+ * pending batch, sets the system-level uniforms (transform, local
+ * bounds, UV bounds, texture), and packs every active particle into
+ * the per-instance buffer. The next `flush()` issues a single
+ * `drawElementsInstanced` for that system.
+ *
+ * Per-instance layout (24 bytes per particle, 4 attributes):
+ * ```
+ *   translation  f32x2  (offset  0,  8 bytes)  particle position (system-local)
+ *   scale        f32x2  (offset  8,  8 bytes)
+ *   rotation     f32    (offset 16,  4 bytes)  degrees
+ *   color        u8x4   (offset 20,  4 bytes)  RGBA tint, normalised
+ * ```
+ *
+ * vs the previous per-vertex layout (36 bytes per vertex × 4 verts =
+ * 144 bytes per particle), this is an 83% bandwidth reduction and
+ * roughly 80% fewer CPU writes per particle (one pack call vs four
+ * duplicated vertex writes plus per-corner UV coords).
+ *
+ * The system transform stays as a uniform — mixing systems in one
+ * batch would require either a per-instance transform matrix (more
+ * bandwidth) or per-particle texture-slot indexing (multi-texture
+ * support similar to the sprite renderer). Both are follow-ups; the
+ * current pattern keeps the renderer focused on the per-particle win.
+ */
+
+const instanceStrideBytes = 24;
+const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
+const indicesPerQuad = 6;
+const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+
+interface ParticleRendererConnection {
+    readonly gl: WebGL2RenderingContext;
+    readonly buffers: Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number; }>;
+    readonly vaoHandle: WebGLVertexArrayObject;
+}
+
+export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSystem> {
+
+    private readonly _shader: Shader;
+    private readonly _batchSize: number;
+    private readonly _instanceData: ArrayBuffer;
+    private readonly _instanceFloat32: Float32Array;
+    private readonly _instanceUint32: Uint32Array;
+
+    private _instanceCount = 0;
+    private _currentTexture: Texture | null = null;
+    private _currentBlendMode: BlendModes | null = null;
+    private _currentView: View | null = null;
+    private _currentViewId = -1;
+
+    private _instanceBuffer: WebGl2RenderBuffer | null = null;
+    private _indexBuffer: WebGl2RenderBuffer | null = null;
+    private _vao: WebGl2VertexArrayObject | null = null;
+    private _connection: ParticleRendererConnection | null = null;
 
     public constructor(batchSize: number) {
+        super();
 
-        /**
-         * 4 x 9 Attributes:
-         * 2 = vertexPos     (x, y) +
-         * 1 = texCoord (packed uv) +
-         * 2 = position      (x, y) +
-         * 2 = scale         (x, y) +
-         * 1 = rotation      (x, y) +
-         * 1 = color         (ARGB int)
-         */
-        super(batchSize, 36, vertexSource, fragmentSource);
+        this._batchSize = batchSize;
+        this._shader = new Shader(vertexSource, fragmentSource);
+        this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
+        this._instanceFloat32 = new Float32Array(this._instanceData);
+        this._instanceUint32 = new Uint32Array(this._instanceData);
     }
 
     public render(system: ParticleSystem): this {
-        const { texture, vertices, texCoords, particles, blendMode } = system;
-        const textureChanged = (texture !== this.currentTexture);
-        const blendModeChanged = (blendMode !== this.currentBlendMode);
-        const float32View = this.float32View;
-        const uint32View = this.uint32View;
         const runtime = this.getRuntime();
+        const { texture, particles, blendMode } = system;
+        const textureChanged = texture !== this._currentTexture;
+        const blendModeChanged = blendMode !== this._currentBlendMode;
 
-        // System transform is a uniform, so mixing systems in one batch is invalid.
+        // System transform / texture / UV / local-bounds are uniforms, so
+        // mixing systems in one batch is invalid. Flush any prior system
+        // before setting up this one.
         this.flush();
 
-        if (textureChanged || blendModeChanged) {
-            if (textureChanged) {
-                this.currentTexture = texture;
-            }
-
-            if (blendModeChanged) {
-                this.currentBlendMode = blendMode;
-                runtime.setBlendMode(blendMode);
-            }
-        }
-
         if (textureChanged) {
+            this._currentTexture = texture;
             runtime.bindTexture(texture);
         }
 
-        this.shader
-            .getUniform('u_translation')
-            .setValue(system.getGlobalTransform().toArray(false));
-
-        for (const particle of particles) {
-            if (this.batchIndex >= this.batchSize) {
-                this.flush();
-            }
-
-            const { position, scale, rotation, tint } = particle;
-            const index = (this.batchIndex * this.attributeCount);
-
-            float32View[index + 0] = float32View[index + 27] = vertices[0];
-            float32View[index + 1] = float32View[index + 10] = vertices[1];
-            float32View[index + 9] = float32View[index + 18] = vertices[2];
-            float32View[index + 19] = float32View[index + 28] = vertices[3];
-
-            uint32View[index + 2] = texCoords[0];
-            uint32View[index + 11] = texCoords[1];
-            uint32View[index + 20] = texCoords[2];
-            uint32View[index + 29] = texCoords[3];
-
-            float32View[index + 3]
-                = float32View[index + 12]
-                = float32View[index + 21]
-                = float32View[index + 30]
-                = position.x;
-
-            float32View[index + 4]
-                = float32View[index + 13]
-                = float32View[index + 22]
-                = float32View[index + 31]
-                = position.y;
-
-            float32View[index + 5]
-                = float32View[index + 14]
-                = float32View[index + 23]
-                = float32View[index + 32]
-                = scale.x;
-
-            float32View[index + 6]
-                = float32View[index + 15]
-                = float32View[index + 24]
-                = float32View[index + 33]
-                = scale.y;
-
-            float32View[index + 7]
-                = float32View[index + 16]
-                = float32View[index + 25]
-                = float32View[index + 34]
-                = rotation;
-
-            uint32View[index + 8]
-                = uint32View[index + 17]
-                = uint32View[index + 26]
-                = uint32View[index + 35]
-                = tint.toRgba();
-
-            this.batchIndex++;
+        if (blendModeChanged) {
+            this._currentBlendMode = blendMode;
+            runtime.setBlendMode(blendMode);
         }
 
+        // System-level uniforms are set before packing so the eventual
+        // flush() can sync them in one go.
+        const localBounds = system.vertices;
+        const uvBounds = this._unpackUvBounds(system);
+
+        this._shader
+            .getUniform('u_systemTransform')
+            .setValue(system.getGlobalTransform().toArray(false));
+        this._shader
+            .getUniform('u_localBounds')
+            .setValue(localBounds);
+        this._shader
+            .getUniform('u_uvBounds')
+            .setValue(uvBounds);
+
+        const f32 = this._instanceFloat32;
+        const u32 = this._instanceUint32;
+        const limit = Math.min(particles.length, this._batchSize);
+
+        for (let i = 0; i < limit; i++) {
+            const particle = particles[i];
+            const offset = i * wordsPerInstance;
+
+            f32[offset + 0] = particle.position.x;
+            f32[offset + 1] = particle.position.y;
+            f32[offset + 2] = particle.scale.x;
+            f32[offset + 3] = particle.scale.y;
+            f32[offset + 4] = particle.rotation;
+            u32[offset + 5] = particle.tint.toRgba();
+        }
+
+        this._instanceCount = limit;
+
         return this;
     }
 
-    protected createVao(gl: WebGL2RenderingContext, indexBuffer: WebGl2RenderBuffer, vertexBuffer: WebGl2RenderBuffer): WebGl2VertexArrayObject {
-        return new WebGl2VertexArrayObject()
-            .addIndex(indexBuffer)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_position'), gl.FLOAT, false, this.attributeCount, 0)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_texcoord'), gl.UNSIGNED_SHORT, true, this.attributeCount, 8)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_translation'), gl.FLOAT, false, this.attributeCount, 12)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_scale'), gl.FLOAT, false, this.attributeCount, 20)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_rotation'), gl.FLOAT, false, this.attributeCount, 28)
-            .addAttribute(vertexBuffer, this.shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, this.attributeCount, 32);
+    public flush(): void {
+        const runtime = this.getRuntimeOrNull();
+        const instanceBuffer = this._instanceBuffer;
+        const indexBuffer = this._indexBuffer;
+        const vao = this._vao;
+
+        if (this._instanceCount === 0 || runtime === null || instanceBuffer === null || indexBuffer === null || vao === null) {
+            return;
+        }
+
+        const view = runtime.view;
+
+        if (this._currentView !== view || this._currentViewId !== view.updateId) {
+            this._currentView = view;
+            this._currentViewId = view.updateId;
+            this._shader
+                .getUniform('u_projection')
+                .setValue(view.getTransform().toArray(false));
+        }
+
+        this._shader.sync();
+        runtime.bindVertexArrayObject(vao);
+        instanceBuffer.upload(this._instanceFloat32.subarray(0, this._instanceCount * wordsPerInstance));
+        vao.drawInstanced(indicesPerQuad, 0, this._instanceCount, RenderingPrimitives.Triangles);
+        runtime.stats.batches++;
+        runtime.stats.drawCalls++;
+
+        this._instanceCount = 0;
     }
 
-    protected updateView(view: View): this {
-        this.shader
-            .getUniform('u_projection')
-            .setValue(view.getTransform().toArray(false));
+    protected onConnect(runtime: WebGl2RendererRuntime): void {
+        const gl = runtime.context;
 
-        return this;
+        this._shader.connect(createWebGl2ShaderRuntime(gl));
+        this._connection = this._createConnection(gl);
+
+        this._indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw)
+            .connect(this._createBufferRuntime(this._connection));
+        this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw)
+            .connect(this._createBufferRuntime(this._connection));
+
+        this._shader.sync();
+
+        this._vao = new WebGl2VertexArrayObject()
+            .addIndex(this._indexBuffer)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_translation'), gl.FLOAT,         false, instanceStrideBytes,  0, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_scale'),       gl.FLOAT,         false, instanceStrideBytes,  8, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_rotation'),    gl.FLOAT,         false, instanceStrideBytes, 16, false, 1)
+            .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'),       gl.UNSIGNED_BYTE, true,  instanceStrideBytes, 20, false, 1)
+            .connect(this._createVaoRuntime(this._connection));
+    }
+
+    protected onDisconnect(): void {
+        this._shader.disconnect();
+        this._instanceBuffer?.destroy();
+        this._instanceBuffer = null;
+        this._indexBuffer?.destroy();
+        this._indexBuffer = null;
+        this._vao?.destroy();
+        this._vao = null;
+        this._connection = null;
+        this._currentTexture = null;
+        this._currentBlendMode = null;
+        this._currentView = null;
+        this._currentViewId = -1;
+        this._instanceCount = 0;
+    }
+
+    public destroy(): void {
+        this.disconnect();
+        this._shader.destroy();
+    }
+
+    /**
+     * Convert the system's per-corner packed-u32 texCoords into the
+     * (uMin, vMin, uMax, vMax) bounds the new vertex shader expects.
+     * Already accounts for flipY (the system's `texCoords` baked it in).
+     *
+     * The four packed u32s, by corner index, are:
+     *   [0] TL = (uMin/uMax | vMin/vMax depending on flipY)
+     *   [1] TR
+     *   [2] BR
+     *   [3] BL
+     * We need (uMin, vMin, uMax, vMax) — the corner-extreme values.
+     */
+    private _uvBoundsScratch = new Float32Array(4);
+    private _unpackUvBounds(system: ParticleSystem): Float32Array {
+        const texCoords = system.texCoords;
+        // Each packed u32: low 16 bits = U normalised to 0..65535,
+        //                  high 16 bits = V normalised.
+        const uTopLeft = (texCoords[0] & 0xFFFF) / 0xFFFF;
+        const vTopLeft = ((texCoords[0] >>> 16) & 0xFFFF) / 0xFFFF;
+        const uBottomRight = (texCoords[2] & 0xFFFF) / 0xFFFF;
+        const vBottomRight = ((texCoords[2] >>> 16) & 0xFFFF) / 0xFFFF;
+
+        // For flipY: TL.v becomes vMax (was minY → maxY). The shader picks
+        // (cornerY == 0 ? vMin : vMax); writing TL.v into vMin and BR.v into
+        // vMax matches the original per-corner ordering whether or not flipY
+        // was applied at texCoords pack time.
+        this._uvBoundsScratch[0] = uTopLeft;
+        this._uvBoundsScratch[1] = vTopLeft;
+        this._uvBoundsScratch[2] = uBottomRight;
+        this._uvBoundsScratch[3] = vBottomRight;
+
+        return this._uvBoundsScratch;
+    }
+
+    private _createConnection(gl: WebGL2RenderingContext): ParticleRendererConnection {
+        const vaoHandle = gl.createVertexArray();
+
+        if (vaoHandle === null) {
+            throw new Error('WebGl2ParticleRenderer: could not create vertex array object.');
+        }
+
+        return {
+            gl,
+            buffers: new Map(),
+            vaoHandle,
+        };
+    }
+
+    private _createBufferRuntime(connection: ParticleRendererConnection): WebGl2RenderBufferRuntime {
+        const handle = connection.gl.createBuffer();
+
+        if (handle === null) {
+            throw new Error('WebGl2ParticleRenderer: could not create render buffer.');
+        }
+
+        return {
+            bind: (buffer): void => {
+                connection.gl.bindBuffer(buffer.type, handle);
+            },
+            upload: (buffer, offset): void => {
+                const gl = connection.gl;
+                const data = buffer.data;
+                const state = connection.buffers.get(buffer);
+
+                gl.bindBuffer(buffer.type, handle);
+
+                if (state && state.dataByteLength >= data.byteLength) {
+                    gl.bufferSubData(buffer.type, offset, data);
+                    state.dataByteLength = data.byteLength;
+                } else {
+                    gl.bufferData(buffer.type, data, buffer.usage);
+                    connection.buffers.set(buffer, { handle, dataByteLength: data.byteLength });
+                }
+            },
+            destroy: (buffer): void => {
+                connection.gl.deleteBuffer(handle);
+                connection.buffers.delete(buffer);
+                buffer.disconnect();
+            },
+        };
+    }
+
+    private _createVaoRuntime(connection: ParticleRendererConnection): WebGl2VertexArrayObjectRuntime {
+        let appliedVersion = -1;
+
+        return {
+            bind: (vao): void => {
+                const gl = connection.gl;
+
+                gl.bindVertexArray(connection.vaoHandle);
+
+                if (appliedVersion !== vao.version) {
+                    let lastBuffer: WebGl2RenderBuffer | null = null;
+
+                    for (const attribute of vao.attributes) {
+                        if (lastBuffer !== attribute.buffer) {
+                            attribute.buffer.bind();
+                            lastBuffer = attribute.buffer;
+                        }
+
+                        if (attribute.integer) {
+                            gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
+                        } else {
+                            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+                        }
+
+                        gl.enableVertexAttribArray(attribute.location);
+                        gl.vertexAttribDivisor(attribute.location, attribute.divisor);
+                    }
+
+                    if (vao.indexBuffer) {
+                        vao.indexBuffer.bind();
+                    }
+
+                    appliedVersion = vao.version;
+                }
+            },
+            unbind: (): void => {
+                connection.gl.bindVertexArray(null);
+            },
+            draw: (vao, size, start, type): void => {
+                const gl = connection.gl;
+
+                if (vao.indexBuffer) {
+                    gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+                } else {
+                    gl.drawArrays(type, start, size);
+                }
+            },
+            drawInstanced: (vao, count, start, instanceCount, type): void => {
+                const gl = connection.gl;
+
+                if (vao.indexBuffer) {
+                    gl.drawElementsInstanced(type, count, gl.UNSIGNED_SHORT, start, instanceCount);
+                } else {
+                    gl.drawArraysInstanced(type, start, count, instanceCount);
+                }
+            },
+            destroy: (vao): void => {
+                connection.gl.deleteVertexArray(connection.vaoHandle);
+                vao.disconnect();
+            },
+        };
     }
 }
