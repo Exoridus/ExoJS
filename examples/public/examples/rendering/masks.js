@@ -9,12 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/bunny.png' });
-    },
-
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
         const bunny = loader.get(Texture, 'bunny');
@@ -39,8 +38,7 @@ app.start(new Scene({
         this._gfxSprite.mask = circle;
 
         this._time = 0;
-    },
-
+    }
     update(delta) {
         const { width, height } = this.app.canvas;
         this._time += delta.seconds;
@@ -48,11 +46,10 @@ app.start(new Scene({
         const r = 80;
         this._rectMask.x = (width / 4 + Math.cos(this._time * 1.4) * r - 55) | 0;
         this._rectMask.y = (height / 2 + Math.sin(this._time * 1.4) * r - 55) | 0;
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._rectSprite.render(backend);
         this._gfxSprite.render(backend);
-    },
-}));
+    }
+});

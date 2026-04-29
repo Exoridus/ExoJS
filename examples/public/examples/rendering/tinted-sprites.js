@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/bunny.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -38,8 +38,7 @@ app.start(new Scene({
         this._random = new Random();
 
         this.tintBunnies();
-    },
-
+    }
     tintBunnies() {
         for (const bunny of this._bunnies.children) {
             bunny.tint.set(
@@ -48,17 +47,15 @@ app.start(new Scene({
                 this._random.next(50, 255)
             );
         }
-    },
-
+    }
     update() {
         if (this._timer.expired) {
             this.tintBunnies();
             this._timer.restart();
         }
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._bunnies.render(backend);
-    },
-}));
+    }
+});

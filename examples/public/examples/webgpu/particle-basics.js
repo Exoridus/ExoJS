@@ -21,7 +21,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
@@ -45,8 +45,7 @@ app.start(new Scene({
         this._particleSystem.addAffector(this._gravityAffector);
         this._particleSystem.addAffector(this._scaleAffector);
         this._particleSystem.addAffector(this._alphaFadeAffector);
-    },
-
+    }
     update(delta) {
         this._particleOptions.totalLifetime = seconds(randomRange(1.05, 1.8));
         this._particleOptions.position.set(randomRange(-26, 26), randomRange(-10, 10));
@@ -56,14 +55,12 @@ app.start(new Scene({
         this._particleOptions.tint = pickTint();
 
         this._particleSystem.update(delta);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._particleSystem.render(backend);
 
-    },
-
+    }
     unload() {
         this._particleSystem?.destroy();
         this._particleSystem = null;
@@ -72,8 +69,7 @@ app.start(new Scene({
         this._scaleAffector = null;
         this._alphaFadeAffector = null;
         this._particleOptions = null;
-    },
-
+    }
     destroy() {
         this._particleSystem?.destroy();
         this._particleSystem = null;
@@ -82,8 +78,8 @@ app.start(new Scene({
         this._scaleAffector = null;
         this._alphaFadeAffector = null;
         this._particleOptions = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

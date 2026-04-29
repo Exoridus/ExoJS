@@ -21,7 +21,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
@@ -106,8 +106,7 @@ app.start(new Scene({
             lifetimeMin: 0.9,
             lifetimeMax: 1.55,
         }));
-    },
-
+    }
     update(delta) {
         const time = this.app.activeTime.seconds;
 
@@ -138,8 +137,7 @@ app.start(new Scene({
             system.instance.rotation = Math.sin(wave * 0.9) * 5;
             system.instance.update(delta);
         }
-    },
-
+    }
     draw(backend) {
         backend.clear();
 
@@ -147,20 +145,18 @@ app.start(new Scene({
             system.instance.render(backend);
         }
 
-    },
-
+    }
     unload() {
         destroySystems(this._particleSystems);
         this._particleSystems = null;
         this._sharedTexture = null;
-    },
-
+    }
     destroy() {
         destroySystems(this._particleSystems);
         this._particleSystems = null;
         this._sharedTexture = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

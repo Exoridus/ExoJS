@@ -9,7 +9,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width } = this.app.canvas;
@@ -67,8 +67,7 @@ app.start(new Scene({
         );
         this._wrapped.setAnchor(0.5);
         this._wrapped.setPosition(585, 335);
-    },
-
+    }
     update(delta) {
         const time = this.app.activeTime.seconds;
 
@@ -80,16 +79,14 @@ app.start(new Scene({
             255,
             1
         ));
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._headline.render(backend);
         this._subhead.render(backend);
         this._multiline.render(backend);
         this._wrapped.render(backend);
-    },
-
+    }
     unload() {
         this._headline?.destroy();
         this._subhead?.destroy();
@@ -99,8 +96,7 @@ app.start(new Scene({
         this._subhead = null;
         this._multiline = null;
         this._wrapped = null;
-    },
-
+    }
     destroy() {
         this._headline?.destroy();
         this._subhead?.destroy();
@@ -110,8 +106,8 @@ app.start(new Scene({
         this._subhead = null;
         this._multiline = null;
         this._wrapped = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

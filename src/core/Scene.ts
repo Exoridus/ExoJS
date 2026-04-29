@@ -28,48 +28,37 @@ export type SceneInputEvent =
     | { type: 'pointerCancel'; pointer: Pointer; }
     | { type: 'mouseWheel'; wheel: Vector; };
 
-export interface SceneData {
-    load?: (loader: Loader) => Promise<void> | void;
-    init?: (loader: Loader) => Promise<void> | void;
-    update?: (delta: Time) => void;
-    draw?: (backend: RenderBackend) => void;
-    handleInput?: (event: SceneInputEvent) => boolean | void;
-    unload?: (loader: Loader) => Promise<void> | void;
-}
-
-export type SceneInstance<T extends SceneData = SceneData> = Scene<T> & T;
-
 /**
- * A scene's lifecycle host. Two creation paths are supported:
+ * A scene's lifecycle host. Subclass to define scene behavior:
  *
- *   - `new Scene()` — empty scene; override later or use as a stub.
- *   - `new Scene({ update() { ... } })` — typed definition object whose
- *     method bodies see `this` as `Scene<T> & T` via `ThisType<>`.
+ *   class GameScene extends Scene {
+ *       override init(loader: Loader): void { ... }
+ *       override update(delta: Time): void { ... }
+ *       override draw(backend: RenderBackend): void { ... }
+ *   }
  *
- * The class is generic over the definition's own-property shape so
- * plain-object users can declare local state in the literal and access it
- * from `this` inside method bodies. For richer scenarios — private state,
- * constructor logic, stronger IntelliSense — extend the class instead.
+ *   app.start(new GameScene());
+ *
+ * For one-off scenes, an anonymous subclass works just as well:
+ *
+ *   app.start(new class extends Scene {
+ *       override update(delta) { ... }
+ *       override draw(backend) { ... }
+ *   });
  */
-export class Scene<T extends SceneData = SceneData> {
+export class Scene {
 
-    #app: Application | null = null;
-    readonly #root = new Container();
-    #stackMode: SceneStackMode = 'overlay';
-    #inputMode: SceneInputMode = 'capture';
-
-    public constructor(definition?: T & ThisType<Scene<T> & T>) {
-        if (definition) {
-            Object.assign(this, definition);
-        }
-    }
+    protected _app: Application | null = null;
+    protected readonly _root = new Container();
+    protected _stackMode: SceneStackMode = 'overlay';
+    protected _inputMode: SceneInputMode = 'capture';
 
     public get app(): Application | null {
-        return this.#app;
+        return this._app;
     }
 
     public set app(app: Application | null) {
-        this.#app = app;
+        this._app = app;
     }
 
     /**
@@ -86,44 +75,44 @@ export class Scene<T extends SceneData = SceneData> {
      * scene's responsibility.
      */
     public get root(): Container {
-        return this.#root;
+        return this._root;
     }
 
     public get stackMode(): SceneStackMode {
-        return this.#stackMode;
+        return this._stackMode;
     }
 
     public set stackMode(mode: SceneStackMode) {
-        this.#stackMode = mode;
+        this._stackMode = mode;
     }
 
     public get inputMode(): SceneInputMode {
-        return this.#inputMode;
+        return this._inputMode;
     }
 
     public set inputMode(mode: SceneInputMode) {
-        this.#inputMode = mode;
+        this._inputMode = mode;
     }
 
     public addChild(child: RenderNode): this {
-        this.#root.addChild(child);
+        this._root.addChild(child);
 
         return this;
     }
 
     public removeChild(child: RenderNode): this {
-        this.#root.removeChild(child);
+        this._root.removeChild(child);
 
         return this;
     }
 
     public setParticipationPolicy(policy: SceneParticipationPolicy): this {
         if (policy.mode) {
-            this.#stackMode = policy.mode;
+            this._stackMode = policy.mode;
         }
 
         if (policy.input) {
-            this.#inputMode = policy.input;
+            this._inputMode = policy.input;
         }
 
         return this;
@@ -131,21 +120,21 @@ export class Scene<T extends SceneData = SceneData> {
 
     public getParticipationPolicy(): SceneParticipationPolicy {
         return {
-            mode: this.#stackMode,
-            input: this.#inputMode,
+            mode: this._stackMode,
+            input: this._inputMode,
         };
     }
 
-    public load(loader: Loader): Promise<void> | void {
-        // override in subclass or via new Scene({ ... })
+    public load(_loader: Loader): Promise<void> | void {
+        // override in subclass
     }
 
-    public init(loader: Loader): Promise<void> | void {
-        // override in subclass or via new Scene({ ... })
+    public init(_loader: Loader): Promise<void> | void {
+        // override in subclass
     }
 
-    public update(delta: Time): void {
-        // override in subclass or via new Scene({ ... })
+    public update(_delta: Time): void {
+        // override in subclass
     }
 
     /**
@@ -163,20 +152,20 @@ export class Scene<T extends SceneData = SceneData> {
      *
      * @see Scene.root for why root is structural, not render-authoritative.
      */
-    public draw(backend: RenderBackend): void {
-        // override in subclass or via new Scene({ ... })
+    public draw(_backend: RenderBackend): void {
+        // override in subclass
     }
 
     public handleInput(_event: SceneInputEvent): boolean | void {
-        // override in subclass or via new Scene({ ... })
+        // override in subclass
     }
 
-    public unload(loader: Loader): Promise<void> | void {
-        // override in subclass or via new Scene({ ... })
+    public unload(_loader: Loader): Promise<void> | void {
+        // override in subclass
     }
 
     public destroy(): void {
-        this.#root.destroy();
-        this.#app = null;
+        this._root.destroy();
+        this._app = null;
     }
 }

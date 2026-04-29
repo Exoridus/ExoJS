@@ -75,11 +75,11 @@ class FireworkAffector {
     }
 }
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { particle: 'image/particle.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -112,8 +112,7 @@ app.start(new Scene({
          * @type {Timer}
          */
         this.explosionTimer = new Timer(explosionInterval, true);
-    },
-
+    }
     update(delta) {
         if (this.explosionTimer.expired) {
             this.particleOptions.tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
@@ -126,10 +125,9 @@ app.start(new Scene({
         }
 
         this.particleSystem.update(delta);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this.particleSystem.render(backend);
-    },
-}));
+    }
+});

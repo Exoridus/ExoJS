@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Music, { example: 'audio/example.ogg' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -65,8 +65,7 @@ app.start(new Scene({
 
             this._music.toggle();
         });
-    },
-
+    }
     update(delta) {
         if (this._music.paused) {
             return;
@@ -95,8 +94,7 @@ app.start(new Scene({
         this._values[1] = low / len;
         this._values[2] = mid / len;
         this._values[3] = high / len;
-    },
-
+    }
     draw(backend) {
         if (this._music.paused) {
             return;
@@ -138,5 +136,5 @@ app.start(new Scene({
 
         backend.clear();
         this._screen.render(backend);
-    },
-}));
+    }
+});

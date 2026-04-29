@@ -9,7 +9,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
@@ -40,8 +40,7 @@ app.start(new Scene({
             this._croppedOrbitSprite,
             this._croppedBobbingSprite
         );
-    },
-
+    }
     update(delta) {
         const time = this.app.activeTime.seconds;
 
@@ -54,30 +53,27 @@ app.start(new Scene({
         this._croppedOrbitSprite.rotate(delta.seconds * 80);
         this._croppedBobbingSprite.y = 12 + Math.sin(time * 2.2) * 24;
         this._croppedBobbingSprite.rotate(delta.seconds * -42);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._spriteLayer.render(backend);
 
-    },
-
+    }
     unload() {
         this._spriteLayer?.destroy();
         this._spriteLayer = null;
         this._fullAtlasSprite = null;
         this._croppedOrbitSprite = null;
         this._croppedBobbingSprite = null;
-    },
-
+    }
     destroy() {
         this._spriteLayer?.destroy();
         this._spriteLayer = null;
         this._fullAtlasSprite = null;
         this._croppedOrbitSprite = null;
         this._croppedBobbingSprite = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

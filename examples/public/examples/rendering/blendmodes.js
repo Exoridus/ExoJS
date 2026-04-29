@@ -9,7 +9,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, {
@@ -18,7 +18,7 @@ app.start(new Scene({
         }, {
             scaleMode: ScaleModes.Nearest,
         });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -66,8 +66,7 @@ app.start(new Scene({
         this.app.inputManager.onPointerDown.add(this.updateBlendMode, this);
 
         this.updateBlendMode();
-    },
-
+    }
     updateBlendMode() {
         this._blendModeIndex = (this._blendModeIndex + 1) % this._blendModes.length;
 
@@ -78,8 +77,7 @@ app.start(new Scene({
             `Click to switch between blend modes`,
             `Current blend mode: ${this._blendModeNames[this._blendModeIndex]}`,
         ].join('\n'));
-    },
-
+    }
     update(delta) {
         const canvas = this.app.canvas,
             offset = (Math.cos(this._ticker * 3) * 0.5 + 0.5) * (canvas.width * 0.25);
@@ -88,13 +86,12 @@ app.start(new Scene({
         this._rightBunny.setPosition((canvas.width / 2) + offset, canvas.height / 2);
 
         this._ticker += delta.seconds;
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._background.render(backend);
         this._leftBunny.render(backend);
         this._rightBunny.render(backend);
         this._info.render(backend);
-    },
-}));
+    }
+});

@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/bunny.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -37,8 +37,7 @@ app.start(new Scene({
         });
 
         this.createBunnies(this._startAmount);
-    },
-
+    }
     createBunnies(amount) {
         for (let i = 0; i < amount; i++) {
             const bunny = new Sprite(this._bunnyTexture);
@@ -50,8 +49,7 @@ app.start(new Scene({
 
             this._bunnies.addChild(bunny);
         }
-    },
-
+    }
     createStats() {
         let frameCount = 0;
         let lastFlush = performance.now();
@@ -91,8 +89,7 @@ app.start(new Scene({
                 }
             },
         };
-    },
-
+    }
     createCounter() {
         // HTML overlay to match the stats.js FPS widget. The count updates
         // continuously while the pointer is held, but DOM textContent updates
@@ -113,8 +110,7 @@ app.start(new Scene({
         counter.textContent = 'BUNNIES 0';
         document.body.appendChild(counter);
         return counter;
-    },
-
+    }
     update() {
         this._stats.begin();
 
@@ -152,12 +148,11 @@ app.start(new Scene({
                 bunny.y = 0;
             }
         }
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._bunnies.render(backend);
 
         this._stats.end();
-    },
-}));
+    }
+});

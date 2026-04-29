@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { particle: 'image/particle.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -26,8 +26,7 @@ app.start(new Scene({
         this._particleSystem.setBlendMode(BlendModes.Additive);
         this._particleSystem.addAffector(this._colorAffector);
         this._particleSystem.addEmitter(this._particleEmitter);
-    },
-
+    }
     update(delta) {
         const angle = rand(90, 100) * (Math.PI / 180);
         const speed = rand(60, 80);
@@ -40,10 +39,9 @@ app.start(new Scene({
         this._particleOptions.velocity.set(Math.cos(angle) * speed, -Math.sin(angle) * speed);
 
         this._particleSystem.update(delta);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._particleSystem.render(backend);
-    },
-}));
+    }
+});

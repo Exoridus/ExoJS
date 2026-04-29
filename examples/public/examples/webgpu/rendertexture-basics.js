@@ -9,7 +9,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
@@ -51,8 +51,7 @@ app.start(new Scene({
         this._displaySprite.setAnchor(0.5);
         this._displaySprite.setPosition(width / 2, height / 2);
         this._displaySprite.setScale(1.85);
-    },
-
+    }
     update(delta) {
         const time = this.app.activeTime.seconds;
 
@@ -65,8 +64,7 @@ app.start(new Scene({
 
         const displayScale = 1.75 + Math.sin(time * 1.7) * 0.2;
         this._displaySprite.setScale(displayScale);
-    },
-
+    }
     draw(backend) {
         backend.setRenderTarget(this._offscreenTexture);
         backend.clear(new Color(0.02, 0.03, 0.06, 1));
@@ -75,8 +73,7 @@ app.start(new Scene({
         backend.setRenderTarget(null);
         backend.clear();
         this._displaySprite.render(backend);
-    },
-
+    }
     unload() {
         this._offscreenRoot?.destroy();
         this._displaySprite?.destroy();
@@ -88,8 +85,7 @@ app.start(new Scene({
         this._ring = null;
         this._centerDiamond = null;
         this._cornerStar = null;
-    },
-
+    }
     destroy() {
         this._offscreenRoot?.destroy();
         this._displaySprite?.destroy();
@@ -101,8 +97,8 @@ app.start(new Scene({
         this._ring = null;
         this._centerDiamond = null;
         this._cornerStar = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

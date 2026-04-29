@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { bunny: 'image/bunny.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -24,8 +24,7 @@ app.start(new Scene({
         this._renderSprite = new Sprite(this._renderTexture);
         this._renderSprite.setPosition(width, height);
         this._renderSprite.setAnchor(1, 1);
-    },
-
+    }
     createBunnyContainer(texture) {
         const container = new Container();
 
@@ -40,8 +39,7 @@ app.start(new Scene({
         }
 
         return container;
-    },
-
+    }
     createRenderTexture(container) {
         const backend = this.app.backend;
         const renderTexture = new RenderTexture(Math.ceil(container.width), Math.ceil(container.height));
@@ -54,11 +52,10 @@ app.start(new Scene({
         backend.setRenderTarget(null);
 
         return renderTexture;
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._container.render(backend);
         this._renderSprite.render(backend);
-    },
-}));
+    }
+});

@@ -9,12 +9,12 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { buttons: 'image/buttons.png' });
         await loader.load(Json, { buttons: 'json/buttons.json' });
-    },
+    }
     init(loader) {
         this._gamepad = null;
         this._buttons = new Spritesheet(
@@ -47,20 +47,17 @@ app.start(new Scene({
         if (connectedGamepad) {
             this.setActiveGamepad(connectedGamepad);
         }
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._status.render(backend);
         this._container.render(backend);
-    },
-
+    }
     handleGamepadConnected(gamepad) {
         if (!this._gamepad) {
             this.setActiveGamepad(gamepad);
         }
-    },
-
+    }
     handleGamepadDisconnected(gamepad) {
         if (!this._gamepad || gamepad.index !== this._gamepad.index) {
             return;
@@ -68,8 +65,7 @@ app.start(new Scene({
 
         const [nextGamepad] = this.app.inputManager.gamepads;
         this.setActiveGamepad(nextGamepad || null);
-    },
-
+    }
     setActiveGamepad(gamepad) {
         if (this._gamepad) {
             this._gamepad.onUpdate.remove(this._updateGamepadState);
@@ -85,8 +81,7 @@ app.start(new Scene({
 
         this._status.setTint(this._buttonColor);
         this.resetVisualState();
-    },
-
+    }
     updateMappedVisual(channel, value) {
         if (this._mappingButtons.has(channel)) {
             this._mappingButtons.get(channel).tint.a = lerp(0.25, 1, value);
@@ -95,8 +90,7 @@ app.start(new Scene({
         if (this._mappingFunctions.has(channel)) {
             this._mappingFunctions.get(channel)(value);
         }
-    },
-
+    }
     resetVisualState() {
         for (const sprite of this._mappingButtons.values()) {
             sprite.tint.a = this._buttonColor.a;
@@ -105,8 +99,7 @@ app.start(new Scene({
         for (const reset of this._resetFunctions) {
             reset();
         }
-    },
-
+    }
     createStatus() {
         const { width, height } = this.app.canvas;
         const status = this._buttons.getFrameSprite('status');
@@ -116,8 +109,7 @@ app.start(new Scene({
         status.setTint(this._buttonColor);
 
         return status;
-    },
-
+    }
     createGamepad() {
         const container = new Container();
 
@@ -128,8 +120,7 @@ app.start(new Scene({
         container.addChild(this.createJoysticks());
 
         return container;
-    },
-
+    }
     createDPadField() {
         const { width, height } = this.app.canvas;
         const mappedButtons = this._mappingButtons;
@@ -163,8 +154,7 @@ app.start(new Scene({
         container.setPosition(width / 5, height / 2);
 
         return container;
-    },
-
+    }
     createFaceButtons() {
         const { width, height } = this.app.canvas;
         const mappedButtons = this._mappingButtons;
@@ -200,8 +190,7 @@ app.start(new Scene({
         container.setPosition(width * 0.8, height / 2);
 
         return container;
-    },
-
+    }
     createShoulderButtons() {
         const { width, height } = this.app.canvas;
         const mappedButtons = this._mappingButtons;
@@ -233,8 +222,7 @@ app.start(new Scene({
         container.setPosition(width / 2, height / 5);
 
         return container;
-    },
-
+    }
     createMenuButtons() {
         const { width, height } = this.app.canvas;
         const mappedButtons = this._mappingButtons;
@@ -255,8 +243,7 @@ app.start(new Scene({
         container.setPosition(width / 2, height / 2);
 
         return container;
-    },
-
+    }
     createJoysticks() {
         const { width, height } = this.app.canvas;
         const mappedButtons = this._mappingButtons;
@@ -295,5 +282,5 @@ app.start(new Scene({
         container.setPosition(width / 2, height * 0.65);
 
         return container;
-    },
-}));
+    }
+});

@@ -9,14 +9,14 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, {
             bunny: 'image/bunny.png',
             rainbow: 'image/rainbow.png',
         });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -34,8 +34,7 @@ app.start(new Scene({
         }
 
         this._bunnies.setAnchor(0.5);
-    },
-
+    }
     update(delta) {
         const bounds = this._bunnies.getBounds();
 
@@ -45,11 +44,10 @@ app.start(new Scene({
         this._rainbow.height = bounds.height;
 
         this._bunnies.rotate(delta.seconds * 36);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._rainbow.render(backend);
         this._bunnies.render(backend);
-    },
-}));
+    }
+});

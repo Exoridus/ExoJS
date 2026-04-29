@@ -13,7 +13,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
@@ -70,8 +70,7 @@ app.start(new Scene({
                 index++;
             }
         }
-    },
-
+    }
     update(delta) {
         const time = this.app.activeTime.seconds;
 
@@ -86,26 +85,23 @@ app.start(new Scene({
             entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
             entry.sprite.setScale(scale);
         }
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._spriteLayer.render(backend);
 
-    },
-
+    }
     unload() {
         this._spriteLayer?.destroy();
         this._spriteLayer = null;
         this._sprites = null;
-    },
-
+    }
     destroy() {
         this._spriteLayer?.destroy();
         this._spriteLayer = null;
         this._sprites = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

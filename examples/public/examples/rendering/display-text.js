@@ -9,12 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(FontFace, { example: 'font/AndyBold.woff2' }, { family: 'AndyBold' });
-    },
-
+    }
     init() {
         const { width, height } = this.app.canvas;
 
@@ -31,16 +30,14 @@ app.start(new Scene({
 
         this._text.setPosition(width / 2, height / 2);
         this._text.setAnchor(0.5, 0.5);
-    },
-
+    }
     update(delta) {
         this._text
             .setText(`Hello World! ${this._time.addTime(delta).seconds | 0}`)
             .rotate(delta.seconds * 36);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._text.render(backend);
-    },
-}));
+    }
+});

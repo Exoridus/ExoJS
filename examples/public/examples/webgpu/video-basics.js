@@ -10,11 +10,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Video, { example: 'video/example.webm' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -26,8 +26,7 @@ app.start(new Scene({
         this._video.play({ loop: true, muted: false, volume: 0.5 });
 
         this.app.inputManager.onPointerTap.add(() => this._video.toggle());
-    },
-
+    }
     update() {
         const time = this.app.activeTime.seconds;
 
@@ -37,26 +36,23 @@ app.start(new Scene({
 
         const scale = 1 + (Math.sin(time * 2) * 0.08);
         this._video.setScale(scale);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._video.render(backend);
 
-    },
-
+    }
     unload() {
         this._video?.stop({ time: 0 });
         this._video?.destroy();
         this._video = null;
-    },
-
+    }
     destroy() {
         this._video?.stop({ time: 0 });
         this._video?.destroy();
         this._video = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

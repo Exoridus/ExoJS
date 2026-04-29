@@ -138,26 +138,23 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         this._triangleRenderer = new CustomTriangleRenderer(this.app.backend);
-    },
-
+    }
     draw() {
         this._triangleRenderer.draw();
-    },
-
+    }
     unload() {
         this._triangleRenderer?.destroy();
         this._triangleRenderer = null;
-    },
-
+    }
     destroy() {
         this._triangleRenderer?.destroy();
         this._triangleRenderer = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

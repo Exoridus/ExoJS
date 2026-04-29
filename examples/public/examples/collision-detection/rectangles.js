@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { rainbow: 'image/rainbow.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -30,8 +30,7 @@ app.start(new Scene({
         this.app.inputManager.onPointerMove.add((pointer) => {
             this._boxB.setPosition(pointer.x, pointer.y);
         });
-    },
-
+    }
     update(delta) {
         this._time.addTime(delta);
 
@@ -57,11 +56,10 @@ app.start(new Scene({
             this._boxB.setTint(shapeBinA ? Color.cyan : Color.red);
             this._boxB.tint.a = 0.5;
         }
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._boxA.render(backend);
         this._boxB.render(backend);
-    },
-}));
+    }
+});

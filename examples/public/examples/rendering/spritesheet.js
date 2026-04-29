@@ -9,12 +9,12 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { explosion: 'image/explosion.png' });
         await loader.load(Json, { explosion: 'json/explosion.json' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'explosion');
@@ -30,15 +30,13 @@ app.start(new Scene({
             sprite.setAnchor(0.5);
             sprite.setPosition(width / 2, height / 2);
         }
-    },
-
+    }
     update() {
         this._frame = (this._frame + 1) % this._frames;
         this._sprite = this._spritesheet.getFrameSprite(`explosion-${this._frame}`);
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._sprite.render(backend);
-    },
-}));
+    }
+});

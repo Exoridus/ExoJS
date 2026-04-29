@@ -9,7 +9,7 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
@@ -39,20 +39,17 @@ app.start(new Scene({
         this._star.drawStar(108, 12, 5, 58, 26, -18);
 
         this._sceneRoot.addChild(this._panel, this._circle, this._diamond, this._star);
-    },
-
+    }
     update(delta) {
         this._sceneRoot.rotate(delta.seconds * 9);
         this._star.rotate(delta.seconds * 60);
         this._circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
-    },
-
+    }
     draw(backend) {
         backend.clear();
         this._sceneRoot.render(backend);
 
-    },
-
+    }
     unload() {
         this._sceneRoot?.destroy();
         this._sceneRoot = null;
@@ -60,8 +57,7 @@ app.start(new Scene({
         this._circle = null;
         this._diamond = null;
         this._star = null;
-    },
-
+    }
     destroy() {
         this._sceneRoot?.destroy();
         this._sceneRoot = null;
@@ -69,8 +65,8 @@ app.start(new Scene({
         this._circle = null;
         this._diamond = null;
         this._star = null;
-    },
-})).catch((error) => {
+    }
+}).catch((error) => {
     app.canvas.remove();
     app.destroy();
 

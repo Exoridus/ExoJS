@@ -9,11 +9,11 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new Scene({
+app.start(new class extends Scene {
 
     async load(loader) {
         await loader.load(Texture, { example: 'image/uv.png' });
-    },
+    }
     init(loader) {
         const { width, height } = this.app.canvas;
 
@@ -85,8 +85,7 @@ app.start(new Scene({
                 onTrigger: () => this._camera.reset(0, 0, width, height),
             })
         ]);
-    },
-
+    }
     draw(backend) {
         backend.clear();
 
@@ -95,5 +94,5 @@ app.start(new Scene({
 
         backend.setView(null);
         this._info.render(backend);
-    },
-}));
+    }
+});
