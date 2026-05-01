@@ -4,6 +4,40 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-05-02
+
+Playground-only release. Library code is unchanged from 0.6.0; the
+npm tarball ships byte-for-byte the same `dist/` output. The version
+bump exists so the published changelog and the playground's release
+catalog stay in sync.
+
+### Changed
+
+- **Playground version selector now reads GitHub Releases at runtime.**
+  The dropdown was previously fed by a committed `versions.json` plus
+  per-version snapshot directories under
+  `examples/public/examples/versions/<id>/` and
+  `examples/public/vendor/exojs/<id>/`. Both are gone. The dropdown
+  now fetches from the GitHub Releases API
+  (`api.github.com/repos/Exoridus/ExoJS/releases`); the special
+  "current" entry continues to load locally-vendored sources for the
+  build-time HEAD. Example sources for any released version load
+  from `raw.githubusercontent.com/Exoridus/ExoJS/v<id>/...` and the
+  library bundle loads from `cdn.jsdelivr.net/npm/@codexo/exojs@<id>`.
+  Versions appear in the dropdown automatically once a tag is
+  published — no bookkeeping commit is needed any more.
+
+### Removed
+
+- **Versioned-snapshot scaffolding in the playground.** The
+  `examples/public/examples/versions/` snapshot tree, the
+  per-version `examples/public/vendor/exojs/<id>/` mirrors, and
+  `examples/public/examples/versions.json` are all gone, along with
+  the `phase2-bundle.smoke.test.mjs` smoke test that policed their
+  byte-identical layout. The `versions.json` shape test in
+  `phase1-bundle.smoke.test.mjs` is also gone. `sync-exo-vendor.ts`
+  no longer mirrors the flat vendor into a versioned subdirectory.
+
 ## [0.6.0] - 2026-05-02
 
 A large pre-1.0 cleanup release. Two intentional API breaks (Backend

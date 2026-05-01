@@ -1,11 +1,13 @@
 import type { Example, ExampleDefinition, ExamplesMap, ExamplesResponse } from './types';
-import { buildVersionedExampleUrl } from './url-builder';
+import { buildExampleUrl, buildGithubRawExampleUrl } from './url-builder';
 import { createUniqueRequest } from './request-manager';
+import { isCurrentVersion } from './versions';
 
-// Phase 2: the example catalog is per-version. The store keeps an internal
-// cache keyed by version id so switching back to a previously-loaded version
-// is instant and so concurrent in-flight loads for different versions don't
-// stomp on each other.
+// Per-version cache. The store keeps an internal map keyed by version id so
+// switching back to a previously-loaded version is instant and so concurrent
+// in-flight loads for different versions don't stomp on each other. The
+// "current" id loads from the locally-deployed examples; everything else
+// loads from raw.githubusercontent.com at the matching tag.
 
 interface VersionEntry {
   response: ExamplesResponse | null;
@@ -22,6 +24,14 @@ function getOrCreateEntry(versionId: string): VersionEntry {
     _entries.set(versionId, entry);
   }
   return entry;
+}
+
+function buildSourceUrl(versionId: string, filePath: string): string {
+  if (isCurrentVersion(versionId)) {
+    return buildExampleUrl(filePath, { 'no-cache': Date.now() });
+  }
+  // Remote release sources are immutable — let the browser/CDN cache normally.
+  return buildGithubRawExampleUrl(versionId, filePath);
 }
 
 export function hasExamplesFor(versionId: string): boolean {
@@ -80,7 +90,7 @@ export function getExampleByPath(versionId: string, path: string): Example | nul
 }
 
 export async function loadExampleSource(versionId: string, filePath: string): Promise<string> {
-  const url = buildVersionedExampleUrl(versionId, filePath, { 'no-cache': Date.now() });
+  const url = buildSourceUrl(versionId, filePath);
   const request = createUniqueRequest(url);
   const response = await request.getText();
 
@@ -95,7 +105,7 @@ export async function loadExamples(versionId: string): Promise<void> {
   const entry = getOrCreateEntry(versionId);
   entry.error = null;
 
-  const url = buildVersionedExampleUrl(versionId, 'examples.json', { 'no-cache': Date.now() });
+  const url = buildSourceUrl(versionId, 'examples.json');
 
   try {
     const request = createUniqueRequest(url);

@@ -15,7 +15,7 @@
     "build": "npm run vendor:sync && astro build",
     "preview": "astro preview",
     "test:dist": "npm run build && node --test tests/dist-open.smoke.test.mjs",
-    "test:smoke:bundle": "node --test tests/phase1-bundle.smoke.test.mjs tests/phase2-bundle.smoke.test.mjs",
+    "test:smoke:bundle": "node --test tests/phase1-bundle.smoke.test.mjs",
     "test:smoke:catalog": "node --test --test-name-pattern=\"backend policy|catalog entries exist\" tests/dist-open.smoke.test.mjs",
     "test:smoke": "npm run test:smoke:bundle && npm run test:smoke:catalog",
     "check-ts": "astro check && tsc --noEmit --pretty"

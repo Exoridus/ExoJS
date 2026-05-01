@@ -94,8 +94,9 @@ export class ExampleBrowser extends LitElement {
     this.addEventListener('select-version', this._selectVersionHandler);
 
     // Catalog ordering: versions must resolve before examples, since the
-    // example catalog lives at versions/<selected>/examples.json. The
-    // example load is fired from _syncVersionState once a version is known.
+    // example catalog URL is version-aware (local for "current", remote
+    // raw.githubusercontent for any released tag). The example load is
+    // fired from _syncVersionState once a version is known.
     void loadVersionCatalog();
     void detectRuntimeSupport();
   }

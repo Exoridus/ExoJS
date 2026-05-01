@@ -48,14 +48,25 @@ export function buildExampleUrl(path: string, params?: UrlParams): string {
   return buildUrl(`${_examplesDir}/${path}`, params);
 }
 
-// Resolves under `examples/versions/<versionId>/<filePath>`. Used by the
-// version-aware example store for both per-version `examples.json` catalogs
-// and per-version source files. Top-level files (`versions.json`) keep using
-// `buildExampleUrl` because they are not version-scoped.
-export function buildVersionedExampleUrl(
+// Resolves to the example source on raw.githubusercontent.com at the matching
+// release tag (e.g. v0.5.1). Used for non-current versions; the current
+// development build is served locally via `buildExampleUrl`. The repo root
+// path is hardcoded — it has not changed since the project's pre-1.0 line and
+// changing it would be a deliberate architectural move.
+export function buildGithubRawExampleUrl(
   versionId: string,
   filePath: string,
   params?: UrlParams,
 ): string {
-  return buildUrl(`${_examplesDir}/versions/${versionId}/${filePath}`, params);
+  const url = new URL(
+    `https://raw.githubusercontent.com/Exoridus/ExoJS/v${versionId}/examples/public/examples/${filePath}`,
+  );
+
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.append(key, String(value));
+    }
+  }
+
+  return url.toString();
 }

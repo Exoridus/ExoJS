@@ -2,8 +2,8 @@
 //
 // These tests run against the static build output (dist/) without spinning up
 // a browser. They guard against accidental removal of the Phase 1 component
-// surface (custom-element tags, typed CustomEvent wiring, the versions.json
-// stub) and are the reliable counterpart to the Playwright suite when WebGL
+// surface (custom-element tags, typed CustomEvent wiring) and are the
+// reliable counterpart to the Playwright suite when WebGL
 // is unavailable in the sandbox.
 //
 // Run after `npm run build` (or `npx astro build`).
@@ -127,41 +127,6 @@ test('phase 1 hooks ship as bundle text — toast, jump, refresh, persistence', 
         missing,
         [],
         `Phase 1 hooks missing from bundle: ${missing.join(', ')}`
-    );
-});
-
-test('versions.json deploys at examples/versions.json with valid shape', () => {
-    const versionsPath = path.join(distDir, 'examples', 'versions.json');
-    assert.ok(
-        fs.existsSync(versionsPath),
-        'examples/versions.json was not copied into dist/.'
-    );
-
-    const data = JSON.parse(fs.readFileSync(versionsPath, 'utf8'));
-
-    assert.equal(typeof data.latestStable, 'string', 'latestStable must be a string.');
-    assert.ok(Array.isArray(data.versions), 'versions must be an array.');
-    assert.ok(data.versions.length >= 1, 'versions must contain at least one entry.');
-
-    const validTracks = new Set(['stable', 'beta', 'legacy']);
-    for (const version of data.versions) {
-        assert.equal(typeof version.id, 'string', `version entry missing id: ${JSON.stringify(version)}`);
-        assert.ok(
-            validTracks.has(version.track),
-            `version entry has invalid track "${version.track}" — expected stable | beta | legacy`
-        );
-        if ('summary' in version) {
-            assert.equal(typeof version.summary, 'string', `summary must be a string when present: ${JSON.stringify(version)}`);
-        }
-        if ('latest' in version) {
-            assert.equal(typeof version.latest, 'boolean', `latest must be a boolean when present: ${JSON.stringify(version)}`);
-        }
-    }
-
-    const latestStableEntry = data.versions.find(version => version.id === data.latestStable);
-    assert.ok(
-        latestStableEntry,
-        `latestStable "${data.latestStable}" is not present in the versions list.`
     );
 });
 

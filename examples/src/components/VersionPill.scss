@@ -8,8 +8,8 @@
   align-items: center;
 }
 
-// Fallback shown while versions.json is still loading. Keeps the header
-// layout from reflowing when the real pill appears.
+// Fallback shown while the GitHub Releases catalog is still loading. Keeps
+// the header layout from reflowing when the real pill appears.
 .pill--empty {
   display: inline-flex;
   align-items: center;

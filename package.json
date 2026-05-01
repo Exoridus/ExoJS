@@ -1,7 +1,7 @@
 {
   "name": "@codexo/exojs",
   "description": "A TypeScript-first browser 2D runtime for games and interactive apps.",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "files": [
     "dist/esm/",

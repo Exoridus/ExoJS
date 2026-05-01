@@ -20,19 +20,26 @@
                 var params = new URLSearchParams(window.location.search);
                 var noCache = encodeURIComponent(params.get('no-cache') || String(Date.now()));
 
-                // Select the ExoJS runtime snapshot that matches the selected
+                // Select the ExoJS runtime that matches the selected
                 // version. The parent shell threads ?v=<id> through
                 // EditorPreview.buildIframeUrl. The value lands inside an
                 // import-map URL, so reject anything that could escape into
-                // path traversal or non-string injection. On a missing or
-                // unsafe id, fall back to the flat vendor path for direct
-                // preview.html opens and older deployed shells.
+                // path traversal or non-string injection. The sentinel
+                // "current" (or missing id) loads the locally-vendored bundle
+                // that ships with this Pages deploy; any other id resolves
+                // against jsDelivr's npm mirror, where every published
+                // release is reachable as @codexo/exojs@<id>.
                 var rawVersion = params.get('v') || '';
                 var safeVersion = /^[A-Za-z0-9._-]+$/.test(rawVersion) ? rawVersion : '';
 
-                var exoEntry = safeVersion
-                    ? './vendor/exojs/' + safeVersion + '/exo.esm.js?no-cache=' + noCache
-                    : './vendor/exojs/exo.esm.js?no-cache=' + noCache;
+                var exoEntry;
+                if (!safeVersion || safeVersion === 'current') {
+                    exoEntry = './vendor/exojs/exo.esm.js?no-cache=' + noCache;
+                } else {
+                    // jsDelivr serves immutable npm tarballs — the version pin
+                    // alone is enough, no cache-buster needed.
+                    exoEntry = 'https://cdn.jsdelivr.net/npm/@codexo/exojs@' + safeVersion + '/dist/exo.esm.js';
+                }
 
                 var importMap = {
                     imports: {

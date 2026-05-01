@@ -38,11 +38,11 @@ const generatedTypingsFiles = [
     'monaco-registry.json',
 ];
 
-// Top-level entries this script owns under `public/vendor/exojs/`. Anything
-// else there (notably the versioned subdirectories the script itself
-// produces) is left intact between runs so older pinned snapshots stay
-// safe when the in-development version is re-synced. The `esm/` directory
-// is included so subsequent syncs can clean it up before re-populating.
+// Top-level entries this script owns under `public/vendor/exojs/`. The
+// `esm/` directory is included so subsequent syncs can clean it up before
+// re-populating. Historical versioned subdirectories are no longer produced
+// (released versions load via jsDelivr at runtime); leftovers from prior
+// syncs may remain on disk and are harmless — they're gitignored.
 const flatManagedEntries: ReadonlyArray<{ name: string; type: 'file' | 'dir' }> = [
     ...requiredArtifacts.map(name => ({ name, type: 'file' as const })),
     ...generatedTypingsFiles.map(name => ({ name, type: 'file' as const })),
@@ -289,51 +289,15 @@ const syncTypings = (): void => {
     );
 };
 
-const copyEntryRecursive = (sourcePath: string, destPath: string): void => {
-    const stat = fs.lstatSync(sourcePath);
-    if (stat.isDirectory()) {
-        fs.rmSync(destPath, { recursive: true, force: true });
-        fs.mkdirSync(destPath, { recursive: true });
-        for (const entry of fs.readdirSync(sourcePath, { withFileTypes: true })) {
-            copyEntryRecursive(
-                path.resolve(sourcePath, entry.name),
-                path.resolve(destPath, entry.name)
-            );
-        }
-        return;
-    }
-    if (stat.isFile()) {
-        fs.mkdirSync(path.dirname(destPath), { recursive: true });
-        fs.copyFileSync(sourcePath, destPath);
-    }
-};
-
-// Replicate the managed flat-level entries into the per-version snapshot
-// directory. We only copy entries this script *owns* (see flatManagedEntries)
-// so other pinned-version subdirectories are never accidentally nested.
-// The versioned snapshot is byte-identical to the flat copy at sync time.
-const mirrorFlatToVersioned = (versionedDir: string): void => {
-    fs.rmSync(versionedDir, { recursive: true, force: true });
-    fs.mkdirSync(versionedDir, { recursive: true });
-
-    for (const entry of flatManagedEntries) {
-        const src = path.resolve(flatTargetDir, entry.name);
-        const dst = path.resolve(versionedDir, entry.name);
-        if (!fs.existsSync(src)) continue;
-        copyEntryRecursive(src, dst);
-    }
-};
-
 const syncVendor = (): void => {
     ensureSourcePackage();
 
     const versionId = readRootPackageVersion();
-    const versionedTargetDir = path.resolve(flatTargetDir, versionId);
 
     fs.mkdirSync(flatTargetDir, { recursive: true });
 
-    // Clear only the entries we manage; leave foreign version subdirectories
-    // intact so other pinned snapshots survive an in-dev re-sync.
+    // Clear only the entries we manage; any leftover versioned subdirectories
+    // from older syncs are left in place — they're gitignored and harmless.
     for (const entry of flatManagedEntries) {
         const target = path.resolve(flatTargetDir, entry.name);
         if (entry.type === 'dir') {
@@ -362,13 +326,8 @@ const syncVendor = (): void => {
         'utf8'
     );
 
-    mirrorFlatToVersioned(versionedTargetDir);
-
     console.log(
         `[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`
-    );
-    console.log(
-        `[vendor:sync] Mirrored vendor snapshot to ${versionedTargetDir}`
     );
 };
 
