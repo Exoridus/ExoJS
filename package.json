@@ -1,18 +1,12 @@
 {
   "name": "@codexo/exojs",
   "description": "A TypeScript-first browser 2D runtime for games and interactive apps.",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "files": [
     "dist/esm/",
     "dist/exo.esm.js",
     "dist/exo.esm.js.map",
-    "dist/exo.esm.min.js",
-    "dist/exo.esm.min.js.map",
-    "dist/exo.global.js",
-    "dist/exo.global.js.map",
-    "dist/exo.global.min.js",
-    "dist/exo.global.min.js.map",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -74,7 +68,6 @@
     "@eslint/js": "^10.0.1",
     "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
     "@types/css-font-loading-module": "0.0.14",
     "@types/earcut": "^3.0.0",

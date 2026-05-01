@@ -4,6 +4,127 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-05-02
+
+A large pre-1.0 cleanup release. Two intentional API breaks (Backend
+rename, Scene class-only), a full GPU-instancing pass across sprite
+and particle renderers on both backends, and a slimmer npm package
+shape. All on a single 0.x minor since the project is still pre-1.0
+and breaks freely between minors.
+
+### Breaking
+
+- **`Runtime` types renamed to `Backend`; render-manager classes
+  collapse into the same name.** `SceneRenderRuntime` →
+  `RenderBackend`. The split `WebGl2RendererRuntime` /
+  `WebGpuRendererRuntime` interfaces are gone — the concrete classes
+  are the public type. `WebGl2RenderManager` → `WebGl2Backend`,
+  `WebGpuRenderManager` → `WebGpuBackend`. `Application.renderManager`
+  → `Application.backend`. Internal field/parameter names follow
+  (`runtime` → `backend`, `_runtime` → `_backend`, `getRuntime()` →
+  `getBackend()`). `WebGl2ShaderRuntime` → `WebGl2ShaderProgram` (the
+  type stores a `WebGLProgram` plus its bound state — the new name
+  reflects that). `WebGl2RenderBufferRuntime` and
+  `WebGl2VertexArrayObjectRuntime` keep their names — they describe
+  per-resource lifecycle, not the render backend.
+- **`Scene` is class-only; the plain-object definition constructor is
+  gone.** `new Scene({ update() { ... } })` no longer works. Subclass
+  to define a scene — `class GameScene extends Scene { override
+  update(...) { ... } }` for named scenes, `new class extends Scene
+  { ... }` for one-offs. The `SceneData` interface and
+  `SceneInstance<T>` type alias are removed (they only existed to
+  type the spread-into-`this` constructor). Internal Scene fields
+  move from ECMAScript `#`-private to TS `protected _app/_root/
+  _stackMode/_inputMode` — subclasses can now reach internal state
+  directly when they need to.
+- **npm package shape simplified.** Dropped: `dist/exo.global.js` /
+  `dist/exo.global.min.js` (legacy IIFE for `<script>` use) and
+  `dist/exo.esm.min.js` (consumers minify on their side). What ships
+  now: `dist/esm/` (per-module ESM tree, the canonical entry) and
+  `dist/exo.esm.js` (single-file ESM bundle for direct module
+  loading). `package.json#main`, `module`, `browser`, `exports` are
+  unchanged in semantics — only the auxiliary artifacts go away.
+
+### Performance
+
+- **WebGL2 sprite renderer is now fully GPU-instanced.** Quad
+  corners derive from `gl_VertexID` in the vertex shader; per-instance
+  attributes carry `localBounds`, `transformAB`/`transformCD` (the 2D
+  affine), `uvBounds`, packed RGBA8 tint, and packed slot/flags (56
+  bytes per instance). The CPU per-frame cost is one bounded
+  `writeBuffer` per batch; no per-vertex stream is uploaded.
+  `drawArraysInstanced` over `TRIANGLE_STRIP` replaces the per-vertex
+  `drawElements` path.
+- **WebGPU sprite renderer matches the same instanced layout.** Uses
+  `drawIndexed` over a static `[0,1,2,0,2,3]` index buffer with
+  `triangle-list` topology (the index buffer keeps mock-frame
+  bookkeeping deterministic — the on-screen result is the same as a
+  triangle-strip).
+- **Particle renderers fully instanced on both backends, with system
+  data hoisted out of per-instance.** `localBounds`, `uvBounds`, and
+  `systemTransform` are now uniforms (one upload per system per
+  frame). Per-instance shrinks from 56 to 24 bytes (translation,
+  scale, rotation, packed RGBA8 color). `WebGl2ParticleRenderer` no
+  longer extends `AbstractWebGl2BatchedRenderer` — particles don't
+  share batch infrastructure with sprites anymore.
+
+### Removed
+
+- `docs/` directory and the README's "Next Steps" link block. The
+  prose docs were drifting out of sync with the code; the in-repo
+  examples (`examples/README.md`) remain the supported reference.
+- `SceneRenderRuntime`, `WebGl2RendererRuntime`, `WebGpuRendererRuntime`
+  interfaces (collapsed into the renamed classes — see Breaking).
+- `SceneData` interface, `SceneInstance<T>` type alias (no longer
+  needed without the Scene definition-spread constructor).
+- `WebGl2RenderManager`, `WebGpuRenderManager` class names (renamed
+  to `*Backend` — see Breaking).
+- `Sampler._premultiplyAlpha`, `Sampler._generateMipMap`,
+  `Sampler._flipY` (write-only — texture pixel-store path consumes
+  these directly from `SamplerOptions`, the GL sampler object only
+  cares about scale and wrap modes).
+- `AudioAnalyser._audioContext` (write-only — never read after
+  setup).
+- `WebGpuRenderManager._blendMode` (write-only — renderers consult
+  `sprite.blendMode` directly; `setBlendMode` keeps its
+  not-yet-implemented blend-mode validation).
+- `@rollup/plugin-terser` devDependency (no minified bundle output
+  any more).
+
+### Migration
+
+```ts
+// Before (0.5.x)
+class GameScene extends Scene {
+    override draw(runtime: SceneRenderRuntime): void {
+        this.root.render(runtime);
+    }
+}
+
+const triangleRenderer = new CustomRenderer(app.renderManager);
+
+if (app.renderManager instanceof WebGpuRenderManager) { /* ... */ }
+
+// Plain-object scene
+app.start(new Scene({ update() { /* ... */ } }));
+```
+
+```ts
+// After (0.6.0)
+class GameScene extends Scene {
+    override draw(backend: RenderBackend): void {
+        this.root.render(backend);
+    }
+}
+
+const triangleRenderer = new CustomRenderer(app.backend);
+
+if (app.backend instanceof WebGpuBackend) { /* ... */ }
+
+// Anonymous-subclass scene (or named subclass)
+app.start(new class extends Scene { override update() { /* ... */ } });
+```
+
 ## [0.5.1] - 2026-04-28
 
 Rendering-pipeline performance pass. No public API changes; all

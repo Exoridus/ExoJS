@@ -39,7 +39,7 @@ CommonJS `require()` usage is not part of the supported contract for this pre-1.
 ## Quickstart
 
 ```ts
-import { Application, Scene, Graphics, Color, type SceneRenderRuntime } from '@codexo/exojs';
+import { Application, Scene, Graphics, Color, type RenderBackend } from '@codexo/exojs';
 
 class HelloScene extends Scene {
     private readonly box = new Graphics();
@@ -58,8 +58,8 @@ class HelloScene extends Scene {
         this.box.rotation += delta.seconds * 45;
     }
 
-    public override draw(runtime: SceneRenderRuntime): void {
-        this.root.render(runtime);
+    public override draw(backend: RenderBackend): void {
+        this.root.render(backend);
     }
 }
 
@@ -81,16 +81,6 @@ await app.start(new HelloScene());
 
 ## Next Steps
 
-- Documentation hub: [docs/README.md](docs/README.md)
-- Getting started: [docs/getting-started/quickstart.md](docs/getting-started/quickstart.md)
-- Core concepts: [docs/core-concepts/overview.md](docs/core-concepts/overview.md)
-- Assets and bundles: [docs/assets/loader-and-bundles.md](docs/assets/loader-and-bundles.md)
-- Scenes and stack flow: [docs/scenes/scene-flow.md](docs/scenes/scene-flow.md)
-- Rendering and visuals: [docs/rendering/visual-capabilities.md](docs/rendering/visual-capabilities.md)
-- Audio workflow: [docs/audio/audio-workflow.md](docs/audio/audio-workflow.md)
-- Optional physics: [docs/physics/rapier-integration.md](docs/physics/rapier-integration.md)
-- Performance/debugging: [docs/performance/performance-and-debugging.md](docs/performance/performance-and-debugging.md)
-- API reference: [docs/api/README.md](docs/api/README.md)
 - In-repo examples: [examples/README.md](examples/README.md)
 
 ## WebGPU and WebGL2

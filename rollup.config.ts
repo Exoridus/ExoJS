@@ -2,57 +2,28 @@ import resolve from '@rollup/plugin-node-resolve';
 import { string } from 'rollup-plugin-string';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
-import terser from '@rollup/plugin-terser';
 import type { RollupOptions } from 'rollup';
 
 const glslPlugin = string({
     include: ['**/*.vert', '**/*.frag'],
 });
 
-const bundledPlugins = [
-    resolve({ mainFields: ['browser', 'module', 'main'] }),
-    glslPlugin,
-    commonjs(),
-    typescript({
-        compilerOptions: { incremental: false },
-        outputToFilesystem: false,
-    }),
-];
-
 const bundled: RollupOptions = {
     input: 'src/index.ts',
-    output: [
-        {
-            file: 'dist/exo.esm.js',
-            format: 'es',
-            sourcemap: true,
-        },
-        {
-            file: 'dist/exo.global.js',
-            format: 'iife',
-            name: 'Exo',
-            sourcemap: true,
-        },
+    output: {
+        file: 'dist/exo.esm.js',
+        format: 'es',
+        sourcemap: true,
+    },
+    plugins: [
+        resolve({ mainFields: ['browser', 'module', 'main'] }),
+        glslPlugin,
+        commonjs(),
+        typescript({
+            compilerOptions: { incremental: false },
+            outputToFilesystem: false,
+        }),
     ],
-    plugins: bundledPlugins,
-};
-
-const minified: RollupOptions = {
-    input: 'src/index.ts',
-    output: [
-        {
-            file: 'dist/exo.esm.min.js',
-            format: 'es',
-            sourcemap: true,
-        },
-        {
-            file: 'dist/exo.global.min.js',
-            format: 'iife',
-            name: 'Exo',
-            sourcemap: true,
-        },
-    ],
-    plugins: [...bundledPlugins, terser()],
 };
 
 const modules: RollupOptions = {
@@ -80,4 +51,4 @@ const modules: RollupOptions = {
     ],
 };
 
-export default [bundled, minified, modules];
+export default [bundled, modules];
