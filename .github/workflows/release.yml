@@ -12,8 +12,11 @@ on:
 
 permissions:
   contents: read
-  # Required for `npm publish --provenance` to mint an OIDC-signed
-  # provenance attestation alongside the token-based publish.
+  # Required so npm-cli can mint an OIDC-token from GitHub at publish
+  # time. The token both (a) authenticates against npm via the package's
+  # configured Trusted Publisher (no static NPM_TOKEN secret), and
+  # (b) signs the provenance attestation that lands on the npm version
+  # page.
   id-token: write
 
 concurrency:
@@ -39,6 +42,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
           cache: npm
+
+      # Trusted Publisher auth requires npm CLI 11.5+. Node 22 LTS still
+      # ships with npm 10, so we upgrade explicitly. Pinned to ^11 so a
+      # future npm 12 with another auth refactor doesn't surprise us.
+      - name: Upgrade npm to 11+
+        run: npm install -g npm@^11
 
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --fund=false
@@ -78,5 +87,3 @@ jobs:
 
       - name: Publish to npm
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
