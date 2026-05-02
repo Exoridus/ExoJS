@@ -12,6 +12,5 @@ describe('root index public API exports', () => {
         expect(exo.BlurFilter).toBeDefined();
         expect(exo.ColorFilter).toBeDefined();
         expect(exo.createRenderStats).toBeDefined();
-        expect(exo.createRapierPhysicsWorld).toBeDefined();
     });
 });

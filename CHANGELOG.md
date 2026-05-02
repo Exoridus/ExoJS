@@ -4,6 +4,57 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2026-05-02
+
+> **Heads-up — breaking change despite the patch number.** Removes
+> the optional Rapier physics integration in its entirety. Pre-1.0
+> SemVer permits breaking changes within the 0.x.y line; we kept
+> the minor digit unchanged because the integration was opt-in and
+> usage outside the engine is presumed minimal.
+
+### Removed
+
+- **`createRapierPhysicsWorld` factory and the `RapierPhysicsWorld`
+  / `RapierPhysicsBinding` classes.** Plus the entire associated
+  type surface (`PhysicsBodyOptions`, `PhysicsBodyType`,
+  `PhysicsBoxShape`, `PhysicsCircleShape`, `PhysicsColliderShape`,
+  `PhysicsCollisionFilter`, `PhysicsSyncMode`, `RapierModuleLoader`,
+  `RapierPhysicsDebugDrawOptions`, `RapierPhysicsEvent`,
+  `RapierPhysicsWorldOptions`).
+- **`@dimforge/rapier2d-compat` peerDependency.** Removed from
+  `package.json` along with the `peerDependenciesMeta` entry that
+  marked it optional.
+- **README's "Optional Rapier Physics" section** and the
+  feature-list bullets that mentioned it.
+- **`src/physics/`** and **`test/physics/`** directories deleted.
+
+### Migration
+
+Apps that depended on `createRapierPhysicsWorld` need to integrate
+Rapier (or any other physics library) directly in their own code
+without library involvement. The adapter was always intentionally
+narrow — it bound Rapier bodies to scene nodes from the outside,
+no rendering / application / core scene code referenced physics.
+Removing it is therefore mechanical for downstream consumers:
+
+```ts
+// Before (≤ 0.6.7)
+import { createRapierPhysicsWorld } from '@codexo/exojs';
+const physics = await createRapierPhysicsWorld({ gravityY: 9.81 });
+
+// After (0.6.8+) — pull Rapier directly:
+import RAPIER from '@dimforge/rapier2d-compat';
+await RAPIER.init();
+const physics = new RAPIER.World({ x: 0, y: 9.81 });
+// Sync bodies to your scene-node positions in your app's update loop.
+```
+
+The motivation: ExoJS doesn't want to be a thin wrapper around
+Rapier's API, and keeping the integration around tied the library
+to a specific physics library forever. Removing it cleans the
+boundary — ExoJS is rendering + scene + input; physics is the
+user's choice.
+
 ## [0.6.7] - 2026-05-02
 
 Touch / multi-touch / pointer support, fully unified — no separate

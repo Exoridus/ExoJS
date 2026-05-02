@@ -5,4 +5,3 @@ export * from './math/index';
 export * from './particles/index';
 export * from './rendering/index';
 export * from './resources/index';
-export * from './physics/index';
