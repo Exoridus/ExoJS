@@ -4,6 +4,41 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-05-02
+
+Adds the `Mesh` primitive — the first new public Drawable since the
+0.6.0 cleanup. PATCH bump because the only change is additive: a new
+class plus its two backend renderers; nothing existing changes shape.
+
+### Added
+
+- **`Mesh` Drawable.** Arbitrary 2D triangle-mesh primitive sitting
+  alongside `Sprite` in the Drawable hierarchy. Construction takes a
+  `MeshOptions` object with required `vertices` (flat (x,y) pairs) and
+  optional `indices`, `uvs`, `colors` (packed RGBA8 u32 per vertex),
+  and `texture`. Mesh data is immutable post-construction, but the
+  underlying typed arrays may be mutated in place — call
+  `mesh.recomputeLocalBounds()` afterwards to keep culling correct.
+  Validation is enforced at construction (mismatched array lengths,
+  out-of-range indices, non-multiple-of-3 vertex/index counts all
+  throw).
+- **`WebGl2MeshRenderer`.** Single-drawcall-per-mesh path on WebGL2.
+  Vertex layout is 20 bytes (pos f32x2 + uv f32x2 + color u8x4-norm).
+  Texture is bound to slot 0; meshes without an explicit texture
+  resolve to `Texture.white` so the fragment shader stays branchless.
+- **`WebGpuMeshRenderer`.** Deferred batched-pass path on WebGPU. CPU
+  bakes (view × globalTransform) into vertex positions so the WGSL is
+  uniform-free except for a per-mesh dynamic-offset tint+flags slot.
+  Pipelines are created per (blendMode × format) and pre-warmed via
+  `prewarmPipelines` during backend init. Texture bind groups are
+  cached per Texture/RenderTexture instance.
+- **Three live examples** under `examples/public/examples/rendering/`:
+  `mesh-triangle.js` (untextured, vertex-colored), `mesh-textured-quad.js`
+  (textured quad equivalent to a Sprite, hand-built from a Mesh), and
+  `mesh-deformed-grid.js` (16×16 grid whose vertex positions wave
+  each frame — demonstrates the deformation use case Sprite can't
+  handle).
+
 ## [0.6.1] - 2026-05-02
 
 Playground-only release. Library code is unchanged from 0.6.0; the

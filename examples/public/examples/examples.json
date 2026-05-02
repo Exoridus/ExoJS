@@ -106,6 +106,36 @@
       ]
     },
     {
+      "slug": "mesh-triangle",
+      "path": "rendering/mesh-triangle.js",
+      "title": "Mesh Triangle",
+      "description": "Three-vertex mesh with one solid color per vertex. Demonstrates the untextured Mesh path.",
+      "backend": "core",
+      "tags": [
+        "mesh"
+      ]
+    },
+    {
+      "slug": "mesh-textured-quad",
+      "path": "rendering/mesh-textured-quad.js",
+      "title": "Mesh Textured Quad",
+      "description": "A quad built from the Mesh primitive with explicit vertices, UVs, indices, and a texture.",
+      "backend": "core",
+      "tags": [
+        "mesh"
+      ]
+    },
+    {
+      "slug": "mesh-deformed-grid",
+      "path": "rendering/mesh-deformed-grid.js",
+      "title": "Mesh Deformed Grid",
+      "description": "16x16 mesh whose vertex positions wave each frame to deform the bound texture — a thing Sprite cannot do.",
+      "backend": "core",
+      "tags": [
+        "mesh"
+      ]
+    },
+    {
       "slug": "masks",
       "path": "rendering/masks.js",
       "title": "Masks",

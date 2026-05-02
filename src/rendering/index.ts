@@ -1,5 +1,7 @@
 /// <reference types="@webgpu/types" />
 
+export * from './mesh/Mesh';
+
 export * from './primitives/CircleGeometry';
 export * from './primitives/Geometry';
 export * from './primitives/DrawableShape';
@@ -28,6 +30,7 @@ export * from './webgl2/WebGl2RenderBuffer';
 export * from './webgl2/WebGl2ShaderBlock';
 export * from './webgl2/WebGl2ShaderMappings';
 export * from './webgl2/WebGl2VertexArrayObject';
+export * from './webgl2/WebGl2MeshRenderer';
 export * from './webgl2/WebGl2ParticleRenderer';
 export * from './webgl2/WebGl2PrimitiveRenderer';
 export type { WebGl2Backend } from './webgl2/WebGl2Backend';
@@ -37,6 +40,7 @@ export * from './webgl2/WebGl2SpriteRenderer';
 
 export * from './webgpu/AbstractWebGpuRenderer';
 export * from './webgpu/WebGpuBlendState';
+export * from './webgpu/WebGpuMeshRenderer';
 export * from './webgpu/WebGpuParticleRenderer';
 export * from './webgpu/WebGpuPrimitiveRenderer';
 export type { WebGpuBackend } from './webgpu/WebGpuBackend';

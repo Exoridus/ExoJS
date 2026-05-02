@@ -18,11 +18,13 @@ import type { RenderBackend } from '../RenderBackend';
 import { RenderTarget } from '../RenderTarget';
 import { WebGpuPrimitiveRenderer } from './WebGpuPrimitiveRenderer';
 import { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
+import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuParticleRenderer } from './WebGpuParticleRenderer';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 import { RenderTexture } from '../texture/RenderTexture';
 import { Sprite } from '../sprite/Sprite';
+import { Mesh } from '../mesh/Mesh';
 import { DrawableShape } from '../primitives/DrawableShape';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Vector } from '@/math/Vector';
@@ -100,6 +102,7 @@ export class WebGpuBackend implements RenderBackend {
 
         this.rendererRegistry.registerRenderer(DrawableShape, new WebGpuPrimitiveRenderer());
         this.rendererRegistry.registerRenderer(Sprite, new WebGpuSpriteRenderer());
+        this.rendererRegistry.registerRenderer(Mesh, new WebGpuMeshRenderer());
         this.rendererRegistry.registerRenderer(ParticleSystem, new WebGpuParticleRenderer());
         this.resize(width, height);
     }
