@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (must already exist, e.g. v0.6.2)'
+        description: 'Tag to publish (must already exist, e.g. v0.6.3)'
         required: true
 
 permissions:
@@ -24,7 +24,15 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '22'
+  # Node 24 ships with npm 11+ which is required for Trusted Publisher
+  # OIDC authentication. We previously used Node 22 + `npm install -g
+  # npm@^11`, but the in-place upgrade has a known MODULE_NOT_FOUND bug
+  # on `promise-retry`. Bumping Node is the cleaner fix.
+  NODE_VERSION: '24'
+  # `github.ref_name` is `main` for workflow_dispatch and the tag name
+  # (e.g. `v0.6.3`) for tag-push. The dispatch input takes priority so
+  # an explicitly-passed tag wins.
+  TARGET_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   publish:
@@ -34,7 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ env.TARGET_TAG }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -43,24 +51,17 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: npm
 
-      # Trusted Publisher auth requires npm CLI 11.5+. Node 22 LTS still
-      # ships with npm 10, so we upgrade explicitly. Pinned to ^11 so a
-      # future npm 12 with another auth refactor doesn't surprise us.
-      - name: Upgrade npm to 11+
-        run: npm install -g npm@^11
-
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --fund=false
 
-      # Refuse to publish unless the workflow is running on a tag whose
-      # name matches the version inside package.json. This catches the
-      # "tag and package.json version drifted" mistake before it ships.
+      # Refuse to publish unless the resolved tag name matches the
+      # version inside package.json. Catches the "tag and package.json
+      # drifted" mistake before it ships.
       - name: Verify tag matches package.json version
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
           PKG_VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$TAG_NAME" != "$PKG_VERSION" ]; then
-            echo "::error::Tag '$TAG_NAME' does not match package.json version '$PKG_VERSION'."
+          if [ "$TARGET_TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Tag '$TARGET_TAG' does not match package.json version '$PKG_VERSION'."
             exit 1
           fi
           echo "Tag and package.json agree on $PKG_VERSION."
