@@ -4,6 +4,75 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-05-02
+
+> **Heads-up — breaking change despite the patch number.** Reshapes
+> the capabilities API one version after it was introduced. Pre-1.0
+> SemVer permits breaking changes within the 0.x.y line; we kept the
+> minor digit unchanged because the previous shape only existed for
+> a single release (0.6.3) and almost no one will have pinned to it.
+
+0.6.3 shipped a sync-only `capabilities` object plus an `isSupported`
+helper; both are gone. The replacement is a `Capabilities` class with
+a lazy-cached `static get ready` Promise — async-aware (real WebGPU
+adapter check, not just API surface), flat-property, OOP-flavored to
+match the rest of ExoJS.
+
+### Breaking
+
+- **`capabilities` (lowercase const) and `isSupported` are removed.**
+  Replace with `await Capabilities.ready`. Properties on the resolved
+  instance carry the same information at richer fidelity:
+  - `capabilities.touch` (`boolean`) → `caps.touch` (`boolean`) plus
+    new `caps.maxTouchPoints` (`number`).
+  - `capabilities.webgpu` (`boolean`, API-surface only) →
+    `caps.webgpu` (`boolean`, same API-surface meaning) plus new
+    `caps.webgpuAdapter` (`GPUAdapter | null`, the actual adapter
+    request result), `caps.webgpuVendor`, `caps.webgpuArchitecture`.
+  - `capabilities.audio` (`boolean`) → `caps.audio` (`boolean`).
+  - All other booleans (`pointer`, `keyboard`, `gamepad`,
+    `fullscreen`, `vibration`, `offscreenCanvas`, `webWorkers`,
+    `devicePixelRatio`, `webgl2`) carry over with identical names.
+- **`CapabilityName` type is removed.** It existed only to type
+  `isSupported`'s parameter; with the function gone the union has no
+  consumer.
+
+### Added
+
+- **`Capabilities` class** with lazy-cached static `ready` Promise.
+  First read fires the probes (sync ones immediate, the WebGPU
+  adapter check async); every subsequent read returns the same
+  Promise. The resolved instance is frozen.
+- **`Application.capabilities`** accessor returns the same instance
+  after `await app.start(...)` resolves; reading before start throws.
+  Application's start now overlaps capability detection with backend
+  init via `Promise.all`-style parallelism — no extra startup
+  latency.
+- **Real WebGPU adapter check** as part of detection: `webgpuAdapter`
+  is non-null only if `navigator.gpu.requestAdapter()` succeeded.
+  Solves the "API surface present but adapter not available" false
+  positive that the 0.6.3 sync `capabilities.webgpu` couldn't
+  distinguish.
+
+### Migration
+
+```ts
+// Before (0.6.3)
+import { capabilities, isSupported } from '@codexo/exojs';
+if (capabilities.webgpu) startWebGpu();             // false positives possible
+if (isSupported('touch')) showTouchUi();
+
+// After (0.6.4)
+import { Capabilities } from '@codexo/exojs';
+const caps = await Capabilities.ready;
+if (caps.webgpuAdapter) startWebGpu();              // strict adapter check
+if (caps.touch) showTouchUi();
+
+// Or via Application after start:
+await app.start(scene);
+if (app.capabilities.touch) showTouchUi();
+```
+
 ## [0.6.3] - 2026-05-02
 
 Adds the `capabilities` feature-detection API. Pure addition — no
