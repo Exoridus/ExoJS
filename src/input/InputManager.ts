@@ -182,19 +182,37 @@ export class InputManager {
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
+        // Game-engine convention: keys only register while the canvas
+        // owns focus. Otherwise typing into adjacent <input> fields would
+        // also drive game state, which is never what users want.
+        if (!this.canvasFocusedValue) {
+            return;
+        }
+
         const channel = ChannelOffset.Keyboard + event.keyCode;
 
         this.channels[channel] = 1;
         this.channelsPressed.push(channel);
         this.flags.push(InputManagerFlag.KeyDown);
+
+        // Consume the event: stop default browser actions (page scroll on
+        // arrow/space, find-as-you-type on /, etc.) and stop propagation
+        // so other listeners on the page don't double-handle.
+        stopEvent(event);
     }
 
     private handleKeyUp(event: KeyboardEvent): void {
+        if (!this.canvasFocusedValue) {
+            return;
+        }
+
         const channel = ChannelOffset.Keyboard + event.keyCode;
 
         this.channels[channel] = 0;
         this.channelsReleased.push(channel);
         this.flags.push(InputManagerFlag.KeyUp);
+
+        stopEvent(event);
     }
 
     private handlePointerOver(event: PointerEvent): void {
@@ -213,7 +231,11 @@ export class InputManager {
         this.pointers[event.pointerId].handlePress(event);
         this.flags.push(InputManagerFlag.PointerUpdate);
 
-        event.preventDefault();
+        // preventDefault stops native drag / text-selection;
+        // stopImmediatePropagation prevents bubbling to host-page click
+        // handlers so an embedded canvas doesn't accidentally trigger UI
+        // outside its bounds.
+        stopEvent(event);
     }
 
     private handlePointerMove(event: PointerEvent): void {
@@ -225,7 +247,7 @@ export class InputManager {
         this.pointers[event.pointerId].handleRelease(event);
         this.flags.push(InputManagerFlag.PointerUpdate);
 
-        event.preventDefault();
+        stopEvent(event);
     }
 
     private handlePointerCancel(event: PointerEvent): void {
@@ -234,12 +256,14 @@ export class InputManager {
     }
 
     private handleMouseWheel(event: WheelEvent): void {
+        if (!this.canvasFocusedValue) {
+            return;
+        }
+
         this.wheelOffset.set(event.deltaX, event.deltaY);
         this.flags.push(InputManagerFlag.MouseWheel);
 
-        if (this.canvasFocusedValue) {
-            event.preventDefault();
-        }
+        stopEvent(event);
     }
 
     private handleCanvasFocus(): void {
@@ -248,10 +272,31 @@ export class InputManager {
 
     private handleCanvasBlur(): void {
         this.canvasFocusedValue = false;
+        this.releaseAllKeyboardChannels();
     }
 
     private handleWindowBlur(): void {
         this.canvasFocusedValue = false;
+        this.releaseAllKeyboardChannels();
+    }
+
+    /**
+     * Force every currently-held keyboard channel back to zero and emit
+     * onKeyUp for each. Called on canvas/window blur so keys held when
+     * focus leaves don't stay stuck "down" forever — without this, a user
+     * who alt-tabs while pressing W would have W register as held until
+     * they manually release while focus is back.
+     */
+    private releaseAllKeyboardChannels(): void {
+        for (let offset = 0; offset < ChannelSize.Category; offset++) {
+            const channel = ChannelOffset.Keyboard + offset;
+
+            if (this.channels[channel] !== 0) {
+                this.channels[channel] = 0;
+                this.channelsReleased.push(channel);
+                this.flags.push(InputManagerFlag.KeyUp);
+            }
+        }
     }
 
     private addEventListeners(): void {
