@@ -4,6 +4,57 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.17] - 2026-05-02
+
+Rewrites the debug overlay as a canvas-native, tree-shake-able module.
+Replaces the DOM-based 0.6.15 implementation. Also adds a generic
+per-frame application hook.
+
+### Added
+
+- **`Application.onFrame: Signal<[Time]>`** — generic per-frame hook
+  fired between `sceneManager.update()` and `backend.flush()`. Useful
+  for any external tool that wants per-frame ticks without writing a
+  Scene (debug overlays, profilers, custom HUDs).
+- **`@codexo/exojs/debug` subpath export** — DebugOverlay and friends
+  now live behind a separate import path. Apps that don't import it
+  pay zero bundle cost. The root `@codexo/exojs` no longer references
+  any debug code.
+- **Canvas-native `DebugOverlay`** — instantiate manually:
+  ```ts
+  import { DebugOverlay } from '@codexo/exojs/debug';
+  const debug = new DebugOverlay(app);
+  debug.layers.performance.visible = true; // or press F1
+  ```
+  Subscribes to `app.onFrame` for ticking, `inputManager.onKeyDown`
+  for F1 binding, and `app.onResize` for screen-space view sync.
+  Renders into its own screen-space view between scene render and
+  backend flush.
+- **`PerformanceLayer`** (V1's only layer) — FPS, frame-time
+  sparkline, draw calls, node count, culled nodes. Top-left fixed
+  position. Toggle via `F1` or `debug.layers.performance.visible`.
+- **`DebugLayer` abstract base** — exported so future layer types
+  (BoundingBoxes, HitTest, PointerStack) plug in cleanly. V1 ships
+  only PerformanceLayer; more arrive in subsequent patches.
+
+### Changed
+
+- **`Application.debug` removed** — was added in 0.6.15. Apps that
+  used `app.debug.show()` must migrate to `import { DebugOverlay }
+  from '@codexo/exojs/debug'` and instantiate manually. **Breaking
+  change**, but the affected window is one day (0.6.15 → 0.6.17).
+
+### Notes
+
+- The new architecture decouples DebugOverlay from Application so
+  the root bundle tree-shakes the debug code away when unused. This
+  is the same pattern projects use for optional dev-tools modules.
+- F1 binding is hardcoded for V1. Opt-out (`{ keybindings: false }`
+  constructor option) and additional keybindings come with the
+  next layers.
+- F-keys only fire while the canvas has focus — engine convention,
+  not a debug-specific quirk.
+
 ## [0.6.16] - 2026-05-02
 
 Adds an opt-in spatial index for hit-testing and replaces the dead

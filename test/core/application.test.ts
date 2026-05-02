@@ -105,9 +105,6 @@ const loadApplicationHarness = (options: {
             getHoveredNode: jest.fn().mockReturnValue(null),
         })),
     }));
-    jest.doMock('@/debug/DebugOverlay', () => ({
-        DebugOverlay: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn() })),
-    }));
     jest.doMock('@/core/SceneManager', () => ({
         SceneManager: jest.fn(() => sceneManager),
     }));
@@ -155,18 +152,17 @@ describe('Application', () => {
         };
 
         const interaction = { update: jest.fn() };
-        const debug = { update: jest.fn() };
 
         rawApp['_status'] = ApplicationStatus.Running;
         rawApp['inputManager'] = inputManager;
         rawApp['interaction'] = interaction;
-        rawApp['debug'] = debug;
         rawApp['tweens'] = tweens;
         rawApp['sceneManager'] = sceneManager;
         rawApp['_backend'] = backend;
         rawApp['_frameClock'] = frameClock;
         rawApp['_updateHandler'] = jest.fn();
         rawApp['_frameCount'] = 0;
+        rawApp['onFrame'] = { dispatch: jest.fn() };
 
         const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 

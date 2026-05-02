@@ -29,7 +29,6 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "ColorAffector",
   "ColorFilter",
   "Container",
-  "DebugOverlay",
   "Drawable",
   "DynamicGlyphAtlas",
   "Ease",

@@ -1,229 +1,266 @@
-import { DebugOverlay } from '@/debug/DebugOverlay';
-import type { Application } from '@/core/Application';
+/**
+ * Canvas-native DebugOverlay tests (0.6.17+).
+ *
+ * Exercises tree-shake architecture (debug not in root), subscription
+ * lifecycle, visibility toggling, F1 keybinding, and render path.
+ */
+
+import { Signal } from '@/core/Signal';
+import { Keyboard } from '@/input/types';
+
+// Stub out the glyph atlas singleton so Text construction never touches a
+// real 2D canvas context (jsdom's canvas does not implement measureText).
+jest.mock('@/rendering/text/atlas-singleton', () => {
+    const fakeGlyph = {
+        x: 0, y: 0, width: 6, height: 10,
+        uvLeft: 0, uvRight: 0.01, uvTop: 0, uvBottom: 0.02,
+    };
+    const fakeAtlas = {
+        texture: { updateSource: jest.fn() },
+        getGlyph: jest.fn(() => fakeGlyph),
+    };
+
+    return { getDefaultGlyphAtlas: () => fakeAtlas };
+});
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Minimal Application mock — enough for DebugOverlay constructor + usage.
 // ---------------------------------------------------------------------------
 
-const makeBackend = () => ({
-    stats: { frameTimeMs: 0, drawCalls: 0, culledNodes: 0 },
+// A view-like object that satisfies the SceneNode.inView() call path.
+// SceneNode.inView() calls view.getBounds().intersectsWith(...), so the
+// view mock needs getBounds returning a Rectangle-like with intersectsWith.
+const makeFakeView = () => ({
+    width: 800,
+    height: 600,
+    getBounds: () => ({
+        intersectsWith: () => true,  // always in-view for tests
+    }),
 });
 
-const makeSceneManager = (root?: object) => ({
-    scene: root
-        ? { root }
-        : null,
-});
+const makeBackend = () => {
+    const view = makeFakeView();
 
-const makeInputManager = (inCanvas = false) => ({
-    pointersInCanvas: inCanvas,
-});
-
-const makeInteraction = (hovered: object | null = null) => ({
-    getHoveredNode: jest.fn().mockReturnValue(hovered),
-});
-
-const makeCanvas = () => {
-    const canvas = document.createElement('canvas');
-    jest.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
-        top: 10, left: 20, width: 800, height: 600,
-        right: 820, bottom: 610, x: 20, y: 10,
-        toJSON: () => ({}),
-    } as DOMRect);
-
-    return canvas;
+    return {
+        stats: {
+            frameTimeMs: 0,
+            drawCalls: 5,
+            culledNodes: 2,
+            submittedNodes: 10,
+            batches: 3,
+            renderPasses: 1,
+            renderTargetChanges: 0,
+            frame: 1,
+        },
+        view,
+        setView: jest.fn().mockReturnThis(),
+        draw: jest.fn().mockReturnThis(),
+        flush: jest.fn().mockReturnThis(),
+    };
 };
 
-const makeApp = (overrides: Partial<{
-    sceneRoot: object;
-    inCanvas: boolean;
-    hovered: object | null;
-}> = {}): Application => ({
-    canvas: makeCanvas(),
-    backend: makeBackend(),
-    sceneManager: makeSceneManager(overrides.sceneRoot),
-    inputManager: makeInputManager(overrides.inCanvas ?? false),
-    interaction: makeInteraction(overrides.hovered ?? null),
-} as unknown as Application);
+const makeSceneManager = () => ({
+    scene: null as null | { root: object; },
+});
+
+const makeOnFrame = () => new Signal<[import('@/core/Time').Time]>();
+const makeOnKeyDown = () => new Signal<[number]>();
+const makeOnResize = () => new Signal<[number, number, unknown]>();
+
+const makeApp = () => {
+    const onFrame = makeOnFrame();
+    const onKeyDown = makeOnKeyDown();
+    const onResize = makeOnResize();
+
+    return {
+        canvas: { width: 800, height: 600 },
+        backend: makeBackend(),
+        sceneManager: makeSceneManager(),
+        inputManager: { onKeyDown },
+        onFrame,
+        onResize,
+    } as unknown as import('@/core/Application').Application;
+};
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('DebugOverlay', () => {
-    afterEach(() => {
-        // Clean up any elements added to body during tests.
-        document.body.innerHTML = '';
-        jest.restoreAllMocks();
+describe('DebugOverlay — tree-shake architecture', () => {
+    test('DebugOverlay is NOT exported from the root barrel', () => {
+        const rootExports = require('../../src/index') as Record<string, unknown>;
+
+        expect(rootExports['DebugOverlay']).toBeUndefined();
     });
 
-    test('show() creates a DOM element and appends it to document.body', () => {
-        const overlay = new DebugOverlay(makeApp());
+    test('DebugOverlay IS exported from the debug subpath', () => {
+        const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-        expect(overlay.visible).toBe(false);
-        expect(document.body.childElementCount).toBe(0);
-
-        overlay.show();
-
-        expect(overlay.visible).toBe(true);
-        expect(document.body.childElementCount).toBe(1);
+        expect(typeof debugExports['DebugOverlay']).toBe('function');
     });
 
-    test('hide() removes the DOM element and sets visible to false', () => {
-        const overlay = new DebugOverlay(makeApp());
+    test('DebugLayer IS exported from the debug subpath', () => {
+        const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-        overlay.show();
-        expect(overlay.visible).toBe(true);
-        expect(document.body.childElementCount).toBe(1);
-
-        overlay.hide();
-        expect(overlay.visible).toBe(false);
-        expect(document.body.childElementCount).toBe(0);
+        expect(typeof debugExports['DebugLayer']).toBe('function');
     });
 
-    test('toggle() flips visibility state', () => {
-        const overlay = new DebugOverlay(makeApp());
+    test('PerformanceLayer IS exported from the debug subpath', () => {
+        const debugExports = require('../../src/debug/index') as Record<string, unknown>;
 
-        overlay.toggle();
-        expect(overlay.visible).toBe(true);
-
-        overlay.toggle();
-        expect(overlay.visible).toBe(false);
-
-        overlay.toggle();
-        expect(overlay.visible).toBe(true);
+        expect(typeof debugExports['PerformanceLayer']).toBe('function');
     });
+});
 
-    test('update() while not visible is a no-op (no DOM mutations)', () => {
-        const overlay = new DebugOverlay(makeApp());
-        const appendSpy = jest.spyOn(document.body, 'appendChild');
-
-        overlay.update();
-
-        expect(appendSpy).not.toHaveBeenCalled();
-        expect(document.body.childElementCount).toBe(0);
-    });
-
-    test('update() while visible writes stats text content to element', () => {
+describe('DebugOverlay — lifecycle', () => {
+    test('new DebugOverlay(app) does not throw', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
         const app = makeApp();
-        const overlay = new DebugOverlay(app);
 
-        overlay.show();
-        overlay.update();
-
-        const el = document.body.firstElementChild as HTMLElement;
-
-        expect(el).not.toBeNull();
-        expect(el.textContent).toBeTruthy();
-        expect(el.textContent!.length).toBeGreaterThan(0);
-        expect(el.textContent).toContain('FPS');
+        expect(() => new DebugOverlay(app)).not.toThrow();
     });
 
-    test('update() text contains all expected stat labels', () => {
+    test('constructor subscribes to app.onFrame', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
         const app = makeApp();
-        const overlay = new DebugOverlay(app);
 
-        overlay.show();
-        overlay.update();
+        expect(app.onFrame.bindings.length).toBe(0);
 
-        const text = (document.body.firstElementChild as HTMLElement).textContent ?? '';
+        const debug = new DebugOverlay(app);
 
-        expect(text).toContain('FPS');
-        expect(text).toContain('Frame time');
-        expect(text).toContain('Draw calls');
-        expect(text).toContain('Culled nodes');
-        expect(text).toContain('Node count');
-        expect(text).toContain('Active pointers');
-        expect(text).toContain('Hovered');
+        expect(app.onFrame.bindings.length).toBe(1);
+
+        debug.destroy();
     });
 
-    test('destroy() removes DOM element and prevents future show()', () => {
-        const overlay = new DebugOverlay(makeApp());
-
-        overlay.show();
-        expect(document.body.childElementCount).toBe(1);
-
-        overlay.destroy();
-        expect(document.body.childElementCount).toBe(0);
-        expect(overlay.visible).toBe(false);
-
-        // show() after destroy() should be a no-op.
-        overlay.show();
-        expect(document.body.childElementCount).toBe(0);
-        expect(overlay.visible).toBe(false);
-    });
-
-    test('show() re-appends element after hide() without recreating it', () => {
+    test('constructor subscribes to inputManager.onKeyDown', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
         const app = makeApp();
-        const overlay = new DebugOverlay(app);
 
-        overlay.show();
-        const firstEl = document.body.firstElementChild;
+        expect(app.inputManager.onKeyDown.bindings.length).toBe(0);
 
-        overlay.hide();
-        overlay.show();
-        const secondEl = document.body.firstElementChild;
+        const debug = new DebugOverlay(app);
 
-        // Same element instance reused.
-        expect(firstEl).toBe(secondEl);
+        expect(app.inputManager.onKeyDown.bindings.length).toBe(1);
+
+        debug.destroy();
     });
 
-    test('Application auto-instantiates app.debug as a DebugOverlay', () => {
-        jest.resetModules();
-        jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-            WebGl2Backend: jest.fn(() => ({
-                initialize: jest.fn().mockResolvedValue(undefined),
-                flush: jest.fn(),
-                resize: jest.fn(),
-                destroy: jest.fn(),
-                resetStats: jest.fn().mockReturnThis(),
-                stats: { frameTimeMs: 0 },
-                renderTarget: { setView: jest.fn() },
-            })),
-        }));
-        jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-            WebGpuBackend: jest.fn(() => ({
-                initialize: jest.fn().mockResolvedValue(undefined),
-            })),
-        }));
-        jest.doMock('@/resources/Loader', () => ({
-            Loader: jest.fn(() => ({ destroy: jest.fn() })),
-        }));
-        jest.doMock('@/input/InputManager', () => ({
-            InputManager: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn() })),
-        }));
-        jest.doMock('@/input/InteractionManager', () => ({
-            InteractionManager: jest.fn(() => ({
-                update: jest.fn(),
-                destroy: jest.fn(),
-                getHoveredNode: jest.fn().mockReturnValue(null),
-            })),
-        }));
-        jest.doMock('@/core/SceneManager', () => ({
-            SceneManager: jest.fn(() => ({
-                update: jest.fn(),
-                setScene: jest.fn().mockResolvedValue(undefined),
-                destroy: jest.fn(),
-                scene: null,
-            })),
-        }));
+    test('layers.performance.visible defaults to false', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
 
-        let Application!: typeof import('@/core/Application').Application;
+        expect(debug.layers.performance.visible).toBe(false);
 
-        jest.isolateModules(() => {
-            const mod = require('@/core/Application') as typeof import('@/core/Application');
-            Application = mod.Application;
-        });
+        debug.destroy();
+    });
 
-        const app = new Application({ canvas: document.createElement('canvas') });
+    test('destroy() removes onFrame and onKeyDown subscriptions', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
 
-        expect(app.debug).toBeDefined();
-        expect(typeof app.debug.show).toBe('function');
-        expect(typeof app.debug.hide).toBe('function');
-        expect(typeof app.debug.toggle).toBe('function');
-        expect(typeof app.debug.update).toBe('function');
-        expect(typeof app.debug.destroy).toBe('function');
+        expect(app.onFrame.bindings.length).toBe(1);
+        expect(app.inputManager.onKeyDown.bindings.length).toBe(1);
 
-        jest.resetModules();
+        debug.destroy();
+
+        expect(app.onFrame.bindings.length).toBe(0);
+        expect(app.inputManager.onKeyDown.bindings.length).toBe(0);
+    });
+});
+
+describe('DebugOverlay — render path', () => {
+    test('with visible=false, dispatching onFrame does NOT call backend.setView', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
+
+        // visible defaults to false — dispatch a frame
+        const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+
+        app.onFrame.dispatch(fakeTime);
+
+        expect(app.backend.setView).not.toHaveBeenCalled();
+
+        debug.destroy();
+    });
+
+    test('with visible=true, dispatching onFrame calls backend.setView', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
+
+        debug.layers.performance.visible = true;
+
+        const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+
+        app.onFrame.dispatch(fakeTime);
+
+        expect(app.backend.setView).toHaveBeenCalled();
+
+        debug.destroy();
+    });
+
+    test('with visible=true, backend.setView is called twice (save + restore)', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
+
+        debug.layers.performance.visible = true;
+
+        const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('@/core/Time').Time;
+
+        app.onFrame.dispatch(fakeTime);
+
+        // Called at least twice: once to swap in debug view, once to restore.
+        expect(app.backend.setView).toHaveBeenCalledTimes(2);
+
+        debug.destroy();
+    });
+});
+
+describe('DebugOverlay — F1 keybinding', () => {
+    test('dispatching F1 toggles performance.visible from false to true', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
+
+        expect(debug.layers.performance.visible).toBe(false);
+
+        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+
+        expect(debug.layers.performance.visible).toBe(true);
+
+        debug.destroy();
+    });
+
+    test('dispatching F1 twice toggles back to false', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
+
+        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+        expect(debug.layers.performance.visible).toBe(true);
+
+        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+        expect(debug.layers.performance.visible).toBe(false);
+
+        debug.destroy();
+    });
+
+    test('other keys do not affect performance.visible', () => {
+        const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
+        const app = makeApp();
+        const debug = new DebugOverlay(app);
+
+        app.inputManager.onKeyDown.dispatch(Keyboard.F2);
+        app.inputManager.onKeyDown.dispatch(Keyboard.Space);
+        app.inputManager.onKeyDown.dispatch(Keyboard.A);
+
+        expect(debug.layers.performance.visible).toBe(false);
+
+        debug.destroy();
     });
 });

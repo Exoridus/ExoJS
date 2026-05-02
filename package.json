@@ -1,7 +1,7 @@
 {
   "name": "@codexo/exojs",
   "description": "A TypeScript-first browser 2D runtime for games and interactive apps.",
-  "version": "0.6.16",
+  "version": "0.6.17",
   "type": "module",
   "files": [
     "dist/esm/",
@@ -32,6 +32,11 @@
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./debug": {
+      "types": "./dist/esm/debug/index.d.ts",
+      "import": "./dist/esm/debug/index.js",
+      "default": "./dist/esm/debug/index.js"
     },
     "./package.json": "./package.json"
   },

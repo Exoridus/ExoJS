@@ -27,7 +27,7 @@ const bundled: RollupOptions = {
 };
 
 const modules: RollupOptions = {
-    input: 'src/index.ts',
+    input: ['src/index.ts', 'src/debug/index.ts'],
     output: {
         dir: 'dist/esm',
         format: 'es',

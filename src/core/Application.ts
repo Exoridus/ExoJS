@@ -7,7 +7,6 @@ import { InputManager } from '@/input/InputManager';
 import { InteractionManager } from '@/input/InteractionManager';
 import { Loader } from '@/resources/Loader';
 import { TweenManager } from '@/animation/TweenManager';
-import { DebugOverlay } from '@/debug/DebugOverlay';
 import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
@@ -92,10 +91,10 @@ export class Application {
     public readonly loader: Loader;
     public readonly inputManager: InputManager;
     public readonly interaction: InteractionManager;
-    public readonly debug: DebugOverlay;
     public readonly sceneManager: SceneManager;
     public readonly tweens: TweenManager = new TweenManager();
     public readonly onResize = new Signal<[number, number, Application]>();
+    public readonly onFrame = new Signal<[Time]>();
 
     private readonly _updateHandler: () => void;
     private readonly _startupClock: Clock = new Clock();
@@ -131,7 +130,6 @@ export class Application {
         this._backend = this.createBackend(this._backendType);
         this.inputManager = new InputManager(this);
         this.interaction = new InteractionManager(this);
-        this.debug = new DebugOverlay(this);
         this.sceneManager = new SceneManager(this);
         this._updateHandler = this.update.bind(this);
 
@@ -209,7 +207,6 @@ export class Application {
 
             this.inputManager.update();
             this.interaction.update();
-            this.debug.update();
             this.tweens.update(frameDelta.seconds);
             const runtimeView = (this.backend as Partial<{
                 view: Partial<{ update(deltaMilliseconds: number): unknown; }>;
@@ -220,6 +217,7 @@ export class Application {
             }
 
             this.sceneManager.update(frameDelta);
+            this.onFrame.dispatch(frameDelta);
             this.backend.flush();
             this.backend.stats.frameTimeMs = performance.now() - frameStart;
             this._frameRequest = requestAnimationFrame(this._updateHandler);
@@ -256,7 +254,6 @@ export class Application {
         this.stop();
         this.loader.destroy();
         this.interaction.destroy();
-        this.debug.destroy();
         this.inputManager.destroy();
         this.tweens.destroy();
         this._backend.destroy();
@@ -265,6 +262,7 @@ export class Application {
         this._activeClock.destroy();
         this._frameClock.destroy();
         this.onResize.destroy();
+        this.onFrame.destroy();
     }
 
     private resolveInitialBackendType(): 'webgl2' | 'webgpu' {

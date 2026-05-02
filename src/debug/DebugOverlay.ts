@@ -1,152 +1,106 @@
-import { Container } from '@/rendering/Container';
-import type { RenderNode } from '@/rendering/RenderNode';
+import { View } from '@/rendering/View';
+import { Keyboard } from '@/input/types';
+import { PerformanceLayer } from './PerformanceLayer';
 import type { Application } from '@/core/Application';
+import type { Time } from '@/core/Time';
+import type { DebugLayer } from './DebugLayer';
 
-const sampleCount = 60;
+export interface DebugLayers {
+    readonly performance: PerformanceLayer;
+}
 
+/**
+ * Canvas-native debug overlay. Instantiate AFTER Application is constructed:
+ *
+ *     import { DebugOverlay } from '@codexo/exojs/debug';
+ *     const debug = new DebugOverlay(app);
+ *     debug.layers.performance.visible = true;  // or press F1
+ *
+ * The overlay subscribes to `app.onFrame` and renders its visible layers
+ * into a screen-space view between scene render and backend flush.
+ *
+ * F1 toggles the Performance layer. Hardcoded for V1; opt-out and additional
+ * layers come in future patches.
+ *
+ * NOTE: F-keys only fire while the canvas has focus (engine convention).
+ */
 export class DebugOverlay {
-    private readonly _app: Application;
-    private _visible = false;
-    private _element: HTMLDivElement | null = null;
-    private _destroyed = false;
+    public readonly layers: DebugLayers;
 
-    private readonly _frameSamples: Array<number> = new Array(sampleCount).fill(0);
-    private _sampleIndex = 0;
-    private _lastFrameTime = 0;
+    private readonly _app: Application;
+    private readonly _view: View;
+    private readonly _onFrameHandler: (delta: Time) => void;
+    private readonly _onKeyDownHandler: (channel: number) => void;
+    private readonly _onResizeHandler: (width: number, height: number) => void;
 
     public constructor(app: Application) {
         this._app = app;
-    }
+        this._view = new View(app.canvas.width / 2, app.canvas.height / 2, app.canvas.width, app.canvas.height);
 
-    public get visible(): boolean {
-        return this._visible;
-    }
+        this.layers = {
+            performance: new PerformanceLayer(app),
+        };
 
-    public show(): this {
-        if (this._destroyed) return this;
+        this._onFrameHandler = this._onFrame.bind(this);
+        this._onKeyDownHandler = this._onKeyDown.bind(this);
+        this._onResizeHandler = this._onResize.bind(this);
 
-        if (this._element === null) {
-            this._createElement();
-        }
-
-        document.body.appendChild(this._element!);
-        this._visible = true;
-
-        return this;
-    }
-
-    public hide(): this {
-        if (this._element !== null && this._element.parentNode !== null) {
-            this._element.parentNode.removeChild(this._element);
-        }
-
-        this._visible = false;
-
-        return this;
-    }
-
-    public toggle(): this {
-        return this._visible ? this.hide() : this.show();
-    }
-
-    public update(): void {
-        if (!this._visible || this._element === null) return;
-
-        const now = performance.now();
-
-        if (this._lastFrameTime !== 0) {
-            this._frameSamples[this._sampleIndex] = now - this._lastFrameTime;
-            this._sampleIndex = (this._sampleIndex + 1) % sampleCount;
-        }
-
-        this._lastFrameTime = now;
-
-        let totalMs = 0;
-        let validSamples = 0;
-
-        for (const sample of this._frameSamples) {
-            if (sample > 0) {
-                totalMs += sample;
-                validSamples++;
-            }
-        }
-
-        const avgFrameMs = validSamples > 0 ? totalMs / validSamples : 0;
-        const fps = avgFrameMs > 0 ? 1000 / avgFrameMs : 0;
-
-        const stats = this._app.backend.stats;
-        const nodeCount = this._countNodes();
-        const activePointers = this._countActivePointers();
-        const hovered = this._getHoveredInfo();
-
-        this._element.textContent = [
-            `FPS:             ${fps.toFixed(1)}`,
-            `Frame time:      ${stats.frameTimeMs.toFixed(1)} ms`,
-            `Draw calls:      ${stats.drawCalls}`,
-            `Culled nodes:    ${stats.culledNodes}`,
-            `Node count:      ${nodeCount}`,
-            `Active pointers: ${activePointers}`,
-            `Hovered:         ${hovered}`,
-        ].join('\n');
-
-        const rect = this._app.canvas.getBoundingClientRect();
-        this._element.style.top = `${rect.top + 4}px`;
-        this._element.style.left = `${rect.left + 4}px`;
+        app.onFrame.add(this._onFrameHandler);
+        app.inputManager.onKeyDown.add(this._onKeyDownHandler);
+        app.onResize.add(this._onResizeHandler);
     }
 
     public destroy(): void {
-        this.hide();
-        this._element = null;
-        this._destroyed = true;
+        this._app.onFrame.remove(this._onFrameHandler);
+        this._app.inputManager.onKeyDown.remove(this._onKeyDownHandler);
+        this._app.onResize.remove(this._onResizeHandler);
+
+        for (const layer of Object.values(this.layers) as Array<DebugLayer>) {
+            layer.destroy();
+        }
+
+        this._view.destroy();
     }
 
-    private _createElement(): void {
-        const root = document.createElement('div');
-
-        root.style.cssText = [
-            'position: fixed',
-            'padding: 6px 10px',
-            'background: rgba(0,0,0,0.65)',
-            'color: #d8e6ff',
-            'font: 11px/1.4 ui-monospace, Consolas, monospace',
-            'pointer-events: none',
-            'z-index: 10000',
-            'border-radius: 3px',
-            'white-space: pre',
-        ].join(';');
-
-        this._element = root;
+    private _onResize(width: number, height: number): void {
+        this._view.resize(width, height);
+        this._view.setCenter(width / 2, height / 2);
     }
 
-    private _countNodes(): number {
-        const scene = this._app.sceneManager.scene;
+    private _onFrame(delta: Time): void {
+        const backend = this._app.backend;
+        const layers = Object.values(this.layers) as Array<DebugLayer>;
+        let anyVisible = false;
 
-        if (!scene) return 0;
-
-        return this._countNodeRecursive(scene.root);
-    }
-
-    private _countNodeRecursive(node: RenderNode): number {
-        let count = 1;
-
-        if (node instanceof Container) {
-            for (const child of node.children) {
-                count += this._countNodeRecursive(child);
+        for (const layer of layers) {
+            if (layer.visible) {
+                anyVisible = true;
+                break;
             }
         }
 
-        return count;
+        if (!anyVisible) return;
+
+        // Save & swap to screen-space view for debug rendering.
+        const savedView = backend.view;
+
+        backend.setView(this._view);
+
+        try {
+            for (const layer of layers) {
+                if (layer.visible) {
+                    layer.update(delta);
+                    layer.render(backend);
+                }
+            }
+        } finally {
+            backend.setView(savedView);
+        }
     }
 
-    private _countActivePointers(): number {
-        return this._app.inputManager.pointersInCanvas ? 1 : 0;
-    }
-
-    private _getHoveredInfo(): string {
-        const node = this._app.interaction.getHoveredNode();
-
-        if (node === null) return 'none';
-
-        return node.constructor.name;
+    private _onKeyDown(channel: number): void {
+        if (channel === Keyboard.F1) {
+            this.layers.performance.visible = !this.layers.performance.visible;
+        }
     }
 }
