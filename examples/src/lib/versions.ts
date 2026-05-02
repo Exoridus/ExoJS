@@ -1,11 +1,17 @@
 // Source-of-truth for the version dropdown. Reads released versions from
-// the GitHub Releases API; the "current" entry is a virtual id for whatever
-// HEAD-of-main the playground was built from. Released versions load their
-// example sources from raw.githubusercontent.com and their library bundle
-// from jsDelivr — see example-store.ts and preview.html for the loader sides.
+// the npm registry — the canonical "what's installable" list. The "current"
+// entry is a virtual id for whatever HEAD-of-main the playground was built
+// from. Released versions load their library bundle from jsDelivr (which
+// serves the same npm tarballs) and their example sources from
+// raw.githubusercontent.com at the matching tag. See example-store.ts and
+// preview.html for the loader sides.
+//
+// Versions tagged with anything other than `latest` (e.g., `legacy-2x`) and
+// versions with a `deprecated` field on the registry are filtered out so the
+// dropdown never offers a release the user shouldn't be using.
 
-const RELEASES_URL = 'https://api.github.com/repos/Exoridus/ExoJS/releases?per_page=30';
-const CACHE_KEY = 'exojs-version-catalog-v1';
+const REGISTRY_URL = 'https://registry.npmjs.org/@codexo/exojs';
+const CACHE_KEY = 'exojs-version-catalog-v2';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1h — releases don't appear that often.
 
 export const CURRENT_VERSION_ID = 'current';
@@ -25,13 +31,16 @@ export interface VersionCatalog {
   versions: ReadonlyArray<VersionInfo>;
 }
 
-interface GithubRelease {
-  tag_name: string;
-  name: string | null;
-  body: string | null;
-  prerelease: boolean;
-  draft: boolean;
-  published_at: string | null;
+interface NpmRegistryVersionEntry {
+  version: string;
+  deprecated?: string;
+}
+
+interface NpmRegistryDocument {
+  name?: string;
+  'dist-tags'?: Record<string, string>;
+  versions?: Record<string, NpmRegistryVersionEntry>;
+  time?: Record<string, string>;
 }
 
 interface CachedCatalog {
@@ -81,16 +90,15 @@ export function onVersionsLoaded(callback: () => void): () => void {
   return () => _loadListeners.delete(callback);
 }
 
-function tagToId(tag: string): string {
-  return tag.startsWith('v') ? tag.slice(1) : tag;
-}
-
-function summarize(body: string | null, fallback: string | null): string | undefined {
-  const source = (body && body.trim().length > 0 ? body : fallback) ?? '';
-  const firstLine = source.split('\n').find(line => line.trim().length > 0) ?? '';
-  const cleaned = firstLine.replace(/^#+\s*/, '').replace(/^[*-]\s+/, '').trim();
-  if (!cleaned) return undefined;
-  return cleaned.length > 80 ? cleaned.slice(0, 77) + '…' : cleaned;
+function compareSemver(a: string, b: string): number {
+  const partsA = a.split('.').map(n => parseInt(n, 10) || 0);
+  const partsB = b.split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const da = partsA[i] ?? 0;
+    const db = partsB[i] ?? 0;
+    if (da !== db) return da - db;
+  }
+  return 0;
 }
 
 function readCache(): VersionCatalog | null {
@@ -115,22 +123,36 @@ function writeCache(catalog: VersionCatalog): void {
   }
 }
 
-function buildCatalog(releases: ReadonlyArray<GithubRelease>): VersionCatalog {
-  const released: Array<VersionInfo> = releases
-    .filter(release => !release.draft)
-    .map(release => ({
-      id: tagToId(release.tag_name),
-      track: release.prerelease ? 'beta' : 'stable',
-      releasedAt: release.published_at ?? undefined,
-      summary: summarize(release.body, release.name),
-    } satisfies VersionInfo));
+function buildCatalog(doc: NpmRegistryDocument): VersionCatalog {
+  const distTags = doc['dist-tags'] ?? {};
+  const latestId = distTags.latest;
 
-  const latestStableEntry = released.find(version => version.track === 'stable');
-  const latestStable = latestStableEntry?.id ?? released[0]?.id ?? CURRENT_VERSION_ID;
-
-  if (latestStableEntry) {
-    latestStableEntry.latest = true;
+  // Build a set of version ids that are pinned to a non-`latest` dist-tag
+  // (e.g., `legacy-2x: 2.1.2`). Those are explicitly off the canonical line
+  // and should not appear in the dropdown.
+  const pinnedToNonLatest = new Set<string>();
+  for (const [tag, id] of Object.entries(distTags)) {
+    if (tag === 'latest') continue;
+    pinnedToNonLatest.add(id);
   }
+
+  const ids = Object.entries(doc.versions ?? {})
+    .filter(([id, meta]) => {
+      if (typeof meta.deprecated === 'string') return false;
+      if (pinnedToNonLatest.has(id)) return false;
+      return true;
+    })
+    .map(([id]) => id)
+    .sort((a, b) => compareSemver(b, a)); // descending: newest first
+
+  const released: Array<VersionInfo> = ids.map(id => ({
+    id,
+    track: 'stable',
+    releasedAt: doc.time?.[id],
+    latest: id === latestId,
+  } satisfies VersionInfo));
+
+  const latestStable = latestId ?? released[0]?.id ?? CURRENT_VERSION_ID;
 
   return {
     latestStable,
@@ -149,22 +171,24 @@ export async function loadVersionCatalog(): Promise<void> {
   }
 
   try {
-    const response = await fetch(RELEASES_URL, {
-      headers: { Accept: 'application/vnd.github+json' },
+    const response = await fetch(REGISTRY_URL, {
+      // Ask for the abbreviated registry document; smaller payload, same
+      // shape for the fields we care about (versions, dist-tags, time).
+      headers: { Accept: 'application/vnd.npm.install-v1+json, application/json' },
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub Releases API returned ${response.status} ${response.statusText}.`);
+      throw new Error(`npm registry returned ${response.status} ${response.statusText}.`);
     }
 
-    const releases = await response.json() as Array<GithubRelease>;
-    const catalog = buildCatalog(releases);
+    const document = await response.json() as NpmRegistryDocument;
+    const catalog = buildCatalog(document);
 
     _catalog = catalog;
     writeCache(catalog);
   } catch (error) {
-    // Fallback: even if the API call fails, we always have the current entry
-    // so the playground is still usable.
+    // Fallback: even if the registry call fails, we always have the current
+    // entry so the playground is still usable.
     _catalog = {
       latestStable: CURRENT_VERSION_ID,
       versions: [currentEntry],
