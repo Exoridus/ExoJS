@@ -1,4 +1,3 @@
-import { Capabilities } from '@codexo/exojs';
 import type { AutoRendererStatus, Example, ExampleAvailability, ExampleBackend } from './types';
 
 let _autoRendererStatus: AutoRendererStatus = 'checking';
@@ -59,16 +58,32 @@ export function getAvailabilityForBackend(backend: ExampleBackend): ExampleAvail
   }
 }
 
-export async function detectRuntimeSupport(): Promise<void> {
-  // Capabilities.ready does the WebGL2 context probe + the async WebGPU
-  // adapter check in one shot. `webgpuAdapter !== null` is the strict
-  // "real adapter is available" signal — `caps.webgpu` alone only confirms
-  // the API surface and would over-report support on browsers where the
-  // adapter request fails (blacklisted GPU, headless without software).
-  const caps = await Capabilities.ready;
+async function detectWebGpuSupport(): Promise<boolean> {
+  try {
+    const gpu = (navigator as Navigator & { gpu?: { requestAdapter?: () => Promise<unknown> } }).gpu;
 
-  _webgpuSupported = caps.webgpuAdapter !== null;
-  _webgl2Supported = caps.webgl2;
+    if (!gpu || typeof gpu.requestAdapter !== 'function') {
+      return false;
+    }
+
+    return !!(await gpu.requestAdapter());
+  } catch {
+    return false;
+  }
+}
+
+function detectWebGl2Support(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!canvas.getContext('webgl2');
+  } catch {
+    return false;
+  }
+}
+
+export async function detectRuntimeSupport(): Promise<void> {
+  _webgpuSupported = await detectWebGpuSupport();
+  _webgl2Supported = detectWebGl2Support();
   _autoRendererStatus = _webgpuSupported ? 'webgpu' : _webgl2Supported ? 'webgl2' : 'unsupported';
 
   for (const listener of _listeners) {
