@@ -4,6 +4,51 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.16] - 2026-05-02
+
+Adds an opt-in spatial index for hit-testing and replaces the dead
+`core/Quadtree` class with a generic `math/Quadtree<T>`.
+
+### Added
+
+- **`Quadtree<T>`** in `@/math/Quadtree` — generic spatial index with
+  `insert(item)`, `queryPoint(x, y, results?)`, `queryRect(rect, results?)`,
+  `clear()`, and `destroy()`. Items carry their `bounds: Rectangle` and
+  arbitrary `payload: T` separately, so a single tree can index any
+  spatial domain. The `results` array is reused across queries for
+  zero-allocation hot paths.
+- **`InteractionManager.useSpatialIndex: boolean`** (default `false`) —
+  opt-in flag. When enabled, the manager rebuilds a quadtree of all
+  visible interactive nodes once per `update()` tick and uses it for
+  hit-testing instead of the recursive scene-tree walk. Z-order is
+  preserved via insertion-order tags. Captured pointers (active drags)
+  bypass the index — same as the recursive fallback.
+
+### Changed
+
+- **`core/Quadtree`** removed — was dead code, exposed publicly via the
+  `core` barrel but never imported anywhere internally. The new
+  `math/Quadtree<T>` covers the same conceptual ground with a cleaner
+  API and broader applicability. **This is a breaking change for any
+  external code that imported `Quadtree` from `@codexo/exojs`** and
+  relied on the SceneNode-specialized `addSceneNode` /
+  `getRelatedChildren` methods. Replacement: use `Quadtree<RenderNode>`
+  from `@/math/Quadtree` with `insert({ bounds, payload })` and
+  `queryPoint` / `queryRect`.
+
+### Notes
+
+- Default behavior is unchanged: `useSpatialIndex` is off, so the
+  recursive walk remains the hit-test path. Turn it on for scenes
+  with many interactive nodes — the per-frame rebuild + log-time
+  query pays off when the linear walk becomes a bottleneck.
+- Per-frame rebuild is intentional in v1. Smarter invalidation
+  (rebuild only when the scene tree mutates) is a follow-up.
+- The new tree does not redistribute items already-stored in a parent
+  when subdivision happens — fine for the rebuild-each-frame model
+  since items don't accumulate across frames. If item-stable trees
+  become a use case later, redistribution is ~20 LOC to add.
+
 ## [0.6.15] - 2026-05-02
 
 Adds a built-in debug HUD for runtime stats. Opt-in HTML overlay that

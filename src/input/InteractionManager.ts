@@ -1,6 +1,9 @@
 import { Container } from '@/rendering/Container';
 import { InteractionEvent } from './InteractionEvent';
+import { Rectangle } from '@/math/Rectangle';
+import { Quadtree } from '@/math/Quadtree';
 
+import type { QuadtreeItem } from '@/math/Quadtree';
 import type { RenderNode } from '@/rendering/RenderNode';
 import type { Application } from '@/core/Application';
 import type { Pointer } from './Pointer';
@@ -34,9 +37,25 @@ interface DragState {
 }
 
 // ---------------------------------------------------------------------------
+// Spatial-index types
+// ---------------------------------------------------------------------------
+
+interface IndexedNode {
+    node: RenderNode;
+    order: number;
+}
+
+// ---------------------------------------------------------------------------
 
 export class InteractionManager {
     private readonly _app: Application;
+
+    /** Opt-in: use a per-frame quadtree for hit-testing. Off by default. */
+    public useSpatialIndex: boolean = false;
+
+    private _quadtree: Quadtree<IndexedNode> | null = null;
+    private _quadtreeOrderCounter: number = 0;
+    private readonly _quadtreeQueryBuffer: Array<QuadtreeItem<IndexedNode>> = [];
 
     /** Maps pointerId → the deepest interactive RenderNode that pointer is currently over. */
     private readonly _lastHit = new Map<number, RenderNode>();
@@ -105,6 +124,11 @@ export class InteractionManager {
         this._capturedPointers.clear();
         this._drags.clear();
         this._dirty = false;
+
+        if (this._quadtree !== null) {
+            this._quadtree.destroy();
+            this._quadtree = null;
+        }
     }
 
     /**
@@ -121,6 +145,10 @@ export class InteractionManager {
     public update(): void {
         if (!this._dirty) return;
         this._dirty = false;
+
+        if (this.useSpatialIndex) {
+            this._buildIndex();
+        }
 
         for (const queue of this._pending.values()) {
             this._processQueue(queue);
@@ -293,6 +321,10 @@ export class InteractionManager {
     // ---------------------------------------------------------------------------
 
     private _hitTest(x: number, y: number): RenderNode | null {
+        if (this.useSpatialIndex && this._quadtree !== null) {
+            return this._hitTestIndexed(x, y);
+        }
+
         const root = this._app.sceneManager.scene?.root;
 
         if (!root) {
@@ -300,6 +332,27 @@ export class InteractionManager {
         }
 
         return this._hitTestNode(root, x, y);
+    }
+
+    private _hitTestIndexed(x: number, y: number): RenderNode | null {
+        const candidates = this._quadtreeQueryBuffer;
+
+        candidates.length = 0;
+        this._quadtree!.queryPoint(x, y, candidates);
+
+        let bestOrder = -1;
+        let bestNode: RenderNode | null = null;
+
+        for (const candidate of candidates) {
+            const indexed = candidate.payload;
+
+            if (indexed.order > bestOrder && indexed.node.contains(x, y)) {
+                bestOrder = indexed.order;
+                bestNode = indexed.node;
+            }
+        }
+
+        return bestNode;
     }
 
     // Walk children in REVERSE order (top z-order first). Recurse into Container children even
@@ -327,6 +380,62 @@ export class InteractionManager {
         }
 
         return null;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Spatial index building
+    // ---------------------------------------------------------------------------
+
+    private _buildIndex(): void {
+        const root = this._app.sceneManager.scene?.root;
+
+        if (!root) {
+            if (this._quadtree !== null) {
+                this._quadtree.destroy();
+                this._quadtree = null;
+            }
+
+            return;
+        }
+
+        const canvas = this._app.canvas;
+        const indexBounds = new Rectangle(0, 0, canvas.width, canvas.height);
+        const rootBounds = root.getBounds();
+
+        // Expand to include any off-canvas interactive nodes.
+        const minX = Math.min(indexBounds.left, rootBounds.left);
+        const minY = Math.min(indexBounds.top, rootBounds.top);
+        const maxX = Math.max(indexBounds.right, rootBounds.right);
+        const maxY = Math.max(indexBounds.bottom, rootBounds.bottom);
+
+        indexBounds.set(minX, minY, maxX - minX, maxY - minY);
+
+        if (this._quadtree !== null) {
+            this._quadtree.destroy();
+        }
+
+        this._quadtree = new Quadtree<IndexedNode>(indexBounds);
+        this._quadtreeOrderCounter = 0;
+        this._collectInteractive(root);
+    }
+
+    private _collectInteractive(node: RenderNode): void {
+        if (!node.visible) return;
+
+        if (node.interactive) {
+            const order = this._quadtreeOrderCounter++;
+
+            this._quadtree!.insert({
+                bounds: node.getBounds(),
+                payload: { node, order },
+            });
+        }
+
+        if (node instanceof Container) {
+            for (const child of node.children) {
+                this._collectInteractive(child);
+            }
+        }
     }
 
     // ---------------------------------------------------------------------------

@@ -142,6 +142,7 @@ exports[`root index type-level export inventory all exported symbols with kind a
   "PopSceneOptions: interface",
   "PushSceneOptions: interface",
   "Quadtree: class",
+  "QuadtreeItem: interface",
   "Random: class",
   "Rectangle: class",
   "RectangleLike: interface",

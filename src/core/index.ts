@@ -5,7 +5,6 @@ export * from './Bounds';
 export * from './capabilities';
 export * from './Clock';
 export * from './Color';
-export * from './Quadtree';
 export * from './Scene';
 export * from './SceneManager';
 export * from './SceneNode';
