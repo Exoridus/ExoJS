@@ -40,7 +40,7 @@ export class Music extends AbstractMedia {
 
         if (this._audioSetup) {
             const { gainNode, audioContext } = this._audioSetup;
-            gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 10);
+            gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 0.01);
         }
 
         return this;
@@ -82,7 +82,7 @@ export class Music extends AbstractMedia {
 
             if (this._audioSetup) {
                 const { gainNode, audioContext } = this._audioSetup;
-                gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 10);
+                gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 0.01);
             }
         }
 
@@ -145,7 +145,7 @@ export class Music extends AbstractMedia {
 
     private setupWithAudioContext(audioContext: AudioContext): void {
         const gainNode = audioContext.createGain();
-        gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 10);
+        gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
         gainNode.connect(audioContext.destination);
 
         const sourceNode = audioContext.createMediaElementSource(this._audioElement);

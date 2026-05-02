@@ -4,6 +4,26 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.18] - 2026-05-02
+
+Fixes a long-standing audio volume-ramp bug.
+
+### Fixed
+
+- **Audio volume / mute changes are now near-instant**. The third
+  argument to `GainNode.setTargetAtTime` is a time constant in
+  **seconds** — `Sound`, `Music`, and the `Video` audio path were
+  passing `10`, which made every volume update take ~30 seconds to
+  reach 95% of its target value. Calling `sound.setVolume(0.5)` would
+  fade over half a minute instead of taking effect immediately.
+  Replaced with `0.01` (10 ms) — fast enough to feel instant, slow
+  enough to avoid the audible click of a snapped value. Standard
+  practice in `pixi-sound`, Howler, and other Web Audio libraries.
+  Affects: `Sound.setVolume`, `Sound.setMuted`, `Sound` audio-context
+  setup, and the equivalent paths on `Music` and `Video`. Bug was
+  present since the initial commit; not caught by tests because the
+  jsdom mock stubs `setTargetAtTime` as a no-op.
+
 ## [0.6.17] - 2026-05-02
 
 Rewrites the debug overlay as a canvas-native, tree-shake-able module.
