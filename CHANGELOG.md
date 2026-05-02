@@ -4,6 +4,23 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-05-02
+
+Adds the `capabilities` feature-detection API. Pure addition — no
+existing surface changes shape.
+
+### Added
+
+- **`capabilities` and `isSupported`.** A frozen
+  `Readonly<Record<CapabilityName, boolean>>` evaluated once at
+  module load, plus a typed `isSupported(name)` lookup. Initial
+  probes: `webgl2`, `webgpu`, `audio`, `pointer`, `touch`, `gamepad`,
+  `keyboard`, `fullscreen`, `vibration`, `offscreenCanvas`. All
+  probes are synchronous; for "is the WebGPU adapter actually
+  available" the answer remains async and lives in `Application`'s
+  backend selection. `Capabilities` and `CapabilityName` types are
+  also exported.
+
 ## [0.6.2] - 2026-05-02
 
 Adds the `Mesh` primitive — the first new public Drawable since the

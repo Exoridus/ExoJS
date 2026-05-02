@@ -2,6 +2,7 @@ export * from './types';
 export * from './utils';
 export * from './Application';
 export * from './Bounds';
+export * from './capabilities';
 export * from './Clock';
 export * from './Color';
 export * from './Quadtree';
