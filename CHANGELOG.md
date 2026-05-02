@@ -4,6 +4,41 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2026-05-02
+
+Pure bug-fix / hardening of the InputManager's event flow. No public
+API changes.
+
+### Changed
+
+- **Keyboard events are now gated on canvas focus.** Previously,
+  `keydown` / `keyup` registered into the channel buffer regardless of
+  whether the canvas was the active element. Typing into an `<input>`
+  field next to the canvas would silently drive game state. The new
+  behavior matches every other 2D engine: keys only register while the
+  canvas owns focus.
+- **Handled events no longer bubble.** Keyboard, wheel, and pointer
+  down/up events that the InputManager consumes now call
+  `stopImmediatePropagation` (via the existing `stopEvent` helper)
+  alongside `preventDefault`. Stops the host page from double-handling
+  (e.g., page-scroll on Space when a game uses Space for jump, modal
+  dismissal on canvas click).
+- **Keyboard channels are released on blur.** When the canvas or
+  window loses focus, all currently-held keyboard channels are
+  forced back to zero and `onKeyUp` fires for each. Previously, a
+  user who alt-tabbed mid-W-press would have W register as held
+  until they manually released while focus was back — visible as
+  "stuck movement" on focus return.
+
+### Notes
+
+- Pointer move/over/leave/cancel are passive listeners and were
+  intentionally left untouched. Stopping propagation on every
+  pointermove would add per-event overhead with marginal benefit.
+- Wheel events: the previous implementation already preventDefault'd
+  when focused but did not stopPropagation. Now both happen, and the
+  channel doesn't fire at all when canvas isn't focused.
+
 ## [0.6.5] - 2026-05-02
 
 > **Heads-up — breaking change despite the patch number.** Removes
