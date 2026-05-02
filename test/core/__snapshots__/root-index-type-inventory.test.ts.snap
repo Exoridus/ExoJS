@@ -53,6 +53,7 @@ exports[`root index type-level export inventory all exported symbols with kind a
   "ColorFilter: class",
   "Container: class",
   "Database: interface",
+  "DebugOverlay: class",
   "Destroyable: interface",
   "Drawable: class",
   "DrawableConstructor: type alias",

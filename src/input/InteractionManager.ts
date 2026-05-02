@@ -78,6 +78,21 @@ export class InteractionManager {
         app.inputManager.onPointerLeave.add(this._onPointerLeaveHandler);
     }
 
+    /**
+     * Returns the RenderNode currently hovered by the given pointer, or null.
+     * If pointerId is omitted, returns the hovered node for the first pointer
+     * in iteration order (typically the primary mouse pointer).
+     */
+    public getHoveredNode(pointerId?: number): RenderNode | null {
+        if (pointerId !== undefined) {
+            return this._lastHit.get(pointerId) ?? null;
+        }
+
+        const firstEntry = this._lastHit.values().next();
+
+        return firstEntry.done ? null : firstEntry.value;
+    }
+
     public destroy(): void {
         this._app.inputManager.onPointerDown.remove(this._onPointerDownHandler);
         this._app.inputManager.onPointerMove.remove(this._onPointerMoveHandler);

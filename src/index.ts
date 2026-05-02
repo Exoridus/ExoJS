@@ -1,6 +1,7 @@
 export * from './animation/index';
 export * from './core/index';
 export * from './audio/index';
+export * from './debug/index';
 export * from './input/index';
 export * from './math/index';
 export * from './particles/index';

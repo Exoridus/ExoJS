@@ -4,6 +4,40 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.15] - 2026-05-02
+
+Adds a built-in debug HUD for runtime stats. Opt-in HTML overlay that
+shows FPS, frame time, draw calls, node count, active pointers, and
+the currently hovered interactive node — handy during development,
+zero cost when not shown.
+
+### Added
+
+- **`Application.debug`** — auto-instantiated `DebugOverlay` instance.
+  DOM is created lazily on first `show()`, so the panel costs nothing
+  until opt-in. Position-fixed over the canvas, recomputed each frame
+  from `canvas.getBoundingClientRect()` so it tracks if the canvas
+  moves.
+- **`DebugOverlay.show() / hide() / toggle()`** — visibility control.
+  `show()` returns `this` for chaining. Bind to a key in your code if
+  you want a hotkey toggle.
+- **Stats displayed**: FPS (60-sample rolling average), frame time
+  (ms), draw calls, culled nodes, total scene-tree node count, active
+  pointers, hovered node class + cursor coords.
+- **`InteractionManager.getHoveredNode(pointerId?)`** — returns the
+  RenderNode currently hovered by the given pointer (or the first one
+  in iteration order when omitted). Used by the debug panel; also
+  useful for custom HUDs.
+
+### Notes
+
+- The overlay is a styled `<div>` appended to `document.body`. It uses
+  `pointer-events: none` so clicks pass through to the canvas.
+- No keyboard shortcut is wired up — bind `app.debug.toggle()` to
+  whatever key you want.
+- Hit-test box visualization is not in this release — coming when
+  the spatial-index work lands.
+
 ## [0.6.14] - 2026-05-02
 
 Reshapes the interaction system around a per-frame tick and adds an
