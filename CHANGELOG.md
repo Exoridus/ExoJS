@@ -4,6 +4,45 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.10] - 2026-05-02
+
+ExoJS now ships with **zero runtime dependencies**. The single
+remaining dependency (`earcut` — used for polygon triangulation
+in `Graphics.drawPolygon` / `drawStar`) was replaced with an
+in-house ear-clipping implementation.
+
+### Changed
+
+- **Polygon triangulation is now in-house.** New
+  `src/math/triangulate.ts` (~205 LOC) implements ear-clipping for
+  simple 2D polygons (no holes — the only mode `buildPolygon` ever
+  used). The function is module-internal; `buildPolygon` is the
+  sole consumer and its public behavior is unchanged.
+- **`buildPolygon` output is identical in shape to the prior
+  earcut output.** Triangle counts, winding, and area coverage
+  match. Index ordering may differ (two valid triangulations of
+  the same polygon are equally correct), but visual output is the
+  same. All existing `buildPolygon` / `buildStar` / `Graphics`
+  tests pass without modification.
+
+### Removed
+
+- **`earcut` runtime dependency** — fully removed from
+  `package.json`. Library `dependencies` block is now empty.
+- **`@types/earcut`** removed from `devDependencies`.
+- **`external: ['earcut']`** entry removed from
+  `rollup.config.ts`'s `modules` config block.
+
+### Notes
+
+- After this change, `npm install @codexo/exojs` installs exactly
+  one package (the library itself). No transitive dependencies.
+- Internal triangulation handles degenerate / collinear input
+  gracefully — emits whatever ears were found and returns; never
+  throws or hangs.
+- 11 new unit tests for `triangulate` cover triangles, convex
+  quads (CW + CCW input), L-shapes, stars, and degenerate inputs.
+
 ## [0.6.9] - 2026-05-02
 
 > **Heads-up — breaking change despite the patch number.** `Text`'s

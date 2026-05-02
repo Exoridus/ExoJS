@@ -1,4 +1,4 @@
-import earcut from 'earcut';
+import { triangulate } from '@/math/triangulate';
 import { Vector } from '@/math/Vector';
 import { tau } from '@/math/utils';
 
@@ -278,7 +278,7 @@ export const buildPolygon = (points: Array<number>): MeshGeometryData => {
     }
 
     const length = points.length / 2;
-    const triangles = earcut(points, [], 2);
+    const triangles = triangulate(points);
     const vertices = new Float32Array(points.length);
 
     for (let i = 0; i < length; i++) {
@@ -286,7 +286,7 @@ export const buildPolygon = (points: Array<number>): MeshGeometryData => {
         vertices[(i * 2) + 1] = points[(i * 2) + 1];
     }
 
-    const indices = triangles ? new Uint16Array(triangles) : new Uint16Array(0);
+    const indices = new Uint16Array(triangles);
 
     return { vertices, indices, points };
 };

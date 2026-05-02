@@ -35,7 +35,6 @@ const modules: RollupOptions = {
         preserveModules: true,
         preserveModulesRoot: 'src',
     },
-    external: ['earcut'],
     plugins: [
         resolve({ mainFields: ['module', 'browser', 'main'] }),
         glslPlugin,
