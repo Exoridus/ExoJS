@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (must already exist, e.g. v0.6.2)'
+        required: true
+
+permissions:
+  contents: read
+  # Required for `npm publish --provenance` to mint an OIDC-signed
+  # provenance attestation alongside the token-based publish.
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --fund=false
+
+      # Refuse to publish unless the workflow is running on a tag whose
+      # name matches the version inside package.json. This catches the
+      # "tag and package.json version drifted" mistake before it ships.
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$TAG_NAME" != "$PKG_VERSION" ]; then
+            echo "::error::Tag '$TAG_NAME' does not match package.json version '$PKG_VERSION'."
+            exit 1
+          fi
+          echo "Tag and package.json agree on $PKG_VERSION."
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # `prepack` rebuilds dist/ via rollup; we run it explicitly here so
+      # any build failure surfaces before the publish attempt rather than
+      # mid-publish.
+      - name: Build
+        run: npm run build
+
+      - name: Verify package shape
+        run: |
+          npm run verify:exports
+          npm pack --dry-run --ignore-scripts
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
