@@ -4,6 +4,74 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2026-05-02
+
+> **Heads-up — breaking change despite the patch number.** `Text`'s
+> internal architecture changed completely: glyph-quad meshing
+> against a runtime atlas instead of canvas2d-rasterize-as-Sprite.
+> The user-facing API for `text.text`, `text.style`, and standard
+> Drawable transforms (`position`, `rotation`, `scale`, etc.) is
+> unchanged, but `text.canvas`, `text.setCanvas`, `text.textureFrame`,
+> `text.getWordWrappedText`, and the `Text instanceof Sprite` check
+> are gone. Text is now `Text extends Container`, not Sprite.
+
+GPU font glyphs (Pixi-style runtime cache). Replaces the prior
+canvas-rasterize-the-whole-string-as-Sprite path with: rasterize
+each glyph once into a shared atlas Texture, build a single Mesh
+per Text whose quads sample the atlas. All Texts in the page share
+one atlas — memory-efficient at scale, single drawcall per Text.
+
+### Added
+
+- **`DynamicGlyphAtlas`** — public class. Constructor takes
+  `width = 1024, height = 1024`. Has `getGlyph(char, family, size,
+  weight, style) → GlyphInfo` (cached or rasterizes), `clear()` to
+  reset, and `texture` for binding to a Mesh. Internal shelf
+  bin-packing; throws on atlas-full (LRU eviction is V2).
+- **`layoutText(text, style, atlas)`** — pure function. Returns
+  `readonly GlyphPlacement[]` with one quad per visible glyph.
+  Handles `\n` line breaks and `align: 'left' | 'center' | 'right'`
+  alignment per `style.align`. Empty text returns `[]`.
+- **Types: `GlyphInfo`, `GlyphPlacement`, `GlyphKey`,
+  `TextAlignment`** — all exported for users who want to compose
+  their own atlas / layout pipelines.
+- **TextStyle gets `fillColor: Color`** (defaults to white, used
+  via mesh.tint after glyph rasterization), **`fontStyle: 'normal'
+  | 'italic'`**, and **`lineHeight: number`** (multiplied by
+  fontSize for line spacing, defaults to 1.2). `align` field is
+  now strongly typed as `TextAlignment`.
+
+### Changed
+
+- **`Text` extends `Container`** (was `Sprite`). It internally
+  manages a single `Mesh` child whose vertices/uvs/indices are
+  rebuilt on every `text` / `style` setter call. Empty string =
+  no internal mesh (no children).
+- **Glyphs always rasterize white**; `style.fillColor` becomes
+  `mesh.tint`. Changing fillColor is cheap (mesh-tint update only,
+  no atlas re-rasterization).
+
+### Removed
+
+- `Text.canvas` getter / setter, `Text.setCanvas(...)`,
+  `Text.textureFrame`, `Text.updateTexture(...)`,
+  `Text.getWordWrappedText(...)` — the old canvas2d path is gone.
+  Word-wrapping is V2; for now use `\n` for explicit line breaks.
+
+### Notes
+
+- Atlas is a process-wide singleton via `getDefaultGlyphAtlas()`
+  (internal helper, not a public function). All `Text` instances
+  share one atlas. Tests can reset it via `atlas.clear()`.
+- The atlas uses `OffscreenCanvas` when available, falls back to
+  `document.createElement('canvas')` (works in jsdom / older
+  browsers).
+- First-render of a never-seen glyph costs one canvas2d round-trip
+  + texture re-upload. Cached glyphs are zero-cost on subsequent
+  renders.
+- Per-character animation, MSDF rendering, word-wrap, BiDi, and
+  text outlines / drop-shadows are all V2.
+
 ## [0.6.8] - 2026-05-02
 
 > **Heads-up — breaking change despite the patch number.** Removes

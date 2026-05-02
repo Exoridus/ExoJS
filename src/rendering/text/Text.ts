@@ -1,61 +1,106 @@
-import { Sprite } from '@/rendering/sprite/Sprite';
-import { Texture } from '@/rendering/texture/Texture';
+import { Container } from '@/rendering/Container';
+import { Mesh } from '@/rendering/mesh/Mesh';
+import { getDefaultGlyphAtlas } from './atlas-singleton';
+import { layoutText } from './TextLayout';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
-import { Rectangle } from '@/math/Rectangle';
-import type { SamplerOptions } from '@/rendering/texture/Sampler';
-import type { RenderBackend } from '../RenderBackend';
-import { determineFontHeight } from '../utils';
+import type { GlyphPlacement } from './types';
 
-const newLinePattern = /(?:\r\n|\r|\n)/;
+function buildMesh(placements: ReadonlyArray<GlyphPlacement>, style: TextStyle): Mesh {
+    const n = placements.length;
+    const vertices = new Float32Array(n * 4 * 2);
+    const uvs = new Float32Array(n * 4 * 2);
+    const indices = new Uint16Array(n * 6);
 
-export class Text extends Sprite {
+    for (let i = 0; i < n; i++) {
+        const p = placements[i];
+        const v = i * 8;
+        const u = i * 8;
+        const idx = i * 6;
+        const baseV = i * 4;
+
+        // Vertices: TL, TR, BR, BL
+        vertices[v + 0] = p.x;              vertices[v + 1] = p.y;
+        vertices[v + 2] = p.x + p.width;    vertices[v + 3] = p.y;
+        vertices[v + 4] = p.x + p.width;    vertices[v + 5] = p.y + p.height;
+        vertices[v + 6] = p.x;              vertices[v + 7] = p.y + p.height;
+
+        // UVs: TL, TR, BR, BL
+        uvs[u + 0] = p.uvLeft;   uvs[u + 1] = p.uvTop;
+        uvs[u + 2] = p.uvRight;  uvs[u + 3] = p.uvTop;
+        uvs[u + 4] = p.uvRight;  uvs[u + 5] = p.uvBottom;
+        uvs[u + 6] = p.uvLeft;   uvs[u + 7] = p.uvBottom;
+
+        // Indices: [TL, TR, BR, TL, BR, BL]
+        indices[idx + 0] = baseV + 0;
+        indices[idx + 1] = baseV + 1;
+        indices[idx + 2] = baseV + 2;
+        indices[idx + 3] = baseV + 0;
+        indices[idx + 4] = baseV + 2;
+        indices[idx + 5] = baseV + 3;
+    }
+
+    const atlas = getDefaultGlyphAtlas();
+    const mesh = new Mesh({
+        vertices,
+        uvs,
+        indices,
+        texture: atlas.texture,
+    });
+
+    mesh.tint = style.fillColor;
+
+    return mesh;
+}
+
+/**
+ * GPU-accelerated text node that rasterizes individual glyphs into a shared
+ * atlas ({@link DynamicGlyphAtlas}) and renders them as a single quad-per-
+ * glyph {@link Mesh} (one draw call per Text instance).
+ *
+ * Glyphs are always rasterized in white and tinted at runtime via
+ * `Mesh.tint`; changing `style.fillColor` only updates the mesh tint —
+ * no atlas re-rasterization is needed.
+ *
+ * The internal {@link Mesh} is the sole child of this {@link Container}.
+ * All transform properties (position, rotation, scale, origin) are
+ * inherited from {@link Container} → {@link RenderNode}.
+ */
+export class Text extends Container {
 
     private _text: string;
     private _style: TextStyle;
-    private _canvas: HTMLCanvasElement;
-    private _context: CanvasRenderingContext2D;
-    private _dirty = true;
+    private _mesh: Mesh | null = null;
 
-    public constructor(text: string, style?: TextStyle | TextStyleOptions, samplerOptions?: Partial<SamplerOptions>, canvas: HTMLCanvasElement = document.createElement('canvas')) {
-        super(new Texture(canvas, samplerOptions));
+    public constructor(text: string, style?: TextStyle | TextStyleOptions) {
+        super();
 
         this._text = text;
         this._style = (style && style instanceof TextStyle) ? style : new TextStyle(style);
-        this._canvas = canvas;
-        this._context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-        this.updateTexture();
+        this._rebuild();
     }
 
     public get text(): string {
         return this._text;
     }
 
-    public set text(text: string) {
-        this.setText(text);
+    public set text(value: string) {
+        this.setText(value);
     }
 
     public get style(): TextStyle {
         return this._style;
     }
 
-    public set style(style: TextStyle) {
+    public set style(style: TextStyle | TextStyleOptions) {
         this.setStyle(style);
-    }
-
-    public get canvas(): HTMLCanvasElement {
-        return this._canvas;
-    }
-
-    public set canvas(canvas: HTMLCanvasElement) {
-        this.setCanvas(canvas);
     }
 
     public setText(text: string): this {
         if (this._text !== text) {
             this._text = text;
-            this._dirty = true;
+            this._rebuild();
         }
 
         return this;
@@ -63,128 +108,42 @@ export class Text extends Sprite {
 
     public setStyle(style: TextStyle | TextStyleOptions): this {
         this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
-        this._dirty = true;
+        this._rebuild();
 
         return this;
     }
 
-    public setCanvas(canvas: HTMLCanvasElement): this {
-        if (this._canvas !== canvas) {
-            this._canvas = canvas;
-            this._context = this._getContext(canvas);
-            this._dirty = true;
-            (this.texture!.setSource as (source: HTMLCanvasElement) => Texture).call(this.texture, canvas);
-
-            this.setTextureFrame(Rectangle.temp.set(0, 0, canvas.width, canvas.height));
+    public override destroy(): void {
+        if (this._mesh !== null) {
+            this._mesh.destroy();
+            this._mesh = null;
         }
 
-        return this;
+        super.destroy();
     }
 
-    public override updateTexture(): this {
-        if (this._style && (this._dirty || this._style.dirty)) {
-            const canvas = this._canvas,
-                context = this._context,
-                style = this._style.apply(context),
-                text = style.wordWrap ? this.getWordWrappedText() : this._text,
-                lineHeight = determineFontHeight(context.font) + style.strokeThickness,
-                lines = text.split(newLinePattern),
-                lineMetrics = lines.map((line) => context.measureText(line)),
-                maxLineWidth = lineMetrics.reduce((max, measure) => Math.max(max, measure.width), 0),
-                canvasWidth = Math.ceil((maxLineWidth + style.strokeThickness) + (style.padding * 2)),
-                canvasHeight = Math.ceil((lineHeight * lines.length) + (style.padding * 2));
+    // -----------------------------------------------------------------------
 
-            if (canvasWidth !== canvas.width || canvasHeight !== canvas.height) {
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-
-                this.setTextureFrame(Rectangle.temp.set(0, 0, canvasWidth, canvasHeight));
-            } else {
-                context.clearRect(0, 0, canvasWidth, canvasHeight);
-            }
-
-            style.apply(context);
-
-            for (let i = 0; i < lines.length; i++) {
-                const metrics = lineMetrics[i],
-                    lineWidth = (maxLineWidth - metrics.width),
-                    offset = (style.align === 'right') ? lineWidth : lineWidth / 2,
-                    padding = style.padding + (style.strokeThickness / 2),
-                    lineX = metrics.actualBoundingBoxLeft + (style.align === 'left' ? 0 : offset) + padding,
-                    lineY = metrics.actualBoundingBoxAscent + (lineHeight * i) + padding;
-
-                if (style.stroke && style.strokeThickness) {
-                    context.strokeText(lines[i], lineX, lineY);
-                }
-
-                if (style.fill) {
-                    context.fillText(lines[i], lineX, lineY);
-                }
-            }
-
-            this.texture!.updateSource();
-
-            this._dirty = false;
-            this._style.dirty = false;
+    private _rebuild(): void {
+        // Remove and discard the old mesh (if any).
+        if (this._mesh !== null) {
+            this.removeChild(this._mesh);
+            this._mesh.destroy();
+            this._mesh = null;
         }
 
-        return this;
-    }
-
-    public getWordWrappedText(): string {
-        const context = this._context,
-            wrapWidth = this._style.wordWrapWidth,
-            lines = this._text.split('\n'),
-            spaceWidth = context.measureText(' ').width;
-
-        let spaceLeft = wrapWidth,
-            result = '';
-
-        for (let y = 0; y < lines.length; y++) {
-            const words = lines[y].split(' ');
-
-            if (y > 0) {
-                result += '\n';
-            }
-
-            for (let x = 0; x < words.length; x++) {
-                const word = words[x],
-                    wordWidth = context.measureText(word).width,
-                    pairWidth = wordWidth + spaceWidth;
-
-                if (pairWidth > spaceLeft) {
-                    if (x > 0) {
-                        result += '\n';
-                    }
-
-                    spaceLeft = wrapWidth;
-                } else {
-                    spaceLeft -= pairWidth;
-                }
-
-                result += `${word} `;
-            }
+        if (this._text.length === 0) {
+            return;
         }
 
-        return result;
-    }
+        const atlas = getDefaultGlyphAtlas();
+        const placements = layoutText(this._text, this._style, atlas);
 
-    public override render(backend: RenderBackend): this {
-        if (this.visible) {
-            this.updateTexture();
-            super.render(backend);
+        if (placements.length === 0) {
+            return;
         }
 
-        return this;
-    }
-
-    private _getContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-        const context = canvas.getContext('2d');
-
-        if (context === null) {
-            throw new Error('Could not create a 2D canvas context.');
-        }
-
-        return context;
+        this._mesh = buildMesh(placements, this._style);
+        this.addChild(this._mesh);
     }
 }

@@ -1,14 +1,19 @@
+import { Color } from '@/core/Color';
+import type { TextAlignment } from './types';
 
 export type TextStyleColor = string | CanvasGradient | CanvasPattern;
 
 export interface TextStyleOptions {
-    align?: string;
+    align?: TextAlignment;
     fill?: TextStyleColor;
+    fillColor?: Color;
+    lineHeight?: number;
     stroke?: TextStyleColor;
     strokeThickness?: number;
     fontSize?: number;
     fontWeight?: string;
     fontFamily?: string;
+    fontStyle?: 'normal' | 'italic';
     wordWrap?: boolean;
     wordWrapWidth?: number;
     baseline?: CanvasTextBaseline;
@@ -18,13 +23,16 @@ export interface TextStyleOptions {
 }
 
 export class TextStyle {
-    private _align: string;
+    private _align: TextAlignment;
     private _fill: TextStyleColor;
+    private _fillColor: Color;
+    private _lineHeight: number;
     private _stroke: TextStyleColor;
     private _strokeThickness: number;
     private _fontSize: number;
     private _fontWeight: string;
     private _fontFamily: string;
+    private _fontStyle: 'normal' | 'italic';
     private _wordWrap: boolean;
     private _wordWrapWidth: number;
     private _baseline: CanvasTextBaseline;
@@ -36,11 +44,14 @@ export class TextStyle {
     public constructor(options: TextStyleOptions = {}) {
         this._align = options.align ?? 'left';
         this._fill = options.fill ?? 'black';
+        this._fillColor = options.fillColor ?? Color.white.clone();
+        this._lineHeight = options.lineHeight ?? 1.2;
         this._stroke = options.stroke ?? 'black';
         this._strokeThickness = options.strokeThickness ?? 1;
         this._fontSize = options.fontSize ?? 20;
         this._fontWeight = options.fontWeight ?? 'bold';
         this._fontFamily = options.fontFamily ?? 'Arial';
+        this._fontStyle = options.fontStyle ?? 'normal';
         this._wordWrap = options.wordWrap ?? false;
         this._wordWrapWidth = options.wordWrapWidth ?? 100;
         this._baseline = options.baseline ?? 'alphabetic';
@@ -49,11 +60,11 @@ export class TextStyle {
         this._padding = options.padding ?? 0;
     }
 
-    public get align(): string {
+    public get align(): TextAlignment {
         return this._align;
     }
 
-    public set align(align: string) {
+    public set align(align: TextAlignment) {
         if (this._align !== align) {
             this._align = align;
             this._dirty = true;
@@ -67,6 +78,35 @@ export class TextStyle {
     public set fill(fill: TextStyleColor) {
         if (this._fill !== fill) {
             this._fill = fill;
+            this._dirty = true;
+        }
+    }
+
+    /**
+     * Runtime fill color applied via `Mesh.tint`. Glyphs are always
+     * rasterized white; this color multiplies them at draw time so that
+     * changing the color never requires re-rasterizing cached glyphs.
+     */
+    public get fillColor(): Color {
+        return this._fillColor;
+    }
+
+    public set fillColor(color: Color) {
+        this._fillColor = color;
+        this._dirty = true;
+    }
+
+    /**
+     * Line-height multiplier applied to `fontSize` when computing vertical
+     * spacing between lines. Defaults to 1.2.
+     */
+    public get lineHeight(): number {
+        return this._lineHeight;
+    }
+
+    public set lineHeight(lineHeight: number) {
+        if (this._lineHeight !== lineHeight) {
+            this._lineHeight = lineHeight;
             this._dirty = true;
         }
     }
@@ -122,6 +162,17 @@ export class TextStyle {
     public set fontFamily(fontFamily: string) {
         if (this._fontFamily !== fontFamily) {
             this._fontFamily = fontFamily;
+            this._dirty = true;
+        }
+    }
+
+    public get fontStyle(): 'normal' | 'italic' {
+        return this._fontStyle;
+    }
+
+    public set fontStyle(fontStyle: 'normal' | 'italic') {
+        if (this._fontStyle !== fontStyle) {
+            this._fontStyle = fontStyle;
             this._dirty = true;
         }
     }
@@ -220,11 +271,14 @@ export class TextStyle {
         if (style !== this) {
             this.align = style.align;
             this.fill = style.fill;
+            this._fillColor = style.fillColor.clone();
+            this.lineHeight = style.lineHeight;
             this.stroke = style.stroke;
             this.strokeThickness = style.strokeThickness;
             this.fontSize = style.fontSize;
             this.fontWeight = style.fontWeight;
             this.fontFamily = style.fontFamily;
+            this.fontStyle = style.fontStyle;
             this.wordWrap = style.wordWrap;
             this.wordWrapWidth = style.wordWrapWidth;
             this.baseline = style.baseline;

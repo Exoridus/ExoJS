@@ -12,8 +12,11 @@ export * from './sprite/Sprite';
 export * from './sprite/Spritesheet';
 export * from './sprite/AnimatedSprite';
 
+export * from './text/DynamicGlyphAtlas';
 export * from './text/Text';
+export * from './text/TextLayout';
 export * from './text/TextStyle';
+export * from './text/types';
 
 export * from './texture/RenderTexture';
 export * from './texture/Sampler';

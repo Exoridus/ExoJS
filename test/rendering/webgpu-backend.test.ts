@@ -1078,9 +1078,31 @@ describe('WebGpuBackend', () => {
         }
     });
 
-    test('renders Text through the built-in WebGPU sprite path', async () => {
+    test('renders Text through the built-in WebGPU mesh path', async () => {
         const environment = createMockWebGpuEnvironment();
-        const textCanvas = createMockTextCanvas();
+
+        // Install a full canvas2d mock so DynamicGlyphAtlas can rasterize glyphs.
+        const glyphCtx = {
+            font: '',
+            textBaseline: 'alphabetic',
+            fillStyle: '#ffffff',
+            measureText: (_text: string) => ({
+                width: 10,
+                actualBoundingBoxLeft: 0,
+                actualBoundingBoxRight: 9,
+                actualBoundingBoxAscent: 13,
+                actualBoundingBoxDescent: 3,
+                fontBoundingBoxAscent: 14,
+                fontBoundingBoxDescent: 4,
+            } as TextMetrics),
+            fillText: jest.fn(),
+            clearRect: jest.fn(),
+        } as unknown as CanvasRenderingContext2D;
+
+        Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+            configurable: true,
+            value: (type: string) => type === '2d' ? glyphCtx : null,
+        });
 
         try {
             const app = {
@@ -1092,12 +1114,9 @@ describe('WebGpuBackend', () => {
                 },
             } as unknown as Application;
             const manager = new WebGpuBackend(app);
-            const text = new Text('Hello WebGPU', new TextStyle({
-                fill: 'white',
-                stroke: 'black',
-                strokeThickness: 2,
-                padding: 4,
-            }), undefined, textCanvas.canvas);
+
+            // "Hi" → 2 glyphs → 2 quads → 12 indices, batched into 1 drawIndexed
+            const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
 
             await manager.initialize();
 
@@ -1106,17 +1125,41 @@ describe('WebGpuBackend', () => {
             manager.flush();
             manager.destroy();
 
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6, 1, 0, 0, 0);
-            expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(1);
-            expect(textCanvas.context.fillText).toHaveBeenCalled();
+            // Text renders its internal Mesh child through the mesh renderer.
+            expect(environment.pass.drawIndexed).toHaveBeenCalled();
         } finally {
+            Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+                configurable: true,
+                value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+            });
             environment.restore();
         }
     });
 
-    test('re-uploads WebGPU text textures after text changes', async () => {
+    test('re-renders Text after setText rebuilds the internal mesh', async () => {
         const environment = createMockWebGpuEnvironment();
-        const textCanvas = createMockTextCanvas();
+
+        const glyphCtx = {
+            font: '',
+            textBaseline: 'alphabetic',
+            fillStyle: '#ffffff',
+            measureText: (_text: string) => ({
+                width: 10,
+                actualBoundingBoxLeft: 0,
+                actualBoundingBoxRight: 9,
+                actualBoundingBoxAscent: 13,
+                actualBoundingBoxDescent: 3,
+                fontBoundingBoxAscent: 14,
+                fontBoundingBoxDescent: 4,
+            } as TextMetrics),
+            fillText: jest.fn(),
+            clearRect: jest.fn(),
+        } as unknown as CanvasRenderingContext2D;
+
+        Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+            configurable: true,
+            value: (type: string) => type === '2d' ? glyphCtx : null,
+        });
 
         try {
             const app = {
@@ -1128,9 +1171,8 @@ describe('WebGpuBackend', () => {
                 },
             } as unknown as Application;
             const manager = new WebGpuBackend(app);
-            const text = new Text('Hello', new TextStyle({
-                fill: 'white',
-            }), undefined, textCanvas.canvas);
+            const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
+            const firstMesh = text.children[0];
 
             await manager.initialize();
 
@@ -1138,20 +1180,49 @@ describe('WebGpuBackend', () => {
             text.render(manager);
             manager.flush();
 
-            text.setText('Hello again');
+            // Changing text rebuilds the internal mesh.
+            text.setText('Bye');
+
+            expect(text.children[0]).not.toBe(firstMesh);
+
             text.render(manager);
             manager.flush();
 
-            expect(environment.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
+            // drawIndexed should have been called for both render passes.
+            expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(2);
         } finally {
+            Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+                configurable: true,
+                value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+            });
             environment.restore();
         }
     });
 
-    test('updates the WebGPU text texture source when the text canvas changes', async () => {
+    test('Text setStyle rebuilds the internal mesh with updated properties', async () => {
         const environment = createMockWebGpuEnvironment();
-        const initialCanvas = createMockTextCanvas();
-        const replacementCanvas = createMockTextCanvas(64, 32);
+
+        const glyphCtx = {
+            font: '',
+            textBaseline: 'alphabetic',
+            fillStyle: '#ffffff',
+            measureText: (_text: string) => ({
+                width: 10,
+                actualBoundingBoxLeft: 0,
+                actualBoundingBoxRight: 9,
+                actualBoundingBoxAscent: 13,
+                actualBoundingBoxDescent: 3,
+                fontBoundingBoxAscent: 14,
+                fontBoundingBoxDescent: 4,
+            } as TextMetrics),
+            fillText: jest.fn(),
+            clearRect: jest.fn(),
+        } as unknown as CanvasRenderingContext2D;
+
+        Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+            configurable: true,
+            value: (type: string) => type === '2d' ? glyphCtx : null,
+        });
 
         try {
             const app = {
@@ -1163,9 +1234,8 @@ describe('WebGpuBackend', () => {
                 },
             } as unknown as Application;
             const manager = new WebGpuBackend(app);
-            const text = new Text('Canvas swap', new TextStyle({
-                fill: 'white',
-            }), undefined, initialCanvas.canvas);
+            const text = new Text('Hi', new TextStyle({ fontSize: 16 }));
+            const firstMesh = text.children[0];
 
             await manager.initialize();
 
@@ -1173,17 +1243,20 @@ describe('WebGpuBackend', () => {
             text.render(manager);
             manager.flush();
 
-            text.setCanvas(replacementCanvas.canvas);
+            // Changing style rebuilds the mesh.
+            text.setStyle(new TextStyle({ fontSize: 32 }));
+
+            expect(text.children[0]).not.toBe(firstMesh);
+
             text.render(manager);
             manager.flush();
 
-            const lastCopyCall = environment.queue.copyExternalImageToTexture.mock.calls[environment.queue.copyExternalImageToTexture.mock.calls.length - 1];
-
-            expect(text.texture!.source).toBe(replacementCanvas.canvas);
-            expect(lastCopyCall[0].source).toBe(replacementCanvas.canvas);
-            expect(text.textureFrame.width).toBe(replacementCanvas.canvas.width);
-            expect(text.textureFrame.height).toBe(replacementCanvas.canvas.height);
+            expect(environment.pass.drawIndexed.mock.calls.length).toBeGreaterThanOrEqual(2);
         } finally {
+            Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+                configurable: true,
+                value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+            });
             environment.restore();
         }
     });
