@@ -1,3 +1,4 @@
+export * from './animation/index';
 export * from './core/index';
 export * from './audio/index';
 export * from './input/index';

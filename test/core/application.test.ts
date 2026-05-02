@@ -130,6 +130,7 @@ describe('Application', () => {
         const app = Object.create(Application.prototype) as import('@/core/Application').Application;
         const rawApp = app as unknown as Record<string, unknown>;
         const inputManager = { update: jest.fn() };
+        const tweens = { update: jest.fn() };
         const sceneManager = { update: jest.fn() };
         const viewUpdate = jest.fn();
         const backend = {
@@ -139,12 +140,13 @@ describe('Application', () => {
             view: { update: viewUpdate },
         };
         const frameClock = {
-            elapsedTime: { milliseconds: 16 },
+            elapsedTime: { milliseconds: 16, seconds: 0.016 },
             restart: jest.fn(),
         };
 
         rawApp['_status'] = ApplicationStatus.Running;
         rawApp['inputManager'] = inputManager;
+        rawApp['tweens'] = tweens;
         rawApp['sceneManager'] = sceneManager;
         rawApp['_backend'] = backend;
         rawApp['_frameClock'] = frameClock;

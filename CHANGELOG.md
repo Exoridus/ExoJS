@@ -4,6 +4,69 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.11] - 2026-05-02
+
+Adds a fluent-builder Tween / Animation system. Pure addition — no
+existing surface changes shape.
+
+### Added
+
+- **`Tween` class.** Fluent-builder API for animating numeric
+  properties on any target object:
+
+  ```ts
+  app.tweens.create(sprite)
+      .to({ x: 100, alpha: 0.5 }, 1.0)        // 1 second
+      .easing(Ease.cubicOut)
+      .delay(0.2)
+      .onComplete(() => console.log('done'))
+      .start();
+  ```
+
+  Lifecycle: `Idle → Active → Complete | Stopped` (with
+  `Paused` as an intermediate). Supports `delay()`, `repeat(N)`
+  with `repeat(-1)` for infinite, `yoyo()` to reverse on each
+  repeat, `chain(next)` to start another tween on completion,
+  and the standard `pause()` / `resume()` / `stop()` controls.
+  Lifecycle callbacks: `onStart` (after delay, on first
+  interpolation), `onUpdate` (per frame), `onRepeat` (cycle
+  boundaries), `onComplete` (final cycle ends naturally).
+  `stop()` does NOT fire `onComplete`.
+- **`TweenManager` class.** Owns active tweens and ticks them
+  from `Application.update()`. Use `app.tweens.create(target)` to
+  spawn-and-register a tween in one call; `app.tweens.add(tween)`
+  for stand-alone constructions; `manager.update(dt)` /
+  `manager.clear()` / `manager.destroy()` for lifecycle. Tweens
+  self-remove on natural completion or `stop()`.
+- **`Ease` namespace.** Robert Penner's standard library, 31
+  functions: `linear`, `quad{In,Out,InOut}`, `cubic{...}`,
+  `quart{...}`, `quint{...}`, `sine{...}`, `expo{...}`,
+  `circ{...}`, `back{...}`, `bounce{...}`, `elastic{...}`. Each
+  returns 0 at `t=0` and 1 at `t=1`. Use `Ease.cubicOut` (etc.) as
+  the argument to `.easing()`.
+- **`Application.tweens: TweenManager`.** Pre-instantiated on
+  every Application; ticked automatically each frame between
+  `inputManager.update()` and `sceneManager.update()`. So
+  tween-driven sprite positions are visible during the same
+  frame's render.
+- **Types: `EasingFunction`, `TweenLifecycleCallback`,
+  `TweenUpdateCallback`, `TweenState`** — all exported.
+
+### Notes
+
+- v1 supports **shallow numeric properties only**. Tweening
+  `{ x: 100 }` works; tweening `{ position: someVector }` does
+  not (use `{ x, y }` instead). Vector / Color / Matrix
+  interpolators are deferred to v2.
+- Non-numeric target properties at start time emit a
+  `console.warn` and are skipped; they don't throw.
+- Lazy snapshot of start values: `to()` records the END values;
+  the START values are captured on the FIRST `update()` after
+  `start()` (after any `delay`). Mutate the target between
+  `to()` and `start()` and the snapshot is correct.
+- `chain()` only fires on natural completion. `stop()` does
+  not start chained tweens.
+
 ## [0.6.10] - 2026-05-02
 
 ExoJS now ships with **zero runtime dependencies**. The single

@@ -5,6 +5,7 @@ import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { InputManager } from '@/input/InputManager';
 import { Loader } from '@/resources/Loader';
+import { TweenManager } from '@/animation/TweenManager';
 import { Signal } from './Signal';
 import { Color } from './Color';
 import type { Time } from './Time';
@@ -89,6 +90,7 @@ export class Application {
     public readonly loader: Loader;
     public readonly inputManager: InputManager;
     public readonly sceneManager: SceneManager;
+    public readonly tweens: TweenManager = new TweenManager();
     public readonly onResize = new Signal<[number, number, Application]>();
 
     private readonly _updateHandler: () => void;
@@ -200,6 +202,7 @@ export class Application {
             this.backend.resetStats();
 
             this.inputManager.update();
+            this.tweens.update(frameDelta.seconds);
             const runtimeView = (this.backend as Partial<{
                 view: Partial<{ update(deltaMilliseconds: number): unknown; }>;
             }>).view;
@@ -245,6 +248,7 @@ export class Application {
         this.stop();
         this.loader.destroy();
         this.inputManager.destroy();
+        this.tweens.destroy();
         this._backend.destroy();
         this.sceneManager.destroy();
         this._startupClock.destroy();
