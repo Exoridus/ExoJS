@@ -3,11 +3,13 @@ import { Color } from '@/core/Color';
 import { Rectangle } from '@/math/Rectangle';
 import { BlendModes } from '@/rendering/types';
 import { View } from '@/rendering/View';
+import { Signal } from '@/core/Signal';
 import type { Texture } from '@/rendering/texture/Texture';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { Filter } from '@/rendering/filters/Filter';
+import type { InteractionEvent } from '@/input/InteractionEvent';
 
 interface DestroyableFilter {
     destroy(): void;
@@ -63,6 +65,16 @@ export type MaskSource =
 export abstract class RenderNode extends SceneNode {
 
     private static _spriteFactory: (() => RenderNodeSpriteLike) | null = null;
+
+    public interactive: boolean = false;
+    public cursor: string | null = null;
+
+    public readonly onPointerDown = new Signal<[InteractionEvent]>();
+    public readonly onPointerUp = new Signal<[InteractionEvent]>();
+    public readonly onPointerMove = new Signal<[InteractionEvent]>();
+    public readonly onPointerOver = new Signal<[InteractionEvent]>();
+    public readonly onPointerOut = new Signal<[InteractionEvent]>();
+    public readonly onPointerTap = new Signal<[InteractionEvent]>();
 
     private readonly _filters: Array<Filter> = [];
     private readonly _cacheBounds: Rectangle = new Rectangle();
@@ -275,6 +287,13 @@ export abstract class RenderNode extends SceneNode {
 
         this._filters.length = 0;
         this._mask = null;
+
+        this.onPointerDown.destroy();
+        this.onPointerUp.destroy();
+        this.onPointerMove.destroy();
+        this.onPointerOver.destroy();
+        this.onPointerOut.destroy();
+        this.onPointerTap.destroy();
     }
 
     private _withMask(

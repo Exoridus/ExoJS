@@ -98,6 +98,9 @@ const loadApplicationHarness = (options: {
     jest.doMock('@/input/InputManager', () => ({
         InputManager: jest.fn(() => inputManager),
     }));
+    jest.doMock('@/input/InteractionManager', () => ({
+        InteractionManager: jest.fn(() => ({ destroy: jest.fn() })),
+    }));
     jest.doMock('@/core/SceneManager', () => ({
         SceneManager: jest.fn(() => sceneManager),
     }));

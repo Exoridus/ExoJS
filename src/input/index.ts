@@ -17,3 +17,5 @@ export * from './ArcadeStickGamepadMapping';
 export * from './Input';
 export * from './InputManager';
 export * from './Pointer';
+export * from './InteractionEvent';
+export * from './InteractionManager';

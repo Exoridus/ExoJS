@@ -4,6 +4,7 @@ import { SceneManager } from './SceneManager';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { InputManager } from '@/input/InputManager';
+import { InteractionManager } from '@/input/InteractionManager';
 import { Loader } from '@/resources/Loader';
 import { TweenManager } from '@/animation/TweenManager';
 import { Signal } from './Signal';
@@ -89,6 +90,7 @@ export class Application {
     public readonly canvas: HTMLCanvasElement;
     public readonly loader: Loader;
     public readonly inputManager: InputManager;
+    public readonly interaction: InteractionManager;
     public readonly sceneManager: SceneManager;
     public readonly tweens: TweenManager = new TweenManager();
     public readonly onResize = new Signal<[number, number, Application]>();
@@ -126,6 +128,7 @@ export class Application {
         this._backendType = this.resolveInitialBackendType();
         this._backend = this.createBackend(this._backendType);
         this.inputManager = new InputManager(this);
+        this.interaction = new InteractionManager(this);
         this.sceneManager = new SceneManager(this);
         this._updateHandler = this.update.bind(this);
 
@@ -247,6 +250,7 @@ export class Application {
     public destroy(): void {
         this.stop();
         this.loader.destroy();
+        this.interaction.destroy();
         this.inputManager.destroy();
         this.tweens.destroy();
         this._backend.destroy();

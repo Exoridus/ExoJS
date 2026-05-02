@@ -4,6 +4,49 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.13] - 2026-05-02
+
+Adds object-level pointer events. Scene-graph nodes are now first-class
+event targets — opt in with `node.interactive = true` and listen on
+per-node signals. Pure addition; existing global pointer signals on
+`InputManager` are unchanged.
+
+### Added
+
+- **`RenderNode.interactive: boolean`** (default `false`) — opt-in flag
+  enabling hit-testing for the node. Hit-test reuses the existing
+  `RenderNode.contains(x, y)` (AABB in world space).
+- **`RenderNode.cursor: string | null`** (default `null`) — CSS cursor
+  string applied to `canvas.style.cursor` while the pointer is over the
+  node. Walks up the ancestor chain; first non-null wins.
+- **Six per-node signals**: `onPointerDown`, `onPointerUp`,
+  `onPointerMove`, `onPointerOver`, `onPointerOut`, `onPointerTap` —
+  all `Signal<[InteractionEvent]>`.
+- **`InteractionEvent`** — `type`, `target` (the originally-hit node,
+  stable across bubble), `currentTarget` (changes per bubble step),
+  `pointer`, `worldX`, `worldY`, `stopPropagation()`,
+  `propagationStopped`.
+- **`InteractionManager`** — wired automatically as
+  `Application.interaction`. Subscribes to existing `InputManager`
+  signals (no extra DOM listeners), hit-tests the active scene's root
+  in reverse z-order, dispatches with bubble propagation, and updates
+  the canvas cursor.
+
+### Notes
+
+- **Bubble-only, no capture phase.** Bubble walks `parentNode` and
+  stops at the first non-interactive ancestor — parents must opt in
+  to receive bubbled events. `event.stopPropagation()` halts the walk.
+- **Touch has no hover phase.** `pointerover` / `pointerout` for touch
+  fire only at down/up boundaries (a finger doesn't exist on the
+  surface between presses). Don't rely on hover effects for touch UX.
+- **AABB hit-test only in v1.** Precise (polygon / alpha) hit-testing
+  is deferred. Override `contains(x, y)` for custom shapes.
+- **Cursor is CSS-only.** For animated or texture-based custom cursors,
+  set `canvas.style.cursor = 'none'` and render a sprite that follows
+  pointer position. CSS gives OS-level latency and survives game-loop
+  stutter; engine-rendered cursors don't.
+
 ## [0.6.12] - 2026-05-02
 
 Adds swept (continuous) collision detection. Pure-math addition —
