@@ -1,34 +1,43 @@
 import earcut from 'earcut';
-import { Geometry } from '@/rendering/primitives/Geometry';
 import { Vector } from '@/math/Vector';
 import { tau } from '@/math/utils';
 
-export const buildLine = (startX: number, startY: number, endX: number, endY: number, width: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
+export interface MeshGeometryData {
+    readonly vertices: Float32Array;
+    readonly indices: Uint16Array;
+    readonly points: Array<number>;
+}
+
+export const buildLine = (startX: number, startY: number, endX: number, endY: number, width: number): MeshGeometryData => {
     const points = [startX, startY, endX, endY];
     const distance = width / 2;
-    const index = vertices.length / 6;
     const perpA = new Vector(startX - endX, startY - endY).perp().normalize().multiply(distance);
     const perpB = new Vector(endX - startX, endY - startY).perp().normalize().multiply(distance);
 
-    vertices.push(startX - perpA.x, startY - perpA.y);
-    vertices.push(startX + perpA.x, startY + perpA.y);
+    const vertices = new Float32Array([
+        startX - perpA.x, startY - perpA.y, // 0: start-left
+        startX + perpA.x, startY + perpA.y, // 1: start-right
+        endX - perpB.x, endY - perpB.y,     // 2: end-left
+        endX + perpB.x, endY + perpB.y,     // 3: end-right
+    ]);
 
-    vertices.push(endX - perpB.x, endY - perpB.y);
-    vertices.push(endX + perpB.x, endY + perpB.y);
+    perpA.destroy();
+    perpB.destroy();
 
-    indices.push(index, index, index + 1, index + 2, index + 3, index + 3);
+    const indices = new Uint16Array([0, 1, 3, 0, 3, 2]);
 
-    return new Geometry({vertices, indices, points});
+    return { vertices, indices, points };
 };
 
-export const buildPath = (points: Array<number>, width: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
+export const buildPath = (points: Array<number>, width: number): MeshGeometryData => {
     if (points.length < 4) {
         throw new Error('At least two X/Y pairs are required to build a line.');
     }
 
-    const lineWidth = width / 2,
-        firstPoint = new Vector(points[0], points[1]),
-        lastPoint = new Vector(points[points.length - 2], points[points.length - 1]);
+    const lineWidth = width / 2;
+    const firstPoint = new Vector(points[0], points[1]);
+    const lastPoint = new Vector(points[points.length - 2], points[points.length - 1]);
+    const outlinePoints = points;
 
     if (firstPoint.x === lastPoint.x && firstPoint.y === lastPoint.y) {
         points = points.slice();
@@ -45,10 +54,11 @@ export const buildPath = (points: Array<number>, width: number, vertices: Array<
         points.push(midPointX, midPointY);
     }
 
-    const length = points.length / 2;
+    firstPoint.destroy();
+    lastPoint.destroy();
 
-    let indexCount = points.length;
-    let indexStart = vertices.length / 6;
+    const length = points.length / 2;
+    const stripVertices: Array<number> = [];
 
     let p1x = points[0];
     let p1y = points[1];
@@ -71,8 +81,8 @@ export const buildPath = (points: Array<number>, width: number, vertices: Array<
     perpx *= lineWidth;
     perpy *= lineWidth;
 
-    vertices.push(p1x - perpx, p1y - perpy);
-    vertices.push(p1x + perpx, p1y + perpy);
+    stripVertices.push(p1x - perpx, p1y - perpy);
+    stripVertices.push(p1x + perpx, p1y + perpy);
 
     for (let i = 1; i < length - 1; i++) {
         p1x = points[(i - 1) * 2];
@@ -116,8 +126,8 @@ export const buildPath = (points: Array<number>, width: number, vertices: Array<
         if (Math.abs(denom) < 0.1) {
             denom += 10.1;
 
-            vertices.push(p2x - perpx, p2y - perpy);
-            vertices.push(p2x + perpx, p2y + perpy);
+            stripVertices.push(p2x - perpx, p2y - perpy);
+            stripVertices.push(p2x + perpx, p2y + perpy);
 
             continue;
         }
@@ -137,14 +147,12 @@ export const buildPath = (points: Array<number>, width: number, vertices: Array<
             perp3x *= lineWidth;
             perp3y *= lineWidth;
 
-            vertices.push(p2x - perp3x, p2y - perp3y);
-            vertices.push(p2x + perp3x, p2y + perp3y);
-            vertices.push(p2x - perp3x, p2y - perp3y);
-
-            indexCount++;
+            stripVertices.push(p2x - perp3x, p2y - perp3y);
+            stripVertices.push(p2x + perp3x, p2y + perp3y);
+            stripVertices.push(p2x - perp3x, p2y - perp3y);
         } else {
-            vertices.push(px, py);
-            vertices.push(p2x - (px - p2x), p2y - (py - p2y));
+            stripVertices.push(px, py);
+            stripVertices.push(p2x - (px - p2x), p2y - (py - p2y));
         }
     }
 
@@ -164,113 +172,145 @@ export const buildPath = (points: Array<number>, width: number, vertices: Array<
     perpx *= lineWidth;
     perpy *= lineWidth;
 
-    vertices.push(p2x - perpx, p2y - perpy);
-    vertices.push(p2x + perpx, p2y + perpy);
+    stripVertices.push(p2x - perpx, p2y - perpy);
+    stripVertices.push(p2x + perpx, p2y + perpy);
 
-    indices.push(indexStart);
+    // Convert strip-style vertex sequence to triangle-list indices.
+    // For N strip vertices (N = stripVertices.length / 2), each i in [0, N-3]
+    // produces a triangle. Even i: (i, i+1, i+2). Odd i: (i+1, i, i+2).
+    // This preserves the same winding the original triangle-strip pipeline saw.
+    const stripVertexCount = stripVertices.length / 2;
+    const vertices = new Float32Array(stripVertices);
+    const triangleCount = stripVertexCount >= 3 ? stripVertexCount - 2 : 0;
+    const indices = new Uint16Array(triangleCount * 3);
 
-    for (let i = 0; i < indexCount; i++) {
-        indices.push(indexStart++);
+    for (let i = 0; i < triangleCount; i++) {
+        const base = i * 3;
+
+        if ((i & 1) === 0) {
+            indices[base] = i;
+            indices[base + 1] = i + 1;
+            indices[base + 2] = i + 2;
+        } else {
+            indices[base] = i + 1;
+            indices[base + 1] = i;
+            indices[base + 2] = i + 2;
+        }
     }
 
-    indices.push(indexStart - 1);
-
-    return new Geometry({vertices, indices, points});
+    return { vertices, indices, points: outlinePoints };
 };
 
-export const buildCircle = (centerX: number, centerY: number, radius: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
-    const length = Math.floor(15 * Math.sqrt(radius + radius)),
-        segment = (Math.PI * 2) / length,
-        points = [];
+export const buildCircle = (centerX: number, centerY: number, radius: number): MeshGeometryData => {
+    const length = Math.floor(15 * Math.sqrt(radius + radius));
+    const segment = (Math.PI * 2) / length;
+    const points: Array<number> = [];
 
-    let index = vertices.length / 6;
+    // 1 center vertex + N perimeter vertices.
+    const vertices = new Float32Array((length + 1) * 2);
 
-    indices.push(index);
+    vertices[0] = centerX;
+    vertices[1] = centerY;
 
-    for (let i = 0; i < length + 1; i++) {
-        const segmentX = centerX + (Math.sin(segment * i) * radius),
-            segmentY = centerY + (Math.cos(segment * i) * radius);
+    for (let i = 0; i < length; i++) {
+        const segmentX = centerX + (Math.sin(segment * i) * radius);
+        const segmentY = centerY + (Math.cos(segment * i) * radius);
 
         points.push(segmentX, segmentY);
 
-        vertices.push(centerX, centerY);
-        vertices.push(segmentX, segmentY);
+        const offset = (i + 1) * 2;
 
-        indices.push(index++, index++);
+        vertices[offset] = segmentX;
+        vertices[offset + 1] = segmentY;
     }
 
-    indices.push(index - 1);
+    const indices = new Uint16Array(length * 3);
 
-    return new Geometry({vertices, indices, points});
+    for (let i = 0; i < length; i++) {
+        const base = i * 3;
+
+        indices[base] = 0;
+        indices[base + 1] = i + 1;
+        indices[base + 2] = i + 2 > length ? 1 : i + 2;
+    }
+
+    return { vertices, indices, points };
 };
 
-export const buildEllipse = (centerX: number, centerY: number, radiusX: number, radiusY: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
-    const length = Math.floor(15 * Math.sqrt(radiusX + radiusY)),
-        segment = (Math.PI * 2) / length,
-        points = [];
+export const buildEllipse = (centerX: number, centerY: number, radiusX: number, radiusY: number): MeshGeometryData => {
+    const length = Math.floor(15 * Math.sqrt(radiusX + radiusY));
+    const segment = (Math.PI * 2) / length;
+    const points: Array<number> = [];
 
-    let index = vertices.length / 6;
+    const vertices = new Float32Array((length + 1) * 2);
 
-    indices.push(index);
+    vertices[0] = centerX;
+    vertices[1] = centerY;
 
-    for (let i = 0; i < length + 1; i++) {
-        const segmentX = centerX + (Math.sin(segment * i) * radiusX),
-            segmentY = centerY + (Math.cos(segment * i) * radiusY);
+    for (let i = 0; i < length; i++) {
+        const segmentX = centerX + (Math.sin(segment * i) * radiusX);
+        const segmentY = centerY + (Math.cos(segment * i) * radiusY);
 
         points.push(segmentX, segmentY);
 
-        vertices.push(centerX, centerY);
-        vertices.push(segmentX, segmentY);
+        const offset = (i + 1) * 2;
 
-        indices.push(index++, index++);
+        vertices[offset] = segmentX;
+        vertices[offset + 1] = segmentY;
     }
 
-    indices.push(index - 1);
+    const indices = new Uint16Array(length * 3);
 
-    return new Geometry({vertices, indices, points});
+    for (let i = 0; i < length; i++) {
+        const base = i * 3;
+
+        indices[base] = 0;
+        indices[base + 1] = i + 1;
+        indices[base + 2] = i + 2 > length ? 1 : i + 2;
+    }
+
+    return { vertices, indices, points };
 };
 
-export const buildPolygon = (points: Array<number>, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
+export const buildPolygon = (points: Array<number>): MeshGeometryData => {
     if (points.length < 6) {
         throw new Error('At least three X/Y pairs are required to build a polygon.');
     }
 
-    const index = vertices.length / 6,
-        length = points.length / 2,
-        triangles = earcut(points, [], 2);
+    const length = points.length / 2;
+    const triangles = earcut(points, [], 2);
+    const vertices = new Float32Array(points.length);
 
-    if (triangles) {
-        for (let i = 0; i < triangles.length; i += 3) {
-            indices.push(triangles[i] + index);
-            indices.push(triangles[i] + index);
-            indices.push(triangles[i + 1] + index);
-            indices.push(triangles[i + 2] + index);
-            indices.push(triangles[i + 2] + index);
-        }
-
-        for (let i = 0; i < length; i++) {
-            vertices.push(points[i * 2], points[(i * 2) + 1]);
-        }
+    for (let i = 0; i < length; i++) {
+        vertices[i * 2] = points[i * 2];
+        vertices[(i * 2) + 1] = points[(i * 2) + 1];
     }
 
-    return new Geometry({vertices, indices, points});
+    const indices = triangles ? new Uint16Array(triangles) : new Uint16Array(0);
+
+    return { vertices, indices, points };
 };
 
-export const buildRectangle = (x: number, y: number, width: number, height: number, vertices: Array<number> = [], indices: Array<number> = []): Geometry => {
-    const points = [x, y, x + width, y, x, y + height, x + width, y + height],
-        index = vertices.length / 6;
+export const buildRectangle = (x: number, y: number, width: number, height: number): MeshGeometryData => {
+    // 4 vertices: TL, TR, BL, BR. Triangles [0, 1, 2,  1, 3, 2] (clockwise).
+    const vertices = new Float32Array([
+        x, y,                   // 0 TL
+        x + width, y,           // 1 TR
+        x, y + height,          // 2 BL
+        x + width, y + height,  // 3 BR
+    ]);
+    const indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
+    // Outline points walk the perimeter (TL -> TR -> BR -> BL).
+    const points = [x, y, x + width, y, x + width, y + height, x, y + height];
 
-    vertices.push(...points);
-    indices.push(index, index, index + 1, index + 2, index + 3, index + 3);
-
-    return new Geometry({vertices, indices, points});
+    return { vertices, indices, points };
 };
 
-export const buildStar = (centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): Geometry => {
-    const startAngle = (Math.PI / -2) + rotation,
-        length = points * 2,
-        delta = tau / length,
-        path = [];
+export const buildStar = (centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): MeshGeometryData => {
+    const startAngle = (Math.PI / -2) + rotation;
+    const length = points * 2;
+    const delta = tau / length;
+    const path: Array<number> = [];
 
     for (let i = 0; i < length; i++) {
         const angle = startAngle + (i * delta);

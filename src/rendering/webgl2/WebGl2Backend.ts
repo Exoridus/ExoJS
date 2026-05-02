@@ -5,11 +5,9 @@ import { RenderTarget } from '../RenderTarget';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
-import { WebGl2PrimitiveRenderer } from './WebGl2PrimitiveRenderer';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { Sprite } from '../sprite/Sprite';
 import { Mesh } from '../mesh/Mesh';
-import { DrawableShape } from '../primitives/DrawableShape';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Color } from '@/core/Color';
 import { canvasSourceToDataUrl } from '@/core/utils';
@@ -120,7 +118,6 @@ export class WebGl2Backend implements RenderBackend {
             debug,
             spriteRendererBatchSize,
             particleRendererBatchSize,
-            primitiveRendererBatchSize,
         } = app.options;
 
         this._canvas = app.canvas;
@@ -155,7 +152,6 @@ export class WebGl2Backend implements RenderBackend {
         this.rendererRegistry.registerRenderer(Sprite, new WebGl2SpriteRenderer(spriteRendererBatchSize));
         this.rendererRegistry.registerRenderer(Mesh, new WebGl2MeshRenderer());
         this.rendererRegistry.registerRenderer(ParticleSystem, new WebGl2ParticleRenderer(particleRendererBatchSize));
-        this.rendererRegistry.registerRenderer(DrawableShape, new WebGl2PrimitiveRenderer(primitiveRendererBatchSize));
         this.rendererRegistry.connect(this);
 
         this._bindRenderTarget(this._renderTarget);

@@ -1,8 +1,6 @@
 import { Signal } from './Signal';
 import { Color } from './Color';
-import { DrawableShape } from '@/rendering/primitives/DrawableShape';
-import { Geometry } from '@/rendering/primitives/Geometry';
-import { RenderingPrimitives } from '@/rendering/types';
+import { Mesh } from '@/rendering/mesh/Mesh';
 import type { Time } from './Time';
 import type { Application } from './Application';
 import type { Pointer } from '@/input/Pointer';
@@ -51,7 +49,7 @@ interface ActiveFadeTransition {
     phase: 'out' | 'switching' | 'in';
 }
 
-class TransitionOverlayShape extends DrawableShape {
+class TransitionOverlayMesh extends Mesh {
     public override render(backend: RenderBackend): this {
         if (this.visible) {
             backend.draw(this);
@@ -61,10 +59,10 @@ class TransitionOverlayShape extends DrawableShape {
     }
 }
 
-const createOverlayGeometry = (): Geometry => new Geometry({
-    vertices: [0, 0, 1, 0, 0, 1, 1, 1],
-    indices: [0, 1, 2, 3],
-    points: [0, 0, 1, 0, 0, 1, 1, 1],
+const createOverlayMesh = (): TransitionOverlayMesh => new TransitionOverlayMesh({
+    // 4 vertices (TL, TR, BL, BR) with 2 indexed triangles forming a screen quad.
+    vertices: new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]),
+    indices: new Uint16Array([0, 1, 2, 1, 3, 2]),
 });
 
 const defaultFadeTransitionDuration = 220;
@@ -73,11 +71,7 @@ export class SceneManager {
 
     private readonly _app: Application;
     private readonly _stack: Array<SceneStackEntry> = [];
-    private readonly _transitionOverlay = new TransitionOverlayShape(
-        createOverlayGeometry(),
-        Color.black,
-        RenderingPrimitives.TriangleStrip,
-    );
+    private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
     private _transition: ActiveFadeTransition | null = null;
 
     public readonly onChangeScene = new Signal<[Scene | null]>();
@@ -576,7 +570,8 @@ export class SceneManager {
         const overlayColor = transition ? transition.color : Color.black;
         const backend = this._app.backend;
         const bounds = backend.view.getBounds();
-        const vertices = this._transitionOverlay.geometry.vertices;
+        const overlay = this._transitionOverlay;
+        const vertices = overlay.vertices;
 
         vertices[0] = bounds.left;
         vertices[1] = bounds.top;
@@ -587,7 +582,7 @@ export class SceneManager {
         vertices[6] = bounds.right;
         vertices[7] = bounds.bottom;
 
-        this._transitionOverlay.color.set(overlayColor.r, overlayColor.g, overlayColor.b, Math.max(0, Math.min(1, alpha)));
-        this._transitionOverlay.render(backend);
+        overlay.tint.set(overlayColor.r, overlayColor.g, overlayColor.b, Math.max(0, Math.min(1, alpha)));
+        overlay.render(backend);
     }
 }

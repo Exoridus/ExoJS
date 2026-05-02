@@ -306,8 +306,7 @@ export class WebGpuMaskCompositor {
 
     private _writeProjectionMatrix(viewMatrix: Matrix): void {
         // Pack the 3x3 affine view matrix into a 4x4 column-major mat4x4
-        // for WGSL, mirroring the layout used by WebGpuPrimitiveRenderer
-        // (see `_writeShapeVertices` in that file for the rationale).
+        // for WGSL.
         const m = this._projectionMatrix.copy(viewMatrix);
         const data = this._projectionData;
 

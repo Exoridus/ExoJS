@@ -28,7 +28,6 @@ export interface ApplicationOptions {
     clearColor: Color;
     spriteRendererBatchSize: number;
     particleRendererBatchSize: number;
-    primitiveRendererBatchSize: number;
     gamepadDefinitions: Array<GamepadDefinition>;
     pointerDistanceThreshold: number;
     webglAttributes: WebGLContextAttributes;
@@ -64,7 +63,6 @@ const defaultAppSettings: DefaultApplicationOptions = {
     debug: false,
     spriteRendererBatchSize: 4096, // ~ 262kb
     particleRendererBatchSize: 8192, // ~ 1.18mb
-    primitiveRendererBatchSize: 65536, // ~ 786kb
     gamepadDefinitions: [],
     pointerDistanceThreshold: 10,
     webglAttributes: {

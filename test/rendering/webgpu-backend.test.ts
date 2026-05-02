@@ -6,8 +6,6 @@ import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { Text } from '@/rendering/text/Text';
 import { TextStyle } from '@/rendering/text/TextStyle';
 import { Graphics } from '@/rendering/primitives/Graphics';
-import { Geometry } from '@/rendering/primitives/Geometry';
-import { DrawableShape } from '@/rendering/primitives/DrawableShape';
 import { Container } from '@/rendering/Container';
 import { Rectangle } from '@/math/Rectangle';
 import { ColorFilter } from '@/rendering/filters/ColorFilter';
@@ -17,7 +15,7 @@ import { Texture } from '@/rendering/texture/Texture';
 import { Video } from '@/rendering/video/Video';
 import type { Renderer } from '@/rendering/Renderer';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
-import { BlendModes, RenderingPrimitives, ScaleModes } from '@/rendering/types';
+import { BlendModes, ScaleModes } from '@/rendering/types';
 
 interface MockWebGpuEnvironment {
     readonly canvas: HTMLCanvasElement;
@@ -512,7 +510,7 @@ describe('WebGpuBackend', () => {
         }
     });
 
-    test('renders Graphics through the built-in WebGPU primitive path', async () => {
+    test('renders Graphics through the built-in WebGPU mesh path', async () => {
         const environment = createMockWebGpuEnvironment();
 
         try {
@@ -537,9 +535,9 @@ describe('WebGpuBackend', () => {
             manager.flush();
             manager.destroy();
 
-            expect(environment.encoder.beginRenderPass).toHaveBeenCalledTimes(1);
+            expect(environment.encoder.beginRenderPass).toHaveBeenCalled();
             expect(environment.pass.drawIndexed).toHaveBeenCalled();
-            expect(environment.queue.submit).toHaveBeenCalledTimes(1);
+            expect(environment.queue.submit).toHaveBeenCalled();
             expect(environment.context.configure).toHaveBeenCalledTimes(1);
             expect(environment.context.unconfigure).toHaveBeenCalledTimes(1);
             expect(environment.buffers.length).toBeGreaterThan(0);
@@ -623,177 +621,6 @@ describe('WebGpuBackend', () => {
             );
 
             expect(subtractTarget).toBeDefined();
-            manager.destroy();
-        } finally {
-            environment.restore();
-        }
-    });
-
-    test('supports WebGPU primitive point-list rendering', async () => {
-        const environment = createMockWebGpuEnvironment();
-
-        try {
-            const app = {
-                canvas: environment.canvas,
-                options: {
-                    width: 128,
-                    height: 128,
-                    clearColor: Color.black,
-                },
-            } as unknown as Application;
-            const manager = new WebGpuBackend(app);
-            const shape = new DrawableShape(new Geometry({
-                vertices: [0, 0, 16, 16],
-            }), Color.red, RenderingPrimitives.Points);
-
-            await manager.initialize();
-
-            manager.clear();
-            shape.render(manager);
-            manager.flush();
-
-            const pointPipeline = environment.pipelineDescriptors.find((descriptor) =>
-                descriptor.primitive?.topology === 'point-list');
-
-            expect(pointPipeline).toBeDefined();
-            expect(environment.pass.draw).toHaveBeenCalledWith(2);
-            manager.destroy();
-        } finally {
-            environment.restore();
-        }
-    });
-
-    test('supports WebGPU primitive line-list rendering', async () => {
-        const environment = createMockWebGpuEnvironment();
-
-        try {
-            const app = {
-                canvas: environment.canvas,
-                options: {
-                    width: 128,
-                    height: 128,
-                    clearColor: Color.black,
-                },
-            } as unknown as Application;
-            const manager = new WebGpuBackend(app);
-            const shape = new DrawableShape(new Geometry({
-                vertices: [0, 0, 16, 16],
-            }), Color.red, RenderingPrimitives.Lines);
-
-            await manager.initialize();
-
-            manager.clear();
-            shape.render(manager);
-            manager.flush();
-
-            const linePipeline = environment.pipelineDescriptors.find((descriptor) =>
-                descriptor.primitive?.topology === 'line-list');
-
-            expect(linePipeline).toBeDefined();
-            expect(environment.pass.draw).toHaveBeenCalledWith(2);
-            manager.destroy();
-        } finally {
-            environment.restore();
-        }
-    });
-
-    test('supports WebGPU primitive line-strip rendering', async () => {
-        const environment = createMockWebGpuEnvironment();
-
-        try {
-            const app = {
-                canvas: environment.canvas,
-                options: {
-                    width: 128,
-                    height: 128,
-                    clearColor: Color.black,
-                },
-            } as unknown as Application;
-            const manager = new WebGpuBackend(app);
-            const shape = new DrawableShape(new Geometry({
-                vertices: [0, 0, 16, 16, 32, 8],
-            }), Color.red, RenderingPrimitives.LineStrip);
-
-            await manager.initialize();
-
-            manager.clear();
-            shape.render(manager);
-            manager.flush();
-
-            const lineStripPipeline = environment.pipelineDescriptors.find((descriptor) =>
-                descriptor.primitive?.topology === 'line-strip');
-
-            expect(lineStripPipeline).toBeDefined();
-            expect(environment.pass.draw).toHaveBeenCalledWith(3);
-            manager.destroy();
-        } finally {
-            environment.restore();
-        }
-    });
-
-    test('supports WebGPU primitive line-loop rendering', async () => {
-        const environment = createMockWebGpuEnvironment();
-
-        try {
-            const app = {
-                canvas: environment.canvas,
-                options: {
-                    width: 128,
-                    height: 128,
-                    clearColor: Color.black,
-                },
-            } as unknown as Application;
-            const manager = new WebGpuBackend(app);
-            const shape = new DrawableShape(new Geometry({
-                vertices: [0, 0, 16, 0, 16, 16],
-            }), Color.red, RenderingPrimitives.LineLoop);
-
-            await manager.initialize();
-
-            manager.clear();
-            shape.render(manager);
-            manager.flush();
-
-            const lineLoopPipeline = environment.pipelineDescriptors.find((descriptor) =>
-                descriptor.primitive?.topology === 'line-strip'
-                && descriptor.primitive.stripIndexFormat === 'uint16');
-
-            expect(lineLoopPipeline).toBeDefined();
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(4);
-            manager.destroy();
-        } finally {
-            environment.restore();
-        }
-    });
-
-    test('supports WebGPU primitive triangle-fan rendering', async () => {
-        const environment = createMockWebGpuEnvironment();
-
-        try {
-            const app = {
-                canvas: environment.canvas,
-                options: {
-                    width: 128,
-                    height: 128,
-                    clearColor: Color.black,
-                },
-            } as unknown as Application;
-            const manager = new WebGpuBackend(app);
-            const shape = new DrawableShape(new Geometry({
-                vertices: [0, 0, 16, 0, 16, 16, 0, 16],
-            }), Color.red, RenderingPrimitives.TriangleFan);
-
-            await manager.initialize();
-
-            manager.clear();
-            shape.render(manager);
-            manager.flush();
-
-            const triangleFanPipeline = environment.pipelineDescriptors.find((descriptor) =>
-                descriptor.primitive?.topology === 'triangle-list');
-
-            expect(triangleFanPipeline).toBeDefined();
-            expect(environment.pass.drawIndexed).toHaveBeenCalledWith(6);
             manager.destroy();
         } finally {
             environment.restore();

@@ -1,12 +1,11 @@
 import { Color } from '@/core/Color';
 import { Container } from '@/rendering/Container';
 import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '@/math/utils';
-import { RenderingPrimitives } from '@/rendering/types';
-import { buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
+import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
+import type { MeshGeometryData } from '@/math/geometry';
 import { Vector } from '@/math/Vector';
-import { CircleGeometry } from './CircleGeometry';
+import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderNode } from '@/rendering/RenderNode';
-import { DrawableShape } from './DrawableShape';
 
 export class Graphics extends Container {
 
@@ -43,21 +42,21 @@ export class Graphics extends Container {
         return this._currentPoint;
     }
 
-    public override getChildAt(index: number): DrawableShape {
-        return super.getChildAt(index) as DrawableShape;
+    public override getChildAt(index: number): Mesh {
+        return super.getChildAt(index) as Mesh;
     }
 
     public override addChild(child: RenderNode): this {
-        if (!(child instanceof DrawableShape)) {
-            throw new Error('Graphics can only contain DrawableShape children.');
+        if (!(child instanceof Mesh)) {
+            throw new Error('Graphics can only contain Mesh children.');
         }
 
         return super.addChild(child);
     }
 
     public override addChildAt(child: RenderNode, index: number): this {
-        if (!(child instanceof DrawableShape)) {
-            throw new Error('Graphics can only contain DrawableShape children.');
+        if (!(child instanceof Mesh)) {
+            throw new Error('Graphics can only contain Mesh children.');
         }
 
         return super.addChildAt(child, index);
@@ -189,72 +188,76 @@ export class Graphics extends Container {
     }
 
     public drawLine(startX: number, startY: number, endX: number, endY: number): this {
-        this.addChild(new DrawableShape(buildLine(startX, startY, endX, endY, this._lineWidth), this._lineColor, RenderingPrimitives.TriangleStrip));
+        const data = buildLine(startX, startY, endX, endY, this._lineWidth);
+
+        this.addChild(this._createMesh(data, this._lineColor));
 
         return this;
     }
 
     public drawPath(path: Array<number>): this {
-        this.addChild(new DrawableShape(buildPath(path, this._lineWidth), this._lineColor, RenderingPrimitives.TriangleStrip));
+        const data = buildPath(path, this._lineWidth);
+
+        this.addChild(this._createMesh(data, this._lineColor));
 
         return this;
     }
 
     public drawPolygon(path: Array<number>): this {
-        const polygon = buildPolygon(path);
+        const data = buildPolygon(path);
 
-        this.addChild(new DrawableShape(polygon, this._fillColor, RenderingPrimitives.TriangleStrip));
+        this.addChild(this._createMesh(data, this._fillColor));
 
         if (this._lineWidth > 0) {
-            this.drawPath(polygon.points);
+            this.drawPath(data.points);
         }
 
         return this;
     }
 
     public drawCircle(centerX: number, centerY: number, radius: number): this {
-        const circle = new CircleGeometry(centerX, centerY, radius);
+        const data = buildCircle(centerX, centerY, radius);
 
-        this.addChild(new DrawableShape(circle, this._fillColor, RenderingPrimitives.TriangleStrip));
+        this.addChild(this._createMesh(data, this._fillColor));
 
         if (this._lineWidth > 0) {
-            this.drawPath(circle.points);
+            this.drawPath(data.points);
         }
 
         return this;
     }
 
     public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
-        const ellipse = buildEllipse(centerX, centerY, radiusX, radiusY);
+        const data = buildEllipse(centerX, centerY, radiusX, radiusY);
 
-        this.addChild(new DrawableShape(ellipse, this._fillColor, RenderingPrimitives.TriangleStrip));
+        this.addChild(this._createMesh(data, this._fillColor));
 
         if (this._lineWidth > 0) {
-            this.drawPath(ellipse.points);
+            this.drawPath(data.points);
         }
 
         return this;
     }
 
     public drawRectangle(x: number, y: number, width: number, height: number): this {
-        const rectangle = buildRectangle(x, y, width, height);
+        const data = buildRectangle(x, y, width, height);
 
-        this.addChild(new DrawableShape(rectangle, this._fillColor, RenderingPrimitives.TriangleStrip));
+        this.addChild(this._createMesh(data, this._fillColor));
 
         if (this._lineWidth > 0) {
-            this.drawPath(rectangle.points);
+            this.drawPath(data.points);
         }
 
         return this;
     }
 
     public drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
-        const star = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
+        const data = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
 
-        this.addChild(new DrawableShape(star, this._fillColor, RenderingPrimitives.TriangleStrip));
+        this.addChild(this._createMesh(data, this._fillColor));
 
         if (this._lineWidth > 0) {
-            this.drawPath(star.points);
+            this.drawPath(data.points);
         }
 
         return this;
@@ -279,5 +282,16 @@ export class Graphics extends Container {
         this._lineColor.destroy();
         this._fillColor.destroy();
         this._currentPoint.destroy();
+    }
+
+    private _createMesh(data: MeshGeometryData, color: Color): Mesh {
+        const mesh = new Mesh({
+            vertices: data.vertices,
+            indices: data.indices,
+        });
+
+        mesh.tint = color;
+
+        return mesh;
     }
 }

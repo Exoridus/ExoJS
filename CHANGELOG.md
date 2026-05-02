@@ -4,6 +4,93 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-05-02
+
+> **Heads-up — breaking change despite the patch number.** Removes
+> `DrawableShape`, `Geometry`, `CircleGeometry`, and the
+> `WebGl2PrimitiveRenderer` / `WebGpuPrimitiveRenderer` classes. Pre-1.0
+> SemVer permits breaking changes within the 0.x.y line; we kept the
+> minor digit unchanged because direct usage of those classes outside
+> the engine is unlikely (the public `Graphics` API is unchanged).
+
+Collapses the legacy primitive-rendering stack into the existing `Mesh`
+primitive. Net effect: ~1100 LOC removed across two files of
+backend-specific primitive renderers and three legacy data classes,
+one unified rendering path for everything triangle-shaped.
+
+### Breaking
+
+- **`DrawableShape` removed.** Internal Graphics children are now
+  `Mesh` instances. If you constructed `DrawableShape` directly,
+  switch to `new Mesh({ vertices, indices, ... })` and assign the
+  fill color via `mesh.tint = color`. See migration below.
+- **`Geometry` and `CircleGeometry` classes removed.** They were
+  only ever consumed by `DrawableShape` and the (now-gone) primitive
+  renderers. The geometry-builder helpers in `src/math/geometry`
+  (`buildLine`, `buildPath`, `buildCircle`, `buildEllipse`,
+  `buildRectangle`, `buildPolygon`, `buildStar`) now return a
+  `MeshGeometryData` plain object — `{ vertices: Float32Array,
+  indices: Uint16Array, points: Array<number> }` — directly suitable
+  for `new Mesh({ ... })`.
+- **`WebGl2PrimitiveRenderer` and `WebGpuPrimitiveRenderer` removed.**
+  Their work moved entirely into the existing `*MeshRenderer`s. Both
+  backends now register only `Sprite`, `Mesh`, and `ParticleSystem`
+  renderers.
+- **`primitiveRendererBatchSize` ApplicationOptions removed.** The
+  field was wired only into the deleted PrimitiveRenderer; no
+  replacement.
+- **`Graphics.getChildAt(index)` return type narrows from
+  `DrawableShape` to `Mesh`.** Children of a `Graphics` are still
+  walked the same way; only the type narrows.
+- **`buildX(...)` geometry-builder return type changes.** Functions
+  previously returned a `Geometry` instance; now return
+  `MeshGeometryData`. The `vertices` and `indices` shift from
+  `Array<number>` / `Array<number>` to typed arrays.
+- **`Lines`, `LineStrip`, `LineLoop`, `Points`, `TriangleFan`,
+  `TriangleStrip` draw modes are no longer renderable** through the
+  public stack. The `RenderingPrimitives` enum is still exported but
+  is now used only internally by SpriteRenderer / ParticleRenderer /
+  MeshRenderer / VertexArrayObject (which all draw triangle-list or
+  triangle-strip).
+
+### Migration
+
+```ts
+// Before (0.6.4)
+import { DrawableShape, Geometry, RenderingPrimitives, Color } from '@codexo/exojs';
+
+const shape = new DrawableShape(
+    new Geometry({ vertices: [0, 0, 100, 0, 50, 100], indices: [0, 1, 2] }),
+    Color.red,
+    RenderingPrimitives.Triangles,
+);
+
+// After (0.6.5)
+import { Mesh, Color } from '@codexo/exojs';
+
+const mesh = new Mesh({
+    vertices: new Float32Array([0, 0, 100, 0, 50, 100]),
+    indices: new Uint16Array([0, 1, 2]),
+});
+mesh.tint = Color.red;
+```
+
+`Graphics`'s public surface is unchanged — `drawCircle`, `drawRectangle`,
+`drawLine`, `drawPath`, `drawPolygon`, `drawEllipse`, `drawArc`,
+`drawStar`, `lineTo`, `moveTo`, `bezierCurveTo`, `quadraticCurveTo`,
+`arcTo`, `clear`, `fillColor`, `lineColor`, `lineWidth`, `currentPoint`
+all behave identically.
+
+### Internals
+
+- All geometry builders now produce triangle-list output. Previously
+  most produced TriangleStrip with degenerate-triangle bridging (the
+  duplicated-first-and-last-index pattern); that hack is gone.
+- `Graphics.drawX` methods now construct `Mesh` children with
+  `mesh.tint` carrying the fill/line color.
+- `SceneManager`'s internal `TransitionOverlay` switched from
+  `DrawableShape` to `Mesh`; quad now indexed `[0,1,2, 1,3,2]`.
+
 ## [0.6.4] - 2026-05-02
 
 > **Heads-up — breaking change despite the patch number.** Reshapes

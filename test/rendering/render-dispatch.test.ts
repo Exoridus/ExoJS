@@ -1,4 +1,3 @@
-import { Color } from '@/core/Color';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Drawable } from '@/rendering/Drawable';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
@@ -8,8 +7,7 @@ import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { Texture } from '@/rendering/texture/Texture';
 import { Container } from '@/rendering/Container';
-import { DrawableShape } from '@/rendering/primitives/DrawableShape';
-import { Geometry } from '@/rendering/primitives/Geometry';
+import { Mesh } from '@/rendering/mesh/Mesh';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 
 const createRuntime = () => {
@@ -108,13 +106,13 @@ describe('render dispatch', () => {
         expect(draw).toHaveBeenCalledWith(sprite);
     });
 
-    test('DrawableShape.render submits through runtime.draw', () => {
+    test('Mesh.render submits through runtime.draw', () => {
         const { runtime, draw } = createRuntime();
-        const shape = new DrawableShape(new Geometry({ vertices: [0, 0, 10, 0, 10, 10] }), Color.white);
+        const mesh = new Mesh({ vertices: new Float32Array([0, 0, 10, 0, 10, 10]) });
 
-        shape.render(runtime);
+        mesh.render(runtime);
 
-        expect(draw).toHaveBeenCalledWith(shape);
+        expect(draw).toHaveBeenCalledWith(mesh);
     });
 
     test('ParticleSystem.render submits through runtime.draw', () => {
