@@ -69,12 +69,29 @@ export abstract class RenderNode extends SceneNode {
     public interactive: boolean = false;
     public cursor: string | null = null;
 
+    /**
+     * When `true` and `interactive` is also `true`, this node will be
+     * automatically repositioned to follow the pointer during a drag gesture.
+     * The framework captures the pointer offset at drag-start so the node
+     * doesn't snap to the cursor position. Both `interactive` and `draggable`
+     * must be set for dragging to work — a `draggable` but non-interactive
+     * node will never receive `pointerdown` and therefore cannot start a drag.
+     */
+    public draggable: boolean = false;
+
     public readonly onPointerDown = new Signal<[InteractionEvent]>();
     public readonly onPointerUp = new Signal<[InteractionEvent]>();
     public readonly onPointerMove = new Signal<[InteractionEvent]>();
     public readonly onPointerOver = new Signal<[InteractionEvent]>();
     public readonly onPointerOut = new Signal<[InteractionEvent]>();
     public readonly onPointerTap = new Signal<[InteractionEvent]>();
+
+    /** Fired once when a drag gesture begins on this node. Does not bubble. */
+    public readonly onDragStart = new Signal<[InteractionEvent]>();
+    /** Fired on every pointer-move while this node is being dragged. Does not bubble. */
+    public readonly onDrag = new Signal<[InteractionEvent]>();
+    /** Fired when the drag gesture ends (pointer-up or cancel). Does not bubble. */
+    public readonly onDragEnd = new Signal<[InteractionEvent]>();
 
     private readonly _filters: Array<Filter> = [];
     private readonly _cacheBounds: Rectangle = new Rectangle();
@@ -294,6 +311,9 @@ export abstract class RenderNode extends SceneNode {
         this.onPointerOver.destroy();
         this.onPointerOut.destroy();
         this.onPointerTap.destroy();
+        this.onDragStart.destroy();
+        this.onDrag.destroy();
+        this.onDragEnd.destroy();
     }
 
     private _withMask(

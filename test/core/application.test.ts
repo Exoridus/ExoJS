@@ -147,8 +147,11 @@ describe('Application', () => {
             restart: jest.fn(),
         };
 
+        const interaction = { update: jest.fn() };
+
         rawApp['_status'] = ApplicationStatus.Running;
         rawApp['inputManager'] = inputManager;
+        rawApp['interaction'] = interaction;
         rawApp['tweens'] = tweens;
         rawApp['sceneManager'] = sceneManager;
         rawApp['_backend'] = backend;

@@ -7,7 +7,10 @@ export type InteractionEventType =
     | 'pointermove'
     | 'pointerover'
     | 'pointerout'
-    | 'pointertap';
+    | 'pointertap'
+    | 'dragstart'
+    | 'drag'
+    | 'dragend';
 
 export class InteractionEvent {
     public readonly type: InteractionEventType;

@@ -4,6 +4,52 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.14] - 2026-05-02
+
+Reshapes the interaction system around a per-frame tick and adds an
+opt-in drag-and-drop helper. The public per-node signal API from 0.6.13
+is unchanged; only event *cadence* and a new `draggable` flag.
+
+### Added
+
+- **`RenderNode.draggable: boolean`** (default `false`) — when set on
+  an interactive node, a `pointerdown` over the node starts a drag:
+  the framework auto-positions the node by tracking pointer movement
+  while preserving the grab offset, and routes all subsequent pointer
+  events for that pointer ID to the dragged node regardless of where
+  the pointer is. Drag bypasses hit-testing until release.
+- **Three drag signals on `RenderNode`**: `onDragStart`, `onDrag`,
+  `onDragEnd` — all `Signal<[InteractionEvent]>`. Drag events use new
+  event types `'dragstart' | 'drag' | 'dragend'` and dispatch directly
+  on the node (no bubble — parent containers don't receive child drag
+  events).
+- **`InteractionManager.update()`** — public per-frame tick called
+  automatically from `Application.update()` between `inputManager.update()`
+  and `tweens.update()`. Drains a per-pointer queue filled by signal
+  handlers; no-op when nothing happened that frame.
+
+### Changed
+
+- **InteractionManager moved from event-driven to tick-driven.**
+  Signal handlers now only enqueue flags into a per-pointer bitfield
+  and set a dirty flag; the actual hit-test + dispatch happens once
+  per frame in `update()`. Same observable behavior, but decoupled
+  from `InputManager` signal cadence — paves the way for spatial-index
+  integration.
+
+### Notes
+
+- **Drag uses native `setPointerCapture`** so movement keeps tracking
+  even when the pointer leaves canvas bounds. `pointercancel` /
+  `pointerleave` during a drag fires `onDragEnd` (no separate
+  cancellation flag in v1; check the event type if needed).
+- **Drag offset is in canvas-space.** Nodes whose parent containers
+  have non-identity transforms may feel off — v1 assumes top-level
+  draggable elements (UI panels, inventory items). True
+  parent-aware drag is a follow-up.
+- **`pointerover` / `pointerout` are suppressed during a drag** —
+  the dragged node stays "hovered" by definition.
+
 ## [0.6.13] - 2026-05-02
 
 Adds object-level pointer events. Scene-graph nodes are now first-class

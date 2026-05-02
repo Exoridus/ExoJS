@@ -205,6 +205,7 @@ export class Application {
             this.backend.resetStats();
 
             this.inputManager.update();
+            this.interaction.update();
             this.tweens.update(frameDelta.seconds);
             const runtimeView = (this.backend as Partial<{
                 view: Partial<{ update(deltaMilliseconds: number): unknown; }>;
