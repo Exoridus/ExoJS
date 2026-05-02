@@ -1,3 +1,4 @@
+import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { SceneManager } from './SceneManager';
 import { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
@@ -102,6 +103,7 @@ export class Application {
     private _frameRequest = 0;
     private _backendType: 'webgl2' | 'webgpu';
     private _backend: RenderBackend;
+    private _capabilities: Capabilities | null = null;
 
     public constructor(appSettings?: Partial<ApplicationOptions>) {
         this.options = {
@@ -154,12 +156,30 @@ export class Application {
         return this._backend;
     }
 
+    /**
+     * Resolved capabilities for the host browser. Available after
+     * {@link Application.start} resolves; reading before that throws.
+     * For pre-start access use {@link Capabilities.ready} directly.
+     */
+    public get capabilities(): Capabilities {
+        if (this._capabilities === null) {
+            throw new Error('Application.capabilities is unavailable before start() resolves. Use `await Capabilities.ready` for pre-start checks.');
+        }
+
+        return this._capabilities;
+    }
+
     public async start(scene: Scene): Promise<this> {
         if (this._status === ApplicationStatus.Stopped) {
             this._status = ApplicationStatus.Loading;
 
+            // Kick off capability detection in parallel with renderer init —
+            // both are mostly-async startup work, no point serializing them.
+            const capabilitiesPromise = Capabilities.ready;
+
             try {
                 await this.initializeRenderManager();
+                this._capabilities = await capabilitiesPromise;
                 await this.sceneManager.setScene(scene);
                 this._frameRequest = requestAnimationFrame(this._updateHandler);
                 this._frameClock.restart();
