@@ -4,6 +4,46 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.12] - 2026-05-02
+
+Adds swept (continuous) collision detection. Pure-math addition —
+prevents fast-moving shapes from tunneling through stationary
+colliders during a single frame's update.
+
+### Added
+
+- **`sweepRectangle(moving, deltaX, deltaY, target)`** — swept AABB
+  vs AABB via the slab method. Returns `SweptHit | null` with time
+  of impact `t ∈ [0..1]`, contact position `(x, y)`, and surface
+  normal `(normalX, normalY)`. Handles already-overlapping case
+  (returns `t = 0` with deepest-penetration axis as normal).
+- **`sweepCircleVsCircle(moving, deltaX, deltaY, target)`** —
+  closed-form quadratic solution.
+- **`sweepCircleVsRectangle(moving, deltaX, deltaY, target)`** —
+  v1 uses the simple expanded-AABB fallback (rectangle expanded
+  by circle radius, treated as AABB swept against zero-sized
+  moving circle). Over-collides slightly at corners — true
+  Minkowski corner rounding is V2.
+- **`sweepRectangleAgainst(moving, dx, dy, targets)`** /
+  **`sweepCircleAgainst(moving, dx, dy, targets)`** — earliest
+  hit against an array of static colliders. Broad-phase swept-AABB
+  early-out per target.
+- **`substepSweep(fromX, fromY, deltaX, deltaY, maxStepSize)`** —
+  generator that yields `(x, y, t)` snapshots along a movement
+  vector at fixed intervals. Use this for arbitrary shape pairs
+  that lack a closed-form swept test: iterate, place shape at
+  each snapshot, run discrete intersection.
+- **`SweptHit` interface** exported.
+
+### Notes
+
+- Pure math only — no Scene / RenderNode / Physics integration. User
+  code calls these in their game's update step.
+- v1 covers the common cases (AABB + Circle). Polygon-vs-anything
+  swept tests are V2 (use `substepSweep` as a fallback for now).
+- Returns the hit; does NOT compute response. Sliding / bouncing /
+  velocity adjustment is the caller's responsibility.
+
 ## [0.6.11] - 2026-05-02
 
 Adds a fluent-builder Tween / Animation system. Pure addition — no

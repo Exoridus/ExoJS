@@ -24,3 +24,4 @@ export * from './Random';
 export * from './Segment';
 export * from './Size';
 export * from './PolarVector';
+export * from './swept-collision';
