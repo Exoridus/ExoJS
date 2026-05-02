@@ -4,6 +4,59 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2026-05-02
+
+Touch / multi-touch / pointer support, fully unified — no separate
+Mouse or Touch class. All single-pointer input (mouse, touch, pen)
+goes through the existing `Pointer` class; multi-touch is just
+"multiple Pointers, each in its own slot". The `ChannelOffset.Pointers`
+block (256 slots, previously reserved but unused) is now populated
+with state for up to 16 simultaneous pointers — 16 channels per
+slot, 16 × 16 = 256 exact fit.
+
+### Added
+
+- **Per-pointer channel-buffer state.** Each active pointer fills 16
+  channels in its slot: `Active`, `X`, `Y`, `Pressure`, `Width`,
+  `Height`, `Twist`, `TiltX`, `TiltY`, `Left`, `Right`, `Middle`,
+  `IsMouse`, `IsTouch`, `IsPen`, `IsPrimary`. Coordinates and
+  contact-area are normalized to [0..1] against the canvas; tilt
+  is mapped from [-90..90°] to [0..1].
+- **`Pointer` namespace export** with channel-offset constants:
+  - Primary-pointer convenience: `Pointer.Active`, `Pointer.X`,
+    `Pointer.Y`, `Pointer.Pressure`, `Pointer.Left`, `Pointer.IsTouch`,
+    etc. — these mirror slot 0.
+  - Per-slot multi-pointer access: `Pointer.Slot0Active`,
+    `Pointer.Slot0X`, ..., `Pointer.Slot15Y`. Used for pinch / multi-
+    touch bindings ("both Slot0 and Slot1 active and IsTouch").
+  - Other per-slot channels are reachable via arithmetic
+    (`Pointer.X + slotIndex * pointerSlotSize + channelOffset`).
+- **Slot allocation.** Up to `maxPointers = 16` simultaneous
+  pointers. The 17th is silently dropped. Slots are reused on
+  pointer release in deterministic order (lowest free slot first),
+  so the primary pointer is reliably slot 0 in single-pointer
+  scenarios.
+- **`InputManager.onPinch / onRotate / onLongPress`** gesture
+  signals. Pinch and rotate fire when at least two `isTouch=true`
+  pointers move simultaneously; long-press fires when a pointer
+  has been held for ≥ 500 ms without exceeding
+  `pointerDistanceThreshold` movement. The dispatcher is an
+  internal `GestureRecognizer` class — not part of the public API.
+- **`maxPointers` and `pointerSlotSize`** constants exported from
+  the input module for callers that want to compute slot offsets.
+- **`canvas.style.touchAction = 'none'`** is set automatically by
+  `InputManager` so browser-default gestures (zoom, pan, double-tap
+  zoom, swipe-to-go-back) don't interfere with the game's own input
+  handling.
+
+### Internal / pre-existing fix
+
+- `Pointer` constructor now takes `channels: Float32Array` and
+  `slotIndex: number` (in addition to `event` and `canvas`) so it
+  can write its slice of the channel buffer. Constructed only by
+  `InputManager`; no documented or expected user-facing
+  constructor calls. Mentioned for completeness.
+
 ## [0.6.6] - 2026-05-02
 
 Pure bug-fix / hardening of the InputManager's event flow. No public

@@ -11,6 +11,92 @@ export const enum ChannelOffset {
     Gamepads = 2 * ChannelSize.Category,
 }
 
+/** Maximum number of simultaneous tracked pointers (mouse / touch / pen). */
+export const maxPointers = 16;
+
+/** Number of channel slots reserved per pointer. 16 pointers × 16 slots = 256 (fills the Pointers category exactly). */
+export const pointerSlotSize = 16;
+
+/**
+ * Channel offsets for unified pointer (mouse / touch / pen) state.
+ *
+ * The un-prefixed aliases (Active, X, Y, …) are identical to Slot0Active, Slot0X, Slot0Y, …
+ * and address the primary pointer (slot 0). Use Slot{N}Active / Slot{N}X / Slot{N}Y for
+ * multi-pointer (e.g. pinch) access. Other per-slot channels beyond Active/X/Y are reachable
+ * via arithmetic: `Pointer.X + slotIndex * pointerSlotSize + channelOffset` (Pointer.X = PointerChannel.X).
+ *
+ * @internal — accessed publicly via the `Pointer` class namespace (see Pointer.ts).
+ */
+export enum PointerChannel {
+    // --- Convenience aliases for the primary pointer (slot 0) ---
+    Active    = ChannelOffset.Pointers + 0,
+    X         = ChannelOffset.Pointers + 1,
+    Y         = ChannelOffset.Pointers + 2,
+    Pressure  = ChannelOffset.Pointers + 3,
+    Width     = ChannelOffset.Pointers + 4,
+    Height    = ChannelOffset.Pointers + 5,
+    Twist     = ChannelOffset.Pointers + 6,
+    TiltX     = ChannelOffset.Pointers + 7,
+    TiltY     = ChannelOffset.Pointers + 8,
+    Left      = ChannelOffset.Pointers + 9,
+    Right     = ChannelOffset.Pointers + 10,
+    Middle    = ChannelOffset.Pointers + 11,
+    IsMouse   = ChannelOffset.Pointers + 12,
+    IsTouch   = ChannelOffset.Pointers + 13,
+    IsPen     = ChannelOffset.Pointers + 14,
+    IsPrimary = ChannelOffset.Pointers + 15,
+
+    // --- Per-slot Active/X/Y for multi-pointer access ---
+    Slot0Active  = ChannelOffset.Pointers + 0 * 16 + 0,
+    Slot0X       = ChannelOffset.Pointers + 0 * 16 + 1,
+    Slot0Y       = ChannelOffset.Pointers + 0 * 16 + 2,
+    Slot1Active  = ChannelOffset.Pointers + 1 * 16 + 0,
+    Slot1X       = ChannelOffset.Pointers + 1 * 16 + 1,
+    Slot1Y       = ChannelOffset.Pointers + 1 * 16 + 2,
+    Slot2Active  = ChannelOffset.Pointers + 2 * 16 + 0,
+    Slot2X       = ChannelOffset.Pointers + 2 * 16 + 1,
+    Slot2Y       = ChannelOffset.Pointers + 2 * 16 + 2,
+    Slot3Active  = ChannelOffset.Pointers + 3 * 16 + 0,
+    Slot3X       = ChannelOffset.Pointers + 3 * 16 + 1,
+    Slot3Y       = ChannelOffset.Pointers + 3 * 16 + 2,
+    Slot4Active  = ChannelOffset.Pointers + 4 * 16 + 0,
+    Slot4X       = ChannelOffset.Pointers + 4 * 16 + 1,
+    Slot4Y       = ChannelOffset.Pointers + 4 * 16 + 2,
+    Slot5Active  = ChannelOffset.Pointers + 5 * 16 + 0,
+    Slot5X       = ChannelOffset.Pointers + 5 * 16 + 1,
+    Slot5Y       = ChannelOffset.Pointers + 5 * 16 + 2,
+    Slot6Active  = ChannelOffset.Pointers + 6 * 16 + 0,
+    Slot6X       = ChannelOffset.Pointers + 6 * 16 + 1,
+    Slot6Y       = ChannelOffset.Pointers + 6 * 16 + 2,
+    Slot7Active  = ChannelOffset.Pointers + 7 * 16 + 0,
+    Slot7X       = ChannelOffset.Pointers + 7 * 16 + 1,
+    Slot7Y       = ChannelOffset.Pointers + 7 * 16 + 2,
+    Slot8Active  = ChannelOffset.Pointers + 8 * 16 + 0,
+    Slot8X       = ChannelOffset.Pointers + 8 * 16 + 1,
+    Slot8Y       = ChannelOffset.Pointers + 8 * 16 + 2,
+    Slot9Active  = ChannelOffset.Pointers + 9 * 16 + 0,
+    Slot9X       = ChannelOffset.Pointers + 9 * 16 + 1,
+    Slot9Y       = ChannelOffset.Pointers + 9 * 16 + 2,
+    Slot10Active = ChannelOffset.Pointers + 10 * 16 + 0,
+    Slot10X      = ChannelOffset.Pointers + 10 * 16 + 1,
+    Slot10Y      = ChannelOffset.Pointers + 10 * 16 + 2,
+    Slot11Active = ChannelOffset.Pointers + 11 * 16 + 0,
+    Slot11X      = ChannelOffset.Pointers + 11 * 16 + 1,
+    Slot11Y      = ChannelOffset.Pointers + 11 * 16 + 2,
+    Slot12Active = ChannelOffset.Pointers + 12 * 16 + 0,
+    Slot12X      = ChannelOffset.Pointers + 12 * 16 + 1,
+    Slot12Y      = ChannelOffset.Pointers + 12 * 16 + 2,
+    Slot13Active = ChannelOffset.Pointers + 13 * 16 + 0,
+    Slot13X      = ChannelOffset.Pointers + 13 * 16 + 1,
+    Slot13Y      = ChannelOffset.Pointers + 13 * 16 + 2,
+    Slot14Active = ChannelOffset.Pointers + 14 * 16 + 0,
+    Slot14X      = ChannelOffset.Pointers + 14 * 16 + 1,
+    Slot14Y      = ChannelOffset.Pointers + 14 * 16 + 2,
+    Slot15Active = ChannelOffset.Pointers + 15 * 16 + 0,
+    Slot15X      = ChannelOffset.Pointers + 15 * 16 + 1,
+    Slot15Y      = ChannelOffset.Pointers + 15 * 16 + 2,
+}
+
 export enum Keyboard {
     Backspace = ChannelOffset.Keyboard + 8,
     Tab = ChannelOffset.Keyboard + 9,

@@ -1,4 +1,4 @@
-export * from './types';
+export { ChannelSize, ChannelOffset, maxPointers, pointerSlotSize, Keyboard } from './types';
 export * from './GamepadChannels';
 export * from './GamepadControl';
 export * from './GamepadMapping';

@@ -1,3 +1,38 @@
+// jsdom does not implement PointerEvent. Provide a minimal polyfill that
+// extends MouseEvent so pointer-event listeners receive the right properties.
+if (typeof globalThis.PointerEvent === 'undefined') {
+    class PointerEventPolyfill extends MouseEvent {
+        public readonly pointerId: number;
+        public readonly pointerType: string;
+        public readonly pressure: number;
+        public readonly width: number;
+        public readonly height: number;
+        public readonly tiltX: number;
+        public readonly tiltY: number;
+        public readonly twist: number;
+        public readonly isPrimary: boolean;
+
+        public constructor(type: string, init: PointerEventInit = {}) {
+            super(type, init);
+            this.pointerId   = init.pointerId   ?? 0;
+            this.pointerType = init.pointerType ?? '';
+            this.pressure    = init.pressure    ?? 0;
+            this.width       = init.width       ?? 1;
+            this.height      = init.height      ?? 1;
+            this.tiltX       = init.tiltX       ?? 0;
+            this.tiltY       = init.tiltY       ?? 0;
+            this.twist       = init.twist       ?? 0;
+            this.isPrimary   = init.isPrimary   ?? false;
+        }
+    }
+
+    Object.defineProperty(globalThis, 'PointerEvent', {
+        configurable: true,
+        writable: true,
+        value: PointerEventPolyfill,
+    });
+}
+
 const mockContext2d = {
     fillStyle: '',
     fillRect: () => undefined,

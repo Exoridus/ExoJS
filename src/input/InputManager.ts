@@ -3,10 +3,11 @@ import { Vector } from '@/math/Vector';
 import { Signal } from '@/core/Signal';
 import { getDistance } from '@/math/utils';
 import { stopEvent } from '@/core/utils';
-import { ChannelOffset, ChannelSize } from '@/input/types';
+import { ChannelOffset, ChannelSize, maxPointers } from '@/input/types';
 
 import { Gamepad } from './Gamepad';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
+import { GestureRecognizer } from './GestureRecognizer';
 import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDefinitions';
 
 import type { Application } from '@/core/Application';
@@ -34,6 +35,12 @@ export class InputManager {
     private readonly channelsPressed: Array<number> = [];
     private readonly channelsReleased: Array<number> = [];
     private readonly gamepadDefinitions: Array<GamepadDefinition>;
+
+    // Slot allocation for unified pointer tracking (mouse / touch / pen).
+    private readonly pointerSlots = new Map<number, number>(); // pointerId → slotIndex
+    private readonly freeSlots: Array<number> = Array.from({ length: maxPointers }, (_, i) => i);
+
+    private readonly gestureRecognizer: GestureRecognizer;
 
     private canvasFocusedValue: boolean;
     private pointerDistanceThreshold: number;
@@ -66,6 +73,13 @@ export class InputManager {
     public readonly onGamepadDisconnected = new Signal<[Gamepad, Array<Gamepad>]>();
     public readonly onGamepadUpdated = new Signal<[Gamepad, Array<Gamepad>]>();
 
+    /** Fires on every two-touch-pointer move where the distance between them changed. `scale` > 1 = spreading, < 1 = pinching. */
+    public readonly onPinch = new Signal<[scale: number, center: Vector]>();
+    /** Fires on every two-touch-pointer move where the angle between them changed. `angleDelta` is in radians. */
+    public readonly onRotate = new Signal<[angleDelta: number, center: Vector]>();
+    /** Fires when a pointer has been held without significant movement for ≥ 500 ms. */
+    public readonly onLongPress = new Signal<[pointer: Pointer]>();
+
     public constructor(app: Application) {
         const { gamepadDefinitions = [], pointerDistanceThreshold } = app.options;
 
@@ -73,6 +87,18 @@ export class InputManager {
         this.canvasFocusedValue = document.activeElement === this.canvas;
         this.pointerDistanceThreshold = pointerDistanceThreshold;
         this.gamepadDefinitions = [...gamepadDefinitions, ...builtInGamepadDefinitions];
+
+        // Disable the browser's default pan/zoom/double-tap-zoom on touch devices so
+        // pointer events reach the canvas without being swallowed by the browser's
+        // native touch gestures.
+        this.canvas.style.touchAction = 'none';
+
+        this.gestureRecognizer = new GestureRecognizer(
+            pointerDistanceThreshold,
+            this.onPinch,
+            this.onRotate,
+            this.onLongPress,
+        );
 
         this.addEventListeners();
     }
@@ -148,6 +174,7 @@ export class InputManager {
 
     public destroy(): void {
         this.removeEventListeners();
+        this.gestureRecognizer.destroy();
 
         for (const pointer of Object.values(this.pointers)) {
             pointer.destroy();
@@ -162,6 +189,8 @@ export class InputManager {
         this.gamepadsValue.length = 0;
         this.channelsPressed.length = 0;
         this.channelsReleased.length = 0;
+        this.pointerSlots.clear();
+        this.freeSlots.length = 0;
         this.wheelOffset.destroy();
         this.flags.destroy();
 
@@ -179,6 +208,35 @@ export class InputManager {
         this.onGamepadConnected.destroy();
         this.onGamepadDisconnected.destroy();
         this.onGamepadUpdated.destroy();
+        this.onPinch.destroy();
+        this.onRotate.destroy();
+        this.onLongPress.destroy();
+    }
+
+    private _assignSlot(pointerId: number): number | null {
+        if (this.pointerSlots.has(pointerId)) {
+            return this.pointerSlots.get(pointerId)!;
+        }
+
+        if (this.freeSlots.length === 0) {
+            return null; // All 16 slots occupied — silently drop.
+        }
+
+        const slot = this.freeSlots.shift()!;
+
+        this.pointerSlots.set(pointerId, slot);
+
+        return slot;
+    }
+
+    private _releaseSlot(pointerId: number): void {
+        const slot = this.pointerSlots.get(pointerId);
+
+        if (slot !== undefined) {
+            this.pointerSlots.delete(pointerId);
+            // Push to the front so slot 0 is recovered first, keeping allocation predictable.
+            this.freeSlots.unshift(slot);
+        }
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -216,19 +274,41 @@ export class InputManager {
     }
 
     private handlePointerOver(event: PointerEvent): void {
-        this.pointers[event.pointerId] = new Pointer(event, this.canvas);
+        const slot = this._assignSlot(event.pointerId);
+
+        if (slot === null) {
+            return; // 17th+ simultaneous pointer — silently drop.
+        }
+
+        this.pointers[event.pointerId] = new Pointer(event, this.canvas, this.channels, slot);
         this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
     private handlePointerLeave(event: PointerEvent): void {
-        this.pointers[event.pointerId].handleLeave(event);
+        const pointer = this.pointers[event.pointerId];
+
+        if (!pointer) {
+            return;
+        }
+
+        pointer.handleLeave(event);
+        this.gestureRecognizer.onPointerLeave(pointer);
+        this._releaseSlot(event.pointerId);
         this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
     private handlePointerDown(event: PointerEvent): void {
         this.canvas.focus();
         this.canvasFocusedValue = true;
-        this.pointers[event.pointerId].handlePress(event);
+
+        const pointer = this.pointers[event.pointerId];
+
+        if (!pointer) {
+            return;
+        }
+
+        pointer.handlePress(event);
+        this.gestureRecognizer.onPointerDown(pointer);
         this.flags.push(InputManagerFlag.PointerUpdate);
 
         // preventDefault stops native drag / text-selection;
@@ -239,19 +319,41 @@ export class InputManager {
     }
 
     private handlePointerMove(event: PointerEvent): void {
-        this.pointers[event.pointerId].handleMove(event);
+        const pointer = this.pointers[event.pointerId];
+
+        if (!pointer) {
+            return;
+        }
+
+        pointer.handleMove(event);
+        this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
         this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
     private handlePointerUp(event: PointerEvent): void {
-        this.pointers[event.pointerId].handleRelease(event);
+        const pointer = this.pointers[event.pointerId];
+
+        if (!pointer) {
+            return;
+        }
+
+        pointer.handleRelease(event);
+        this.gestureRecognizer.onPointerUp(pointer);
         this.flags.push(InputManagerFlag.PointerUpdate);
 
         stopEvent(event);
     }
 
     private handlePointerCancel(event: PointerEvent): void {
-        this.pointers[event.pointerId].handleCancel(event);
+        const pointer = this.pointers[event.pointerId];
+
+        if (!pointer) {
+            return;
+        }
+
+        pointer.handleCancel(event);
+        this.gestureRecognizer.onPointerCancel(pointer);
+        this._releaseSlot(event.pointerId);
         this.flags.push(InputManagerFlag.PointerUpdate);
     }
 
