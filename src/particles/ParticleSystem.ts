@@ -117,6 +117,7 @@ export class ParticleSystem extends Drawable {
         this._updateVertices = true;
 
         this.localBounds.set(0, 0, frame.width, frame.height);
+        this._invalidateBoundsCascade();
 
         return this;
     }

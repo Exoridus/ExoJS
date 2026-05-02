@@ -84,6 +84,9 @@ export class Container extends RenderNode {
         this.markSortDirty();
         this.invalidateCache();
 
+        child._invalidateSubtreeTransform();
+        this._invalidateBoundsCascade();
+
         return this;
     }
 
@@ -149,7 +152,10 @@ export class Container extends RenderNode {
         removeArrayItems(this._children, index, 1);
 
         if (child && child.parentNode === this) {
+            // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
+            this._invalidateBoundsCascade();
             child.parentNode = null;
+            child._invalidateSubtreeTransform();
         }
 
         this.markSortDirty();
@@ -165,11 +171,17 @@ export class Container extends RenderNode {
             throw new Error('Values are outside the acceptable range.');
         }
 
+        // Cascade bounds before clearing any parent references.
+        if (range > 0) {
+            this._invalidateBoundsCascade();
+        }
+
         for (let i = begin; i < end; i++) {
             const child = this._children[i];
 
             if (child && child.parentNode === this) {
                 child.parentNode = null;
+                child._invalidateSubtreeTransform();
             }
         }
 
@@ -204,6 +216,12 @@ export class Container extends RenderNode {
 
     public override contains(x: number, y: number): boolean {
         return this._children.some((child) => child.contains(x, y));
+    }
+
+    protected override _invalidateChildrenTransform(): void {
+        for (const child of this._children) {
+            child._invalidateSubtreeTransform();
+        }
     }
 
     public override updateBounds(): this {

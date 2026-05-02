@@ -38,6 +38,8 @@ enum SceneNodeTransformFlags {
         | SceneNodeTransformFlags.Scaling
         | SceneNodeTransformFlags.Origin,
     TransformInverse = 1 << 4,
+    GlobalTransform = 1 << 8,  // own _globalTransform is stale
+    BoundsRect = 1 << 9,       // own _bounds is stale
 }
 
 export class SceneNode implements Collidable {
@@ -45,7 +47,11 @@ export class SceneNode implements Collidable {
     public readonly collisionType: CollisionType = CollisionType.SceneNode;
 
     public readonly flags: Flags<SceneNodeTransformFlags> =
-        new Flags<SceneNodeTransformFlags>(SceneNodeTransformFlags.Transform);
+        new Flags<SceneNodeTransformFlags>(
+            SceneNodeTransformFlags.Transform
+            | SceneNodeTransformFlags.GlobalTransform
+            | SceneNodeTransformFlags.BoundsRect
+        );
 
     protected _bounds = new Bounds();
     protected _transform: Matrix = new Matrix();
@@ -284,8 +290,10 @@ export class SceneNode implements Collidable {
     }
 
     public getBounds(): Rectangle {
-        this.updateParentTransform();
-        this.updateBounds();
+        if (this.flags.has(SceneNodeTransformFlags.BoundsRect)) {
+            this.updateBounds();
+            this.flags.remove(SceneNodeTransformFlags.BoundsRect);
+        }
 
         return this._bounds.getRect();
     }
@@ -308,10 +316,14 @@ export class SceneNode implements Collidable {
     }
 
     public getGlobalTransform(): Matrix {
-        this._globalTransform.copy(this.getTransform());
+        if (this.flags.has(SceneNodeTransformFlags.GlobalTransform)) {
+            this._globalTransform.copy(this.getTransform());
 
-        if (this._parentNode) {
-            this._globalTransform.combine(this._parentNode.getGlobalTransform());
+            if (this._parentNode) {
+                this._globalTransform.combine(this._parentNode.getGlobalTransform());
+            }
+
+            this.flags.remove(SceneNodeTransformFlags.GlobalTransform);
         }
 
         return this._globalTransform;
@@ -381,20 +393,48 @@ export class SceneNode implements Collidable {
         this._anchor.destroy();
     }
 
+    /** Mark own + all descendants' GlobalTransform + Bounds dirty. */
+    public _invalidateSubtreeTransform(): void {
+        this.flags.push(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
+        this._invalidateChildrenTransform();
+    }
+
+    /** Hook for Container to override. Default: no-op (leaf node has no children). */
+    protected _invalidateChildrenTransform(): void {
+        // overridden by Container
+    }
+
+    /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
+    public _invalidateBoundsCascade(): void {
+        this.flags.push(SceneNodeTransformFlags.BoundsRect);
+
+        if (this._parentNode) {
+            this._parentNode._invalidateBoundsCascade();
+        }
+    }
+
     private _setPositionDirty(): void {
         this.flags.push(SceneNodeTransformFlags.Translation);
+        this._invalidateSubtreeTransform();
+        this._invalidateBoundsCascade();
     }
 
     private _setRotationDirty(): void {
         this.flags.push(SceneNodeTransformFlags.Rotation);
+        this._invalidateSubtreeTransform();
+        this._invalidateBoundsCascade();
     }
 
     private _setScalingDirty(): void {
         this.flags.push(SceneNodeTransformFlags.Scaling);
+        this._invalidateSubtreeTransform();
+        this._invalidateBoundsCascade();
     }
 
     private _setOriginDirty(): void {
         this.flags.push(SceneNodeTransformFlags.Origin);
+        this._invalidateSubtreeTransform();
+        this._invalidateBoundsCascade();
     }
 
     private _updateOrigin(): void {

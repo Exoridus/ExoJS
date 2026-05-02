@@ -144,6 +144,7 @@ export class Mesh extends Drawable {
         }
 
         this.localBounds.set(minX, minY, maxX - minX, maxY - minY);
+        this._invalidateBoundsCascade();
 
         return this;
     }

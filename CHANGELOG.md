@@ -4,6 +4,56 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.19] - 2026-05-02
+
+Caches global transforms, world-space bounds, sprite vertices, and
+sprite normals via dirty flags. Closes four hot-path recomputation
+gaps that the audit identified — `getGlobalTransform()` and
+`getBounds()` were O(depth) per call, called many times per frame
+from sprite rendering, hit-testing, frustum culling, and collision
+detection. Pure performance change — no public API surface changes.
+
+### Performance
+
+- **`SceneNode.getGlobalTransform()`** is now cache-hit-O(1) instead
+  of O(depth). The cached `_globalTransform` is invalidated on
+  position / rotation / scale / origin change, on parent change
+  (add/remove from a Container), and propagated to all descendants
+  on parent transform changes.
+- **`SceneNode.getBounds()`** is now cache-hit-O(1). Invalidated
+  alongside global transform, plus on local-bounds mutations
+  (`Sprite.setTextureFrame`, `Mesh.recomputeLocalBounds`,
+  `ParticleSystem.setTextureFrame`). Local-bounds changes also
+  cascade up to ancestor Containers' bounds.
+- **`Sprite.vertices`** getter caches the eight world-space vertex
+  components. Recomputes only when the sprite's transform or local
+  bounds change. Previously had a `// todo cache this` comment.
+- **`Sprite.getNormals()`** returns a stable `[Vector, Vector,
+  Vector, Vector]` array. The four `Vector` instances are reused
+  across calls; previously each call allocated four new `Vector`s.
+  Recomputes only when vertices change. Reduces GC pressure in
+  collision-detection hot paths.
+
+### Notes
+
+- `Sprite.getNormals()` now returns the **same array reference** on
+  every call. Callers that previously stored the result and expected
+  it to remain stable across mutations must re-read after any
+  transform change. This is a behavior refinement; no caller in the
+  codebase relied on the prior allocation pattern.
+- Invalidation propagation walks the scene subtree on position /
+  rotation / scale / origin changes. For very large UI trees
+  (thousands of nested children), this is O(descendants) per setter
+  call. Setters are typically called on a small number of nodes per
+  frame, so the cumulative cost is dominated by the savings on
+  the read path. Generation-counter invalidation is a possible
+  future optimization if profiling shows the walk dominates.
+- New flag bits: `SceneNodeTransformFlags.GlobalTransform` (1<<8),
+  `SceneNodeTransformFlags.BoundsRect` (1<<9),
+  `SpriteFlags.Vertices` (0x400), `SpriteFlags.Normals` (0x800).
+  Non-overlapping with existing flags so they share the same
+  `Flags<T>` instance.
+
 ## [0.6.18] - 2026-05-02
 
 Fixes a long-standing audio volume-ramp bug.

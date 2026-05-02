@@ -17,6 +17,8 @@ export enum SpriteFlags {
     BoundingBox = 0x20,
     TextureCoords = 0x40,
     VertexTint = 0x80,
+    Vertices = 0x400,
+    Normals  = 0x800,
 }
 
 export class Sprite extends Drawable {
@@ -25,9 +27,15 @@ export class Sprite extends Drawable {
     private _textureFrame: Rectangle = new Rectangle();
     private _vertices: Float32Array = new Float32Array(8);
     private _texCoords: Uint32Array = new Uint32Array(4);
+    private readonly _normals: [Vector, Vector, Vector, Vector] = [
+        new Vector(), new Vector(), new Vector(), new Vector(),
+    ];
 
     public constructor(texture: Texture | RenderTexture | null) {
         super();
+
+        // Mark vertices and normals dirty from the start.
+        this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
 
         if (texture !== null) {
             this.setTexture(texture);
@@ -66,22 +74,25 @@ export class Sprite extends Drawable {
         this.scale.y = (value / this._textureFrame.height);
     }
 
-    // todo cache this
     public get vertices(): Float32Array {
-        const { left, top, right, bottom } = this.getLocalBounds();
-        const { a, b, x, c, d, y } = this.getGlobalTransform();
+        if (this.flags.has(SpriteFlags.Vertices)) {
+            const { left, top, right, bottom } = this.getLocalBounds();
+            const { a, b, x, c, d, y } = this.getGlobalTransform();
 
-        this._vertices[0] = (left * a) + (top * b) + x;
-        this._vertices[1] = (left * c) + (top * d) + y;
+            this._vertices[0] = (left * a) + (top * b) + x;
+            this._vertices[1] = (left * c) + (top * d) + y;
 
-        this._vertices[2] = (right * a) + (top * b) + x;
-        this._vertices[3] = (right * c) + (top * d) + y;
+            this._vertices[2] = (right * a) + (top * b) + x;
+            this._vertices[3] = (right * c) + (top * d) + y;
 
-        this._vertices[4] = (right * a) + (bottom * b) + x;
-        this._vertices[5] = (right * c) + (bottom * d) + y;
+            this._vertices[4] = (right * a) + (bottom * b) + x;
+            this._vertices[5] = (right * c) + (bottom * d) + y;
 
-        this._vertices[6] = (left * a) + (bottom * b) + x;
-        this._vertices[7] = (left * c) + (bottom * d) + y;
+            this._vertices[6] = (left * a) + (bottom * b) + x;
+            this._vertices[7] = (left * c) + (bottom * d) + y;
+
+            this.flags.remove(SpriteFlags.Vertices);
+        }
 
         return this._vertices;
     }
@@ -142,6 +153,7 @@ export class Sprite extends Drawable {
         this._textureFrame.copy(frame);
         this.flags.push(SpriteFlags.TextureCoords);
         this.localBounds.set(0, 0, frame.width, frame.height);
+        this._invalidateBoundsCascade();
 
         if (resetSize) {
             this.width = frame.width;
@@ -164,16 +176,19 @@ export class Sprite extends Drawable {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    // todo cache this
     public override getNormals(): Array<Vector> {
-        const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
+        if (this.flags.has(SpriteFlags.Normals)) {
+            const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
 
-        return [
-            new Vector(x2 - x1, y2 - y1).rperp().normalize(),
-            new Vector(x3 - x2, y3 - y2).rperp().normalize(),
-            new Vector(x4 - x3, y4 - y3).rperp().normalize(),
-            new Vector(x1 - x4, y1 - y4).rperp().normalize(),
-        ];
+            this._normals[0].set(x2 - x1, y2 - y1).rperp().normalize();
+            this._normals[1].set(x3 - x2, y3 - y2).rperp().normalize();
+            this._normals[2].set(x4 - x3, y4 - y3).rperp().normalize();
+            this._normals[3].set(x1 - x4, y1 - y4).rperp().normalize();
+
+            this.flags.remove(SpriteFlags.Normals);
+        }
+
+        return this._normals;
     }
 
     public override project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -207,8 +222,22 @@ export class Sprite extends Drawable {
             && (dotB > 0) && (dotB <= lenB);
     }
 
+    public override _invalidateSubtreeTransform(): void {
+        super._invalidateSubtreeTransform();
+        this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
+    }
+
+    public override _invalidateBoundsCascade(): void {
+        super._invalidateBoundsCascade();
+        this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
+    }
+
     public override destroy(): void {
         super.destroy();
+
+        for (const normal of this._normals) {
+            normal.destroy();
+        }
 
         this._textureFrame.destroy();
         this._texture = null;
