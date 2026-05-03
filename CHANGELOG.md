@@ -4,6 +4,60 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.20] - 2026-05-02
+
+Adds `view.follow(SceneNode)`, audio fade helpers, and focus / visibility
+infrastructure. Pure additive — no behavior changes for existing code.
+
+### Added
+
+- **`view.follow()` accepts `SceneNode`** in addition to `{x, y}`
+  targets. When the target is a SceneNode, the follow tracks its
+  **world-space position** via `getGlobalTransform()`, so following a
+  Sprite nested under a translated/rotated Container works correctly.
+  New exported type `ViewFollowTarget = SceneNode | { x: number; y:
+  number } | null`.
+- **Audio fade helpers on `AbstractMedia`** — both `Sound` and `Music`
+  inherit:
+  - `fadeIn(durationMs): this` — ramps gain from 0 to current volume.
+    Auto-plays if paused. Cancels any in-flight fade.
+  - `fadeOut(durationMs, options?: { stopAfter?: boolean }): this` —
+    ramps gain to 0. By default calls `pause()` after the fade
+    completes; pass `{ stopAfter: false }` to keep playing at zero
+    volume.
+  - Both return `this` for chaining and use Web Audio's
+    `linearRampToValueAtTime` for sample-accurate fades.
+- **`Application.canvasFocused: boolean`** — passthrough getter for the
+  InputManager's existing canvas focus state.
+- **`Application.documentVisible: boolean`** — tracks
+  `document.visibilityState`, updated on `visibilitychange`.
+- **`Application.onCanvasFocusChange: Signal<[focused: boolean]>`** —
+  fires when the canvas gains or loses focus (canvas blur,
+  click-outside, alt-tab from canvas-focused state).
+- **`Application.onVisibilityChange: Signal<[visible: boolean]>`** —
+  fires when the page tab becomes hidden or visible (minimize, switch
+  tab, etc.).
+- **`Application.pauseOnHidden: boolean`** (default `false`) — when
+  `true`, `app.update()` skips the entire frame body while
+  `documentVisible` is `false`. `requestAnimationFrame` keeps
+  ticking (already throttled by the browser when hidden) so the loop
+  resumes seamlessly when the page becomes visible again.
+- **`InputManager.onCanvasFocusChange`** — same signal also exposed
+  here for users who only need input-side focus tracking without
+  reaching for the Application.
+
+### Notes
+
+- Window-level `blur` / `focus` events are intentionally not exposed as
+  separate signals — `document.visibilitychange` is the better-defined
+  API and covers the common cases.
+- `crossFade()` as a top-level helper was deferred — compose
+  `a.fadeOut(ms)` + `b.fadeIn(ms)` manually until the AudioMixer lands.
+- `view.follow()` continues to use lerp-based smoothing for continuous
+  tracking. Scripted one-shot camera moves (zoom-to-room,
+  pan-to-cutscene) should use the existing Tween system on
+  `view.center` for full easing-curve support.
+
 ## [0.6.19] - 2026-05-02
 
 Caches global transforms, world-space bounds, sprite vertices, and

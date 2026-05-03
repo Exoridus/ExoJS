@@ -103,6 +103,78 @@ export abstract class AbstractMedia implements Media {
     public abstract setTime(time: number): this;
     public abstract setMuted(muted: boolean): this;
 
+    protected abstract _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null;
+
+    private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
+
+    private _clearScheduledStop(): void {
+        if (this._scheduledStopId !== null) {
+            clearTimeout(this._scheduledStopId);
+            this._scheduledStopId = null;
+        }
+    }
+
+    public fadeIn(durationMs: number): this {
+        this._clearScheduledStop();
+
+        if (durationMs <= 0) {
+            if (this.paused) this.play();
+
+            return this;
+        }
+
+        const setup = this._getAudioSetup();
+
+        if (!setup) return this;
+
+        if (this.paused) this.play();
+
+        const ctx = setup.audioContext;
+        const target = this.muted ? 0 : this._volume;
+        const node = setup.gainNode;
+
+        node.gain.cancelScheduledValues(ctx.currentTime);
+        node.gain.setValueAtTime(0, ctx.currentTime);
+        node.gain.linearRampToValueAtTime(target, ctx.currentTime + durationMs / 1000);
+
+        return this;
+    }
+
+    public fadeOut(durationMs: number, options: { stopAfter?: boolean } = {}): this {
+        const stopAfter = options.stopAfter ?? true;
+
+        if (durationMs <= 0) {
+            if (stopAfter) this.pause();
+
+            return this;
+        }
+
+        const setup = this._getAudioSetup();
+
+        if (!setup) {
+            if (stopAfter) this.pause();
+
+            return this;
+        }
+
+        const ctx = setup.audioContext;
+        const node = setup.gainNode;
+
+        node.gain.cancelScheduledValues(ctx.currentTime);
+        node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
+        node.gain.linearRampToValueAtTime(0, ctx.currentTime + durationMs / 1000);
+
+        if (stopAfter) {
+            this._clearScheduledStop();
+            this._scheduledStopId = setTimeout(() => {
+                this._scheduledStopId = null;
+                this.pause();
+            }, durationMs);
+        }
+
+        return this;
+    }
+
     public stop(options?: Partial<PlaybackOptions>): this {
         this.pause(options);
         this.currentTime = 0;
@@ -141,6 +213,7 @@ export abstract class AbstractMedia implements Media {
     }
 
     public destroy(): void {
+        this._clearScheduledStop();
         this.stop();
 
         this.onStart.destroy();

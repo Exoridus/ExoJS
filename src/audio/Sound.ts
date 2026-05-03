@@ -375,6 +375,10 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
+    protected override _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null {
+        return this._audioSetup;
+    }
+
     public override destroy(): void {
         super.destroy();
 

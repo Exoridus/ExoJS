@@ -223,6 +223,7 @@ exports[`root index type-level export inventory all exported symbols with kind a
   "View: class",
   "ViewFlags: enum",
   "ViewFollowOptions: interface",
+  "ViewFollowTarget: type alias",
   "ViewShakeOptions: interface",
   "VoronoiRegion: const enum",
   "VttAsset: class",

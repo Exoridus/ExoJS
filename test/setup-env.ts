@@ -77,6 +77,9 @@ class MockAudioContext {
             disconnect: () => undefined,
             gain: {
                 setTargetAtTime: () => undefined,
+                cancelScheduledValues: () => undefined,
+                setValueAtTime: () => undefined,
+                linearRampToValueAtTime: () => undefined,
                 value: 1,
             },
         } as unknown as GainNode;

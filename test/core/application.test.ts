@@ -76,6 +76,7 @@ const loadApplicationHarness = (options: {
     const inputManager = {
         update: jest.fn(),
         destroy: jest.fn(),
+        onCanvasFocusChange: { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn() },
     };
     const loader = {
         destroy: jest.fn(),

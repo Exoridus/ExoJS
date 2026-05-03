@@ -54,8 +54,9 @@ const loadOnFrameHarness = (): OnFrameTestHarness => {
     jest.doMock('@/resources/Loader', () => ({
         Loader: jest.fn(() => ({ destroy: jest.fn() })),
     }));
+    const onCanvasFocusChange = { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn() };
     jest.doMock('@/input/InputManager', () => ({
-        InputManager: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn(), onKeyDown })),
+        InputManager: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn(), onKeyDown, onCanvasFocusChange })),
     }));
     jest.doMock('@/input/InteractionManager', () => ({
         InteractionManager: jest.fn(() => ({

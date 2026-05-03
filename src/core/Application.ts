@@ -95,6 +95,9 @@ export class Application {
     public readonly tweens: TweenManager = new TweenManager();
     public readonly onResize = new Signal<[number, number, Application]>();
     public readonly onFrame = new Signal<[Time]>();
+    public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
+    public readonly onVisibilityChange = new Signal<[visible: boolean]>();
+    public pauseOnHidden: boolean = false;
 
     private readonly _updateHandler: () => void;
     private readonly _startupClock: Clock = new Clock();
@@ -107,6 +110,8 @@ export class Application {
     private _backendType: 'webgl2' | 'webgpu';
     private _backend: RenderBackend;
     private _capabilities: Capabilities | null = null;
+    private _documentVisible: boolean = true;
+    private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
 
     public constructor(appSettings?: Partial<ApplicationOptions>) {
         this.options = {
@@ -134,6 +139,15 @@ export class Application {
         this._updateHandler = this.update.bind(this);
 
         this._startupClock.start();
+
+        if (typeof document !== 'undefined') {
+            this._documentVisible = document.visibilityState === 'visible';
+            document.addEventListener('visibilitychange', this._visibilityChangeHandler);
+        }
+
+        this.inputManager.onCanvasFocusChange.add((focused) => {
+            this.onCanvasFocusChange.dispatch(focused);
+        });
     }
 
     public get status(): ApplicationStatus {
@@ -173,6 +187,14 @@ export class Application {
         return this._capabilities;
     }
 
+    public get canvasFocused(): boolean {
+        return this.inputManager.canvasFocused;
+    }
+
+    public get documentVisible(): boolean {
+        return this._documentVisible;
+    }
+
     public async start(scene: Scene): Promise<this> {
         if (this._status === ApplicationStatus.Stopped) {
             this._status = ApplicationStatus.Loading;
@@ -200,6 +222,12 @@ export class Application {
 
     public update(): this {
         if (this._status === ApplicationStatus.Running) {
+            if (this.pauseOnHidden && !this._documentVisible) {
+                this._frameRequest = requestAnimationFrame(this._updateHandler);
+
+                return this;
+            }
+
             const frameDelta = this._frameClock.elapsedTime;
             const frameStart = performance.now();
 
@@ -251,6 +279,10 @@ export class Application {
     }
 
     public destroy(): void {
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
+        }
+
         this.stop();
         this.loader.destroy();
         this.interaction.destroy();
@@ -263,6 +295,17 @@ export class Application {
         this._frameClock.destroy();
         this.onResize.destroy();
         this.onFrame.destroy();
+        this.onCanvasFocusChange.destroy();
+        this.onVisibilityChange.destroy();
+    }
+
+    private _onDocumentVisibilityChange(): void {
+        const visible = document.visibilityState === 'visible';
+
+        if (visible !== this._documentVisible) {
+            this._documentVisible = visible;
+            this.onVisibilityChange.dispatch(visible);
+        }
     }
 
     private resolveInitialBackendType(): 'webgl2' | 'webgpu' {

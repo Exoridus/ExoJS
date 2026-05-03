@@ -5,6 +5,7 @@ import { clamp, degreesToRadians, trimRotation } from '@/math/utils';
 import { ObservableSize } from '@/math/ObservableSize';
 import { Bounds } from '@/core/Bounds';
 import { Flags } from '@/math/Flags';
+import { SceneNode } from '@/core/SceneNode';
 
 export enum ViewFlags {
     None = 0x00,
@@ -18,6 +19,8 @@ export enum ViewFlags {
     TextureCoords = 0x40,
     VertexTint = 0x80,
 }
+
+export type ViewFollowTarget = SceneNode | { x: number; y: number } | null;
 
 export interface ViewFollowOptions {
     lerp?: number;
@@ -44,7 +47,7 @@ export class View {
     private _zoomLevel = 1;
     private _zoomBaseWidth: number;
     private _zoomBaseHeight: number;
-    private _followTarget: { x: number; y: number; } | null = null;
+    private _followTarget: ViewFollowTarget = null;
     private _followLerp = 1;
     private _followOffsetX = 0;
     private _followOffsetY = 0;
@@ -188,7 +191,7 @@ export class View {
         return this.setZoom(Math.max(0.0001, this._zoomLevel - amount));
     }
 
-    public follow(target: { x: number; y: number; } | null, options: ViewFollowOptions = {}): this {
+    public follow(target: ViewFollowTarget, options: ViewFollowOptions = {}): this {
         this._followTarget = target;
         this._followLerp = clamp(options.lerp ?? 1, 0, 1);
         this._followOffsetX = options.offsetX ?? 0;
@@ -402,8 +405,17 @@ export class View {
             return;
         }
 
-        const targetX = this._followTarget.x + this._followOffsetX;
-        const targetY = this._followTarget.y + this._followOffsetY;
+        let targetX = 0;
+        let targetY = 0;
+
+        if (this._followTarget instanceof SceneNode) {
+            const m = this._followTarget.getGlobalTransform();
+            targetX = m.x + this._followOffsetX;
+            targetY = m.y + this._followOffsetY;
+        } else {
+            targetX = this._followTarget.x + this._followOffsetX;
+            targetY = this._followTarget.y + this._followOffsetY;
+        }
 
         if (this._followLerp >= 1) {
             this.setCenter(targetX, targetY);

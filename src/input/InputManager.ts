@@ -58,6 +58,7 @@ export class InputManager {
     private readonly pointerUpHandler = this.handlePointerUp.bind(this);
     private readonly pointerCancelHandler = this.handlePointerCancel.bind(this);
 
+    public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
     public readonly onPointerEnter = new Signal<[Pointer]>();
     public readonly onPointerLeave = new Signal<[Pointer]>();
     public readonly onPointerDown = new Signal<[Pointer]>();
@@ -211,6 +212,7 @@ export class InputManager {
         this.onPinch.destroy();
         this.onRotate.destroy();
         this.onLongPress.destroy();
+        this.onCanvasFocusChange.destroy();
     }
 
     private _assignSlot(pointerId: number): number | null {
@@ -369,17 +371,26 @@ export class InputManager {
     }
 
     private handleCanvasFocus(): void {
-        this.canvasFocusedValue = true;
+        if (!this.canvasFocusedValue) {
+            this.canvasFocusedValue = true;
+            this.onCanvasFocusChange.dispatch(true);
+        }
     }
 
     private handleCanvasBlur(): void {
-        this.canvasFocusedValue = false;
-        this.releaseAllKeyboardChannels();
+        if (this.canvasFocusedValue) {
+            this.canvasFocusedValue = false;
+            this.releaseAllKeyboardChannels();
+            this.onCanvasFocusChange.dispatch(false);
+        }
     }
 
     private handleWindowBlur(): void {
-        this.canvasFocusedValue = false;
-        this.releaseAllKeyboardChannels();
+        if (this.canvasFocusedValue) {
+            this.canvasFocusedValue = false;
+            this.releaseAllKeyboardChannels();
+            this.onCanvasFocusChange.dispatch(false);
+        }
     }
 
     /**
