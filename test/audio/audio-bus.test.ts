@@ -87,6 +87,7 @@ const spyOnBusCreation = (): BusSpy => {
 class StubFilter implements AudioFilter {
     public readonly inputNode: AudioNode;
     public readonly outputNode: AudioNode;
+    public readonly ready: Promise<void> = Promise.resolve();
     public destroyed = false;
 
     public constructor() {

@@ -5,3 +5,4 @@ export * from './DelayFilter';
 export * from './ReverbFilter';
 export * from './EqualizerFilter';
 export * from './DuckingFilter';
+export { WorkletFilter } from './WorkletFilter';

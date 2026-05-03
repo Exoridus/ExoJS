@@ -4,6 +4,71 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-05-04
+
+Adds an AudioWorklet foundation and migrates `DuckingFilter` from
+CPU-thread `setInterval(60Hz)` polling to sample-accurate audio-thread
+DSP. Establishes the architecture for future custom-DSP filters
+(Chorus, Pitch-Shift, Vocoder, etc.) without shipping any new effect
+filters in this release.
+
+### Added
+
+- **`registerWorkletProcessor(audioContext, name, source)`** — Blob-URL
+  based helper for registering AudioWorkletProcessors at runtime from a
+  source string. No build-tooling changes required: worklet code lives
+  as a JavaScript string inside the TypeScript file, gets converted to
+  a Blob URL on first registration, and is cached per-AudioContext.
+  Concurrent registrations are deduplicated via shared in-flight
+  Promises.
+- **`WorkletFilter`** — abstract base class extending `AudioFilter` for
+  filters implemented as AudioWorklet processors. Subclasses declare
+  `_workletName`, `_workletSource`, and (optionally) `_workletOptions`
+  / `_onWorkletReady`. The base handles:
+  - Async worklet loading lifecycle
+  - Stable `inputNode` / `outputNode` GainNodes that exist immediately
+    (audio passes through directly while the worklet loads, then
+    re-routes through the worklet once ready — no destruction or
+    re-wiring on the bus side)
+  - `_setAudioParam(name, value)` helper for smooth parameter updates
+  - Safe destruction during async load
+- **`AudioFilter.ready: Promise<void>`** — resolves when the filter is
+  fully initialized. Sync filters (BiquadFilter-backed, etc.) return
+  an already-resolved Promise. Async filters (WorkletFilter
+  subclasses) return a Promise that resolves once the worklet has
+  loaded. Useful when user code wants to `await` a parameter setup
+  that depends on the underlying node existing.
+
+### Changed
+
+- **`DuckingFilter` is now AudioWorklet-backed.** The setInterval-based
+  envelope follower has been replaced with a sample-accurate worklet
+  processor. Public API is unchanged: same constructor options
+  (`sidechain`, `threshold`, `ratio`, `attackMs`, `releaseMs`), same
+  property setters. Behaviorally:
+  - Detection runs at full sample-rate (typically 48 kHz) instead of
+    60 Hz polling
+  - Audio-thread isolated — no jitter from main-thread garbage
+    collection or task pressure
+  - Functions correctly when the page tab is inactive (audio thread
+    keeps running while CPU thread is throttled)
+  - Initial use has a one-time ~10–50 ms async load cost as the
+    worklet code registers; during that window the filter passes
+    audio through unmodified
+
+### Notes
+
+- AudioWorklet is supported in all browsers since 2020 (Chrome 66+,
+  Firefox 76+, Safari 14.1+). No fallback to the old setInterval
+  approach — environments without worklet support will throw on
+  DuckingFilter construction.
+- The shared infrastructure (`registerWorkletProcessor` +
+  `WorkletFilter`) is the foundation for future custom-DSP filters.
+  Concrete filter additions (Chorus, Pitch-Shift, Vocoder, Granular,
+  etc.) come in subsequent releases.
+- BeatDetector / AudioAnalyser hook revamp is deferred — that's the
+  next focused topic.
+
 ## [0.7.0] - 2026-05-04
 
 Audio modernization. Introduces a routing manager with hierarchical buses,

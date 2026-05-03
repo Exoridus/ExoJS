@@ -6,31 +6,7 @@ import { DuckingFilter } from '@/audio/filters/DuckingFilter';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeAudioParam = (initial: number) => ({
-    setValueAtTime: jest.fn(),
-    setTargetAtTime: jest.fn(),
-    value: initial,
-});
-
-const makeGainNode = (ctx: AudioContext) => ({
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    context: ctx,
-    gain: makeAudioParam(1),
-});
-
-const makeAnalyserNode = (fftSize = 2048) => ({
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    fftSize,
-    minDecibels: -100,
-    maxDecibels: -30,
-    smoothingTimeConstant: 0.8,
-    getByteTimeDomainData: jest.fn(),
-    getByteFrequencyData: jest.fn(),
-    getFloatTimeDomainData: jest.fn(),
-    getFloatFrequencyData: jest.fn(),
-});
+const makeSidechain = (): AudioBus => new AudioBus('sidechain-test');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -38,65 +14,53 @@ const makeAnalyserNode = (fftSize = 2048) => ({
 
 describe('DuckingFilter', () => {
     let sidechain: AudioBus;
+    let addModuleMock: jest.Mock;
 
     beforeEach(() => {
-        sidechain = new AudioBus('sidechain-test');
+        sidechain = makeSidechain();
+        const ctx = getAudioContext();
+        addModuleMock = jest.fn().mockResolvedValue(undefined);
+        (ctx as unknown as { audioWorklet: { addModule: jest.Mock } }).audioWorklet.addModule = addModuleMock;
+        jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:ducking-url');
+        jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     });
 
     afterEach(() => {
         sidechain.destroy();
+        jest.restoreAllMocks();
     });
 
     describe('construction', () => {
-        it('creates a GainNode and AnalyserNode on construction', () => {
-            jest.useFakeTimers();
-            const ctx = getAudioContext();
-            const gainSpy = jest.spyOn(ctx, 'createGain');
-            const analyserSpy = jest.spyOn(ctx, 'createAnalyser');
-            const filter = new DuckingFilter({ sidechain });
-            // Multiple gains created by sidechain setup too; just ensure at least 1 analyser
-            expect(analyserSpy).toHaveBeenCalled();
-            expect(gainSpy).toHaveBeenCalled();
-            filter.destroy();
-            gainSpy.mockRestore();
-            analyserSpy.mockRestore();
-            jest.useRealTimers();
+        it('throws if no sidechain provided', () => {
+            // @ts-expect-error intentional: testing runtime guard
+            expect(() => new DuckingFilter({})).toThrow('DuckingFilter requires a sidechain AudioBus.');
         });
 
-        it('uses default threshold of -20 dB', () => {
-            jest.useFakeTimers();
+        it('uses default threshold of -20', () => {
             const filter = new DuckingFilter({ sidechain });
             expect(filter.threshold).toBe(-20);
             filter.destroy();
-            jest.useRealTimers();
         });
 
         it('uses default ratio of 4', () => {
-            jest.useFakeTimers();
             const filter = new DuckingFilter({ sidechain });
             expect(filter.ratio).toBe(4);
             filter.destroy();
-            jest.useRealTimers();
         });
 
         it('uses default attackMs of 30', () => {
-            jest.useFakeTimers();
             const filter = new DuckingFilter({ sidechain });
             expect(filter.attackMs).toBe(30);
             filter.destroy();
-            jest.useRealTimers();
         });
 
         it('uses default releaseMs of 300', () => {
-            jest.useFakeTimers();
             const filter = new DuckingFilter({ sidechain });
             expect(filter.releaseMs).toBe(300);
             filter.destroy();
-            jest.useRealTimers();
         });
 
         it('accepts custom options', () => {
-            jest.useFakeTimers();
             const filter = new DuckingFilter({
                 sidechain,
                 threshold: -10,
@@ -109,220 +73,203 @@ describe('DuckingFilter', () => {
             expect(filter.attackMs).toBe(50);
             expect(filter.releaseMs).toBe(500);
             filter.destroy();
-            jest.useRealTimers();
+        });
+
+        it('creates input and output gain nodes on construction', () => {
+            const filter = new DuckingFilter({ sidechain });
+            expect(filter.inputNode).toBeDefined();
+            expect(filter.outputNode).toBeDefined();
+            filter.destroy();
         });
     });
 
-    describe('inputNode / outputNode', () => {
-        it('inputNode and outputNode are the same GainNode', () => {
-            jest.useFakeTimers();
+    describe('worklet lifecycle', () => {
+        it('after await filter.ready: workletNode is an AudioWorkletNode', async () => {
             const filter = new DuckingFilter({ sidechain });
-            expect(filter.inputNode).toBe(filter.outputNode);
+            await filter.ready;
+            expect(filter['_workletNode']).not.toBeNull();
             filter.destroy();
-            jest.useRealTimers();
         });
 
-        it('throws after destroy', () => {
-            jest.useFakeTimers();
+        it('after await filter.ready: workletNode has 2 inputs configured', async () => {
+            let capturedOptions: AudioWorkletNodeOptions | undefined;
+            const OrigAWN = globalThis.AudioWorkletNode;
+            (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn(
+                (c: AudioContext, name: string, options: AudioWorkletNodeOptions) => {
+                    capturedOptions = options;
+                    return new OrigAWN(c, name, options);
+                },
+            );
+
             const filter = new DuckingFilter({ sidechain });
+            await filter.ready;
+            expect(capturedOptions?.numberOfInputs).toBe(2);
             filter.destroy();
-            expect(() => filter.inputNode).toThrow('DuckingFilter not yet initialized.');
-            jest.useRealTimers();
+        });
+
+        it('worklet parameters are set on ready: threshold and ratio', async () => {
+            const filter = new DuckingFilter({ sidechain, threshold: -15, ratio: 6 });
+            await filter.ready;
+            const node = filter['_workletNode']!;
+            const thresholdParam = node.parameters.get('threshold') as unknown as { setTargetAtTime: jest.Mock };
+            const ratioParam = node.parameters.get('ratio') as unknown as { setTargetAtTime: jest.Mock };
+            expect(thresholdParam.setTargetAtTime).toHaveBeenCalledWith(-15, expect.anything(), expect.anything());
+            expect(ratioParam.setTargetAtTime).toHaveBeenCalledWith(6, expect.anything(), expect.anything());
+            filter.destroy();
+        });
+
+        it('worklet parameters are set on ready: attack and release coefficients', async () => {
+            const filter = new DuckingFilter({ sidechain, attackMs: 30, releaseMs: 300 });
+            await filter.ready;
+            const node = filter['_workletNode']!;
+            const attackParam = node.parameters.get('attack') as unknown as { setTargetAtTime: jest.Mock };
+            const releaseParam = node.parameters.get('release') as unknown as { setTargetAtTime: jest.Mock };
+            // attack coefficient should be in (0, 1)
+            expect(attackParam.setTargetAtTime).toHaveBeenCalled();
+            const attackCoeff = attackParam.setTargetAtTime.mock.calls[0][0];
+            expect(attackCoeff).toBeGreaterThan(0);
+            expect(attackCoeff).toBeLessThan(1);
+            expect(releaseParam.setTargetAtTime).toHaveBeenCalled();
+            const releaseCoeff = releaseParam.setTargetAtTime.mock.calls[0][0];
+            expect(releaseCoeff).toBeGreaterThan(0);
+            expect(releaseCoeff).toBeLessThan(attackCoeff); // release is slower = smaller coeff
+            filter.destroy();
+        });
+
+        it('sidechain bus output is connected to worklet input 1 after ready', async () => {
+            // Ensure sidechain output node exists
+            const sidechainOutputNode = sidechain._getOutputNode();
+            if (sidechainOutputNode) {
+                const connectSpy = jest.spyOn(sidechainOutputNode, 'connect');
+                const filter = new DuckingFilter({ sidechain });
+                await filter.ready;
+                // Should have been called with (workletNode, 0, 1)
+                const callWithInput1 = (connectSpy.mock.calls as unknown as Array<unknown[]>).find(
+                    (args) => args[2] === 1,
+                );
+                expect(callWithInput1).toBeDefined();
+                filter.destroy();
+            }
         });
     });
 
-    describe('interval-based tick', () => {
-        it('starts a ~60Hz interval on setup', () => {
-            jest.useFakeTimers();
-            const setIntervalSpy = jest.spyOn(globalThis, 'setInterval');
+    describe('setters after ready', () => {
+        it('setting threshold after ready updates worklet param', async () => {
             const filter = new DuckingFilter({ sidechain });
-            // One setInterval call for the 60Hz ticker
-            const tickCalls = setIntervalSpy.mock.calls.filter(
-                ([, delay]) => Math.round(delay as number) === Math.round(1000 / 60),
-            );
-            expect(tickCalls.length).toBeGreaterThanOrEqual(1);
+            await filter.ready;
+            const node = filter['_workletNode']!;
+            const param = node.parameters.get('threshold') as unknown as { setTargetAtTime: jest.Mock };
+            param.setTargetAtTime.mockClear();
+            filter.threshold = -30;
+            expect(filter.threshold).toBe(-30);
+            expect(param.setTargetAtTime).toHaveBeenCalledWith(-30, expect.anything(), expect.anything());
             filter.destroy();
-            setIntervalSpy.mockRestore();
-            jest.useRealTimers();
         });
 
-        it('calls _tick periodically via the interval', () => {
-            jest.useFakeTimers();
-            const ctx = getAudioContext();
-            const analyser = makeAnalyserNode();
-            const analyserSpy = jest.spyOn(ctx, 'createAnalyser').mockReturnValue(
-                analyser as unknown as AnalyserNode,
-            );
+        it('setting ratio after ready updates worklet param', async () => {
             const filter = new DuckingFilter({ sidechain });
-
-            // Advance timer by 1 tick duration (1000/60 ms)
-            jest.advanceTimersByTime(Math.ceil(1000 / 60));
-            expect(analyser.getByteTimeDomainData).toHaveBeenCalled();
-
+            await filter.ready;
+            const node = filter['_workletNode']!;
+            const param = node.parameters.get('ratio') as unknown as { setTargetAtTime: jest.Mock };
+            param.setTargetAtTime.mockClear();
+            filter.ratio = 8;
+            expect(filter.ratio).toBe(8);
+            expect(param.setTargetAtTime).toHaveBeenCalledWith(8, expect.anything(), expect.anything());
             filter.destroy();
-            analyserSpy.mockRestore();
-            jest.useRealTimers();
+        });
+
+        it('setting attackMs after ready updates worklet attack param', async () => {
+            const filter = new DuckingFilter({ sidechain });
+            await filter.ready;
+            const node = filter['_workletNode']!;
+            const param = node.parameters.get('attack') as unknown as { setTargetAtTime: jest.Mock };
+            param.setTargetAtTime.mockClear();
+            filter.attackMs = 100;
+            expect(filter.attackMs).toBe(100);
+            expect(param.setTargetAtTime).toHaveBeenCalled();
+            filter.destroy();
+        });
+
+        it('setting releaseMs after ready updates worklet release param', async () => {
+            const filter = new DuckingFilter({ sidechain });
+            await filter.ready;
+            const node = filter['_workletNode']!;
+            const param = node.parameters.get('release') as unknown as { setTargetAtTime: jest.Mock };
+            param.setTargetAtTime.mockClear();
+            filter.releaseMs = 500;
+            expect(filter.releaseMs).toBe(500);
+            expect(param.setTargetAtTime).toHaveBeenCalled();
+            filter.destroy();
+        });
+
+        it('setting threshold before ready stores value; applied when worklet loads', async () => {
+            let resolveModule!: () => void;
+            addModuleMock.mockReturnValue(new Promise<void>((res) => { resolveModule = res; }));
+
+            const filter = new DuckingFilter({ sidechain, threshold: -20 });
+            filter.threshold = -50; // set before ready
+
+            resolveModule();
+            await filter.ready;
+
+            expect(filter.threshold).toBe(-50);
+            filter.destroy();
+        });
+    });
+
+    describe('setters clamping', () => {
+        it('threshold is clamped to [-100, 0]', () => {
+            const filter = new DuckingFilter({ sidechain });
+            filter.threshold = 10;
+            expect(filter.threshold).toBe(0);
+            filter.threshold = -200;
+            expect(filter.threshold).toBe(-100);
+            filter.destroy();
+        });
+
+        it('ratio is clamped to [1, 20]', () => {
+            const filter = new DuckingFilter({ sidechain });
+            filter.ratio = 0;
+            expect(filter.ratio).toBe(1);
+            filter.ratio = 100;
+            expect(filter.ratio).toBe(20);
+            filter.destroy();
+        });
+
+        it('attackMs clamps to minimum of 0.001', () => {
+            const filter = new DuckingFilter({ sidechain });
+            filter.attackMs = 0;
+            expect(filter.attackMs).toBe(0.001);
+            filter.destroy();
+        });
+
+        it('releaseMs clamps to minimum of 0.001', () => {
+            const filter = new DuckingFilter({ sidechain });
+            filter.releaseMs = -100;
+            expect(filter.releaseMs).toBe(0.001);
+            filter.destroy();
         });
     });
 
     describe('destroy', () => {
-        it('clears the setInterval', () => {
-            jest.useFakeTimers();
-            const clearSpy = jest.spyOn(globalThis, 'clearInterval');
+        it('destroy cleans up nodes without throwing', async () => {
             const filter = new DuckingFilter({ sidechain });
-            filter.destroy();
-            expect(clearSpy).toHaveBeenCalled();
-            clearSpy.mockRestore();
-            jest.useRealTimers();
+            await filter.ready;
+            expect(() => filter.destroy()).not.toThrow();
         });
 
-        it('disconnects gain and analyser nodes', () => {
-            jest.useFakeTimers();
-            const ctx = getAudioContext();
-            const analyser = makeAnalyserNode();
-            const analyserSpy = jest.spyOn(ctx, 'createAnalyser').mockReturnValue(
-                analyser as unknown as AnalyserNode,
-            );
-            const gain = makeGainNode(ctx);
-            // The DuckingFilter creates only 1 gain node for itself (sidechain has its own gains)
-            // We need to intercept createGain selectively — spy and capture last call
-            const gainSpy = jest.spyOn(ctx, 'createGain');
+        it('after destroy, inputNode throws', async () => {
             const filter = new DuckingFilter({ sidechain });
+            await filter.ready;
             filter.destroy();
-            expect(analyser.disconnect).toHaveBeenCalled();
-            // At least one gain was disconnected
-            expect(gainSpy).toHaveBeenCalled();
-            analyserSpy.mockRestore();
-            gainSpy.mockRestore();
-            jest.useRealTimers();
+            expect(() => filter.inputNode).toThrow();
         });
 
-        it('stops _tick from being called after destroy', () => {
-            jest.useFakeTimers();
-            const ctx = getAudioContext();
-            const analyser = makeAnalyserNode();
-            const analyserSpy = jest.spyOn(ctx, 'createAnalyser').mockReturnValue(
-                analyser as unknown as AnalyserNode,
-            );
+        it('double destroy is safe', async () => {
             const filter = new DuckingFilter({ sidechain });
+            await filter.ready;
             filter.destroy();
-            analyser.getByteTimeDomainData.mockClear();
-            jest.advanceTimersByTime(500);
-            expect(analyser.getByteTimeDomainData).not.toHaveBeenCalled();
-            analyserSpy.mockRestore();
-            jest.useRealTimers();
-        });
-    });
-
-    describe('gain ramping based on sidechain signal', () => {
-        it('ramps gain down when sidechain RMS exceeds threshold', () => {
-            jest.useFakeTimers();
-            const ctx = getAudioContext();
-
-            // Intercept createGain so we can spy on the DuckingFilter's specific GainNode.
-            // The DuckingFilter creates exactly 1 gain node (sidechain creates its own via AudioBus).
-            // Since the sidechain is already set up, only the filter's gain creation is intercepted.
-            const duckingGain = makeGainNode(ctx);
-            // Make setTargetAtTime a jest.fn on this specific gain node's param
-            duckingGain.gain.setTargetAtTime = jest.fn();
-            // The sidechain may already have been set up; we just intercept the next createGain call.
-            const gainSpy = jest.spyOn(ctx, 'createGain').mockReturnValueOnce(
-                duckingGain as unknown as GainNode,
-            );
-
-            const analyser = makeAnalyserNode();
-            const analyserSpy = jest.spyOn(ctx, 'createAnalyser').mockReturnValue(
-                analyser as unknown as AnalyserNode,
-            );
-
-            // Mock getByteTimeDomainData to return a loud signal.
-            // Bytes are in 0..255 centered at 128. Full scale = 255 (sample = 1.0).
-            analyser.getByteTimeDomainData.mockImplementation((buf: Uint8Array) => {
-                buf.fill(255); // maximum amplitude → loud signal
-            });
-
-            const filter = new DuckingFilter({ sidechain, threshold: -20, ratio: 4 });
-
-            // Advance timer to trigger tick
-            jest.advanceTimersByTime(Math.ceil(1000 / 60));
-
-            // When RMS > threshold, gain should be ramped toward 1/ratio = 0.25
-            expect(duckingGain.gain.setTargetAtTime).toHaveBeenCalledWith(
-                1 / 4,
-                expect.anything(),
-                expect.anything(),
-            );
-
-            filter.destroy();
-            gainSpy.mockRestore();
-            analyserSpy.mockRestore();
-            jest.useRealTimers();
-        });
-
-        it('ramps gain up when sidechain is quiet', () => {
-            jest.useFakeTimers();
-            const ctx = getAudioContext();
-
-            const duckingGain = makeGainNode(ctx);
-            duckingGain.gain.setTargetAtTime = jest.fn();
-            const gainSpy = jest.spyOn(ctx, 'createGain').mockReturnValueOnce(
-                duckingGain as unknown as GainNode,
-            );
-
-            const analyser = makeAnalyserNode();
-            const analyserSpy = jest.spyOn(ctx, 'createAnalyser').mockReturnValue(
-                analyser as unknown as AnalyserNode,
-            );
-
-            // Mock silence: all bytes at 128 → sample = 0, RMS = 0 → -Infinity dB
-            analyser.getByteTimeDomainData.mockImplementation((buf: Uint8Array) => {
-                buf.fill(128);
-            });
-
-            const filter = new DuckingFilter({ sidechain, threshold: -20 });
-
-            jest.advanceTimersByTime(Math.ceil(1000 / 60));
-
-            // When RMS < threshold, gain should be ramped toward 1
-            expect(duckingGain.gain.setTargetAtTime).toHaveBeenCalledWith(
-                1,
-                expect.anything(),
-                expect.anything(),
-            );
-
-            filter.destroy();
-            gainSpy.mockRestore();
-            analyserSpy.mockRestore();
-            jest.useRealTimers();
-        });
-    });
-
-    describe('setters', () => {
-        it('ratio setter clamps to minimum of 1', () => {
-            jest.useFakeTimers();
-            const filter = new DuckingFilter({ sidechain });
-            filter.ratio = 0;
-            expect(filter.ratio).toBe(1);
-            filter.destroy();
-            jest.useRealTimers();
-        });
-
-        it('attackMs setter clamps to minimum of 1', () => {
-            jest.useFakeTimers();
-            const filter = new DuckingFilter({ sidechain });
-            filter.attackMs = 0;
-            expect(filter.attackMs).toBe(1);
-            filter.destroy();
-            jest.useRealTimers();
-        });
-
-        it('releaseMs setter clamps to minimum of 1', () => {
-            jest.useFakeTimers();
-            const filter = new DuckingFilter({ sidechain });
-            filter.releaseMs = -100;
-            expect(filter.releaseMs).toBe(1);
-            filter.destroy();
-            jest.useRealTimers();
+            expect(() => filter.destroy()).not.toThrow();
         });
     });
 });

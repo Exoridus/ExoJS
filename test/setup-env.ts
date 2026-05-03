@@ -52,11 +52,18 @@ const makeMockAudioParam = (): AudioParam => ({
     value: 0,
 } as unknown as AudioParam);
 
+const WORKLET_PARAM_NAMES = ['threshold', 'ratio', 'attack', 'release'];
+
+class MockAudioWorklet {
+    public addModule: jest.Mock = jest.fn().mockResolvedValue(undefined);
+}
+
 class MockAudioContext {
     public state: AudioContextState = 'running';
     public currentTime = 0;
     public sampleRate = 44100;
     public destination = {};
+    public readonly audioWorklet = new MockAudioWorklet();
 
     public readonly listener: {
         positionX: AudioParam; positionY: AudioParam; positionZ: AudioParam;
@@ -280,3 +287,42 @@ Object.defineProperty(globalThis, 'OfflineAudioContext', {
     configurable: true,
     value: MockOfflineAudioContext,
 });
+
+// AudioWorkletNode mock — jsdom does not implement AudioWorkletNode.
+// Tests that need custom node shapes can override via jest.spyOn or mockImplementation.
+Object.defineProperty(globalThis, 'AudioWorkletNode', {
+    configurable: true,
+    writable: true,
+    value: class MockAudioWorkletNode {
+        public readonly connect: jest.Mock;
+        public readonly disconnect: jest.Mock;
+        public readonly context: MockAudioContext;
+        public readonly parameters: Map<string, AudioParam>;
+
+        public constructor(context: MockAudioContext, _name: string, _options?: AudioWorkletNodeOptions) {
+            this.connect = jest.fn();
+            this.disconnect = jest.fn();
+            this.context = context;
+            this.parameters = new Map<string, AudioParam>();
+            for (const name of WORKLET_PARAM_NAMES) {
+                this.parameters.set(name, makeMockAudioParam());
+            }
+        }
+    },
+});
+
+// Ensure URL.createObjectURL and revokeObjectURL exist (jsdom may not provide them).
+if (typeof URL.createObjectURL === 'undefined') {
+    Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        writable: true,
+        value: jest.fn().mockReturnValue('blob:mock-url'),
+    });
+}
+if (typeof URL.revokeObjectURL === 'undefined') {
+    Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        writable: true,
+        value: jest.fn(),
+    });
+}

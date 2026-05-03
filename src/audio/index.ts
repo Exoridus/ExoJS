@@ -10,3 +10,4 @@ export * from './filters';
 export * from './Music';
 export { Sound, SoundPoolStrategy } from './Sound';
 export type { SoundOptions, PlayOptions, AudioSpriteClip } from './Sound';
+export { registerWorkletProcessor } from './worklet/registerWorklet';
