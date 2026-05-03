@@ -14,6 +14,7 @@ import type { Scene } from './Scene';
 import type { CacheStore } from '@/resources/CacheStore';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { GamepadDefinition } from '@/input/GamepadDefinitions';
+import { getAudioManager, type AudioManager } from '@/audio/AudioManager';
 
 export enum ApplicationStatus {
     Loading = 1,
@@ -148,6 +149,10 @@ export class Application {
         this.inputManager.onCanvasFocusChange.add((focused) => {
             this.onCanvasFocusChange.dispatch(focused);
         });
+
+        this.onVisibilityChange.add((visible) => {
+            getAudioManager()._applyVisibility(visible);
+        });
     }
 
     public get status(): ApplicationStatus {
@@ -195,6 +200,10 @@ export class Application {
         return this._documentVisible;
     }
 
+    public get audio(): AudioManager {
+        return getAudioManager();
+    }
+
     public async start(scene: Scene): Promise<this> {
         if (this._status === ApplicationStatus.Stopped) {
             this._status = ApplicationStatus.Loading;
@@ -235,6 +244,7 @@ export class Application {
 
             this.inputManager.update();
             this.interaction.update();
+            getAudioManager().update();
             this.tweens.update(frameDelta.seconds);
             const runtimeView = (this.backend as Partial<{
                 view: Partial<{ update(deltaMilliseconds: number): unknown; }>;

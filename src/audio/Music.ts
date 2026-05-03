@@ -2,6 +2,8 @@ import { clamp } from '@/math/utils';
 import type { PlaybackOptions } from '@/core/types';
 import { AbstractMedia } from '@/audio/AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
+import { getAudioManager } from '@/audio/AudioManager';
+import type { AudioBus } from '@/audio/AudioBus';
 
 interface MusicAudioSetup {
     readonly audioContext: AudioContext;
@@ -135,6 +137,27 @@ export class Music extends AbstractMedia {
         return this._audioSetup;
     }
 
+    protected override _defaultBus(): AudioBus {
+        return getAudioManager().music;
+    }
+
+    protected override _disconnectFromBus(): void {
+        if (this._audioSetup) {
+            this._audioSetup.gainNode.disconnect();
+        }
+    }
+
+    protected override _connectToBus(): void {
+        if (this._audioSetup) {
+            const inputNode = this.bus._getInputNode();
+            if (inputNode) {
+                this._audioSetup.gainNode.connect(inputNode);
+            } else {
+                this._audioSetup.gainNode.connect(this._audioSetup.audioContext.destination);
+            }
+        }
+    }
+
     public override destroy(): void {
         super.destroy();
 
@@ -150,7 +173,13 @@ export class Music extends AbstractMedia {
     private setupWithAudioContext(audioContext: AudioContext): void {
         const gainNode = audioContext.createGain();
         gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
-        gainNode.connect(audioContext.destination);
+
+        const inputNode = this.bus._getInputNode();
+        if (inputNode) {
+            gainNode.connect(inputNode);
+        } else {
+            gainNode.connect(audioContext.destination);
+        }
 
         const sourceNode = audioContext.createMediaElementSource(this._audioElement);
         sourceNode.connect(gainNode);

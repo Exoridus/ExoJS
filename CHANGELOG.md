@@ -4,6 +4,141 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-05-04
+
+Audio modernization. Introduces a routing manager with hierarchical buses,
+a filter API consistent with the rendering side, 2D spatial audio, and
+unifies `Sound.play()` into a multi-instance default. Pure-additive on
+the bus / filter / spatial side; the `Sound.play()` semantics are a
+breaking change.
+
+### Added
+
+- **`AudioManager`** — routing mixer accessible via `app.audio` (lazy
+  module-level singleton, also reachable via `getAudioManager()`).
+  Built-in buses `master`, `music`, `sound` with hierarchy
+  (`music` and `sound` are children of `master`).
+- **`AudioBus`** — class with `name` (positional constructor arg),
+  `parent`, `volume`, `muted`, `pan`, `addFilter`, `removeFilter`,
+  `fadeIn`, `fadeOut`, `destroy`. Internal node chain is
+  `inputNode → [filters...] → panNode → outputNode → parent.input`.
+- **Mixer API**: `app.audio.registerBus(bus)`, `getBus(name)`,
+  `hasBus(name)`, `unregisterBus(bus)`. Built-ins cannot be
+  unregistered.
+- **Default routing**: `Sound` → `app.audio.sound`, `Music` →
+  `app.audio.music`, `Video` → `app.audio.master`. Override by
+  setting `media.bus = customBus`.
+- **`AudioManager.muteOnHidden: boolean`** — when true, master is
+  muted while `document.visibilityState !== 'visible'`. Wired
+  through the `app.onVisibilityChange` signal added in 0.6.20.
+- **`AudioFilter`** — abstract base with `inputNode`, `outputNode`,
+  `destroy()`. Buses chain filter `inputNode → outputNode` in the
+  order they were added.
+- **Filter implementations**: `LowpassFilter`, `HighpassFilter`,
+  `CompressorFilter`, `DelayFilter`, `ReverbFilter` (algorithmic
+  impulse-response, no IR assets shipped), `EqualizerFilter`
+  (3-band low-shelf / peaking / high-shelf), `DuckingFilter`
+  (sidechain-driven gain reduction via `AnalyserNode` polled at
+  ~60 Hz; takes a `sidechain: AudioBus` option).
+- **`AudioListener`** — accessible at `app.audio.listener`. Has
+  `position: Vector`, `velocity: Vector`, and a polymorphic
+  `target: SceneNode | View | { x, y } | null` that auto-feeds
+  the WebAudio listener position each frame.
+- **`Sound.position: Vector | null`** — when non-null, the sound
+  becomes spatial: routes through a `PannerNode`
+  (`panningModel: 'equalpower'`, `distanceModel: 'linear'`) and
+  ticks per-frame from `AudioManager.update()`. Setting back to null
+  tears down the panner and restores non-spatial routing.
+- **`Sound.velocity: Vector | null`** — tracked for future Doppler
+  use (modern WebAudio infers Doppler implicitly from positional
+  change between frames; we don't pipe velocity to the panner
+  directly).
+- **`SoundPoolStrategy` enum** — `FirstInFirstOut`,
+  `LeastRecentlyUsed`, `LowestPriority`. Selects the eviction
+  policy when pool capacity is reached.
+- **`Sound.priority: number`** — used by the `LowestPriority`
+  strategy. Default 0.
+- **`AudioManager.update()`** — public per-frame tick called from
+  `Application.update()` between `interaction.update()` and
+  `tweens.update()`. Updates listener position from target,
+  ticks each registered spatial sound's panner.
+
+### Changed (BREAKING)
+
+- **`Sound.play()` is now multi-instance by default.** Each call
+  creates a new pooled instance up to `poolSize`. The previous
+  singleton-replace behavior is opt-in via
+  `play({ replace: true })`.
+- **`Sound.playPooled()` removed.** Use `play()` (which is now the
+  pooled multi-instance path).
+- **`Sound.poolSize` default raised from 1 to 8.** Closer to typical
+  SFX needs without manual configuration.
+- **`Sound._sourceNode` (the previous primary singleton source) is
+  removed.** With pooled play unified, all sources go through
+  `_pooledSources`. As a consequence, `Sound.getTime()` and
+  `Sound.setTime()` no longer track per-source playback position
+  — they're effectively no-ops on Sound now. For precise timing
+  use `Music` (HTMLMediaElement-backed singleton).
+- **`AbstractMedia.bus` property added.** Subclasses (Sound, Music)
+  override `_defaultBus()`, `_connectToBus()`, `_disconnectFromBus()`
+  to integrate with the mixer.
+
+### Migration
+
+```ts
+// Before:
+sound.play();              // singleton — second call replaces first
+sound.playPooled();        // multi-instance — concurrent plays
+
+// After:
+sound.play();              // multi-instance — concurrent plays (default!)
+sound.play({ replace: true }); // singleton — equivalent of old play()
+```
+
+```ts
+// Before — direct destination routing was implicit:
+const sound = new Sound(buffer);
+sound.play();   // → audioContext.destination
+
+// After — routes through the soundBus by default:
+const sound = new Sound(buffer);
+sound.play();   // → app.audio.sound → app.audio.master → destination
+
+// Override to a custom bus:
+const dialogueBus = new AudioBus('dialogue', { parent: app.audio.master });
+app.audio.registerBus(dialogueBus);
+sound.bus = dialogueBus;
+```
+
+```ts
+// Spatial audio:
+const explosion = new Sound(buffer);
+explosion.position = { x: 200, y: 100 };  // becomes spatial
+app.audio.listener.target = playerSprite;  // ears follow player
+
+explosion.play();
+// → routes through equalpower panner with distance falloff
+```
+
+### Notes
+
+- `DuckingFilter` uses its own internal `setInterval(60Hz)` for
+  per-frame envelope-following rather than hooking into
+  `AudioManager.update()`. This keeps audio-side filters
+  self-contained and avoids cross-cutting changes to the mixer
+  contract. May be revisited.
+- `LowestPriority` pool strategy degenerates to FIFO within a
+  single Sound instance because all pooled sources share the same
+  `priority` value. The strategy becomes meaningful when the
+  engine later adds cross-Sound voice management.
+- Spatial sounds share a single `PannerNode` per Sound instance —
+  all simultaneous pooled plays of one sound emit from the same
+  world-space point. Per-instance positions would require an
+  API extension and are deferred.
+- BeatDetector / `AudioAnalyser.onBeat` hooks are deferred to
+  0.7.1 — this release focuses on the mixer / filter / spatial
+  foundation.
+
 ## [0.6.20] - 2026-05-02
 
 Adds `view.follow(SceneNode)`, audio fade helpers, and focus / visibility
@@ -52,7 +187,7 @@ infrastructure. Pure additive — no behavior changes for existing code.
   separate signals — `document.visibilitychange` is the better-defined
   API and covers the common cases.
 - `crossFade()` as a top-level helper was deferred — compose
-  `a.fadeOut(ms)` + `b.fadeIn(ms)` manually until the AudioMixer lands.
+  `a.fadeOut(ms)` + `b.fadeIn(ms)` manually until the AudioManager lands.
 - `view.follow()` continues to use lerp-based smoothing for continuous
   tracking. Scripted one-shot camera moves (zoom-to-room,
   pan-to-cutscene) should use the existing Tween system on

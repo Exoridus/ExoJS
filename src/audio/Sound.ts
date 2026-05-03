@@ -1,7 +1,31 @@
 import { clamp } from '@/math/utils';
+import { Vector } from '@/math/Vector';
 import type { PlaybackOptions } from '@/core/types';
 import { AbstractMedia } from '@/audio/AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
+import { getAudioManager } from '@/audio/AudioManager';
+import type { AudioBus } from '@/audio/AudioBus';
+
+/**
+ * Eviction strategy used when the pool is full and a new play is requested.
+ *
+ * At the per-Sound level all pooled instances share the same priority, so
+ * `LowestPriority` degenerates to `FirstInFirstOut` in V1. The enum is
+ * forward-compatible with a future global voice manager that culls across
+ * multiple Sound instances.
+ */
+export enum SoundPoolStrategy {
+    /** Evict the oldest (first-started) source. Default. */
+    FirstInFirstOut = 'fifo',
+    /** Evict the source closest to its natural end (shortest remaining time). */
+    LeastRecentlyUsed = 'lru',
+    /**
+     * Evict the source with the lowest priority.
+     * Within a single Sound all instances share the same priority, so this
+     * degenerates to FirstInFirstOut in V1.
+     */
+    LowestPriority = 'priority',
+}
 
 interface SoundAudioSetup {
     readonly audioContext: AudioContext;
@@ -15,6 +39,15 @@ interface QueuedPooledPlay {
     readonly loopStart?: number;
     readonly loopEnd?: number;
     readonly playbackRate: number;
+}
+
+/** A pooled source with timing metadata for LRU eviction. */
+interface PooledSource {
+    readonly node: AudioBufferSourceNode;
+    /** audioContext.currentTime when the source was started. */
+    readonly startedAt: number;
+    /** Finite playback duration in seconds, or Infinity for looping sources. */
+    readonly effectiveDuration: number;
 }
 
 interface NormalizedAudioSpriteClip {
@@ -31,21 +64,37 @@ export interface AudioSpriteClip {
 
 export interface SoundOptions extends Partial<PlaybackOptions> {
     poolSize?: number;
+    poolStrategy?: SoundPoolStrategy;
+    priority?: number;
     sprites?: Readonly<Record<string, AudioSpriteClip>>;
+}
+
+export interface PlayOptions extends Partial<PlaybackOptions> {
+    bus?: AudioBus;
+    /**
+     * When `true`, all currently-playing instances of this sound are stopped
+     * before the new one starts (singleton-replace mode). Useful for
+     * non-overlapping playback such as UI confirmation chimes.
+     *
+     * Default: `false` (multi-instance / pooled mode).
+     */
+    replace?: boolean;
 }
 
 export class Sound extends AbstractMedia {
     private readonly _audioBuffer: AudioBuffer;
-    private readonly _pooledSources: Array<AudioBufferSourceNode> = [];
+    private readonly _pooledSources: Array<PooledSource> = [];
     private readonly _queuedPooledPlays: Array<QueuedPooledPlay> = [];
     private readonly _sprites = new Map<string, NormalizedAudioSpriteClip>();
 
     private _audioSetup: SoundAudioSetup | null = null;
     private _paused = true;
-    private _startTime = 0;
-    private _currentTime = 0;
-    private _sourceNode: AudioBufferSourceNode | null = null;
-    private _poolSize = 1;
+    private _poolSize = 8;
+    private _poolStrategy: SoundPoolStrategy = SoundPoolStrategy.FirstInFirstOut;
+    private _priority: number = 0;
+    private _position: Vector | null = null;
+    private _velocity: Vector | null = null;
+    private _pannerNode: PannerNode | null = null;
 
     public get paused(): boolean {
         return this._paused;
@@ -71,6 +120,74 @@ export class Sound extends AbstractMedia {
         this.setPoolSize(poolSize);
     }
 
+    /**
+     * The eviction strategy used when the pool is at capacity.
+     * @default SoundPoolStrategy.FirstInFirstOut
+     */
+    public get poolStrategy(): SoundPoolStrategy {
+        return this._poolStrategy;
+    }
+
+    public set poolStrategy(strategy: SoundPoolStrategy) {
+        this._poolStrategy = strategy;
+    }
+
+    /**
+     * Sound priority. Used by the `LowestPriority` pool strategy.
+     * Higher values indicate higher priority (less likely to be evicted).
+     * @default 0
+     */
+    public get priority(): number {
+        return this._priority;
+    }
+
+    public set priority(value: number) {
+        this._priority = value;
+    }
+
+    public get position(): Vector | null {
+        return this._position;
+    }
+
+    public set position(value: { x: number; y: number } | Vector | null) {
+        if (value === null) {
+            if (this._position !== null) {
+                this._position.destroy();
+                this._position = null;
+                this._teardownSpatial();
+                getAudioManager()._unregisterSpatialSound(this);
+            }
+            return;
+        }
+        if (this._position === null) {
+            // Becoming spatial
+            this._position = new Vector(value.x, value.y);
+            this._setupSpatial();
+            getAudioManager()._registerSpatialSound(this);
+        } else {
+            this._position.set(value.x, value.y);
+        }
+    }
+
+    public get velocity(): Vector | null {
+        return this._velocity;
+    }
+
+    public set velocity(value: { x: number; y: number } | Vector | null) {
+        if (value === null) {
+            if (this._velocity !== null) {
+                this._velocity.destroy();
+                this._velocity = null;
+            }
+        } else {
+            if (this._velocity === null) {
+                this._velocity = new Vector(value.x, value.y);
+            } else {
+                this._velocity.set(value.x, value.y);
+            }
+        }
+    }
+
     public constructor(audioBuffer: AudioBuffer, options: SoundOptions = {}) {
         super({
             duration: audioBuffer.duration,
@@ -82,9 +199,17 @@ export class Sound extends AbstractMedia {
 
         this._audioBuffer = audioBuffer;
 
-        const { poolSize, sprites, ...playbackOptions } = options;
+        const { poolSize, poolStrategy, priority, sprites, ...playbackOptions } = options;
 
-        this._poolSize = Math.max(1, Math.floor(poolSize ?? 1));
+        this._poolSize = Math.max(1, Math.floor(poolSize ?? 8));
+
+        if (poolStrategy !== undefined) {
+            this._poolStrategy = poolStrategy;
+        }
+
+        if (priority !== undefined) {
+            this._priority = priority;
+        }
 
         if (Object.keys(playbackOptions).length > 0) {
             this.applyOptions(playbackOptions);
@@ -121,49 +246,21 @@ export class Sound extends AbstractMedia {
     public setLoop(loop: boolean): this {
         this._loop = loop;
 
-        if (this._sourceNode) {
-            this._sourceNode.loop = loop;
-
-            if (loop) {
-                this._sourceNode.loopStart = 0;
-                this._sourceNode.loopEnd = this.duration;
-            }
-        }
-
         return this;
     }
 
     public setPlaybackRate(value: number): this {
         this._playbackRate = clamp(value, 0.1, 20);
 
-        if (this._sourceNode) {
-            this._sourceNode.playbackRate.value = this._playbackRate;
-        }
-
         return this;
     }
 
     public getTime(): number {
-        if (!this._audioSetup || this._paused || !this._sourceNode) {
-            return this._currentTime;
-        }
-
-        return this._currentTime + ((this._audioSetup.audioContext.currentTime - this._startTime) * this._playbackRate);
+        return 0;
     }
 
     public setTime(currentTime: number): this {
-        const time = Math.max(0, currentTime);
-
-        if (this.paused || !this._audioSetup) {
-            this._currentTime = time;
-
-            return this;
-        }
-
-        this.pause();
-        this._currentTime = time;
-        this.play();
-
+        void currentTime;
         return this;
     }
 
@@ -240,36 +337,32 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
-    public play(options?: Partial<PlaybackOptions>): this {
-        if (options) {
-            this.applyOptions(options);
+    /**
+     * Play this sound. By default, creates a new pooled instance allowing
+     * multiple concurrent plays up to `poolSize`. Pass `{ replace: true }` to
+     * stop all prior instances of this sound before starting a new one
+     * (singleton-replace mode — useful for non-overlapping playback like UI
+     * confirmation chimes).
+     */
+    public play(options?: PlayOptions): this {
+        if (options?.bus !== undefined) {
+            this.bus = options.bus;
         }
 
-        if (!this._paused) {
-            return this;
-        }
+        const playbackRate = clamp(options?.playbackRate ?? this._playbackRate, 0.1, 20);
+        const offset = Math.max(0, options?.time ?? 0);
+        const loop = options?.loop ?? this._loop;
 
-        if (this._audioSetup) {
-            this.createSourceNode(this._audioSetup);
-        }
-
-        this._paused = false;
-        this.onStart.dispatch();
-
-        return this;
-    }
-
-    public playPooled(options: Partial<PlaybackOptions> = {}): this {
-        const playbackRate = clamp(options.playbackRate ?? this._playbackRate, 0.1, 20);
-        const offset = Math.max(0, options.time ?? 0);
-        const loop = options.loop ?? false;
-
-        if (options.volume !== undefined) {
+        if (options?.volume !== undefined) {
             this.setVolume(options.volume);
         }
 
-        if (options.muted !== undefined) {
+        if (options?.muted !== undefined) {
             this.setMuted(options.muted);
+        }
+
+        if (options?.replace) {
+            this._stopAllPooled();
         }
 
         if (offset >= this.duration) {
@@ -286,6 +379,8 @@ export class Sound extends AbstractMedia {
             loopEnd: this.duration,
             playbackRate,
         });
+
+        this._paused = false;
         this.onStart.dispatch();
 
         return this;
@@ -331,17 +426,6 @@ export class Sound extends AbstractMedia {
         return this;
     }
 
-    public stopPooled(): this {
-        if (this._pooledSources.length > 0) {
-            this._stopPooledSources();
-            this.onStop.dispatch();
-        }
-
-        this._queuedPooledPlays.length = 0;
-
-        return this;
-    }
-
     public pause(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
@@ -351,20 +435,11 @@ export class Sound extends AbstractMedia {
             return this;
         }
 
-        if (!this._paused && this._audioSetup) {
-            const duration = this.duration;
-            const currentTime = this.currentTime;
-
-            this._currentTime = duration > 0 ? (currentTime % duration) : 0;
-        }
-
         const hadPooledSources = this._pooledSources.length > 0;
-
-        this._stopPrimarySource();
-        this._stopPooledSources();
-        this._queuedPooledPlays.length = 0;
-
         const wasPlaying = !this._paused || hadPooledSources;
+
+        this._stopAllPooled();
+        this._queuedPooledPlays.length = 0;
 
         this._paused = true;
 
@@ -379,62 +454,126 @@ export class Sound extends AbstractMedia {
         return this._audioSetup;
     }
 
+    protected override _defaultBus(): AudioBus {
+        return getAudioManager().sound;
+    }
+
+    protected override _disconnectFromBus(): void {
+        if (this._audioSetup) {
+            // Disconnect the upstream node (panner if spatial, else gainNode)
+            const upstream = this._pannerNode ?? this._audioSetup.gainNode;
+            upstream.disconnect();
+        }
+    }
+
+    protected override _connectToBus(): void {
+        if (this._audioSetup) {
+            const upstream = this._pannerNode ?? this._audioSetup.gainNode;
+            const inputNode = this.bus._getInputNode();
+            if (inputNode) {
+                upstream.connect(inputNode);
+            } else {
+                upstream.connect(this._audioSetup.audioContext.destination);
+            }
+        }
+    }
+
     public override destroy(): void {
+        if (this._pannerNode !== null) {
+            this._pannerNode.disconnect();
+            this._pannerNode = null;
+        }
+        if (this._position !== null) {
+            this._position.destroy();
+            this._position = null;
+            getAudioManager()._unregisterSpatialSound(this);
+        }
+        if (this._velocity !== null) {
+            this._velocity.destroy();
+            this._velocity = null;
+        }
+
         super.destroy();
 
         onAudioContextReady.clearByContext(this);
 
         this._audioSetup?.gainNode.disconnect();
-        this._stopPrimarySource();
-        this._stopPooledSources();
+        this._stopAllPooled();
 
         this._queuedPooledPlays.length = 0;
         this._sprites.clear();
     }
 
-    private createSourceNode(setup: SoundAudioSetup): void {
-        const { audioContext } = setup;
+    /** Internal: called by AudioManager.update() once per frame for spatial sounds. */
+    public _tickSpatial(): void {
+        if (this._pannerNode === null || this._position === null) return;
+        const ctx = this._pannerNode.context;
+        const t = ctx.currentTime;
+        const panner = this._pannerNode as unknown as Partial<{
+            positionX: AudioParam;
+            positionY: AudioParam;
+            positionZ: AudioParam;
+            setPosition: (x: number, y: number, z: number) => void;
+        }>;
+        if (panner.positionX) {
+            panner.positionX.setValueAtTime(this._position.x, t);
+            panner.positionY!.setValueAtTime(this._position.y, t);
+            panner.positionZ!.setValueAtTime(0, t);
+        } else if (panner.setPosition) {
+            panner.setPosition(this._position.x, this._position.y, 0);
+        }
+    }
 
-        this._stopPrimarySource();
+    private _setupSpatial(): void {
+        if (!this._audioSetup || this._pannerNode !== null) return;
+        const ctx = this._audioSetup.audioContext;
+        const panner = ctx.createPanner();
+        panner.panningModel = 'equalpower';
+        panner.distanceModel = 'linear';
+        panner.maxDistance = 1000;
+        panner.refDistance = 50;
+        panner.rolloffFactor = 1;
+        this._pannerNode = panner;
 
-        const sourceNode = this._createBufferSourceNode(setup, {
-            offset: Math.min(Math.max(0, this._currentTime), Math.max(0, this.duration)),
-            duration: undefined,
-            loop: this._loop,
-            loopStart: 0,
-            loopEnd: this.duration,
-            playbackRate: this._playbackRate,
-        });
+        // Re-route: gainNode → pannerNode → bus.inputNode
+        this._audioSetup.gainNode.disconnect();
+        this._audioSetup.gainNode.connect(panner);
 
-        sourceNode.onended = (): void => {
-            if (this._sourceNode !== sourceNode) {
-                return;
-            }
+        const busInput = this.bus._getInputNode();
+        if (busInput) {
+            panner.connect(busInput);
+        } else {
+            panner.connect(ctx.destination);
+        }
+    }
 
-            this._sourceNode = null;
-            this._startTime = 0;
-            this._currentTime = 0;
+    private _teardownSpatial(): void {
+        if (!this._audioSetup || this._pannerNode === null) return;
+        this._audioSetup.gainNode.disconnect();
+        this._pannerNode.disconnect();
+        this._pannerNode = null;
 
-            if (!this._paused) {
-                this._paused = true;
-                this.onStop.dispatch();
-            }
-        };
-
-        this._sourceNode = sourceNode;
-        this._startTime = audioContext.currentTime;
+        // Restore: gainNode → bus.inputNode
+        const busInput = this.bus._getInputNode();
+        if (busInput) {
+            this._audioSetup.gainNode.connect(busInput);
+        } else {
+            this._audioSetup.gainNode.connect(this._audioSetup.audioContext.destination);
+        }
     }
 
     private setupWithAudioContext(audioContext: AudioContext): void {
         const gainNode = audioContext.createGain();
         gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
-        gainNode.connect(audioContext.destination);
+
+        const inputNode = this.bus._getInputNode();
+        if (inputNode) {
+            gainNode.connect(inputNode);
+        } else {
+            gainNode.connect(audioContext.destination);
+        }
 
         this._audioSetup = { audioContext, gainNode };
-
-        if (!this._paused) {
-            this.createSourceNode(this._audioSetup);
-        }
 
         this._flushQueuedPooledPlays();
     }
@@ -468,51 +607,95 @@ export class Sound extends AbstractMedia {
             return;
         }
 
+        const { audioContext } = this._audioSetup;
         const sourceNode = this._createBufferSourceNode(this._audioSetup, play);
+        const startedAt = audioContext.currentTime;
+        const effectiveDuration = play.loop ? Infinity : (play.duration ?? Infinity);
+
+        const pooledSource: PooledSource = { node: sourceNode, startedAt, effectiveDuration };
 
         sourceNode.onended = (): void => {
-            const index = this._pooledSources.indexOf(sourceNode);
+            const index = this._pooledSources.indexOf(pooledSource);
 
             if (index !== -1) {
                 this._pooledSources.splice(index, 1);
             }
 
             sourceNode.disconnect();
+
+            if (this._pooledSources.length === 0 && this._queuedPooledPlays.length === 0) {
+                this._paused = true;
+            }
         };
 
-        this._pooledSources.push(sourceNode);
+        this._pooledSources.push(pooledSource);
         this._trimPooledSources();
+    }
+
+    /**
+     * Pick the index within `_pooledSources` of the source to evict.
+     * The returned index is always valid (0 .. length-1).
+     */
+    private _pickEvictionVictim(): number {
+        switch (this._poolStrategy) {
+            case SoundPoolStrategy.LeastRecentlyUsed: {
+                return this._pickClosestToEnd();
+            }
+            case SoundPoolStrategy.LowestPriority:
+            // All pooled instances of this Sound share the same priority,
+            // so LowestPriority degenerates to FIFO within a single Sound (V1).
+            // falls through
+            case SoundPoolStrategy.FirstInFirstOut:
+            default:
+                return 0; // oldest
+        }
+    }
+
+    /**
+     * Returns the index of the source with the smallest remaining playback
+     * time (i.e. closest to its natural end). Used for `LeastRecentlyUsed`.
+     */
+    private _pickClosestToEnd(): number {
+        if (!this._audioSetup) return 0;
+
+        const now = this._audioSetup.audioContext.currentTime;
+        let minRemaining = Infinity;
+        let minIndex = 0;
+
+        for (let i = 0; i < this._pooledSources.length; i++) {
+            const src = this._pooledSources[i];
+            const elapsed = now - src.startedAt;
+            const remaining = src.effectiveDuration - elapsed;
+
+            if (remaining < minRemaining) {
+                minRemaining = remaining;
+                minIndex = i;
+            }
+        }
+
+        return minIndex;
     }
 
     private _trimPooledSources(): void {
         while (this._pooledSources.length > this._poolSize) {
-            const oldestSource = this._pooledSources.shift();
+            const victimIndex = this._pickEvictionVictim();
+            const victim = this._pooledSources[victimIndex];
 
-            if (!oldestSource) {
-                continue;
+            if (!victim) {
+                break;
             }
 
-            oldestSource.onended = null;
-            this._stopSourceNode(oldestSource);
+            this._pooledSources.splice(victimIndex, 1);
+            victim.node.onended = null;
+            this._stopSourceNode(victim.node);
         }
     }
 
-    private _stopPrimarySource(): void {
-        if (!this._sourceNode) {
-            return;
-        }
-
-        this._sourceNode.onended = null;
-        this._stopSourceNode(this._sourceNode);
-
-        this._sourceNode = null;
-        this._startTime = 0;
-    }
-
-    private _stopPooledSources(): void {
-        for (const sourceNode of this._pooledSources) {
-            sourceNode.onended = null;
-            this._stopSourceNode(sourceNode);
+    /** Stop all pooled sources immediately (used by `replace: true` and `pause()`). */
+    private _stopAllPooled(): void {
+        for (const pooledSource of this._pooledSources) {
+            pooledSource.node.onended = null;
+            this._stopSourceNode(pooledSource.node);
         }
 
         this._pooledSources.length = 0;

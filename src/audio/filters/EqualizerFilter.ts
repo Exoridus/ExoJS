@@ -1,0 +1,130 @@
+import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
+import { AudioFilter } from '../AudioFilter';
+
+export interface EqualizerFilterOptions {
+    low?: number;
+    mid?: number;
+    high?: number;
+    lowFrequency?: number;
+    midFrequency?: number;
+    highFrequency?: number;
+}
+
+interface EqualizerFilterSetup {
+    readonly lowShelf: BiquadFilterNode;
+    readonly peaking: BiquadFilterNode;
+    readonly highShelf: BiquadFilterNode;
+}
+
+export class EqualizerFilter extends AudioFilter {
+    private _setup: EqualizerFilterSetup | null = null;
+    private _low: number;
+    private _mid: number;
+    private _high: number;
+    private _lowFrequency: number;
+    private _midFrequency: number;
+    private _highFrequency: number;
+
+    public constructor(options: EqualizerFilterOptions = {}) {
+        super();
+        this._low = Math.max(-40, Math.min(40, options.low ?? 0));
+        this._mid = Math.max(-40, Math.min(40, options.mid ?? 0));
+        this._high = Math.max(-40, Math.min(40, options.high ?? 0));
+        this._lowFrequency = options.lowFrequency ?? 250;
+        this._midFrequency = options.midFrequency ?? 1500;
+        this._highFrequency = options.highFrequency ?? 6000;
+        if (isAudioContextReady()) {
+            this._setupNodes(getAudioContext());
+        } else {
+            onAudioContextReady.once(this._setupNodes, this);
+        }
+    }
+
+    public get inputNode(): AudioNode {
+        if (!this._setup) throw new Error('EqualizerFilter not yet initialized.');
+        return this._setup.lowShelf;
+    }
+
+    public get outputNode(): AudioNode {
+        if (!this._setup) throw new Error('EqualizerFilter not yet initialized.');
+        return this._setup.highShelf;
+    }
+
+    public get low(): number {
+        return this._low;
+    }
+
+    public set low(value: number) {
+        this._low = Math.max(-40, Math.min(40, value));
+        if (this._setup) {
+            this._setup.lowShelf.gain.setTargetAtTime(
+                this._low,
+                this._setup.lowShelf.context.currentTime,
+                0.01,
+            );
+        }
+    }
+
+    public get mid(): number {
+        return this._mid;
+    }
+
+    public set mid(value: number) {
+        this._mid = Math.max(-40, Math.min(40, value));
+        if (this._setup) {
+            this._setup.peaking.gain.setTargetAtTime(
+                this._mid,
+                this._setup.peaking.context.currentTime,
+                0.01,
+            );
+        }
+    }
+
+    public get high(): number {
+        return this._high;
+    }
+
+    public set high(value: number) {
+        this._high = Math.max(-40, Math.min(40, value));
+        if (this._setup) {
+            this._setup.highShelf.gain.setTargetAtTime(
+                this._high,
+                this._setup.highShelf.context.currentTime,
+                0.01,
+            );
+        }
+    }
+
+    public override destroy(): void {
+        onAudioContextReady.clearByContext(this);
+        if (this._setup) {
+            this._setup.lowShelf.disconnect();
+            this._setup.peaking.disconnect();
+            this._setup.highShelf.disconnect();
+            this._setup = null;
+        }
+    }
+
+    private _setupNodes(ctx: AudioContext): void {
+        const lowShelf = ctx.createBiquadFilter();
+        lowShelf.type = 'lowshelf';
+        lowShelf.frequency.setValueAtTime(this._lowFrequency, ctx.currentTime);
+        lowShelf.gain.setValueAtTime(this._low, ctx.currentTime);
+
+        const peaking = ctx.createBiquadFilter();
+        peaking.type = 'peaking';
+        peaking.frequency.setValueAtTime(this._midFrequency, ctx.currentTime);
+        peaking.gain.setValueAtTime(this._mid, ctx.currentTime);
+
+        const highShelf = ctx.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.setValueAtTime(this._highFrequency, ctx.currentTime);
+        highShelf.gain.setValueAtTime(this._high, ctx.currentTime);
+
+        // Series chain: lowShelf → peaking → highShelf
+        lowShelf.connect(peaking);
+        peaking.connect(highShelf);
+
+        this._setup = { lowShelf, peaking, highShelf };
+    }
+}

@@ -7,6 +7,8 @@ import type { RenderBackend } from '../RenderBackend';
 import type { SamplerOptions } from '../texture/Sampler';
 import type { Media } from '@/audio/Media';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
+import { getAudioManager } from '@/audio/AudioManager';
+import type { AudioBus } from '@/audio/AudioBus';
 import { Rectangle } from '@/math/Rectangle';
 
 interface VideoAudioSetup {
@@ -31,6 +33,7 @@ export class Video extends Sprite implements Media {
     private _playbackRate = 1;
     private _loop = false;
     private _muted = false;
+    private _bus: AudioBus | null = null;
     private _audioSetup: VideoAudioSetup | null = null;
     private _textureDirty = true;
     private _lastVideoTime = Number.NaN;
@@ -155,6 +158,26 @@ export class Video extends Sprite implements Media {
 
     public get analyserTarget(): AudioNode | null {
         return this._audioSetup?.gainNode ?? null;
+    }
+
+    public get bus(): AudioBus {
+        return this._bus ?? getAudioManager().master;
+    }
+
+    public set bus(bus: AudioBus) {
+        if (this._bus === bus) return;
+        if (this._audioSetup) {
+            this._audioSetup.gainNode.disconnect();
+        }
+        this._bus = bus;
+        if (this._audioSetup) {
+            const inputNode = bus._getInputNode();
+            if (inputNode) {
+                this._audioSetup.gainNode.connect(inputNode);
+            } else {
+                this._audioSetup.gainNode.connect(this._audioSetup.audioContext.destination);
+            }
+        }
     }
 
     public play(options?: Partial<PlaybackOptions>): this {
@@ -385,7 +408,13 @@ export class Video extends Sprite implements Media {
     private setupWithAudioContext(audioContext: AudioContext): void {
         const gainNode = audioContext.createGain();
         gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
-        gainNode.connect(audioContext.destination);
+
+        const inputNode = this.bus._getInputNode();
+        if (inputNode) {
+            gainNode.connect(inputNode);
+        } else {
+            gainNode.connect(audioContext.destination);
+        }
 
         const sourceNode = audioContext.createMediaElementSource(this._videoElement);
         sourceNode.connect(gainNode);

@@ -44,11 +44,42 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     value: () => mockContext2d,
 });
 
+const makeMockAudioParam = (): AudioParam => ({
+    setValueAtTime: jest.fn(),
+    setTargetAtTime: jest.fn(),
+    cancelScheduledValues: jest.fn(),
+    linearRampToValueAtTime: jest.fn(),
+    value: 0,
+} as unknown as AudioParam);
+
 class MockAudioContext {
     public state: AudioContextState = 'running';
     public currentTime = 0;
     public sampleRate = 44100;
     public destination = {};
+
+    public readonly listener: {
+        positionX: AudioParam; positionY: AudioParam; positionZ: AudioParam;
+        forwardX: AudioParam; forwardY: AudioParam; forwardZ: AudioParam;
+        upX: AudioParam; upY: AudioParam; upZ: AudioParam;
+        context: MockAudioContext;
+    };
+
+    public constructor() {
+        this.listener = {
+            positionX: makeMockAudioParam(),
+            positionY: makeMockAudioParam(),
+            positionZ: makeMockAudioParam(),
+            forwardX: makeMockAudioParam(),
+            forwardY: makeMockAudioParam(),
+            forwardZ: makeMockAudioParam(),
+            upX: makeMockAudioParam(),
+            upY: makeMockAudioParam(),
+            upZ: makeMockAudioParam(),
+            // Expose context so AudioListener._tick() can call ctx.currentTime
+            context: this,
+        };
+    }
 
     public resume(): Promise<void> {
         this.state = 'running';
@@ -75,6 +106,7 @@ class MockAudioContext {
         return {
             connect: () => undefined,
             disconnect: () => undefined,
+            context: this,
             gain: {
                 setTargetAtTime: () => undefined,
                 cancelScheduledValues: () => undefined,
@@ -83,6 +115,33 @@ class MockAudioContext {
                 value: 1,
             },
         } as unknown as GainNode;
+    }
+
+    public createStereoPanner(): StereoPannerNode {
+        return {
+            connect: () => undefined,
+            disconnect: () => undefined,
+            pan: {
+                setTargetAtTime: () => undefined,
+                value: 0,
+            },
+        } as unknown as StereoPannerNode;
+    }
+
+    public createPanner(): PannerNode {
+        return {
+            connect: jest.fn(),
+            disconnect: jest.fn(),
+            context: this,
+            panningModel: 'equalpower' as PanningModelType,
+            distanceModel: 'linear' as DistanceModelType,
+            maxDistance: 10000,
+            refDistance: 1,
+            rolloffFactor: 1,
+            positionX: makeMockAudioParam(),
+            positionY: makeMockAudioParam(),
+            positionZ: makeMockAudioParam(),
+        } as unknown as PannerNode;
     }
 
     public createMediaElementSource(): MediaElementAudioSourceNode {
@@ -102,6 +161,101 @@ class MockAudioContext {
             loop: false,
             buffer: null,
         } as unknown as AudioBufferSourceNode;
+    }
+
+    public createBiquadFilter(): BiquadFilterNode {
+        return {
+            connect: () => undefined,
+            disconnect: () => undefined,
+            type: 'lowpass' as BiquadFilterType,
+            context: this,
+            frequency: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 350,
+            },
+            Q: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 1,
+            },
+            gain: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 0,
+            },
+        } as unknown as BiquadFilterNode;
+    }
+
+    public createDynamicsCompressor(): DynamicsCompressorNode {
+        return {
+            connect: () => undefined,
+            disconnect: () => undefined,
+            context: this,
+            threshold: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: -24,
+            },
+            knee: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 30,
+            },
+            ratio: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 12,
+            },
+            attack: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 0.003,
+            },
+            release: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 0.25,
+            },
+            reduction: 0,
+        } as unknown as DynamicsCompressorNode;
+    }
+
+    public createDelay(_maxDelayTime?: number): DelayNode {
+        return {
+            connect: () => undefined,
+            disconnect: () => undefined,
+            context: this,
+            delayTime: {
+                setValueAtTime: () => undefined,
+                setTargetAtTime: () => undefined,
+                value: 0,
+            },
+        } as unknown as DelayNode;
+    }
+
+    public createConvolver(): ConvolverNode {
+        return {
+            connect: () => undefined,
+            disconnect: () => undefined,
+            context: this,
+            buffer: null,
+            normalize: true,
+        } as unknown as ConvolverNode;
+    }
+
+    public createBuffer(numberOfChannels: number, length: number, _sampleRate: number): AudioBuffer {
+        const channels: Float32Array[] = [];
+        for (let i = 0; i < numberOfChannels; i++) {
+            channels.push(new Float32Array(length));
+        }
+        return {
+            numberOfChannels,
+            length,
+            sampleRate: _sampleRate,
+            duration: length / _sampleRate,
+            getChannelData: (channel: number) => channels[channel],
+        } as unknown as AudioBuffer;
     }
 }
 

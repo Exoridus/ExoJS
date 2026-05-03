@@ -1,6 +1,7 @@
 import type { Media } from '@/audio/Media';
 import { Signal } from '@/core/Signal';
 import type { PlaybackOptions } from '@/core/types';
+import type { AudioBus } from '@/audio/AudioBus';
 
 export interface AbstractMediaInitialState extends Omit<PlaybackOptions, 'time'> {
     duration: number;
@@ -16,10 +17,28 @@ export abstract class AbstractMedia implements Media {
     protected _playbackRate: number;
     protected _loop: boolean;
     protected _muted: boolean;
+    protected _bus: AudioBus | null = null;
 
     public abstract get paused(): boolean;
     public abstract set paused(paused: boolean);
     public abstract get analyserTarget(): AudioNode | null;
+
+    public get bus(): AudioBus {
+        return this._bus ?? this._defaultBus();
+    }
+
+    public set bus(bus: AudioBus) {
+        if (this._bus === bus) return;
+        this._disconnectFromBus();
+        this._bus = bus;
+        this._connectToBus();
+    }
+
+    /** Returns the default bus for this media type. Subclasses override. */
+    protected abstract _defaultBus(): AudioBus;
+
+    protected abstract _disconnectFromBus(): void;
+    protected abstract _connectToBus(): void;
 
     public get duration(): number {
         return this._duration;

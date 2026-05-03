@@ -57,31 +57,50 @@ describe('Sound', () => {
         jest.restoreAllMocks();
     });
 
-    test('play() keeps single-instance semantics, but can replay after natural completion', () => {
+    // Previously: play() kept single-instance semantics (singleton-replace default).
+    // Now: play() is multi-instance by default. Use play({ replace: true }) for
+    // singleton-replace behavior.
+    test('play({ replace: true }) stops prior instance before starting a new one', () => {
         const factory = setupSourceFactorySpy();
         const sound = new Sound(createAudioBufferStub());
 
-        sound.play();
-        sound.play();
+        sound.play({ replace: true });
+        sound.play({ replace: true });
 
-        expect(factory.sources.length).toBe(1);
-
-        factory.sources[0].onended?.();
-        expect(sound.paused).toBe(true);
-
-        sound.play();
+        // Each replace call stops previous sources, so each call yields exactly 1 live source.
+        // Two calls = 2 source nodes created total, first stopped before second started.
         expect(factory.sources.length).toBe(2);
+        expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
+        expect(factory.sources[1].stop).toHaveBeenCalledTimes(0);
 
         factory.restore();
     });
 
-    test('playPooled() supports repeated SFX playback and pool-size limiting', () => {
+    // play() without replace creates independent pooled instances (multi-instance default).
+    test('play() without replace creates independent pooled instances', () => {
+        const factory = setupSourceFactorySpy();
+        const sound = new Sound(createAudioBufferStub(), { poolSize: 3 });
+
+        sound.play();
+        sound.play();
+        sound.play();
+
+        expect(factory.sources.length).toBe(3);
+        for (const src of factory.sources) {
+            expect(src.stop).not.toHaveBeenCalled();
+        }
+
+        factory.restore();
+    });
+
+    // Pool eviction: when pool is full a new play() evicts oldest (FIFO).
+    test('play() past pool limit evicts oldest via FIFO', () => {
         const factory = setupSourceFactorySpy();
         const sound = new Sound(createAudioBufferStub(), { poolSize: 2 });
 
-        sound.playPooled();
-        sound.playPooled();
-        sound.playPooled();
+        sound.play();
+        sound.play();
+        sound.play();
 
         expect(factory.sources.length).toBe(3);
         expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
