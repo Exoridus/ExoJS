@@ -7,6 +7,7 @@ export * from './primitives/Graphics';
 export * from './shader/Shader';
 export * from './shader/ShaderAttribute';
 export * from './shader/ShaderUniform';
+export * from './shader/upgradeFragmentShaderToGl300';
 
 export * from './sprite/Sprite';
 export * from './sprite/Spritesheet';

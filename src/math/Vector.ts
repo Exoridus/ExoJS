@@ -81,7 +81,7 @@ export class Vector extends AbstractVector implements ShapeLike {
     }
 
     public destroy(): void {
-        // todo - check if destroy is needed
+        // no-op — pure value class, kept for Destroyable interface conformance
     }
 
     public static get temp(): Vector {

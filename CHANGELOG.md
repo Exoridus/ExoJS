@@ -4,6 +4,79 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.8] - 2026-05-04
+
+GLSL 1.00 → 3.00 auto-upgrade for `WebGl2ShaderFilter` (Shadertoy/ISF
+shaders work out of the box) plus a code-hygiene pass — `Circle.getNormals()`
+now caches via dirty-flag (matching 0.6.19's Sprite pattern), Rectangle-vs-
+Rectangle collision response now reports correct `overlap` value, and the
+`destroy()` audit cleans up TODO comments across 8 value classes (with
+real cleanup logic added to `ObservableVector` and `Circle` where needed).
+
+### Added
+
+- **`upgradeFragmentShaderToGl300(source)`** — exported utility function.
+  Upgrades GLSL ES 1.00 fragment shader source to 3.00 with documented
+  transformations (adds `#version 300 es`, `precision highp float`,
+  `out vec4 fragColor`, replaces `gl_FragColor` / `texture2D(` /
+  `textureCube(` / `texture2DProj(` / `varying`). Idempotent: 3.00
+  source returns unchanged. Edge cases not handled (`gl_FragData[N]`,
+  `textureLod` variants, etc.) produce GLSL compile errors that the
+  user must port manually.
+- **`WebGl2ShaderFilterOptions.autoUpgrade: boolean`** (default `true`)
+  — when enabled, the constructor passes the user's `fragmentSource`
+  through `upgradeFragmentShaderToGl300()` before storing. Set to
+  `false` for strict 3.00 input (legacy code becomes a compile error
+  — useful for CI / linting setups that want to catch legacy shaders
+  as bugs). Vertex shader source is never auto-upgraded; legacy
+  vertex sources must be ported manually.
+
+### Performance
+
+- **`Circle.getNormals()` cached via dirty flag** (matching the 0.6.19
+  pattern for `Sprite.getNormals()`). Returns a stable array of `Vector`
+  references on subsequent calls; recomputes only when radius / position
+  / x / y change. Reduces GC pressure in collision-detection hot paths
+  (especially SAT polygon-vs-circle).
+- **`Circle.getCollisionVertices()` invalidation bug fixed.** The
+  cache existed since the initial commit but was never invalidated on
+  position / radius changes — moving a Circle after first collision
+  check returned stale vertex positions. Now invalidates correctly via
+  `_verticesDirty` flag.
+
+### Fixed
+
+- **`getCollisionRectangleRectangle.overlap`** now returns the correct
+  minimum axis overlap (`min(overlapX, overlapY)`) instead of hardcoded
+  `0`. Required for any collision-response logic that pushes shapes
+  apart by their overlap distance. Other collision shapes (Circle-vs-
+  Circle, Circle-vs-Rectangle, polygon-via-SAT) already computed this
+  correctly.
+
+### Changed
+
+- **`destroy()` audit complete** across 8 value classes:
+  - `Vector`, `Size`, `Interval`, `Random`, `Time`, `TorqueAffector`
+    — kept as no-op; `// todo` comments replaced with explanatory
+    "no-op — pure value class, kept for `Destroyable` interface
+    conformance" comments.
+  - `ObservableVector` — `destroy()` now nulls the change callback
+    to prevent leaks if the instance is held in external scope.
+    Field type widened to `(() => void) | null`; all internal call
+    sites already used optional-chaining, so no functional change for
+    live instances.
+  - `Circle` — `destroy()` now destroys all cached `Vector` instances
+    in `_collisionVertices` and `_normals` arrays (added in this
+    release).
+
+### Notes
+
+- The autoUpgrade default is `true` so Shadertoy/ISF/legacy shaders
+  work without any flag. Strict-3.00 codebases can opt out per filter.
+- Removed the private `Circle.getCollisionVertex` helper — its logic
+  was inlined into `getCollisionVertices` for the cache-reuse pattern.
+  Internal change, no external impact.
+
 ## [0.7.7] - 2026-05-04
 
 Critical bugfix in `AudioListener` and adds 3/4 time-signature detection

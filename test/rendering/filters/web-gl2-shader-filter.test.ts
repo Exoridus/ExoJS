@@ -565,4 +565,28 @@ describe('WebGl2ShaderFilter', () => {
         input.destroy();
         output.destroy();
     });
+
+    // 21. Default behavior: legacy gl_FragColor source is auto-upgraded (autoUpgrade default = true)
+    test('default autoUpgrade upgrades legacy gl_FragColor source', () => {
+        const legacyFrag = `void main() { gl_FragColor = vec4(1.0); }`;
+        const filter = new WebGl2ShaderFilter({ fragmentSource: legacyFrag });
+        const stored = (filter as unknown as Record<string, unknown>)['_fragmentSource'] as string;
+
+        expect(stored).toMatch(/^#version 300 es/);
+        expect(stored).toContain('fragColor');
+        expect(stored).not.toContain('gl_FragColor');
+
+        filter.destroy();
+    });
+
+    // 22. autoUpgrade: false skips the transform
+    test('autoUpgrade: false leaves fragment source unchanged', () => {
+        const legacyFrag = `void main() { gl_FragColor = vec4(1.0); }`;
+        const filter = new WebGl2ShaderFilter({ fragmentSource: legacyFrag, autoUpgrade: false });
+        const stored = (filter as unknown as Record<string, unknown>)['_fragmentSource'] as string;
+
+        expect(stored).toBe(legacyFrag);
+
+        filter.destroy();
+    });
 });

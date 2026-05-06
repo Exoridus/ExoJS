@@ -318,13 +318,17 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
         return null;
     }
 
+    const overlapX = Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left);
+    const overlapY = Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top);
+    const overlap = Math.min(overlapX, overlapY);
+
     const zeroNormal = rectA.position.clone().set(0, 0);
     const zeroVector = rectA.position.clone().set(0, 0);
 
     return {
         shapeA: rectA,
         shapeB: rectB,
-        overlap: 0, // todo
+        overlap,
         shapeAinB: rectB.containsRect(rectA),
         shapeBinA: rectA.containsRect(rectB),
         projectionN: zeroNormal,

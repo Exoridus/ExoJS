@@ -31,6 +31,6 @@ export class TorqueAffector implements ParticleAffector {
     }
 
     public destroy(): void {
-        // todo - check if destroy is needed
+        // no-op — pure value class, kept for Destroyable interface conformance
     }
 }

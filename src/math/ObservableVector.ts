@@ -4,9 +4,9 @@ export class ObservableVector extends AbstractVector {
 
     private _x: number;
     private _y: number;
-    private readonly _callback: () => void;
+    private _callback: (() => void) | null;
 
-    public constructor(callback: () => void, x = 0, y = 0) {
+    public constructor(callback: (() => void) | null, x = 0, y = 0) {
         super();
 
         this._x = x;
@@ -79,7 +79,7 @@ export class ObservableVector extends AbstractVector {
     }
 
     public clone(): this {
-        return new ObservableVector(this._callback, this._x, this._y) as this;
+        return new ObservableVector(this._callback ?? ((): void => {}), this._x, this._y) as this;
     }
 
     public copy(vector: AbstractVector): this {
@@ -87,6 +87,8 @@ export class ObservableVector extends AbstractVector {
     }
 
     public destroy<T = ObservableVector>(): void {
-        // todo - check if destroy is needed
+        // Clear the callback to prevent leaks if this vector is retained by an
+        // external scope after the owning object is destroyed.
+        this._callback = null;
     }
 }

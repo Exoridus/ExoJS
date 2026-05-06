@@ -7,6 +7,7 @@ import { createWebGl2ShaderProgram } from '@/rendering/webgl2/WebGl2ShaderProgra
 import { WebGl2RenderBuffer } from '@/rendering/webgl2/WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject } from '@/rendering/webgl2/WebGl2VertexArrayObject';
 import { Texture } from '@/rendering/texture/Texture';
+import { upgradeFragmentShaderToGl300 } from '@/rendering/shader/upgradeFragmentShaderToGl300';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
@@ -53,6 +54,21 @@ export interface WebGl2ShaderFilterOptions {
      *   filter.uniforms.uTime = performance.now() / 1000;
      */
     uniforms?: Record<string, ShaderFilterUniformValue>;
+
+    /**
+     * Auto-upgrade legacy GLSL ES 1.00 fragment shader source to GLSL ES 3.00.
+     * Default `true` — accepts both Shadertoy/ISF/legacy shaders and modern
+     * 3.00 shaders interchangeably.
+     *
+     * Set to `false` if you want strict 3.00 input (will fail to compile if
+     * given 1.00-style code). Useful for CI/linting setups that want to catch
+     * legacy shader code as bugs.
+     *
+     * Note: only the fragment shader is upgraded. If you supply a 1.00-style
+     * vertex shader via `vertexSource`, you will get a compile error that
+     * must be fixed manually.
+     */
+    autoUpgrade?: boolean;
 }
 
 /**
@@ -154,7 +170,10 @@ export class WebGl2ShaderFilter extends Filter {
             throw new Error('WebGl2ShaderFilter requires fragmentSource for the WebGL2 backend.');
         }
 
-        this._fragmentSource = options.fragmentSource;
+        const autoUpgrade = options.autoUpgrade !== false;
+        this._fragmentSource = autoUpgrade
+            ? upgradeFragmentShaderToGl300(options.fragmentSource)
+            : options.fragmentSource;
         this._vertexSource = options.vertexSource ?? defaultVertexSource;
         this.uniforms = { ...(options.uniforms ?? {}) };
     }
