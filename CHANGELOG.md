@@ -4,6 +4,30 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.9] - 2026-05-07
+
+Fixes a GLSL compile-error in the 0.7.8 shader auto-upgrade path.
+
+### Fixed
+
+- **`upgradeFragmentShaderToGl300()` now always prepends `precision highp
+  float;`** before the `out vec4 fragColor;` declaration. Previously, if
+  the user's source already contained a precision declaration anywhere
+  (e.g., `precision lowp float;` mid-source), the upgrader skipped its
+  own injection — but the user's declaration came AFTER the
+  `out vec4 fragColor;` line, which itself uses a float-typed variable.
+  GLSL ES 3.00 requires precision to be declared before any float-typed
+  declaration, so the compiler rejected the output with
+  `0:2: '' : No precision specified for (float).`
+
+  Multiple precision declarations are legal in GLSL ES 3.00 with
+  last-precision-wins semantics. The fix always injects `precision highp
+  float;` at line 2 (before `out vec4 fragColor;`); the user's own
+  precision declaration further down still applies to their code via
+  the standard last-precision-wins rule. No semantic change for
+  user-provided shader logic; previously-broken shaders with custom
+  precision declarations now compile correctly.
+
 ## [0.7.8] - 2026-05-04
 
 GLSL 1.00 → 3.00 auto-upgrade for `WebGl2ShaderFilter` (Shadertoy/ISF

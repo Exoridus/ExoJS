@@ -8,6 +8,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .claude/
+.claire/
 .codex/
 .workspace/
 .rollup.cache/

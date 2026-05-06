@@ -50,16 +50,36 @@ void main() { gl_FragColor = vec4(vUv, 0.0, 1.0); }`;
         expect(result).not.toContain('varying vec2 vUv;');
     });
 
-    // 6. Precision line is NOT duplicated when already present
-    test('does not duplicate precision declaration when already present', () => {
-        const src = `precision highp float;
+    // 6. Always prepends `precision highp float;` BEFORE `out vec4 fragColor;`
+    //    because GLSL ES 3.00 requires precision to be set before any float-typed
+    //    declaration. If the user has their own precision declaration later in
+    //    the source, last-precision-wins rule means their preference still
+    //    applies to their own code below. Multiple precision declarations are
+    //    legal in GLSL ES 3.00.
+    test('always prepends precision before out fragColor (multiple declarations allowed)', () => {
+        const src = `precision lowp float;
 void main() { gl_FragColor = vec4(1.0); }`;
         const result = upgradeFragmentShaderToGl300(src);
 
-        const matches = result.match(/precision\s+\w+\s+float\s*;/g);
+        // Two precision declarations: ours (highp, before fragColor) + user's (lowp, kept)
+        const precisionLines = result.match(/precision\s+\w+\s+float\s*;/g);
 
-        expect(matches).not.toBeNull();
-        expect(matches!.length).toBe(1);
+        expect(precisionLines).not.toBeNull();
+        expect(precisionLines!.length).toBe(2);
+
+        // The injected `precision highp float;` MUST appear before
+        // `out vec4 fragColor;` to satisfy GLSL ES 3.00's rule that
+        // precision must be declared before any float-typed declaration.
+        const highpIndex = result.indexOf('precision highp float;');
+        const fragColorIndex = result.indexOf('out vec4 fragColor;');
+        const lowpIndex = result.indexOf('precision lowp float;');
+
+        expect(highpIndex).toBeGreaterThanOrEqual(0);
+        expect(fragColorIndex).toBeGreaterThanOrEqual(0);
+        expect(highpIndex).toBeLessThan(fragColorIndex);
+        // User's lowp declaration comes after fragColor — last-precision-wins
+        // for the user's own code below.
+        expect(lowpIndex).toBeGreaterThan(fragColorIndex);
     });
 
     // 7. Precision line IS added when missing
