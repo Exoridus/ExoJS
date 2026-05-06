@@ -26,6 +26,11 @@ export interface BeatDetectorOptions {
     settlingMs?: number;
     /** Number of mel filterbank bands. Default 24. */
     melBands?: number;
+    /**
+     * When true (default), the worklet runs parallel 3/4 and 4/4 posteriors and
+     * switches active time signature via hysteresis. Set false to lock to 4/4.
+     */
+    enableTimeSignatureDetection?: boolean;
 }
 
 export interface BeatInfo {
@@ -192,6 +197,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._melBands   = opts.melBands   || 24;
         this._settlingMs = opts.settlingMs !== undefined ? opts.settlingMs : 1500;
         this._tempoWindowSec = opts.tempoWindowSec || 6;
+        this._enableTsDetection = opts.enableTimeSignatureDetection !== false;
 
         var numBins = this._fftSize >> 1;
         this._real = new Float32Array(this._fftSize);
@@ -233,8 +239,13 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         this._ibiHistory     = new Float32Array(4); // last 4 inter-beat intervals
         this._ibiIdx         = 0;
 
-        // Bar position state (4/4 hardcoded for V1)
-        this._barPosterior  = new Float32Array([0.25, 0.25, 0.25, 0.25]);
+        // Bar position state — parallel posteriors for 4/4 and 3/4
+        this._posterior4    = new Float32Array([0.25, 0.25, 0.25, 0.25]);
+        this._posterior3    = new Float32Array([1/3, 1/3, 1/3]);
+        this._ts4Confidence = 0.5;
+        this._ts3Confidence = 0.5;
+        this._activeTs      = '4/4';
+        this._sustainCounter = 0;
         this._barPosition   = 1; // 1-indexed
         this._barNumber     = 0;
         this._beatsSinceStart = 0;
@@ -514,48 +525,84 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         }
     }
 
-    _updateBarPosition(flux) {
-        // HMM-lite: prior shifts bar position forward
-        var p = this._barPosterior;
-        var shifted = new Float32Array(4);
-        // prior: each position shifts to next
-        shifted[0] = p[3]; // bar pos 4 → 1
-        shifted[1] = p[0]; // bar pos 1 → 2
-        shifted[2] = p[1]; // bar pos 2 → 3
-        shifted[3] = p[2]; // bar pos 3 → 4
-
-        // Likelihood: downbeats tend to have higher flux
-        // Simple model: position 0 (beat 1) has higher likelihood when flux is high
-        var totalFlux = 0;
-        var mean = 0;
+    _computeBeatLikelihood(flux) {
         var count = Math.min(this._fluxCount, 32);
         var wp = this._fluxWritePos;
         var len = this._fluxWindow.length;
+        var totalFlux = 0;
         for (var i = 0; i < count; i++) {
             totalFlux += this._fluxWindow[(wp - 1 - i + len) % len];
         }
-        mean = count > 0 ? totalFlux / count : 1;
-        var normalizedFlux = mean > 0 ? flux / mean : 1;
-        var downbeatLikelihood = Math.max(0.5, Math.min(2, normalizedFlux));
-        var otherLikelihood = 1.0;
+        var mean = count > 0 ? totalFlux / count : 1;
+        return Math.max(0.5, Math.min(1.5, mean > 0 ? flux / mean : 1));
+    }
 
-        var likelihood = new Float32Array([downbeatLikelihood, otherLikelihood, otherLikelihood, otherLikelihood]);
+    _updateBarPosition(flux) {
+        var likelihood = this._computeBeatLikelihood(flux);
 
-        // Posterior = shifted * likelihood
-        var sumP = 0;
+        // --- 4/4 posterior ---
+        var p4 = this._posterior4;
+        var s4 = new Float32Array(4);
+        s4[0] = p4[3]; s4[1] = p4[0]; s4[2] = p4[1]; s4[3] = p4[2];
+        var sum4 = 0;
         for (var i = 0; i < 4; i++) {
-            p[i] = shifted[i] * likelihood[i];
-            sumP += p[i];
+            p4[i] = s4[i] * (likelihood + (i === 0 ? 0.3 : 0));
+            sum4 += p4[i];
         }
-        if (sumP > 0) {
-            for (var i = 0; i < 4; i++) p[i] /= sumP;
+        if (sum4 > 0) { for (var i = 0; i < 4; i++) p4[i] /= sum4; }
+
+        // --- 3/4 posterior ---
+        var p3 = this._posterior3;
+        var s3 = new Float32Array(3);
+        s3[0] = p3[2]; s3[1] = p3[0]; s3[2] = p3[1];
+        var sum3 = 0;
+        for (var i = 0; i < 3; i++) {
+            p3[i] = s3[i] * (likelihood + (i === 0 ? 0.3 : 0));
+            sum3 += p3[i];
+        }
+        if (sum3 > 0) { for (var i = 0; i < 3; i++) p3[i] /= sum3; }
+
+        // --- Update TS confidences (EMA) ---
+        var max4 = 0;
+        for (var i = 0; i < 4; i++) { if (p4[i] > max4) max4 = p4[i]; }
+        var max3 = 0;
+        for (var i = 0; i < 3; i++) { if (p3[i] > max3) max3 = p3[i]; }
+        var alpha = 0.1;
+        this._ts4Confidence = (1 - alpha) * this._ts4Confidence + alpha * max4;
+        this._ts3Confidence = (1 - alpha) * this._ts3Confidence + alpha * max3;
+
+        // --- Hysteresis switching ---
+        if (this._enableTsDetection && this._beatsSinceStart > 8) {
+            var minSwitchMargin = 1.4;
+            var minSustainBeats = 12; // ~4 bars * 3 beats
+            var threeFavored = this._ts3Confidence > this._ts4Confidence * minSwitchMargin;
+            var fourFavored  = this._ts4Confidence > this._ts3Confidence * minSwitchMargin;
+
+            if (this._activeTs === '4/4' && threeFavored) {
+                this._sustainCounter++;
+                if (this._sustainCounter >= minSustainBeats) {
+                    this._activeTs = '3/4';
+                    this._sustainCounter = 0;
+                }
+            } else if (this._activeTs === '3/4' && fourFavored) {
+                this._sustainCounter++;
+                if (this._sustainCounter >= minSustainBeats + 4) { // 16 beats for 4/4
+                    this._activeTs = '4/4';
+                    this._sustainCounter = 0;
+                }
+            } else {
+                this._sustainCounter = 0;
+            }
         }
 
-        // Only trust after first full bar (4 beats)
-        if (this._beatsSinceStart >= 4) {
+        // --- Determine bar position from active TS ---
+        var barLen = this._activeTs === '3/4' ? 3 : 4;
+        var posterior = this._activeTs === '3/4' ? p3 : p4;
+
+        if (this._beatsSinceStart >= barLen) {
             var maxP = -1, maxI = 0;
-            for (var i = 0; i < 4; i++) {
-                if (p[i] > maxP) { maxP = p[i]; maxI = i; }
+            for (var i = 0; i < barLen; i++) {
+                if (posterior[i] > maxP) { maxP = posterior[i]; maxI = i; }
             }
             var newPos = maxI + 1; // 1-indexed
             if (newPos === 1 && this._barPosition !== 1) {
@@ -564,7 +611,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             this._barPosition = newPos;
         } else {
             // Just advance sequentially
-            this._barPosition = ((this._barPosition) % 4) + 1;
+            this._barPosition = ((this._barPosition) % barLen) + 1;
             if (this._barPosition === 1) this._barNumber++;
         }
     }
@@ -593,10 +640,12 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         ibiVar /= 4;
         var phaseConsistency = ibiMean > 0 ? Math.max(0, 1 - ibiVar / (ibiMean * ibiMean)) : 0;
 
-        // Bar consistency
+        // Bar consistency (use the active posterior)
+        var activePosterior = this._activeTs === '3/4' ? this._posterior3 : this._posterior4;
+        var activeLen = this._activeTs === '3/4' ? 3 : 4;
         var maxP = 0;
-        for (var i = 0; i < 4; i++) {
-            if (this._barPosterior[i] > maxP) maxP = this._barPosterior[i];
+        for (var i = 0; i < activeLen; i++) {
+            if (activePosterior[i] > maxP) maxP = activePosterior[i];
         }
         var barConsistency = maxP;
 
@@ -610,9 +659,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
         var lookahead = [];
         var beatInterval = 60 / this._bestBpm;
         var barPos = this._barPosition;
+        var barLen = this._activeTs === '3/4' ? 3 : 4;
         for (var i = 0; i < 8; i++) {
             var t = lastBeatTime + (i + 1) * beatInterval;
-            var bp = ((barPos + i - 1) % 4) + 1;
+            var bp = ((barPos - 1 + i) % barLen) + 1;
             lookahead.push({
                 audioTime: t,
                 tempo: this._bestBpm,
@@ -669,8 +719,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
             onsetStrength: this._onsetStrength,
             bandEnergy: be,
             barPosition: this._barPosition,
-            barLength: 4,
-            timeSignature: { numerator: 4, denominator: 4 },
+            barLength: this._activeTs === '3/4' ? 3 : 4,
+            timeSignature: this._activeTs === '3/4'
+                ? { numerator: 3, denominator: 4 }
+                : { numerator: 4, denominator: 4 },
             lookahead: this._lookahead,
             nextBeatTime: settled ? nextBeatTime : 0,
             nextDownbeatTime: settled ? nextDownbeatTime : 0,
@@ -694,6 +746,7 @@ export class BeatDetector {
     public readonly onBeatPredicted: Signal<[UpcomingBeat]>           = new Signal();
 
     // ---- Options ----
+    // enableTimeSignatureDetection not in Required<> since it has a default; keep as full explicit type
     private readonly _options: Required<BeatDetectorOptions>;
 
     // ---- Audio plumbing ----
@@ -721,13 +774,14 @@ export class BeatDetector {
 
     public constructor(options?: BeatDetectorOptions) {
         this._options = {
-            minBpm:         options?.minBpm         ?? 50,
-            maxBpm:         options?.maxBpm         ?? 250,
-            fftSize:        options?.fftSize        ?? 2048,
-            hopSize:        options?.hopSize        ?? 512,
-            tempoWindowSec: options?.tempoWindowSec ?? 6,
-            settlingMs:     options?.settlingMs     ?? 1500,
-            melBands:       options?.melBands       ?? 24,
+            minBpm:                      options?.minBpm                      ?? 50,
+            maxBpm:                      options?.maxBpm                      ?? 250,
+            fftSize:                     options?.fftSize                     ?? 2048,
+            hopSize:                     options?.hopSize                     ?? 512,
+            tempoWindowSec:              options?.tempoWindowSec              ?? 6,
+            settlingMs:                  options?.settlingMs                  ?? 1500,
+            melBands:                    options?.melBands                    ?? 24,
+            enableTimeSignatureDetection: options?.enableTimeSignatureDetection ?? true,
         };
 
         if (isAudioContextReady()) {
@@ -834,13 +888,14 @@ export class BeatDetector {
                 numberOfInputs: 1,
                 numberOfOutputs: 0,
                 processorOptions: {
-                    fftSize:        opts.fftSize,
-                    hopSize:        opts.hopSize,
-                    minBpm:         opts.minBpm,
-                    maxBpm:         opts.maxBpm,
-                    melBands:       opts.melBands,
-                    settlingMs:     opts.settlingMs,
-                    tempoWindowSec: opts.tempoWindowSec,
+                    fftSize:                      opts.fftSize,
+                    hopSize:                      opts.hopSize,
+                    minBpm:                       opts.minBpm,
+                    maxBpm:                       opts.maxBpm,
+                    melBands:                     opts.melBands,
+                    settlingMs:                   opts.settlingMs,
+                    tempoWindowSec:               opts.tempoWindowSec,
+                    enableTimeSignatureDetection: opts.enableTimeSignatureDetection,
                 },
             });
 

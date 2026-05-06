@@ -18,7 +18,7 @@ const getListenerMock = (): {
     upX: { setValueAtTime: jest.Mock };
     upY: { setValueAtTime: jest.Mock };
     upZ: { setValueAtTime: jest.Mock };
-    context: AudioContext;
+    // NO context property — matches real WebAudio spec
 } => (getCtx() as unknown as { listener: ReturnType<typeof getListenerMock> }).listener;
 
 const makeSceneNodeStub = (x: number, y: number) => ({
@@ -182,6 +182,53 @@ describe('AudioListener', () => {
         listener.target = { x: 99, y: 88 };
         listener._tick();
         expect(listener.position.x).toBe(99);
+        expect(listener.position.y).toBe(88);
+        listener.destroy();
+    });
+
+    // ---- Regression tests: AudioListener._ctx bugfix ----
+
+    // R1. _tick() does not throw even though WebAudio listener has no .context property
+    test('_tick() does not throw when WebAudio listener has no .context property (regression)', () => {
+        const listener = new AudioListener();
+        // Verify the mock listener has no context property (real-browser parity)
+        const l = getListenerMock();
+        expect((l as unknown as { context?: unknown }).context).toBeUndefined();
+        // _tick() must not crash
+        listener.target = { x: 1, y: 2 };
+        expect(() => listener._tick()).not.toThrow();
+        listener.destroy();
+    });
+
+    // R2. position is written to audioListener.positionX/Y/Z via _ctx.currentTime
+    test('_tick() writes position to positionX/Y/Z using _ctx (not listener.context)', () => {
+        const listener = new AudioListener();
+        listener.target = { x: 55, y: 66 };
+        listener._tick();
+        const l = getListenerMock();
+        expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(55, expect.any(Number));
+        expect(l.positionY.setValueAtTime).toHaveBeenCalledWith(66, expect.any(Number));
+        expect(l.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+        listener.destroy();
+    });
+
+    // R3. _tick() with target = null does not update position and does not throw
+    test('_tick() with target=null neither updates position nor throws', () => {
+        const listener = new AudioListener();
+        expect(() => listener._tick()).not.toThrow();
+        expect(listener.position.x).toBe(0);
+        expect(listener.position.y).toBe(0);
+        listener.destroy();
+    });
+
+    // R4. _tick() reads global transform from a SceneNode target
+    test('_tick() reads global transform from SceneNode target', () => {
+        const listener = new AudioListener();
+        const node = makeSceneNodeStub(77, 88);
+        listener.target = node as unknown as Parameters<typeof listener['target'] extends infer T ? (t: T) => void : never>[0];
+        listener._tick();
+        expect(node.getGlobalTransform).toHaveBeenCalledTimes(1);
+        expect(listener.position.x).toBe(77);
         expect(listener.position.y).toBe(88);
         listener.destroy();
     });

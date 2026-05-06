@@ -4,6 +4,62 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2026-05-04
+
+Critical bugfix in `AudioListener` and adds 3/4 time-signature detection
+to `BeatDetector`.
+
+### Fixed
+
+- **`AudioListener._tick()` no longer crashes in real browsers.** The
+  WebAudio `AudioListener` interface does not expose a `.context`
+  property — that's an undocumented quirk that does not exist in any
+  spec-compliant browser. The previous `_tick()` implementation read
+  `_audioListener.context.currentTime`, which crashed
+  deterministically on the first frame after audio-context unlock.
+  Tests passed because the jsdom mock incorrectly defined a `.context`
+  property; that has been removed from the mock as well.
+
+  **Severity**: production-critical. The bug fired in every ExoJS app
+  that triggered `getAudioContext()` (i.e. any app using `Sound`,
+  `Music`, `BeatDetector`, `AudioAnalyser`, or `Video` audio), because
+  `AudioMixer.update()` ticks the listener every frame regardless of
+  whether the user explicitly set `listener.target`.
+
+  **Fix**: `AudioListener` now stores its `AudioContext` reference in
+  a private `_ctx` field at setup time and reads `_ctx.currentTime`
+  instead. Mirrors the pattern used elsewhere in the audio stack.
+
+### Added
+
+- **3/4 time-signature detection in `BeatDetector`** — the worklet
+  now tracks parallel posteriors over 4-beat and 3-beat bar
+  structures. Active time signature is selected via hysteresis:
+  - **EMA confidences** (smoothing α=0.1) for each candidate
+  - **Sustain-margin guard**: switching requires the alternate TS's
+    confidence to exceed the active by 1.4× for ~12-16 consecutive
+    beats. Bridges and breakdowns don't trigger spurious switches.
+  - **Settling**: first 8 beats stay 4/4 regardless of evidence
+- **`BeatDetectorOptions.enableTimeSignatureDetection: boolean`**
+  (default `true`) — set to `false` to lock detection to 4/4.
+- **`BeatDetector.timeSignature`** stops being hardcoded to
+  `{numerator: 4, denominator: 4}` — now reflects the active
+  detected TS. Public API unchanged.
+- **`BeatDetector.barLength` and `barPosition`** dynamically reflect
+  the active TS (3 vs 4 positions). The `lookahead` array marks
+  downbeats based on the active bar length.
+
+### Notes
+
+- 6/8, 5/4, 7/8 and other odd time signatures are not detected.
+  Default-fallback is 4/4 in all ambiguous cases.
+- 3/4 detection works best on stable, percussive 3/4 material
+  (waltz-feel music). Performance on Jazz / Rubato / Free-form
+  remains weak — consistent with Stage 1+2 limitations from 0.7.2.
+- The mock-cleanup means existing test fixtures that relied on
+  `audioContext.listener.context` had to be updated; the production
+  path no longer reads that property at all.
+
 ## [0.7.6] - 2026-05-04
 
 Closes the remaining WebGPU / WebGL2 backend parity gaps and cleans up

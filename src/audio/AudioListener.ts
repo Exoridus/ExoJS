@@ -15,6 +15,7 @@ export class AudioListener {
     public target: AudioListenerTarget = null;
 
     private _audioListener: WebAudioListener | null = null;
+    private _ctx: AudioContext | null = null;
 
     public constructor() {
         if (isAudioContextReady()) {
@@ -29,9 +30,8 @@ export class AudioListener {
         if (this.target !== null) {
             this._readTargetPosition();
         }
-        if (this._audioListener !== null) {
-            const ctx = (this._audioListener as unknown as { context: AudioContext }).context;
-            const t = ctx.currentTime;
+        if (this._audioListener !== null && this._ctx !== null) {
+            const t = this._ctx.currentTime;
             const listener = this._audioListener as unknown as Partial<{
                 positionX: AudioParam;
                 positionY: AudioParam;
@@ -54,6 +54,7 @@ export class AudioListener {
         this.velocity.destroy();
         this.target = null;
         this._audioListener = null;
+        this._ctx = null;
     }
 
     private _readTargetPosition(): void {
@@ -81,6 +82,7 @@ export class AudioListener {
     }
 
     private _setup(ctx: AudioContext): void {
+        this._ctx = ctx;
         this._audioListener = ctx.listener;
         const t = ctx.currentTime;
         const listener = ctx.listener as unknown as Partial<{

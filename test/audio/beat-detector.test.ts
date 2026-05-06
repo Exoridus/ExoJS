@@ -407,6 +407,150 @@ describe('BeatDetector', () => {
             expect(d.timeSignature).toEqual({ numerator: 4, denominator: 4 });
             d.destroy();
         });
+
+        it('barLength is 4 in default 4/4 mode', () => {
+            const d = new BeatDetector();
+            expect(d.barLength).toBe(4);
+            d.destroy();
+        });
+
+        it('switches to 3/4 after sustained 3/4 state messages', async () => {
+            const d = new BeatDetector();
+            await d.ready;
+            // Simulate ~20 state messages with 3/4 TS
+            for (let i = 0; i < 20; i++) {
+                simulateMessage(d, {
+                    type: 'state',
+                    tempo: 120, beatPhase: 0, confidence: 0.8, gridStability: 0.8,
+                    tempoCandidates: [], rms: 0.3, onsetStrength: 1.0,
+                    bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+                    barPosition: ((i % 3) + 1),
+                    barLength: 3,
+                    timeSignature: { numerator: 3, denominator: 4 },
+                    lookahead: [],
+                    nextBeatTime: i * 0.5,
+                    nextDownbeatTime: (i + 1) * 0.5,
+                });
+            }
+            expect(d.timeSignature).toEqual({ numerator: 3, denominator: 4 });
+            expect(d.barLength).toBe(3);
+            d.destroy();
+        });
+
+        it('switches back to 4/4 after sustained 4/4 state messages following 3/4', async () => {
+            const d = new BeatDetector();
+            await d.ready;
+            // First switch to 3/4
+            for (let i = 0; i < 20; i++) {
+                simulateMessage(d, {
+                    type: 'state',
+                    tempo: 120, beatPhase: 0, confidence: 0.8, gridStability: 0.8,
+                    tempoCandidates: [], rms: 0.3, onsetStrength: 1.0,
+                    bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+                    barPosition: ((i % 3) + 1), barLength: 3,
+                    timeSignature: { numerator: 3, denominator: 4 },
+                    lookahead: [], nextBeatTime: i * 0.5, nextDownbeatTime: (i + 1) * 0.5,
+                });
+            }
+            expect(d.timeSignature).toEqual({ numerator: 3, denominator: 4 });
+
+            // Then switch back to 4/4
+            for (let i = 0; i < 20; i++) {
+                simulateMessage(d, {
+                    type: 'state',
+                    tempo: 120, beatPhase: 0, confidence: 0.8, gridStability: 0.8,
+                    tempoCandidates: [], rms: 0.3, onsetStrength: 1.0,
+                    bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+                    barPosition: ((i % 4) + 1), barLength: 4,
+                    timeSignature: { numerator: 4, denominator: 4 },
+                    lookahead: [], nextBeatTime: i * 0.5, nextDownbeatTime: (i + 1) * 0.5,
+                });
+            }
+            expect(d.timeSignature).toEqual({ numerator: 4, denominator: 4 });
+            expect(d.barLength).toBe(4);
+            d.destroy();
+        });
+
+        it('hysteresis is enforced in the worklet (processorOptions carries enableTimeSignatureDetection=true by default)', async () => {
+            // The main-thread BeatDetector is a pure cache of worklet state messages —
+            // hysteresis switching lives inside the worklet. We verify the option is
+            // forwarded correctly so the worklet can apply it.
+            let capturedProcessorOptions: Record<string, unknown> | undefined;
+            const OrigAWN = globalThis.AudioWorkletNode;
+            (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn(
+                (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) => {
+                    capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
+                    return new OrigAWN(c, name, opts);
+                },
+            );
+            const d = new BeatDetector();
+            await d.ready;
+            // Default: enableTimeSignatureDetection should be true
+            expect(capturedProcessorOptions?.['enableTimeSignatureDetection']).toBe(true);
+            d.destroy();
+        });
+
+        it('forwards enableTimeSignatureDetection=false to worklet processorOptions', async () => {
+            let capturedProcessorOptions: Record<string, unknown> | undefined;
+            const OrigAWN = globalThis.AudioWorkletNode;
+            (globalThis.AudioWorkletNode as unknown as jest.Mock) = jest.fn(
+                (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) => {
+                    capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
+                    return new OrigAWN(c, name, opts);
+                },
+            );
+            const d = new BeatDetector({ enableTimeSignatureDetection: false });
+            await d.ready;
+            expect(capturedProcessorOptions?.['enableTimeSignatureDetection']).toBe(false);
+            d.destroy();
+        });
+
+        it('barPosition cycles 1..3 in 3/4 mode from state messages', async () => {
+            const d = new BeatDetector();
+            await d.ready;
+            simulateMessage(d, {
+                type: 'state',
+                tempo: 120, beatPhase: 0, confidence: 0.8, gridStability: 0.8,
+                tempoCandidates: [], rms: 0.3, onsetStrength: 1.0,
+                bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+                barPosition: 2, barLength: 3,
+                timeSignature: { numerator: 3, denominator: 4 },
+                lookahead: [], nextBeatTime: 1.0, nextDownbeatTime: 2.0,
+            });
+            expect(d.barPosition).toBe(2);
+            expect(d.barLength).toBe(3);
+            d.destroy();
+        });
+
+        it('lookahead has correct downbeat marks for 3-beat bars', async () => {
+            const d = new BeatDetector();
+            await d.ready;
+            const upcoming = [
+                { audioTime: 1.0, tempo: 120, isDownbeat: true, beatInBar: 1 },
+                { audioTime: 1.5, tempo: 120, isDownbeat: false, beatInBar: 2 },
+                { audioTime: 2.0, tempo: 120, isDownbeat: false, beatInBar: 3 },
+                { audioTime: 2.5, tempo: 120, isDownbeat: true, beatInBar: 1 },
+            ];
+            simulateMessage(d, {
+                type: 'state',
+                tempo: 120, beatPhase: 0, confidence: 0.8, gridStability: 0.8,
+                tempoCandidates: [], rms: 0.3, onsetStrength: 1.0,
+                bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+                barPosition: 1, barLength: 3,
+                timeSignature: { numerator: 3, denominator: 4 },
+                lookahead: upcoming,
+                nextBeatTime: 1.0, nextDownbeatTime: 1.0,
+            });
+            expect(d.lookahead[0].beatInBar).toBe(1);
+            expect(d.lookahead[0].isDownbeat).toBe(true);
+            expect(d.lookahead[1].beatInBar).toBe(2);
+            expect(d.lookahead[1].isDownbeat).toBe(false);
+            expect(d.lookahead[2].beatInBar).toBe(3);
+            expect(d.lookahead[2].isDownbeat).toBe(false);
+            expect(d.lookahead[3].beatInBar).toBe(1);
+            expect(d.lookahead[3].isDownbeat).toBe(true);
+            d.destroy();
+        });
     });
 
     // ---- Destroy ----

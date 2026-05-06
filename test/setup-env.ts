@@ -69,7 +69,7 @@ class MockAudioContext {
         positionX: AudioParam; positionY: AudioParam; positionZ: AudioParam;
         forwardX: AudioParam; forwardY: AudioParam; forwardZ: AudioParam;
         upX: AudioParam; upY: AudioParam; upZ: AudioParam;
-        context: MockAudioContext;
+        // NO context property — matches real WebAudio spec
     };
 
     public constructor() {
@@ -83,8 +83,6 @@ class MockAudioContext {
             upX: makeMockAudioParam(),
             upY: makeMockAudioParam(),
             upZ: makeMockAudioParam(),
-            // Expose context so AudioListener._tick() can call ctx.currentTime
-            context: this,
         };
     }
 
