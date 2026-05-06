@@ -104,6 +104,28 @@ export class InputManager {
         this.addEventListeners();
     }
 
+    /**
+     * Returns the canvas-relative position of the primary pointer (isPrimary = true),
+     * or the first non-cancelled pointer if no primary is found. Returns null when
+     * no active pointer is present. Used by debug layers to show cursor info.
+     */
+    public getPrimaryPointerPosition(): { x: number; y: number } | null {
+        for (const pointer of Object.values(this.pointers)) {
+            if (pointer.isPrimary && pointer.currentState !== PointerState.Cancelled) {
+                return { x: pointer.x, y: pointer.y };
+            }
+        }
+
+        // Fall back to first non-cancelled pointer.
+        for (const pointer of Object.values(this.pointers)) {
+            if (pointer.currentState !== PointerState.Cancelled) {
+                return { x: pointer.x, y: pointer.y };
+            }
+        }
+
+        return null;
+    }
+
     public get pointersInCanvas(): boolean {
         return Object.values(this.pointers).some((pointer) => (
             pointer.currentState !== PointerState.OutsideCanvas

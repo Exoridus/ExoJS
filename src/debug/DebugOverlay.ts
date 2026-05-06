@@ -1,12 +1,18 @@
 import { View } from '@/rendering/View';
 import { Keyboard } from '@/input/types';
 import { PerformanceLayer } from './PerformanceLayer';
+import { BoundingBoxesLayer } from './BoundingBoxesLayer';
+import { HitTestLayer } from './HitTestLayer';
+import { PointerStackLayer } from './PointerStackLayer';
 import type { Application } from '@/core/Application';
 import type { Time } from '@/core/Time';
 import type { DebugLayer } from './DebugLayer';
 
 export interface DebugLayers {
     readonly performance: PerformanceLayer;
+    readonly boundingBoxes: BoundingBoxesLayer;
+    readonly hitTest: HitTestLayer;
+    readonly pointerStack: PointerStackLayer;
 }
 
 /**
@@ -16,15 +22,25 @@ export interface DebugLayers {
  *     const debug = new DebugOverlay(app);
  *     debug.layers.performance.visible = true;  // or press F1
  *
- * The overlay subscribes to `app.onFrame` and renders its visible layers
- * into a screen-space view between scene render and backend flush.
+ * The overlay subscribes to `app.onFrame` and renders its visible layers.
+ * World-space layers render first (under text panels) in the scene view;
+ * screen-space layers then render in the overlay's pixel-space view.
  *
- * F1 toggles the Performance layer. Hardcoded for V1; opt-out and additional
- * layers come in future patches.
+ * Keybindings (while canvas has focus):
+ *   F1 — toggle Performance layer
+ *   F2 — toggle BoundingBoxes layer
+ *   F3 — toggle HitTest layer
+ *   F4 — toggle PointerStack layer
  *
  * NOTE: F-keys only fire while the canvas has focus (engine convention).
+ *
+ * The master `visible` switch suppresses all layer rendering when false
+ * without changing individual layer visibility flags.
  */
 export class DebugOverlay {
+    /** Master visibility switch. When false, no layers render regardless of their individual flags. */
+    public visible: boolean = true;
+
     public readonly layers: DebugLayers;
 
     private readonly _app: Application;
@@ -38,12 +54,15 @@ export class DebugOverlay {
         this._view = new View(app.canvas.width / 2, app.canvas.height / 2, app.canvas.width, app.canvas.height);
 
         this.layers = {
-            performance: new PerformanceLayer(app),
+            performance:  new PerformanceLayer(app),
+            boundingBoxes: new BoundingBoxesLayer(app),
+            hitTest:       new HitTestLayer(app),
+            pointerStack:  new PointerStackLayer(app),
         };
 
-        this._onFrameHandler = this._onFrame.bind(this);
+        this._onFrameHandler  = this._onFrame.bind(this);
         this._onKeyDownHandler = this._onKeyDown.bind(this);
-        this._onResizeHandler = this._onResize.bind(this);
+        this._onResizeHandler  = this._onResize.bind(this);
 
         app.onFrame.add(this._onFrameHandler);
         app.inputManager.onKeyDown.add(this._onKeyDownHandler);
@@ -68,39 +87,47 @@ export class DebugOverlay {
     }
 
     private _onFrame(delta: Time): void {
-        const backend = this._app.backend;
-        const layers = Object.values(this.layers) as Array<DebugLayer>;
-        let anyVisible = false;
+        if (!this.visible) return;
 
-        for (const layer of layers) {
-            if (layer.visible) {
-                anyVisible = true;
-                break;
-            }
+        const layers = Object.values(this.layers) as Array<DebugLayer>;
+        const visibleLayers = layers.filter(l => l.visible);
+
+        if (visibleLayers.length === 0) return;
+
+        const backend = this._app.backend;
+        const sceneView = backend.view; // capture scene's current view
+
+        // --- World-space layers first (render under screen-space text panels) ---
+        const worldLayers = visibleLayers.filter(l => l.viewMode === 'world');
+
+        for (const layer of worldLayers) {
+            layer.update(delta);
+            layer.render(backend);
         }
 
-        if (!anyVisible) return;
+        // --- Screen-space layers: swap to overlay's pixel view ---
+        const screenLayers = visibleLayers.filter(l => l.viewMode === 'screen');
 
-        // Save & swap to screen-space view for debug rendering.
-        const savedView = backend.view;
+        if (screenLayers.length > 0) {
+            backend.setView(this._view);
 
-        backend.setView(this._view);
-
-        try {
-            for (const layer of layers) {
-                if (layer.visible) {
+            try {
+                for (const layer of screenLayers) {
                     layer.update(delta);
                     layer.render(backend);
                 }
+            } finally {
+                backend.setView(sceneView);
             }
-        } finally {
-            backend.setView(savedView);
         }
     }
 
     private _onKeyDown(channel: number): void {
-        if (channel === Keyboard.F1) {
-            this.layers.performance.visible = !this.layers.performance.visible;
+        switch (channel) {
+            case Keyboard.F1: this.layers.performance.visible  = !this.layers.performance.visible;  break;
+            case Keyboard.F2: this.layers.boundingBoxes.visible = !this.layers.boundingBoxes.visible; break;
+            case Keyboard.F3: this.layers.hitTest.visible       = !this.layers.hitTest.visible;       break;
+            case Keyboard.F4: this.layers.pointerStack.visible  = !this.layers.pointerStack.visible;  break;
         }
     }
 }

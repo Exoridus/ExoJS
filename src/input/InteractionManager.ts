@@ -112,6 +112,23 @@ export class InteractionManager {
         return firstEntry.done ? null : firstEntry.value;
     }
 
+    /**
+     * Returns all currently captured RenderNodes (nodes that have an active
+     * drag / pointer-capture in progress). Used by debug layers.
+     */
+    public getCapturedNodes(): ReadonlyArray<RenderNode> {
+        return Array.from(this._capturedPointers.values());
+    }
+
+    /**
+     * Returns the internal quadtree used for spatial hit-testing, or null when
+     * the spatial index is not enabled or not yet built. Prefixed with underscore
+     * to signal "internal-but-public" (debug use only).
+     */
+    public _getDebugQuadtree(): Quadtree<{ node: RenderNode; order: number }> | null {
+        return this._quadtree;
+    }
+
     public destroy(): void {
         this._app.inputManager.onPointerDown.remove(this._onPointerDownHandler);
         this._app.inputManager.onPointerMove.remove(this._onPointerMoveHandler);

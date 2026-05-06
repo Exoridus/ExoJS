@@ -112,6 +112,22 @@ export class Quadtree<T> {
         }
     }
 
+    /**
+     * Walk every subdivided region's bounding rectangle, calling `callback`
+     * once per node in the tree (including the root). Used by debug layers
+     * to visualise quadtree partitioning. Prefixed with underscore to signal
+     * "internal-but-public" (debug use only).
+     */
+    public _walkBounds(callback: (rect: Rectangle) => void): void {
+        callback(this._bounds);
+
+        if (this._children !== null) {
+            for (const child of this._children) {
+                child._walkBounds(callback);
+            }
+        }
+    }
+
     public destroy(): void {
         this._items.length = 0;
         this._bounds.destroy();

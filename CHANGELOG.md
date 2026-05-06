@@ -4,6 +4,64 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2026-05-04
+
+Expands the debug overlay with three new layers: `BoundingBoxesLayer`,
+`HitTestLayer`, and `PointerStackLayer`. Adds a master visibility switch
+on `DebugOverlay`. Layers can now opt into world-space rendering for
+overlays that need to align with scene content. F2 / F3 / F4 keys are
+hardcoded to toggle the new layers (matching the existing F1 for
+Performance).
+
+### Added
+
+- **`BoundingBoxesLayer`** — renders AABB outlines for every visible
+  RenderNode in the active scene. Color cycles through HSL hue based
+  on `zIndex` (`hue = (zIndex * 30) % 360`), so layered nodes are
+  visually distinct. Toggle via F2 or
+  `debug.layers.boundingBoxes.visible = true`.
+- **`HitTestLayer`** — outlines for `interactive` nodes only, with
+  state-based colors:
+  - **Magenta** (idle interactive)
+  - **Yellow** (currently hovered, via `app.interaction.getHoveredNode()`)
+  - **Cyan** (captured by an active drag, via the new
+    `getCapturedNodes()` accessor)
+  - When `useSpatialIndex` is enabled on InteractionManager,
+    additionally draws faint quadtree quadrant outlines.
+  - Toggle via F3.
+- **`PointerStackLayer`** — fixed top-right text panel listing all
+  RenderNodes in the active scene whose `contains(worldX, worldY)`
+  matches the primary pointer position. Sorted by `zIndex`
+  descending (top of stack first). Limited to 10 entries to avoid
+  overflow. Useful for debugging "why isn't this clickable" — see
+  exactly what's stacked under the cursor. Toggle via F4.
+- **`DebugOverlay.visible: boolean`** (default `true`) — master gate
+  that suppresses all layer rendering when `false` while preserving
+  individual layer states. Restoring `debug.visible = true` brings
+  layers back without rewiring.
+- **`DebugLayer.viewMode: 'screen' | 'world'`** — abstract getter
+  (default `'screen'`); subclasses override. The DebugOverlay groups
+  layers by viewMode and swaps `backend.view` accordingly: world-mode
+  layers render in the active scene's view (matching scene
+  coordinates), screen-mode layers render in canvas-pixel space.
+- **`InteractionManager.getCapturedNodes(): ReadonlyArray<RenderNode>`** —
+  returns the nodes currently captured by active drags. Used by
+  HitTestLayer; also generally useful.
+- **`InputManager.getPrimaryPointerPosition()`** — returns the canvas-
+  pixel position of the primary pointer (or null if none active).
+
+### Notes
+
+- F2 / F3 / F4 are hardcoded for V1 (matching F1 from 0.6.17). A
+  `keybindings: false` opt-out comes when there's concrete demand.
+- BoundingBoxes color cycle is intentionally simple (`hue = z * 30 % 360`).
+  Adapts to any z range without per-frame normalization. If two nodes
+  share zIndex, they share color — that's fine, the layer's purpose is
+  visualizing depth differences.
+- World-mode layers (BoundingBoxes, HitTest) render BEFORE screen-mode
+  layers (Performance, PointerStack) in each frame, so text panels
+  appear on top of outlines.
+
 ## [0.7.4] - 2026-05-04
 
 Renames `ShaderFilter` → `WebGl2ShaderFilter` and adds `WebGpuShaderFilter`
