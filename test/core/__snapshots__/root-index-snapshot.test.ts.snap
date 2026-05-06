@@ -16,6 +16,7 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "AudioFilter",
   "AudioListener",
   "AudioManager",
+  "BeatDetector",
   "BinaryFactory",
   "BlendModes",
   "BlurFilter",

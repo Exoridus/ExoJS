@@ -1,0 +1,1009 @@
+import { Signal } from '@/core/Signal';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
+import { registerWorkletProcessor } from '@/audio/worklet/registerWorklet';
+import type { AudioBus } from '@/audio/AudioBus';
+import type { Sound } from '@/audio/Sound';
+import type { Music } from '@/audio/Music';
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
+
+export type BeatDetectorSource = AudioBus | Sound | Music | MediaStream | AudioNode | null;
+
+export interface BeatDetectorOptions {
+    /** Minimum detectable BPM. Default 50. */
+    minBpm?: number;
+    /** Maximum detectable BPM. Default 250. */
+    maxBpm?: number;
+    /** FFT size for onset detection. Default 2048. */
+    fftSize?: number;
+    /** Hop size in samples between successive FFTs. Default 512. */
+    hopSize?: number;
+    /** Sliding window duration for tempogram (seconds). Default 6. */
+    tempoWindowSec?: number;
+    /** Initial suppression period before beats are emitted (ms). Default 1500. */
+    settlingMs?: number;
+    /** Number of mel filterbank bands. Default 24. */
+    melBands?: number;
+}
+
+export interface BeatInfo {
+    /** audioContext.currentTime when the beat occurred. */
+    audioTime: number;
+    /** BPM at this beat. */
+    tempo: number;
+    /** Confidence 0..1. */
+    confidence: number;
+    /** Phase within beat (0 = start). */
+    beatPhase: number;
+    /** Novelty/onset strength at the beat. */
+    energy: number;
+    /** Is this beat the first in a bar? */
+    isDownbeat: boolean;
+    /** Beat position within the bar (1..N). */
+    beatInBar: number;
+}
+
+export interface UpcomingBeat {
+    audioTime: number;
+    tempo: number;
+    isDownbeat: boolean;
+    beatInBar: number;
+}
+
+export interface BarInfo {
+    audioTime: number;
+    tempo: number;
+    confidence: number;
+    /** Monotonically increasing bar counter since detector start. */
+    barNumber: number;
+}
+
+export interface TimeSignature {
+    numerator: number;
+    denominator: number;
+}
+
+export interface TempoCandidate {
+    bpm: number;
+    /** Peak strength 0..1. */
+    score: number;
+}
+
+export interface BandEnergy {
+    low: number;
+    mid: number;
+    high: number;
+}
+
+// ---------------------------------------------------------------------------
+// Worklet source (self-contained JavaScript, no imports)
+// ---------------------------------------------------------------------------
+
+const workletName = 'exojs-beat-detector';
+
+const beatDetectorWorkletSource = `
+// ---- Hann window + FFT (radix-2 Cooley-Tukey) ----
+function applyHannWindow(real, imag) {
+    var n = real.length;
+    for (var i = 0; i < n; i++) {
+        var w = 0.5 * (1 - Math.cos(2 * Math.PI * i / (n - 1)));
+        real[i] *= w;
+        imag[i] = 0;
+    }
+}
+
+function bitReversePermute(real, imag) {
+    var n = real.length;
+    var j = 0;
+    for (var i = 1; i < n; i++) {
+        var bit = n >> 1;
+        for (; j & bit; bit >>= 1) { j ^= bit; }
+        j ^= bit;
+        if (i < j) {
+            var t = real[i]; real[i] = real[j]; real[j] = t;
+            t = imag[i]; imag[i] = imag[j]; imag[j] = t;
+        }
+    }
+}
+
+function fftInPlace(real, imag) {
+    applyHannWindow(real, imag);
+    bitReversePermute(real, imag);
+    var n = real.length;
+    for (var len = 2; len <= n; len <<= 1) {
+        var halfLen = len >> 1;
+        var step = -2 * Math.PI / len;
+        for (var i = 0; i < n; i += len) {
+            for (var k = 0; k < halfLen; k++) {
+                var angle = step * k;
+                var cos = Math.cos(angle);
+                var sin = Math.sin(angle);
+                var re = real[i+k+halfLen]*cos - imag[i+k+halfLen]*sin;
+                var im = real[i+k+halfLen]*sin + imag[i+k+halfLen]*cos;
+                real[i+k+halfLen] = real[i+k] - re;
+                imag[i+k+halfLen] = imag[i+k] - im;
+                real[i+k] += re;
+                imag[i+k] += im;
+            }
+        }
+    }
+}
+
+// ---- Mel filterbank ----
+function buildMelFilterbank(numBands, fMin, fMax, fftSize, sampleRate) {
+    var numBins = fftSize >> 1;
+    var nyquist = sampleRate / 2;
+    var melMin = 2595 * Math.log10(1 + fMin / 700);
+    var melMax = 2595 * Math.log10(1 + fMax / 700);
+    var melPoints = new Float32Array(numBands + 2);
+    for (var i = 0; i < numBands + 2; i++) {
+        melPoints[i] = melMin + (melMax - melMin) * i / (numBands + 1);
+    }
+    var binPoints = new Float32Array(numBands + 2);
+    for (var i = 0; i < numBands + 2; i++) {
+        var hz = 700 * (Math.pow(10, melPoints[i] / 2595) - 1);
+        binPoints[i] = Math.round(hz / nyquist * (numBins - 1));
+    }
+    var bands = [];
+    for (var b = 0; b < numBands; b++) {
+        var startBin = Math.max(0, Math.min(numBins - 1, binPoints[b]));
+        var peakBin  = Math.max(0, Math.min(numBins - 1, binPoints[b+1]));
+        var endBin   = Math.max(0, Math.min(numBins - 1, binPoints[b+2]));
+        var len = endBin - startBin + 1;
+        var weights = new Float32Array(len);
+        for (var i = 0; i < len; i++) {
+            var bin = startBin + i;
+            if (bin <= peakBin && peakBin > startBin) {
+                weights[i] = (bin - startBin) / (peakBin - startBin);
+            } else if (bin > peakBin && endBin > peakBin) {
+                weights[i] = (endBin - bin) / (endBin - peakBin);
+            } else {
+                weights[i] = 1;
+            }
+        }
+        bands.push({ startBin: startBin, peakBin: peakBin, endBin: endBin, weights: weights });
+    }
+    return bands;
+}
+
+function computeMelBands(mag, bands, out) {
+    for (var b = 0; b < bands.length; b++) {
+        var band = bands[b];
+        var energy = 0;
+        for (var i = 0; i < band.weights.length; i++) {
+            energy += mag[band.startBin + i] * band.weights[i];
+        }
+        out[b] = Math.log(1 + energy);
+    }
+}
+
+// ---- Processor ----
+class BeatDetectorProcessor extends AudioWorkletProcessor {
+    constructor(options) {
+        super();
+        var opts = (options && options.processorOptions) || {};
+        this._sampleRate = sampleRate;
+        this._fftSize    = opts.fftSize    || 2048;
+        this._hopSize    = opts.hopSize    || 512;
+        this._minBpm     = opts.minBpm     || 50;
+        this._maxBpm     = opts.maxBpm     || 250;
+        this._melBands   = opts.melBands   || 24;
+        this._settlingMs = opts.settlingMs !== undefined ? opts.settlingMs : 1500;
+        this._tempoWindowSec = opts.tempoWindowSec || 6;
+
+        var numBins = this._fftSize >> 1;
+        this._real = new Float32Array(this._fftSize);
+        this._imag = new Float32Array(this._fftSize);
+        this._mag  = new Float32Array(numBins);
+        this._ringBuffer  = new Float32Array(this._fftSize);
+        this._ringWritePos = 0;
+        this._sampleCount  = 0;
+        this._hopAccum     = 0;
+
+        this._melBandFilters = buildMelFilterbank(this._melBands, 80, 8000, this._fftSize, this._sampleRate);
+        this._melOut         = new Float32Array(this._melBands);
+        var fluxWindowLen    = Math.ceil(this._tempoWindowSec * this._sampleRate / this._hopSize);
+        this._fluxWindow     = new Float32Array(fluxWindowLen);
+        this._fluxWritePos   = 0;
+        this._fluxCount      = 0;
+        var LAG_K = 3;
+        this._prevMelFrames  = [];
+        for (var i = 0; i < LAG_K; i++) {
+            this._prevMelFrames.push(new Float32Array(this._melBands));
+        }
+        this._prevMelFrameIdx = 0;
+
+        // Lag range in hops for BPM range
+        this._minLag = Math.max(1, Math.round(60 / this._maxBpm * this._sampleRate / this._hopSize));
+        this._maxLag = Math.round(60 / this._minBpm * this._sampleRate / this._hopSize);
+
+        this._hopsSinceACF = 0;
+        var ACF_INTERVAL = 15;
+        this._acfInterval = ACF_INTERVAL;
+
+        // Tempo state
+        this._bestBpm    = 0;
+        this._bestScore  = 0;
+        this._candidates = [];
+
+        // Phase state
+        this._lastBeatSample = -1;
+        this._ibiHistory     = new Float32Array(4); // last 4 inter-beat intervals
+        this._ibiIdx         = 0;
+
+        // Bar position state (4/4 hardcoded for V1)
+        this._barPosterior  = new Float32Array([0.25, 0.25, 0.25, 0.25]);
+        this._barPosition   = 1; // 1-indexed
+        this._barNumber     = 0;
+        this._beatsSinceStart = 0;
+
+        // Confidence
+        this._confidence = 0;
+
+        // State snapshot cadence (~20 Hz)
+        var STATE_INTERVAL_HOPS = Math.round(this._sampleRate / this._hopSize / 20);
+        this._stateInterval = Math.max(1, STATE_INTERVAL_HOPS);
+        this._hopsSinceState = 0;
+
+        // Settling
+        this._startSample   = currentFrame;
+        this._settledSamples = Math.round(this._settlingMs * 0.001 * this._sampleRate);
+
+        // Lookahead
+        this._lookahead = [];
+
+        // RMS / onset state
+        this._rms = 0;
+        this._onsetStrength = 0;
+
+        // Band energy (for state messages)
+        var LOW_BANDS  = Math.round(this._melBands * 0.25);
+        var MID_BANDS  = Math.round(this._melBands * 0.6);
+        this._lowBandEnd  = LOW_BANDS;
+        this._midBandEnd  = MID_BANDS;
+    }
+
+    process(inputs, _outputs, _parameters) {
+        var input = inputs[0];
+        if (!input || input.length === 0) return true;
+
+        var left  = input[0] || [];
+        var right = input[1] || left;
+        var blockLen = left.length;
+
+        for (var s = 0; s < blockLen; s++) {
+            // Mono downmix
+            var mono = (left[s] + right[s]) * 0.5;
+
+            // Accumulate RMS
+            this._rms += mono * mono;
+
+            // Fill ring buffer
+            this._ringBuffer[this._ringWritePos] = mono;
+            this._ringWritePos = (this._ringWritePos + 1) & (this._fftSize - 1);
+
+            this._hopAccum++;
+            this._sampleCount++;
+
+            if (this._hopAccum >= this._hopSize) {
+                this._hopAccum = 0;
+                this._processHop();
+            }
+        }
+
+        return true;
+    }
+
+    _processHop() {
+        // Read ring buffer into real[] (oldest first)
+        var rb = this._ringBuffer;
+        var wp = this._ringWritePos;
+        var n  = this._fftSize;
+        for (var i = 0; i < n; i++) {
+            this._real[i] = rb[(wp + i) & (n - 1)];
+        }
+
+        // FFT
+        fftInPlace(this._real, this._imag);
+
+        // Magnitude spectrum
+        var bins = n >> 1;
+        for (var i = 0; i < bins; i++) {
+            this._mag[i] = Math.sqrt(this._real[i]*this._real[i] + this._imag[i]*this._imag[i]);
+        }
+
+        // RMS (from time domain, using ring buffer)
+        var rmsAccum = 0;
+        for (var i = 0; i < n; i++) {
+            rmsAccum += rb[(wp + i) & (n - 1)] * rb[(wp + i) & (n - 1)];
+        }
+        this._rms = Math.sqrt(rmsAccum / n);
+
+        // Mel bands
+        computeMelBands(this._mag, this._melBandFilters, this._melOut);
+
+        // Spectral flux (SuperFlux-lite, lag k=3)
+        var K = this._prevMelFrames.length;
+        var flux = 0;
+        for (var b = 0; b < this._melBands; b++) {
+            var localMax = -Infinity;
+            for (var k = 0; k < K; k++) {
+                var prevVal = this._prevMelFrames[k][b];
+                if (prevVal > localMax) localMax = prevVal;
+            }
+            var diff = this._melOut[b] - localMax;
+            if (diff > 0) flux += diff;
+        }
+        this._onsetStrength = flux;
+
+        // Store current mel frame in circular buffer
+        var prevFrame = this._prevMelFrames[this._prevMelFrameIdx];
+        for (var b = 0; b < this._melBands; b++) {
+            prevFrame[b] = this._melOut[b];
+        }
+        this._prevMelFrameIdx = (this._prevMelFrameIdx + 1) % K;
+
+        // Add flux to sliding window
+        this._fluxWindow[this._fluxWritePos] = flux;
+        this._fluxWritePos = (this._fluxWritePos + 1) % this._fluxWindow.length;
+        if (this._fluxCount < this._fluxWindow.length) this._fluxCount++;
+
+        // Tempogram: compute ACF periodically
+        this._hopsSinceACF++;
+        if (this._hopsSinceACF >= this._acfInterval && this._fluxCount >= this._maxLag + 1) {
+            this._hopsSinceACF = 0;
+            this._computeACFAndCandidates();
+        }
+
+        // Phase tracker
+        var settled = (this._sampleCount - this._settledSamples) > 0;
+        if (this._bestBpm > 0 && settled) {
+            this._tickPhase(flux);
+        }
+
+        // State snapshot
+        this._hopsSinceState++;
+        if (this._hopsSinceState >= this._stateInterval) {
+            this._hopsSinceState = 0;
+            this._sendStateMessage();
+        }
+    }
+
+    _computeACFAndCandidates() {
+        var n   = this._fluxCount;
+        var buf = this._fluxWindow;
+        var wp  = this._fluxWritePos;
+        var len = buf.length;
+
+        // Compute ACF for lags in [minLag, maxLag]
+        var numLags = this._maxLag - this._minLag + 1;
+        var acf = new Float32Array(numLags);
+        for (var lagIdx = 0; lagIdx < numLags; lagIdx++) {
+            var lag = this._minLag + lagIdx;
+            var sum = 0, count = 0;
+            for (var t = lag; t < n; t++) {
+                var idxT   = (wp - 1 - (n - 1 - t) + len) % len;
+                var idxTL  = (wp - 1 - (n - 1 - (t - lag)) + len) % len;
+                sum += buf[idxT] * buf[idxTL];
+                count++;
+            }
+            acf[lagIdx] = count > 0 ? sum / count : 0;
+        }
+
+        // Normalise
+        var norm = 0;
+        for (var i = 0; i < numLags; i++) { if (acf[i] > norm) norm = acf[i]; }
+        if (norm > 0) {
+            for (var i = 0; i < numLags; i++) acf[i] /= norm;
+        }
+
+        // Find top peaks
+        var peaks = [];
+        for (var i = 1; i < numLags - 1; i++) {
+            if (acf[i] > acf[i-1] && acf[i] > acf[i+1] && acf[i] > 0) {
+                var lag2 = this._minLag + i;
+                var bpm = 60 * this._sampleRate / (lag2 * this._hopSize);
+                if (bpm >= this._minBpm && bpm <= this._maxBpm) {
+                    peaks.push({ bpm: bpm, score: acf[i], lag: lag2 });
+                }
+            }
+        }
+        peaks.sort(function(a, b) { return b.score - a.score; });
+        this._candidates = peaks.slice(0, 3);
+
+        if (this._candidates.length === 0) return;
+
+        var top = this._candidates[0];
+
+        // Hysteresis
+        if (this._bestBpm <= 0) {
+            // First lock
+            this._bestBpm   = top.bpm;
+            this._bestScore = top.score;
+        } else {
+            var isOctave = (Math.abs(top.bpm / this._bestBpm - 2) < 0.1) ||
+                           (Math.abs(top.bpm / this._bestBpm - 0.5) < 0.05);
+            var margin = isOctave ? 1.5 : 1.15;
+            if (top.score > this._bestScore * margin) {
+                var oldBpm = this._bestBpm;
+                this._bestBpm   = top.bpm;
+                this._bestScore = top.score;
+                // Only fire tempoChange if > 5% different
+                if (Math.abs(this._bestBpm - oldBpm) / oldBpm > 0.05) {
+                    this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
+                }
+            } else {
+                this._bestScore = this._bestScore * 0.99 + top.score * 0.01; // slowly decay
+            }
+        }
+
+        this._updateConfidence();
+    }
+
+    _tickPhase(flux) {
+        if (this._lastBeatSample < 0) {
+            // Bootstrap: set first beat at current sample
+            this._lastBeatSample = this._sampleCount;
+            return;
+        }
+
+        var beatIntervalSamples = 60 / this._bestBpm * this._sampleRate;
+        var phase = (this._sampleCount - this._lastBeatSample) / beatIntervalSamples;
+
+        // Snap correction: if novelty peak is strong and phase is 0.7..1.3, snap
+        if (phase >= 0.7 && phase <= 1.3 && flux > 0) {
+            // Compute mean recent flux
+            var recentMean = 0;
+            var count = Math.min(this._fluxCount, 16);
+            var wp = this._fluxWritePos;
+            var len = this._fluxWindow.length;
+            for (var i = 0; i < count; i++) {
+                recentMean += this._fluxWindow[(wp - 1 - i + len) % len];
+            }
+            recentMean /= count || 1;
+            if (flux > 1.5 * recentMean && recentMean > 0) {
+                // Snap to this sample
+                this._lastBeatSample = this._sampleCount;
+                phase = 1.0;
+            }
+        }
+
+        if (phase >= 1.0) {
+            var beatTime = (this._lastBeatSample + beatIntervalSamples) / this._sampleRate;
+            this._lastBeatSample += beatIntervalSamples;
+
+            // Update IBI history
+            this._ibiHistory[this._ibiIdx] = beatIntervalSamples;
+            this._ibiIdx = (this._ibiIdx + 1) & 3;
+
+            this._beatsSinceStart++;
+
+            // Update bar position
+            this._updateBarPosition(flux);
+
+            // Compute confidence
+            this._updateConfidence();
+
+            // Lookahead
+            this._updateLookahead(beatTime);
+
+            var isDownbeat = this._barPosition === 1;
+            var beatInfo = {
+                type: 'beat',
+                audioTime: beatTime,
+                tempo: this._bestBpm,
+                confidence: this._confidence,
+                beatPhase: 0,
+                energy: flux,
+                isDownbeat: isDownbeat,
+                beatInBar: this._barPosition,
+            };
+            this.port.postMessage(beatInfo);
+
+            if (isDownbeat) {
+                this.port.postMessage({
+                    type: 'barStart',
+                    audioTime: beatTime,
+                    tempo: this._bestBpm,
+                    confidence: this._confidence,
+                    barNumber: this._barNumber,
+                });
+            }
+        }
+    }
+
+    _updateBarPosition(flux) {
+        // HMM-lite: prior shifts bar position forward
+        var p = this._barPosterior;
+        var shifted = new Float32Array(4);
+        // prior: each position shifts to next
+        shifted[0] = p[3]; // bar pos 4 → 1
+        shifted[1] = p[0]; // bar pos 1 → 2
+        shifted[2] = p[1]; // bar pos 2 → 3
+        shifted[3] = p[2]; // bar pos 3 → 4
+
+        // Likelihood: downbeats tend to have higher flux
+        // Simple model: position 0 (beat 1) has higher likelihood when flux is high
+        var totalFlux = 0;
+        var mean = 0;
+        var count = Math.min(this._fluxCount, 32);
+        var wp = this._fluxWritePos;
+        var len = this._fluxWindow.length;
+        for (var i = 0; i < count; i++) {
+            totalFlux += this._fluxWindow[(wp - 1 - i + len) % len];
+        }
+        mean = count > 0 ? totalFlux / count : 1;
+        var normalizedFlux = mean > 0 ? flux / mean : 1;
+        var downbeatLikelihood = Math.max(0.5, Math.min(2, normalizedFlux));
+        var otherLikelihood = 1.0;
+
+        var likelihood = new Float32Array([downbeatLikelihood, otherLikelihood, otherLikelihood, otherLikelihood]);
+
+        // Posterior = shifted * likelihood
+        var sumP = 0;
+        for (var i = 0; i < 4; i++) {
+            p[i] = shifted[i] * likelihood[i];
+            sumP += p[i];
+        }
+        if (sumP > 0) {
+            for (var i = 0; i < 4; i++) p[i] /= sumP;
+        }
+
+        // Only trust after first full bar (4 beats)
+        if (this._beatsSinceStart >= 4) {
+            var maxP = -1, maxI = 0;
+            for (var i = 0; i < 4; i++) {
+                if (p[i] > maxP) { maxP = p[i]; maxI = i; }
+            }
+            var newPos = maxI + 1; // 1-indexed
+            if (newPos === 1 && this._barPosition !== 1) {
+                this._barNumber++;
+            }
+            this._barPosition = newPos;
+        } else {
+            // Just advance sequentially
+            this._barPosition = ((this._barPosition) % 4) + 1;
+            if (this._barPosition === 1) this._barNumber++;
+        }
+    }
+
+    _updateConfidence() {
+        if (this._candidates.length === 0) {
+            this._confidence = 0;
+            return;
+        }
+
+        // Peak contrast
+        var top1 = this._candidates[0] ? this._candidates[0].score : 0;
+        var top2 = this._candidates[1] ? this._candidates[1].score : top1;
+        var top3 = this._candidates[2] ? this._candidates[2].score : top2;
+        var peakContrast = (top2 + top3) > 0 ? top1 / ((top2 + top3) / 2) : 1;
+
+        // Phase consistency from IBI variance
+        var ibiMean = 0;
+        for (var i = 0; i < 4; i++) ibiMean += this._ibiHistory[i];
+        ibiMean /= 4;
+        var ibiVar = 0;
+        for (var i = 0; i < 4; i++) {
+            var d = this._ibiHistory[i] - ibiMean;
+            ibiVar += d * d;
+        }
+        ibiVar /= 4;
+        var phaseConsistency = ibiMean > 0 ? Math.max(0, 1 - ibiVar / (ibiMean * ibiMean)) : 0;
+
+        // Bar consistency
+        var maxP = 0;
+        for (var i = 0; i < 4; i++) {
+            if (this._barPosterior[i] > maxP) maxP = this._barPosterior[i];
+        }
+        var barConsistency = maxP;
+
+        var c = Math.sqrt(Math.max(0, peakContrast / 2)) *
+                Math.sqrt(Math.max(0, phaseConsistency)) *
+                (0.5 + 0.5 * barConsistency);
+        this._confidence = Math.max(0, Math.min(1, c));
+    }
+
+    _updateLookahead(lastBeatTime) {
+        var lookahead = [];
+        var beatInterval = 60 / this._bestBpm;
+        var barPos = this._barPosition;
+        for (var i = 0; i < 8; i++) {
+            var t = lastBeatTime + (i + 1) * beatInterval;
+            var bp = ((barPos + i - 1) % 4) + 1;
+            lookahead.push({
+                audioTime: t,
+                tempo: this._bestBpm,
+                isDownbeat: bp === 1,
+                beatInBar: bp,
+            });
+        }
+        this._lookahead = lookahead;
+    }
+
+    _computeBandEnergy() {
+        var low = 0, mid = 0, high = 0;
+        for (var b = 0; b < this._lowBandEnd; b++) low += this._melOut[b];
+        for (var b = this._lowBandEnd; b < this._midBandEnd; b++) mid += this._melOut[b];
+        for (var b = this._midBandEnd; b < this._melBands; b++) high += this._melOut[b];
+        var denom = this._lowBandEnd || 1;
+        return {
+            low:  low  / denom,
+            mid:  mid  / Math.max(1, this._midBandEnd - this._lowBandEnd),
+            high: high / Math.max(1, this._melBands - this._midBandEnd),
+        };
+    }
+
+    _sendStateMessage() {
+        var settled = (this._sampleCount - this._settledSamples) > 0;
+        var beatInterval = this._bestBpm > 0 ? 60 / this._bestBpm : 0;
+        var currentTime = this._sampleCount / this._sampleRate;
+        var lastBeatTime = this._lastBeatSample >= 0 ? this._lastBeatSample / this._sampleRate : 0;
+        var beatPhase = beatInterval > 0
+            ? Math.min(1, (currentTime - lastBeatTime) / beatInterval)
+            : 0;
+        var nextBeatTime = lastBeatTime + beatInterval;
+
+        var nextDownbeatTime = nextBeatTime;
+        for (var i = 0; i < this._lookahead.length; i++) {
+            if (this._lookahead[i].isDownbeat) {
+                nextDownbeatTime = this._lookahead[i].audioTime;
+                break;
+            }
+        }
+
+        var be = this._computeBandEnergy();
+
+        this.port.postMessage({
+            type: 'state',
+            tempo: settled ? this._bestBpm : 0,
+            beatPhase: beatPhase,
+            confidence: settled ? this._confidence : 0,
+            gridStability: settled ? this._confidence : 0,
+            tempoCandidates: settled ? this._candidates.map(function(c) {
+                return { bpm: c.bpm, score: c.score };
+            }) : [],
+            rms: this._rms,
+            onsetStrength: this._onsetStrength,
+            bandEnergy: be,
+            barPosition: this._barPosition,
+            barLength: 4,
+            timeSignature: { numerator: 4, denominator: 4 },
+            lookahead: this._lookahead,
+            nextBeatTime: settled ? nextBeatTime : 0,
+            nextDownbeatTime: settled ? nextDownbeatTime : 0,
+        });
+    }
+}
+
+registerProcessor('${workletName}', BeatDetectorProcessor);
+`;
+
+// ---------------------------------------------------------------------------
+// Main-thread BeatDetector class
+// ---------------------------------------------------------------------------
+
+export class BeatDetector {
+    // ---- Signals ----
+    public readonly onBeat:          Signal<[BeatInfo]>               = new Signal();
+    public readonly onTempoChange:   Signal<[number, number]>         = new Signal();
+    public readonly onDownbeat:      Signal<[BeatInfo]>               = new Signal();
+    public readonly onBarStart:      Signal<[BarInfo]>                = new Signal();
+    public readonly onBeatPredicted: Signal<[UpcomingBeat]>           = new Signal();
+
+    // ---- Options ----
+    private readonly _options: Required<BeatDetectorOptions>;
+
+    // ---- Audio plumbing ----
+    private _workletNode: AudioWorkletNode | null = null;
+    private _source: BeatDetectorSource = null;
+    private _tapSource: AudioNode | null = null;
+    private _streamSource: MediaStreamAudioSourceNode | null = null;
+    private _ready: Promise<void> | null = null;
+
+    // ---- Cached state from worklet ----
+    private _tempo            = 0;
+    private _beatPhase        = 0;
+    private _nextBeatTime     = 0;
+    private _confidence       = 0;
+    private _gridStability    = 0;
+    private _tempoCandidates: ReadonlyArray<TempoCandidate> = [];
+    private _rms              = 0;
+    private _onsetStrength    = 0;
+    private _bandEnergy: BandEnergy = { low: 0, mid: 0, high: 0 };
+    private _barPosition      = 1;
+    private _barLength        = 4;
+    private _timeSignature: TimeSignature = { numerator: 4, denominator: 4 };
+    private _nextDownbeatTime = 0;
+    private _lookahead: ReadonlyArray<UpcomingBeat> = Object.freeze([]);
+
+    public constructor(options?: BeatDetectorOptions) {
+        this._options = {
+            minBpm:         options?.minBpm         ?? 50,
+            maxBpm:         options?.maxBpm         ?? 250,
+            fftSize:        options?.fftSize        ?? 2048,
+            hopSize:        options?.hopSize        ?? 512,
+            tempoWindowSec: options?.tempoWindowSec ?? 6,
+            settlingMs:     options?.settlingMs     ?? 1500,
+            melBands:       options?.melBands       ?? 24,
+        };
+
+        if (isAudioContextReady()) {
+            this._setup(getAudioContext());
+        } else {
+            onAudioContextReady.once(this._setup, this);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Source setter (polymorphic tap)
+    // -----------------------------------------------------------------------
+
+    public get source(): BeatDetectorSource {
+        return this._source;
+    }
+
+    public set source(value: BeatDetectorSource) {
+        if (value === this._source) return;
+
+        this._disconnectTap();
+        this._source = value;
+
+        if (value === null) return;
+
+        if (isAudioContextReady()) {
+            this._connectSource(value, getAudioContext());
+        } else {
+            onAudioContextReady.once((ctx: AudioContext) => {
+                if (this._source === value) {
+                    this._connectSource(value, ctx);
+                }
+            }, this);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Ready promise
+    // -----------------------------------------------------------------------
+
+    public get ready(): Promise<void> {
+        return this._ready ?? Promise.resolve();
+    }
+
+    // -----------------------------------------------------------------------
+    // Stage 1 state accessors
+    // -----------------------------------------------------------------------
+
+    public get tempo(): number           { return this._tempo; }
+    public get beatPhase(): number       { return this._beatPhase; }
+    public get nextBeatTime(): number    { return this._nextBeatTime; }
+    public get confidence(): number      { return this._confidence; }
+    public get gridStability(): number   { return this._gridStability; }
+    public get rms(): number             { return this._rms; }
+    public get onsetStrength(): number   { return this._onsetStrength; }
+    public get bandEnergy(): BandEnergy  { return this._bandEnergy; }
+
+    public get tempoCandidates(): ReadonlyArray<TempoCandidate> {
+        return this._tempoCandidates;
+    }
+
+    // -----------------------------------------------------------------------
+    // Stage 2 state accessors
+    // -----------------------------------------------------------------------
+
+    public get barPosition(): number            { return this._barPosition; }
+    public get barLength(): number              { return this._barLength; }
+    public get timeSignature(): TimeSignature   { return this._timeSignature; }
+    public get nextDownbeatTime(): number       { return this._nextDownbeatTime; }
+
+    public get lookahead(): ReadonlyArray<UpcomingBeat> {
+        return this._lookahead;
+    }
+
+    // -----------------------------------------------------------------------
+    // Lifecycle
+    // -----------------------------------------------------------------------
+
+    public destroy(): void {
+        onAudioContextReady.clearByContext(this);
+        this._disconnectTap();
+        this._workletNode?.disconnect();
+        this._workletNode = null;
+        this._ready = null;
+        this.onBeat.clear();
+        this.onTempoChange.clear();
+        this.onDownbeat.clear();
+        this.onBarStart.clear();
+        this.onBeatPredicted.clear();
+    }
+
+    // -----------------------------------------------------------------------
+    // Private helpers — setup
+    // -----------------------------------------------------------------------
+
+    private _setup(audioContext: AudioContext): void {
+        const opts = this._options;
+        this._ready = registerWorkletProcessor(
+            audioContext,
+            workletName,
+            beatDetectorWorkletSource,
+        ).then(() => {
+            const node = new AudioWorkletNode(audioContext, workletName, {
+                numberOfInputs: 1,
+                numberOfOutputs: 0,
+                processorOptions: {
+                    fftSize:        opts.fftSize,
+                    hopSize:        opts.hopSize,
+                    minBpm:         opts.minBpm,
+                    maxBpm:         opts.maxBpm,
+                    melBands:       opts.melBands,
+                    settlingMs:     opts.settlingMs,
+                    tempoWindowSec: opts.tempoWindowSec,
+                },
+            });
+
+            this._workletNode = node;
+            node.port.onmessage = this._onWorkletMessage.bind(this);
+
+            // If a source was set before worklet was ready, connect it now.
+            if (this._source !== null) {
+                this._connectSource(this._source, audioContext);
+            }
+        });
+    }
+
+    private _onWorkletMessage(event: MessageEvent): void {
+        const msg = event.data as Record<string, unknown>;
+        switch (msg['type']) {
+            case 'state':
+                this._tempo          = (msg['tempo'] as number) ?? 0;
+                this._beatPhase      = (msg['beatPhase'] as number) ?? 0;
+                this._nextBeatTime   = (msg['nextBeatTime'] as number) ?? 0;
+                this._nextDownbeatTime = (msg['nextDownbeatTime'] as number) ?? 0;
+                this._confidence     = (msg['confidence'] as number) ?? 0;
+                this._gridStability  = (msg['gridStability'] as number) ?? 0;
+                this._tempoCandidates = Object.freeze(
+                    (msg['tempoCandidates'] as Array<TempoCandidate>) ?? [],
+                );
+                this._rms            = (msg['rms'] as number) ?? 0;
+                this._onsetStrength  = (msg['onsetStrength'] as number) ?? 0;
+                this._bandEnergy     = (msg['bandEnergy'] as BandEnergy) ?? { low: 0, mid: 0, high: 0 };
+                this._barPosition    = (msg['barPosition'] as number) ?? 1;
+                this._barLength      = (msg['barLength'] as number) ?? 4;
+                this._timeSignature  = (msg['timeSignature'] as TimeSignature) ?? { numerator: 4, denominator: 4 };
+                {
+                    const la = (msg['lookahead'] as Array<UpcomingBeat>) ?? [];
+                    this._lookahead = Object.freeze(la);
+                    if (la.length > 0) {
+                        this.onBeatPredicted.dispatch(la[0]);
+                    }
+                }
+                break;
+
+            case 'beat': {
+                const bi: BeatInfo = {
+                    audioTime:  (msg['audioTime']  as number),
+                    tempo:      (msg['tempo']      as number),
+                    confidence: (msg['confidence'] as number),
+                    beatPhase:  (msg['beatPhase']  as number),
+                    energy:     (msg['energy']     as number),
+                    isDownbeat: (msg['isDownbeat'] as boolean),
+                    beatInBar:  (msg['beatInBar']  as number),
+                };
+                this.onBeat.dispatch(bi);
+                if (bi.isDownbeat) this.onDownbeat.dispatch(bi);
+                break;
+            }
+
+            case 'tempoChange':
+                this.onTempoChange.dispatch(
+                    msg['newTempo'] as number,
+                    msg['oldTempo'] as number,
+                );
+                break;
+
+            case 'barStart': {
+                const info: BarInfo = {
+                    audioTime:  (msg['audioTime']  as number),
+                    tempo:      (msg['tempo']      as number),
+                    confidence: (msg['confidence'] as number),
+                    barNumber:  (msg['barNumber']  as number),
+                };
+                this.onBarStart.dispatch(info);
+                break;
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Private helpers — source tap
+    // -----------------------------------------------------------------------
+
+    private _connectSource(source: BeatDetectorSource, audioContext: AudioContext): void {
+        if (!this._workletNode) return;
+
+        const tap = this._resolveToAudioNode(source, audioContext);
+        if (!tap) {
+            this._deferConnectionViaBus(source);
+            return;
+        }
+
+        this._tapSource = tap;
+        tap.connect(this._workletNode, 0, 0);
+    }
+
+    private _resolveToAudioNode(
+        source: BeatDetectorSource,
+        audioContext: AudioContext,
+    ): AudioNode | null {
+        if (source === null) return null;
+
+        // MediaStream — duck-type via getTracks
+        const asStream = source as Partial<{ getTracks: unknown }>;
+        if (typeof asStream.getTracks === 'function') {
+            if (this._streamSource) {
+                this._streamSource.disconnect();
+                this._streamSource = null;
+            }
+            const msNode = audioContext.createMediaStreamSource(source as MediaStream);
+            this._streamSource = msNode;
+            return msNode;
+        }
+
+        // AudioBus — has _getOutputNode (checked before raw AudioNode)
+        const asBus = source as Partial<{ _getOutputNode: () => AudioNode | null }>;
+        if (typeof asBus._getOutputNode === 'function') {
+            return asBus._getOutputNode();
+        }
+
+        // Sound / Music — has analyserTarget
+        const asMedia = source as Partial<{ analyserTarget: AudioNode | null }>;
+        if ('analyserTarget' in asMedia) {
+            return asMedia.analyserTarget ?? null;
+        }
+
+        // Raw AudioNode — duck-type: has connect & disconnect
+        const asNode = source as Partial<{ connect: unknown; disconnect: unknown }>;
+        if (typeof asNode.connect === 'function' && typeof asNode.disconnect === 'function') {
+            return source as unknown as AudioNode;
+        }
+
+        return null;
+    }
+
+    private _deferConnectionViaBus(source: BeatDetectorSource): void {
+        const asBus = source as Partial<{ onceSetup: (cb: () => void) => void }>;
+        if (typeof asBus.onceSetup === 'function') {
+            asBus.onceSetup(() => {
+                if (this._source === source && this._workletNode && isAudioContextReady()) {
+                    this._connectSource(source, getAudioContext());
+                }
+            });
+            return;
+        }
+
+        onAudioContextReady.once(() => {
+            if (this._source === source && this._workletNode && isAudioContextReady()) {
+                this._connectSource(source, getAudioContext());
+            }
+        }, this);
+    }
+
+    private _disconnectTap(): void {
+        if (this._tapSource && this._workletNode) {
+            try {
+                this._tapSource.disconnect(this._workletNode);
+            } catch {
+                // Ignore
+            }
+        }
+        this._tapSource = null;
+
+        if (this._streamSource) {
+            this._streamSource.disconnect();
+            this._streamSource = null;
+        }
+    }
+}

@@ -3,6 +3,7 @@ export * from './Media';
 export * from './audio-context';
 export * from './AudioAnalyser';
 export * from './AudioBus';
+export * from './BeatDetector';
 export { AudioFilter } from './AudioFilter';
 export { AudioListener, type AudioListenerTarget } from './AudioListener';
 export { AudioManager, getAudioManager } from './AudioManager';

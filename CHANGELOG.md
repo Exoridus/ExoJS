@@ -4,6 +4,127 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-05-04
+
+Adds `BeatDetector` (Stage 1+2: causal DSP hybrid tracker with bar-aware
+state model) and rewrites `AudioAnalyser` with a polymorphic source
+setter and convenience helpers. **Breaking change** to AudioAnalyser
+API — see migration below. Pure-additive on BeatDetector.
+
+### Added
+
+- **`BeatDetector`** — Stage 1+2 beat tracker via AudioWorkletNode.
+  Causal DSP pipeline: log-mel spectral flux → 6-second sliding
+  tempogram → top-K tempo candidates with octave-error hysteresis →
+  phase tracker with novelty-snap correction → HMM-lite bar-position
+  posterior. ~500 LOC of inlined worklet source, all in plain JS, no
+  dependencies. Polymorphic `source` setter accepts `AudioBus`,
+  `Sound`, `Music`, `MediaStream`, raw `AudioNode`, or `null`.
+- **BeatDetector live state**:
+  - Stage 1: `tempo`, `beatPhase`, `nextBeatTime`, `confidence`,
+    `gridStability`, `tempoCandidates`, `rms`, `onsetStrength`,
+    `bandEnergy`
+  - Stage 2: `barPosition` (1..N within bar), `barLength`,
+    `timeSignature` (currently always 4/4 in V1), `nextDownbeatTime`,
+    `lookahead` (next 8 beats projected with audio-time precision)
+- **BeatDetector signals**:
+  - Stage 1: `onBeat`, `onTempoChange`
+  - Stage 2: `onDownbeat` (the "1" of each bar), `onBarStart`,
+    `onBeatPredicted` (when lookahead updates)
+- **`BeatDetectorOptions`** — `minBpm` (default 50), `maxBpm` (default
+  250), `fftSize` (default 2048), `hopSize` (default 512),
+  `tempoWindowSec` (default 6), `settlingMs` (default 1500), `melBands`
+  (default 24).
+- **Settling period** — first `settlingMs` ms after worklet starts,
+  beats are suppressed and `confidence` is `0`. Prevents spurious early
+  beat firings before the tempogram has stabilized.
+- **Anti-half/double-tempo hysteresis** — top-K candidates retain
+  octave-related tempos; switch only with 1.5× score margin to resist
+  the classic 60↔120↔240 BPM flipping.
+- **DSP utilities** in `@/audio/dsp` — pure-function exports for
+  `fft`, `mel`, `tempogram`. Used internally by the worklet (inlined
+  as JS strings) but also testable in isolation. Also usable directly
+  by advanced users for custom analysis.
+- **`AudioAnalyser` rewrite** — polymorphic `source` setter (same 5
+  source types as BeatDetector). Lazy-init pattern (works before
+  AudioContext is unlocked).
+- **`AudioAnalyser` data getters**: `getSpectrum(into?)`,
+  `getSpectrumFloat(into?)`, `getWaveform(into?)`,
+  `getWaveformFloat(into?)` — all support a user-provided buffer for
+  zero-allocation reads.
+- **`AudioAnalyser` convenience**: `getBandEnergy(fromHz, toHz)`,
+  `getLowMidHigh()`, `getRms()` — high-level helpers for visualizers
+  and reactive UI.
+
+### Changed (BREAKING)
+
+- **`AudioAnalyser` constructor signature changed.** Old:
+  `new AudioAnalyser(media, options)`. New:
+  `new AudioAnalyser(options?); analyser.source = media`.
+- **`AudioAnalyser` data properties replaced with methods.** Old
+  getters `timeDomainData`, `frequencyData`, `preciseTimeDomainData`,
+  `preciseFrequencyData` are removed. Use `getWaveform()`,
+  `getSpectrum()`, `getWaveformFloat()`, `getSpectrumFloat()`
+  respectively. The new methods accept an optional `into` buffer
+  argument for zero-allocation reuse.
+- **`AudioAnalyser.connect()` removed.** Connection is now automatic
+  on `source` assignment.
+
+### Migration
+
+```ts
+// Before:
+const analyser = new AudioAnalyser(music, { fftSize: 1024 });
+analyser.connect();
+const spectrum = analyser.frequencyData;
+const waveform = analyser.timeDomainData;
+
+// After:
+const analyser = new AudioAnalyser({ fftSize: 1024 });
+analyser.source = music;
+const spectrum = analyser.getSpectrum();
+const waveform = analyser.getWaveform();
+
+// Now also possible:
+analyser.source = mediaStream;     // Mic input
+analyser.source = app.audio.master; // Whole mix
+analyser.getBandEnergy(20, 200);   // Bass energy 0..1
+analyser.getLowMidHigh();          // {low, mid, high}
+```
+
+```ts
+// New: BeatDetector
+const detector = new BeatDetector();
+detector.source = music;
+await detector.ready;
+
+detector.onBeat.add(({ audioTime, tempo, isDownbeat, energy }) => {
+    sprite.scale.set(1.5);
+    new Tween().target(sprite.scale).to({x: 1, y: 1}).duration(200).start();
+});
+
+detector.onDownbeat.add(() => {
+    boss.attack();  // syncs exactly to "the 1" of each bar
+});
+```
+
+### Notes
+
+- BeatDetector is calibrated for percussive, metrically stable music
+  (Pop, EDM, Dance, Hip-Hop). Expect ~85-92% beat F1 in that range.
+  Performance on Jazz, Classical, and Ambient is weaker (50-65%) —
+  Stage 3 (CRNN-based activations) would address that and is deferred.
+- Time-signature detection is hardcoded to 4/4 in V1. Bar-position
+  tracking still works (HMM-lite over 4 beats); 3/4 detection comes
+  later if needed.
+- Lookahead returns 8 beats projected at current tempo. Game-event
+  scheduling can use `audioContext.currentTime` differences for
+  sample-accurate alignment.
+- The DSP runs entirely in the audio thread via AudioWorklet — no
+  main-thread CPU pressure, no jitter from GC or task scheduling. The
+  worklet source is embedded as a JS string in BeatDetector.ts (no
+  separate asset shipped).
+
 ## [0.7.1] - 2026-05-04
 
 Adds an AudioWorklet foundation and migrates `DuckingFilter` from

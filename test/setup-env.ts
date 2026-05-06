@@ -95,18 +95,20 @@ class MockAudioContext {
     }
 
     public createAnalyser(): AnalyserNode {
-        return {
-            connect: () => undefined,
-            disconnect: () => undefined,
+        const node = {
+            connect: jest.fn(),
+            disconnect: jest.fn(),
             fftSize: 2048,
+            frequencyBinCount: 1024,
             minDecibels: -100,
             maxDecibels: -30,
             smoothingTimeConstant: 0.8,
-            getByteTimeDomainData: () => undefined,
-            getByteFrequencyData: () => undefined,
-            getFloatTimeDomainData: () => undefined,
-            getFloatFrequencyData: () => undefined,
-        } as unknown as AnalyserNode;
+            getByteTimeDomainData: jest.fn((arr: Uint8Array) => { arr.fill(128); }),
+            getByteFrequencyData: jest.fn((arr: Uint8Array) => { arr.fill(100); }),
+            getFloatTimeDomainData: jest.fn((arr: Float32Array) => { arr.fill(0); }),
+            getFloatFrequencyData: jest.fn((arr: Float32Array) => { arr.fill(-60); }),
+        };
+        return node as unknown as AnalyserNode;
     }
 
     public createGain(): GainNode {
@@ -156,6 +158,13 @@ class MockAudioContext {
             connect: () => undefined,
             disconnect: () => undefined,
         } as unknown as MediaElementAudioSourceNode;
+    }
+
+    public createMediaStreamSource(_stream: MediaStream): MediaStreamAudioSourceNode {
+        return {
+            connect: jest.fn(),
+            disconnect: jest.fn(),
+        } as unknown as MediaStreamAudioSourceNode;
     }
 
     public createBufferSource(): AudioBufferSourceNode {
@@ -298,6 +307,10 @@ Object.defineProperty(globalThis, 'AudioWorkletNode', {
         public readonly disconnect: jest.Mock;
         public readonly context: MockAudioContext;
         public readonly parameters: Map<string, AudioParam>;
+        public readonly port: {
+            postMessage: jest.Mock;
+            onmessage: ((event: { data: unknown }) => void) | null;
+        };
 
         public constructor(context: MockAudioContext, _name: string, _options?: AudioWorkletNodeOptions) {
             this.connect = jest.fn();
@@ -307,9 +320,22 @@ Object.defineProperty(globalThis, 'AudioWorkletNode', {
             for (const name of WORKLET_PARAM_NAMES) {
                 this.parameters.set(name, makeMockAudioParam());
             }
+            this.port = {
+                postMessage: jest.fn(),
+                onmessage: null,
+            };
         }
     },
 });
+
+// MediaStream mock — jsdom does not implement MediaStream.
+if (typeof globalThis.MediaStream === 'undefined') {
+    Object.defineProperty(globalThis, 'MediaStream', {
+        configurable: true,
+        writable: true,
+        value: class MockMediaStream {},
+    });
+}
 
 // Ensure URL.createObjectURL and revokeObjectURL exist (jsdom may not provide them).
 if (typeof URL.createObjectURL === 'undefined') {
