@@ -6,3 +6,7 @@ export * from './ReverbFilter';
 export * from './EqualizerFilter';
 export * from './DuckingFilter';
 export { WorkletFilter } from './WorkletFilter';
+export { ChorusFilter, type ChorusFilterOptions } from './ChorusFilter';
+export { PitchShiftFilter, type PitchShiftFilterOptions } from './PitchShiftFilter';
+export { VocoderFilter, type VocoderFilterOptions } from './VocoderFilter';
+export { GranularFilter, type GranularFilterOptions } from './GranularFilter';

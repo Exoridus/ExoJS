@@ -52,7 +52,7 @@ const makeMockAudioParam = (): AudioParam => ({
     value: 0,
 } as unknown as AudioParam);
 
-const WORKLET_PARAM_NAMES = ['threshold', 'ratio', 'attack', 'release'];
+const WORKLET_PARAM_NAMES = ['threshold', 'ratio', 'attack', 'release', 'pitch', 'wet', 'envelopeSmoothing', 'grainSize', 'density', 'spread', 'pitchMin', 'pitchMax'];
 
 class MockAudioWorklet {
     public addModule: jest.Mock = jest.fn().mockResolvedValue(undefined);
@@ -175,6 +175,19 @@ class MockAudioContext {
             loop: false,
             buffer: null,
         } as unknown as AudioBufferSourceNode;
+    }
+
+    public createOscillator(): OscillatorNode {
+        return {
+            connect: () => undefined,
+            disconnect: () => undefined,
+            start: () => undefined,
+            stop: () => undefined,
+            type: 'sine' as OscillatorType,
+            frequency: { value: 440 },
+            detune: { value: 0 },
+            onended: null,
+        } as unknown as OscillatorNode;
     }
 
     public createBiquadFilter(): BiquadFilterNode {

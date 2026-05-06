@@ -4,6 +4,78 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.10] - 2026-05-07
+
+Closes the audio chapter. Adds the long-deferred fade transition helper,
+a procedural tone generator, and four custom-DSP filter classes that
+demonstrate the WorkletFilter foundation from 0.7.1. After this release,
+ExoJS audio is feature-complete for the originally-planned scope.
+
+### Added
+
+- **`crossFade(from, to, durationMs, options?): Promise<void>`** — top-
+  level helper that calls `from.fadeOut()` and `to.fadeIn()` in parallel,
+  optionally auto-playing `to` if paused. Resolves after `durationMs`
+  elapses. Replaces the manual `await` + dual-fade pattern documented in
+  0.6.20.
+- **`Envelope`** — ADSR (Attack-Decay-Sustain-Release) generator usable
+  on any `AudioParam`. Schedules a gain curve via `trigger()` (attack →
+  decay → sustain) and `release()` (sustain → 0). Independent of any
+  specific media class — apply to oscillators, filters, or custom
+  AudioParam targets.
+- **`OscillatorSound`** — procedural tone generator. No AudioBuffer
+  needed — each `play()` synthesizes via WebAudio's `OscillatorNode`.
+  Configurable `frequency`, `type` (`sine` | `square` | `sawtooth` |
+  `triangle`), `detune` (cents), optional `Envelope`. Pool semantics
+  match `Sound` (default `poolSize: 8`, `SoundPoolStrategy.FirstInFirstOut`).
+  Static helper `OscillatorSound.midiToFrequency(midiNote)` and
+  `setNote(midiNote)` for music apps. Default-routes to `mixer.sound`.
+- **`ChorusFilter`** — modulated-delay chorus / vibrato effect. Native
+  WebAudio nodes only (DelayNode + Oscillator LFO + GainNodes), no
+  worklet. Configurable `delayMs`, `depthMs`, `rateHz`, `wet`. Use as
+  an Audio bus filter:
+  ```ts
+  bus.addFilter(new ChorusFilter({ rateHz: 1.5, depthMs: 5 }));
+  ```
+- **`PitchShiftFilter`** — granular real-time pitch shifter (WorkletFilter).
+  Configurable `pitch` (0.25× to 4×), `wet`, internal `grainSize`. V1
+  quality is good for ±1 octave; beyond that, audible granular artifacts.
+  Higher-quality phase-vocoder pitch shifting is V2.
+- **`VocoderFilter`** — classic 16-band vocoder (WorkletFilter, 2-input).
+  Takes a `modulator: AudioBus` whose spectral envelope shapes the
+  carrier signal (the bus the filter is attached to). Configurable
+  `numBands`, `minHz`, `maxHz`, `bandQ`, `wet`, `envelopeSmoothing`.
+  Per-band biquad bandpass filters + envelope follower entirely in the
+  worklet for sample-accurate processing.
+- **`GranularFilter`** — granular synthesis effect. Slices recent input
+  audio into Hann-windowed grains and replays them with randomized
+  offset and pitch. Configurable `grainSize`, `density`, `spread`,
+  `pitchMin`, `pitchMax`, `wet`. Suitable for ambient textures, glitch
+  effects, time-stretching, pitch clouds.
+
+### Notes
+
+- `OscillatorSound` does NOT support spatial audio in V1 (no
+  `position` / `velocity` properties). For spatial procedural audio,
+  attach the OscillatorSound to a spatial `Sound` bus or wait for a
+  future enhancement. `Sound`'s spatial path covers AudioBuffer-based
+  sources.
+- All four custom-DSP filters extend the `WorkletFilter` base from
+  0.7.1, except `ChorusFilter` which uses native nodes (sufficient for
+  modulated-delay topology).
+- The audio chapter as originally scoped is now closed:
+  - 0.7.0 — AudioMixer + Buses + Filters + Spatial + Pool
+  - 0.7.1 — AudioWorklet foundation + DuckingFilter migration
+  - 0.7.2 — BeatDetector (Stage 1+2) + AudioAnalyser rewrite
+  - 0.7.7 — 3/4 time-signature detection + AudioListener bugfix
+  - 0.7.10 — crossFade + OscillatorSound + Envelope + 4 custom-DSP
+    filters (Chorus, PitchShift, Vocoder, Granular)
+- Items deferred indefinitely: HRTF binaural panning, ambisonic /
+  surround output, MIDI playback, voice chat, ASR/TTS, format
+  conversion, audio editor / waveform UI, custom-loudness
+  normalization. These remain out-of-scope per the original audio
+  modernization roadmap.
+
 ## [0.7.9] - 2026-05-07
 
 Fixes a GLSL compile-error in the 0.7.8 shader auto-upgrade path.
