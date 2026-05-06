@@ -4,6 +4,83 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-05-04
+
+Renames `ShaderFilter` → `WebGl2ShaderFilter` and adds `WebGpuShaderFilter`
+— full backend-specific custom shader support. Custom post-process
+shaders now work on both WebGL2 (GLSL) and WebGPU (WGSL) backends with
+explicit, type-safe class names matching the rest of the codebase
+(WebGl2Backend / WebGpuBackend, WebGl2SpriteRenderer / WebGpuSpriteRenderer,
+etc.).
+
+### Added
+
+- **`WebGpuShaderFilter`** — full WGSL fragment shader support on the
+  WebGPU backend. API mirrors `WebGl2ShaderFilter` — accepts WGSL source,
+  exposes a mutable `uniforms` map, applies as a post-process Filter via
+  `node.filters = [filter]`. Internally creates GPUShaderModules,
+  bind-group layouts, render pipeline, and fullscreen-quad vertex buffer
+  using the same patterns as `WebGpuMaskCompositor`.
+- **WGSL auto-bindings** in `@group(0)`:
+  - `@binding(0) var<uniform> uResolution: vec2<f32>` — output dimensions
+  - `@binding(1) var uTexture: texture_2d<f32>` — input texture
+  - `@binding(2) var uSampler: sampler` — linear sampler
+- **User uniforms** in `@group(1)` — packed into a uniform buffer with
+  16-byte alignment per slot (per WGSL alignment rules; vec3 is 16-byte
+  aligned, not 12). Texture uniforms get separate bind group entries.
+- **WGSL default vertex shader** when omitted — fullscreen pass-through
+  with a `vUv: vec2<f32>` varying.
+
+### Changed (BREAKING)
+
+- **`ShaderFilter` → `WebGl2ShaderFilter`** — the class was always
+  WebGL2-only; the name now reflects that. Same API otherwise.
+- **`ShaderFilterOptions` → `WebGl2ShaderFilterOptions`**.
+- **`wgsl` option removed from `WebGl2ShaderFilterOptions`** — was
+  reserved API surface for future WGSL support, now superseded by the
+  separate `WebGpuShaderFilter`.
+- **Backend guard messages updated**:
+  - `WebGl2ShaderFilter` on WebGPU: `'WebGl2ShaderFilter requires the
+    WebGL2 backend. Use WebGpuShaderFilter on WebGPU.'`
+  - `WebGpuShaderFilter` on WebGL2: `'WebGpuShaderFilter requires the
+    WebGPU backend. Use WebGl2ShaderFilter on WebGL2.'`
+
+`ShaderFilterUniformValue` (the polymorphic uniform value type) is
+**unchanged** and shared between both backends — same value shapes
+(number / tuples / TypedArrays / Texture).
+
+### Migration
+
+```ts
+// Before (0.7.3):
+import { ShaderFilter } from '@codexo/exojs';
+const filter = new ShaderFilter({ fragmentSource: glsl, uniforms: { ... } });
+
+// After (0.7.4):
+import { WebGl2ShaderFilter } from '@codexo/exojs';
+const filter = new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { ... } });
+
+// New on WebGPU:
+import { WebGpuShaderFilter } from '@codexo/exojs';
+const filter = new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { ... } });
+```
+
+### Notes
+
+- Two separate classes (rather than one polymorphic class with both
+  shader sources) reflects the reality that GLSL and WGSL are entirely
+  different languages with different binding models. Users writing a
+  custom shader inherently know their backend; the explicit class name
+  matches that mental model.
+- 0.7.3 is effectively replaced — it shipped with the wrong name and a
+  WebGPU stub. Window of exposure was minutes; this is corrective.
+- WGSL alignment rules differ from GLSL std140: vec3 occupies 16 bytes
+  (not 12). The user's WGSL struct must declare members accordingly.
+- Performance for fullscreen pixel-shader rendering is equivalent on
+  both backends — choose based on browser support, ecosystem
+  familiarity (GLSL has more tutorials / Shadertoy), or future-proofing
+  preference (WebGPU is the long-term direction).
+
 ## [0.7.3] - 2026-05-04
 
 Adds `ShaderFilter` — a high-level Filter subclass that renders the input

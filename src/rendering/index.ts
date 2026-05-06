@@ -63,4 +63,5 @@ export * from './View';
 export * from './filters/Filter';
 export * from './filters/BlurFilter';
 export * from './filters/ColorFilter';
-export * from './filters/ShaderFilter';
+export * from './filters/WebGl2ShaderFilter';
+export * from './filters/WebGpuShaderFilter';

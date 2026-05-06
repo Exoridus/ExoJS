@@ -13,8 +13,9 @@ import type { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
 import { Filter } from './Filter';
 
 /**
- * A scalar number, vector tuple, typed array, or texture. ShaderFilter
- * marshals these into the appropriate uniform type at apply time.
+ * A scalar number, vector tuple, typed array, or texture. Both
+ * {@link WebGl2ShaderFilter} and {@link WebGpuShaderFilter} accept and
+ * marshal these value types.
  */
 export type ShaderFilterUniformValue =
     | number
@@ -26,10 +27,9 @@ export type ShaderFilterUniformValue =
     | Texture
     | RenderTexture;
 
-export interface ShaderFilterOptions {
+export interface WebGl2ShaderFilterOptions {
     /**
-     * GLSL fragment shader source for the WebGL2 backend.
-     * Required when the active backend is WebGL2.
+     * GLSL fragment shader source. Required.
      *
      * The shader receives these auto-bound uniforms:
      *   uniform sampler2D uTexture;     // the filter's input
@@ -41,16 +41,10 @@ export interface ShaderFilterOptions {
     fragmentSource?: string;
 
     /**
-     * GLSL vertex shader source for the WebGL2 backend. Optional;
-     * defaults to a pass-through fullscreen-quad shader.
+     * GLSL vertex shader source. Optional; defaults to a pass-through
+     * fullscreen-quad shader.
      */
     vertexSource?: string;
-
-    /**
-     * WGSL source for the WebGPU backend. Required when the active
-     * backend is WebGPU. (V1 throws on WebGPU regardless — see notes.)
-     */
-    wgsl?: string;
 
     /**
      * Initial uniform values. Can be updated at runtime by writing
@@ -103,12 +97,14 @@ interface WebGl2Connection {
 
 /**
  * A high-level {@link Filter} subclass that renders the input texture
- * through a user-provided GLSL fragment shader.
+ * through a user-provided GLSL fragment shader on the **WebGL2** backend.
+ *
+ * For the WebGPU backend use {@link WebGpuShaderFilter}.
  *
  * ## Usage
  *
  * ```ts
- * const filter = new ShaderFilter({
+ * const filter = new WebGl2ShaderFilter({
  *   fragmentSource: `
  *     #version 300 es
  *     precision mediump float;
@@ -133,14 +129,8 @@ interface WebGl2Connection {
  *
  * The backend automatically sets `uTexture` (slot 0) and `uResolution`
  * before each draw. User uniforms start at texture slot 1.
- *
- * ## WebGPU
- *
- * WebGPU is **not** supported in V1. Calling `apply()` on a WebGPU
- * backend throws a clear error. The `wgsl` option is reserved API
- * surface for a future release.
  */
-export class ShaderFilter extends Filter {
+export class WebGl2ShaderFilter extends Filter {
 
     /**
      * Mutable map of uniform values. Set values via property
@@ -157,11 +147,11 @@ export class ShaderFilter extends Filter {
     private _shader: Shader | null = null;
     private _connection: WebGl2Connection | null = null;
 
-    public constructor(options: ShaderFilterOptions) {
+    public constructor(options: WebGl2ShaderFilterOptions) {
         super();
 
         if (!options.fragmentSource) {
-            throw new Error('ShaderFilter requires fragmentSource for the WebGL2 backend.');
+            throw new Error('WebGl2ShaderFilter requires fragmentSource for the WebGL2 backend.');
         }
 
         this._fragmentSource = options.fragmentSource;
@@ -172,9 +162,7 @@ export class ShaderFilter extends Filter {
     public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
         if (backend.backendType === RenderBackendType.WebGpu) {
             throw new Error(
-                'ShaderFilter does not yet support the WebGPU backend. ' +
-                'WGSL support is planned for a future release. ' +
-                'Use the WebGL2 backend for now.',
+                'WebGl2ShaderFilter requires the WebGL2 backend. Use WebGpuShaderFilter on WebGPU.',
             );
         }
 
@@ -281,7 +269,7 @@ export class ShaderFilter extends Filter {
         const vaoHandle = gl.createVertexArray();
 
         if (vaoHandle === null) {
-            throw new Error('ShaderFilter: could not create vertex array object.');
+            throw new Error('WebGl2ShaderFilter: could not create vertex array object.');
         }
 
         const vertexBuffer = this._createVertexBuffer(gl);
@@ -295,7 +283,7 @@ export class ShaderFilter extends Filter {
         const handle = gl.createBuffer();
 
         if (handle === null) {
-            throw new Error('ShaderFilter: could not create vertex buffer.');
+            throw new Error('WebGl2ShaderFilter: could not create vertex buffer.');
         }
 
         const buffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, quadVertices, BufferUsage.StaticDraw);

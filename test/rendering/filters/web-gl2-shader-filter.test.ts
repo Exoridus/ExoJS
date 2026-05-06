@@ -1,8 +1,8 @@
 /**
- * ShaderFilter unit tests.
+ * WebGl2ShaderFilter unit tests.
  *
  * These tests use a minimal WebGL2 mock (no real GPU) to verify the
- * ShaderFilter's apply() flow, uniform marshalling, WebGPU guard, and
+ * WebGl2ShaderFilter's apply() flow, uniform marshalling, WebGPU guard, and
  * lifecycle methods without requiring a real WebGL2RenderingContext.
  */
 
@@ -10,8 +10,8 @@ import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { RenderTarget } from '@/rendering/RenderTarget';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
-import { ShaderFilter } from '@/rendering/filters/ShaderFilter';
-import type { ShaderFilterOptions, ShaderFilterUniformValue } from '@/rendering/filters/ShaderFilter';
+import { WebGl2ShaderFilter } from '@/rendering/filters/WebGl2ShaderFilter';
+import type { WebGl2ShaderFilterOptions, ShaderFilterUniformValue } from '@/rendering/filters/WebGl2ShaderFilter';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
@@ -222,29 +222,22 @@ void main() { vUv = aUv; gl_Position = vec4(aPosition, 0.0, 1.0); }
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('ShaderFilter', () => {
+describe('WebGl2ShaderFilter', () => {
     // 1. Construction with fragmentSource only — succeeds
     test('constructs successfully with only fragmentSource', () => {
-        expect(() => new ShaderFilter({ fragmentSource: minimalFragSrc })).not.toThrow();
+        expect(() => new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc })).not.toThrow();
     });
 
     // 2. Construction without fragmentSource — throws
     test('throws when constructed without fragmentSource', () => {
-        expect(() => new ShaderFilter({} as ShaderFilterOptions)).toThrow(
-            'ShaderFilter requires fragmentSource for the WebGL2 backend.',
+        expect(() => new WebGl2ShaderFilter({} as WebGl2ShaderFilterOptions)).toThrow(
+            'WebGl2ShaderFilter requires fragmentSource for the WebGL2 backend.',
         );
     });
 
-    // 3. Without fragmentSource and without wgsl — also throws (same error)
-    test('throws when constructed with only wgsl and no fragmentSource', () => {
-        expect(() => new ShaderFilter({ wgsl: 'dummy wgsl' } as ShaderFilterOptions)).toThrow(
-            'ShaderFilter requires fragmentSource for the WebGL2 backend.',
-        );
-    });
-
-    // 4. Default vertex shader is used when none provided
+    // 3. Default vertex shader is used when none provided
     test('uses default vertex shader when vertexSource is omitted', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
 
         // Access private field via bracket notation for inspection
         expect((filter as unknown as Record<string, unknown>)['_vertexSource']).toContain('gl_Position');
@@ -254,9 +247,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 5. Custom vertex shader is used when provided
+    // 4. Custom vertex shader is used when provided
     test('uses provided vertexSource when specified', () => {
-        const filter = new ShaderFilter({
+        const filter = new WebGl2ShaderFilter({
             fragmentSource: minimalFragSrc,
             vertexSource: customVertSrc,
         });
@@ -266,9 +259,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 6. uniforms map is mutable
+    // 5. uniforms map is mutable
     test('uniforms map allows runtime mutation via property assignment', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
 
         filter.uniforms['uTime'] = 1.234;
         filter.uniforms['uColor'] = [1, 0.5, 0, 1] as unknown as readonly [number, number, number, number];
@@ -279,9 +272,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 7. Initial uniforms from constructor options populate the map
+    // 6. Initial uniforms from constructor options populate the map
     test('constructor uniforms option populates the uniforms map', () => {
-        const filter = new ShaderFilter({
+        const filter = new WebGl2ShaderFilter({
             fragmentSource: minimalFragSrc,
             uniforms: {
                 uTime: 0.5,
@@ -295,18 +288,15 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 8. apply() on WebGPU throws clearly
+    // 7. apply() on WebGPU throws clearly with updated message
     test('apply() on WebGPU backend throws with clear error message', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const backend = makeWebGpuBackend();
         const input = new RenderTexture(16, 16);
         const output = new RenderTexture(16, 16);
 
         expect(() => filter.apply(backend, input, output)).toThrow(
-            'ShaderFilter does not yet support the WebGPU backend.',
-        );
-        expect(() => filter.apply(backend, input, output)).toThrow(
-            'WGSL support is planned for a future release.',
+            'WebGl2ShaderFilter requires the WebGL2 backend. Use WebGpuShaderFilter on WebGPU.',
         );
 
         filter.destroy();
@@ -314,10 +304,10 @@ describe('ShaderFilter', () => {
         output.destroy();
     });
 
-    // 9. apply() on WebGL2 backend calls backend.execute (RenderTargetPass)
+    // 8. apply() on WebGL2 backend calls backend.execute (RenderTargetPass)
     test('apply() on WebGL2 backend calls backend.execute with a RenderTargetPass', () => {
         const backend = makeWebGl2Backend();
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const input = new RenderTexture(64, 64);
         const output = new RenderTexture(64, 64);
 
@@ -330,10 +320,10 @@ describe('ShaderFilter', () => {
         output.destroy();
     });
 
-    // 10. apply() binds input texture to slot 0
+    // 9. apply() binds input texture to slot 0
     test('apply() binds input texture to slot 0', () => {
         const backend = makeWebGl2Backend();
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const input = new RenderTexture(16, 16);
         const output = new RenderTexture(16, 16);
 
@@ -350,7 +340,7 @@ describe('ShaderFilter', () => {
         output.destroy();
     });
 
-    // 11. Texture uniform binds to slot >= 1, sampler uniform = slot index
+    // 10. Texture uniform binds to slot >= 1, sampler uniform = slot index
     test('texture uniforms in user map bind to slots starting at 1', () => {
         // Build a mock gl that reports one sampler2D uniform
         const gl = makeGlMock();
@@ -376,7 +366,7 @@ describe('ShaderFilter', () => {
         canvas.height = 8;
         const extraTex = new Texture(canvas);
 
-        const filter = new ShaderFilter({
+        const filter = new WebGl2ShaderFilter({
             fragmentSource: minimalFragSrc,
             uniforms: { uExtraTex: extraTex },
         });
@@ -398,9 +388,9 @@ describe('ShaderFilter', () => {
         extraTex.destroy();
     });
 
-    // 12. Number -> Float32Array marshalling
+    // 11. Number -> Float32Array marshalling
     test('marshals number uniform value to Float32Array([n])', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
 
         const result = marshal(3.14) as Float32Array;
@@ -412,9 +402,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 13. Tuple -> Float32Array marshalling
+    // 12. Tuple -> Float32Array marshalling
     test('marshals 2-tuple to Float32Array([a, b])', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
 
         const result = marshal([0.5, 1.0] as unknown as readonly [number, number]) as Float32Array;
@@ -426,7 +416,7 @@ describe('ShaderFilter', () => {
     });
 
     test('marshals 4-tuple to Float32Array of length 4', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
 
         const result = marshal([1, 0, 0.5, 0.75] as unknown as readonly [number, number, number, number]) as Float32Array;
@@ -437,9 +427,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 14. Float32Array pass-through
+    // 13. Float32Array pass-through
     test('passes through Float32Array without re-allocation', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
         const arr = new Float32Array([1, 2, 3, 4]);
 
@@ -448,9 +438,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 15. Int32Array pass-through
+    // 14. Int32Array pass-through
     test('passes through Int32Array without re-allocation', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const marshal = (filter as unknown as Record<string, (v: ShaderFilterUniformValue) => unknown>)['_marshalValue'].bind(filter);
         const arr = new Int32Array([7, 8]);
 
@@ -459,9 +449,9 @@ describe('ShaderFilter', () => {
         filter.destroy();
     });
 
-    // 16. destroy() releases shader and clears uniforms
+    // 15. destroy() releases shader and clears uniforms
     test('destroy() clears the uniforms map and nulls internal resources', () => {
-        const filter = new ShaderFilter({
+        const filter = new WebGl2ShaderFilter({
             fragmentSource: minimalFragSrc,
             uniforms: { uTime: 1.0 },
         });
@@ -473,10 +463,10 @@ describe('ShaderFilter', () => {
         expect((filter as unknown as Record<string, unknown>)['_connection']).toBeNull();
     });
 
-    // 17. destroy() after apply() also disconnects GPU resources
+    // 16. destroy() after apply() also disconnects GPU resources
     test('destroy() after apply() releases GPU resources', () => {
         const backend = makeWebGl2Backend();
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const input = new RenderTexture(16, 16);
         const output = new RenderTexture(16, 16);
 
@@ -494,19 +484,19 @@ describe('ShaderFilter', () => {
         output.destroy();
     });
 
-    // 18. Lazy init: _shader is null before first apply()
+    // 17. Lazy init: _shader is null before first apply()
     test('shader is null before first apply() (lazy initialization)', () => {
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
 
         expect((filter as unknown as Record<string, unknown>)['_shader']).toBeNull();
 
         filter.destroy();
     });
 
-    // 19. _ensureConnected is idempotent — second apply() does not re-compile
+    // 18. _ensureConnected is idempotent — second apply() does not re-compile
     test('second apply() reuses the already-compiled shader', () => {
         const backend = makeWebGl2Backend();
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const input = new RenderTexture(16, 16);
         const output = new RenderTexture(16, 16);
 
@@ -523,10 +513,10 @@ describe('ShaderFilter', () => {
         output.destroy();
     });
 
-    // 20. bindShader is called with the compiled shader during apply()
+    // 19. bindShader is called with the compiled shader during apply()
     test('apply() calls bindShader with the internal Shader instance', () => {
         const backend = makeWebGl2Backend();
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const input = new RenderTexture(16, 16);
         const output = new RenderTexture(16, 16);
 
@@ -541,10 +531,10 @@ describe('ShaderFilter', () => {
         output.destroy();
     });
 
-    // 21. apply() passes output as the RenderTargetPass target
+    // 20. apply() passes output as the RenderTargetPass target
     test('apply() renders into the output RenderTexture (RenderTargetPass target = output)', () => {
         const backend = makeWebGl2Backend();
-        const filter = new ShaderFilter({ fragmentSource: minimalFragSrc });
+        const filter = new WebGl2ShaderFilter({ fragmentSource: minimalFragSrc });
         const input = new RenderTexture(16, 16);
         const output = new RenderTexture(32, 32);
 
