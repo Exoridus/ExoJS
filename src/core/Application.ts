@@ -9,6 +9,8 @@ import { Loader } from '@/resources/Loader';
 import { TweenManager } from '@/animation/TweenManager';
 import { Signal } from './Signal';
 import { Color } from './Color';
+import { Texture } from '@/rendering/texture/Texture';
+import { canvasSourceToDataUrl } from './utils';
 import type { Time } from './Time';
 import type { Scene } from './Scene';
 import type { CacheStore } from '@/resources/CacheStore';
@@ -98,6 +100,7 @@ export class Application {
     public readonly onFrame = new Signal<[Time]>();
     public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
     public readonly onVisibilityChange = new Signal<[visible: boolean]>();
+    public readonly onBackendLost = new Signal<[]>();
     public pauseOnHidden: boolean = false;
 
     private readonly _updateHandler: () => void;
@@ -112,6 +115,7 @@ export class Application {
     private _backend: RenderBackend;
     private _capabilities: Capabilities | null = null;
     private _documentVisible: boolean = true;
+    private _cursor: string = 'default';
     private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
 
     public constructor(appSettings?: Partial<ApplicationOptions>) {
@@ -198,6 +202,14 @@ export class Application {
 
     public get documentVisible(): boolean {
         return this._documentVisible;
+    }
+
+    public get cursor(): string {
+        return this._cursor;
+    }
+
+    public set cursor(cursor: string) {
+        this.setCursor(cursor);
     }
 
     public get audio(): AudioManager {
@@ -288,6 +300,19 @@ export class Application {
         return this;
     }
 
+    public setCursor(cursor: string | Texture | HTMLImageElement | HTMLCanvasElement): this {
+        const source = (cursor instanceof Texture) ? cursor.source : cursor;
+
+        if (source === null) {
+            throw new Error('Provided Texture has no source.');
+        }
+
+        this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataUrl(source)})`;
+        this.canvas.style.cursor = this._cursor;
+
+        return this;
+    }
+
     public destroy(): void {
         if (typeof document !== 'undefined') {
             document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
@@ -307,6 +332,7 @@ export class Application {
         this.onFrame.destroy();
         this.onCanvasFocusChange.destroy();
         this.onVisibilityChange.destroy();
+        this.onBackendLost.destroy();
     }
 
     private _onDocumentVisibilityChange(): void {
@@ -334,10 +360,18 @@ export class Application {
 
     private createBackend(backendType: 'webgl2' | 'webgpu'): RenderBackend {
         if (backendType === 'webgpu') {
-            return new WebGpuBackend(this);
+            const backend = new WebGpuBackend(this);
+
+            backend.onDeviceLost.add(() => { this.onBackendLost.dispatch(); });
+
+            return backend;
         }
 
-        return new WebGl2Backend(this);
+        const backend = new WebGl2Backend(this);
+
+        backend.onContextLost.add(() => { this.onBackendLost.dispatch(); });
+
+        return backend;
     }
 
     private async initializeRenderManager(): Promise<void> {

@@ -1,6 +1,7 @@
 import WebGLDebugUtils from '../../vendor/webgl-debug';
 
 import { BlendModes } from '@/rendering/types';
+import { Signal } from '@/core/Signal';
 import { RenderTarget } from '../RenderTarget';
 import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
@@ -10,8 +11,7 @@ import { Sprite } from '../sprite/Sprite';
 import { Mesh } from '../mesh/Mesh';
 import { ParticleSystem } from '@/particles/ParticleSystem';
 import { Color } from '@/core/Color';
-import { canvasSourceToDataUrl } from '@/core/utils';
-import { Texture } from '../texture/Texture';
+import type { Texture } from '../texture/Texture';
 import { RenderTexture } from '../texture/RenderTexture';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
@@ -78,6 +78,8 @@ export class WebGl2Backend implements RenderBackend {
 
     public readonly backendType = RenderBackendType.WebGl2;
     public readonly rendererRegistry = new RendererRegistry<WebGl2Backend>();
+    public readonly onContextLost = new Signal<[]>();
+    public readonly onContextRestored = new Signal<[]>();
 
     private readonly _context: WebGL2RenderingContext;
     private readonly _rootRenderTarget: RenderTarget;
@@ -105,7 +107,6 @@ export class WebGl2Backend implements RenderBackend {
     private _textureUnit = 0;
     private _vao: WebGl2VertexArrayObject | null = null;
     private _clearColor: Color = new Color();
-    private _cursor: string;
     private _boundFramebuffer: WebGLFramebuffer | null = null;
     private readonly _stats: RenderStats = createRenderStats();
 
@@ -141,7 +142,6 @@ export class WebGl2Backend implements RenderBackend {
 
         this._rootRenderTarget = new RenderTarget(width, height, true);
         this._renderTarget = this._rootRenderTarget;
-        this._cursor = this._canvas.style.cursor;
 
         this._onContextLostHandler = this._onContextLost.bind(this);
         this._onContextRestoredHandler = this._onContextRestored.bind(this);
@@ -174,10 +174,6 @@ export class WebGl2Backend implements RenderBackend {
 
     public get clearColor(): Color {
         return this._clearColor;
-    }
-
-    public get cursor(): string {
-        return this._cursor;
     }
 
     public get stats(): RenderStats {
@@ -427,19 +423,6 @@ export class WebGl2Backend implements RenderBackend {
         return this;
     }
 
-    public setCursor(cursor: string | Texture | HTMLImageElement | HTMLCanvasElement): this {
-        const source = (cursor instanceof Texture) ? cursor.source : cursor;
-
-        if (source === null) {
-            throw new Error('Provided Texture has no source.');
-        }
-
-        this._cursor = typeof source === 'string' ? source : `url(${canvasSourceToDataUrl(source)})`;
-        this._canvas.style.cursor = this._cursor;
-
-        return this;
-    }
-
     public clear(color?: Color): this {
         const gl = this._context;
 
@@ -471,6 +454,8 @@ export class WebGl2Backend implements RenderBackend {
 
     public destroy(): void {
         this._removeEvents();
+        this.onContextLost.destroy();
+        this.onContextRestored.destroy();
 
         this.setRenderTarget(null);
         this._setActiveRenderer(null);
@@ -544,11 +529,13 @@ export class WebGl2Backend implements RenderBackend {
 
     private _onContextLost(): void {
         this._contextLost = true;
+        this.onContextLost.dispatch();
         this._restoreContext();
     }
 
     private _onContextRestored(): void {
         this._contextLost = false;
+        this.onContextRestored.dispatch();
     }
 
     private _createFramebuffer(): WebGLFramebuffer {

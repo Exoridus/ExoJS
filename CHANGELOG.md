@@ -4,6 +4,99 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.6] - 2026-05-04
+
+Closes the remaining WebGPU / WebGL2 backend parity gaps and cleans up
+vestigial backend API. Adds device-loss / context-loss recovery signals
+on both backends, unifies them under `Application.onBackendLost`, moves
+`setCursor` to Application, and removes dead-code throws from WebGPU.
+
+### Added
+
+- **`Application.onBackendLost: Signal<[]>`** — unified signal that
+  fires when either backend's GPU context is lost (WebGl2 context-lost
+  event or WebGpu device-lost promise). User code listens once and
+  doesn't care which backend they're on. Useful for showing a "GPU
+  driver issue, please reload" dialog.
+- **`WebGl2Backend.onContextLost: Signal<[]>`** — backend-specific
+  signal mirroring the existing `webglcontextlost` handler.
+- **`WebGl2Backend.onContextRestored: Signal<[]>`** — backend-specific
+  signal mirroring the existing `webglcontextrestored` handler.
+- **`WebGpuBackend.onDeviceLost: Signal<[GPUDeviceLostInfo]>`** —
+  WebGPU's `device.lost` promise is now subscribed at initialization;
+  resolution dispatches this signal with the loss info. Note: WebGPU
+  device loss is irrecoverable on the same device — user code must
+  reload, retry, or recreate the application to recover. V1 only
+  signals; user decides response strategy.
+- **`WebGpuBackend.deviceLost: boolean`** — getter for current
+  device-loss state.
+- **`WebGpuBackend.clearColor: Color`** + **`setClearColor(color)`** —
+  persistent clear color, matching WebGl2's API. `clear()` without
+  arguments uses the persistent color.
+- **`Application.setCursor(cursor)`** + **`cursor` property** — moved
+  here from `WebGl2Backend`. Accepts CSS cursor strings or a
+  `Texture` / `HTMLImageElement` / `HTMLCanvasElement` (converted to
+  a `url(...)` cursor). Sets `canvas.style.cursor` directly.
+
+### Changed (BREAKING)
+
+- **`WebGl2Backend.setCursor()` and `cursor` getter removed.** Use
+  `app.setCursor(...)` or `app.cursor = ...` instead. Cursor is a DOM
+  concern, not a backend concern; this corrects the misplacement.
+- **`WebGpuBackend.setShader()` removed.** Was a vestigial throw with
+  no callers. WebGPU's pipeline-based architecture doesn't fit the
+  imperative `setShader` pattern. Custom shaders go through
+  `WebGpuShaderFilter` (since 0.7.4).
+- **`WebGpuBackend.setVao()` removed.** VAOs are a WebGL concept;
+  WebGPU uses bind groups + pipelines. Method had no callers.
+- **`WebGpuBackend.setTexture()` and `setRenderTarget()` no-longer-
+  throwing on RenderTarget subclass guards.** Throws were unreachable
+  because `RenderTexture` is the only `RenderTarget` subclass. The
+  guards are gone; the type system already prevents misuse.
+- **`WebGpuBackend.setBlendMode()` no-longer-throwing**. Internal
+  renderers call this during their pipeline setup; the previous throw
+  for unrecognized modes was unreachable (covered all 5 valid blend
+  modes). Method now silently returns; the actual blend logic lives in
+  the pipeline-creation paths inside `WebGpuBlendState` and the
+  individual renderers.
+
+### Migration
+
+```ts
+// Before:
+app.backend.setCursor('pointer');
+const cursor = app.backend.cursor;
+
+// After:
+app.setCursor('pointer');           // or
+app.cursor = 'pointer';
+const cursor = app.cursor;
+```
+
+```ts
+// New: react to backend loss
+app.onBackendLost.add(() => {
+    showReloadDialog();
+});
+
+// Or backend-specific:
+if (app.backend.backendType === RenderBackendType.WebGpu) {
+    (app.backend as WebGpuBackend).onDeviceLost.add((info) => {
+        console.error('GPU device lost:', info.message, info.reason);
+    });
+}
+```
+
+### Notes
+
+- Device-loss is irrecoverable on WebGPU (the lost device cannot be
+  reused; recovery requires creating a fresh device, which means
+  re-initializing the application). V1 dispatches the signal and stops;
+  the user's app code decides whether to reload, retry, or fall back.
+- `setBlendMode` could be removed entirely in a future cleanup if the
+  pipeline-creation path is the only place blend state is set, but it
+  remains as a no-op for now to preserve internal call sites.
+
 ## [0.7.5] - 2026-05-04
 
 Expands the debug overlay with three new layers: `BoundingBoxesLayer`,

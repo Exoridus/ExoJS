@@ -58,6 +58,7 @@ const loadApplicationHarness = (options: {
         resetStats: jest.fn().mockReturnThis(),
         stats: { frameTimeMs: 0 },
         renderTarget: { setView: jest.fn() },
+        onContextLost: { add: jest.fn(), destroy: jest.fn() },
     };
     const webgpuManager = {
         initialize: options.webgpuInitialize ?? jest.fn().mockResolvedValue(undefined),
@@ -67,6 +68,7 @@ const loadApplicationHarness = (options: {
         resetStats: jest.fn().mockReturnThis(),
         stats: { frameTimeMs: 0 },
         renderTarget: { setView: jest.fn() },
+        onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
     };
     const sceneManager = {
         update: jest.fn(),

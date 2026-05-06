@@ -1,18 +1,17 @@
 /// <reference types="@webgpu/types" />
 
 import { Color } from '@/core/Color';
+import { Signal } from '@/core/Signal';
 import type { Application } from '@/core/Application';
 import type { TextureSource } from '@/core/types';
-import { BlendModes } from '@/rendering/types';
+import type { BlendModes } from '@/rendering/types';
 import { RenderBackendType } from '../RenderBackendType';
 import { RendererRegistry } from '../RendererRegistry';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import type { Drawable } from '../Drawable';
 import type { RenderPass } from '../RenderPass';
 import type { Renderer } from '../Renderer';
-import type { Shader } from '../shader/Shader';
 import type { Texture } from '../texture/Texture';
-import type { WebGl2VertexArrayObject } from '../webgl2/WebGl2VertexArrayObject';
 import type { View } from '../View';
 import type { RenderBackend } from '../RenderBackend';
 import { RenderTarget } from '../RenderTarget';
@@ -53,10 +52,12 @@ export class WebGpuBackend implements RenderBackend {
 
     public readonly backendType = RenderBackendType.WebGpu;
     public readonly rendererRegistry = new RendererRegistry<WebGpuBackend>();
+    public readonly onDeviceLost = new Signal<[GPUDeviceLostInfo]>();
 
     private readonly _canvas: HTMLCanvasElement;
     private readonly _rootRenderTarget: RenderTarget;
-    private readonly _clearColor: Color = new Color();
+    private _clearColor: Color = new Color();
+    private _deviceLost: boolean = false;
     private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
@@ -148,6 +149,20 @@ export class WebGpuBackend implements RenderBackend {
         return this._stats;
     }
 
+    public get clearColor(): Color {
+        return this._clearColor;
+    }
+
+    public get deviceLost(): boolean {
+        return this._deviceLost;
+    }
+
+    public setClearColor(color: Color): this {
+        this._clearColor.copy(color);
+
+        return this;
+    }
+
     public initialize(): Promise<this> {
         if (!this._initializePromise) {
             this._initializePromise = this._initialize().catch((error: unknown) => {
@@ -183,63 +198,15 @@ export class WebGpuBackend implements RenderBackend {
         return this;
     }
 
-    public setShader(shader: Shader | null): this {
-        if (shader !== null) {
-            throw new Error('WebGPU shaders are not implemented yet.');
-        }
-
-        return this;
-    }
-
-    public setTexture(texture: Texture | RenderTexture | null, _unit?: number): this {
-        if (texture === null) {
-            this._texture = null;
-
-            return this;
-        }
-
-        if (texture instanceof RenderTarget && !(texture instanceof RenderTexture)) {
-            throw new Error('WebGPU render textures are not implemented yet.');
-        }
-
-        this._syncTexture(texture);
-        this._texture = texture;
-
-        return this;
-    }
-
-    public setBlendMode(blendMode: BlendModes | null): this {
-        if (blendMode === null) {
-            return this;
-        }
-
-        if (
-            blendMode !== BlendModes.Normal
-            && blendMode !== BlendModes.Additive
-            && blendMode !== BlendModes.Subtract
-            && blendMode !== BlendModes.Multiply
-            && blendMode !== BlendModes.Screen
-        ) {
-            throw new Error(`WebGPU blend mode "${blendMode}" is not implemented yet.`);
-        }
-
-        return this;
-    }
-
-    public setVao(vao: WebGl2VertexArrayObject | null): this {
-        if (vao !== null) {
-            throw new Error('WebGPU vertex array objects are not implemented yet.');
-        }
-
+    public setBlendMode(_blendMode: BlendModes | null): this {
+        // Blend mode is baked into WebGPU render pipelines at creation time.
+        // This method is a no-op; renderers use the blend mode directly when
+        // selecting or creating their pipelines.
         return this;
     }
 
     public setRenderTarget(target: RenderTarget | null): this {
         const nextRenderTarget = target ?? this._rootRenderTarget;
-
-        if (!nextRenderTarget.root && !(nextRenderTarget instanceof RenderTexture)) {
-            throw new Error('WebGPU currently supports only root targets and RenderTexture targets.');
-        }
 
         if (this._renderTarget !== nextRenderTarget) {
             this._flushActiveRenderer();
@@ -368,7 +335,7 @@ export class WebGpuBackend implements RenderBackend {
 
     public clear(color?: Color): this {
         if (color) {
-            this._clearColor.copy(color);
+            this.setClearColor(color);
         }
 
         this._clearRequested = true;
@@ -407,6 +374,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     public destroy(): void {
+        this.onDeviceLost.destroy();
         this._setActiveRenderer(null);
         this.rendererRegistry.destroy();
         this._destroyManagedTextures();
@@ -436,6 +404,7 @@ export class WebGpuBackend implements RenderBackend {
         this._initializePromise = null;
         this._clearRequested = false;
         this._hasPresentedFrame = false;
+        this._deviceLost = false;
         this._texture = null;
         this._mipmapShaderModule = null;
         this._mipmapBindGroupLayout = null;
@@ -592,6 +561,7 @@ export class WebGpuBackend implements RenderBackend {
         this._device = device;
         this._format = format;
         this._hasPresentedFrame = false;
+        this._subscribeToDeviceLoss();
         this.rendererRegistry.connect(this);
         this.resize(this._canvas.width, this._canvas.height);
 
@@ -606,6 +576,15 @@ export class WebGpuBackend implements RenderBackend {
         await this._prewarmRendererPipelines(prewarmFormats);
 
         return this;
+    }
+
+    private _subscribeToDeviceLoss(): void {
+        if (this._device) {
+            void this._device.lost.then((info) => {
+                this._deviceLost = true;
+                this.onDeviceLost.dispatch(info);
+            });
+        }
     }
 
     private async _prewarmRendererPipelines(formats: ReadonlyArray<GPUTextureFormat>): Promise<void> {

@@ -30,6 +30,8 @@ const loadOnFrameHarness = (): OnFrameTestHarness => {
         renderTarget: { setView: jest.fn() },
         view: {},
         setView: jest.fn().mockReturnThis(),
+        onContextLost: { add: jest.fn(), destroy: jest.fn() },
+        onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
     };
     const sceneManager = {
         update: jest.fn(),

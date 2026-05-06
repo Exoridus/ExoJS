@@ -52,6 +52,8 @@ const loadHarness = (): FocusVisibilityHarness => {
         destroy: jest.fn(),
         resetStats: jest.fn().mockReturnThis(),
         stats: { frameTimeMs: 0 },
+        onContextLost: { add: jest.fn(), destroy: jest.fn() },
+        onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
     };
 
     let Application!: typeof import('@/core/Application').Application;

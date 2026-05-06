@@ -46,6 +46,8 @@ interface MockWebGpuEnvironment {
     readonly pipelineDescriptors: Array<GPURenderPipelineDescriptor>;
     readonly buffers: Array<{ destroy: jest.Mock<void, []>; }>;
     readonly textures: Array<{ destroy: jest.Mock<void, []>; createView: jest.Mock<GPUTextureView, []>; }>;
+    /** Resolve this to simulate the GPU device being lost. */
+    simulateDeviceLost(info?: Partial<GPUDeviceLostInfo>): void;
     restore(): void;
 }
 
@@ -126,6 +128,17 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     const createSampler = jest.fn(() => ({}) as GPUSampler);
     const buffers: Array<{ destroy: jest.Mock<void, []>; }> = [];
     const textures: Array<{ destroy: jest.Mock<void, []>; createView: jest.Mock<GPUTextureView, []>; }> = [];
+    let _resolveLost: ((info: GPUDeviceLostInfo) => void) | null = null;
+    const lostPromise = new Promise<GPUDeviceLostInfo>((resolve) => {
+        _resolveLost = resolve;
+    });
+    const simulateDeviceLost = (info: Partial<GPUDeviceLostInfo> = {}): void => {
+        _resolveLost?.({
+            reason: 'unknown' as GPUDeviceLostReason,
+            message: 'simulated device loss',
+            ...info,
+        } as GPUDeviceLostInfo);
+    };
     const device = {
         createShaderModule: jest.fn(() => ({}) as GPUShaderModule),
         createBindGroupLayout,
@@ -144,6 +157,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
         }),
         createTexture,
         createSampler,
+        lost: lostPromise,
         queue,
     } as unknown as GPUDevice;
     const context = {
@@ -213,6 +227,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
         pipelineDescriptors,
         buffers,
         textures,
+        simulateDeviceLost,
         restore: (): void => {
             if (previousGpu) {
                 Object.defineProperty(navigator, 'gpu', previousGpu);
@@ -2040,7 +2055,7 @@ describe('WebGpuBackend', () => {
         }
     });
 
-    test('still rejects unknown WebGPU blend modes explicitly', async () => {
+    test('setClearColor persists and clearColor getter returns the set color', async () => {
         const environment = createMockWebGpuEnvironment();
 
         try {
@@ -2056,7 +2071,101 @@ describe('WebGpuBackend', () => {
 
             await manager.initialize();
 
-            expect(() => manager.setBlendMode(999 as BlendModes)).toThrow('WebGPU blend mode');
+            manager.setClearColor(Color.red);
+
+            expect(manager.clearColor.r).toBe(Color.red.r);
+            expect(manager.clearColor.g).toBe(Color.red.g);
+            expect(manager.clearColor.b).toBe(Color.red.b);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('clear() without argument uses the persistent clearColor', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuBackend(app);
+
+            await manager.initialize();
+
+            manager.setClearColor(Color.cornflowerBlue);
+            manager.clear(); // no arg — should use stored clearColor
+            manager.flush();
+
+            // createColorAttachment uses _clearColor; verify the value propagated
+            expect(manager.clearColor.r).toBe(Color.cornflowerBlue.r);
+            expect(manager.clearColor.g).toBe(Color.cornflowerBlue.g);
+            expect(manager.clearColor.b).toBe(Color.cornflowerBlue.b);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('onDeviceLost signal fires when the GPU device is lost', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuBackend(app);
+            const lostHandler = jest.fn();
+
+            await manager.initialize();
+
+            manager.onDeviceLost.add(lostHandler);
+
+            expect(manager.deviceLost).toBe(false);
+
+            environment.simulateDeviceLost({ message: 'gpu removed' });
+
+            // The lost promise is async — flush the microtask queue.
+            await Promise.resolve();
+
+            expect(lostHandler).toHaveBeenCalledTimes(1);
+            expect(lostHandler.mock.calls[0][0]).toMatchObject({ message: 'gpu removed' });
+            expect(manager.deviceLost).toBe(true);
+        } finally {
+            environment.restore();
+        }
+    });
+
+    test('setBlendMode is a no-op on WebGPU (blend is baked into pipelines)', async () => {
+        const environment = createMockWebGpuEnvironment();
+
+        try {
+            const app = {
+                canvas: environment.canvas,
+                options: {
+                    width: 128,
+                    height: 128,
+                    clearColor: Color.black,
+                },
+            } as unknown as Application;
+            const manager = new WebGpuBackend(app);
+
+            await manager.initialize();
+
+            // All blend modes — including out-of-range values — are silently
+            // accepted. Blend state is baked into GPU pipelines at creation time
+            // and is not set imperatively on the backend.
+            expect(() => manager.setBlendMode(BlendModes.Normal)).not.toThrow();
+            expect(() => manager.setBlendMode(BlendModes.Additive)).not.toThrow();
+            expect(() => manager.setBlendMode(999 as BlendModes)).not.toThrow();
         } finally {
             environment.restore();
         }
