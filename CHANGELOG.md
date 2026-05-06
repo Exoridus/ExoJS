@@ -4,6 +4,87 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-05-04
+
+Adds `ShaderFilter` — a high-level Filter subclass that renders the input
+through a user-provided GLSL fragment shader. Unlocks custom post-process
+effects: visualizers, demoscene shaders, glitch/scanline/dithering passes,
+LUT color grading, chromatic aberration, etc.
+
+### Added
+
+- **`ShaderFilter`** — accepts a fragment shader source string + uniforms,
+  applies it as a post-process filter on any `RenderNode` via
+  `node.filters = [shaderFilter]`. Internally lazy-compiles the shader on
+  first apply, allocates a per-instance fullscreen-quad vertex buffer,
+  and uses the existing `RenderTargetPass` orchestration shared with
+  built-in filters like `BlurFilter`.
+- **Auto-bound uniforms** for the user shader:
+  - `uniform sampler2D uTexture` — the filter's input
+  - `uniform vec2 uResolution` — output dimensions
+  - `in vec2 vUv` (varying) — 0..1 UVs across the quad
+- **`ShaderFilter.uniforms`** — mutable map for user uniforms. Set values
+  via property assignment; flushed before each apply():
+  ```ts
+  filter.uniforms.uTime = performance.now() / 1000;
+  filter.uniforms.uColor = [1, 0.5, 0, 1];      // vec4
+  ```
+- **Polymorphic uniform values**: scalar `number`, tuple `[a, b]` /
+  `[a, b, c]` / `[a, b, c, d]`, `Float32Array` / `Int32Array`, or
+  `Texture` / `RenderTexture` (auto-bound to a sampler slot).
+- **Default vertex shader** when `vertexSource` is omitted — pass-through
+  fullscreen quad. User can supply a custom vertex shader for warps /
+  vertex displacement effects.
+- **`wgsl` option** in `ShaderFilterOptions` — reserved API surface for
+  WebGPU support landing in a future release.
+
+### Notes
+
+- **WebGL2-only in V1.** Constructor accepts `wgsl` source, but `apply()`
+  on the WebGPU backend throws `'ShaderFilter does not yet support the
+  WebGPU backend. WGSL support is planned for a future release. Use the
+  WebGL2 backend for now.'` Document this limitation; reasoning: WebGPU
+  requires a separate WGSL pipeline implementation that's substantial
+  on its own. Coming when there's concrete user demand.
+- `fragmentSource` is required at construction. Constructor throws if
+  missing.
+- Internally reuses the existing `Shader` + `WebGl2ShaderProgram`
+  infrastructure — no new public Backend methods added.
+- Vertex buffer is per-instance (4 vertices × 16 bytes = 64 bytes per
+  filter). Pooling across instances was considered but rejected for V1
+  to avoid cross-instance lifecycle coupling.
+
+### Usage
+
+```ts
+import { ShaderFilter } from '@codexo/exojs';
+
+const filter = new ShaderFilter({
+    fragmentSource: `#version 300 es
+        precision highp float;
+        in vec2 vUv;
+        uniform sampler2D uTexture;
+        uniform vec2 uResolution;
+        uniform float uTime;
+        out vec4 outColor;
+        void main() {
+            vec2 uv = vUv;
+            uv.x += sin(uv.y * 10.0 + uTime) * 0.01;  // wavy distort
+            outColor = texture(uTexture, uv);
+        }
+    `,
+    uniforms: {
+        uTime: 0,
+    },
+});
+
+sprite.filters = [filter];
+
+app.onFrame.add((delta) => {
+    filter.uniforms.uTime = performance.now() / 1000;
+});
+```
+
 ## [0.7.2] - 2026-05-04
 
 Adds `BeatDetector` (Stage 1+2: causal DSP hybrid tracker with bar-aware

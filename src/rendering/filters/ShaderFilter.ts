@@ -1,0 +1,400 @@
+import { Color } from '@/core/Color';
+import { Shader } from '@/rendering/shader/Shader';
+import { RenderBackendType } from '@/rendering/RenderBackendType';
+import { RenderTargetPass } from '@/rendering/RenderTargetPass';
+import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
+import { createWebGl2ShaderProgram } from '@/rendering/webgl2/WebGl2ShaderProgram';
+import { WebGl2RenderBuffer } from '@/rendering/webgl2/WebGl2RenderBuffer';
+import { WebGl2VertexArrayObject } from '@/rendering/webgl2/WebGl2VertexArrayObject';
+import { Texture } from '@/rendering/texture/Texture';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { RenderBackend } from '@/rendering/RenderBackend';
+import type { WebGl2Backend } from '@/rendering/webgl2/WebGl2Backend';
+import { Filter } from './Filter';
+
+/**
+ * A scalar number, vector tuple, typed array, or texture. ShaderFilter
+ * marshals these into the appropriate uniform type at apply time.
+ */
+export type ShaderFilterUniformValue =
+    | number
+    | readonly [number, number]
+    | readonly [number, number, number]
+    | readonly [number, number, number, number]
+    | Float32Array
+    | Int32Array
+    | Texture
+    | RenderTexture;
+
+export interface ShaderFilterOptions {
+    /**
+     * GLSL fragment shader source for the WebGL2 backend.
+     * Required when the active backend is WebGL2.
+     *
+     * The shader receives these auto-bound uniforms:
+     *   uniform sampler2D uTexture;     // the filter's input
+     *   uniform vec2 uResolution;        // output dimensions
+     *
+     * And these auto-bound varyings:
+     *   in vec2 vUv;                     // 0..1 across the quad
+     */
+    fragmentSource?: string;
+
+    /**
+     * GLSL vertex shader source for the WebGL2 backend. Optional;
+     * defaults to a pass-through fullscreen-quad shader.
+     */
+    vertexSource?: string;
+
+    /**
+     * WGSL source for the WebGPU backend. Required when the active
+     * backend is WebGPU. (V1 throws on WebGPU regardless — see notes.)
+     */
+    wgsl?: string;
+
+    /**
+     * Initial uniform values. Can be updated at runtime by writing
+     * to the `uniforms` property:
+     *
+     *   filter.uniforms.uTime = performance.now() / 1000;
+     */
+    uniforms?: Record<string, ShaderFilterUniformValue>;
+}
+
+/**
+ * Default fullscreen-quad vertex shader. Positions are already in clip
+ * space (-1..1), so no projection matrix is needed.
+ */
+const defaultVertexSource = `#version 300 es
+in vec2 aPosition;
+in vec2 aUv;
+out vec2 vUv;
+void main() {
+    vUv = aUv;
+    gl_Position = vec4(aPosition, 0.0, 1.0);
+}
+`;
+
+/**
+ * Interleaved position+UV data for a fullscreen TRIANGLE_STRIP quad.
+ * Layout per vertex: [posX, posY, uvX, uvY]
+ *
+ * Vertices (clip-space positions, 0..1 UVs):
+ *   0: bottom-left  (-1, -1, 0, 0)
+ *   1: bottom-right ( 1, -1, 1, 0)
+ *   2: top-left     (-1,  1, 0, 1)
+ *   3: top-right    ( 1,  1, 1, 1)
+ */
+const quadVertices = new Float32Array([
+    -1, -1, 0, 0,
+    1, -1, 1, 0,
+    -1, 1, 0, 1,
+    1, 1, 1, 1,
+]);
+
+/** Bytes per vertex: 2 floats position + 2 floats UV = 16 bytes */
+const vertexStride = 16;
+
+interface WebGl2Connection {
+    readonly gl: WebGL2RenderingContext;
+    readonly vertexBuffer: WebGl2RenderBuffer;
+    readonly vao: WebGl2VertexArrayObject;
+}
+
+/**
+ * A high-level {@link Filter} subclass that renders the input texture
+ * through a user-provided GLSL fragment shader.
+ *
+ * ## Usage
+ *
+ * ```ts
+ * const filter = new ShaderFilter({
+ *   fragmentSource: `
+ *     #version 300 es
+ *     precision mediump float;
+ *     uniform sampler2D uTexture;
+ *     uniform vec2 uResolution;
+ *     uniform float uTime;
+ *     in vec2 vUv;
+ *     out vec4 fragColor;
+ *     void main() {
+ *       fragColor = texture(uTexture, vUv);
+ *     }
+ *   `,
+ *   uniforms: { uTime: 0.0 },
+ * });
+ *
+ * // Update uniforms each frame:
+ * filter.uniforms.uTime = performance.now() / 1000;
+ * sprite.filters = [filter];
+ * ```
+ *
+ * ## Auto-bound uniforms
+ *
+ * The backend automatically sets `uTexture` (slot 0) and `uResolution`
+ * before each draw. User uniforms start at texture slot 1.
+ *
+ * ## WebGPU
+ *
+ * WebGPU is **not** supported in V1. Calling `apply()` on a WebGPU
+ * backend throws a clear error. The `wgsl` option is reserved API
+ * surface for a future release.
+ */
+export class ShaderFilter extends Filter {
+
+    /**
+     * Mutable map of uniform values. Set values via property
+     * assignment; they are flushed to the GPU before each apply().
+     *
+     *   filter.uniforms.uTime = 1.234;
+     *   filter.uniforms.uColor = [1, 0.5, 0, 1];  // vec4
+     */
+    public readonly uniforms: Record<string, ShaderFilterUniformValue>;
+
+    private readonly _fragmentSource: string;
+    private readonly _vertexSource: string;
+
+    private _shader: Shader | null = null;
+    private _connection: WebGl2Connection | null = null;
+
+    public constructor(options: ShaderFilterOptions) {
+        super();
+
+        if (!options.fragmentSource) {
+            throw new Error('ShaderFilter requires fragmentSource for the WebGL2 backend.');
+        }
+
+        this._fragmentSource = options.fragmentSource;
+        this._vertexSource = options.vertexSource ?? defaultVertexSource;
+        this.uniforms = { ...(options.uniforms ?? {}) };
+    }
+
+    public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
+        if (backend.backendType === RenderBackendType.WebGpu) {
+            throw new Error(
+                'ShaderFilter does not yet support the WebGPU backend. ' +
+                'WGSL support is planned for a future release. ' +
+                'Use the WebGL2 backend for now.',
+            );
+        }
+
+        const gl2Backend = backend as WebGl2Backend;
+
+        this._ensureConnected(gl2Backend);
+
+        const shader = this._shader!;
+
+        backend.execute(new RenderTargetPass(
+            (b) => {
+                const gl2 = b as WebGl2Backend;
+
+                // Bind shader (calls ShaderProgram.bind → gl.useProgram + sync dirty uniforms)
+                gl2.bindShader(shader);
+
+                // Auto-bind input texture to slot 0 (uTexture)
+                gl2.bindTexture(input, 0);
+
+                if (shader.uniforms.has('uTexture')) {
+                    shader.getUniform('uTexture').setValue(new Int32Array([0]));
+                }
+
+                // Auto-bind uResolution
+                if (shader.uniforms.has('uResolution')) {
+                    shader.getUniform('uResolution').setValue(new Float32Array([output.width, output.height]));
+                }
+
+                // Sync user uniforms — texture uniforms start at slot 1
+                let textureSlot = 1;
+
+                for (const [name, value] of Object.entries(this.uniforms)) {
+                    if (!shader.uniforms.has(name)) {
+                        continue;
+                    }
+
+                    const uniform = shader.getUniform(name);
+
+                    if (value instanceof Texture) {
+                        gl2.bindTexture(value, textureSlot);
+                        uniform.setValue(new Int32Array([textureSlot]));
+                        textureSlot++;
+                    } else {
+                        uniform.setValue(this._marshalValue(value as Exclude<ShaderFilterUniformValue, Texture>));
+                    }
+                }
+
+                // Flush dirty uniforms to the GPU
+                shader.sync();
+
+                // Draw the fullscreen quad
+                const connection = this._connection!;
+
+                gl2.bindVertexArrayObject(connection.vao);
+                connection.vao.draw(4, 0, RenderingPrimitives.TriangleStrip);
+            },
+            {
+                target: output,
+                view: output.view,
+                clearColor: Color.transparentBlack,
+            },
+        ));
+    }
+
+    public destroy(): void {
+        if (this._connection !== null) {
+            this._connection.vertexBuffer.destroy();
+            this._connection.vao.destroy();
+            this._connection = null;
+        }
+
+        if (this._shader !== null) {
+            this._shader.destroy();
+            this._shader = null;
+        }
+
+        for (const key of Object.keys(this.uniforms)) {
+            delete this.uniforms[key];
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Private helpers
+    // ---------------------------------------------------------------------------
+
+    private _ensureConnected(backend: WebGl2Backend): void {
+        if (this._shader !== null) {
+            return;
+        }
+
+        const gl = backend.context;
+
+        // Create and connect the shader
+        const shader = new Shader(this._vertexSource, this._fragmentSource);
+
+        shader.connect(createWebGl2ShaderProgram(gl));
+
+        // Force shader finalization so attributes are populated before VAO setup.
+        // sync() calls finalize() internally, which blocks until compilation is
+        // done and extracts attribute/uniform reflection data.
+        shader.sync();
+
+        // Build the fullscreen-quad vertex buffer (static, per-instance)
+        const vaoHandle = gl.createVertexArray();
+
+        if (vaoHandle === null) {
+            throw new Error('ShaderFilter: could not create vertex array object.');
+        }
+
+        const vertexBuffer = this._createVertexBuffer(gl);
+        const vao = this._createVao(gl, vaoHandle, shader, vertexBuffer);
+
+        this._shader = shader;
+        this._connection = { gl, vertexBuffer, vao };
+    }
+
+    private _createVertexBuffer(gl: WebGL2RenderingContext): WebGl2RenderBuffer {
+        const handle = gl.createBuffer();
+
+        if (handle === null) {
+            throw new Error('ShaderFilter: could not create vertex buffer.');
+        }
+
+        const buffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, quadVertices, BufferUsage.StaticDraw);
+
+        buffer.connect({
+            bind: (): void => {
+                gl.bindBuffer(gl.ARRAY_BUFFER, handle);
+            },
+            upload: (buf, _offset): void => {
+                gl.bindBuffer(gl.ARRAY_BUFFER, handle);
+                gl.bufferData(gl.ARRAY_BUFFER, buf.data, buf.usage);
+            },
+            destroy: (buf): void => {
+                gl.deleteBuffer(handle);
+                buf.disconnect();
+            },
+        });
+
+        return buffer;
+    }
+
+    private _createVao(
+        gl: WebGL2RenderingContext,
+        vaoHandle: WebGLVertexArrayObject,
+        shader: Shader,
+        vertexBuffer: WebGl2RenderBuffer,
+    ): WebGl2VertexArrayObject {
+        let appliedVersion = -1;
+
+        const vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip);
+
+        if (shader.attributes.has('aPosition')) {
+            vao.addAttribute(vertexBuffer, shader.getAttribute('aPosition'), gl.FLOAT, false, vertexStride, 0);
+        }
+
+        if (shader.attributes.has('aUv')) {
+            vao.addAttribute(vertexBuffer, shader.getAttribute('aUv'), gl.FLOAT, false, vertexStride, 8);
+        }
+
+        vao.connect({
+            bind: (v): void => {
+                gl.bindVertexArray(vaoHandle);
+
+                if (appliedVersion !== v.version) {
+                    let lastBuffer: WebGl2RenderBuffer | null = null;
+
+                    for (const attribute of v.attributes) {
+                        const buf = attribute.buffer as WebGl2RenderBuffer;
+
+                        if (lastBuffer !== buf) {
+                            buf.bind();
+                            lastBuffer = buf;
+                        }
+
+                        gl.vertexAttribPointer(
+                            attribute.location,
+                            attribute.size,
+                            attribute.type,
+                            attribute.normalized,
+                            attribute.stride,
+                            attribute.start,
+                        );
+                        gl.enableVertexAttribArray(attribute.location);
+                    }
+
+                    appliedVersion = v.version;
+                }
+            },
+            unbind: (): void => {
+                gl.bindVertexArray(null);
+            },
+            draw: (_v, size, start, type): void => {
+                gl.drawArrays(type, start, size);
+            },
+            destroy: (v): void => {
+                gl.deleteVertexArray(vaoHandle);
+                v.disconnect();
+            },
+        });
+
+        return vao;
+    }
+
+    /**
+     * Marshal a non-texture uniform value to a TypedArray suitable for
+     * {@link ShaderUniform#setValue}.
+     */
+    private _marshalValue(
+        value: Exclude<ShaderFilterUniformValue, Texture>,
+    ): Float32Array | Int32Array {
+        if (value instanceof Float32Array || value instanceof Int32Array) {
+            return value;
+        }
+
+        if (typeof value === 'number') {
+            return new Float32Array([value]);
+        }
+
+        // readonly tuple [a, b], [a, b, c], or [a, b, c, d]
+        return new Float32Array(value as ReadonlyArray<number>);
+    }
+}
