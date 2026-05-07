@@ -57,7 +57,7 @@ app.start(new class extends Scene {
         ];
         window.__EXAMPLE_PREVIEW_AUTOPLAY__ = () => this._music.play({ loop: true, muted: false, volume: 0.5 });
 
-        this.app.inputManager.onPointerDown.add(() => {
+        this.app.input.onPointerDown.add(() => {
             if (this._music.paused) {
                 window.__EXAMPLE_PREVIEW_AUTOPLAY__?.();
                 return;

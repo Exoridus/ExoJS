@@ -393,7 +393,7 @@ export class SceneManager {
     }
 
     private _subscribeInputRouting(): void {
-        const inputManager = (this._app as Partial<Application>).inputManager as {
+        const inputManager = (this._app as Partial<Application>).input as {
             onKeyDown?: { add?: (handler: (channel: number) => void) => unknown; };
             onKeyUp?: { add?: (handler: (channel: number) => void) => unknown; };
             onPointerEnter?: { add?: (handler: (pointer: Pointer) => void) => unknown; };
@@ -421,7 +421,7 @@ export class SceneManager {
     }
 
     private _unsubscribeInputRouting(): void {
-        const inputManager = (this._app as Partial<Application>).inputManager as {
+        const inputManager = (this._app as Partial<Application>).input as {
             onKeyDown?: { remove?: (handler: (channel: number) => void) => unknown; };
             onKeyUp?: { remove?: (handler: (channel: number) => void) => unknown; };
             onPointerEnter?: { remove?: (handler: (pointer: Pointer) => void) => unknown; };

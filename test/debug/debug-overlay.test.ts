@@ -76,7 +76,7 @@ const makeApp = () => {
         canvas: { width: 800, height: 600 },
         backend: makeBackend(),
         sceneManager: makeSceneManager(),
-        inputManager: { onKeyDown },
+        input: { onKeyDown },
         onFrame,
         onResize,
     } as unknown as import('@/core/Application').Application;
@@ -133,15 +133,15 @@ describe('DebugOverlay — lifecycle', () => {
         debug.destroy();
     });
 
-    test('constructor subscribes to inputManager.onKeyDown', () => {
+    test('constructor subscribes to input.onKeyDown', () => {
         const { DebugOverlay } = require('../../src/debug/DebugOverlay') as typeof import('../../src/debug/DebugOverlay');
         const app = makeApp();
 
-        expect(app.inputManager.onKeyDown.bindings.length).toBe(0);
+        expect(app.input.onKeyDown.bindings.length).toBe(0);
 
         const debug = new DebugOverlay(app);
 
-        expect(app.inputManager.onKeyDown.bindings.length).toBe(1);
+        expect(app.input.onKeyDown.bindings.length).toBe(1);
 
         debug.destroy();
     });
@@ -162,12 +162,12 @@ describe('DebugOverlay — lifecycle', () => {
         const debug = new DebugOverlay(app);
 
         expect(app.onFrame.bindings.length).toBe(1);
-        expect(app.inputManager.onKeyDown.bindings.length).toBe(1);
+        expect(app.input.onKeyDown.bindings.length).toBe(1);
 
         debug.destroy();
 
         expect(app.onFrame.bindings.length).toBe(0);
-        expect(app.inputManager.onKeyDown.bindings.length).toBe(0);
+        expect(app.input.onKeyDown.bindings.length).toBe(0);
     });
 });
 
@@ -229,7 +229,7 @@ describe('DebugOverlay — F1 keybinding', () => {
 
         expect(debug.layers.performance.visible).toBe(false);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+        app.input.onKeyDown.dispatch(Keyboard.F1);
 
         expect(debug.layers.performance.visible).toBe(true);
 
@@ -241,10 +241,10 @@ describe('DebugOverlay — F1 keybinding', () => {
         const app = makeApp();
         const debug = new DebugOverlay(app);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+        app.input.onKeyDown.dispatch(Keyboard.F1);
         expect(debug.layers.performance.visible).toBe(true);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+        app.input.onKeyDown.dispatch(Keyboard.F1);
         expect(debug.layers.performance.visible).toBe(false);
 
         debug.destroy();
@@ -255,9 +255,9 @@ describe('DebugOverlay — F1 keybinding', () => {
         const app = makeApp();
         const debug = new DebugOverlay(app);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F2);
-        app.inputManager.onKeyDown.dispatch(Keyboard.Space);
-        app.inputManager.onKeyDown.dispatch(Keyboard.A);
+        app.input.onKeyDown.dispatch(Keyboard.F2);
+        app.input.onKeyDown.dispatch(Keyboard.Space);
+        app.input.onKeyDown.dispatch(Keyboard.A);
 
         expect(debug.layers.performance.visible).toBe(false);
 
@@ -273,10 +273,10 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
         expect(debug.layers.boundingBoxes.visible).toBe(false);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F2);
+        app.input.onKeyDown.dispatch(Keyboard.F2);
         expect(debug.layers.boundingBoxes.visible).toBe(true);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F2);
+        app.input.onKeyDown.dispatch(Keyboard.F2);
         expect(debug.layers.boundingBoxes.visible).toBe(false);
 
         debug.destroy();
@@ -289,10 +289,10 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
         expect(debug.layers.hitTest.visible).toBe(false);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F3);
+        app.input.onKeyDown.dispatch(Keyboard.F3);
         expect(debug.layers.hitTest.visible).toBe(true);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F3);
+        app.input.onKeyDown.dispatch(Keyboard.F3);
         expect(debug.layers.hitTest.visible).toBe(false);
 
         debug.destroy();
@@ -305,10 +305,10 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
 
         expect(debug.layers.pointerStack.visible).toBe(false);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F4);
+        app.input.onKeyDown.dispatch(Keyboard.F4);
         expect(debug.layers.pointerStack.visible).toBe(true);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F4);
+        app.input.onKeyDown.dispatch(Keyboard.F4);
         expect(debug.layers.pointerStack.visible).toBe(false);
 
         debug.destroy();
@@ -319,7 +319,7 @@ describe('DebugOverlay — F2/F3/F4 keybindings', () => {
         const app = makeApp();
         const debug = new DebugOverlay(app);
 
-        app.inputManager.onKeyDown.dispatch(Keyboard.F1);
+        app.input.onKeyDown.dispatch(Keyboard.F1);
 
         expect(debug.layers.boundingBoxes.visible).toBe(false);
         expect(debug.layers.hitTest.visible).toBe(false);

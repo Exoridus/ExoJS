@@ -133,7 +133,7 @@ export class PointerStackLayer extends DebugLayer {
     }
 
     private _buildLines(): Array<string> {
-        const pos = this._app.inputManager.getPrimaryPointerPosition();
+        const pos = this._app.input.getPrimaryPointerPosition();
 
         if (pos === null) {
             return ['Pointer: (none)'];

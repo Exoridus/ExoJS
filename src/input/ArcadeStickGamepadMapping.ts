@@ -1,25 +1,5 @@
-import { GamepadChannel } from './GamepadChannels';
+import { GamepadButton } from './GamepadButton';
 import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
-
-import type { GamepadControlDefinition } from './GamepadMapping';
-
-const arcadeStickButtonDefinitions: ReadonlyArray<GamepadControlDefinition> = [
-    [0, GamepadChannel.ButtonSouth],
-    [1, GamepadChannel.ButtonEast],
-    [2, GamepadChannel.ButtonWest],
-    [3, GamepadChannel.ButtonNorth],
-    [4, GamepadChannel.LeftShoulder],
-    [5, GamepadChannel.RightShoulder],
-    [6, GamepadChannel.LeftTrigger],
-    [7, GamepadChannel.RightTrigger],
-    [8, GamepadChannel.Select],
-    [9, GamepadChannel.Start],
-    [12, GamepadChannel.DPadUp],
-    [13, GamepadChannel.DPadDown],
-    [14, GamepadChannel.DPadLeft],
-    [15, GamepadChannel.DPadRight],
-    [16, GamepadChannel.Guide],
-];
 
 /**
  * Mapping for generic arcade-stick controllers.
@@ -32,6 +12,25 @@ export class ArcadeStickGamepadMapping extends GamepadMapping {
     public readonly family = GamepadMappingFamily.ArcadeStick;
 
     public constructor() {
-        super(GamepadMapping.createControls(arcadeStickButtonDefinitions), []);
+        super(
+            [
+                new GamepadButton(0, GamepadButton.South),
+                new GamepadButton(1, GamepadButton.East),
+                new GamepadButton(2, GamepadButton.West),
+                new GamepadButton(3, GamepadButton.North),
+                new GamepadButton(4, GamepadButton.LeftShoulder),
+                new GamepadButton(5, GamepadButton.RightShoulder),
+                new GamepadButton(6, GamepadButton.LeftTrigger),
+                new GamepadButton(7, GamepadButton.RightTrigger),
+                new GamepadButton(8, GamepadButton.Select),
+                new GamepadButton(9, GamepadButton.Start),
+                new GamepadButton(12, GamepadButton.DPadUp),
+                new GamepadButton(13, GamepadButton.DPadDown),
+                new GamepadButton(14, GamepadButton.DPadLeft),
+                new GamepadButton(15, GamepadButton.DPadRight),
+                new GamepadButton(16, GamepadButton.Guide),
+            ],
+            [],
+        );
     }
 }

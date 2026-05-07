@@ -1,12 +1,16 @@
-import { GamepadChannel } from './GamepadChannels';
+import { GamepadButton } from './GamepadButton';
 import { GamepadMappingFamily } from './GamepadMapping';
+
+import type { GamepadButtonChannel } from './GamepadButton';
 
 /**
  * Named controls that can appear in an in-game prompt or button-hint UI.
  *
- * Intentionally a subset of {@link GamepadChannel} — covers the controls a
- * typical prompt overlay needs to label, including the composite `'DPad'` token
- * which has no single channel equivalent.
+ * Intentionally a subset of {@link GamepadButton} channels — covers the
+ * controls a typical prompt overlay needs to label, including the composite
+ * `'DPad'` token which has no single channel equivalent. The names retain
+ * a `'Button'` prefix on the face cluster for compatibility with prompt
+ * artwork file names.
  */
 export type GamepadPromptControl =
     | 'DPad'
@@ -47,23 +51,23 @@ const basePositions = new Map<GamepadPromptControl, readonly [number, number]>([
     ['RightStick', [0.62, 0.66]],
 ]);
 
-const channelMap = new Map<GamepadPromptControl, GamepadChannel>([
-    ['ButtonNorth', GamepadChannel.ButtonNorth],
-    ['ButtonWest', GamepadChannel.ButtonWest],
-    ['ButtonEast', GamepadChannel.ButtonEast],
-    ['ButtonSouth', GamepadChannel.ButtonSouth],
-    ['LeftShoulder', GamepadChannel.LeftShoulder],
-    ['RightShoulder', GamepadChannel.RightShoulder],
-    ['LeftTrigger', GamepadChannel.LeftTrigger],
-    ['RightTrigger', GamepadChannel.RightTrigger],
-    ['Select', GamepadChannel.Select],
-    ['Start', GamepadChannel.Start],
-    ['LeftStick', GamepadChannel.LeftStick],
-    ['RightStick', GamepadChannel.RightStick],
-    ['DPadUp', GamepadChannel.DPadUp],
-    ['DPadDown', GamepadChannel.DPadDown],
-    ['DPadLeft', GamepadChannel.DPadLeft],
-    ['DPadRight', GamepadChannel.DPadRight],
+const channelMap = new Map<GamepadPromptControl, GamepadButtonChannel>([
+    ['ButtonNorth', GamepadButton.North],
+    ['ButtonWest', GamepadButton.West],
+    ['ButtonEast', GamepadButton.East],
+    ['ButtonSouth', GamepadButton.South],
+    ['LeftShoulder', GamepadButton.LeftShoulder],
+    ['RightShoulder', GamepadButton.RightShoulder],
+    ['LeftTrigger', GamepadButton.LeftTrigger],
+    ['RightTrigger', GamepadButton.RightTrigger],
+    ['Select', GamepadButton.Select],
+    ['Start', GamepadButton.Start],
+    ['LeftStick', GamepadButton.LeftStick],
+    ['RightStick', GamepadButton.RightStick],
+    ['DPadUp', GamepadButton.DPadUp],
+    ['DPadDown', GamepadButton.DPadDown],
+    ['DPadLeft', GamepadButton.DPadLeft],
+    ['DPadRight', GamepadButton.DPadRight],
 ]);
 
 const genericLabels = new Map<GamepadPromptControl, string>([
@@ -135,6 +139,7 @@ const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPr
     [GamepadMappingFamily.JoyConRight, switchLabels],
     [GamepadMappingFamily.GameCube, genericLabels],
     [GamepadMappingFamily.SteamController, genericLabels],
+    [GamepadMappingFamily.SteamDeck, genericLabels],
     [GamepadMappingFamily.ArcadeStick, genericLabels],
 ]);
 
@@ -144,7 +149,7 @@ const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPr
  * Provides the canonical set of prompt controls, their normalised [x, y] positions
  * on a generic controller silhouette, device-family label strings (e.g. "A" for
  * Xbox, "Cross" for PlayStation, "B" for Switch), and the mapping from prompt
- * control names to {@link GamepadChannel} values.
+ * control names to {@link GamepadButton} channel values.
  */
 export class GamepadPromptLayouts {
     /** Complete ordered list of every {@link GamepadPromptControl} token. */
@@ -188,10 +193,10 @@ export class GamepadPromptLayouts {
 
     /**
      * Returns the static mapping from each {@link GamepadPromptControl} to its
-     * corresponding {@link GamepadChannel}. The composite `'DPad'` control has no
-     * channel entry and is absent from the returned map.
+     * corresponding {@link GamepadButton} channel. The composite `'DPad'`
+     * control has no channel entry and is absent from the returned map.
      */
-    public static getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadChannel> {
+    public static getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadButtonChannel> {
         return channelMap;
     }
 }

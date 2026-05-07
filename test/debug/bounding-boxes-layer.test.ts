@@ -82,7 +82,7 @@ const makeApp = (root: FakeNode | null = null) => ({
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
     sceneManager: { scene: root ? { root } : null },
-    inputManager: { onKeyDown: new Signal<[number]>(), getPrimaryPointerPosition: jest.fn(() => null) },
+    input: { onKeyDown: new Signal<[number]>(), getPrimaryPointerPosition: jest.fn(() => null) },
     interaction: { getHoveredNode: jest.fn(() => null), getCapturedNodes: jest.fn(() => []), useSpatialIndex: false, _getDebugQuadtree: jest.fn(() => null) },
     onFrame: new Signal(),
     onResize: new Signal(),

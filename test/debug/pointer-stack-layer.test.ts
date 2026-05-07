@@ -81,7 +81,7 @@ const makeApp = (opts: {
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
     sceneManager: { scene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
-    inputManager: {
+    input: {
         onKeyDown: new Signal<[number]>(),
         getPrimaryPointerPosition: jest.fn(() => opts.pointerPos !== undefined ? opts.pointerPos : null),
     },
@@ -224,7 +224,7 @@ describe('PointerStackLayer', () => {
         }).not.toThrow();
 
         // getPrimaryPointerPosition must have been called during update.
-        expect((app.inputManager.getPrimaryPointerPosition as jest.Mock)).toHaveBeenCalled();
+        expect((app.input.getPrimaryPointerPosition as jest.Mock)).toHaveBeenCalled();
     });
 
     test('destroy() cleans up without throwing', () => {

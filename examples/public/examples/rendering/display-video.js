@@ -22,7 +22,7 @@ app.start(new class extends Scene {
         this._video.height = height;
         this._video.applyOptions({ loop: true, muted: false, volume: 0.5 });
 
-        this.app.inputManager.onPointerTap.add(() => this._video.toggle());
+        this.app.input.onPointerTap.add(() => this._video.toggle());
     }
     draw(backend) {
         backend.clear();

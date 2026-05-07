@@ -121,12 +121,12 @@ export class InteractionManager {
         this._onPointerCancelHandler = this._handlePointerCancel.bind(this);
         this._onPointerLeaveHandler = this._handlePointerLeave.bind(this);
 
-        app.inputManager.onPointerDown.add(this._onPointerDownHandler);
-        app.inputManager.onPointerMove.add(this._onPointerMoveHandler);
-        app.inputManager.onPointerUp.add(this._onPointerUpHandler);
-        app.inputManager.onPointerTap.add(this._onPointerTapHandler);
-        app.inputManager.onPointerCancel.add(this._onPointerCancelHandler);
-        app.inputManager.onPointerLeave.add(this._onPointerLeaveHandler);
+        app.input.onPointerDown.add(this._onPointerDownHandler);
+        app.input.onPointerMove.add(this._onPointerMoveHandler);
+        app.input.onPointerUp.add(this._onPointerUpHandler);
+        app.input.onPointerTap.add(this._onPointerTapHandler);
+        app.input.onPointerCancel.add(this._onPointerCancelHandler);
+        app.input.onPointerLeave.add(this._onPointerLeaveHandler);
     }
 
     /**
@@ -176,12 +176,12 @@ export class InteractionManager {
     }
 
     public destroy(): void {
-        this._app.inputManager.onPointerDown.remove(this._onPointerDownHandler);
-        this._app.inputManager.onPointerMove.remove(this._onPointerMoveHandler);
-        this._app.inputManager.onPointerUp.remove(this._onPointerUpHandler);
-        this._app.inputManager.onPointerTap.remove(this._onPointerTapHandler);
-        this._app.inputManager.onPointerCancel.remove(this._onPointerCancelHandler);
-        this._app.inputManager.onPointerLeave.remove(this._onPointerLeaveHandler);
+        this._app.input.onPointerDown.remove(this._onPointerDownHandler);
+        this._app.input.onPointerMove.remove(this._onPointerMoveHandler);
+        this._app.input.onPointerUp.remove(this._onPointerUpHandler);
+        this._app.input.onPointerTap.remove(this._onPointerTapHandler);
+        this._app.input.onPointerCancel.remove(this._onPointerCancelHandler);
+        this._app.input.onPointerLeave.remove(this._onPointerLeaveHandler);
         this._lastHit.clear();
         this._pending.clear();
         this._capturedPointers.clear();
@@ -202,7 +202,7 @@ export class InteractionManager {
     /**
      * Process all pending pointer events accumulated since the last frame.
      * Must be called once per frame from {@link Application.update}, after
-     * `inputManager.update()` has run (so signals are already dispatched and
+     * `input.update()` has run (so signals are already dispatched and
      * queued here) and before game-state updates so that user listeners on
      * `onPointerDown` etc. fire before per-frame logic mutates state.
      *

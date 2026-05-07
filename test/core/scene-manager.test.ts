@@ -36,7 +36,7 @@ const createInputManagerStub = (): InputManagerStub => ({
 });
 
 const createApplicationStub = (): Application & {
-    inputManager: InputManagerStub;
+    input: InputManagerStub;
     backend: {
         view: { getBounds: () => Rectangle; };
         draw: jest.Mock;
@@ -48,7 +48,7 @@ const createApplicationStub = (): Application & {
 
     return {
         loader: {},
-        inputManager: createInputManagerStub(),
+        input: createInputManagerStub(),
         backend: {
             view: {
                 getBounds: () => bounds,
@@ -58,7 +58,7 @@ const createApplicationStub = (): Application & {
             resetStats: jest.fn().mockReturnThis(),
         },
     } as unknown as Application & {
-        inputManager: InputManagerStub;
+        input: InputManagerStub;
         backend: {
             view: { getBounds: () => Rectangle; };
             draw: jest.Mock;
@@ -292,19 +292,19 @@ describe('SceneManager', () => {
 
         await manager.setScene(base);
         await manager.pushScene(capture, { input: 'capture' });
-        app.inputManager.onKeyDown.dispatch(1);
+        app.input.onKeyDown.dispatch(1);
         expect(captureInput).toHaveBeenCalledTimes(1);
         expect(baseInput).toHaveBeenCalledTimes(0);
 
         await manager.popScene();
         await manager.pushScene(passthrough, { input: 'passthrough' });
-        app.inputManager.onKeyDown.dispatch(2);
+        app.input.onKeyDown.dispatch(2);
         expect(passthroughInput).toHaveBeenCalledTimes(1);
         expect(baseInput).toHaveBeenCalledTimes(1);
 
         await manager.popScene();
         await manager.pushScene(transparent, { input: 'transparent' });
-        app.inputManager.onKeyDown.dispatch(3);
+        app.input.onKeyDown.dispatch(3);
         expect(transparentInput).toHaveBeenCalledTimes(0);
         expect(baseInput).toHaveBeenCalledTimes(2);
     });

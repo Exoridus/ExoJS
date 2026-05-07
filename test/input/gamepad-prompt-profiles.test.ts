@@ -1,5 +1,5 @@
+import { GamepadButton } from '@/input/GamepadButton';
 import { GamepadPromptLayouts } from '@/input/GamepadPromptLayouts';
-import { GamepadChannel } from '@/input/GamepadChannels';
 import { GamepadMappingFamily } from '@/input/GamepadMapping';
 
 describe('GamepadPromptLayouts', () => {
@@ -12,9 +12,9 @@ describe('GamepadPromptLayouts', () => {
     test('builds canonical channels from prompt controls', () => {
         const controlChannelMap = GamepadPromptLayouts.getControlChannelMap();
 
-        expect(controlChannelMap.get('ButtonSouth')).toBe(GamepadChannel.ButtonSouth);
-        expect(controlChannelMap.get('Select')).toBe(GamepadChannel.Select);
-        expect(controlChannelMap.get('Start')).toBe(GamepadChannel.Start);
+        expect(controlChannelMap.get('ButtonSouth')).toBe(GamepadButton.South);
+        expect(controlChannelMap.get('Select')).toBe(GamepadButton.Select);
+        expect(controlChannelMap.get('Start')).toBe(GamepadButton.Start);
     });
 
     test('exposes family-specific prompt labels without a separate profile system', () => {

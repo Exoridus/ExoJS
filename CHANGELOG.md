@@ -4,6 +4,340 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.13] - 2026-05-07
+
+Major gamepad-input refactor. Replaces the `new Input(...)` +
+`inputManager.add(...)` pattern with a fluent listener API, splits the
+unified `GamepadChannel` enum into disjoint `GamepadButton` /
+`GamepadAxis` for type-safe button-vs-axis distinction, introduces
+always-4 stable gamepad slots with disconnect-aware listeners, and adds
+rumble, generic per-pad signals, slot-strategy configuration, aggregate
+signed stick channels, and Joy-Con-honest mappings.
+
+### Added — Listener API
+
+```ts
+// Per inputManager (manual unbind):
+app.input.onTrigger(GamepadButton.South, () => player.jump());
+app.input.onActive(GamepadAxis.LeftStickX, (v) => player.x += v * 5);
+app.input.onStart([Keyboard.Space, GamepadButton.South], () => fire());
+
+// Per gamepad (slot-aware, listener survives disconnect/reconnect):
+const pad = app.input.getGamepad(0);
+pad.onTrigger(GamepadButton.South, () => p1.jump());
+
+// Per scene (auto-disposed on scene unload):
+this.inputs.onTrigger(Keyboard.Escape, () => this.app.sceneManager.popScene());
+```
+
+Each method returns an `InputBinding` with `.unbind()` for manual
+lifecycle. Single channel or array of channels is accepted.
+
+### Added — Always-4 gamepad slots
+
+`InputManager.gamepads` is now a fixed
+`readonly [Gamepad, Gamepad, Gamepad, Gamepad]` tuple. Each `Gamepad`
+instance lives for the application's lifetime; check `pad.connected` for
+hardware presence. Listeners attached when a slot is empty automatically
+activate when a pad connects to that slot — no rebinding required.
+
+Convenience accessors on `app.input`:
+
+- `getGamepad(slot)` — readable single-slot accessor (equivalent to
+  `gamepads[slot]`).
+- `connectedGamepads: readonly Gamepad[]` — only the currently-attached
+  pads, in slot order.
+- `connectedGamepadCount: number`
+- `firstConnectedGamepad: Gamepad | null`
+- `hasGamepad: boolean`
+
+Per-pad: `pad.internalIndex` returns the browser's `Gamepad.index` for
+the attached hardware (or `null` when disconnected). Low-level escape
+hatch — prefer `pad.slot` for stable application-side identity.
+
+### Added — Slot strategy
+
+`new Application({ gamepadSlotStrategy: 'sticky' | 'compact' })` —
+default `'sticky'` (each pad keeps its slot through disconnects).
+`'compact'` shifts higher-numbered pads down to fill gaps after a
+disconnect (good for hot-seat couch coop where "the first N pads are
+the N players" is the desired semantic).
+
+In compact mode, the disconnect signal fires on the slot that *ended
+up* empty after the shift (not the slot the disconnected hardware
+originally occupied), keeping `pad.connected === false` consistent with
+the fired event. Slots that received a different physical pad through
+the shift dispatch a separate signal:
+
+- `pad.onPadReassigned: Signal<[fromSlot: 0 | 1 | 2 | 3]>`
+- `app.input.onAnyGamepadReassigned: Signal<[Gamepad, fromSlot]>`
+
+so player-binding code can re-resolve which `Gamepad` belongs to which
+player when slots renumber.
+
+### Added — Generic signals
+
+Per-pad:
+- `pad.onConnect: Signal<[]>`
+- `pad.onDisconnect: Signal<[]>`
+- `pad.onButtonDown: Signal<[GamepadButton, number]>`
+- `pad.onButtonUp: Signal<[GamepadButton, number]>`
+- `pad.onAxisChange: Signal<[GamepadAxis, number]>`
+
+Aggregate across all pads:
+- `inputManager.onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>`
+- `inputManager.onAnyGamepadButtonUp: Signal<[Gamepad, GamepadButton, number]>`
+- `inputManager.onAnyGamepadAxisChange: Signal<[Gamepad, GamepadAxis, number]>`
+
+### Added — Vibration
+
+```ts
+if (pad.canVibrate) {
+    await pad.vibrate({ duration: 200, weakMagnitude: 0.5, strongMagnitude: 1.0 });
+}
+pad.stopVibration();
+```
+
+Wraps the W3C `vibrationActuator.playEffect('dual-rumble')` API. Silent
+no-op on platforms without haptic support — use `pad.canVibrate` to
+detect availability for UI gating. Trigger-rumble (PS5 / Xbox Series
+adaptive triggers) is not exposed because browser support is currently
+Chrome-only and non-standard.
+
+### Added — Aggregate axis channels
+
+`GamepadAxis.LeftStickX`, `LeftStickY`, `RightStickX`, `RightStickY` —
+signed -1..1 values that consume the full bipolar range of the physical
+stick. Use these for stick-style movement input; the existing
+direction-split channels (`LeftStickLeft`, `LeftStickRight`, etc.)
+remain available for buttons-style 0..1 input.
+
+```ts
+// Stick-style — one binding per axis, signed value:
+this.inputs.onActive(GamepadAxis.LeftStickX, (x) => player.x += x * 5);
+
+// Buttons-style — separate bindings per direction, 0..1 each:
+this.inputs.onActive(GamepadAxis.LeftStickLeft,  (v) => player.x -= v * 5);
+this.inputs.onActive(GamepadAxis.LeftStickRight, (v) => player.x += v * 5);
+```
+
+### Added — `pad.hasChannel(channel)` capability check
+
+```ts
+if (pad.hasChannel(GamepadAxis.RightStickX)) {
+    pad.onActive(GamepadAxis.RightStickX, (v) => crosshair.x += v * 8);
+}
+```
+
+Returns `true` only when the pad's mapping declares the requested
+channel. Useful for graceful degradation on devices with limited
+hardware (e.g. single Joy-Con without a right stick).
+
+### Added — `Scene.inputs` proxy
+
+Bindings created via `this.inputs.onTrigger(...)` etc. are automatically
+disposed when the scene unloads. No manual cleanup tracking required.
+Internally tracks each binding and calls `.unbind()` in `Scene.destroy`.
+
+### Added — Steam Deck / Steam Virtual Gamepad / Valve fallback
+
+New `SteamDeckGamepadMapping` covers the raw HID layout reported by the
+Steam Deck (and likely future Valve hardware) when Steam Input is *not*
+intercepting the device. Indices follow the SDL_GameControllerDB Linux
+entry: face buttons at 3-6, D-pad at 16-19, paddles at 20-23, triggers
+as analog axes 8/9.
+
+Routing rules added to `builtInGamepadDefinitions`:
+
+| Browser ID | Mapping |
+|---|---|
+| `28de:1102`, `28de:1142` | `SteamControllerGamepadMapping` (existing, original Steam Controller raw) |
+| `28de:11ff` (Steam Virtual Gamepad — any controller via Steam Input) | `GenericDualAnalogGamepadMapping` (W3C standard Xbox emulation) |
+| `28de:1205` | `SteamDeckGamepadMapping` (raw Steam Deck) |
+| Vendor `28de` (anything else from Valve, e.g. future Steam Controller 2 raw) | `SteamDeckGamepadMapping` (best-effort fallback) |
+
+Enum: `GamepadMappingFamily.SteamDeck` added.
+
+### Added — Paddle2/3/4 buttons + Touchpad2X/Y axes
+
+The per-gamepad channel allocation is repartitioned into 32 button
+slots + 32 axis slots (was 21 / 22 with mid-block axis indices). 24
+named buttons (`South`-`Paddle4`) plus 8 reserved slots; 24 named axes
+(stick split + aggregate + dual-touchpad XY + 4 auxiliary bipolar) plus
+8 reserved slots. The reserved slots are accessible to custom mappings
+without colliding with future named additions.
+
+New named channels:
+
+- `GamepadButton.Paddle2`, `.Paddle3`, `.Paddle4` — extra paddles
+  / back buttons on Xbox Elite, PS5 Edge, Steam Deck (R4/L5/R5).
+- `GamepadAxis.Touchpad2X`, `.Touchpad2Y` — secondary touchpad on
+  dual-touchpad hardware (Steam Deck right pad).
+
+User code that previously read `GamepadButton.Paddle1` etc. is
+unaffected — channel **values** changed (offsets re-laid-out), but the
+namespace constants resolve to the new offsets transparently.
+
+### Added — JoyCon-honest mappings
+
+`JoyConLeftGamepadMapping` and `JoyConRightGamepadMapping` no longer
+inherit the full DualAnalog 16-axis layout. Each declares only channels
+that physically exist on the device (one stick mapped to LeftStick
+channels, four face buttons, SL/SR shoulders, Minus/Plus, Capture/Home,
+stick-click). Right-stick channels and other phantom hardware are
+intentionally absent — `pad.hasChannel(GamepadAxis.RightStickX)` returns
+`false` on a solo Joy-Con.
+
+### Changed — `app.inputManager` renamed to `app.input` (BREAKING)
+
+For consistency with `app.audio` and parity with the brevity of
+`app.tweens` / `app.loader` / `app.interaction`. All call sites that
+read or wrote `app.inputManager` need a one-token rename.
+
+```ts
+// Before:
+app.inputManager.onTrigger(GamepadButton.South, () => fire());
+app.inputManager.gamepads[0];
+
+// After:
+app.input.onTrigger(GamepadButton.South, () => fire());
+app.input.getGamepad(0);
+```
+
+### Fixed — Compact-mode disconnect ordering
+
+In `'compact'` slot strategy, `onDisconnect` previously fired on the
+slot the disconnected hardware originally occupied — *before* the
+compaction shift moved a different physical pad into that slot. User
+code observing the event would see `pad.connected === true` because
+the slot had been silently re-bound by the shift. Now compaction is
+applied first (silent), and `onDisconnect` fires on the slot that
+ended up empty (the trailing slot). Sticky behaviour is unchanged.
+
+### Changed — Channel naming (BREAKING)
+
+The unified `GamepadChannel` enum is split into two disjoint enums for
+nominal type safety:
+
+| Old | New (user-facing) | New (internal type) |
+|---|---|---|
+| `GamepadChannel.ButtonSouth` | `GamepadButton.South` | `GamepadButtonChannel.South` |
+| `GamepadChannel.ButtonEast` | `GamepadButton.East` | `GamepadButtonChannel.East` |
+| `GamepadChannel.LeftShoulder` | `GamepadButton.LeftShoulder` | `GamepadButtonChannel.LeftShoulder` |
+| `GamepadChannel.LeftStickLeft` | `GamepadAxis.LeftStickLeft` | `GamepadAxisChannel.LeftStickLeft` |
+| ... | ... | ... |
+
+User code references the namespace mirrors (`GamepadButton.X`,
+`GamepadAxis.Y`) — same `Pointer.X` / `Keyboard.Space` convention. Type
+checking now rejects passing a button channel where an axis is expected
+(and vice versa).
+
+### Changed — `GamepadControl` removed (BREAKING)
+
+`GamepadControl` is replaced by two concrete classes:
+
+- `GamepadButton` — wraps a button index + channel, with optional
+  `invert` and `threshold` options. `transformValue(v)` clamps to [0, 1].
+- `GamepadAxis` — wraps an axis index + channel, with optional `invert`,
+  `normalize`, `threshold`, and the new `bipolar` flag.
+  `transformValue(v)` clamps to [-1, +1] and applies the pipeline.
+
+Custom mappings construct these directly via `new GamepadButton(index, channel)`
+/ `new GamepadAxis(index, channel, options)` —
+`GamepadMapping.createControls()` is removed.
+
+### Changed — `Input` class replaced by `InputBinding` (BREAKING)
+
+`new Input(channel, { onTrigger: cb })` + `inputManager.add(input)` is
+gone. Use `inputManager.onTrigger(channel, cb)` / `pad.onTrigger(...)` /
+`scene.inputs.onTrigger(...)` instead. Returned `InputBinding` exposes
+the same `onStart`/`onActive`/`onStop`/`onTrigger` Signals plus a
+`.unbind()` method.
+
+### Changed — `inputManager.add/remove/clear/getGamepad/onGamepadUpdated` removed (BREAKING)
+
+The push-input-objects-into-the-manager API is fully replaced by the
+factory-method API. `getGamepad(index)` is replaced by direct
+`gamepads[slot]` indexing. `onGamepadUpdated` is replaced by
+`onAnyGamepadButtonDown` / `onAnyGamepadButtonUp` /
+`onAnyGamepadAxisChange` which carry semantic transition information
+instead of firing every frame.
+
+### Changed — `Gamepad` constructor signature (BREAKING)
+
+```ts
+// Before:
+new Gamepad(index, channels, mapping)
+new Gamepad(browserGamepad, channels, definition)
+
+// After (engine-internal — InputManager handles slot allocation):
+new Gamepad(slot, channels)
+// followed by pad._bind(browserGamepad, definition) on connect
+```
+
+User code does not construct `Gamepad` instances directly. Reads from
+`pad.info` / `pad.mapping` / `pad.connected` instead of the previous
+`pad.name` / `pad.label` / `pad.vendorId` / etc. inline accessors.
+
+### Migration guide
+
+```ts
+// Before:
+import { Input, GamepadChannel, Keyboard } from '@codexo/exojs';
+
+const jump = new Input(GamepadChannel.ButtonSouth, { onTrigger: () => player.jump() });
+app.input.add(jump);
+
+// After (any of three styles, depending on lifecycle):
+import { GamepadButton, Keyboard } from '@codexo/exojs';
+
+// Manual lifecycle
+const binding = app.input.onTrigger(GamepadButton.South, () => player.jump());
+binding.unbind();   // when done
+
+// Auto-disposed on scene unload
+this.inputs.onTrigger(GamepadButton.South, () => player.jump());
+
+// Pinned to a specific pad slot
+this.app.input.gamepads[0].onTrigger(GamepadButton.South, () => player.jump());
+```
+
+```ts
+// Stick movement — before:
+const moveLeft  = new Input(GamepadChannel.LeftStickLeft);
+const moveRight = new Input(GamepadChannel.LeftStickRight);
+app.input.add(moveLeft);
+app.input.add(moveRight);
+// per frame: const x = moveRight.value - moveLeft.value;
+
+// After (signed aggregate channel):
+this.inputs.onActive(GamepadAxis.LeftStickX, (x) => player.x += x * 5);
+```
+
+```ts
+// Custom mapping — before:
+import { GamepadMapping, GamepadChannel } from '@codexo/exojs';
+const buttons = GamepadMapping.createControls([
+    [0, GamepadChannel.ButtonSouth],
+    [1, GamepadChannel.ButtonEast],
+]);
+
+// After:
+import { GamepadButton, GamepadMapping, GamepadMappingFamily } from '@codexo/exojs';
+class MyMapping extends GamepadMapping {
+    public readonly family = GamepadMappingFamily.GenericDualAnalog;
+    public constructor() {
+        super(
+            [
+                new GamepadButton(0, GamepadButton.South),
+                new GamepadButton(1, GamepadButton.East),
+            ],
+            [],
+        );
+    }
+}
+```
+
 ## [0.7.12] - 2026-05-07
 
 API audit cleanup pass — implements collision-response computation that was

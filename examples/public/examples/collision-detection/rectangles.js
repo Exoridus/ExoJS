@@ -27,7 +27,7 @@ app.start(new class extends Scene {
         this._boxB.setPosition(width / 2, height / 2);
         this._boxB.setAnchor(0.5, 0.5);
 
-        this.app.inputManager.onPointerMove.add((pointer) => {
+        this.app.input.onPointerMove.add((pointer) => {
             this._boxB.setPosition(pointer.x, pointer.y);
         });
     }

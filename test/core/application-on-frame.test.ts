@@ -137,7 +137,7 @@ describe('Application.onFrame', () => {
         };
 
         rawApp['_status'] = ApplicationStatus.Running;
-        rawApp['inputManager'] = { update: jest.fn() };
+        rawApp['input'] = { update: jest.fn() };
         rawApp['interaction'] = { update: jest.fn() };
         rawApp['tweens'] = { update: jest.fn() };
         rawApp['sceneManager'] = sceneManager;

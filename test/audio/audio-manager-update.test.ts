@@ -142,7 +142,7 @@ describe('AudioManager.update()', () => {
         };
 
         rawApp['_status'] = ApplicationStatus.Running;
-        rawApp['inputManager'] = { update: jest.fn() };
+        rawApp['input'] = { update: jest.fn() };
         rawApp['interaction'] = { update: () => { callOrder.push('interaction'); } };
         rawApp['tweens'] = tweens;
         rawApp['sceneManager'] = { update: jest.fn() };

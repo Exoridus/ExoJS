@@ -6,6 +6,48 @@ import type { RenderNode } from '@/rendering/RenderNode';
 import type { Application } from './Application';
 import type { Pointer } from '@/input/Pointer';
 import type { Vector } from '@/math/Vector';
+import type { InputBinding, InputBindingOptions, InputChannel } from '@/input/InputBinding';
+
+/**
+ * Scene-bound input proxy that automatically disposes its bindings when
+ * the owning scene unloads. Created lazily on first access via
+ * {@link Scene.inputs}; do not instantiate directly.
+ */
+class SceneInputs {
+    private readonly _bindings: Set<InputBinding> = new Set<InputBinding>();
+
+    public constructor(private readonly _scene: Scene) {}
+
+    public onStart(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        return this._track(this._scene.app!.input.onStart(channel, callback, options));
+    }
+
+    public onActive(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        return this._track(this._scene.app!.input.onActive(channel, callback, options));
+    }
+
+    public onStop(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        return this._track(this._scene.app!.input.onStop(channel, callback, options));
+    }
+
+    public onTrigger(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        return this._track(this._scene.app!.input.onTrigger(channel, callback, options));
+    }
+
+    /** @internal Called by Scene.destroy. */
+    public _disposeAll(): void {
+        for (const binding of Array.from(this._bindings)) {
+            binding.unbind();
+        }
+
+        this._bindings.clear();
+    }
+
+    private _track(binding: InputBinding): InputBinding {
+        this._bindings.add(binding);
+        return binding;
+    }
+}
 
 /**
  * How a {@link Scene} composes with scenes already on the stack.
@@ -72,6 +114,7 @@ export class Scene {
     protected readonly _root = new Container();
     protected _stackMode: SceneStackMode = 'overlay';
     protected _inputMode: SceneInputMode = 'capture';
+    protected _inputs: SceneInputs | null = null;
 
     public get app(): Application | null {
         return this._app;
@@ -96,6 +139,27 @@ export class Scene {
      */
     public get root(): Container {
         return this._root;
+    }
+
+    /**
+     * Scene-bound input registry. Bindings created via
+     * `this.inputs.onTrigger(...)` etc. are automatically disposed when the
+     * scene unloads — no manual cleanup required.
+     *
+     * Lazily instantiated on first access; throws if accessed before
+     * {@link Scene.app} is set (i.e. before the scene is registered with
+     * a {@link SceneManager}).
+     */
+    public get inputs(): SceneInputs {
+        if (this._inputs === null) {
+            if (this._app === null) {
+                throw new Error('Scene.inputs is unavailable before the scene is attached to an Application.');
+            }
+
+            this._inputs = new SceneInputs(this);
+        }
+
+        return this._inputs;
     }
 
     public get stackMode(): SceneStackMode {
@@ -212,6 +276,8 @@ export class Scene {
     }
 
     public destroy(): void {
+        this._inputs?._disposeAll();
+        this._inputs = null;
         this._root.destroy();
         this._app = null;
     }

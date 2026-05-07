@@ -16,6 +16,7 @@ import type { Scene } from './Scene';
 import type { CacheStore } from '@/resources/CacheStore';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { GamepadDefinition } from '@/input/GamepadDefinitions';
+import type { GamepadSlotStrategy } from '@/input/InputManager';
 import { getAudioManager, type AudioManager } from '@/audio/AudioManager';
 
 export enum ApplicationStatus {
@@ -34,6 +35,7 @@ export interface ApplicationOptions {
     spriteRendererBatchSize: number;
     particleRendererBatchSize: number;
     gamepadDefinitions: Array<GamepadDefinition>;
+    gamepadSlotStrategy: GamepadSlotStrategy;
     pointerDistanceThreshold: number;
     webglAttributes: WebGLContextAttributes;
     resourcePath: string;
@@ -74,6 +76,7 @@ const defaultAppSettings: DefaultApplicationOptions = {
     spriteRendererBatchSize: 4096, // ~ 262kb
     particleRendererBatchSize: 8192, // ~ 1.18mb
     gamepadDefinitions: [],
+    gamepadSlotStrategy: 'sticky',
     pointerDistanceThreshold: 10,
     webglAttributes: {
         alpha: false,
@@ -120,7 +123,7 @@ export class Application {
     public readonly options: ApplicationOptions;
     public readonly canvas: HTMLCanvasElement;
     public readonly loader: Loader;
-    public readonly inputManager: InputManager;
+    public readonly input: InputManager;
     public readonly interaction: InteractionManager;
     public readonly sceneManager: SceneManager;
     public readonly tweens: TweenManager = new TweenManager();
@@ -167,7 +170,7 @@ export class Application {
         });
         this._backendType = this.resolveInitialBackendType();
         this._backend = this.createBackend(this._backendType);
-        this.inputManager = new InputManager(this);
+        this.input = new InputManager(this);
         this.interaction = new InteractionManager(this);
         this.sceneManager = new SceneManager(this);
         this._updateHandler = this.update.bind(this);
@@ -179,7 +182,7 @@ export class Application {
             document.addEventListener('visibilitychange', this._visibilityChangeHandler);
         }
 
-        this.inputManager.onCanvasFocusChange.add((focused) => {
+        this.input.onCanvasFocusChange.add((focused) => {
             this.onCanvasFocusChange.dispatch(focused);
         });
 
@@ -226,7 +229,7 @@ export class Application {
     }
 
     public get canvasFocused(): boolean {
-        return this.inputManager.canvasFocused;
+        return this.input.canvasFocused;
     }
 
     public get documentVisible(): boolean {
@@ -296,7 +299,7 @@ export class Application {
 
             this.backend.resetStats();
 
-            this.inputManager.update();
+            this.input.update();
             this.interaction.update();
             getAudioManager().update();
             this.tweens.update(frameDelta.seconds);
@@ -384,7 +387,7 @@ export class Application {
         this.stop();
         this.loader.destroy();
         this.interaction.destroy();
-        this.inputManager.destroy();
+        this.input.destroy();
         this.tweens.destroy();
         this._backend.destroy();
         this.sceneManager.destroy();

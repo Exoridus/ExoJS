@@ -71,7 +71,7 @@ export class DebugOverlay {
         this._onResizeHandler  = this._onResize.bind(this);
 
         app.onFrame.add(this._onFrameHandler);
-        app.inputManager.onKeyDown.add(this._onKeyDownHandler);
+        app.input.onKeyDown.add(this._onKeyDownHandler);
         app.onResize.add(this._onResizeHandler);
     }
 
@@ -82,7 +82,7 @@ export class DebugOverlay {
      */
     public destroy(): void {
         this._app.onFrame.remove(this._onFrameHandler);
-        this._app.inputManager.onKeyDown.remove(this._onKeyDownHandler);
+        this._app.input.onKeyDown.remove(this._onKeyDownHandler);
         this._app.onResize.remove(this._onResizeHandler);
 
         for (const layer of Object.values(this.layers) as Array<DebugLayer>) {

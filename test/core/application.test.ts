@@ -159,7 +159,7 @@ describe('Application', () => {
         const interaction = { update: jest.fn() };
 
         rawApp['_status'] = ApplicationStatus.Running;
-        rawApp['inputManager'] = inputManager;
+        rawApp['input'] = inputManager;
         rawApp['interaction'] = interaction;
         rawApp['tweens'] = tweens;
         rawApp['sceneManager'] = sceneManager;

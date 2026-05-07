@@ -1,58 +1,17 @@
-import { GamepadChannel } from './GamepadChannels';
+import { GamepadAxis } from './GamepadAxis';
+import { GamepadButton } from './GamepadButton';
 import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
-
-import type { GamepadControlDefinition } from './GamepadMapping';
-
-const genericDualAnalogButtonDefinitions: ReadonlyArray<GamepadControlDefinition> = [
-    [0, GamepadChannel.ButtonSouth],
-    [1, GamepadChannel.ButtonEast],
-    [2, GamepadChannel.ButtonWest],
-    [3, GamepadChannel.ButtonNorth],
-    [4, GamepadChannel.LeftShoulder],
-    [5, GamepadChannel.RightShoulder],
-    [6, GamepadChannel.LeftTrigger],
-    [7, GamepadChannel.RightTrigger],
-    [8, GamepadChannel.Select],
-    [9, GamepadChannel.Start],
-    [10, GamepadChannel.LeftStick],
-    [11, GamepadChannel.RightStick],
-    [12, GamepadChannel.DPadUp],
-    [13, GamepadChannel.DPadDown],
-    [14, GamepadChannel.DPadLeft],
-    [15, GamepadChannel.DPadRight],
-    [16, GamepadChannel.Guide],
-    [17, GamepadChannel.Share],
-    [18, GamepadChannel.Capture],
-    [19, GamepadChannel.Touchpad],
-    [20, GamepadChannel.Paddle1],
-];
-
-const genericDualAnalogAxisDefinitions: ReadonlyArray<GamepadControlDefinition> = [
-    [0, GamepadChannel.LeftStickLeft, { invert: true }],
-    [0, GamepadChannel.LeftStickRight],
-    [1, GamepadChannel.LeftStickUp, { invert: true }],
-    [1, GamepadChannel.LeftStickDown],
-    [2, GamepadChannel.RightStickLeft, { invert: true }],
-    [2, GamepadChannel.RightStickRight],
-    [3, GamepadChannel.RightStickUp, { invert: true }],
-    [3, GamepadChannel.RightStickDown],
-    [4, GamepadChannel.AuxiliaryAxis0Negative, { invert: true }],
-    [4, GamepadChannel.AuxiliaryAxis0Positive],
-    [5, GamepadChannel.AuxiliaryAxis1Negative, { invert: true }],
-    [5, GamepadChannel.AuxiliaryAxis1Positive],
-    [6, GamepadChannel.AuxiliaryAxis2Negative, { invert: true }],
-    [6, GamepadChannel.AuxiliaryAxis2Positive],
-    [7, GamepadChannel.AuxiliaryAxis3Negative, { invert: true }],
-    [7, GamepadChannel.AuxiliaryAxis3Positive],
-];
 
 /**
  * Baseline mapping for dual-analog controllers that follow the standard
  * W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary).
  *
- * Each signed axis is split into two directional channels — one for the
- * negative half and one for the positive half — with the negative channel
- * inverted so all channel values are non-negative during normal use.
+ * Each signed stick axis is exposed three ways for ergonomic binding:
+ *  - Two direction-split, non-negative channels (e.g. `LeftStickLeft` /
+ *    `LeftStickRight`) for "buttons-style" subscriptions.
+ *  - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1
+ *    consumption — useful for movement or aiming.
+ *
  * Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit
  * this layout and override only {@link GamepadMapping.family}.
  */
@@ -61,8 +20,56 @@ export class GenericDualAnalogGamepadMapping extends GamepadMapping {
 
     public constructor() {
         super(
-            GamepadMapping.createControls(genericDualAnalogButtonDefinitions),
-            GamepadMapping.createControls(genericDualAnalogAxisDefinitions)
+            [
+                new GamepadButton(0, GamepadButton.South),
+                new GamepadButton(1, GamepadButton.East),
+                new GamepadButton(2, GamepadButton.West),
+                new GamepadButton(3, GamepadButton.North),
+                new GamepadButton(4, GamepadButton.LeftShoulder),
+                new GamepadButton(5, GamepadButton.RightShoulder),
+                new GamepadButton(6, GamepadButton.LeftTrigger),
+                new GamepadButton(7, GamepadButton.RightTrigger),
+                new GamepadButton(8, GamepadButton.Select),
+                new GamepadButton(9, GamepadButton.Start),
+                new GamepadButton(10, GamepadButton.LeftStick),
+                new GamepadButton(11, GamepadButton.RightStick),
+                new GamepadButton(12, GamepadButton.DPadUp),
+                new GamepadButton(13, GamepadButton.DPadDown),
+                new GamepadButton(14, GamepadButton.DPadLeft),
+                new GamepadButton(15, GamepadButton.DPadRight),
+                new GamepadButton(16, GamepadButton.Guide),
+                new GamepadButton(17, GamepadButton.Share),
+                new GamepadButton(18, GamepadButton.Capture),
+                new GamepadButton(19, GamepadButton.Touchpad),
+                new GamepadButton(20, GamepadButton.Paddle1),
+            ],
+            [
+                // Direction-split (0..1).
+                new GamepadAxis(0, GamepadAxis.LeftStickLeft,  { invert: true }),
+                new GamepadAxis(0, GamepadAxis.LeftStickRight),
+                new GamepadAxis(1, GamepadAxis.LeftStickUp,    { invert: true }),
+                new GamepadAxis(1, GamepadAxis.LeftStickDown),
+                new GamepadAxis(2, GamepadAxis.RightStickLeft,  { invert: true }),
+                new GamepadAxis(2, GamepadAxis.RightStickRight),
+                new GamepadAxis(3, GamepadAxis.RightStickUp,    { invert: true }),
+                new GamepadAxis(3, GamepadAxis.RightStickDown),
+
+                // Aggregate signed channels (-1..1).
+                new GamepadAxis(0, GamepadAxis.LeftStickX,  { bipolar: true }),
+                new GamepadAxis(1, GamepadAxis.LeftStickY,  { bipolar: true }),
+                new GamepadAxis(2, GamepadAxis.RightStickX, { bipolar: true }),
+                new GamepadAxis(3, GamepadAxis.RightStickY, { bipolar: true }),
+
+                // Auxiliary axes (4 bipolar physical axes split into 8 half-channels).
+                new GamepadAxis(4, GamepadAxis.AuxiliaryAxis0Negative, { invert: true }),
+                new GamepadAxis(4, GamepadAxis.AuxiliaryAxis0Positive),
+                new GamepadAxis(5, GamepadAxis.AuxiliaryAxis1Negative, { invert: true }),
+                new GamepadAxis(5, GamepadAxis.AuxiliaryAxis1Positive),
+                new GamepadAxis(6, GamepadAxis.AuxiliaryAxis2Negative, { invert: true }),
+                new GamepadAxis(6, GamepadAxis.AuxiliaryAxis2Positive),
+                new GamepadAxis(7, GamepadAxis.AuxiliaryAxis3Negative, { invert: true }),
+                new GamepadAxis(7, GamepadAxis.AuxiliaryAxis3Positive),
+            ],
         );
     }
 }

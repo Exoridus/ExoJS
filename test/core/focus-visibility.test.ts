@@ -100,7 +100,7 @@ describe('Application focus / visibility', () => {
         jest.resetModules();
     });
 
-    test('canvasFocused reflects inputManager.canvasFocused', () => {
+    test('canvasFocused reflects input.canvasFocused', () => {
         const { Application, inputManagerMock } = loadHarness();
         const app = new Application({ canvas: document.createElement('canvas') });
 

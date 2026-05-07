@@ -5,6 +5,7 @@ import { JoyConLeftGamepadMapping } from './JoyConLeftGamepadMapping';
 import { JoyConRightGamepadMapping } from './JoyConRightGamepadMapping';
 import { PlayStationGamepadMapping } from './PlayStationGamepadMapping';
 import { SteamControllerGamepadMapping } from './SteamControllerGamepadMapping';
+import { SteamDeckGamepadMapping } from './SteamDeckGamepadMapping';
 import { SwitchProGamepadMapping } from './SwitchProGamepadMapping';
 import { XboxGamepadMapping } from './XboxGamepadMapping';
 
@@ -272,6 +273,8 @@ const exactDeviceDefinitions: Array<GamepadDefinition> = [
     createStaticGamepadDefinition('Switch 2 Pro Controller', () => new SwitchProGamepadMapping(), '057e:2069'),
     createStaticGamepadDefinition('Switch 2 GameCube Controller', () => new GameCubeGamepadMapping(), '057e:2073'),
     createStaticGamepadDefinition('Steam Controller', () => new SteamControllerGamepadMapping(), ['28de:1102', '28de:1142']),
+    createStaticGamepadDefinition('Steam Virtual Gamepad', () => new GenericDualAnalogGamepadMapping(), '28de:11ff'),
+    createStaticGamepadDefinition('Steam Deck', () => new SteamDeckGamepadMapping(), '28de:1205'),
     createStaticGamepadDefinition('F310 Gamepad', () => new GenericDualAnalogGamepadMapping(), '046d:c216'),
     createStaticGamepadDefinition('F710 Gamepad', () => new GenericDualAnalogGamepadMapping(), ['046d:c219', '046d:c21f']),
     createStaticGamepadDefinition('8BitDo P30 Controller', () => new GenericDualAnalogGamepadMapping(), ['2dc8:5107', '2dc8:5108']),
@@ -295,6 +298,7 @@ const exactDeviceDefinitions: Array<GamepadDefinition> = [
 const vendorFallbackDefinitions: Array<GamepadDefinition> = [
     createStaticGamepadDefinition('Microsoft Controller', () => new XboxGamepadMapping(), '045e'),
     createStaticGamepadDefinition('Sony Controller', () => new PlayStationGamepadMapping(), '054c'),
+    createStaticGamepadDefinition('Valve Controller', () => new SteamDeckGamepadMapping(), '28de'),
 ];
 
 const genericFallbackDefinition = createStaticGamepadDefinition('Generic Gamepad', () => new GenericDualAnalogGamepadMapping());

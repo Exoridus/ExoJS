@@ -28,11 +28,11 @@ app.start(new class extends Scene {
         this._stats = this.createStats();
         this._counter = this.createCounter();
 
-        this.app.inputManager.onPointerDown.add(() => {
+        this.app.input.onPointerDown.add(() => {
             this._addBunnies = true;
         });
 
-        this.app.inputManager.onPointerUp.add(() => {
+        this.app.input.onPointerUp.add(() => {
             this._addBunnies = false;
         });
 

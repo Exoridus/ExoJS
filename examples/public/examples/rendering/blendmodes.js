@@ -63,7 +63,7 @@ app.start(new class extends Scene {
         this._info.setPosition(width / 2, 0);
         this._info.setAnchor(0.5, 0);
 
-        this.app.inputManager.onPointerDown.add(this.updateBlendMode, this);
+        this.app.input.onPointerDown.add(this.updateBlendMode, this);
 
         this.updateBlendMode();
     }

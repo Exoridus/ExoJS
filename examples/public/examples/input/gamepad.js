@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Spritesheet, lerp, Container, GamepadChannel, Vector, Texture, Json } from '@codexo/exojs';
+import { Application, Color, Scene, Spritesheet, lerp, Container, GamepadButton, GamepadAxis, Vector, Texture, Json } from '@codexo/exojs';
 
 const app = new Application({
     width: 800,
@@ -16,7 +16,7 @@ app.start(new class extends Scene {
         await loader.load(Json, { buttons: 'json/buttons.json' });
     }
     init(loader) {
-        this._gamepad = null;
+        this._activePad = null;
         this._buttons = new Spritesheet(
             loader.get(Texture, 'buttons'),
             loader.get(Json, 'buttons')
@@ -25,27 +25,22 @@ app.start(new class extends Scene {
         this._mappingButtons = new Map();
         this._mappingFunctions = new Map();
         this._resetFunctions = [];
+        this._padBindings = [];
         this._status = this.createStatus();
         this._container = this.createGamepad();
-        this._updateGamepadState = (channel, value, updatedGamepad) => {
-            if (!this._gamepad || updatedGamepad.index !== this._gamepad.index) {
-                return;
-            }
-
-            this.updateMappedVisual(channel, value);
-        };
 
         for (const sprite of this._mappingButtons.values()) {
             sprite.setTint(this._buttonColor);
         }
 
-        this.app.inputManager.onGamepadConnected.add((gamepad) => this.handleGamepadConnected(gamepad));
-        this.app.inputManager.onGamepadDisconnected.add((gamepad) => this.handleGamepadDisconnected(gamepad));
+        this.app.input.onGamepadConnected.add((pad) => this.handleGamepadConnected(pad));
+        this.app.input.onGamepadDisconnected.add((pad) => this.handleGamepadDisconnected(pad));
 
-        const [connectedGamepad] = this.app.inputManager.gamepads;
-
-        if (connectedGamepad) {
-            this.setActiveGamepad(connectedGamepad);
+        for (const pad of this.app.input.gamepads) {
+            if (pad.connected) {
+                this.setActivePad(pad);
+                break;
+            }
         }
     }
     draw(backend) {
@@ -53,42 +48,49 @@ app.start(new class extends Scene {
         this._status.render(backend);
         this._container.render(backend);
     }
-    handleGamepadConnected(gamepad) {
-        if (!this._gamepad) {
-            this.setActiveGamepad(gamepad);
+    handleGamepadConnected(pad) {
+        if (!this._activePad) {
+            this.setActivePad(pad);
         }
     }
-    handleGamepadDisconnected(gamepad) {
-        if (!this._gamepad || gamepad.index !== this._gamepad.index) {
+    handleGamepadDisconnected(pad) {
+        if (this._activePad !== pad) {
             return;
         }
 
-        const [nextGamepad] = this.app.inputManager.gamepads;
-        this.setActiveGamepad(nextGamepad || null);
+        const next = this.app.input.gamepads.find((other) => other !== pad && other.connected) || null;
+        this.setActivePad(next);
     }
-    setActiveGamepad(gamepad) {
-        if (this._gamepad) {
-            this._gamepad.onUpdate.remove(this._updateGamepadState);
+    setActivePad(pad) {
+        // Drop previous pad's bindings (auto-detach via .unbind()).
+        for (const binding of this._padBindings) {
+            binding.unbind();
         }
+        this._padBindings.length = 0;
 
-        this._gamepad = gamepad;
+        this._activePad = pad;
 
-        if (this._gamepad) {
-            this._gamepad.onUpdate.add(this._updateGamepadState);
-            this._status.setTint(Color.white);
+        if (!pad) {
+            this._status.setTint(this._buttonColor);
+            this.resetVisualState();
             return;
         }
 
-        this._status.setTint(this._buttonColor);
-        this.resetVisualState();
-    }
-    updateMappedVisual(channel, value) {
-        if (this._mappingButtons.has(channel)) {
-            this._mappingButtons.get(channel).tint.a = lerp(0.25, 1, value);
+        this._status.setTint(Color.white);
+
+        // Subscribe via the new pad-aware listener API.
+        for (const [channel, sprite] of this._mappingButtons.entries()) {
+            this._padBindings.push(
+                pad.onActive(channel, (v) => { sprite.tint.a = lerp(0.25, 1, v); }),
+                pad.onStop(channel, () => { sprite.tint.a = this._buttonColor.a; })
+            );
         }
 
-        if (this._mappingFunctions.has(channel)) {
-            this._mappingFunctions.get(channel)(value);
+        for (const [channel, fn] of this._mappingFunctions.entries()) {
+            this._padBindings.push(
+                pad.onActive(channel, (v) => { fn(v); }),
+                pad.onStop(channel, () => { fn(0); })
+            );
         }
     }
     resetVisualState() {
@@ -131,10 +133,10 @@ app.start(new class extends Scene {
         const dPadLeft = this._buttons.getFrameSprite('DPadLeft');
         const dPadRight = this._buttons.getFrameSprite('DPadRight');
 
-        mappedButtons.set(GamepadChannel.DPadUp, dPadUp);
-        mappedButtons.set(GamepadChannel.DPadDown, dPadDown);
-        mappedButtons.set(GamepadChannel.DPadLeft, dPadLeft);
-        mappedButtons.set(GamepadChannel.DPadRight, dPadRight);
+        mappedButtons.set(GamepadButton.DPadUp, dPadUp);
+        mappedButtons.set(GamepadButton.DPadDown, dPadDown);
+        mappedButtons.set(GamepadButton.DPadLeft, dPadLeft);
+        mappedButtons.set(GamepadButton.DPadRight, dPadRight);
 
         dPad.setTint(this._buttonColor);
 
@@ -164,10 +166,10 @@ app.start(new class extends Scene {
         const buttonRight = this._buttons.getFrameSprite('FaceRight');
         const buttonBottom = this._buttons.getFrameSprite('FaceBottom');
 
-        mappedButtons.set(GamepadChannel.ButtonNorth, buttonTop);
-        mappedButtons.set(GamepadChannel.ButtonWest, buttonLeft);
-        mappedButtons.set(GamepadChannel.ButtonEast, buttonRight);
-        mappedButtons.set(GamepadChannel.ButtonSouth, buttonBottom);
+        mappedButtons.set(GamepadButton.North, buttonTop);
+        mappedButtons.set(GamepadButton.West, buttonLeft);
+        mappedButtons.set(GamepadButton.East, buttonRight);
+        mappedButtons.set(GamepadButton.South, buttonBottom);
 
         buttonTop.setScale(0.75);
         buttonTop.setPosition(50, 0);
@@ -200,10 +202,10 @@ app.start(new class extends Scene {
         const leftTrigger = this._buttons.getFrameSprite('ShoulderLeftTop');
         const rightTrigger = this._buttons.getFrameSprite('ShoulderRightTop');
 
-        mappedButtons.set(GamepadChannel.LeftShoulder, leftButton);
-        mappedButtons.set(GamepadChannel.RightShoulder, rightButton);
-        mappedButtons.set(GamepadChannel.LeftTrigger, leftTrigger);
-        mappedButtons.set(GamepadChannel.RightTrigger, rightTrigger);
+        mappedButtons.set(GamepadButton.LeftShoulder, leftButton);
+        mappedButtons.set(GamepadButton.RightShoulder, rightButton);
+        mappedButtons.set(GamepadButton.LeftTrigger, leftTrigger);
+        mappedButtons.set(GamepadButton.RightTrigger, rightTrigger);
 
         leftButton.setPosition(0, 75);
 
@@ -230,8 +232,8 @@ app.start(new class extends Scene {
         const selectButton = this._buttons.getFrameSprite('Select');
         const startButton = this._buttons.getFrameSprite('Start');
 
-        mappedButtons.set(GamepadChannel.Select, selectButton);
-        mappedButtons.set(GamepadChannel.Start, startButton);
+        mappedButtons.set(GamepadButton.Select, selectButton);
+        mappedButtons.set(GamepadButton.Start, startButton);
 
         startButton.setAnchor(1, 0);
         startButton.setPosition(width * 0.3, 0);
@@ -255,17 +257,15 @@ app.start(new class extends Scene {
         const startRight = new Vector(width * 0.3, 0);
         const range = 35;
 
-        mappedButtons.set(GamepadChannel.LeftStick, leftStick);
-        mappedButtons.set(GamepadChannel.RightStick, rightStick);
+        mappedButtons.set(GamepadButton.LeftStick, leftStick);
+        mappedButtons.set(GamepadButton.RightStick, rightStick);
 
-        mappingFunctions.set(GamepadChannel.LeftStickLeft, (value) => (leftStick.x = lerp(startLeft.x, startLeft.x - range, value)));
-        mappingFunctions.set(GamepadChannel.LeftStickRight, (value) => (leftStick.x = lerp(startLeft.x, startLeft.x + range, value)));
-        mappingFunctions.set(GamepadChannel.LeftStickUp, (value) => (leftStick.y = lerp(startLeft.y, startLeft.y - range, value)));
-        mappingFunctions.set(GamepadChannel.LeftStickDown, (value) => (leftStick.y = lerp(startLeft.y, startLeft.y + range, value)));
-        mappingFunctions.set(GamepadChannel.RightStickLeft, (value) => (rightStick.x = lerp(startRight.x, startRight.x - range, value)));
-        mappingFunctions.set(GamepadChannel.RightStickRight, (value) => (rightStick.x = lerp(startRight.x, startRight.x + range, value)));
-        mappingFunctions.set(GamepadChannel.RightStickUp, (value) => (rightStick.y = lerp(startRight.y, startRight.y - range, value)));
-        mappingFunctions.set(GamepadChannel.RightStickDown, (value) => (rightStick.y = lerp(startRight.y, startRight.y + range, value)));
+        // Aggregate signed axis channels make 2D-stick visualisation
+        // a one-liner per axis instead of split-direction subtraction.
+        mappingFunctions.set(GamepadAxis.LeftStickX,  (value) => (leftStick.x  = startLeft.x  + value * range));
+        mappingFunctions.set(GamepadAxis.LeftStickY,  (value) => (leftStick.y  = startLeft.y  + value * range));
+        mappingFunctions.set(GamepadAxis.RightStickX, (value) => (rightStick.x = startRight.x + value * range));
+        mappingFunctions.set(GamepadAxis.RightStickY, (value) => (rightStick.y = startRight.y + value * range));
 
         this._resetFunctions.push(() => {
             leftStick.setPosition(startLeft.x, startLeft.y);

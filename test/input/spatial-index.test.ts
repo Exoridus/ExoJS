@@ -96,7 +96,7 @@ const createApp = (): {
 
     const app = {
         canvas,
-        inputManager: signals as unknown as InputManager,
+        input: signals as unknown as InputManager,
         sceneManager: {
             get scene(): Scene | null {
                 return scene;

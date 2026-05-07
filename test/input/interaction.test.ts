@@ -97,7 +97,7 @@ const createApp = (): {
 
     const app = {
         canvas,
-        inputManager: signals as unknown as InputManager,
+        input: signals as unknown as InputManager,
         sceneManager: {
             get scene(): Scene | null {
                 return scene;
@@ -455,7 +455,7 @@ describe('InteractionManager — cursor', () => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — tap', () => {
-    test('onPointerTap signal fires on hit node when inputManager.onPointerTap dispatches', () => {
+    test('onPointerTap signal fires on hit node when input.onPointerTap dispatches', () => {
         const { app, scene, signals } = createApp();
         const im = new InteractionManager(app);
         const sprite = new TestSprite().setBounds(0, 0, 100, 100);

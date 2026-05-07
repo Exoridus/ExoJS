@@ -1,7 +1,25 @@
 import { Vector } from '@/math/Vector';
 import { Size } from '@/math/Size';
 import { Flags } from '@/math/Flags';
-import { ChannelOffset, PointerChannel, pointerSlotSize } from '@/input/types';
+import { ChannelOffset, pointerSlotSize } from '@/input/types';
+
+declare const pointerChannelBrand: unique symbol;
+
+/**
+ * Branded numeric type identifying a canonical pointer-state input channel.
+ * Values are absolute offsets into the engine's shared {@link Float32Array}
+ * input channel buffer; the brand keeps the type system from confusing
+ * pointer channels with other channel kinds.
+ *
+ * User code reads channel constants from the {@link Pointer} namespace
+ * (`Pointer.X`, `Pointer.Active`, `Pointer.Slot1X`, ...).
+ *
+ * @internal
+ */
+export type PointerChannel = number & { readonly [pointerChannelBrand]: void };
+
+const pointerCh = (offset: number): PointerChannel => (ChannelOffset.Pointers + offset) as PointerChannel;
+const slot = (s: number, field: 0 | 1 | 2): PointerChannel => pointerCh(s * pointerSlotSize + field);
 
 /**
  * Bit flags accumulated on a {@link Pointer} between frames so consumers can
@@ -266,82 +284,80 @@ export class Pointer {
 }
 
 /**
- * Namespace merged onto the `Pointer` class to expose channel-offset constants.
- * All members mirror `PointerChannel` so callers can write `Pointer.Active`, `Pointer.X`, etc.
- *
- * The un-prefixed members (Active, X, Y, …) address slot 0 (the primary pointer).
- * For multi-touch access use `Pointer.Slot{N}Active / Slot{N}X / Slot{N}Y`, or compute:
- * `Pointer.X + slotIndex * pointerSlotSize + channelOffset`.
+ * Channel-identifier constants merged onto the `Pointer` class. The
+ * un-prefixed members (Active, X, Y, …) address slot 0 (the primary
+ * pointer). For multi-touch access use `Pointer.Slot{N}Active /
+ * Slot{N}X / Slot{N}Y`.
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Pointer {
     /* eslint-disable @typescript-eslint/naming-convention */
     // --- Primary-pointer convenience aliases (slot 0) ---
-    export const Active    = PointerChannel.Active;
-    export const X         = PointerChannel.X;
-    export const Y         = PointerChannel.Y;
-    export const Pressure  = PointerChannel.Pressure;
-    export const Width     = PointerChannel.Width;
-    export const Height    = PointerChannel.Height;
-    export const Twist     = PointerChannel.Twist;
-    export const TiltX     = PointerChannel.TiltX;
-    export const TiltY     = PointerChannel.TiltY;
-    export const Left      = PointerChannel.Left;
-    export const Right     = PointerChannel.Right;
-    export const Middle    = PointerChannel.Middle;
-    export const IsMouse   = PointerChannel.IsMouse;
-    export const IsTouch   = PointerChannel.IsTouch;
-    export const IsPen     = PointerChannel.IsPen;
-    export const IsPrimary = PointerChannel.IsPrimary;
+    export const Active    = pointerCh(0);
+    export const X         = pointerCh(1);
+    export const Y         = pointerCh(2);
+    export const Pressure  = pointerCh(3);
+    export const Width     = pointerCh(4);
+    export const Height    = pointerCh(5);
+    export const Twist     = pointerCh(6);
+    export const TiltX     = pointerCh(7);
+    export const TiltY     = pointerCh(8);
+    export const Left      = pointerCh(9);
+    export const Right     = pointerCh(10);
+    export const Middle    = pointerCh(11);
+    export const IsMouse   = pointerCh(12);
+    export const IsTouch   = pointerCh(13);
+    export const IsPen     = pointerCh(14);
+    export const IsPrimary = pointerCh(15);
 
     // --- Per-slot Active/X/Y for multi-pointer access ---
-    export const Slot0Active  = PointerChannel.Slot0Active;
-    export const Slot0X       = PointerChannel.Slot0X;
-    export const Slot0Y       = PointerChannel.Slot0Y;
-    export const Slot1Active  = PointerChannel.Slot1Active;
-    export const Slot1X       = PointerChannel.Slot1X;
-    export const Slot1Y       = PointerChannel.Slot1Y;
-    export const Slot2Active  = PointerChannel.Slot2Active;
-    export const Slot2X       = PointerChannel.Slot2X;
-    export const Slot2Y       = PointerChannel.Slot2Y;
-    export const Slot3Active  = PointerChannel.Slot3Active;
-    export const Slot3X       = PointerChannel.Slot3X;
-    export const Slot3Y       = PointerChannel.Slot3Y;
-    export const Slot4Active  = PointerChannel.Slot4Active;
-    export const Slot4X       = PointerChannel.Slot4X;
-    export const Slot4Y       = PointerChannel.Slot4Y;
-    export const Slot5Active  = PointerChannel.Slot5Active;
-    export const Slot5X       = PointerChannel.Slot5X;
-    export const Slot5Y       = PointerChannel.Slot5Y;
-    export const Slot6Active  = PointerChannel.Slot6Active;
-    export const Slot6X       = PointerChannel.Slot6X;
-    export const Slot6Y       = PointerChannel.Slot6Y;
-    export const Slot7Active  = PointerChannel.Slot7Active;
-    export const Slot7X       = PointerChannel.Slot7X;
-    export const Slot7Y       = PointerChannel.Slot7Y;
-    export const Slot8Active  = PointerChannel.Slot8Active;
-    export const Slot8X       = PointerChannel.Slot8X;
-    export const Slot8Y       = PointerChannel.Slot8Y;
-    export const Slot9Active  = PointerChannel.Slot9Active;
-    export const Slot9X       = PointerChannel.Slot9X;
-    export const Slot9Y       = PointerChannel.Slot9Y;
-    export const Slot10Active = PointerChannel.Slot10Active;
-    export const Slot10X      = PointerChannel.Slot10X;
-    export const Slot10Y      = PointerChannel.Slot10Y;
-    export const Slot11Active = PointerChannel.Slot11Active;
-    export const Slot11X      = PointerChannel.Slot11X;
-    export const Slot11Y      = PointerChannel.Slot11Y;
-    export const Slot12Active = PointerChannel.Slot12Active;
-    export const Slot12X      = PointerChannel.Slot12X;
-    export const Slot12Y      = PointerChannel.Slot12Y;
-    export const Slot13Active = PointerChannel.Slot13Active;
-    export const Slot13X      = PointerChannel.Slot13X;
-    export const Slot13Y      = PointerChannel.Slot13Y;
-    export const Slot14Active = PointerChannel.Slot14Active;
-    export const Slot14X      = PointerChannel.Slot14X;
-    export const Slot14Y      = PointerChannel.Slot14Y;
-    export const Slot15Active = PointerChannel.Slot15Active;
-    export const Slot15X      = PointerChannel.Slot15X;
-    export const Slot15Y      = PointerChannel.Slot15Y;
+    export const Slot0Active  = slot(0,  0);
+    export const Slot0X       = slot(0,  1);
+    export const Slot0Y       = slot(0,  2);
+    export const Slot1Active  = slot(1,  0);
+    export const Slot1X       = slot(1,  1);
+    export const Slot1Y       = slot(1,  2);
+    export const Slot2Active  = slot(2,  0);
+    export const Slot2X       = slot(2,  1);
+    export const Slot2Y       = slot(2,  2);
+    export const Slot3Active  = slot(3,  0);
+    export const Slot3X       = slot(3,  1);
+    export const Slot3Y       = slot(3,  2);
+    export const Slot4Active  = slot(4,  0);
+    export const Slot4X       = slot(4,  1);
+    export const Slot4Y       = slot(4,  2);
+    export const Slot5Active  = slot(5,  0);
+    export const Slot5X       = slot(5,  1);
+    export const Slot5Y       = slot(5,  2);
+    export const Slot6Active  = slot(6,  0);
+    export const Slot6X       = slot(6,  1);
+    export const Slot6Y       = slot(6,  2);
+    export const Slot7Active  = slot(7,  0);
+    export const Slot7X       = slot(7,  1);
+    export const Slot7Y       = slot(7,  2);
+    export const Slot8Active  = slot(8,  0);
+    export const Slot8X       = slot(8,  1);
+    export const Slot8Y       = slot(8,  2);
+    export const Slot9Active  = slot(9,  0);
+    export const Slot9X       = slot(9,  1);
+    export const Slot9Y       = slot(9,  2);
+    export const Slot10Active = slot(10, 0);
+    export const Slot10X      = slot(10, 1);
+    export const Slot10Y      = slot(10, 2);
+    export const Slot11Active = slot(11, 0);
+    export const Slot11X      = slot(11, 1);
+    export const Slot11Y      = slot(11, 2);
+    export const Slot12Active = slot(12, 0);
+    export const Slot12X      = slot(12, 1);
+    export const Slot12Y      = slot(12, 2);
+    export const Slot13Active = slot(13, 0);
+    export const Slot13X      = slot(13, 1);
+    export const Slot13Y      = slot(13, 2);
+    export const Slot14Active = slot(14, 0);
+    export const Slot14X      = slot(14, 1);
+    export const Slot14Y      = slot(14, 2);
+    export const Slot15Active = slot(15, 0);
+    export const Slot15X      = slot(15, 1);
+    export const Slot15Y      = slot(15, 2);
     /* eslint-enable @typescript-eslint/naming-convention */
 }

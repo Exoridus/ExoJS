@@ -38,7 +38,7 @@ app.start(new class extends Scene {
             padding: 10,
         });
 
-        this.app.inputManager.add([
+        this.app.input.add([
 
             // Move Up
             new Input(Keyboard.W, {

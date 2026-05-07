@@ -8,11 +8,29 @@ import { ChannelOffset, ChannelSize, maxPointers } from '@/input/types';
 import { Gamepad } from './Gamepad';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { GestureRecognizer } from './GestureRecognizer';
+import { InputBinding } from './InputBinding';
 import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDefinitions';
 
 import type { Application } from '@/core/Application';
+import type { GamepadAxis } from './GamepadAxis';
+import type { GamepadButton } from './GamepadButton';
 import type { GamepadDefinition, BrowserGamepad } from './GamepadDefinitions';
-import type { Input } from './Input';
+import type { InputBindingOptions, InputChannel } from './InputBinding';
+
+const gamepadSlots = 4;
+
+/**
+ * Strategy used by {@link InputManager} when assigning physical gamepads to
+ * slot indices in {@link InputManager.gamepads}.
+ *
+ * - `'sticky'` (default): each physical pad keeps its slot until a new pad
+ *   fills an empty slot. A disconnect leaves a gap; reconnect later fills
+ *   the lowest empty slot. Best for player-stable-binding semantics.
+ * - `'compact'`: on disconnect, higher-numbered slots shift down to keep
+ *   `gamepads[0..N-1]` densely populated. Good for "the first N pads are
+ *   the N players" workflows.
+ */
+export type GamepadSlotStrategy = 'sticky' | 'compact';
 
 enum InputManagerFlag {
     None = 0,
@@ -30,10 +48,11 @@ enum InputManagerFlag {
  * rotate / long-press).
  *
  * All raw inputs are written into a shared `Float32Array` channel buffer.
- * Bind {@link Input} instances to channel indices to react to specific
- * keys, gamepad controls, or pointer slots without rolling your own event
- * routing. Direct subscribers can use the per-event Signals
- * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onPinch`, …).
+ * Bind input listeners via the {@link onTrigger} / {@link onActive} /
+ * {@link onStart} / {@link onStop} factory methods (or via
+ * {@link Gamepad.onTrigger}-style methods on individual pads), or
+ * subscribe to the signal-style notifications
+ * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).
  *
  * Driven each frame by {@link Application.update}; constructed
  * automatically — you do not instantiate this class yourself.
@@ -41,19 +60,20 @@ enum InputManagerFlag {
 export class InputManager {
     private readonly canvas: HTMLCanvasElement;
     private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
-    private readonly inputs = new Set<Input>();
     private readonly pointers: Record<number, Pointer> = {};
-    private readonly gamepadsValue: Array<Gamepad> = [];
-    private readonly gamepadsByIndex = new Map<number, Gamepad>();
-    private readonly gamepadSlotsActive = new Uint8Array(ChannelSize.Category / ChannelSize.Gamepad);
+    private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
+    private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
+    private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
+    private readonly bindingDetacher = { detach: (binding: InputBinding): void => { this.bindings.delete(binding); } };
     private readonly wheelOffset = new Vector();
     private readonly flags = new Flags<InputManagerFlag>();
     private readonly channelsPressed: Array<number> = [];
     private readonly channelsReleased: Array<number> = [];
     private readonly gamepadDefinitions: Array<GamepadDefinition>;
+    private readonly slotStrategy: GamepadSlotStrategy;
 
     // Slot allocation for unified pointer tracking (mouse / touch / pen).
-    private readonly pointerSlots = new Map<number, number>(); // pointerId → slotIndex
+    private readonly pointerSlots = new Map<number, number>();
     private readonly freeSlots: Array<number> = Array.from({ length: maxPointers }, (_, i) => i);
 
     private readonly gestureRecognizer: GestureRecognizer;
@@ -86,9 +106,24 @@ export class InputManager {
     public readonly onMouseWheel = new Signal<[Vector]>();
     public readonly onKeyDown = new Signal<[number]>();
     public readonly onKeyUp = new Signal<[number]>();
-    public readonly onGamepadConnected = new Signal<[Gamepad, Array<Gamepad>]>();
-    public readonly onGamepadDisconnected = new Signal<[Gamepad, Array<Gamepad>]>();
-    public readonly onGamepadUpdated = new Signal<[Gamepad, Array<Gamepad>]>();
+
+    /** Fires when a physical pad connects to any slot. */
+    public readonly onGamepadConnected = new Signal<[Gamepad]>();
+    /** Fires when a physical pad disconnects from any slot. */
+    public readonly onGamepadDisconnected = new Signal<[Gamepad]>();
+    /**
+     * Fires when a `'compact'`-strategy disconnect shifts a higher-numbered
+     * slot's pad into a lower one. Dispatched once per moved pad with the
+     * destination slot and the slot index it came from.
+     */
+    public readonly onAnyGamepadReassigned = new Signal<[Gamepad, fromSlot: 0 | 1 | 2 | 3]>();
+
+    /** Fires whenever any pad reports a button press transition. */
+    public readonly onAnyGamepadButtonDown = new Signal<[Gamepad, GamepadButton, number]>();
+    /** Fires whenever any pad reports a button release transition. */
+    public readonly onAnyGamepadButtonUp = new Signal<[Gamepad, GamepadButton, number]>();
+    /** Fires whenever any pad reports an axis value change. */
+    public readonly onAnyGamepadAxisChange = new Signal<[Gamepad, GamepadAxis, number]>();
 
     /** Fires on every two-touch-pointer move where the distance between them changed. `scale` > 1 = spreading, < 1 = pinching. */
     public readonly onPinch = new Signal<[scale: number, center: Vector]>();
@@ -98,12 +133,17 @@ export class InputManager {
     public readonly onLongPress = new Signal<[pointer: Pointer]>();
 
     public constructor(app: Application) {
-        const { gamepadDefinitions = [], pointerDistanceThreshold } = app.options;
+        const {
+            gamepadDefinitions = [],
+            pointerDistanceThreshold,
+            gamepadSlotStrategy = 'sticky',
+        } = app.options;
 
         this.canvas = app.canvas;
         this.canvasFocusedValue = document.activeElement === this.canvas;
         this.pointerDistanceThreshold = pointerDistanceThreshold;
         this.gamepadDefinitions = [...gamepadDefinitions, ...builtInGamepadDefinitions];
+        this.slotStrategy = gamepadSlotStrategy;
 
         // Disable the browser's default pan/zoom/double-tap-zoom on touch devices so
         // pointer events reach the canvas without being swallowed by the browser's
@@ -116,6 +156,17 @@ export class InputManager {
             this.onRotate,
             this.onLongPress,
         );
+
+        const slot0 = new Gamepad(0, this.channels);
+        const slot1 = new Gamepad(1, this.channels);
+        const slot2 = new Gamepad(2, this.channels);
+        const slot3 = new Gamepad(3, this.channels);
+
+        this._gamepads = [slot0, slot1, slot2, slot3];
+
+        for (const pad of this._gamepads) {
+            this.wireGamepadEvents(pad);
+        }
 
         this.addEventListeners();
     }
@@ -132,7 +183,6 @@ export class InputManager {
             }
         }
 
-        // Fall back to first non-cancelled pointer.
         for (const pointer of Object.values(this.pointers)) {
             if (pointer.currentState !== PointerState.Cancelled) {
                 return { x: pointer.x, y: pointer.y };
@@ -153,72 +203,121 @@ export class InputManager {
         return this.canvasFocusedValue;
     }
 
-    public get gamepads(): Array<Gamepad> {
-        return this.gamepadsValue;
+    /**
+     * Always-4 array of {@link Gamepad} slot mailboxes. Each entry exists for
+     * the application's full lifetime; check `pad.connected` for hardware
+     * presence. Listeners attached to a slot survive disconnect/reconnect.
+     */
+    public get gamepads(): readonly [Gamepad, Gamepad, Gamepad, Gamepad] {
+        return this._gamepads;
     }
 
-    public getGamepad(index: number): Gamepad | null {
-        return this.gamepadsByIndex.get(index) ?? null;
+    /** The slot strategy active for this `InputManager`. */
+    public get gamepadSlotStrategy(): GamepadSlotStrategy {
+        return this.slotStrategy;
     }
 
     /**
-     * Register one or more {@link Input} bindings so they participate in the
-     * per-frame channel-buffer reads. Idempotent for already-registered
-     * inputs; chainable.
+     * Direct accessor for a single gamepad slot. Equivalent to
+     * `app.input.gamepads[slot]` but reads more clearly at call sites.
      */
-    public add(inputs: Input | Array<Input>): this {
-        if (Array.isArray(inputs)) {
-            inputs.forEach((input) => this.add(input));
-
-            return this;
-        }
-
-        this.inputs.add(inputs);
-
-        return this;
+    public getGamepad(slot: 0 | 1 | 2 | 3): Gamepad {
+        return this._gamepads[slot];
     }
 
-    /** Unregister one or more {@link Input} bindings. */
-    public remove(inputs: Input | Array<Input>): this {
-        if (Array.isArray(inputs)) {
-            inputs.forEach((input) => this.remove(input));
+    /** Subset of {@link gamepads} containing only currently connected pads, in slot order. */
+    public get connectedGamepads(): ReadonlyArray<Gamepad> {
+        const result: Array<Gamepad> = [];
 
-            return this;
-        }
-
-        this.inputs.delete(inputs);
-
-        return this;
-    }
-
-    /**
-     * Drop every registered {@link Input}. Pass `destroyInputs = true` to
-     * also call `.destroy()` on each one (releases its Signals); default
-     * `false` leaves them intact for re-registration.
-     */
-    public clear(destroyInputs = false): this {
-        if (destroyInputs) {
-            for (const input of this.inputs) {
-                input.destroy();
+        for (const pad of this._gamepads) {
+            if (pad.connected) {
+                result.push(pad);
             }
         }
 
-        this.inputs.clear();
+        return result;
+    }
 
-        return this;
+    /** Number of slots currently occupied by a physical gamepad. */
+    public get connectedGamepadCount(): number {
+        let count = 0;
+
+        for (const pad of this._gamepads) {
+            if (pad.connected) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /** First connected gamepad in slot order, or `null` when no pads are attached. */
+    public get firstConnectedGamepad(): Gamepad | null {
+        for (const pad of this._gamepads) {
+            if (pad.connected) {
+                return pad;
+            }
+        }
+
+        return null;
+    }
+
+    /** `true` when at least one slot is occupied by a physical gamepad. */
+    public get hasGamepad(): boolean {
+        for (const pad of this._gamepads) {
+            if (pad.connected) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Register a callback fired once when any of `channels` becomes active.
+     * Manual lifecycle — call `.unbind()` on the returned binding to detach.
+     */
+    public onStart(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        const binding = this.createBinding(channel, options);
+        binding.onStart.add(callback);
+        return binding;
+    }
+
+    /** Register a callback fired every frame while any of `channels` is active. */
+    public onActive(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        const binding = this.createBinding(channel, options);
+        binding.onActive.add(callback);
+        return binding;
+    }
+
+    /** Register a callback fired once when all of `channels` become inactive. */
+    public onStop(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        const binding = this.createBinding(channel, options);
+        binding.onStop.add(callback);
+        return binding;
+    }
+
+    /**
+     * Register a callback fired when the input is released within
+     * {@link InputBindingOptions.threshold} ms of activation (a "tap").
+     */
+    public onTrigger(channel: InputChannel | ReadonlyArray<InputChannel>, callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
+        const binding = this.createBinding(channel, options);
+        binding.onTrigger.add(callback);
+        return binding;
     }
 
     /**
      * Per-frame entry point invoked by {@link Application.update}. Polls
      * the gamepad API, drains queued keyboard/pointer/wheel deltas into
      * the channel buffer, fires the corresponding Signals, then evaluates
-     * each registered {@link Input}.
+     * each registered binding.
      */
     public update(): this {
         this.updateGamepads();
 
-        for (const input of this.inputs) {
-            input.update(this.channels);
+        for (const binding of this.bindings) {
+            binding.update(this.channels);
         }
 
         if (this.flags.value !== InputManagerFlag.None) {
@@ -236,13 +335,16 @@ export class InputManager {
             pointer.destroy();
         }
 
-        for (const gamepad of this.gamepadsValue) {
-            gamepad.destroy();
+        for (const pad of this._gamepads) {
+            pad.destroy();
         }
 
-        this.inputs.clear();
-        this.gamepadsByIndex.clear();
-        this.gamepadsValue.length = 0;
+        for (const binding of Array.from(this.bindings)) {
+            binding.unbind();
+        }
+
+        this.bindings.clear();
+        this.gamepadsByBrowserIndex.clear();
         this.channelsPressed.length = 0;
         this.channelsReleased.length = 0;
         this.pointerSlots.clear();
@@ -263,11 +365,40 @@ export class InputManager {
         this.onKeyUp.destroy();
         this.onGamepadConnected.destroy();
         this.onGamepadDisconnected.destroy();
-        this.onGamepadUpdated.destroy();
+        this.onAnyGamepadReassigned.destroy();
+        this.onAnyGamepadButtonDown.destroy();
+        this.onAnyGamepadButtonUp.destroy();
+        this.onAnyGamepadAxisChange.destroy();
         this.onPinch.destroy();
         this.onRotate.destroy();
         this.onLongPress.destroy();
         this.onCanvasFocusChange.destroy();
+    }
+
+    private createBinding(
+        channel: InputChannel | ReadonlyArray<InputChannel>,
+        options: InputBindingOptions = {},
+    ): InputBinding {
+        const list = Array.isArray(channel) ? channel : [channel as InputChannel];
+        const slot = options.gamepadSlot ?? 0;
+        const resolved = list.map((c) => this.resolveExternalChannel(c, slot));
+        const binding = new InputBinding(resolved, options, this.bindingDetacher);
+        this.bindings.add(binding);
+        return binding;
+    }
+
+    private resolveExternalChannel(channel: InputChannel, slot: 0 | 1 | 2 | 3): number {
+        if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
+            return ChannelOffset.Gamepads + (slot * ChannelSize.Gamepad) + (channel ^ ChannelOffset.Gamepads);
+        }
+
+        return channel;
+    }
+
+    private wireGamepadEvents(pad: Gamepad): void {
+        pad.onButtonDown.add((button, value) => { this.onAnyGamepadButtonDown.dispatch(pad, button, value); });
+        pad.onButtonUp.add((button, value) => { this.onAnyGamepadButtonUp.dispatch(pad, button, value); });
+        pad.onAxisChange.add((axis, value) => { this.onAnyGamepadAxisChange.dispatch(pad, axis, value); });
     }
 
     private _assignSlot(pointerId: number): number | null {
@@ -276,7 +407,7 @@ export class InputManager {
         }
 
         if (this.freeSlots.length === 0) {
-            return null; // All 16 slots occupied — silently drop.
+            return null;
         }
 
         const slot = this.freeSlots.shift()!;
@@ -291,15 +422,11 @@ export class InputManager {
 
         if (slot !== undefined) {
             this.pointerSlots.delete(pointerId);
-            // Push to the front so slot 0 is recovered first, keeping allocation predictable.
             this.freeSlots.unshift(slot);
         }
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
-        // Game-engine convention: keys only register while the canvas
-        // owns focus. Otherwise typing into adjacent <input> fields would
-        // also drive game state, which is never what users want.
         if (!this.canvasFocusedValue) {
             return;
         }
@@ -310,9 +437,6 @@ export class InputManager {
         this.channelsPressed.push(channel);
         this.flags.push(InputManagerFlag.KeyDown);
 
-        // Consume the event: stop default browser actions (page scroll on
-        // arrow/space, find-as-you-type on /, etc.) and stop propagation
-        // so other listeners on the page don't double-handle.
         stopEvent(event);
     }
 
@@ -334,7 +458,7 @@ export class InputManager {
         const slot = this._assignSlot(event.pointerId);
 
         if (slot === null) {
-            return; // 17th+ simultaneous pointer — silently drop.
+            return;
         }
 
         this.pointers[event.pointerId] = new Pointer(event, this.canvas, this.channels, slot);
@@ -368,10 +492,6 @@ export class InputManager {
         this.gestureRecognizer.onPointerDown(pointer);
         this.flags.push(InputManagerFlag.PointerUpdate);
 
-        // preventDefault stops native drag / text-selection;
-        // stopImmediatePropagation prevents bubbling to host-page click
-        // handlers so an embedded canvas doesn't accidentally trigger UI
-        // outside its bounds.
         stopEvent(event);
     }
 
@@ -448,13 +568,6 @@ export class InputManager {
         }
     }
 
-    /**
-     * Force every currently-held keyboard channel back to zero and emit
-     * onKeyUp for each. Called on canvas/window blur so keys held when
-     * focus leaves don't stay stuck "down" forever — without this, a user
-     * who alt-tabs while pressing W would have W register as held until
-     * they manually release while focus is back.
-     */
     private releaseAllKeyboardChannels(): void {
         for (let offset = 0; offset < ChannelSize.Category; offset++) {
             const channel = ChannelOffset.Keyboard + offset;
@@ -509,63 +622,126 @@ export class InputManager {
     }
 
     private updateGamepads(): this {
-        const activeGamepads = window.navigator.getGamepads();
+        const browserGamepads = window.navigator.getGamepads();
+        const seenBrowserIndices = new Set<number>();
 
-        this.gamepadSlotsActive.fill(0);
-
-        for (const activeGamepad of activeGamepads) {
-            if (!activeGamepad) {
+        for (const browserGamepad of browserGamepads) {
+            if (!browserGamepad) {
                 continue;
             }
 
-            const activeIndex = activeGamepad.index;
+            const browserIndex = browserGamepad.index;
 
-            if (activeIndex < 0 || activeIndex >= this.gamepadSlotsActive.length) {
+            if (browserIndex < 0) {
                 continue;
             }
 
-            this.gamepadSlotsActive[activeIndex] = 1;
+            seenBrowserIndices.add(browserIndex);
 
-            let gamepad = this.gamepadsByIndex.get(activeIndex);
+            const existing = this.gamepadsByBrowserIndex.get(browserIndex);
 
-            if (!gamepad) {
-                const definition = resolveGamepadDefinition(activeGamepad, this.gamepadDefinitions);
+            if (existing === undefined) {
+                const pad = this.assignSlotForNewPad(browserGamepad);
 
-                gamepad = new Gamepad(activeGamepad, this.channels, definition);
-                this.gamepadsByIndex.set(activeIndex, gamepad);
-                this.insertGamepadByIndex(gamepad);
-                this.onGamepadConnected.dispatch(gamepad, this.gamepadsValue);
-            } else {
-                gamepad.connect(activeGamepad);
+                if (pad === null) {
+                    continue;
+                }
+
+                this.gamepadsByBrowserIndex.set(browserIndex, pad);
+                this.onGamepadConnected.dispatch(pad);
             }
-
-            gamepad.update();
-            this.onGamepadUpdated.dispatch(gamepad, this.gamepadsValue);
         }
 
-        for (let index = this.gamepadsValue.length - 1; index >= 0; index -= 1) {
-            const gamepad = this.gamepadsValue[index];
-
-            if (this.gamepadSlotsActive[gamepad.index] === 0) {
-                gamepad.disconnect();
-                this.gamepadsValue.splice(index, 1);
-                this.gamepadsByIndex.delete(gamepad.index);
-                this.onGamepadDisconnected.dispatch(gamepad, this.gamepadsValue);
-                gamepad.destroy();
+        for (const [browserIndex, pad] of Array.from(this.gamepadsByBrowserIndex.entries())) {
+            if (!seenBrowserIndices.has(browserIndex)) {
+                this.gamepadsByBrowserIndex.delete(browserIndex);
+                this.handleGamepadDisconnect(pad);
             }
+        }
+
+        for (const pad of this._gamepads) {
+            pad.update();
         }
 
         return this;
     }
 
-    private insertGamepadByIndex(gamepad: Gamepad): void {
-        let insertIndex = 0;
+    private assignSlotForNewPad(browserGamepad: BrowserGamepad): Gamepad | null {
+        const definition = resolveGamepadDefinition(browserGamepad, this.gamepadDefinitions);
 
-        while (insertIndex < this.gamepadsValue.length && this.gamepadsValue[insertIndex].index < gamepad.index) {
-            insertIndex += 1;
+        for (const pad of this._gamepads) {
+            if (!pad.connected) {
+                pad._bind(browserGamepad, definition);
+                return pad;
+            }
         }
 
-        this.gamepadsValue.splice(insertIndex, 0, gamepad);
+        return null;
+    }
+
+    private handleGamepadDisconnect(pad: Gamepad): void {
+        if (this.slotStrategy !== 'compact') {
+            // Sticky: pad's slot becomes empty in place; fire onDisconnect
+            // on that slot directly.
+            pad._unbind();
+            this.onGamepadDisconnected.dispatch(pad);
+
+            return;
+        }
+
+        // Compact: in semantic terms the user lost a player, and the trailing
+        // (highest-numbered) occupied slot is the one that becomes empty.
+        // 1. Snapshot the highest occupied slot before any state change.
+        // 2. Silently vacate the disconnecting pad (no onDisconnect yet).
+        // 3. Shift higher-numbered occupied slots down to fill any gaps,
+        //    firing onPadReassigned for each slot that received a new pad.
+        // 4. Fire onDisconnect on the slot that ended up empty (the one
+        //    snapshotted in step 1).
+        let lastOccupiedSlot = -1;
+
+        for (let i = gamepadSlots - 1; i >= 0; i--) {
+            if (this._gamepads[i].connected) {
+                lastOccupiedSlot = i;
+                break;
+            }
+        }
+
+        pad._silentUnbind();
+
+        for (let target = 0; target < gamepadSlots; target++) {
+            if (this._gamepads[target].connected) {
+                continue;
+            }
+
+            for (let source = target + 1; source < gamepadSlots; source++) {
+                const sourcePad = this._gamepads[source];
+
+                if (!sourcePad.connected) {
+                    continue;
+                }
+
+                const browserIndex = sourcePad.browserGamepad?.index;
+                const targetPad = this._gamepads[target];
+                const sourceSlot = sourcePad.slot;
+
+                targetPad._rebindFrom(sourcePad);
+
+                if (browserIndex !== undefined) {
+                    this.gamepadsByBrowserIndex.set(browserIndex, targetPad);
+                }
+
+                targetPad.onPadReassigned.dispatch(sourceSlot);
+                this.onAnyGamepadReassigned.dispatch(targetPad, sourceSlot);
+                break;
+            }
+        }
+
+        if (lastOccupiedSlot >= 0) {
+            const emptiedSlot = this._gamepads[lastOccupiedSlot];
+
+            emptiedSlot._dispatchDisconnect();
+            this.onGamepadDisconnected.dispatch(emptiedSlot);
+        }
     }
 
     private updateEvents(): this {
