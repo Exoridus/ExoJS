@@ -1,5 +1,6 @@
 import { UpdateModule } from './UpdateModule';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
+import type { WgslContribution } from './WgslContribution';
 
 /**
  * Adds a constant angular acceleration to every live particle each frame
@@ -8,6 +9,8 @@ import type { ParticleSystem } from '@/particles/ParticleSystem';
  * `rotationSpeed` itself.
  *
  * Units: degrees per second². Negative values decelerate spin.
+ *
+ * GPU-eligible.
  */
 export class RotateOverLifetime extends UpdateModule {
     public angularAcceleration: number;
@@ -24,5 +27,21 @@ export class RotateOverLifetime extends UpdateModule {
         for (let i = 0; i < liveCount; i++) {
             rotationSpeeds[i] += delta;
         }
+    }
+
+    public override wgsl(): WgslContribution {
+        return {
+            key: 'RotateOverLifetime',
+            uniforms: [
+                { name: 'angularAcceleration', type: 'f32' },
+            ],
+            body: `
+                rotInfo[idx].y = rotInfo[idx].y + modules.u_RotateOverLifetime.angularAcceleration * dt;
+            `,
+        };
+    }
+
+    public override writeUniforms(view: DataView, offset: number): void {
+        view.setFloat32(offset + 0, this.angularAcceleration, true);
     }
 }

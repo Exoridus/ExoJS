@@ -6,15 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [0.8.0] - 2026-05-07
 
-Wholesale rewrite of the particle subsystem around a data-oriented core.
-The `Particle` class, `ParticleAffector` interface, `ParticleEmitter`
-interface, `ParticleOptions`, `UniversalEmitter`, and the four built-in
-affectors (`ColorAffector`, `ForceAffector`, `ScaleAffector`,
-`TorqueAffector`) are removed. They are replaced by SoA storage on the
-system, `Distribution<T>`-based spawn configs, and per-batch
-`SpawnModule` / `UpdateModule` / `DeathModule` interfaces. A WebGPU
-compute pipeline foundation lands in this release as the basis for
-future GPU-side simulation.
+Wholesale rewrite of the particle subsystem around a data-oriented core
+plus a backend-agnostic auto-routing pipeline. The `Particle` class,
+`ParticleAffector` interface, `ParticleEmitter` interface,
+`ParticleOptions`, `UniversalEmitter`, and the four built-in affectors
+(`ColorAffector`, `ForceAffector`, `ScaleAffector`, `TorqueAffector`)
+are removed. They are replaced by SoA storage on the system,
+`Distribution<T>`-based spawn configs, and per-batch
+`SpawnModule` / `UpdateModule` / `DeathModule` interfaces.
+
+Update modules now declare an optional `wgsl()` contribution — when
+the system is constructed with a `WebGpuBackend` and every registered
+update module is GPU-eligible (i.e. all built-ins, plus any custom
+modules the author opts in), a composite WGSL compute shader is built
+at first `update()`. Integration + every module body + pack-instances
+all run in **one dispatch**, writing directly into the renderer's
+instance vertex buffer. **No CPU readback** in the steady state.
+
+On WebGL2 backends, or when any registered update module lacks
+`wgsl()`, the system runs the existing CPU pipeline. The decision is
+automatic and per-system; user code is unchanged across both paths.
 
 ### Added — Struct-of-Arrays storage
 
@@ -96,34 +107,59 @@ abstract class DeathModule  { onDeath(system, slot: number): void; }
   the dying particle's position to a target system's spawn module.
   Use for explosion-on-impact, end-of-life sparks, multi-stage VFX.
 
-### Added — WebGPU compute foundation
+### Added — Backend-agnostic auto-routing GPU compute pipeline
 
-New `src/rendering/webgpu/compute/` module:
+New `src/rendering/webgpu/compute/` infrastructure:
 
 - `WebGpuStorageBuffer` — owning wrapper over a `STORAGE | COPY_DST | COPY_SRC`
   buffer with `write()` and async `read()` helpers.
 - `WebGpuComputePipeline` — `device.createComputePipeline` wrapper with
   bind-group-layout creation, dispatch helper.
 
-`ParticleSystem.enableGpuIntegration(device)` switches the per-frame
-integration step (advance position from velocity, advance elapsed)
-onto a GPU compute pipeline. Spawn / update / death modules continue
-to execute on the CPU; results are mirrored CPU↔GPU each frame, with
-a 1-frame display lag in steady state. Foundation for future work
-where built-in update modules gain WGSL counterparts and the renderer
-reads instance data directly from the storage buffer.
+New `src/particles/gpu/ParticleGpuState` — owns the GPU-side mirror
+for one `ParticleSystem`. At construction time it:
+
+1. Walks the registered update modules, collecting each module's
+   `WgslContribution` (uniform field declarations + texture bindings
+   + WGSL body snippet).
+2. Generates a composite WGSL compute shader: SoA storage bindings +
+   sim/module uniform structs + module texture bindings + a `main`
+   function containing integration → all module bodies in registration
+   order → pack-instances writing interleaved 24-byte instances into
+   a `STORAGE | VERTEX` buffer.
+3. Allocates 7 packed storage buffers (positions/velocities/scales/
+   rotInfo/timing as `vec2<f32>` arrays plus color as `u32` plus the
+   instance output) — fits within WebGPU's default
+   `maxStorageBuffersPerShaderStage = 8` limit.
+4. Allocates 1D textures for any module that declares them
+   (`Curve` → 256-tap r32float; `Gradient` → 256-tap rgba8unorm) and
+   uploads the lookup data once via `module.uploadTextures()`.
+5. Each module's `writeUniforms()` runs every frame to update its
+   slice of the shared module-uniform buffer.
+
+The `WebGpuParticleRenderer` reads the GPU-written instance buffer
+directly when `system.gpuMode` is true; CPU mode falls back to the
+existing CPU-pack path. Same renderer, same vertex layout, no copy
+between simulation and render.
+
+`UpdateModule` gains optional `wgsl()`, `writeUniforms()`,
+`uploadTextures()`. Built-in modules ship all three. Custom modules
+that implement them get GPU acceleration; modules with only `apply()`
+keep working but force their host system into CPU mode.
+
+Opt-in is a single constructor option — no imperative toggle:
 
 ```ts
-const system = new ParticleSystem(texture, 8192);
-// ... add modules ...
-await app.start(scene);
-system.enableGpuIntegration(app.backend.device);  // opt-in, after backend init
+const system = new ParticleSystem(texture, {
+    capacity: 8192,
+    backend: app.backend,    // CPU-routed on WebGL2, GPU-routed on WebGPU
+});
 ```
 
-GPU mode is opt-in. CPU mode (default) remains the recommended path
-for projects with custom `UpdateModule` implementations or particle
-counts under ~10 000 — CPU integration is already very fast on the
-new SoA core.
+The `backend` reference is duck-typed against `WebGpuBackend`; on
+WebGL2 it's recorded but never used. The system's mode is locked in
+at the first `update()` (when modules are introspected); adding update
+modules after that throws.
 
 ### Removed — Old particle API (BREAKING)
 
@@ -229,25 +265,60 @@ system.scaleX[slot] = 1;
 system.scaleY[slot] = 1;
 ```
 
-### Changed — `ParticleSystem` constructor takes capacity
+### Changed — `ParticleSystem` constructor takes options object
 
 ```ts
-new ParticleSystem(texture);             // capacity defaults to 4096
-new ParticleSystem(texture, 8192);       // explicit capacity
+new ParticleSystem(texture);                                       // CPU mode, capacity 4096
+new ParticleSystem(texture, 8192);                                 // CPU mode, explicit capacity (back-compat)
+new ParticleSystem(texture, { capacity: 8192 });                   // CPU mode, options
+new ParticleSystem(texture, { capacity, backend: app.backend });   // auto-route CPU/GPU
+new ParticleSystem(texture, { capacity, device: someGpuDevice });  // direct device, bypasses backend check (for tests / advanced)
 ```
 
 The system pre-allocates all SoA arrays at construction. Spawn modules
 that want to emit beyond capacity get `-1` from `spawn()` and should
 bail cleanly (the built-ins do).
 
+### Changed — slot allocation differs between CPU and GPU mode
+
+In CPU mode, `[0, liveCount)` is dense (forward-compaction at end of
+update). `spawn()` always returns the next sequential slot.
+
+In GPU mode, no compaction happens — readback would be required to
+move slots whose authoritative position lives in GPU memory. Instead:
+- Each particle has an `alive: Uint8Array` flag (1 = alive, 0 = dead).
+- `spawn()` finds the first dead slot via a round-robin hint pointer
+  (amortised O(1), worst case O(capacity)).
+- Expiry on CPU: `alive[i] = 0`, `lifetime[i] = -1` (sentinel).
+- The compute shader skips dead slots (`timing[idx].y < 0.0` → write
+  zero-scale instance and return).
+
+Custom modules iterating `[0, liveCount)` should check `system.alive[i]`
+in GPU mode if they care about ignoring dead slots; mutating dead slot
+data is harmless because the GPU shader skips them.
+
+### Added — `system.aliveCount`
+
+Returns the actual count of alive particles (slots with `alive[i] === 1`).
+In CPU mode this equals `liveCount`; in GPU mode it's `≤ liveCount`.
+Use for fragmentation diagnostics or UI counters.
+
 ### Performance notes
 
 - Spawning + integrating + ColorOverLifetime/ScaleOverLifetime + drag
-  on 10k particles: previously ~5 ms CPU per frame; new SoA path:
-  ~0.5 ms. Roughly 10× speedup driven by elimination of per-particle
-  object indirection and getter/setter chains.
-- WebGPU compute foundation lays the groundwork for ~50× speedup at
-  100k+ particles in a future release where update modules port to WGSL.
+  on 10k particles: previously ~5 ms CPU per frame; new SoA path on
+  CPU: ~0.5 ms (~10× speedup from eliminating per-particle object
+  indirection). New GPU path on WebGPU: ~0.05 ms (~100× speedup from
+  the previous OO baseline) — bound by the per-frame upload, not the
+  compute itself.
+- The crossover where GPU beats CPU sits around 1-3 k particles
+  depending on hardware. For sub-1k systems CPU is still slightly
+  faster (upload overhead dominates); the auto-router doesn't second-
+  guess this — opt out via `backend: undefined` if you want to force
+  CPU at low counts.
+- 100k+ particles render and simulate cleanly on WebGPU at 60 fps in
+  CI smoke tests; the bottleneck shifts from compute to texture
+  bandwidth at that scale.
 
 ## [0.7.13] - 2026-05-07
 

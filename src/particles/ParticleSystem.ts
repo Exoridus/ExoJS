@@ -1,7 +1,11 @@
+/// <reference types="@webgpu/types" />
+
 import { Rectangle } from '@/math/Rectangle';
 import type { Time } from '@/core/Time';
 import { Drawable } from '@/rendering/Drawable';
 import type { Texture } from '@/rendering/texture/Texture';
+import type { RenderBackend } from '@/rendering/RenderBackend';
+import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import type { SpawnModule } from './modules/SpawnModule';
 import type { UpdateModule } from './modules/UpdateModule';
 import type { DeathModule } from './modules/DeathModule';
@@ -9,45 +13,86 @@ import { ParticleGpuState } from './gpu/ParticleGpuState';
 
 const defaultCapacity = 4096;
 
+/** Options for {@link ParticleSystem}'s constructor. */
+export interface ParticleSystemOptions {
+    /** Maximum particle count. Fixed at construction. Default 4096. */
+    capacity?: number;
+    /**
+     * Render backend reference. When supplied AND the backend is a
+     * `WebGpuBackend` AND every registered {@link UpdateModule} has a
+     * `wgsl()` implementation, the system runs the simulation on the GPU
+     * via a composite compute pipeline. Otherwise the system runs the
+     * simulation on the CPU using each module's `apply()` method.
+     *
+     * Backend-binding is finalised on the **first** call to {@link update}
+     * — register all spawn / update / death modules before then. Adding
+     * an update module after that throws.
+     */
+    backend?: RenderBackend;
+    /**
+     * Direct GPU device, bypassing the {@link backend} duck-type check.
+     * Useful for tests with mocked devices and for advanced scenarios
+     * where the device is owned outside an ExoJS `Application`. Mutually
+     * exclusive with {@link backend} — `device` wins if both are set.
+     */
+    device?: GPUDevice;
+}
+
 /**
  * The central coordinator of the particle pipeline. `ParticleSystem` is a
  * {@link Drawable} that owns:
  *
- * - **SoA particle storage** — one `Float32Array` (or `Uint32Array` /
- *   `Uint16Array`) per particle attribute, sized to a fixed capacity at
- *   construction. Live particles occupy slots `[0, liveCount)`; expired
- *   slots are recycled in place by the per-frame compaction pass.
+ * - **SoA particle storage** — one typed array per attribute (position,
+ *   velocity, scale, rotation, color, lifetime, ...), sized to a fixed
+ *   capacity at construction. User code reads/writes via
+ *   `system.posX[slot]`, `system.velX[slot]`, etc.
  * - **Spawn modules** — write new particles into freshly allocated slots.
  * - **Update modules** — mutate the live range each frame (forces, color
- *   blends, scale curves, drag, ...).
+ *   blends, scale curves, drag, ...). Built-in modules ship both CPU and
+ *   WGSL implementations; custom modules can opt into GPU acceleration by
+ *   implementing `wgsl()`.
  * - **Death modules** — fire once per dying particle, before its slot is
  *   recycled (sub-emitters, event hooks).
  *
- * **Per-frame order in {@link update}:**
- * 1. Run every spawn module (each may emit any number of particles).
- * 2. Integrate position from velocity, rotation from rotationSpeed, and
- *    advance `elapsed` by `dt`. One inner loop, no method calls.
+ * **Auto-routing CPU vs GPU:** at first {@link update}, the system checks:
+ * if a `WebGpuBackend` was supplied AND every registered update module has
+ * `wgsl()`, the GPU path engages — a composite compute pipeline runs
+ * integration plus all module bodies in one dispatch and writes directly
+ * into the renderer's instance buffer (no CPU readback). Otherwise the CPU
+ * path runs the existing per-module `apply()` loops.
+ *
+ * **Per-frame order in {@link update} (CPU mode):**
+ * 1. Run every spawn module.
+ * 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`.
  * 3. Run every update module on the live range.
  * 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired
- *    slots, copy survivors down to fill gaps. `liveCount` shrinks to the
- *    survivor count.
+ *    slots, copy survivors down. `liveCount` shrinks to the survivor count.
+ *
+ * **Per-frame order in {@link update} (GPU mode):**
+ * 1. Run every spawn module (CPU writes initial values into the spawn slot).
+ * 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules;
+ *    set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU
+ *    shader skips them. **No compaction** — slots are recycled on next spawn.
+ * 3. Dispatch the composite compute pipeline. Integration + update modules
+ *    + pack-instances run in one pass; the instance buffer is written
+ *    directly. CPU SoA stays as-is for spawn writes.
  *
  * **Coordinate space:** particle positions are LOCAL to the system. The
  * system's `getGlobalTransform()` is applied on top during rendering — both
  * the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`.
- * Setting world-space positions on individual particles (e.g. `system.x +
- * offset`) double-translates because the shader translates again. Position
- * the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.
- *
- * **Capacity** is fixed at construction (default 4096). Spawn modules call
- * {@link spawn} to allocate a slot; the call returns `-1` when at capacity
- * — modules should bail cleanly in that case rather than overwriting live
- * slots.
+ * Setting world-space positions on individual particles double-translates.
+ * Position the system itself via `system.setPosition(...)` and emit relative
+ * to `(0, 0)`.
  *
  * @example
- * const system = new ParticleSystem(loader.get(Texture, 'spark'), 8192);
+ * // Backend-agnostic — runs CPU on WebGL2, GPU on WebGPU automatically.
+ * const system = new ParticleSystem(loader.get(Texture, 'spark'), {
+ *     capacity: 8192,
+ *     backend: app.backend,
+ * });
+ *
  * system.addSpawnModule(new RateSpawn({ rate: new Constant(60), ... }));
- * system.addUpdateModule(new ApplyForce(0, 980));     // gravity
+ * system.addUpdateModule(new ApplyForce(0, 980));     // gravity, GPU-eligible
  * system.addUpdateModule(new ColorOverLifetime(fireGradient));
  * scene.addChild(system);
  */
@@ -55,8 +100,6 @@ export class ParticleSystem extends Drawable {
     /** Maximum particle count this system will store. Fixed at construction. */
     public readonly capacity: number;
 
-    // SoA storage — public + readonly references, but the array contents
-    // are mutable: spawn / update / death modules write into them directly.
     public readonly posX: Float32Array;
     public readonly posY: Float32Array;
     public readonly velX: Float32Array;
@@ -67,19 +110,35 @@ export class ParticleSystem extends Drawable {
     public readonly rotationSpeeds: Float32Array;
     public readonly color: Uint32Array;        // packed 0xAABBGGRR
     public readonly elapsed: Float32Array;     // seconds since spawn
-    public readonly lifetime: Float32Array;    // total seconds before expiry
-    public readonly textureIndex: Uint16Array; // atlas frame index (reserved; renderer uses single frame currently)
+    public readonly lifetime: Float32Array;    // total seconds before expiry; -1 sentinel for dead in GPU mode
+    public readonly textureIndex: Uint16Array;
 
-    /** Number of currently live particles. Slots `[0, liveCount)` are valid; `[liveCount, capacity)` are dead. */
+    /**
+     * Number of currently live particles. In CPU mode this is exact: slots
+     * `[0, liveCount)` are all alive after each `update()`. In GPU mode
+     * this is a high-water mark — slots `[0, liveCount)` may contain dead
+     * holes (filled in by future spawns); use {@link aliveCount} for the
+     * actual alive count.
+     */
     public liveCount = 0;
+
+    /**
+     * Per-slot alive flag (1 = alive, 0 = dead). Maintained in both CPU
+     * and GPU mode. Custom modules iterating the live range should check
+     * this to skip dead slots in GPU mode.
+     */
+    public readonly alive: Uint8Array;
 
     private readonly _spawnModules: Array<SpawnModule> = [];
     private readonly _updateModules: Array<UpdateModule> = [];
     private readonly _deathModules: Array<DeathModule> = [];
 
+    private readonly _backend: RenderBackend | null = null;
+    private readonly _device: GPUDevice | null = null;
     private _gpuState: ParticleGpuState | null = null;
     private _gpuMode = false;
-    private _pendingReadback: Promise<void> | null = null;
+    private _compiled = false;
+    private _spawnHint = 0;        // round-robin pointer for first-dead lookup in GPU mode
 
     private _texture: Texture;
     private readonly _textureFrame: Rectangle = new Rectangle();
@@ -88,8 +147,12 @@ export class ParticleSystem extends Drawable {
     private _updateTexCoords = true;
     private _updateVertices = true;
 
-    public constructor(texture: Texture, capacity: number = defaultCapacity) {
+    public constructor(texture: Texture, options: ParticleSystemOptions | number = {}) {
         super();
+
+        // Back-compat: a bare `number` second arg is treated as `capacity`.
+        const opts: ParticleSystemOptions = typeof options === 'number' ? { capacity: options } : options;
+        const capacity = opts.capacity ?? defaultCapacity;
 
         if (capacity <= 0 || !Number.isInteger(capacity)) {
             throw new Error(`ParticleSystem capacity must be a positive integer (got ${capacity}).`);
@@ -108,7 +171,10 @@ export class ParticleSystem extends Drawable {
         this.elapsed = new Float32Array(capacity);
         this.lifetime = new Float32Array(capacity);
         this.textureIndex = new Uint16Array(capacity);
+        this.alive = new Uint8Array(capacity);
 
+        this._backend = opts.backend ?? null;
+        this._device = opts.device ?? null;
         this._texture = texture;
         this.resetTextureFrame();
     }
@@ -129,12 +195,6 @@ export class ParticleSystem extends Drawable {
         this.setTextureFrame(frame);
     }
 
-    /**
-     * Quad corner offsets for the current {@link textureFrame}, in local
-     * space as `[minX, minY, maxX, maxY]`. Recomputed lazily whenever
-     * `textureFrame` changes. Used by the renderer to position each particle
-     * sprite relative to its world position.
-     */
     public get vertices(): Float32Array {
         if (this._updateVertices) {
             const { x, y, width, height } = this._textureFrame;
@@ -152,12 +212,6 @@ export class ParticleSystem extends Drawable {
         return this._vertices;
     }
 
-    /**
-     * Packed UV coordinates for the current {@link textureFrame} as four
-     * `Uint32` values, each encoding a `(u, v)` pair in the upper/lower 16
-     * bits (normalised to 0–65535). Vertex order respects {@link Texture.flipY}.
-     * Recomputed lazily on texture or frame changes.
-     */
     public get texCoords(): Uint32Array {
         if (this._updateTexCoords) {
             const { width, height } = this._texture;
@@ -185,68 +239,25 @@ export class ParticleSystem extends Drawable {
         return this._texCoords;
     }
 
-    /**
-     * `true` once {@link enableGpuIntegration} has wired this system to a
-     * WebGPU compute pipeline. Read-only; toggle via the dedicated methods.
-     */
+    /** `true` when the system is running on the GPU compute pipeline. */
     public get gpuMode(): boolean {
         return this._gpuMode;
     }
 
-    /**
-     * The GPU-side mirror of this system's storage, or `null` when GPU
-     * integration is not enabled. Exposed for advanced users who want to
-     * dispatch additional compute work against the same buffers.
-     */
+    /** GPU-side state, or `null` in CPU mode. */
     public get gpuState(): ParticleGpuState | null {
         return this._gpuState;
     }
 
-    /**
-     * Switch this system's per-frame integration step (advance position by
-     * velocity, rotation by rotation-speed, advance elapsed) onto a WebGPU
-     * compute pipeline. Subsequent `update()` calls upload the live SoA
-     * range to the GPU, dispatch the integration shader, and queue an
-     * async readback whose results land in the CPU SoA before the next
-     * frame's update — a 1-frame display lag, no async surface added to
-     * the public `update()` contract.
-     *
-     * **Scope (0.8.0):** integration only. `SpawnModule`, `UpdateModule`,
-     * `DeathModule` instances continue to execute on the CPU. The GPU
-     * compute path is the foundation for future work that ports the
-     * built-in update modules to WGSL; until then, GPU mode is best
-     * thought of as a preview feature for projects with very high particle
-     * counts where CPU integration becomes the dominant cost.
-     *
-     * Idempotent — calling twice with the same device is a no-op. Pass a
-     * different `GPUDevice` after a context-loss restore to reattach.
-     */
-    public enableGpuIntegration(device: GPUDevice): this {
-        if (this._gpuState !== null && this._gpuState.device === device) {
-            return this;
+    /** Actual count of live particles (slots with `alive[i] === 1`). May differ from `liveCount` in GPU mode. */
+    public get aliveCount(): number {
+        let count = 0;
+
+        for (let i = 0; i < this.liveCount; i++) {
+            if (this.alive[i]) count++;
         }
 
-        if (this._gpuState !== null) {
-            this._gpuState.destroy();
-        }
-
-        this._gpuState = new ParticleGpuState(device, this.capacity);
-        this._gpuMode = true;
-
-        return this;
-    }
-
-    /** Disable GPU integration and release GPU resources. The next `update()` reverts to the CPU integration path. */
-    public disableGpuIntegration(): this {
-        if (this._gpuState !== null) {
-            this._gpuState.destroy();
-            this._gpuState = null;
-        }
-
-        this._gpuMode = false;
-        this._pendingReadback = null;
-
-        return this;
+        return count;
     }
 
     public get spawnModules(): ReadonlyArray<SpawnModule> {
@@ -261,7 +272,6 @@ export class ParticleSystem extends Drawable {
         return this._deathModules;
     }
 
-    /** Replaces the particle sprite texture and resets the texture frame to cover the new texture. */
     public setTexture(texture: Texture): this {
         if (this._texture !== texture) {
             this._texture = texture;
@@ -271,7 +281,6 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
-    /** Sets the sub-rectangle of the texture used as the particle sprite. */
     public setTextureFrame(frame: Rectangle): this {
         this._textureFrame.copy(frame);
         this._updateTexCoords = true;
@@ -283,7 +292,6 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
-    /** Resets the texture frame to the full dimensions of the current texture. */
     public resetTextureFrame(): this {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
@@ -295,6 +303,10 @@ export class ParticleSystem extends Drawable {
     }
 
     public addUpdateModule(mod: UpdateModule): this {
+        if (this._compiled) {
+            throw new Error('Cannot add update modules after the system has been compiled (first update). Register all modules before the first update().');
+        }
+
         this._updateModules.push(mod);
 
         return this;
@@ -331,86 +343,53 @@ export class ParticleSystem extends Drawable {
     }
 
     /**
-     * Allocates a fresh particle slot and returns its index. Returns `-1`
-     * when the system is at {@link capacity} — spawn modules should bail
-     * cleanly in that case. The slot's previous data is overwritten by the
-     * spawn module; only `elapsed` is reset to 0 here so a partially
-     * initialised slot still expires correctly.
+     * Allocates a particle slot and returns its index. Returns `-1` when
+     * the system is at {@link capacity}.
+     *
+     * **CPU mode:** slots are dense in `[0, liveCount)`. `spawn()` returns
+     * the next sequential slot; `liveCount++`.
+     *
+     * **GPU mode:** slots may have dead holes. `spawn()` finds the first
+     * `alive[i] === 0` slot via a round-robin hint pointer (amortised O(1),
+     * worst case O(capacity) on full systems).
      */
     public spawn(): number {
-        if (this.liveCount >= this.capacity) {
-            return -1;
+        if (this._gpuMode) {
+            return this._spawnGpu();
         }
 
-        const slot = this.liveCount++;
-
-        this.elapsed[slot] = 0;
-
-        return slot;
+        return this._spawnCpu();
     }
 
     /** Resets the system to zero live particles without destroying it. */
     public clearParticles(): this {
         this.liveCount = 0;
+        this._spawnHint = 0;
+        this.alive.fill(0);
+        this.lifetime.fill(0);
+        this.elapsed.fill(0);
 
         return this;
     }
 
-    /**
-     * Advances the full simulation by one `delta` step. See class JSDoc for
-     * the exact spawn → integrate → update → expire ordering.
-     */
+    /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */
     public update(delta: Time): this {
+        if (!this._compiled) {
+            this._compile();
+        }
+
         const dt = delta.seconds;
 
-        // 1. Spawn.
+        // 1. Spawn (CPU writes SoA in both modes).
         for (let i = 0; i < this._spawnModules.length; i++) {
             this._spawnModules[i].apply(this, dt);
         }
 
-        // 2. Integrate position + rotation, advance lifetime.
-        if (this._gpuState !== null) {
-            this._integrateOnGpu(dt);
+        if (this._gpuMode) {
+            this._updateGpu(dt);
         } else {
-            const { posX, posY, velX, velY, rotations, rotationSpeeds, elapsed } = this;
-            const liveCount = this.liveCount;
-
-            for (let i = 0; i < liveCount; i++) {
-                posX[i] += velX[i] * dt;
-                posY[i] += velY[i] * dt;
-                rotations[i] += rotationSpeeds[i] * dt;
-                elapsed[i] += dt;
-            }
+            this._updateCpu(dt);
         }
-
-        // 3. Update modules — operate on the live range.
-        for (let i = 0; i < this._updateModules.length; i++) {
-            this._updateModules[i].apply(this, dt);
-        }
-
-        // 4. Compact: forward pass, fire death modules, copy survivors down.
-        const lifetime = this.lifetime;
-        const elapsed = this.elapsed;
-        const deathModules = this._deathModules;
-        let writeIndex = 0;
-
-        for (let readIndex = 0; readIndex < this.liveCount; readIndex++) {
-            if (elapsed[readIndex] >= lifetime[readIndex]) {
-                for (let m = 0; m < deathModules.length; m++) {
-                    deathModules[m].onDeath(this, readIndex);
-                }
-
-                continue;
-            }
-
-            if (writeIndex !== readIndex) {
-                this._copySlot(readIndex, writeIndex);
-            }
-
-            writeIndex++;
-        }
-
-        this.liveCount = writeIndex;
 
         return this;
     }
@@ -428,33 +407,151 @@ export class ParticleSystem extends Drawable {
         }
 
         this._gpuMode = false;
-        this._pendingReadback = null;
+        this._compiled = false;
         this.liveCount = 0;
+        this.alive.fill(0);
         this._textureFrame.destroy();
     }
 
-    private _integrateOnGpu(dt: number): void {
-        const state = this._gpuState!;
+    private _compile(): void {
+        this._compiled = true;
+
+        const device = this._device
+            ?? (this._backend instanceof WebGpuBackend ? this._backend.device : null);
+
+        if (device === null) {
+            return;
+        }
+
+        const allEligible = this._updateModules.every((m) => typeof m.wgsl === 'function');
+
+        if (!allEligible) {
+            return;
+        }
+
+        this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules);
+        this._gpuMode = true;
+    }
+
+    private _spawnCpu(): number {
+        if (this.liveCount >= this.capacity) {
+            return -1;
+        }
+
+        const slot = this.liveCount++;
+
+        this.alive[slot] = 1;
+        this.elapsed[slot] = 0;
+
+        return slot;
+    }
+
+    private _spawnGpu(): number {
+        const capacity = this.capacity;
+        const alive = this.alive;
+        const start = this._spawnHint;
+
+        // Search forward from hint, then wrap.
+        for (let i = start; i < capacity; i++) {
+            if (alive[i] === 0) {
+                alive[i] = 1;
+                this.elapsed[i] = 0;
+                this._spawnHint = i + 1 === capacity ? 0 : i + 1;
+                if (i >= this.liveCount) this.liveCount = i + 1;
+                return i;
+            }
+        }
+
+        for (let i = 0; i < start; i++) {
+            if (alive[i] === 0) {
+                alive[i] = 1;
+                this.elapsed[i] = 0;
+                this._spawnHint = i + 1;
+                if (i >= this.liveCount) this.liveCount = i + 1;
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private _updateCpu(dt: number): void {
+        const { posX, posY, velX, velY, rotations, rotationSpeeds, elapsed } = this;
         const liveCount = this.liveCount;
 
-        // The previous frame's readback may have completed asynchronously.
-        // We can't synchronously poll its status without device-specific
-        // hacks, so update modules and the renderer simply consume the most
-        // recent CPU SoA snapshot — which lags GPU by one frame in steady
-        // state. New spawns appear immediately because they're written to
-        // CPU SoA before this dispatch runs.
-        state.uploadFromCpu(this);
+        for (let i = 0; i < liveCount; i++) {
+            posX[i] += velX[i] * dt;
+            posY[i] += velY[i] * dt;
+            rotations[i] += rotationSpeeds[i] * dt;
+            elapsed[i] += dt;
+        }
 
-        const encoder = state.device.createCommandEncoder({ label: 'particle-integration' });
+        for (let i = 0; i < this._updateModules.length; i++) {
+            this._updateModules[i].apply(this, dt);
+        }
 
-        state.dispatch(encoder, dt, liveCount);
-        state.device.queue.submit([encoder.finish()]);
+        // Compact: forward pass, fire death modules on expired, copy survivors down.
+        const lifetime = this.lifetime;
+        const alive = this.alive;
+        const deathModules = this._deathModules;
+        let writeIndex = 0;
 
-        // Schedule readback. The Promise resolves once the GPU has the
-        // mapped readback buffer ready; the data lands in the CPU SoA at
-        // that point. By the next `update()` call (typically 16 ms later),
-        // the readback is overwhelmingly likely to have completed.
-        this._pendingReadback = state.downloadToCpu(this);
+        for (let readIndex = 0; readIndex < this.liveCount; readIndex++) {
+            if (elapsed[readIndex] >= lifetime[readIndex]) {
+                for (let m = 0; m < deathModules.length; m++) {
+                    deathModules[m].onDeath(this, readIndex);
+                }
+                alive[readIndex] = 0;
+                continue;
+            }
+
+            if (writeIndex !== readIndex) {
+                this._copySlot(readIndex, writeIndex);
+                alive[writeIndex] = 1;
+            }
+
+            writeIndex++;
+        }
+
+        for (let i = writeIndex; i < this.liveCount; i++) {
+            alive[i] = 0;
+        }
+
+        this.liveCount = writeIndex;
+    }
+
+    private _updateGpu(dt: number): void {
+        // CPU advances elapsed locally + detects expiries (cheap).
+        // No readback from GPU.
+        const elapsed = this.elapsed;
+        const lifetime = this.lifetime;
+        const alive = this.alive;
+        const deathModules = this._deathModules;
+        const liveCount = this.liveCount;
+
+        for (let i = 0; i < liveCount; i++) {
+            if (alive[i] === 0) continue;
+
+            elapsed[i] += dt;
+
+            if (elapsed[i] >= lifetime[i]) {
+                for (let m = 0; m < deathModules.length; m++) {
+                    deathModules[m].onDeath(this, i);
+                }
+                alive[i] = 0;
+                lifetime[i] = -1;  // sentinel for GPU shader skip
+            }
+        }
+
+        // Trim trailing dead slots.
+        let newLiveCount = this.liveCount;
+        while (newLiveCount > 0 && alive[newLiveCount - 1] === 0) {
+            newLiveCount--;
+        }
+        this.liveCount = newLiveCount;
+
+        // Dispatch GPU compute (integration + module bodies + pack-instances).
+        this._gpuState!.dispatch(this, dt);
     }
 
     private _copySlot(from: number, to: number): void {

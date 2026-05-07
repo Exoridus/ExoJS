@@ -67,7 +67,10 @@ app.start(new class extends Scene {
     init() {
         const { width, height } = this.app.canvas;
 
-        this._particleSystem = new ParticleSystem(createParticleTexture(), 4096);
+        this._particleSystem = new ParticleSystem(createParticleTexture(), {
+            capacity: 4096,
+            backend: this.app.backend,    // auto-engages GPU compute when WebGPU + all modules are GPU-eligible
+        });
         this._particleSystem.setPosition(width / 2, height * 0.82);
 
         this._particleSystem.addSpawnModule(new RateSpawn({

@@ -1,6 +1,8 @@
 export { SpawnModule } from './SpawnModule';
 export { UpdateModule } from './UpdateModule';
 export { DeathModule } from './DeathModule';
+export type { WgslContribution, WgslPrimitive, WgslUniformField, WgslTextureBinding } from './WgslContribution';
+export { wgslUniformByteSize, wgslFieldLayout } from './WgslContribution';
 
 export { RateSpawn } from './RateSpawn';
 export type { RateSpawnConfig } from './RateSpawn';

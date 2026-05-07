@@ -217,11 +217,24 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
                 }],
             });
 
-            this._ensureCapacity(particleCount);
-            this._writeInstanceData(system);
             this._writeUniformData(backend, system, drawCall.texture);
 
-            device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
+            // GPU mode: the system's compute pipeline already wrote the
+            // interleaved instance data into its own buffer. Bind it
+            // directly — no CPU pack, no writeBuffer for instance data.
+            // CPU mode: pack from CPU SoA into our owned instance buffer.
+            const instanceBuffer = ((): GPUBuffer => {
+                if (system.gpuMode && system.gpuState !== null) {
+                    return system.gpuState.instanceBuffer;
+                }
+
+                this._ensureCapacity(particleCount);
+                this._writeInstanceData(system);
+                device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
+
+                return this._instanceBuffer!;
+            })();
+
             device.queue.writeBuffer(
                 uniformBuffer,
                 0,
@@ -244,7 +257,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             pass.setPipeline(pipeline);
             pass.setBindGroup(1, textureBindGroup);
             pass.setVertexBuffer(0, staticVertexBuffer);
-            pass.setVertexBuffer(1, this._instanceBuffer!);
+            pass.setVertexBuffer(1, instanceBuffer);
             pass.setIndexBuffer(indexBuffer, 'uint16');
             pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
             backend.stats.batches++;
