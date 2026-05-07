@@ -25,13 +25,15 @@ var particleTexture: texture_2d<f32>;
 @group(1) @binding(1)
 var particleSampler: sampler;
 
-// Per-instance attributes (one entry per particle, 24 bytes total).
+// Per-instance attributes (one entry per particle, 40 bytes total).
 struct VertexInput {
     @location(0) unitPosition: vec2<f32>,    // per-vertex (static unit quad)
     @location(1) translation: vec2<f32>,
     @location(2) scale: vec2<f32>,
     @location(3) rotation: f32,
     @location(4) color: vec4<f32>,
+    @location(5) uvMin: vec2<f32>,            // pre-resolved frame UV (top-left)
+    @location(6) uvMax: vec2<f32>,            // pre-resolved frame UV (bottom-right)
 };
 
 struct VertexOutput {
@@ -44,8 +46,6 @@ struct VertexOutput {
 fn vertexMain(input: VertexInput) -> VertexOutput {
     let quadMin = uniforms.localBounds.xy;
     let quadSize = uniforms.localBounds.zw;
-    let uvMin = uniforms.uvBounds.xy;
-    let uvMax = uniforms.uvBounds.zw;
 
     let localPosition = quadMin + (input.unitPosition * quadSize);
     let radians = radians(input.rotation);
@@ -59,7 +59,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
     output.position = uniforms.projection * uniforms.translation * vec4<f32>(rotated, 0.0, 1.0);
-    output.texcoord = uvMin + ((uvMax - uvMin) * input.unitPosition);
+    output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * input.unitPosition);
     output.color = vec4(input.color.rgb * input.color.a, input.color.a);
 
     return output;
@@ -75,8 +75,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 `;
 
 const staticVertexStrideBytes = 8;
-const instanceWords = 6;
-const instanceStrideBytes = 24;
+const instanceWords = 10;
+const instanceStrideBytes = 40;
 const indicesPerParticle = 6;
 const uniformByteLength = 176;
 const initialParticleCapacity = 1;
@@ -223,14 +223,15 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             // interleaved instance data into its own buffer. Bind it
             // directly — no CPU pack, no writeBuffer for instance data.
             // CPU mode: pack from CPU SoA into our owned instance buffer.
+            let drawInstanceCount = particleCount;
             const instanceBuffer = ((): GPUBuffer => {
                 if (system.gpuMode && system.gpuState !== null) {
                     return system.gpuState.instanceBuffer;
                 }
 
                 this._ensureCapacity(particleCount);
-                this._writeInstanceData(system);
-                device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
+                drawInstanceCount = this._writeInstanceData(system);
+                device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, drawInstanceCount * instanceStrideBytes);
 
                 return this._instanceBuffer!;
             })();
@@ -259,7 +260,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             pass.setVertexBuffer(0, staticVertexBuffer);
             pass.setVertexBuffer(1, instanceBuffer);
             pass.setIndexBuffer(indexBuffer, 'uint16');
-            pass.drawIndexed(indicesPerParticle, particleCount, 0, 0, 0);
+            pass.drawIndexed(indicesPerParticle, drawInstanceCount, 0, 0, 0);
             backend.stats.batches++;
             backend.stats.drawCalls++;
 
@@ -422,13 +423,26 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         ]);
     }
 
-    private _writeInstanceData(system: ParticleSystem): void {
-        const { posX, posY, scaleX, scaleY, rotations, color, liveCount } = system;
+    private _writeInstanceData(system: ParticleSystem): number {
+        const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive, liveCount } = system;
         const f32 = this._float32View;
         const u32 = this._uint32View;
 
+        const { uvMins, uvMaxs } = this._computeFrameUvs(system);
+        const frameCount = uvMins.length / 2;
+
+        let writeIndex = 0;
+
         for (let particleIndex = 0; particleIndex < liveCount; particleIndex++) {
-            const targetIndex = particleIndex * instanceWords;
+            // Skip dead slots — present in GPU-mode systems where the live
+            // range can carry holes filled in on next spawn.
+            if (alive[particleIndex] === 0) {
+                continue;
+            }
+
+            const targetIndex = writeIndex * instanceWords;
+            const frame = textureIndex[particleIndex] < frameCount ? textureIndex[particleIndex] : 0;
+            const uvBase = frame * 2;
 
             f32[targetIndex + 0] = posX[particleIndex];
             f32[targetIndex + 1] = posY[particleIndex];
@@ -436,7 +450,72 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             f32[targetIndex + 3] = scaleY[particleIndex];
             f32[targetIndex + 4] = rotations[particleIndex];
             u32[targetIndex + 5] = color[particleIndex];
+            f32[targetIndex + 6] = uvMins[uvBase + 0];
+            f32[targetIndex + 7] = uvMins[uvBase + 1];
+            f32[targetIndex + 8] = uvMaxs[uvBase + 0];
+            f32[targetIndex + 9] = uvMaxs[uvBase + 1];
+
+            writeIndex++;
         }
+
+        return writeIndex;
+    }
+
+    /**
+     * Same atlas/UV-resolution as the WebGL2 path. Returns the per-frame
+     * (uvMin, uvMax) pairs derived from `system.frames` (or fallback to
+     * `system.textureFrame` when no atlas is declared), already flipY-
+     * adjusted for the current texture.
+     */
+    private _uvMinsScratch = new Float32Array(2);
+    private _uvMaxsScratch = new Float32Array(2);
+    private _computeFrameUvs(system: ParticleSystem): { uvMins: Float32Array; uvMaxs: Float32Array } {
+        const frames = system.frames;
+        const tex = system.texture;
+        const texW = tex.width;
+        const texH = tex.height;
+        const flipY = tex.flipY;
+
+        const count = frames.length === 0 ? 1 : frames.length;
+
+        if (this._uvMinsScratch.length < count * 2) {
+            this._uvMinsScratch = new Float32Array(count * 2);
+            this._uvMaxsScratch = new Float32Array(count * 2);
+        }
+
+        const mins = this._uvMinsScratch;
+        const maxs = this._uvMaxsScratch;
+
+        if (frames.length === 0) {
+            const f = system.textureFrame;
+            const minU = f.left / texW;
+            const maxU = f.right / texW;
+            const topV = f.top / texH;
+            const bottomV = f.bottom / texH;
+
+            mins[0] = minU;
+            mins[1] = flipY ? bottomV : topV;
+            maxs[0] = maxU;
+            maxs[1] = flipY ? topV : bottomV;
+
+            return { uvMins: mins, uvMaxs: maxs };
+        }
+
+        for (let i = 0; i < frames.length; i++) {
+            const f = frames[i];
+            const o = i * 2;
+            const minU = f.left / texW;
+            const maxU = f.right / texW;
+            const topV = f.top / texH;
+            const bottomV = f.bottom / texH;
+
+            mins[o + 0] = minU;
+            mins[o + 1] = flipY ? bottomV : topV;
+            maxs[o + 0] = maxU;
+            maxs[o + 1] = flipY ? topV : bottomV;
+        }
+
+        return { uvMins: mins, uvMaxs: maxs };
     }
 
     private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
@@ -478,6 +557,14 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
                         shaderLocation: 4,
                         offset: 20,
                         format: 'unorm8x4',
+                    }, {
+                        shaderLocation: 5,
+                        offset: 24,
+                        format: 'float32x2',
+                    }, {
+                        shaderLocation: 6,
+                        offset: 32,
+                        format: 'float32x2',
                     }],
                 }],
             },

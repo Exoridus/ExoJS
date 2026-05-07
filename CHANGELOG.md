@@ -265,15 +265,83 @@ system.scaleX[slot] = 1;
 system.scaleY[slot] = 1;
 ```
 
-### Changed — `ParticleSystem` constructor takes options object
+### Changed — `ParticleSystem` constructor: options-only (BREAKING)
+
+The constructor now takes a single `ParticleSystemOptions` object — no
+positional `texture` argument. Texture, capacity, atlas frames, and the
+test-only `device` override all live in the same place:
 
 ```ts
-new ParticleSystem(texture);                                       // CPU mode, capacity 4096
-new ParticleSystem(texture, 8192);                                 // CPU mode, explicit capacity (back-compat)
-new ParticleSystem(texture, { capacity: 8192 });                   // CPU mode, options
-new ParticleSystem(texture, { capacity, backend: app.backend });   // auto-route CPU/GPU
-new ParticleSystem(texture, { capacity, device: someGpuDevice });  // direct device, bypasses backend check (for tests / advanced)
+// 0.7.x and Phase 3 of 0.8.0 (work-in-progress, never released):
+new ParticleSystem(texture);
+new ParticleSystem(texture, 4096);
+new ParticleSystem(texture, { capacity: 4096, backend: app.backend });
+
+// 0.8.0 final:
+new ParticleSystem();                                              // untextured (1×1 white default), CPU/GPU auto-routed
+new ParticleSystem({ texture: spark });                            // simple textured particles
+new ParticleSystem({ texture: spark, capacity: 8192 });            // explicit capacity
+new ParticleSystem({ texture: atlas, frames: rectangles });        // multi-frame atlas
+new ParticleSystem({ spritesheet: sheet });                        // shorthand: extract texture + frames
+new ParticleSystem({ texture, device: mockGpuDevice });            // tests / advanced device-bypass
 ```
+
+**No `backend` option** — the renderer auto-discovers the active backend
+on the first `render(backend)` call. WebGPU → GPU compute path, WebGL2 →
+CPU path. Re-discovery on backend change (device-loss recovery).
+
+### Added — Optional texture + 1×1 white default
+
+When `texture` is omitted, the system uses a lazily-allocated 1×1
+opaque-white singleton. Particles render as solid color quads driven by
+the per-particle `color` channel. Useful for tech-demo magic effects,
+abstract VFX, performance benchmarks.
+
+### Added — Multi-frame atlas via `frames` / `spritesheet` options
+
+`frames: ReadonlyArray<Rectangle>` declares per-particle frame
+rectangles within the atlas texture. Each particle's `textureIndex[i]`
+selects which frame to render — `RateSpawn` /
+`BurstSpawn`'s `textureIndex: Distribution<number>` becomes the per-spawn
+frame chooser:
+
+```ts
+const system = new ParticleSystem({
+    texture: explosionAtlas,
+    frames: [
+        new Rectangle(0,   0, 32, 32),  // index 0 — flame core
+        new Rectangle(32,  0, 32, 32),  // index 1 — smoke ring
+        new Rectangle(64,  0, 32, 32),  // index 2 — ember
+    ],
+});
+
+system.addSpawnModule(new BurstSpawn({
+    schedule: [{ time: 0, count: 60 }],
+    velocity: ConeDirection.omni(120, 280),
+    textureIndex: new Range(0, 2),       // each spawn picks a random frame
+}));
+```
+
+`Spritesheet` integration via `spritesheet: sheet` extracts texture +
+frames in insertion order — convenient for atlas authors who already
+have a sheet from a TexturePacker / Aseprite export.
+
+UV resolution happens once per particle per frame (CPU pack in CPU mode,
+compute shader in GPU mode); the renderer reads pre-resolved UVs from
+the instance buffer — no shader-side frame-array lookup overhead.
+
+### Changed — Per-instance vertex layout: 24 → 40 bytes
+
+The renderer's per-instance buffer now carries `uvMin: vec2` and
+`uvMax: vec2` alongside the existing translation/scale/rotation/color
+fields. Lets a single batch render any mix of atlas frames per instance
+without indirection through a uniform array. Net cost: +67% bandwidth
+on the instance buffer (still trivial — ~10 MB/s at 60 fps with 16k
+particles).
+
+The previous design used a single `u_uvBounds` uniform that pinned
+every particle in a system to the same frame; the new layout is what
+makes per-particle atlas selection free.
 
 The system pre-allocates all SoA arrays at construction. Spawn modules
 that want to emit beyond capacity get `-1` from `spawn()` and should

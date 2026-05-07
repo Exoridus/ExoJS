@@ -2,16 +2,17 @@
 precision lowp float;
 precision lowp int;
 
-// Per-instance attributes (one entry per particle, 24 bytes total).
+// Per-instance attributes (one entry per particle, 40 bytes total).
 layout(location = 0) in vec2 a_translation;     // particle position in system-local space
 layout(location = 1) in vec2 a_scale;            // particle scale
 layout(location = 2) in float a_rotation;        // particle rotation in degrees
 layout(location = 3) in vec4 a_color;            // RGBA tint
+layout(location = 4) in vec2 a_uvMin;            // top-left UV (u, v) — pre-resolved per instance
+layout(location = 5) in vec2 a_uvMax;            // bottom-right UV (u, v) — pre-resolved per instance
 
 uniform mat3 u_projection;
 uniform mat3 u_systemTransform;
 uniform vec4 u_localBounds;                      // left, top, right, bottom (system.vertices)
-uniform vec4 u_uvBounds;                         // uMin, vMin, uMax, vMax (flipY-swapped)
 
 out vec2 v_texcoord;
 out vec4 v_color;
@@ -37,8 +38,8 @@ void main(void) {
 
     gl_Position = vec4((u_projection * u_systemTransform * worldPos).xy, 0.0, 1.0);
 
-    float u = (cornerX == 0) ? u_uvBounds.x : u_uvBounds.z;
-    float v = (cornerY == 0) ? u_uvBounds.y : u_uvBounds.w;
+    float u = (cornerX == 0) ? a_uvMin.x : a_uvMax.x;
+    float v = (cornerY == 0) ? a_uvMin.y : a_uvMax.y;
     v_texcoord = vec2(u, v);
 
     v_color = vec4(a_color.rgb * a_color.a, a_color.a);

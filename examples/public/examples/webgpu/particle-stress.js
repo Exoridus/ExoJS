@@ -115,9 +115,9 @@ app.start(new class extends Scene {
         }));
     }
     _buildSystem(config) {
-        const system = new ParticleSystem(this._sharedTexture, {
+        const system = new ParticleSystem({
+            texture: this._sharedTexture,
             capacity: 4096,
-            backend: this.app.backend,
         });
 
         system.setPosition(config.x, config.y);

@@ -3,9 +3,10 @@
 import { Rectangle } from '@/math/Rectangle';
 import type { Time } from '@/core/Time';
 import { Drawable } from '@/rendering/Drawable';
-import type { Texture } from '@/rendering/texture/Texture';
+import { Texture } from '@/rendering/texture/Texture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+import type { Spritesheet } from '@/rendering/sprite/Spritesheet';
 import type { SpawnModule } from './modules/SpawnModule';
 import type { UpdateModule } from './modules/UpdateModule';
 import type { DeathModule } from './modules/DeathModule';
@@ -13,27 +14,68 @@ import { ParticleGpuState } from './gpu/ParticleGpuState';
 
 const defaultCapacity = 4096;
 
+/**
+ * Lazily-initialised 1×1 opaque-white texture used as the default sprite
+ * when a {@link ParticleSystem} is constructed without one. Particles
+ * render as solid color quads (the per-particle `color` channel times
+ * white-with-alpha-1). Shared across systems to avoid wasted texture
+ * allocations.
+ */
+let defaultWhiteTexture: Texture | null = null;
+const getDefaultWhiteTexture = (): Texture => {
+    if (defaultWhiteTexture === null) {
+        const canvas = document.createElement('canvas');
+
+        canvas.width = 1;
+        canvas.height = 1;
+
+        const ctx = canvas.getContext('2d');
+
+        if (ctx !== null) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 1, 1);
+        }
+
+        defaultWhiteTexture = new Texture(canvas);
+    }
+
+    return defaultWhiteTexture;
+};
+
 /** Options for {@link ParticleSystem}'s constructor. */
 export interface ParticleSystemOptions {
     /** Maximum particle count. Fixed at construction. Default 4096. */
     capacity?: number;
     /**
-     * Render backend reference. When supplied AND the backend is a
-     * `WebGpuBackend` AND every registered {@link UpdateModule} has a
-     * `wgsl()` implementation, the system runs the simulation on the GPU
-     * via a composite compute pipeline. Otherwise the system runs the
-     * simulation on the CPU using each module's `apply()` method.
-     *
-     * Backend-binding is finalised on the **first** call to {@link update}
-     * — register all spawn / update / death modules before then. Adding
-     * an update module after that throws.
+     * Sprite texture for every rendered particle. Optional — when omitted,
+     * the system uses a 1×1 opaque-white default and particles render as
+     * solid-color quads driven by the per-particle `color` channel.
      */
-    backend?: RenderBackend;
+    texture?: Texture;
     /**
-     * Direct GPU device, bypassing the {@link backend} duck-type check.
-     * Useful for tests with mocked devices and for advanced scenarios
-     * where the device is owned outside an ExoJS `Application`. Mutually
-     * exclusive with {@link backend} — `device` wins if both are set.
+     * Atlas-frame rectangles. When supplied, each particle's `textureIndex`
+     * value selects which frame to render — `RateSpawn` /
+     * `BurstSpawn`'s `textureIndex: Distribution<number>` becomes the
+     * per-spawn frame chooser. Indices outside `[0, frames.length)` clamp
+     * to 0.
+     *
+     * When omitted, the system treats the whole texture as one frame
+     * (legacy single-frame behaviour). Mutually exclusive with
+     * {@link spritesheet} — pass one or the other.
+     */
+    frames?: ReadonlyArray<Rectangle>;
+    /**
+     * Convenience: pull `texture` and `frames` from a {@link Spritesheet}
+     * in insertion order. Equivalent to passing `{ texture: sheet.texture,
+     * frames: [...sheet.frames.values()] }`.
+     */
+    spritesheet?: Spritesheet;
+    /**
+     * Direct GPU device. Lets advanced consumers wire a `GPUDevice` owned
+     * outside an `Application` (or a mock device in tests). When omitted,
+     * the backend reference is captured automatically on the first
+     * {@link render} call — `WebGpuBackend` ⇒ GPU mode, anything else
+     * (incl. WebGL2) ⇒ CPU mode.
      */
     device?: GPUDevice;
 }
@@ -133,7 +175,7 @@ export class ParticleSystem extends Drawable {
     private readonly _updateModules: Array<UpdateModule> = [];
     private readonly _deathModules: Array<DeathModule> = [];
 
-    private readonly _backend: RenderBackend | null = null;
+    private _backend: RenderBackend | null = null;
     private readonly _device: GPUDevice | null = null;
     private _gpuState: ParticleGpuState | null = null;
     private _gpuMode = false;
@@ -141,18 +183,17 @@ export class ParticleSystem extends Drawable {
     private _spawnHint = 0;        // round-robin pointer for first-dead lookup in GPU mode
 
     private _texture: Texture;
+    private readonly _frames: Array<Rectangle> = [];
     private readonly _textureFrame: Rectangle = new Rectangle();
     private readonly _vertices: Float32Array = new Float32Array(4);
     private readonly _texCoords: Uint32Array = new Uint32Array(4);
     private _updateTexCoords = true;
     private _updateVertices = true;
 
-    public constructor(texture: Texture, options: ParticleSystemOptions | number = {}) {
+    public constructor(options: ParticleSystemOptions = {}) {
         super();
 
-        // Back-compat: a bare `number` second arg is treated as `capacity`.
-        const opts: ParticleSystemOptions = typeof options === 'number' ? { capacity: options } : options;
-        const capacity = opts.capacity ?? defaultCapacity;
+        const capacity = options.capacity ?? defaultCapacity;
 
         if (capacity <= 0 || !Number.isInteger(capacity)) {
             throw new Error(`ParticleSystem capacity must be a positive integer (got ${capacity}).`);
@@ -173,9 +214,26 @@ export class ParticleSystem extends Drawable {
         this.textureIndex = new Uint16Array(capacity);
         this.alive = new Uint8Array(capacity);
 
-        this._backend = opts.backend ?? null;
-        this._device = opts.device ?? null;
-        this._texture = texture;
+        this._device = options.device ?? null;
+
+        // Resolve texture + frames. Mutually exclusive: spritesheet wins
+        // when both are passed (with a defensive override of texture).
+        let texture = options.texture ?? null;
+        let frames: ReadonlyArray<Rectangle> | null = options.frames ?? null;
+
+        if (options.spritesheet) {
+            texture = options.spritesheet.texture;
+            frames = [...options.spritesheet.frames.values()];
+        }
+
+        this._texture = texture ?? getDefaultWhiteTexture();
+
+        if (frames !== null) {
+            for (const frame of frames) {
+                this._frames.push(frame.clone());
+            }
+        }
+
         this.resetTextureFrame();
     }
 
@@ -193,6 +251,20 @@ export class ParticleSystem extends Drawable {
 
     public set textureFrame(frame: Rectangle) {
         this.setTextureFrame(frame);
+    }
+
+    /**
+     * Atlas frames declared on this system, or empty when the texture is
+     * used as a single frame. Each particle's `textureIndex[i]` selects
+     * an entry from this list; out-of-range indices are clamped to 0.
+     */
+    public get frames(): ReadonlyArray<Rectangle> {
+        return this._frames;
+    }
+
+    /** `true` when the system declares more than one atlas frame. */
+    public get hasAtlas(): boolean {
+        return this._frames.length > 1;
     }
 
     public get vertices(): Float32Array {
@@ -372,6 +444,28 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /**
+     * Engine-side render hook. Captures the active backend on each call so
+     * the next `update()` can compile a GPU pipeline if the backend turned
+     * out to be `WebGpuBackend`. Re-captures and rebuilds when the backend
+     * reference changes (e.g. after device-loss recovery).
+     */
+    public override render(backend: RenderBackend): this {
+        if (this._backend !== backend) {
+            this._backend = backend;
+
+            if (this._gpuState !== null) {
+                this._gpuState.destroy();
+                this._gpuState = null;
+            }
+
+            this._gpuMode = false;
+            this._compiled = false;
+        }
+
+        return super.render(backend);
+    }
+
     /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */
     public update(delta: Time): this {
         if (!this._compiled) {
@@ -406,6 +500,11 @@ export class ParticleSystem extends Drawable {
             this._gpuState = null;
         }
 
+        for (const frame of this._frames) {
+            frame.destroy();
+        }
+        this._frames.length = 0;
+
         this._gpuMode = false;
         this._compiled = false;
         this.liveCount = 0;
@@ -429,7 +528,7 @@ export class ParticleSystem extends Drawable {
             return;
         }
 
-        this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules);
+        this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules, this._frames, this._texture);
         this._gpuMode = true;
     }
 

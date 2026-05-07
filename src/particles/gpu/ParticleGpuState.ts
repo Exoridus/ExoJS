@@ -1,5 +1,7 @@
 /// <reference types="@webgpu/types" />
 
+import type { Rectangle } from '@/math/Rectangle';
+import type { Texture } from '@/rendering/texture/Texture';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
 import type { UpdateModule } from '@/particles/modules/UpdateModule';
 import type { WgslContribution, WgslUniformField } from '@/particles/modules/WgslContribution';
@@ -8,32 +10,29 @@ import { wgslUniformByteSize } from '@/particles/modules/WgslContribution';
 /**
  * GPU-side mirror of one {@link ParticleSystem}. Owns:
  *
- * - **7 packed storage buffers** for the per-particle SoA data. Channels are
- *   combined into `vec2<f32>`-typed buffers (positions, velocities, scales,
- *   rotInfo = rotation+rotationSpeed, timing = elapsed+lifetime) to fit the
- *   `maxStorageBuffersPerShaderStage = 8` default WebGPU limit.
- * - **One uniform buffer** per system carrying `dt` + `liveCount`.
- * - **One uniform buffer** per system carrying packed module configs (each
- *   registered {@link UpdateModule}'s `wgsl()` declaration contributes a
- *   struct field; the system writes new values per frame).
+ * - **8 packed storage buffers** for the per-particle SoA data:
+ *   positions/velocities/scales/rotInfo/timing as `vec2<f32>`, color and
+ *   textureIndex as `u32`, plus the instance output buffer. Sits at the
+ *   default WebGPU `maxStorageBuffersPerShaderStage = 8` limit.
+ * - **One uniform buffer** for sim state (`dt`, `liveCount`).
+ * - **One uniform buffer** for module configs (concatenated per-module
+ *   structs with WGSL std140-ish alignment).
+ * - **One uniform buffer** for frame UVs — `array<vec4<f32>, N>` where N
+ *   is the system's frame count (or 1 when no atlas is declared). Each
+ *   vec4 is `(uvMinX, uvMinY, uvMaxX, uvMaxY)` already flipY-adjusted.
  * - **N 1D textures** for modules that use lookup tables (Curve / Gradient).
- * - **Instance output buffer** with `STORAGE | VERTEX` usage — written by
- *   the compute shader's pack-instances step, then bound directly as the
- *   particle renderer's per-instance vertex source. **No CPU readback.**
  * - **Composite compute pipeline** built once at construction by
- *   concatenating the integration step, all registered module bodies, and
+ *   concatenating the integration step + every registered module body +
  *   the pack-instances step into a single shader.
  *
- * The system uploads its CPU SoA to GPU once per frame (deltas only would
- * require change tracking the modules don't provide), dispatches compute,
- * and the renderer reads from {@link instanceBuffer} directly. CPU-side
- * `posX[i]`, `velX[i]`, etc. are kept up to date for spawn writes only —
- * after the first GPU dispatch, GPU is the source of truth for position /
- * velocity / scale / rotation / color in the live range.
+ * The compute shader's pack-instances step reads `textureIndex[i]`, looks
+ * up the matching frame UV, and writes a 40-byte interleaved record into
+ * the instance output buffer (`STORAGE | VERTEX`). The renderer binds that
+ * buffer directly as instanced vertex source — no readback.
  */
 
 const workgroupSize = 64;
-const instanceBytes = 24;        // 5 × f32 + 1 × u32
+const instanceBytes = 40;        // 5 × f32 + 1 × u32 + 4 × f32 (uvMin.xy, uvMax.xy)
 
 interface ModuleSlot {
     module: UpdateModule;
@@ -55,6 +54,7 @@ export class ParticleGpuState {
     private readonly _rotInfo: GPUBuffer;
     private readonly _timing: GPUBuffer;
     private readonly _color: GPUBuffer;
+    private readonly _textureIndex: GPUBuffer;
 
     private readonly _simUniformBuffer: GPUBuffer;
     private readonly _simUniformData: ArrayBuffer = new ArrayBuffer(16);
@@ -65,6 +65,11 @@ export class ParticleGpuState {
     private readonly _moduleUniformView: DataView | null;
     private readonly _moduleSlots: ReadonlyArray<ModuleSlot>;
 
+    private readonly _framesUniformBuffer: GPUBuffer;
+    private readonly _framesUniformData: ArrayBuffer;
+    private readonly _framesUniformView: Float32Array;
+    private readonly _frameCount: number;
+
     private readonly _moduleTextures: Map<string, GPUTexture> = new Map();
     private readonly _sampler: GPUSampler;
 
@@ -72,31 +77,33 @@ export class ParticleGpuState {
     private readonly _bindGroup0: GPUBindGroup;
     private readonly _bindGroup1: GPUBindGroup;
 
-    // CPU-side staging arrays for pack-and-upload of SoA each frame.
     private readonly _packedPositions: Float32Array;
     private readonly _packedVelocities: Float32Array;
     private readonly _packedScales: Float32Array;
     private readonly _packedRotInfo: Float32Array;
     private readonly _packedTiming: Float32Array;
+    private readonly _packedTextureIndex: Uint32Array;
 
-    public constructor(device: GPUDevice, capacity: number, modules: ReadonlyArray<UpdateModule>) {
+    public constructor(
+        device: GPUDevice,
+        capacity: number,
+        modules: ReadonlyArray<UpdateModule>,
+        frames: ReadonlyArray<Rectangle>,
+        texture: Texture,
+    ) {
         this.device = device;
         this.capacity = capacity;
 
-        // Validate: every module must have wgsl(). Caller (ParticleSystem)
-        // is supposed to filter, but a defensive check here surfaces the
-        // contract clearly.
         for (const m of modules) {
             if (!m.wgsl) {
                 throw new Error(
                     `ParticleGpuState: module ${m.constructor.name} has no wgsl() — `
-                    + 'all registered UpdateModules must be GPU-eligible. '
-                    + 'ParticleSystem must use CPU mode if any custom CPU-only module is registered.',
+                    + 'all registered UpdateModules must be GPU-eligible.',
                 );
             }
         }
 
-        // Compute module uniform layout.
+        // Module uniform layout.
         const slots: Array<ModuleSlot> = [];
         let uniformOffset = 0;
 
@@ -105,7 +112,6 @@ export class ParticleGpuState {
             const fields = c.uniforms ?? [];
             const size = wgslUniformByteSize(fields);
 
-            // Each module struct is 16-byte aligned within ModuleUniforms struct.
             uniformOffset = Math.ceil(uniformOffset / 16) * 16;
 
             slots.push({
@@ -136,7 +142,17 @@ export class ParticleGpuState {
             this._moduleUniformBuffer = null;
         }
 
-        // Allocate packed storage buffers. Each vec2 entry = 8 bytes.
+        // Frames uniform buffer.
+        this._frameCount = Math.max(1, frames.length);
+        this._framesUniformData = new ArrayBuffer(this._frameCount * 16);
+        this._framesUniformView = new Float32Array(this._framesUniformData);
+        this._framesUniformBuffer = device.createBuffer({
+            label: 'particle-frames-uniforms',
+            size: this._framesUniformData.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this._writeFrames(frames, texture);
+
         const vec2Bytes = capacity * 8;
         const u32Bytes = capacity * 4;
 
@@ -146,24 +162,21 @@ export class ParticleGpuState {
         this._rotInfo = device.createBuffer({ label: 'particle-rotInfo', size: vec2Bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
         this._timing = device.createBuffer({ label: 'particle-timing', size: vec2Bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
         this._color = device.createBuffer({ label: 'particle-color', size: u32Bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+        this._textureIndex = device.createBuffer({ label: 'particle-textureIndex', size: u32Bytes, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
 
-        // Instance output: 24 bytes per particle (5 f32 + 1 u32). VERTEX
-        // usage so the particle renderer can bind it as instanced vertex
-        // attributes without copying.
         this.instanceBuffer = device.createBuffer({
             label: 'particle-instance-output',
             size: capacity * instanceBytes,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
 
-        // CPU staging arrays.
         this._packedPositions = new Float32Array(capacity * 2);
         this._packedVelocities = new Float32Array(capacity * 2);
         this._packedScales = new Float32Array(capacity * 2);
         this._packedRotInfo = new Float32Array(capacity * 2);
         this._packedTiming = new Float32Array(capacity * 2);
+        this._packedTextureIndex = new Uint32Array(capacity);
 
-        // Sim uniforms.
         this._simUniformView = new DataView(this._simUniformData);
         this._simUniformBuffer = device.createBuffer({
             label: 'particle-sim-uniforms',
@@ -171,7 +184,6 @@ export class ParticleGpuState {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
-        // Sampler shared by all texture-using modules.
         this._sampler = device.createSampler({
             label: 'particle-lookup-sampler',
             minFilter: 'linear',
@@ -198,10 +210,8 @@ export class ParticleGpuState {
             }
         }
 
-        // Build composite shader.
         const wgsl = this._buildShader(slots);
 
-        // Bind group 0: uniforms + textures.
         const bindGroup0Layout = this._buildBindGroup0Layout(slots);
         const bindGroup1Layout = device.createBindGroupLayout({
             label: 'particle-soa-bgl',
@@ -213,6 +223,7 @@ export class ParticleGpuState {
                 { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
                 { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
                 { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+                { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
             ],
         });
 
@@ -246,13 +257,12 @@ export class ParticleGpuState {
                 { binding: 3, resource: { buffer: this._rotInfo } },
                 { binding: 4, resource: { buffer: this._timing } },
                 { binding: 5, resource: { buffer: this._color } },
-                { binding: 6, resource: { buffer: this.instanceBuffer } },
+                { binding: 6, resource: { buffer: this._textureIndex } },
+                { binding: 7, resource: { buffer: this.instanceBuffer } },
             ],
         });
 
-        // Modules upload their lookup textures. Each module gets a subset
-        // map keyed by the texture's local `name` (without the module-key
-        // prefix) for ergonomic lookups inside the module's body.
+        // Modules upload their lookup textures.
         for (const slot of slots) {
             if (!slot.module.uploadTextures) continue;
 
@@ -270,13 +280,6 @@ export class ParticleGpuState {
         }
     }
 
-    /**
-     * Pack CPU SoA into staging arrays, upload to GPU, write module
-     * uniforms, dispatch the compute pipeline. After this returns, the
-     * GPU's {@link instanceBuffer} holds the rendered-ready interleaved
-     * vertex data — the particle renderer can bind it directly without
-     * any further CPU touchpoint.
-     */
     public dispatch(system: ParticleSystem, dt: number): void {
         const liveCount = system.liveCount;
 
@@ -307,8 +310,10 @@ export class ParticleGpuState {
         this._rotInfo.destroy();
         this._timing.destroy();
         this._color.destroy();
+        this._textureIndex.destroy();
         this.instanceBuffer.destroy();
         this._simUniformBuffer.destroy();
+        this._framesUniformBuffer.destroy();
         this._moduleUniformBuffer?.destroy();
 
         for (const tex of this._moduleTextures.values()) {
@@ -318,12 +323,44 @@ export class ParticleGpuState {
         this._moduleTextures.clear();
     }
 
+    private _writeFrames(frames: ReadonlyArray<Rectangle>, texture: Texture): void {
+        const view = this._framesUniformView;
+        const w = texture.width;
+        const h = texture.height;
+        const flipY = texture.flipY;
+
+        if (frames.length === 0) {
+            // Single-frame fallback — full texture.
+            view[0] = 0;
+            view[1] = flipY ? 1 : 0;
+            view[2] = 1;
+            view[3] = flipY ? 0 : 1;
+        } else {
+            for (let i = 0; i < frames.length; i++) {
+                const f = frames[i];
+                const o = i * 4;
+                const minU = f.left / w;
+                const maxU = f.right / w;
+                const topV = f.top / h;
+                const bottomV = f.bottom / h;
+
+                view[o + 0] = minU;
+                view[o + 1] = flipY ? bottomV : topV;
+                view[o + 2] = maxU;
+                view[o + 3] = flipY ? topV : bottomV;
+            }
+        }
+
+        this.device.queue.writeBuffer(this._framesUniformBuffer, 0, this._framesUniformData);
+    }
+
     private _packAndUpload(system: ParticleSystem, liveCount: number): void {
         const packedPos = this._packedPositions;
         const packedVel = this._packedVelocities;
         const packedScale = this._packedScales;
         const packedRot = this._packedRotInfo;
         const packedTime = this._packedTiming;
+        const packedTexIdx = this._packedTextureIndex;
 
         for (let i = 0; i < liveCount; i++) {
             const o = i * 2;
@@ -338,6 +375,7 @@ export class ParticleGpuState {
             packedRot[o + 1] = system.rotationSpeeds[i];
             packedTime[o + 0] = system.elapsed[i];
             packedTime[o + 1] = system.lifetime[i];
+            packedTexIdx[i] = system.textureIndex[i];
         }
 
         const vec2Bytes = liveCount * 8;
@@ -350,6 +388,7 @@ export class ParticleGpuState {
         queue.writeBuffer(this._rotInfo, 0, packedRot.buffer as ArrayBuffer, 0, vec2Bytes);
         queue.writeBuffer(this._timing, 0, packedTime.buffer as ArrayBuffer, 0, vec2Bytes);
         queue.writeBuffer(this._color, 0, system.color.buffer as ArrayBuffer, 0, u32Bytes);
+        queue.writeBuffer(this._textureIndex, 0, packedTexIdx.buffer as ArrayBuffer, 0, u32Bytes);
     }
 
     private _writeSimUniforms(dt: number, liveCount: number): void {
@@ -373,13 +412,14 @@ export class ParticleGpuState {
     private _buildBindGroup0Layout(slots: ReadonlyArray<ModuleSlot>): GPUBindGroupLayout {
         const entries: Array<GPUBindGroupLayoutEntry> = [
             { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+            { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
         ];
 
         if (this._moduleUniformBuffer !== null) {
-            entries.push({ binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } });
+            entries.push({ binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } });
         }
 
-        let textureBindingIdx = 2;
+        let textureBindingIdx = this._moduleUniformBuffer !== null ? 3 : 2;
 
         for (const slot of slots) {
             for (const _t of slot.contribution.textures ?? []) {
@@ -402,13 +442,14 @@ export class ParticleGpuState {
     private _buildBindGroup0(layout: GPUBindGroupLayout, slots: ReadonlyArray<ModuleSlot>): GPUBindGroup {
         const entries: Array<GPUBindGroupEntry> = [
             { binding: 0, resource: { buffer: this._simUniformBuffer } },
+            { binding: 1, resource: { buffer: this._framesUniformBuffer } },
         ];
 
         if (this._moduleUniformBuffer !== null) {
-            entries.push({ binding: 1, resource: { buffer: this._moduleUniformBuffer } });
+            entries.push({ binding: 2, resource: { buffer: this._moduleUniformBuffer } });
         }
 
-        let textureBindingIdx = 2;
+        let textureBindingIdx = this._moduleUniformBuffer !== null ? 3 : 2;
 
         for (const slot of slots) {
             for (const t of slot.contribution.textures ?? []) {
@@ -433,10 +474,14 @@ struct SimUniforms {
     _pad1: u32,
 }
 
+struct FrameUniforms {
+    frames: array<vec4<f32>, ${this._frameCount}>,
+}
+
 @group(0) @binding(0) var<uniform> sim: SimUniforms;
+@group(0) @binding(1) var<uniform> frameUv: FrameUniforms;
         `);
 
-        // Module uniform structs and combined ModuleUniforms.
         const moduleStructFields: Array<string> = [];
 
         for (const slot of slots) {
@@ -457,12 +502,11 @@ struct ModuleUniforms {
 ${moduleStructFields.map((s) => `    ${s}`).join('\n')}
 }
 
-@group(0) @binding(1) var<uniform> modules: ModuleUniforms;
+@group(0) @binding(2) var<uniform> modules: ModuleUniforms;
             `);
         }
 
-        // Texture bindings.
-        let textureBindingIdx = 2;
+        let textureBindingIdx = moduleStructFields.length > 0 ? 3 : 2;
 
         for (const slot of slots) {
             for (const t of slot.contribution.textures ?? []) {
@@ -473,7 +517,6 @@ ${moduleStructFields.map((s) => `    ${s}`).join('\n')}
             }
         }
 
-        // Group(1): SoA storage + instance output.
         sections.push(`
 @group(1) @binding(0) var<storage, read_write> positions: array<vec2<f32>>;
 @group(1) @binding(1) var<storage, read_write> velocities: array<vec2<f32>>;
@@ -481,11 +524,12 @@ ${moduleStructFields.map((s) => `    ${s}`).join('\n')}
 @group(1) @binding(3) var<storage, read_write> rotInfo: array<vec2<f32>>;
 @group(1) @binding(4) var<storage, read_write> timing: array<vec2<f32>>;
 @group(1) @binding(5) var<storage, read_write> color: array<u32>;
-@group(1) @binding(6) var<storage, read_write> instanceOutput: array<u32>;
+@group(1) @binding(6) var<storage, read>       textureIndex: array<u32>;
+@group(1) @binding(7) var<storage, read_write> instanceOutput: array<u32>;
         `);
 
-        // Main: integration → modules → pack-instances.
         const moduleBodies = slots.map((s) => s.contribution.body).join('\n');
+        const frameCountConst = this._frameCount;
 
         sections.push(`
 @compute @workgroup_size(${workgroupSize})
@@ -498,13 +542,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     // Skip dead particles (lifetime sentinel < 0). Write zero-scale instance
     // so the renderer doesn't accidentally draw them.
     if (timing[idx].y < 0.0) {
-        let outBase = idx * 6u;
-        instanceOutput[outBase + 0u] = 0u;
-        instanceOutput[outBase + 1u] = 0u;
-        instanceOutput[outBase + 2u] = 0u;
-        instanceOutput[outBase + 3u] = 0u;
-        instanceOutput[outBase + 4u] = 0u;
-        instanceOutput[outBase + 5u] = 0u;
+        let outBaseDead = idx * 10u;
+        for (var k: u32 = 0u; k < 10u; k++) { instanceOutput[outBaseDead + k] = 0u; }
         return;
     }
 
@@ -516,14 +555,23 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     // Module bodies (in registration order).
 ${moduleBodies}
 
-    // Pack interleaved instance data: x, y, scaleX, scaleY, rotation (f32), color (u32).
-    let outBase = idx * 6u;
+    // Resolve frame UVs.
+    let frameIndex = min(textureIndex[idx], ${frameCountConst}u - 1u);
+    let frameUvBounds = frameUv.frames[frameIndex];
+
+    // Pack interleaved instance data (10 u32s per particle):
+    //   x, y, scaleX, scaleY, rotation (f32×5) + color (u32) + uvMin.xy (f32×2) + uvMax.xy (f32×2)
+    let outBase = idx * 10u;
     instanceOutput[outBase + 0u] = bitcast<u32>(positions[idx].x);
     instanceOutput[outBase + 1u] = bitcast<u32>(positions[idx].y);
     instanceOutput[outBase + 2u] = bitcast<u32>(scales[idx].x);
     instanceOutput[outBase + 3u] = bitcast<u32>(scales[idx].y);
     instanceOutput[outBase + 4u] = bitcast<u32>(rotInfo[idx].x);
     instanceOutput[outBase + 5u] = color[idx];
+    instanceOutput[outBase + 6u] = bitcast<u32>(frameUvBounds.x);
+    instanceOutput[outBase + 7u] = bitcast<u32>(frameUvBounds.y);
+    instanceOutput[outBase + 8u] = bitcast<u32>(frameUvBounds.z);
+    instanceOutput[outBase + 9u] = bitcast<u32>(frameUvBounds.w);
 }
         `);
 

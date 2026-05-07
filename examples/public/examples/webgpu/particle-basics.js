@@ -67,9 +67,11 @@ app.start(new class extends Scene {
     init() {
         const { width, height } = this.app.canvas;
 
-        this._particleSystem = new ParticleSystem(createParticleTexture(), {
+        // Backend auto-detected on first render(); WebGPU → GPU compute path,
+        // WebGL2 → CPU path. No explicit configuration needed here.
+        this._particleSystem = new ParticleSystem({
+            texture: createParticleTexture(),
             capacity: 4096,
-            backend: this.app.backend,    // auto-engages GPU compute when WebGPU + all modules are GPU-eligible
         });
         this._particleSystem.setPosition(width / 2, height * 0.82);
 

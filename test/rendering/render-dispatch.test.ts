@@ -117,7 +117,7 @@ describe('render dispatch', () => {
 
     test('ParticleSystem.render submits through runtime.draw', () => {
         const { runtime, draw } = createRuntime();
-        const system = new ParticleSystem(createTexture());
+        const system = new ParticleSystem({ texture: createTexture() });
 
         system.render(runtime);
 
