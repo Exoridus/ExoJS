@@ -23,13 +23,13 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@astrojs/lit": "^4.3.0",
-    "@types/node": "^22.19.17",
-    "astro": "^6.2.1",
+    "@types/node": "^25.6.0",
+    "astro": "^6.3.0",
     "lit": "^3.3.2",
     "playwright": "^1.59.1",
     "sass": "^1.99.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

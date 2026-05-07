@@ -5,7 +5,6 @@ import type { Time } from '@/core/Time';
 import { Drawable } from '@/rendering/Drawable';
 import { Texture } from '@/rendering/texture/Texture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
-import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import { Spritesheet } from '@/rendering/sprite/Spritesheet';
 import type { SpawnModule } from './modules/SpawnModule';
 import type { UpdateModule } from './modules/UpdateModule';
@@ -522,8 +521,12 @@ export class ParticleSystem extends Drawable {
     private _compile(): void {
         this._compiled = true;
 
-        const device = this._device
-            ?? (this._backend instanceof WebGpuBackend ? this._backend.device : null);
+        // Duck-typed `instanceof WebGpuBackend` — avoids importing the
+        // backend class (which registers a renderer for ParticleSystem
+        // and would create a circular dependency). WebGl2Backend has no
+        // `device` field, so this naturally falls back to CPU mode.
+        const backendDevice = (this._backend as { device?: GPUDevice } | null)?.device ?? null;
+        const device = this._device ?? backendDevice;
 
         if (device === null) {
             return;
