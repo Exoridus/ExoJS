@@ -8,16 +8,22 @@ import type { CacheStore } from './CacheStore';
  * Useful for assets that must always be fresh (e.g. live configuration files)
  * or for environments where persistent storage is unavailable. The `stores`
  * argument is accepted but intentionally ignored.
+ *
+ * Returns the fully constructed resource — callers do not need to call
+ * {@link AssetFactory.create} again.
  */
 export class NetworkOnlyStrategy implements CacheStrategy {
 
     public async resolve(request: CacheRequest, _stores: ReadonlyArray<CacheStore>): Promise<unknown> {
-        const response = await fetch(request.url, request.requestOptions);
+        const { url, requestOptions, factory, options } = request;
+        const response = await fetch(url, requestOptions);
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch "${request.url}" (${response.status} ${response.statusText}).`);
+            throw new Error(`Failed to fetch "${url}" (${response.status} ${response.statusText}).`);
         }
 
-        return request.factory.process(response);
+        const source = await factory.process(response);
+
+        return factory.create(source, options);
     }
 }

@@ -3,7 +3,8 @@ import type { SamplerOptions } from '@/rendering/texture/Sampler';
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 import { determineMimeType } from '@/resources/utils';
 
-interface TextureFactoryOptions {
+/** Construction options for {@link TextureFactory.create}. */
+export interface TextureFactoryOptions {
     /**
      * MIME type for the intermediate blob. Inferred from magic bytes when
      * omitted.

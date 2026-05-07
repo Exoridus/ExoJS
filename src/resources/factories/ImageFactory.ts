@@ -1,7 +1,8 @@
 import { determineMimeType } from '@/resources/utils';
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
-interface ImageFactoryOptions {
+/** Construction options for {@link ImageFactory.create}. */
+export interface ImageFactoryOptions {
     /**
      * MIME type used when constructing the intermediate {@link Blob}. When
      * omitted the type is inferred from the buffer's magic bytes via

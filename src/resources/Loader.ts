@@ -18,9 +18,11 @@ import { BinaryFactory } from './factories/BinaryFactory';
 import { WasmFactory } from './factories/WasmFactory';
 import { VttFactory } from './factories/VttFactory';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
+import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import type { CacheStore } from './CacheStore';
+import type { CacheStrategy } from './CacheStrategy';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 
 // ---------------------------------------------------------------------------
@@ -56,14 +58,17 @@ export type LoadReturn<T> =
  * Construction options for {@link Loader}.
  *
  * `resourcePath` is prepended to relative asset paths at fetch time.
- * `cache` accepts one or more {@link CacheStore} instances that are checked
- * (in order) before any network request is made. `concurrency` caps the number
- * of simultaneous background-queue fetches (default `6`).
+ * `cache` accepts one or more {@link CacheStore} instances. `cacheStrategy`
+ * picks the policy used to consult them — defaults to
+ * {@link CacheFirstStrategy} (check stores → network → write back).
+ * `concurrency` caps the number of simultaneous background-queue fetches
+ * (default `6`).
  */
 export interface LoaderOptions {
     resourcePath?: string;
     requestOptions?: RequestInit;
     cache?: CacheStore | ReadonlyArray<CacheStore>;
+    cacheStrategy?: CacheStrategy;
     concurrency?: number;
 }
 
@@ -123,6 +128,7 @@ export class Loader {
     private readonly _typeIds = new WeakMap<AssetConstructor, number>();
     private readonly _preventStoreKeys = new Set<string>();
     private readonly _stores: ReadonlyArray<CacheStore>;
+    private readonly _cacheStrategy: CacheStrategy;
 
     private _resourcePath: string;
     private _requestOptions: RequestInit;
@@ -151,6 +157,7 @@ export class Loader {
         this._stores = options.cache
             ? (Array.isArray(options.cache) ? options.cache : [options.cache])
             : [];
+        this._cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
 
         this._registerBuiltinFactories();
     }
@@ -686,57 +693,27 @@ export class Loader {
     ): Promise<unknown> {
         const factory = this._registry.resolve(type);
         const url = this._resolveUrl(path);
-        let source: unknown = null;
 
-        // Check caches
-        for (const store of this._stores) {
-            source = await store.load(factory.storageName, alias);
+        try {
+            const resource = await this._cacheStrategy.resolve({
+                storageName: factory.storageName,
+                key: alias,
+                url,
+                requestOptions: this._requestOptions,
+                factory,
+                options,
+            }, this._stores);
 
-            if (source !== null && source !== undefined) {
-                try {
-                    const resource = await factory.create(source, options);
+            this._storeResource(type, alias, resource);
 
-                    this._storeResource(type, alias, resource);
+            return resource;
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
 
-                    return resource;
-                } catch {
-                    await store.delete(factory.storageName, alias);
-                    source = null;
-                }
-            }
-        }
-
-        // Network fetch
-        const response = await fetch(url, this._requestOptions);
-
-        if (!response.ok) {
-            throw new Error(
-                `Failed to fetch "${alias}" from "${url}" (${response.status} ${response.statusText}).`,
-            );
-        }
-
-        source = await factory.process(response);
-
-        const resource = await factory.create(source, options).catch((error: unknown) => {
-            const cause = error instanceof Error ? error : new Error(String(error));
-
-            throw new Error(`Failed to create "${alias}" from "${url}": ${cause.message}`, {
-                cause,
+            throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, {
+                cause: error,
             });
-        });
-
-        // Write to caches
-        for (const store of this._stores) {
-            try {
-                await store.save(factory.storageName, alias, source);
-            } catch {
-                // Quota exceeded or non-cloneable — continue without caching.
-            }
         }
-
-        this._storeResource(type, alias, resource);
-
-        return resource;
     }
 
     // -----------------------------------------------------------------------
