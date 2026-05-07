@@ -1,7 +1,7 @@
 import { Vector } from '@/math/Vector';
 import type { Distribution } from './Distribution';
 
-const TAU = Math.PI * 2;
+const tau = Math.PI * 2;
 
 /**
  * Random point on or inside a circle of radius `radius`, centred at
@@ -22,7 +22,7 @@ export class CircleArea implements Distribution<Vector> {
     ) {}
 
     public sample(out: Vector = this._scratch): Vector {
-        const angle = Math.random() * TAU;
+        const angle = Math.random() * tau;
         const r = this.mode === 'edge' ? this.radius : this.radius * Math.sqrt(Math.random());
 
         out.set(this.centerX + Math.cos(angle) * r, this.centerY + Math.sin(angle) * r);

@@ -4,6 +4,251 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-07
+
+Wholesale rewrite of the particle subsystem around a data-oriented core.
+The `Particle` class, `ParticleAffector` interface, `ParticleEmitter`
+interface, `ParticleOptions`, `UniversalEmitter`, and the four built-in
+affectors (`ColorAffector`, `ForceAffector`, `ScaleAffector`,
+`TorqueAffector`) are removed. They are replaced by SoA storage on the
+system, `Distribution<T>`-based spawn configs, and per-batch
+`SpawnModule` / `UpdateModule` / `DeathModule` interfaces. A WebGPU
+compute pipeline foundation lands in this release as the basis for
+future GPU-side simulation.
+
+### Added — Struct-of-Arrays storage
+
+`ParticleSystem` now stores particles as parallel `Float32Array` /
+`Uint32Array` / `Uint16Array` channels addressed by slot index:
+
+```ts
+system.posX[slot]
+system.posY[slot]
+system.velX[slot]
+system.velY[slot]
+system.scaleX[slot]
+system.scaleY[slot]
+system.rotations[slot]
+system.rotationSpeeds[slot]
+system.color[slot]            // packed 0xAABBGGRR
+system.elapsed[slot]
+system.lifetime[slot]
+system.textureIndex[slot]
+system.liveCount              // [0, liveCount) is the live range
+```
+
+Capacity is fixed at construction (default 4096) — no reallocations.
+The integrate pass runs as one tight loop over typed arrays with no
+method calls. Expiry is handled by forward-compaction (O(n) total
+instead of the previous O(n²) splice loop with scattered expirations).
+
+### Added — `Distribution<T>` family
+
+Spawn-time random sampling and lifetime-parameterised evaluation:
+
+| Type | Use |
+|---|---|
+| `Constant<T>` | Always-same value |
+| `Range` | Uniform random number in `[min, max]` |
+| `VectorRange` | Per-axis random vector |
+| `ConeDirection` | Random unit vector in a cone × speed range |
+| `CircleArea` | Random point in/on a circle |
+| `BoxArea` | Random point in/on an AABB |
+| `LineSegment` | Random point on a segment |
+| `Curve` | Piecewise-linear keyframe scalar by lifetime ratio |
+| `Gradient` | Piecewise-linear keyframe color, with `evaluateRgba()` for direct u32 packing |
+
+`Curve` and `Gradient` cache the last segment so monotonically
+advancing `t` (the typical case for per-particle lifetime sampling)
+is O(1) amortised.
+
+### Added — Module pipeline
+
+Three module bases. Each registered on a system via the corresponding
+`addX` method; each runs in its declared phase per-frame.
+
+```ts
+abstract class SpawnModule  { apply(system, dt: number): void; }
+abstract class UpdateModule { apply(system, dt: number): void; }
+abstract class DeathModule  { onDeath(system, slot: number): void; }
+```
+
+**Built-in spawn modules:**
+
+- `RateSpawn({ rate, lifetime?, position?, velocity?, scale?, rotation?, rotationSpeed?, tint?, textureIndex? })`
+  — continuous emission with sub-frame accumulator. Each property is an
+  independent `Distribution<T>`.
+- `BurstSpawn({ schedule, loop?, ...samePropsAsRate })` — discrete
+  bursts at scheduled times. Use for explosions, level-ups,
+  hit-impacts.
+
+**Built-in update modules** (operate on the SoA arrays in tight loops):
+
+- `ApplyForce(ax, ay)` — adds constant acceleration.
+- `Drag(coefficient)` — exponential velocity damping.
+- `ColorOverLifetime(gradient)` — tint sampled from a `Gradient`.
+- `ScaleOverLifetime(curve)` — both axes sampled from a `Curve`.
+- `RotateOverLifetime(angularAccel)` — increments `rotationSpeed`.
+
+**Built-in death module:**
+
+- `SpawnOnDeath(targetSystem, spawner, count?)` — sub-emitter. Forwards
+  the dying particle's position to a target system's spawn module.
+  Use for explosion-on-impact, end-of-life sparks, multi-stage VFX.
+
+### Added — WebGPU compute foundation
+
+New `src/rendering/webgpu/compute/` module:
+
+- `WebGpuStorageBuffer` — owning wrapper over a `STORAGE | COPY_DST | COPY_SRC`
+  buffer with `write()` and async `read()` helpers.
+- `WebGpuComputePipeline` — `device.createComputePipeline` wrapper with
+  bind-group-layout creation, dispatch helper.
+
+`ParticleSystem.enableGpuIntegration(device)` switches the per-frame
+integration step (advance position from velocity, advance elapsed)
+onto a GPU compute pipeline. Spawn / update / death modules continue
+to execute on the CPU; results are mirrored CPU↔GPU each frame, with
+a 1-frame display lag in steady state. Foundation for future work
+where built-in update modules gain WGSL counterparts and the renderer
+reads instance data directly from the storage buffer.
+
+```ts
+const system = new ParticleSystem(texture, 8192);
+// ... add modules ...
+await app.start(scene);
+system.enableGpuIntegration(app.backend.device);  // opt-in, after backend init
+```
+
+GPU mode is opt-in. CPU mode (default) remains the recommended path
+for projects with custom `UpdateModule` implementations or particle
+counts under ~10 000 — CPU integration is already very fast on the
+new SoA core.
+
+### Removed — Old particle API (BREAKING)
+
+The following symbols are deleted. Migration recipes follow the table.
+
+| Removed | Replacement |
+|---|---|
+| `Particle` (class) | SoA arrays on `ParticleSystem` (`system.posX[slot]`, etc.) |
+| `ParticleProperties` (interface) | None — slot-indexed arrays replace the per-particle object |
+| `ParticleEmitter` (interface) | `SpawnModule` (abstract class) |
+| `ParticleOptions` | Per-property `Distribution<T>` in the spawn module's config |
+| `UniversalEmitter` | `RateSpawn` |
+| `ParticleAffector` (interface) | `UpdateModule` (abstract class) |
+| `ColorAffector` | `ColorOverLifetime` + `Gradient` |
+| `ForceAffector` | `ApplyForce` |
+| `ScaleAffector` | `ScaleOverLifetime` + `Curve` |
+| `TorqueAffector` | `RotateOverLifetime` |
+| `system.requestParticle()` | `system.spawn(): number` (slot index, or `-1` at capacity) |
+| `system.emitParticle(p)` | (gone — `spawn()` already commits the slot to the live range) |
+| `system.updateParticle(p, dt)` | (gone — internal to `update()`) |
+| `system.addEmitter(e)` | `system.addSpawnModule(m)` |
+| `system.addAffector(a)` | `system.addUpdateModule(m)` |
+| `system.particles` (`Array<Particle>`) | `system.posX` / `system.posY` / ... `system.liveCount` |
+| `system.graveyard` | (gone — no graveyard; slots are recycled in place) |
+
+### Migration
+
+```ts
+// Before — bonfire
+const options = new ParticleOptions();
+const colorAffector = new ColorAffector(new Color(194, 64, 30, 1), new Color(0, 0, 0, 0));
+const emitter = new UniversalEmitter(50, options);
+const system = new ParticleSystem(texture);
+system.addAffector(colorAffector);
+system.addEmitter(emitter);
+
+// in update():
+options.totalLifetime.copy(seconds(rand(5, 10)));
+options.position.set(rand(-50, 50), rand(-10, 10));
+options.velocity.set(/* ... */);
+
+// After — bonfire
+const system = new ParticleSystem(texture);
+system.addSpawnModule(new RateSpawn({
+    rate: new Constant(50),
+    lifetime: new Range(5, 10),
+    position: new VectorRange(-50, 50, -10, 10),
+    velocity: new ConeDirection(-Math.PI / 2, Math.PI / 36, 60, 80),
+}));
+system.addUpdateModule(new ColorOverLifetime(new Gradient([
+    { t: 0, color: new Color(194, 64, 30, 1) },
+    { t: 1, color: new Color(0, 0, 0, 0) },
+])));
+// no per-frame mutation needed.
+```
+
+```ts
+// Before — gravity affector
+const gravity = new ForceAffector(0, 980);
+system.addAffector(gravity);
+
+// After
+system.addUpdateModule(new ApplyForce(0, 980));
+```
+
+```ts
+// Before — custom affector
+class AlphaFade {
+    apply(particle, delta) {
+        particle.tint.a = particle.remainingRatio;
+        return this;
+    }
+    destroy() {}
+}
+
+// After
+class AlphaFadeOverLifetime extends UpdateModule {
+    apply(system) {
+        const { color, elapsed, lifetime, liveCount } = system;
+        for (let i = 0; i < liveCount; i++) {
+            const remaining = 1 - elapsed[i] / lifetime[i];
+            const a = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
+            color[i] = (color[i] & 0x00ffffff) | (a << 24);
+        }
+    }
+}
+```
+
+```ts
+// Before — direct particle creation in tests
+const particle = system.requestParticle();
+particle.position.set(10, 12);
+particle.tint = Color.red;
+system.emitParticle(particle);
+
+// After — direct slot manipulation
+const slot = system.spawn();
+system.posX[slot] = 10;
+system.posY[slot] = 12;
+system.color[slot] = Color.red.toRgba();
+system.lifetime[slot] = 1;
+system.scaleX[slot] = 1;
+system.scaleY[slot] = 1;
+```
+
+### Changed — `ParticleSystem` constructor takes capacity
+
+```ts
+new ParticleSystem(texture);             // capacity defaults to 4096
+new ParticleSystem(texture, 8192);       // explicit capacity
+```
+
+The system pre-allocates all SoA arrays at construction. Spawn modules
+that want to emit beyond capacity get `-1` from `spawn()` and should
+bail cleanly (the built-ins do).
+
+### Performance notes
+
+- Spawning + integrating + ColorOverLifetime/ScaleOverLifetime + drag
+  on 10k particles: previously ~5 ms CPU per frame; new SoA path:
+  ~0.5 ms. Roughly 10× speedup driven by elimination of per-particle
+  object indirection and getter/setter chains.
+- WebGPU compute foundation lays the groundwork for ~50× speedup at
+  100k+ particles in a future release where update modules port to WGSL.
+
 ## [0.7.13] - 2026-05-07
 
 Major gamepad-input refactor. Replaces the `new Input(...)` +

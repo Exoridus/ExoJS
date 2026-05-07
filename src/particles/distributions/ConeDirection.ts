@@ -1,7 +1,7 @@
 import { Vector } from '@/math/Vector';
 import type { Distribution } from './Distribution';
 
-const TAU = Math.PI * 2;
+const tau = Math.PI * 2;
 
 /**
  * Random unit vector inside a cone, scaled by a speed magnitude.
@@ -39,6 +39,6 @@ export class ConeDirection implements Distribution<Vector> {
 
     /** Convenience: omnidirectional emission (full circle, 0..2π). */
     public static omni(minSpeed: number, maxSpeed: number): ConeDirection {
-        return new ConeDirection(0, TAU / 2, minSpeed, maxSpeed);
+        return new ConeDirection(0, tau / 2, minSpeed, maxSpeed);
     }
 }

@@ -5,8 +5,9 @@ import type { Texture } from '@/rendering/texture/Texture';
 import type { SpawnModule } from './modules/SpawnModule';
 import type { UpdateModule } from './modules/UpdateModule';
 import type { DeathModule } from './modules/DeathModule';
+import { ParticleGpuState } from './gpu/ParticleGpuState';
 
-const DEFAULT_CAPACITY = 4096;
+const defaultCapacity = 4096;
 
 /**
  * The central coordinator of the particle pipeline. `ParticleSystem` is a
@@ -76,6 +77,10 @@ export class ParticleSystem extends Drawable {
     private readonly _updateModules: Array<UpdateModule> = [];
     private readonly _deathModules: Array<DeathModule> = [];
 
+    private _gpuState: ParticleGpuState | null = null;
+    private _gpuMode = false;
+    private _pendingReadback: Promise<void> | null = null;
+
     private _texture: Texture;
     private readonly _textureFrame: Rectangle = new Rectangle();
     private readonly _vertices: Float32Array = new Float32Array(4);
@@ -83,7 +88,7 @@ export class ParticleSystem extends Drawable {
     private _updateTexCoords = true;
     private _updateVertices = true;
 
-    public constructor(texture: Texture, capacity: number = DEFAULT_CAPACITY) {
+    public constructor(texture: Texture, capacity: number = defaultCapacity) {
         super();
 
         if (capacity <= 0 || !Number.isInteger(capacity)) {
@@ -178,6 +183,70 @@ export class ParticleSystem extends Drawable {
         }
 
         return this._texCoords;
+    }
+
+    /**
+     * `true` once {@link enableGpuIntegration} has wired this system to a
+     * WebGPU compute pipeline. Read-only; toggle via the dedicated methods.
+     */
+    public get gpuMode(): boolean {
+        return this._gpuMode;
+    }
+
+    /**
+     * The GPU-side mirror of this system's storage, or `null` when GPU
+     * integration is not enabled. Exposed for advanced users who want to
+     * dispatch additional compute work against the same buffers.
+     */
+    public get gpuState(): ParticleGpuState | null {
+        return this._gpuState;
+    }
+
+    /**
+     * Switch this system's per-frame integration step (advance position by
+     * velocity, rotation by rotation-speed, advance elapsed) onto a WebGPU
+     * compute pipeline. Subsequent `update()` calls upload the live SoA
+     * range to the GPU, dispatch the integration shader, and queue an
+     * async readback whose results land in the CPU SoA before the next
+     * frame's update — a 1-frame display lag, no async surface added to
+     * the public `update()` contract.
+     *
+     * **Scope (0.8.0):** integration only. `SpawnModule`, `UpdateModule`,
+     * `DeathModule` instances continue to execute on the CPU. The GPU
+     * compute path is the foundation for future work that ports the
+     * built-in update modules to WGSL; until then, GPU mode is best
+     * thought of as a preview feature for projects with very high particle
+     * counts where CPU integration becomes the dominant cost.
+     *
+     * Idempotent — calling twice with the same device is a no-op. Pass a
+     * different `GPUDevice` after a context-loss restore to reattach.
+     */
+    public enableGpuIntegration(device: GPUDevice): this {
+        if (this._gpuState !== null && this._gpuState.device === device) {
+            return this;
+        }
+
+        if (this._gpuState !== null) {
+            this._gpuState.destroy();
+        }
+
+        this._gpuState = new ParticleGpuState(device, this.capacity);
+        this._gpuMode = true;
+
+        return this;
+    }
+
+    /** Disable GPU integration and release GPU resources. The next `update()` reverts to the CPU integration path. */
+    public disableGpuIntegration(): this {
+        if (this._gpuState !== null) {
+            this._gpuState.destroy();
+            this._gpuState = null;
+        }
+
+        this._gpuMode = false;
+        this._pendingReadback = null;
+
+        return this;
     }
 
     public get spawnModules(): ReadonlyArray<SpawnModule> {
@@ -299,15 +368,19 @@ export class ParticleSystem extends Drawable {
             this._spawnModules[i].apply(this, dt);
         }
 
-        // 2. Integrate position + rotation, advance lifetime. Tight inner loop.
-        const { posX, posY, velX, velY, rotations, rotationSpeeds, elapsed } = this;
-        const liveCount = this.liveCount;
+        // 2. Integrate position + rotation, advance lifetime.
+        if (this._gpuState !== null) {
+            this._integrateOnGpu(dt);
+        } else {
+            const { posX, posY, velX, velY, rotations, rotationSpeeds, elapsed } = this;
+            const liveCount = this.liveCount;
 
-        for (let i = 0; i < liveCount; i++) {
-            posX[i] += velX[i] * dt;
-            posY[i] += velY[i] * dt;
-            rotations[i] += rotationSpeeds[i] * dt;
-            elapsed[i] += dt;
+            for (let i = 0; i < liveCount; i++) {
+                posX[i] += velX[i] * dt;
+                posY[i] += velY[i] * dt;
+                rotations[i] += rotationSpeeds[i] * dt;
+                elapsed[i] += dt;
+            }
         }
 
         // 3. Update modules — operate on the live range.
@@ -317,6 +390,7 @@ export class ParticleSystem extends Drawable {
 
         // 4. Compact: forward pass, fire death modules, copy survivors down.
         const lifetime = this.lifetime;
+        const elapsed = this.elapsed;
         const deathModules = this._deathModules;
         let writeIndex = 0;
 
@@ -347,8 +421,40 @@ export class ParticleSystem extends Drawable {
         this.clearSpawnModules();
         this.clearUpdateModules();
         this.clearDeathModules();
+
+        if (this._gpuState !== null) {
+            this._gpuState.destroy();
+            this._gpuState = null;
+        }
+
+        this._gpuMode = false;
+        this._pendingReadback = null;
         this.liveCount = 0;
         this._textureFrame.destroy();
+    }
+
+    private _integrateOnGpu(dt: number): void {
+        const state = this._gpuState!;
+        const liveCount = this.liveCount;
+
+        // The previous frame's readback may have completed asynchronously.
+        // We can't synchronously poll its status without device-specific
+        // hacks, so update modules and the renderer simply consume the most
+        // recent CPU SoA snapshot — which lags GPU by one frame in steady
+        // state. New spawns appear immediately because they're written to
+        // CPU SoA before this dispatch runs.
+        state.uploadFromCpu(this);
+
+        const encoder = state.device.createCommandEncoder({ label: 'particle-integration' });
+
+        state.dispatch(encoder, dt, liveCount);
+        state.device.queue.submit([encoder.finish()]);
+
+        // Schedule readback. The Promise resolves once the GPU has the
+        // mapped readback buffer ready; the data lands in the CPU SoA at
+        // that point. By the next `update()` call (typically 16 ms later),
+        // the readback is overwhelmingly likely to have completed.
+        this._pendingReadback = state.downloadToCpu(this);
     }
 
     private _copySlot(from: number, to: number): void {
