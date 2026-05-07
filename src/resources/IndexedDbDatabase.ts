@@ -55,11 +55,10 @@ export class IndexedDbDatabase implements Database {
     /**
      * Opens (or re-uses) an IDBObjectStore for `type` in the given
      * `transactionMode`. Calls {@link connect} automatically if the database
-     * is not yet open.
-     *
-     * @internal Used internally by the load/save/delete methods.
+     * is not yet open. Used internally by the load/save/delete methods;
+     * `protected` so subclasses can extend with custom transaction shapes.
      */
-    public async getObjectStore(type: string, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
+    protected async getObjectStore(type: string, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
         await this.connect();
 
         return this._database!.transaction([type], transactionMode).objectStore(type);

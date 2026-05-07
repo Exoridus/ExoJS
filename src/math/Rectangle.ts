@@ -8,6 +8,7 @@ import type { Collidable, CollisionResponse} from '@/math/Collision';
 import { CollisionType } from '@/math/Collision';
 import {
     getCollisionCircleRectangle,
+    getCollisionEllipseRectangle,
     getCollisionRectangleRectangle,
     getCollisionSat,
 } from '@/math/collision-detection';
@@ -269,7 +270,7 @@ export class Rectangle implements ShapeLike {
             case CollisionType.Rectangle: return getCollisionRectangleRectangle(this, target as Rectangle);
             case CollisionType.Polygon: return getCollisionSat(this, target as Polygon);
             case CollisionType.Circle: return getCollisionCircleRectangle(target as Circle, this, true);
-            // case CollisionType.Ellipse: return intersectionRectEllipse(this, target as Ellipse);
+            case CollisionType.Ellipse: return getCollisionEllipseRectangle(target as Ellipse, this, true);
             // case CollisionType.Line: return intersectionLineRect(target as Line, this);
             // case CollisionType.Point: return intersectionPointRect(target as Vector, this);
             default: return null;

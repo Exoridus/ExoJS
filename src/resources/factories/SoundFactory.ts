@@ -8,7 +8,8 @@ interface SoundFactoryOptions {
     playbackOptions?: Partial<PlaybackOptions>;
     /**
      * Number of concurrent voices the {@link Sound} instance pre-allocates.
-     * Higher values allow more simultaneous plays of the same clip.
+     * Higher values allow more simultaneous plays of the same clip. Default
+     * 8 (chosen by {@link Sound} when omitted).
      */
     poolSize?: number;
     /**

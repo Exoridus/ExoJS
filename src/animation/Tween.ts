@@ -119,7 +119,18 @@ export class Tween<T extends object = object> {
 
     /**
      * Number of additional repeat cycles. -1 = infinite. Default 0 (runs once).
-     * Note: repeat(2) means the animation runs 3 times total.
+     *
+     * The argument counts cycles **after** the first, not the total cycle
+     * count — `repeat(2)` runs the animation three times total (the initial
+     * pass plus two repeats).
+     *
+     * @example
+     * ```ts
+     * tween.repeat(0);   // runs once
+     * tween.repeat(1);   // runs twice
+     * tween.repeat(2);   // runs three times
+     * tween.repeat(-1);  // runs forever
+     * ```
      */
     public repeat(count: number): this {
         this._repeatTotal = count;

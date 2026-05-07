@@ -142,7 +142,12 @@ export class Line implements ShapeLike {
         }
     }
 
-    public collidesWith(target: Collidable): CollisionResponse | null {
+    /**
+     * Always returns `null`. SAT collision response is not defined for line
+     * segments — use {@link Line.intersectsWith} for boolean intersection
+     * tests against any shape.
+     */
+    public collidesWith(_target: Collidable): CollisionResponse | null {
         return null;
     }
 

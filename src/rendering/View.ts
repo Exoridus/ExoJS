@@ -359,7 +359,7 @@ export class View {
         return this._transform;
     }
 
-    public updateTransform(): this {
+    protected updateTransform(): this {
         const centerX = this._center.x + this._shakeOffsetX;
         const centerY = this._center.y + this._shakeOffsetY;
         const x = 2 / this.width,
@@ -414,7 +414,7 @@ export class View {
         return this._bounds.getRect();
     }
 
-    public updateBounds(): this {
+    protected updateBounds(): this {
         const centerX = this._center.x + this._shakeOffsetX;
         const centerY = this._center.y + this._shakeOffsetY;
         const offsetX = this.width / 2;

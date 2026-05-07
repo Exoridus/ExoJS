@@ -4,6 +4,114 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.12] - 2026-05-07
+
+API audit cleanup pass — implements collision-response computation that was
+silently returning zero/null, exports previously-internal type aliases that
+callers couldn't otherwise type, and removes a handful of small API papercuts
+surfaced during the JSDoc-coverage pass that landed across `0.7.x`.
+
+### Fixed — Collision-response computation
+
+Four collision paths were returning a `CollisionResponse` whose `projectionN`
+and `projectionV` were zero vectors (or returning `null` outright), making
+the response unusable for separation/sliding logic.
+
+- **`getCollisionRectangleRectangle`** — now returns the minimum-translation
+  vector (MTV) along the axis with the smaller penetration, signed by the
+  centre-to-centre direction. Existing `overlap` and containment flags are
+  unchanged.
+- **`getCollisionCircleRectangle`** — rewritten to use the standard
+  closest-point-on-rect algorithm. Previously computed distance against an
+  out-of-rect anchor point, producing a wrong result whenever the circle
+  centre was inside the rectangle. Normal points from rect surface toward
+  circle; falls back to the smaller-exit axis when the circle centre is
+  inside the rect.
+- **`Ellipse.collidesWith`** — implements `Ellipse`-vs-`Rectangle` and
+  `Ellipse`-vs-`Circle` via the directional ellipse-boundary equation
+  `1 / sqrt((dx/rx)² + (dy/ry)²)`. Other targets (ellipse-vs-ellipse,
+  ellipse-vs-polygon, ellipse-vs-line) still return `null` —
+  `intersectsWith` remains the boolean fallback.
+- **`Line.collidesWith`** — kept returning `null` (lines have no
+  meaningful SAT response), but the JSDoc now states the contract
+  explicitly so callers don't expect a vector.
+
+`Rectangle.collidesWith` and `Circle.collidesWith` route ellipse targets to
+the new functions via the existing `swap` flag.
+
+### Fixed — Object-URL leak (re-emphasised; was 0.7.11 fix)
+
+The 0.7.11 fix for `MusicFactory` and `VideoFactory` URL revocation is
+unchanged in 0.7.12 — listing it here for completeness because the pre-1.0
+audit findings memory carries a forward reference to it.
+
+### Changed — Visibility / readonly tightening (potentially breaking)
+
+Pre-1.0 cleanups that narrow the public surface where callers could
+previously poke at internal state:
+
+- **`GamepadMapping.buttons` / `.axes`** typed `ReadonlyArray<GamepadControl>`
+  instead of `Array<GamepadControl>`. Internal `destroy()` retains the
+  `length = 0` clear via a local cast. **Breaking** for callers that were
+  pushing or splicing the arrays directly.
+- **`View.updateTransform()` / `.updateBounds()`** changed from `public` to
+  `protected`. They were never safe to call externally — invoking them
+  bypassed the dirty-flag clearing in `getTransform()` / `getBounds()` and
+  could cause redundant recalculation. **Breaking** if you relied on them.
+- **`IndexedDbDatabase.getObjectStore()`** changed from `public` to
+  `protected`. Only callers were the class's own `load`/`save`/`delete`
+  methods. **Breaking** if any subclass referenced it externally.
+- **`GamepadDefinitions.normalizeIds`** is no longer exported. It was an
+  in-file helper that leaked through the barrel. **Breaking** for any
+  caller importing it directly.
+- **`GamepadPromptLayouts.buildControlChannelMap()`** renamed to
+  `getControlChannelMap()` — the name now matches the behaviour (returns a
+  pre-built constant; never builds anything). **Breaking** rename.
+
+### Added — API surface
+
+Additive changes; not breaking:
+
+- `EqualizerFilter` now exposes runtime setters for `lowFrequency`,
+  `midFrequency`, and `highFrequency` (previously only construction-time).
+  Smooth ramp via `setTargetAtTime` to avoid clicks.
+- `Filter` (abstract base for post-process filters) now declares a
+  `destroy()` method with a no-op default. `BlurFilter` / `ColorFilter` /
+  `WebGl2ShaderFilter` / `WebGpuShaderFilter` mark their existing
+  implementations as `override`. Generic-filter consumers no longer need
+  a cast to release filters.
+- `getCollisionEllipseRectangle` and `getCollisionEllipseCircle` are
+  exported from the math barrel for direct use.
+
+### Changed — Internal cleanups
+
+Doc-only and signature-only refactors:
+
+- `Sprite._invalidateSubtreeTransform` / `._invalidateBoundsCascade` tagged
+  `@internal` (they are `public` only because of TS friend-class limits).
+- `_getDebugQuadtree` (InteractionManager) and `_walkBounds` (Quadtree)
+  tagged `@internal` to mark the friend-class link to the debug layer.
+- `PerformanceLayer` declares `viewMode` explicitly to match the other
+  debug layers.
+- `PointerStackLayer._buildLines` lost its two unused `_panelX` / `_panelY`
+  parameters. Internal-only; not user-visible.
+- `intersectionCirclePoly` got an inline comment explaining the
+  negated-frame coordinate transform.
+- `AudioAnalyserOptions` interface picked up per-field JSDoc with documented
+  defaults.
+- `SoundFactoryOptions.poolSize` JSDoc names the implicit `Sound` default (8).
+- `ChorusFilter` lost a redundant `as AudioParam` cast.
+- `Video.setupWithAudioContext` is now an arrow-bound field instead of a
+  context-bound method; cleaner internally, no API change.
+- `ShaderUniform.propName` uses `String.prototype.substring` instead of the
+  deprecated `substr`.
+- `Tween.repeat` JSDoc now ships an `@example` block clarifying that
+  `repeat(2)` runs the animation three times total.
+- `Line.collidesWith` documents the always-`null` behaviour as intentional.
+- `RenderTarget.addDestroyListener` / `.removeDestroyListener` got JSDoc
+  pointing out that `RenderTexture` (which extends `RenderTarget`) inherits
+  them; the audit finding that claimed otherwise was incorrect.
+
 ## [0.7.11] - 2026-05-07
 
 Performance pass — adds a multi-domain benchmark suite, an auto-profiler

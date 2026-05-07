@@ -37,7 +37,7 @@ export class ShaderUniform {
      * it returns only the field name (`color`).
      */
     public get propName(): string {
-        return this.name.substr(this.name.lastIndexOf('.') + 1);
+        return this.name.substring(this.name.lastIndexOf('.') + 1);
     }
 
     public get value(): TypedArray {

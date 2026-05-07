@@ -196,9 +196,4 @@ export const getOfflineAudioContext = (): OfflineAudioContext => getOrCreateOffl
  * running (live) context — decoding may fail with a browser-level error rather
  * than an ExoJS-shaped error in those environments.
  */
-// Decodes audio data using a shared OfflineAudioContext whose sample rate is derived from
-// the live AudioContext. OfflineAudioContext.decodeAudioData is spec-compliant and works
-// in all major browsers. On some older mobile WebKit versions, decodeAudioData may only
-// succeed on a live (running) AudioContext — in those environments, sound loading may
-// fail with a browser-level error rather than an ExoJS-shaped error.
 export const decodeAudioData = async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer> => getOrCreateOfflineAudioContext().decodeAudioData(arrayBuffer);

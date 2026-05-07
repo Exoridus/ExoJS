@@ -67,7 +67,7 @@ export class PointerStackLayer extends DebugLayer {
         }
 
         // Collect stack info.
-        const lines = this._buildLines(panelX, panelY);
+        const lines = this._buildLines();
 
         // Update text nodes.
         for (let i = 0; i < this._lines.length; i++) {
@@ -132,7 +132,7 @@ export class PointerStackLayer extends DebugLayer {
         }
     }
 
-    private _buildLines(_panelX: number, _panelY: number): Array<string> {
+    private _buildLines(): Array<string> {
         const pos = this._app.inputManager.getPrimaryPointerPosition();
 
         if (pos === null) {

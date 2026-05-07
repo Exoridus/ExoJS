@@ -5,10 +5,15 @@ import type { Music } from '@/audio/Music';
 
 export type AudioAnalyserSource = AudioBus | Sound | Music | MediaStream | AudioNode | null;
 
+/** Construction options for {@link AudioAnalyser}. */
 export interface AudioAnalyserOptions {
+    /** FFT window size; must be a power of two between 32 and 32768. Default 2048. */
     fftSize?: number;
+    /** Time-domain smoothing constant in 0..1 applied between successive analyses. Default 0.8. */
     smoothingTimeConstant?: number;
+    /** Minimum dBFS rendered by the byte-domain spectrum getters. Default -100. */
     minDecibels?: number;
+    /** Maximum dBFS rendered by the byte-domain spectrum getters. Default -30. */
     maxDecibels?: number;
 }
 

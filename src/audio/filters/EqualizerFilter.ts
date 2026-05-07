@@ -20,8 +20,9 @@ interface EqualizerFilterSetup {
 /**
  * Three-band equalizer (low shelf / peaking mid / high shelf) built from a
  * series chain of `BiquadFilterNode` instances. Gain values are in dB and
- * clamped to ±40 dB. Band frequencies can be set at construction time but
- * are not adjustable at runtime; only the band gains are.
+ * clamped to ±40 dB. All six parameters (gains + frequencies) are
+ * adjustable at runtime via the corresponding setters; gain changes use a
+ * short exponential ramp to avoid clicks.
  */
 export class EqualizerFilter extends AudioFilter {
     private _setup: EqualizerFilterSetup | null = null;
@@ -99,6 +100,54 @@ export class EqualizerFilter extends AudioFilter {
         if (this._setup) {
             this._setup.highShelf.gain.setTargetAtTime(
                 this._high,
+                this._setup.highShelf.context.currentTime,
+                0.01,
+            );
+        }
+    }
+
+    /** Cutoff frequency in Hz of the low-shelf band. Default 250. */
+    public get lowFrequency(): number {
+        return this._lowFrequency;
+    }
+
+    public set lowFrequency(value: number) {
+        this._lowFrequency = Math.max(0, value);
+        if (this._setup) {
+            this._setup.lowShelf.frequency.setTargetAtTime(
+                this._lowFrequency,
+                this._setup.lowShelf.context.currentTime,
+                0.01,
+            );
+        }
+    }
+
+    /** Center frequency in Hz of the peaking mid band. Default 1500. */
+    public get midFrequency(): number {
+        return this._midFrequency;
+    }
+
+    public set midFrequency(value: number) {
+        this._midFrequency = Math.max(0, value);
+        if (this._setup) {
+            this._setup.peaking.frequency.setTargetAtTime(
+                this._midFrequency,
+                this._setup.peaking.context.currentTime,
+                0.01,
+            );
+        }
+    }
+
+    /** Cutoff frequency in Hz of the high-shelf band. Default 6000. */
+    public get highFrequency(): number {
+        return this._highFrequency;
+    }
+
+    public set highFrequency(value: number) {
+        this._highFrequency = Math.max(0, value);
+        if (this._setup) {
+            this._setup.highShelf.frequency.setTargetAtTime(
+                this._highFrequency,
                 this._setup.highShelf.context.currentTime,
                 0.01,
             );

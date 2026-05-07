@@ -104,7 +104,7 @@ export class ChorusFilter extends AudioFilter {
     public set rateHz(value: number) {
         this._rateHz = Math.max(0, value);
         if (this._nodes) {
-            (this._nodes.lfoOscillator.frequency as AudioParam).setTargetAtTime(
+            this._nodes.lfoOscillator.frequency.setTargetAtTime(
                 this._rateHz,
                 this._nodes.inputGain.context.currentTime,
                 0.01,

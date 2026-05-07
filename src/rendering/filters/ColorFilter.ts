@@ -52,7 +52,7 @@ export class ColorFilter extends Filter {
         ));
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         this._sprite.destroy();
         this._color.destroy();
     }

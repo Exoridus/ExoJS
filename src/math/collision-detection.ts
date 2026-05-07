@@ -272,6 +272,13 @@ const shouldExcludeMiddleVoronoi = (
 };
 
 const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, { x: px, y: py, points, edges }: Polygon): boolean => {
+    // Frame transform: express the circle's position relative to the polygon's
+    // local space, but with the sign inverted (poly.position - circle.position
+    // rather than the natural circle.position - poly.position). The poly's
+    // `points` are then in their local coordinates and the Voronoi-region tests
+    // below combine them with the negated-offset circle position to reach the
+    // same value as a positively-offset frame would. Don't flip without
+    // re-deriving the Voronoi math.
     const circleX = px - cx;
     const circleY = py - cy;
     const len = points.length;
@@ -331,10 +338,32 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
 
     const overlapX = Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left);
     const overlapY = Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top);
-    const overlap = Math.min(overlapX, overlapY);
 
-    const zeroNormal = rectA.position.clone().set(0, 0);
-    const zeroVector = rectA.position.clone().set(0, 0);
+    // Pick the axis with the smaller overlap as the MTV — pushing along that
+    // axis separates the rectangles with the least displacement. Sign is
+    // determined by whether rectB's center is right/below or left/above of
+    // rectA's center.
+    const centerAx = rectA.left + rectA.width * 0.5;
+    const centerAy = rectA.top + rectA.height * 0.5;
+    const centerBx = rectB.left + rectB.width * 0.5;
+    const centerBy = rectB.top + rectB.height * 0.5;
+
+    let normalX = 0;
+    let normalY = 0;
+    let overlap = 0;
+
+    if (overlapX < overlapY) {
+        overlap = overlapX;
+        normalX = centerBx < centerAx ? -1 : 1;
+        normalY = 0;
+    } else {
+        overlap = overlapY;
+        normalX = 0;
+        normalY = centerBy < centerAy ? -1 : 1;
+    }
+
+    const projectionN = rectA.position.clone().set(normalX, normalY);
+    const projectionV = rectA.position.clone().set(normalX * overlap, normalY * overlap);
 
     return {
         shapeA: rectA,
@@ -342,8 +371,8 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
         overlap,
         shapeAinB: rectB.containsRect(rectA),
         shapeBinA: rectA.containsRect(rectB),
-        projectionN: zeroNormal,
-        projectionV: zeroVector,
+        projectionN,
+        projectionV,
     };
 };
 
@@ -380,27 +409,201 @@ const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): CollisionRe
  */
 const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): CollisionResponse | null => {
     const radius = circle.radius;
-    const centerWidth = rect.width / 2;
-    const centerHeight = rect.height / 2;
-    const distance = getDistance(circle.x, circle.y, rect.x - centerWidth, rect.y - centerHeight);
-    const containsA = (radius <= Math.min(centerWidth, centerHeight)) && (distance <= (Math.min(centerWidth, centerHeight) - radius));
-    const containsB = (Math.max(centerWidth, centerHeight) <= radius) && (distance <= (radius - Math.max(centerWidth, centerHeight)));
 
-    if (distance > circle.radius) {
+    // Closest point on the rectangle to the circle center, found by clamping
+    // the circle center against the rect's axis-aligned bounds.
+    const closestX = Math.max(rect.left, Math.min(circle.x, rect.right));
+    const closestY = Math.max(rect.top, Math.min(circle.y, rect.bottom));
+
+    const dx = circle.x - closestX;
+    const dy = circle.y - closestY;
+    const distanceSq = dx * dx + dy * dy;
+
+    if (distanceSq > radius * radius) {
         return null;
     }
 
-    const zeroNormal = circle.position.clone().set(0, 0);
-    const zeroVector = circle.position.clone().set(0, 0);
+    const distance = Math.sqrt(distanceSq);
+    const overlap = radius - distance;
+
+    // Containment flags: A inside B when the rect fully covers the circle,
+    // B inside A when the circle fully covers the rect's bounding extent.
+    const halfWidth = rect.width / 2;
+    const halfHeight = rect.height / 2;
+    const minHalf = Math.min(halfWidth, halfHeight);
+    const maxHalf = Math.max(halfWidth, halfHeight);
+    const centerDistance = getDistance(
+        circle.x, circle.y,
+        rect.left + halfWidth, rect.top + halfHeight,
+    );
+    const containsA = (radius <= minHalf) && (centerDistance <= (minHalf - radius));
+    const containsB = (maxHalf <= radius) && (centerDistance <= (radius - maxHalf));
+
+    // Normal points from the rect surface toward the circle. When the circle
+    // center lies inside the rect (distance == 0) fall back to a unit vector
+    // pointing along the closer axis so callers always receive a usable MTV.
+    let normalX = 0;
+    let normalY = 0;
+
+    if (distance > 0) {
+        normalX = dx / distance;
+        normalY = dy / distance;
+    } else {
+        // Circle center is inside the rect. Push along whichever axis has
+        // the smallest exit distance.
+        const exitLeft = circle.x - rect.left;
+        const exitRight = rect.right - circle.x;
+        const exitTop = circle.y - rect.top;
+        const exitBottom = rect.bottom - circle.y;
+        const minExitX = Math.min(exitLeft, exitRight);
+        const minExitY = Math.min(exitTop, exitBottom);
+
+        if (minExitX < minExitY) {
+            normalX = exitLeft < exitRight ? -1 : 1;
+            normalY = 0;
+        } else {
+            normalX = 0;
+            normalY = exitTop < exitBottom ? -1 : 1;
+        }
+    }
+
+    // When the response is "swapped" (rect-against-circle), flip the normal
+    // so it points from `shapeA` (rect) toward `shapeB` (circle).
+    const finalNormalX = swap ? -normalX : normalX;
+    const finalNormalY = swap ? -normalY : normalY;
+
+    const projectionN = circle.position.clone().set(finalNormalX, finalNormalY);
+    const projectionV = circle.position.clone().set(finalNormalX * overlap, finalNormalY * overlap);
 
     return {
         shapeA: swap ? rect : circle,
         shapeB: swap ? circle : rect,
-        overlap: radius - distance,
+        overlap,
         shapeAinB: swap ? containsB : containsA,
         shapeBinA: swap ? containsA : containsB,
-        projectionN: zeroNormal,
-        projectionV: zeroVector,
+        projectionN,
+        projectionV,
+    };
+};
+
+/**
+ * Compute a {@link CollisionResponse} between an axis-aligned ellipse and an
+ * axis-aligned rectangle. Returns `null` when they do not overlap.
+ *
+ * Approach: find the closest point on the rect to the ellipse center, then
+ * compare its distance against the ellipse's boundary along that direction.
+ * For an axis-aligned ellipse with half-radii `(rx, ry)`, the boundary
+ * distance from the center along unit direction `(dx, dy)` is
+ * `1 / sqrt((dx/rx)² + (dy/ry)²)`.
+ */
+const getCollisionEllipseRectangle = (ellipse: Ellipse, rect: Rectangle, swap = false): CollisionResponse | null => {
+    if (!intersectionRectEllipse(rect, ellipse)) {
+        return null;
+    }
+
+    const closestX = Math.max(rect.left, Math.min(ellipse.x, rect.right));
+    const closestY = Math.max(rect.top, Math.min(ellipse.y, rect.bottom));
+    const dx = ellipse.x - closestX;
+    const dy = ellipse.y - closestY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    let normalX = 0;
+    let normalY = 0;
+    let overlap = 0;
+
+    if (distance > 0) {
+        normalX = dx / distance;
+        normalY = dy / distance;
+        const boundary = 1 / Math.sqrt((normalX * normalX) / (ellipse.rx * ellipse.rx) + (normalY * normalY) / (ellipse.ry * ellipse.ry));
+        overlap = boundary - distance;
+    } else {
+        // Ellipse center is inside the rect — push along the smaller exit
+        // axis and use the corresponding ellipse half-radius as the overlap
+        // contribution.
+        const exitLeft = ellipse.x - rect.left;
+        const exitRight = rect.right - ellipse.x;
+        const exitTop = ellipse.y - rect.top;
+        const exitBottom = rect.bottom - ellipse.y;
+        const minExitX = Math.min(exitLeft, exitRight);
+        const minExitY = Math.min(exitTop, exitBottom);
+
+        if (minExitX < minExitY) {
+            normalX = exitLeft < exitRight ? -1 : 1;
+            normalY = 0;
+            overlap = minExitX + ellipse.rx;
+        } else {
+            normalX = 0;
+            normalY = exitTop < exitBottom ? -1 : 1;
+            overlap = minExitY + ellipse.ry;
+        }
+    }
+
+    const finalNormalX = swap ? -normalX : normalX;
+    const finalNormalY = swap ? -normalY : normalY;
+    const projectionN = ellipse.position.clone().set(finalNormalX, finalNormalY);
+    const projectionV = ellipse.position.clone().set(finalNormalX * overlap, finalNormalY * overlap);
+
+    return {
+        shapeA: swap ? rect : ellipse,
+        shapeB: swap ? ellipse : rect,
+        overlap,
+        shapeAinB: false,
+        shapeBinA: false,
+        projectionN,
+        projectionV,
+    };
+};
+
+/**
+ * Compute a {@link CollisionResponse} between an axis-aligned ellipse and a
+ * circle. Returns `null` when they do not overlap. Uses the ellipse's
+ * directional boundary distance plus the circle's radius along the connecting
+ * axis to compute penetration depth.
+ */
+const getCollisionEllipseCircle = (ellipse: Ellipse, circle: Circle, swap = false): CollisionResponse | null => {
+    if (!intersectionCircleEllipse(circle, ellipse)) {
+        return null;
+    }
+
+    const dx = ellipse.x - circle.x;
+    const dy = ellipse.y - circle.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    let normalX = 0;
+    let normalY = 0;
+    let overlap = 0;
+
+    if (distance > 0) {
+        normalX = dx / distance;
+        normalY = dy / distance;
+        const ellipseBoundary = 1 / Math.sqrt((normalX * normalX) / (ellipse.rx * ellipse.rx) + (normalY * normalY) / (ellipse.ry * ellipse.ry));
+        overlap = (ellipseBoundary + circle.radius) - distance;
+    } else {
+        // Coincident centers — use the smaller ellipse axis as the push direction.
+        if (ellipse.rx <= ellipse.ry) {
+            normalX = 1;
+            normalY = 0;
+            overlap = ellipse.rx + circle.radius;
+        } else {
+            normalX = 0;
+            normalY = 1;
+            overlap = ellipse.ry + circle.radius;
+        }
+    }
+
+    const finalNormalX = swap ? -normalX : normalX;
+    const finalNormalY = swap ? -normalY : normalY;
+    const projectionN = ellipse.position.clone().set(finalNormalX, finalNormalY);
+    const projectionV = ellipse.position.clone().set(finalNormalX * overlap, finalNormalY * overlap);
+
+    return {
+        shapeA: swap ? circle : ellipse,
+        shapeB: swap ? ellipse : circle,
+        overlap,
+        shapeAinB: false,
+        shapeBinA: false,
+        projectionN,
+        projectionV,
     };
 };
 
@@ -650,6 +853,8 @@ export {
     getCollisionSat,
     getCollisionRectangleRectangle,
     getCollisionCircleRectangle,
+    getCollisionEllipseRectangle,
+    getCollisionEllipseCircle,
     getCollisionCircleCircle,
     getCollisionPolygonCircle,
 };

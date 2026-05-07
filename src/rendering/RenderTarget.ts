@@ -70,12 +70,19 @@ export class RenderTarget {
         return this._version;
     }
 
+    /**
+     * Subscribe to the moment this target (or any subclass — including
+     * {@link RenderTexture}) is destroyed. Backends use this to release
+     * GPU-side resources (framebuffer + attached texture) tied to the
+     * target. Listeners fire exactly once.
+     */
     public addDestroyListener(listener: () => void): this {
         this._destroyListeners.add(listener);
 
         return this;
     }
 
+    /** Remove a previously registered destroy listener. No-op if absent. */
     public removeDestroyListener(listener: () => void): this {
         this._destroyListeners.delete(listener);
 

@@ -7,6 +7,7 @@ import { CollisionType } from '@/math/Collision';
 import {
     getCollisionCircleCircle,
     getCollisionCircleRectangle,
+    getCollisionEllipseCircle,
     getCollisionPolygonCircle,
     intersectionCircleCircle,
     intersectionCircleEllipse,
@@ -239,7 +240,7 @@ export class Circle implements ShapeLike {
             case CollisionType.Rectangle: return getCollisionCircleRectangle(this, target as Rectangle);
             case CollisionType.Polygon: return getCollisionPolygonCircle(target as Polygon, this, true);
             case CollisionType.Circle: return getCollisionCircleCircle(this, target as Circle);
-            // case CollisionType.Ellipse: return intersectionCircleEllipse(this, target as Ellipse);
+            case CollisionType.Ellipse: return getCollisionEllipseCircle(target as Ellipse, this, true);
             // case CollisionType.Line: return intersectionLineCircle(target as Line, this);
             // case CollisionType.Point: return intersectionPointCircle(target as Vector, this);
             default: return null;

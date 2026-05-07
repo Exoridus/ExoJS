@@ -191,7 +191,7 @@ export class GamepadPromptLayouts {
      * corresponding {@link GamepadChannel}. The composite `'DPad'` control has no
      * channel entry and is absent from the returned map.
      */
-    public static buildControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadChannel> {
+    public static getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadChannel> {
         return channelMap;
     }
 }

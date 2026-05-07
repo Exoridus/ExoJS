@@ -439,7 +439,7 @@ export class Video extends Sprite implements Media {
         this._videoFrameCallbackHandle = null;
     }
 
-    private setupWithAudioContext(audioContext: AudioContext): void {
+    private readonly setupWithAudioContext = (audioContext: AudioContext): void => {
         const gainNode = audioContext.createGain();
         gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
 
@@ -454,5 +454,5 @@ export class Video extends Sprite implements Media {
         sourceNode.connect(gainNode);
 
         this._audioSetup = { audioContext, gainNode, sourceNode };
-    }
+    };
 }

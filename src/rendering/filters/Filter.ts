@@ -23,4 +23,14 @@ export abstract class Filter {
         input: RenderTexture,
         output: RenderTexture,
     ): void;
+
+    /**
+     * Release any GPU-side resources held by this filter (uniform buffers,
+     * pipelines, intermediate textures). Default is a no-op for stateless
+     * filters; subclasses with state ({@link BlurFilter}, {@link ColorFilter})
+     * override.
+     */
+    public destroy(): void {
+        // no-op — subclasses with GPU state override
+    }
 }

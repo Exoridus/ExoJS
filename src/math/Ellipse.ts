@@ -5,6 +5,8 @@ import { Interval } from '@/math/Interval';
 import type { Collidable, CollisionResponse} from '@/math/Collision';
 import { CollisionType } from '@/math/Collision';
 import {
+    getCollisionEllipseCircle,
+    getCollisionEllipseRectangle,
     intersectionCircleEllipse,
     intersectionEllipseEllipse,
     intersectionEllipsePoly,
@@ -22,8 +24,11 @@ import type { SceneNode } from '@/core/SceneNode';
  * separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements
  * {@link ShapeLike} for use in the intersection pipeline.
  *
- * Note: `collidesWith` always returns `null` — the ellipse supports boolean
- * intersection tests only; full SAT response is not yet implemented.
+ * `collidesWith` returns a {@link CollisionResponse} for ellipse-vs-rectangle
+ * (axis-aligned), ellipse-vs-circle, and ellipse-vs-{@link SceneNode} (which
+ * collides against the node's AABB). Other targets — ellipse-vs-ellipse,
+ * ellipse-vs-polygon, and ellipse-vs-line — return `null`; use
+ * {@link Ellipse.intersectsWith} for boolean tests against those.
  */
 export class Ellipse implements ShapeLike {
     public readonly collisionType: CollisionType = CollisionType.Ellipse;
@@ -140,7 +145,12 @@ export class Ellipse implements ShapeLike {
     }
 
     public collidesWith(target: Collidable): CollisionResponse | null {
-        return null;
+        switch (target.collisionType) {
+            case CollisionType.SceneNode: return getCollisionEllipseRectangle(this, (target as SceneNode).getBounds());
+            case CollisionType.Rectangle: return getCollisionEllipseRectangle(this, target as Rectangle);
+            case CollisionType.Circle: return getCollisionEllipseCircle(this, target as Circle);
+            default: return null;
+        }
     }
 
     public contains(x: number, y: number): boolean {

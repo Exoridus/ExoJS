@@ -40,10 +40,10 @@ export abstract class GamepadMapping {
     public abstract readonly family: GamepadMappingFamily;
 
     /** Ordered list of button controls, indexed by the Gamepad API button index. */
-    public readonly buttons: Array<GamepadControl>;
+    public readonly buttons: ReadonlyArray<GamepadControl>;
 
     /** Ordered list of axis controls, indexed by the Gamepad API axis index. */
-    public readonly axes: Array<GamepadControl>;
+    public readonly axes: ReadonlyArray<GamepadControl>;
 
     protected constructor(buttons: Array<GamepadControl>, axes: Array<GamepadControl>) {
         this.buttons = buttons;
@@ -55,8 +55,8 @@ export abstract class GamepadMapping {
      * Call when the associated gamepad disconnects to allow garbage collection.
      */
     public destroy(): void {
-        this.buttons.length = 0;
-        this.axes.length = 0;
+        (this.buttons as Array<GamepadControl>).length = 0;
+        (this.axes as Array<GamepadControl>).length = 0;
     }
 
     /**

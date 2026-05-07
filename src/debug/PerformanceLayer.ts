@@ -1,4 +1,4 @@
-import { DebugLayer } from './DebugLayer';
+import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 import { Graphics } from '@/rendering/primitives/Graphics';
 import { Text } from '@/rendering/text/Text';
 import { TextStyle } from '@/rendering/text/TextStyle';
@@ -78,6 +78,10 @@ export class PerformanceLayer extends DebugLayer {
 
     public constructor(app: Application) {
         super(app);
+    }
+
+    public override get viewMode(): DebugLayerViewMode {
+        return 'screen';
     }
 
     /**

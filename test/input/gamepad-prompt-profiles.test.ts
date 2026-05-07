@@ -10,7 +10,7 @@ describe('GamepadPromptLayouts', () => {
     });
 
     test('builds canonical channels from prompt controls', () => {
-        const controlChannelMap = GamepadPromptLayouts.buildControlChannelMap();
+        const controlChannelMap = GamepadPromptLayouts.getControlChannelMap();
 
         expect(controlChannelMap.get('ButtonSouth')).toBe(GamepadChannel.ButtonSouth);
         expect(controlChannelMap.get('Select')).toBe(GamepadChannel.Select);

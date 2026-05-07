@@ -276,11 +276,13 @@ export class Sprite extends Drawable {
             && (dotB > 0) && (dotB <= lenB);
     }
 
+    /** @internal */
     public override _invalidateSubtreeTransform(): void {
         super._invalidateSubtreeTransform();
         this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);
     }
 
+    /** @internal */
     public override _invalidateBoundsCascade(): void {
         super._invalidateBoundsCascade();
         this.flags.push(SpriteFlags.Vertices | SpriteFlags.Normals);

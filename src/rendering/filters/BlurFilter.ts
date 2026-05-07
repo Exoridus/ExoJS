@@ -91,7 +91,7 @@ export class BlurFilter extends Filter {
         ));
     }
 
-    public destroy(): void {
+    public override destroy(): void {
         this._sampleTint.destroy();
         this._sprite.destroy();
     }

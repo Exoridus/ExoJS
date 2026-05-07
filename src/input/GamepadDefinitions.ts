@@ -142,9 +142,8 @@ const resolveDefinitionResult = (definition: GamepadDefinition, descriptor: Game
 /**
  * Normalises an `ids` value into a trimmed, lower-case string array ready for
  * comparison against a {@link GamepadDescriptor}.
- * @internal
  */
-export const normalizeIds = (ids?: string | Array<string>): Array<string> => {
+const normalizeIds = (ids?: string | Array<string>): Array<string> => {
     if (!ids) {
         return [];
     }

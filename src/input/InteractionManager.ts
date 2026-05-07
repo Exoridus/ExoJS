@@ -165,10 +165,11 @@ export class InteractionManager {
 
     /**
      * Returns the internal quadtree used for spatial hit-testing, or null when
-     * no interactive nodes are present. The quadtree is automatically created
-     * when the first interactive node is registered and disposed when the last
-     * interactive node is removed. Prefixed with underscore to signal
-     * "internal-but-public" (debug use only).
+     * no interactive nodes are present. Used by {@link HitTestLayer} to render
+     * the quadtree partitioning during development. Not part of the stable
+     * public API — friend-class access only.
+     *
+     * @internal
      */
     public _getDebugQuadtree(): Quadtree<{ node: RenderNode; order: number }> | null {
         return this._quadtree;
