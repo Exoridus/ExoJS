@@ -47,6 +47,7 @@
     "verify:exports": "tsx ./scripts/verify-exports.ts",
     "verify:package": "npm run build && npm run verify:exports && npm pack --dry-run --ignore-scripts",
     "verify:release": "npm run typecheck && npm run lint && npm test && npm run verify:package",
+    "release": "node ./scripts/release.mjs",
     "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",

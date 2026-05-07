@@ -1,5 +1,28 @@
 #!/usr/bin/env sh
-npm run lint || exit 1
-npm run typecheck || exit 1
-npm run test || exit 1
-npm run build || exit 1
+# Pre-push verification.
+#
+# Branch pushes:  lint + typecheck + test + build (fast-feedback subset).
+# Tag pushes:     full `verify:release` (mirrors CI's verify job, including
+#                 verify:exports + npm pack --dry-run) so a release tag is
+#                 never published until the same checks CI runs have all
+#                 passed locally.
+#
+# Refs being pushed are read from stdin in the format:
+#   <local_ref> <local_sha> <remote_ref> <remote_sha>
+is_tag_push=0
+
+while read local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in
+        refs/tags/*) is_tag_push=1 ;;
+    esac
+done
+
+if [ "$is_tag_push" = "1" ]; then
+    echo "[pre-push] tag push detected — running full release verification"
+    npm run verify:release || exit 1
+else
+    npm run lint || exit 1
+    npm run typecheck || exit 1
+    npm run test || exit 1
+    npm run build || exit 1
+fi

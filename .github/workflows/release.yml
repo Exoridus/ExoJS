@@ -86,5 +86,23 @@ jobs:
           npm run verify:exports
           npm pack --dry-run --ignore-scripts
 
+      # Mirror CI's examples-smoke job so a release that would break the
+      # example app cannot ship even if the library tests/typecheck pass.
+      - name: Install examples dependencies
+        working-directory: examples
+        run: npm ci --ignore-scripts --no-audit --fund=false
+
+      - name: Build examples
+        working-directory: examples
+        run: npm run build
+
+      - name: Examples bundle smoke
+        working-directory: examples
+        run: npm run test:smoke:bundle
+
+      - name: Examples catalog smoke
+        working-directory: examples
+        run: npm run test:smoke:catalog
+
       - name: Publish to npm
         run: npm publish --provenance --access public
