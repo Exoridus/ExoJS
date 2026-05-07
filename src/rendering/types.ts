@@ -1,3 +1,7 @@
+/**
+ * Compositing blend modes applied when drawing a {@link Drawable} over the current render target.
+ * Values map to backend-specific blend-equation presets.
+ */
 export enum BlendModes {
     Normal = 0,
     Additive = 1,
@@ -6,6 +10,11 @@ export enum BlendModes {
     Screen = 4,
 }
 
+/**
+ * Texture magnification and minification filter modes.
+ * Values are WebGL2 GLenum constants and are passed directly to the GPU sampler.
+ * Mipmap variants require {@link Texture.generateMipMap} to be enabled.
+ */
 export enum ScaleModes {
     Nearest = 0x2600,
     Linear = 0x2601,
@@ -15,12 +24,20 @@ export enum ScaleModes {
     LinearMipmapLinear = 0x2703,
 }
 
+/**
+ * Texture coordinate wrap behaviour when UV values fall outside [0, 1].
+ * Values are WebGL2 GLenum constants passed directly to the GPU sampler.
+ */
 export enum WrapModes {
     Repeat = 0x2901,
     ClampToEdge = 0x812F,
     MirroredRepeat = 0x8370,
 }
 
+/**
+ * GPU primitive topology used when issuing draw calls.
+ * Values are WebGL2 GLenum constants (e.g. `gl.TRIANGLES`).
+ */
 export enum RenderingPrimitives {
     Points = 0x0000,
     Lines = 0x0001,
@@ -31,6 +48,10 @@ export enum RenderingPrimitives {
     TriangleFan = 0x0006,
 }
 
+/**
+ * GPU buffer binding targets.
+ * Values are WebGL2 GLenum constants used when calling `gl.bindBuffer`.
+ */
 export enum BufferTypes {
     ArrayBuffer = 0x8892,
     ElementArrayBuffer = 0x8893,
@@ -42,6 +63,10 @@ export enum BufferTypes {
     PixelUnpackBuffer = 0x88EC,
 }
 
+/**
+ * Hints describing expected buffer access pattern, allowing the driver to optimise allocation.
+ * Values are WebGL2 GLenum constants used when calling `gl.bufferData`.
+ */
 export enum BufferUsage {
     StaticDraw = 0x88E4,
     StaticRead = 0x88E5,
@@ -54,6 +79,10 @@ export enum BufferUsage {
     StreamCopy = 0x88E2,
 }
 
+/**
+ * GLSL primitive type tokens used to describe {@link ShaderAttribute} and {@link ShaderUniform} data types.
+ * Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`.
+ */
 // @eslint-ignore
 export enum ShaderPrimitives {
     Int = 0x1404,

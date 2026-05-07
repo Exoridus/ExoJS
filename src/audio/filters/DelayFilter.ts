@@ -1,6 +1,7 @@
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
 
+/** Construction options for {@link DelayFilter}. */
 export interface DelayFilterOptions {
     delaySeconds?: number;
     feedback?: number;
@@ -16,6 +17,13 @@ interface DelayFilterSetup {
     readonly wetGain: GainNode;
 }
 
+/**
+ * Echo/delay effect using a Web Audio `DelayNode` with a feedback loop and
+ * dry/wet mix. The feedback path feeds the delayed signal back into itself,
+ * producing repeating echoes that decay naturally. Setting `feedback` near
+ * its maximum of 0.95 produces a long, prominent tail; lower values create
+ * a single slap-back echo.
+ */
 export class DelayFilter extends AudioFilter {
     private _setup: DelayFilterSetup | null = null;
     private _delaySeconds: number;
@@ -44,6 +52,7 @@ export class DelayFilter extends AudioFilter {
         return this._setup.outputGain;
     }
 
+    /** Delay time in seconds. Range 0..5, default 0.3. */
     public get delaySeconds(): number {
         return this._delaySeconds;
     }
@@ -59,6 +68,7 @@ export class DelayFilter extends AudioFilter {
         }
     }
 
+    /** Fraction of the delayed signal fed back into the delay input. Range 0..0.95, default 0.4. */
     public get feedback(): number {
         return this._feedback;
     }
@@ -74,6 +84,7 @@ export class DelayFilter extends AudioFilter {
         }
     }
 
+    /** Wet (delayed) mix level, 0..1. The dry level is automatically `1 - wet`. Default 0.5. */
     public get wet(): number {
         return this._wet;
     }

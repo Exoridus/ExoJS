@@ -55,6 +55,13 @@ export class RendererRegistry<Runtime extends RenderBackend> {
         return this._renderers.values();
     }
 
+    /**
+     * Find the renderer responsible for `drawable`.
+     * Walks the prototype chain so subclasses inherit their parent's renderer
+     * without requiring an explicit registration.
+     *
+     * @throws Error if no renderer is found for the drawable's type.
+     */
     public resolve(drawable: Drawable): Renderer<Runtime, Drawable> {
         let constructor = drawable.constructor as DrawableConstructor | null;
         let renderer: Renderer<Runtime, Drawable> | undefined = undefined;

@@ -97,6 +97,7 @@ export class Text extends Container {
         this.setStyle(style);
     }
 
+    /** Replace the displayed string and rebuild the glyph mesh if the value changed. */
     public setText(text: string): this {
         if (this._text !== text) {
             this._text = text;
@@ -106,6 +107,7 @@ export class Text extends Container {
         return this;
     }
 
+    /** Replace the active style and rebuild the glyph mesh unconditionally. */
     public setStyle(style: TextStyle | TextStyleOptions): this {
         this._style = (style instanceof TextStyle) ? style : new TextStyle(style);
         this._rebuild();

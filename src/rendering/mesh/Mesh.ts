@@ -106,10 +106,12 @@ export class Mesh extends Drawable {
         this.recomputeLocalBounds();
     }
 
+    /** Number of (x, y) vertex pairs in the mesh (i.e. `vertices.length / 2`). */
     public get vertexCount(): number {
         return this.vertices.length / 2;
     }
 
+    /** Number of indices to draw: `indices.length` for indexed meshes, `vertexCount` otherwise. */
     public get indexCount(): number {
         return this.indices?.length ?? this.vertexCount;
     }

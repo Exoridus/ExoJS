@@ -22,6 +22,16 @@ type FrameCallbackVideoElement = HTMLVideoElement & Partial<{
     cancelVideoFrameCallback: (handle: number) => void;
 }>;
 
+/**
+ * Renders an `HTMLVideoElement` as a live texture on a {@link Sprite}.
+ *
+ * `Video` wraps a video element, manages playback (play/pause/stop/seek,
+ * volume, loop, playback rate), and keeps the underlying {@link Texture}
+ * in sync with the decoded video frame stream via
+ * `requestVideoFrameCallback` (falling back to `currentTime` polling on
+ * browsers that lack it). Audio is routed through the Web Audio API gain
+ * node and can be directed to any {@link AudioBus}.
+ */
 export class Video extends Sprite implements Media {
 
     public readonly onStart = new Signal();
@@ -85,6 +95,10 @@ export class Video extends Sprite implements Media {
         return this._duration;
     }
 
+    /**
+     * Current playback progress in the range [0, 1), computed as
+     * `(currentTime % duration) / duration`. Wraps for looping video.
+     */
     public get progress(): number {
         const elapsed = this.currentTime,
             duration = this.duration;
@@ -156,6 +170,11 @@ export class Video extends Sprite implements Media {
         }
     }
 
+    /**
+     * The Web Audio `GainNode` for this video's audio stream, or `null` when
+     * the audio context has not yet been initialized. Connect an analyser node
+     * here for audio-reactive visuals.
+     */
     public get analyserTarget(): AudioNode | null {
         return this._audioSetup?.gainNode ?? null;
     }
@@ -180,6 +199,7 @@ export class Video extends Sprite implements Media {
         }
     }
 
+    /** Start video playback. Dispatches `onStart` if the video was paused. Applies `options` before playing. */
     public play(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
@@ -193,6 +213,7 @@ export class Video extends Sprite implements Media {
         return this;
     }
 
+    /** Pause video playback. Dispatches `onStop` if the video was playing. */
     public pause(options?: Partial<PlaybackOptions>): this {
         if (options) {
             this.applyOptions(options);
@@ -206,6 +227,7 @@ export class Video extends Sprite implements Media {
         return this;
     }
 
+    /** Pause and seek to the start of the video. */
     public stop(options?: Partial<PlaybackOptions>): this {
         this.pause(options);
         this.currentTime = 0;
@@ -213,10 +235,12 @@ export class Video extends Sprite implements Media {
         return this;
     }
 
+    /** Toggle between play and pause. */
     public toggle(options?: Partial<PlaybackOptions>): this {
         return this.paused ? this.play(options) : this.pause(options);
     }
 
+    /** Apply a partial set of playback options (volume, loop, playbackRate, time, muted) to the video element. */
     public applyOptions(options: Partial<PlaybackOptions> = {}): this {
         const { volume, loop, playbackRate, time, muted } = options;
 
@@ -304,6 +328,11 @@ export class Video extends Sprite implements Media {
     }
 
 
+    /**
+     * Mark the texture dirty when the video frame has advanced, then upload
+     * the latest video frame and delegate rendering to {@link Sprite.render}.
+     * @internal
+     */
     public override render(backend: RenderBackend): this {
         if (this.visible) {
             this._markTextureDirtyIfPlaybackAdvanced();
@@ -314,6 +343,11 @@ export class Video extends Sprite implements Media {
         return this;
     }
 
+    /**
+     * Upload the current video frame to the GPU texture if the frame is dirty
+     * and the video dimensions are known. Called automatically by `render`;
+     * also safe to call manually when the video is paused on a specific frame.
+     */
     public override updateTexture(): this {
         const texture = this.texture;
 

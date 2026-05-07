@@ -178,6 +178,11 @@ export class WebGl2ShaderFilter extends Filter {
         this.uniforms = { ...(options.uniforms ?? {}) };
     }
 
+    /**
+     * Execute the GLSL shader pass: compile the program on first call, bind
+     * uniforms, and render the input texture into `output`. Throws if the
+     * active backend is WebGPU — use {@link WebGpuShaderFilter} on WebGPU.
+     */
     public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
         if (backend.backendType === RenderBackendType.WebGpu) {
             throw new Error(

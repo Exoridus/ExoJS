@@ -3,12 +3,31 @@ import { onAudioContextReady, isAudioContextReady, getAudioContext } from './aud
 import type { SceneNode } from '@/core/SceneNode';
 import type { View } from '@/rendering/View';
 
+/**
+ * Anything {@link AudioListener.target} can be set to. The listener reads
+ * its world-space position from the target each frame:
+ * - {@link SceneNode}: uses `getGlobalTransform()` translation
+ * - {@link View}: uses `view.center`
+ * - Plain `{ x, y }` object: read directly
+ * - `null`: no automatic tracking — set `position` manually.
+ */
 export type AudioListenerTarget = SceneNode | View | { x: number; y: number } | null;
 
 // Type alias to avoid name collision with the class itself (both our class and
 // WebAudio's built-in interface are named "AudioListener").
 type WebAudioListener = globalThis.AudioListener;
 
+/**
+ * Singleton observer position fed to the Web Audio panner nodes used by
+ * spatial sounds. Sets the listener orientation once at setup (forward = -Z,
+ * up = +Y for 2D scenes) and updates `positionX/Y/Z` (or legacy
+ * `setPosition`) every frame from {@link AudioListener.position} —
+ * which is in turn read from {@link AudioListener.target} when one is set.
+ *
+ * Owned by {@link AudioManager}; one instance per engine. `velocity` is a
+ * placeholder for future Doppler support (currently not piped to the Web
+ * Audio listener).
+ */
 export class AudioListener {
     public readonly position: Vector = new Vector(0, 0);
     public readonly velocity: Vector = new Vector(0, 0);

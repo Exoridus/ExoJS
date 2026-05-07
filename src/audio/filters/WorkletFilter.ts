@@ -63,6 +63,7 @@ export abstract class WorkletFilter extends AudioFilter {
         return this._ready ?? Promise.resolve();
     }
 
+    /** Disconnects all nodes, cancels any pending worklet load, and releases resources. */
     public override destroy(): void {
         onAudioContextReady.clearByContext(this);
         this._workletNode?.disconnect();
@@ -81,7 +82,11 @@ export abstract class WorkletFilter extends AudioFilter {
      */
     protected _onWorkletReady?(audioContext: AudioContext): void;
 
-    /** Helper for subclasses: ramp an AudioParam smoothly. */
+    /**
+     * Ramps an `AudioParam` on the underlying `AudioWorkletNode` to `value`
+     * using a short exponential ramp. No-ops if the worklet is not yet loaded.
+     * @internal
+     */
     protected _setAudioParam(name: string, value: number): void {
         if (!this._workletNode) return;
         const param = this._workletNode.parameters.get(name);

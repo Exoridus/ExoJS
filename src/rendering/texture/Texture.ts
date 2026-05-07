@@ -6,6 +6,17 @@ import type { SamplerOptions } from './Sampler';
 import { getTextureSourceSize } from '@/core/utils';
 import type { TextureSource } from '@/core/types';
 
+/**
+ * A static GPU texture sourced from an image, canvas, or video element.
+ *
+ * Holds the pixel source and sampling parameters ({@link ScaleModes}, {@link WrapModes},
+ * mip generation, alpha premultiplication). A `version` counter is incremented on every
+ * mutation so backends can detect stale GPU uploads without polling.
+ *
+ * Static helpers {@link Texture.black}, {@link Texture.white}, and {@link Texture.empty}
+ * provide ready-made placeholder textures. Default sampler options are configurable via
+ * {@link Texture.defaultSamplerOptions}.
+ */
 export class Texture {
     private static _black: Texture | null = null;
     private static _white: Texture | null = null;
@@ -133,14 +144,28 @@ export class Texture {
         this._flipY = flipY;
     }
 
+    /**
+     * Whether both dimensions are powers of two.
+     * Non-power-of-two textures may have limited wrap-mode support on some hardware.
+     */
     public get powerOfTwo(): boolean {
         return isPowerOfTwo(this.width) && isPowerOfTwo(this.height);
     }
 
+    /**
+     * Monotonically increasing version counter.
+     * Incremented by any mutation that requires a GPU re-upload (source change,
+     * size change, or sampler parameter change). Backends compare this value to
+     * their cached version to decide whether to re-upload the texture.
+     */
     public get version(): number {
         return this._version;
     }
 
+    /**
+     * Register a callback to be invoked just before this texture is destroyed.
+     * Useful for backends to release their GPU-side texture objects.
+     */
     public addDestroyListener(listener: () => void): this {
         this._destroyListeners.add(listener);
 
@@ -189,6 +214,11 @@ export class Texture {
         return this;
     }
 
+    /**
+     * Refresh the size from the current source and bump the version.
+     * Call after mutating the source's pixel data in place (e.g. drawing to a canvas)
+     * to notify backends that a re-upload is needed.
+     */
     public updateSource(): this {
         const { width, height } = getTextureSourceSize(this._source);
 

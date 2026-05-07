@@ -2,6 +2,7 @@ import { clamp } from '@/math/utils';
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from './audio-context';
 import type { AudioFilter } from './AudioFilter';
 
+/** Construction options for {@link AudioBus}. */
 export interface AudioBusOptions {
     parent?: AudioBus | null;
     volume?: number;
@@ -17,6 +18,26 @@ interface AudioBusSetup {
     readonly panNode: StereoPannerNode;
 }
 
+/**
+ * Hierarchical mixer node in the engine's audio routing graph. Each bus
+ * owns three Web Audio nodes (input gain, optional filter chain, stereo
+ * pan, output gain) and routes its output into its parent's input — the
+ * root bus connects to the destination.
+ *
+ * The three engine-built-in busses are constructed by {@link AudioManager}:
+ * `master` (root), `music` (child of master), `sound` (child of master).
+ * User code creates additional busses via `new AudioBus(name, { parent })`
+ * and registers them via {@link AudioManager.registerBus}.
+ *
+ * Volume is in 0..2 (1 = unity), pan is -1..1, mute is a boolean override.
+ * {@link AudioBus.fadeIn} / {@link AudioBus.fadeOut} produce smooth ramps
+ * over the output gain. Filter changes via {@link AudioBus.addFilter} /
+ * {@link AudioBus.removeFilter} rebuild the chain in place.
+ *
+ * Setup is deferred until the global `AudioContext` is unlocked
+ * (browser autoplay policy); operations that need live nodes are no-ops
+ * until that happens.
+ */
 export class AudioBus {
     public readonly name: string;
     private _parent: AudioBus | null;
@@ -94,12 +115,18 @@ export class AudioBus {
         return this._setup?.inputNode ?? null;
     }
 
+    /**
+     * Append a filter to the end of the chain (before the pan stage). The
+     * chain is rebuilt in place; existing audio routes through the new
+     * filter on the next frame.
+     */
     public addFilter(filter: AudioFilter): this {
         this._filters.push(filter);
         this._rebuildFilterChain();
         return this;
     }
 
+    /** Remove `filter` from the chain. No-op if not present. Caller still owns + must `destroy()` it. */
     public removeFilter(filter: AudioFilter): this {
         const index = this._filters.indexOf(filter);
         if (index !== -1) {
@@ -109,6 +136,10 @@ export class AudioBus {
         return this;
     }
 
+    /**
+     * Linearly ramp the output gain from 0 to the current volume over
+     * `durationMs`. Cancels any in-flight ramps on the same gain node.
+     */
     public fadeIn(durationMs: number): this {
         this._clearScheduledStop();
         if (durationMs <= 0 || !this._setup) {
@@ -123,6 +154,12 @@ export class AudioBus {
         return this;
     }
 
+    /**
+     * Linearly ramp the output gain to 0 over `durationMs`. By default
+     * mutes the bus once the ramp completes (`stopAfter: true`); pass
+     * `stopAfter: false` to let the ramp finish silently while leaving
+     * `muted` unchanged.
+     */
     public fadeOut(durationMs: number, options: { stopAfter?: boolean } = {}): this {
         const stopAfter = options.stopAfter ?? true;
         this._clearScheduledStop();

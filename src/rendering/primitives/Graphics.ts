@@ -7,6 +7,19 @@ import { Vector } from '@/math/Vector';
 import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderNode } from '@/rendering/RenderNode';
 
+/**
+ * Immediate-mode 2D shape API backed by {@link Mesh} children.
+ *
+ * Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a
+ * new {@link Mesh} child colored with the current `fillColor` or `lineColor`.
+ * The active `lineWidth` controls stroke thickness for path and outline draws.
+ * Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor
+ * point and flush a Mesh on each segment.
+ *
+ * Call {@link clear} to remove all child meshes and reset pen state. Because
+ * each shape is a separate Mesh, `Graphics` inherits full filter, blend,
+ * tint, and mask support from {@link Container}.
+ */
 export class Graphics extends Container {
 
     private _lineWidth = 0;
@@ -62,12 +75,14 @@ export class Graphics extends Container {
         return super.addChildAt(child, index);
     }
 
+    /** Move the current pen position to (`x`, `y`) without drawing anything. */
     public moveTo(x: number, y: number): this {
         this._currentPoint.set(x, y);
 
         return this;
     }
 
+    /** Draw a stroked line segment from the current point to (`toX`, `toY`) and advance the pen. */
     public lineTo(toX: number, toY: number): this {
         const { x: fromX, y: fromY } = this._currentPoint;
 
@@ -77,6 +92,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Draw a quadratic Bézier curve from the current point to (`toX`, `toY`) via control point (`cpX`, `cpY`). */
     public quadraticCurveTo(cpX: number, cpY: number, toX: number, toY: number): this {
         const { x: fromX, y: fromY } = this._currentPoint;
 
@@ -86,6 +102,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Draw a cubic Bézier curve from the current point to (`toX`, `toY`) via two control points. */
     public bezierCurveTo(cpX1: number, cpY1: number, cpX2: number, cpY2: number, toX: number, toY: number): this {
         const { x: fromX, y: fromY } = this._currentPoint;
 
@@ -95,6 +112,11 @@ export class Graphics extends Container {
         return this;
     }
 
+    /**
+     * Draw a circular arc tangent to the two lines defined by the current point→(x1,y1)
+     * and (x1,y1)→(x2,y2), with the given `radius`. Falls back to `lineTo(x1,y1)`
+     * when the geometry is degenerate.
+     */
     public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
         const { x: fromX, y: fromY } = this._currentPoint;
         const r = Math.abs(radius);
@@ -149,6 +171,7 @@ export class Graphics extends Container {
         return this.drawArc(centerX, centerY, r, startAngle, endAngle, leftTurn);
     }
 
+    /** Draw a stroked arc centered at (`x`, `y`) with the given `radius` from `startAngle` to `endAngle` (radians). */
     public drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise = false): this {
         const r = Math.abs(radius);
 
@@ -187,6 +210,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Draw a stroked line between two explicit points, independent of the current pen position. */
     public drawLine(startX: number, startY: number, endX: number, endY: number): this {
         const data = buildLine(startX, startY, endX, endY, this._lineWidth);
 
@@ -195,6 +219,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Draw a stroked polyline from a flat `[x0,y0, x1,y1, ...]` coordinate array. */
     public drawPath(path: Array<number>): this {
         const data = buildPath(path, this._lineWidth);
 
@@ -203,6 +228,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Fill a closed polygon defined by `[x0,y0, x1,y1, ...]` and optionally stroke its outline. */
     public drawPolygon(path: Array<number>): this {
         const data = buildPolygon(path);
 
@@ -215,6 +241,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. */
     public drawCircle(centerX: number, centerY: number, radius: number): this {
         const data = buildCircle(centerX, centerY, radius);
 
@@ -227,6 +254,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. */
     public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
         const data = buildEllipse(centerX, centerY, radiusX, radiusY);
 
@@ -239,6 +267,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Fill a rectangle and optionally stroke its outline if `lineWidth > 0`. */
     public drawRectangle(x: number, y: number, width: number, height: number): this {
         const data = buildRectangle(x, y, width, height);
 
@@ -251,6 +280,10 @@ export class Graphics extends Container {
         return this;
     }
 
+    /**
+     * Fill a regular star polygon and optionally stroke its outline.
+     * `innerRadius` defaults to half of `radius`.
+     */
     public drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
         const data = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
 
@@ -263,6 +296,7 @@ export class Graphics extends Container {
         return this;
     }
 
+    /** Remove all child meshes and reset pen state (position, colors, line width). */
     public clear(): this {
         this.removeChildren();
 

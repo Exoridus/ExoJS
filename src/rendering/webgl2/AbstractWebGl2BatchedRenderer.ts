@@ -23,6 +23,13 @@ interface RendererConnection {
     readonly vaoHandle: WebGLVertexArrayObject;
 }
 
+/**
+ * Specialization of {@link AbstractWebGl2Renderer} for renderers that
+ * batch many drawables of the same type into one or two GPU draw calls
+ * (sprite batches, particle batches). Subclasses fill the shared vertex
+ * + index buffers and call `flush()` either when the buffer is full or
+ * when the active batched renderer changes.
+ */
 export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Renderer<Drawable> {
     protected readonly attributeCount: number;
     protected readonly batchSize: number;

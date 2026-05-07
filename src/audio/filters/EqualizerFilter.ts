@@ -1,6 +1,7 @@
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
 
+/** Construction options for {@link EqualizerFilter}. */
 export interface EqualizerFilterOptions {
     low?: number;
     mid?: number;
@@ -16,6 +17,12 @@ interface EqualizerFilterSetup {
     readonly highShelf: BiquadFilterNode;
 }
 
+/**
+ * Three-band equalizer (low shelf / peaking mid / high shelf) built from a
+ * series chain of `BiquadFilterNode` instances. Gain values are in dB and
+ * clamped to ±40 dB. Band frequencies can be set at construction time but
+ * are not adjustable at runtime; only the band gains are.
+ */
 export class EqualizerFilter extends AudioFilter {
     private _setup: EqualizerFilterSetup | null = null;
     private _low: number;
@@ -50,6 +57,7 @@ export class EqualizerFilter extends AudioFilter {
         return this._setup.highShelf;
     }
 
+    /** Low-shelf gain in dB applied below `lowFrequency`. Range −40..40, default 0. */
     public get low(): number {
         return this._low;
     }
@@ -65,6 +73,7 @@ export class EqualizerFilter extends AudioFilter {
         }
     }
 
+    /** Peaking mid-band gain in dB centered at `midFrequency`. Range −40..40, default 0. */
     public get mid(): number {
         return this._mid;
     }
@@ -80,6 +89,7 @@ export class EqualizerFilter extends AudioFilter {
         }
     }
 
+    /** High-shelf gain in dB applied above `highFrequency`. Range −40..40, default 0. */
     public get high(): number {
         return this._high;
     }

@@ -6,6 +6,11 @@ import type { Texture } from '@/rendering/texture/Texture';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { RenderNode } from '@/rendering/RenderNode';
 
+/**
+ * Internal dirty-flag bitmask used by {@link Sprite} to lazily recompute
+ * derived data (vertices, normals, texture coordinates, bounding boxes).
+ * @internal
+ */
 export enum SpriteFlags {
     None = 0x00,
     Translation = 0x01,
@@ -21,6 +26,21 @@ export enum SpriteFlags {
     Normals  = 0x800,
 }
 
+/**
+ * The primary 2D drawable for textured quads and the foundation of the
+ * rendering hierarchy.
+ *
+ * A Sprite wraps a {@link Texture} (or {@link RenderTexture}) and exposes
+ * full transform control (position, rotation, scale, origin) inherited from
+ * {@link Drawable}. The rendered quad is derived from `textureFrame`, which
+ * defaults to the full texture dimensions but can be narrowed to a sub-region
+ * (e.g. a frame from a {@link Spritesheet}).
+ *
+ * Vertex and normal data are computed lazily and cached until the transform
+ * or frame changes, making repeated read access free after the first evaluation.
+ * Collision helpers — `contains`, `getNormals`, `project` — are overridden to
+ * operate on the exact rotated quad rather than the AABB.
+ */
 export class Sprite extends Drawable {
 
     private _texture: Texture | RenderTexture | null = null;
@@ -74,6 +94,11 @@ export class Sprite extends Drawable {
         this.scale.y = (value / this._textureFrame.height);
     }
 
+    /**
+     * World-space corner positions of the sprite quad, computed lazily from the
+     * current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3]
+     * (TL, TR, BR, BL). Cached until the transform is invalidated.
+     */
     public get vertices(): Float32Array {
         if (this.flags.has(SpriteFlags.Vertices)) {
             const { left, top, right, bottom } = this.getLocalBounds();
@@ -97,6 +122,12 @@ export class Sprite extends Drawable {
         return this._vertices;
     }
 
+    /**
+     * Packed UV coordinates for the four quad corners, encoded as two
+     * 16-bit fixed-point values per element (low 16 bits = U, high 16 bits = V,
+     * each in the range 0–65535). Accounts for `Texture.flipY`. Throws if no
+     * texture is assigned.
+     */
     public get texCoords(): Uint32Array {
         if (this._texture === null) {
             throw new Error('texCoords can only be calculated when the sprite has a texture')
@@ -126,6 +157,7 @@ export class Sprite extends Drawable {
         return this._texCoords;
     }
 
+    /** Assign a new texture, refreshing the texture frame to the full texture dimensions. */
     public setTexture(texture: Texture | RenderTexture | null): this {
         if (this._texture !== texture) {
             this._texture = texture;
@@ -136,6 +168,7 @@ export class Sprite extends Drawable {
         return this;
     }
 
+    /** Signal the GPU backend that the underlying texture source has changed and reset the frame to full dimensions. */
     public updateTexture(): this {
         if (this._texture) {
             this._texture.updateSource();
@@ -146,6 +179,13 @@ export class Sprite extends Drawable {
         return this;
     }
 
+    /**
+     * Set a sub-region of the texture to render.
+     * When `resetSize` is `true` (default) the sprite's logical size snaps to
+     * the new frame dimensions; pass `false` to keep the current pixel size
+     * (useful for animation playback where the frame changes but the display
+     * size should stay constant).
+     */
     public setTextureFrame(frame: Rectangle, resetSize = true): this {
         const width = this.width;
         const height = this.height;
@@ -168,6 +208,7 @@ export class Sprite extends Drawable {
         return this;
     }
 
+    /** Reset the texture frame to the full dimensions of the current texture. Throws if no texture is set. */
     public resetTextureFrame(): this {
         if (!this._texture) {
             throw new Error('Cannot reset texture frame when no texture was set');
@@ -176,6 +217,10 @@ export class Sprite extends Drawable {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
+    /**
+     * Return the four outward-facing edge normals of the rotated quad, lazily
+     * computed from `vertices`. Used by the SAT collision system.
+     */
     public override getNormals(): Array<Vector> {
         if (this.flags.has(SpriteFlags.Normals)) {
             const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
@@ -191,6 +236,10 @@ export class Sprite extends Drawable {
         return this._normals;
     }
 
+    /**
+     * Project all four quad vertices onto `axis` and return the resulting
+     * scalar interval. Used by the SAT collision system.
+     */
     public override project(axis: Vector, result: Interval = new Interval()): Interval {
         const [x1, y1, x2, y2, x3, y3, x4, y4] = this.vertices;
         const proj1 = axis.dot(x1, y1);
@@ -204,6 +253,11 @@ export class Sprite extends Drawable {
         );
     }
 
+    /**
+     * Return `true` if the world-space point (`x`, `y`) lies inside the quad.
+     * Uses a fast AABB check when the rotation is a multiple of 90°, and the
+     * exact dot-product test for arbitrary angles.
+     */
     public override contains(x: number, y: number): boolean {
         if ((this.rotation % 90 === 0)) {
             return this.getBounds().contains(x, y);

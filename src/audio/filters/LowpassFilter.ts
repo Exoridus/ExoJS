@@ -1,11 +1,19 @@
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
 
+/** Construction options for {@link LowpassFilter}. */
 export interface LowpassFilterOptions {
     frequency?: number;
     resonance?: number;
 }
 
+/**
+ * Low-pass filter backed by a `BiquadFilterNode` in `lowpass` mode.
+ * Attenuates frequencies above the cutoff and passes everything below it.
+ * Useful for muffling audio (e.g., sound heard through a wall), taming
+ * harsh high-frequency content, or creating underwater/telephone effects.
+ * The `resonance` (Q) parameter controls the sharpness of the roll-off peak.
+ */
 export class LowpassFilter extends AudioFilter {
     private _node: BiquadFilterNode | null = null;
     private _frequency: number;
@@ -32,6 +40,7 @@ export class LowpassFilter extends AudioFilter {
         return this._node;
     }
 
+    /** Cutoff frequency in Hz. Signals above this frequency are attenuated. Range 20..20000, default 1000. */
     public get frequency(): number {
         return this._frequency;
     }
@@ -43,6 +52,7 @@ export class LowpassFilter extends AudioFilter {
         }
     }
 
+    /** Q (resonance) at the cutoff. Higher values create a sharper, resonant peak. Minimum 0.0001, default 1. */
     public get resonance(): number {
         return this._resonance;
     }

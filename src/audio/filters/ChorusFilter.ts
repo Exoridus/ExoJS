@@ -1,6 +1,7 @@
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
 
+/** Construction options for {@link ChorusFilter}. */
 export interface ChorusFilterOptions {
     /** Base delay in ms. Typical 15-30ms. Default 25. */
     delayMs?: number;
@@ -72,6 +73,7 @@ export class ChorusFilter extends AudioFilter {
     // Getters / setters
     // -------------------------------------------------------------------------
 
+    /** Base delay time in milliseconds. Default 25. */
     public get delayMs(): number { return this._delayMs; }
     public set delayMs(value: number) {
         this._delayMs = Math.max(0, value);
@@ -84,6 +86,7 @@ export class ChorusFilter extends AudioFilter {
         }
     }
 
+    /** LFO modulation depth in milliseconds (peak deviation from base delay). Default 5. */
     public get depthMs(): number { return this._depthMs; }
     public set depthMs(value: number) {
         this._depthMs = Math.max(0, value);
@@ -96,6 +99,7 @@ export class ChorusFilter extends AudioFilter {
         }
     }
 
+    /** LFO oscillation rate in Hz. Typical chorus range is 0.1–5 Hz; 5–15 Hz produces a vibrato effect. Default 1.5. */
     public get rateHz(): number { return this._rateHz; }
     public set rateHz(value: number) {
         this._rateHz = Math.max(0, value);
@@ -108,6 +112,7 @@ export class ChorusFilter extends AudioFilter {
         }
     }
 
+    /** Wet (modulated) mix level, 0..1. The dry level is automatically `1 - wet`. Default 0.5. */
     public get wet(): number { return this._wet; }
     public set wet(value: number) {
         this._wet = Math.max(0, Math.min(1, value));

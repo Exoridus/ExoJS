@@ -36,6 +36,11 @@ export class AudioAnalyser {
     private _byteWaveform: Uint8Array<ArrayBuffer>;
     private _floatWaveform: Float32Array<ArrayBuffer>;
 
+    /**
+     * Create an `AudioAnalyser` with the given options. The underlying
+     * `AnalyserNode` is created immediately if the `AudioContext` is already
+     * running, or deferred until {@link onAudioContextReady} fires.
+     */
     public constructor(options?: AudioAnalyserOptions) {
         this._options = {
             fftSize: options?.fftSize ?? 2048,
@@ -61,6 +66,11 @@ export class AudioAnalyser {
     // Source setter
     // -----------------------------------------------------------------------
 
+    /**
+     * The currently tapped audio source, or `null` if none is set.
+     * Assigning a new value disconnects the previous tap and connects the new
+     * source as a parallel branch without affecting the source's main routing.
+     */
     public get source(): AudioAnalyserSource {
         return this._source;
     }
@@ -95,6 +105,7 @@ export class AudioAnalyser {
         return this._options.fftSize;
     }
 
+    /** Number of frequency bins available — half of `fftSize`. */
     public get frequencyBinCount(): number {
         return this._options.fftSize >> 1;
     }
@@ -223,6 +234,11 @@ export class AudioAnalyser {
     // Lifecycle
     // -----------------------------------------------------------------------
 
+    /**
+     * Disconnect the analyser tap, release the internal `AnalyserNode`, and
+     * cancel any pending setup callbacks. Call when the analyser is no longer
+     * needed to avoid memory leaks.
+     */
     public destroy(): void {
         onAudioContextReady.clearByContext(this);
         this._disconnectTap();

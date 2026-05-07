@@ -737,6 +737,27 @@ registerProcessor('${workletName}', BeatDetectorProcessor);
 // Main-thread BeatDetector class
 // ---------------------------------------------------------------------------
 
+/**
+ * Real-time tempo + beat tracker. Splits work between the audio-rendering
+ * thread (an AudioWorklet that runs onset detection, tempogram analysis,
+ * and parallel 3/4 and 4/4 posterior estimation) and the main thread (this
+ * class — receives beats, fires Signals, handles configuration and source
+ * routing).
+ *
+ * Accepts a wide range of {@link BeatDetectorSource}s — bus, individual
+ * sound/music, raw MediaStream, or any AudioNode — and exposes a Signal
+ * for each notable event:
+ * - {@link BeatDetector.onBeat} — every detected beat
+ * - {@link BeatDetector.onDownbeat} — first beat of each bar
+ * - {@link BeatDetector.onBarStart} — bar boundary
+ * - {@link BeatDetector.onTempoChange} — when the tracked BPM changes
+ * - {@link BeatDetector.onBeatPredicted} — look-ahead schedule notice
+ *
+ * Detection is delayed by `settlingMs` (default 1500 ms) after a new
+ * source is attached; this prevents spurious beats during the algorithm's
+ * warm-up. Time-signature detection (3/4 vs 4/4) is on by default; lock
+ * to 4/4 by setting `enableTimeSignatureDetection: false`.
+ */
 export class BeatDetector {
     // ---- Signals ----
     public readonly onBeat:          Signal<[BeatInfo]>               = new Signal();

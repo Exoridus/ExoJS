@@ -6,6 +6,13 @@ import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Filter } from './Filter';
 
+/**
+ * A {@link Filter} that multiplies the input texture by a solid {@link Color}.
+ *
+ * Useful for tinting, fade-to-black/white, flash effects, and
+ * colour-grading passes. The `color` property can be mutated at runtime
+ * without recreating the filter.
+ */
 export class ColorFilter extends Filter {
 
     private readonly _color: Color;

@@ -1,3 +1,9 @@
+/**
+ * Generate a `Uint16Array` of indices for `size` axis-aligned quads.
+ * Each quad is split into two triangles using vertex order `0-1-2, 0-2-3`,
+ * producing six indices per quad. Use with an interleaved vertex buffer where
+ * every four vertices form one quad.
+ */
 export const createQuadIndices = (size: number): Uint16Array => {
     const data = new Uint16Array(size * 6);
     const len = data.length;
@@ -14,13 +20,22 @@ export const createQuadIndices = (size: number): Uint16Array => {
     return data;
 };
 
+/** Options for {@link createCanvas}. All fields are optional. */
 export interface CreateCanvasOptions {
+    /** Existing canvas element to reuse instead of creating a new one. */
     canvas?: HTMLCanvasElement;
+    /** 2D fill colour string applied to the entire canvas surface. Defaults to `'#6495ed'`. */
     fillStyle?: string;
+    /** Canvas pixel width. Defaults to `10`. */
     width?: number;
+    /** Canvas pixel height. Defaults to `10`. */
     height?: number;
 }
 
+/**
+ * Create or reuse an `HTMLCanvasElement` filled with a solid colour.
+ * Used internally to produce placeholder textures (e.g. {@link Texture.black}, {@link Texture.white}).
+ */
 export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasElement => {
     const { canvas, fillStyle, width, height } = options;
 
@@ -38,6 +53,11 @@ export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasEleme
 
 const heightCache: Map<string, number> = new Map<string, number>();
 
+/**
+ * Measure the line height of a CSS font string in pixels.
+ * Results are cached by font string so repeated calls for the same font are cheap.
+ * Uses a temporary DOM element to derive the true rendered height including leading.
+ */
 export const determineFontHeight = (font: string): number => {
     if (!heightCache.has(font)) {
         const body = document.body;

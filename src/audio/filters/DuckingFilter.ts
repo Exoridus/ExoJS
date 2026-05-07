@@ -67,6 +67,7 @@ class DuckingProcessor extends AudioWorkletProcessor {
 registerProcessor('exojs-ducking', DuckingProcessor);
 `;
 
+/** Construction options for {@link DuckingFilter}. `sidechain` is required. */
 export interface DuckingFilterOptions {
     sidechain: AudioBus;
     threshold?: number;
@@ -75,6 +76,14 @@ export interface DuckingFilterOptions {
     releaseMs?: number;
 }
 
+/**
+ * Sidechain compressor (ducker) implemented as an {@link WorkletFilter}.
+ * Attenuates the main audio signal whenever the `sidechain` {@link AudioBus}
+ * exceeds the threshold, then releases when it drops back down. Commonly used
+ * to duck background music under dialogue or sound effects. Attack and release
+ * times are expressed in milliseconds and converted internally to one-pole
+ * filter coefficients.
+ */
 export class DuckingFilter extends WorkletFilter {
     // Declared nullable because super() may trigger _onWorkletReady before the
     // subclass constructor body runs (if construction is aborted by a throw).
@@ -139,18 +148,21 @@ export class DuckingFilter extends WorkletFilter {
         return 1 - Math.exp(-1 / Math.max(1, tau));
     }
 
+    /** Sidechain level above which the main signal is attenuated, in dBFS. Range −100..0, default −20. */
     public get threshold(): number { return this._threshold; }
     public set threshold(value: number) {
         this._threshold = Math.max(-100, Math.min(0, value));
         this._setAudioParam('threshold', this._threshold);
     }
 
+    /** Compression ratio applied to the main signal above the threshold. Range 1..20, default 4. */
     public get ratio(): number { return this._ratio; }
     public set ratio(value: number) {
         this._ratio = Math.max(1, Math.min(20, value));
         this._setAudioParam('ratio', this._ratio);
     }
 
+    /** Attack time in milliseconds — how quickly the ducker engages. Default 30. */
     public get attackMs(): number { return this._attackMs; }
     public set attackMs(value: number) {
         this._attackMs = Math.max(0.001, value);
@@ -159,6 +171,7 @@ export class DuckingFilter extends WorkletFilter {
         }
     }
 
+    /** Release time in milliseconds — how quickly the ducker disengages. Default 300. */
     public get releaseMs(): number { return this._releaseMs; }
     public set releaseMs(value: number) {
         this._releaseMs = Math.max(0.001, value);

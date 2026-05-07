@@ -7,6 +7,10 @@ import { Bounds } from '@/core/Bounds';
 import { Flags } from '@/math/Flags';
 import { SceneNode } from '@/core/SceneNode';
 
+/**
+ * Dirty-flag bits for lazy {@link View} transform and bounds recalculation.
+ * @internal
+ */
 export enum ViewFlags {
     None = 0x00,
     Translation = 0x01,
@@ -20,19 +24,36 @@ export enum ViewFlags {
     VertexTint = 0x80,
 }
 
+/** A target that a {@link View} can track — either a {@link SceneNode} or any `{x, y}` position object. */
 export type ViewFollowTarget = SceneNode | { x: number; y: number } | null;
 
+/** Options for {@link View.follow}. */
 export interface ViewFollowOptions {
+    /** Interpolation factor in [0, 1]. `1` snaps instantly; lower values smooth the camera. Defaults to `1`. */
     lerp?: number;
+    /** Horizontal offset in world units applied after following the target. */
     offsetX?: number;
+    /** Vertical offset in world units applied after following the target. */
     offsetY?: number;
 }
 
+/** Options for {@link View.shake}. */
 export interface ViewShakeOptions {
+    /** Oscillation frequency in Hz. Higher values produce more rapid shaking. Defaults to `16`. */
     frequency?: number;
+    /** When `true` the amplitude decays linearly to zero over the shake duration. Defaults to `true`. */
     decay?: boolean;
 }
 
+/**
+ * 2D camera that defines what region of the world is visible on screen.
+ *
+ * Maintains a center position, a visible area size, a rotation, and an optional
+ * zoom level. Provides lazy-evaluated world-to-clip and clip-to-world transform
+ * matrices, a follow-target system for tracking scene nodes, and a procedural
+ * screen-shake effect. Call {@link update} once per frame to advance follow and
+ * shake animations.
+ */
 export class View {
     private readonly _center: ObservableVector;
     private readonly _size: ObservableSize;
@@ -125,6 +146,10 @@ export class View {
         }
     }
 
+    /**
+     * Monotonically increasing counter incremented whenever the view's transform
+     * is invalidated. Backends use this to detect when to re-upload the projection matrix.
+     */
     public get updateId(): number {
         return this._updateId;
     }
@@ -139,6 +164,10 @@ export class View {
         return this;
     }
 
+    /**
+     * Resize the view to the given dimensions and reset zoom to `1`.
+     * Use this when the canvas or window is resized.
+     */
     public resize(width: number, height: number): this {
         this._zoomBaseWidth = width;
         this._zoomBaseHeight = height;
@@ -171,6 +200,11 @@ export class View {
         return this;
     }
 
+    /**
+     * Set an absolute zoom level.
+     * A zoom of `2` halves the visible area; `0.5` doubles it.
+     * Values are clamped to a minimum of `0.0001` to prevent division by zero.
+     */
     public setZoom(zoom: number): this {
         const normalizedZoom = Math.max(0.0001, zoom);
 
@@ -191,6 +225,11 @@ export class View {
         return this.setZoom(Math.max(0.0001, this._zoomLevel - amount));
     }
 
+    /**
+     * Track a scene node or world position each frame.
+     * The view center is interpolated towards the target using the `lerp` factor.
+     * Call {@link clearFollow} to stop tracking.
+     */
     public follow(target: ViewFollowTarget, options: ViewFollowOptions = {}): this {
         this._followTarget = target;
         this._followLerp = clamp(options.lerp ?? 1, 0, 1);
@@ -209,6 +248,11 @@ export class View {
         return this;
     }
 
+    /**
+     * Constrain the camera center so the visible area never extends outside `bounds`.
+     * When the view is larger than the constraint rectangle the camera is clamped to
+     * the geometric centre of the rectangle. Pass `null` to remove the constraint.
+     */
     public setBounds(bounds: Rectangle | null): this {
         if (bounds === null) {
             if (this._boundsConstraint) {
@@ -234,6 +278,15 @@ export class View {
         return this.setBounds(null);
     }
 
+    /**
+     * Start a procedural camera shake effect.
+     * The shake applies a sinusoidal offset to the view's center position, then
+     * stops automatically when `durationMs` elapses. Call {@link stopShake} to
+     * cancel early.
+     *
+     * @param intensity  - Maximum pixel displacement at peak amplitude.
+     * @param durationMs - How long the shake lasts in milliseconds.
+     */
     public shake(intensity: number, durationMs: number, options: ViewShakeOptions = {}): this {
         this._shakeIntensity = Math.max(0, intensity);
         this._shakeDurationMs = Math.max(0, durationMs);
@@ -293,6 +346,10 @@ export class View {
         return this;
     }
 
+    /**
+     * Return the cached world-to-clip projection matrix, recalculating it if dirty.
+     * The returned matrix is owned by this view — do not store a reference across frames.
+     */
     public getTransform(): Matrix {
         if (this._flags.has(ViewFlags.Transform)) {
             this.updateTransform();
@@ -329,6 +386,10 @@ export class View {
         return this;
     }
 
+    /**
+     * Return the cached clip-to-world inverse matrix, recalculating it if dirty.
+     * Use this to convert screen-space coordinates (e.g. mouse position) to world space.
+     */
     public getInverseTransform(): Matrix {
         if (this._flags.has(ViewFlags.TransformInverse)) {
             this.getTransform()
@@ -340,6 +401,10 @@ export class View {
         return this._inverseTransform;
     }
 
+    /**
+     * Return the world-space bounding rectangle of the currently visible area, recalculating if dirty.
+     * Used for frustum culling by {@link Drawable.render}.
+     */
     public getBounds(): Rectangle {
         if (this._flags.has(ViewFlags.BoundingBox)) {
             this.updateBounds();

@@ -11,6 +11,18 @@ interface MusicAudioSetup {
     readonly sourceNode: MediaElementAudioSourceNode;
 }
 
+/**
+ * Streaming long-form audio backed by an `HTMLAudioElement`. Decoded
+ * lazily via the browser's media pipeline, so memory cost scales with
+ * decode-buffer size rather than total duration. Routes through the
+ * engine's `music` bus by default (overridable via the inherited
+ * `bus` setter).
+ *
+ * Use {@link Sound} for short, frequently-triggered clips that benefit
+ * from pre-decoded `AudioBuffer` storage and pooled overlapping
+ * playback. `Music` is the right choice for background tracks, voice
+ * lines, or anything else where a single source per track is enough.
+ */
 export class Music extends AbstractMedia {
     private readonly _audioElement: HTMLMediaElement;
     private _audioSetup: MusicAudioSetup | null = null;

@@ -3,10 +3,21 @@ import { Signal } from '@/core/Signal';
 import type { PlaybackOptions } from '@/core/types';
 import type { AudioBus } from '@/audio/AudioBus';
 
+/** Initial state passed to the {@link AbstractMedia} constructor by subclasses. */
 export interface AbstractMediaInitialState extends Omit<PlaybackOptions, 'time'> {
     duration: number;
 }
 
+/**
+ * Shared base for {@link Sound} and {@link Music}: holds playback
+ * primitives (volume, loop, playbackRate, muted, currentTime), the
+ * {@link AudioBus} routing slot, lifecycle Signals (`onStart`, `onStop`),
+ * and ramp helpers ({@link AbstractMedia.fadeIn}, {@link AbstractMedia.fadeOut})
+ * that operate on whatever `GainNode` the subclass exposes.
+ *
+ * Subclasses implement the abstract members to bind to either an
+ * `AudioBufferSourceNode` (Sound) or `MediaElementAudioSourceNode` (Music).
+ */
 export abstract class AbstractMedia implements Media {
 
     public readonly onStart = new Signal();

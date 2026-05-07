@@ -56,12 +56,18 @@ interface NormalizedAudioSpriteClip {
     readonly loop: boolean;
 }
 
+/**
+ * Named sub-region of an {@link AudioBuffer} used as an audio sprite sheet.
+ * `start` / `end` are seconds into the buffer; `loop` makes
+ * {@link Sound.playSprite} loop the sprite indefinitely.
+ */
 export interface AudioSpriteClip {
     start: number;
     end: number;
     loop?: boolean;
 }
 
+/** Construction options for {@link Sound}. */
 export interface SoundOptions extends Partial<PlaybackOptions> {
     poolSize?: number;
     poolStrategy?: SoundPoolStrategy;
@@ -69,6 +75,7 @@ export interface SoundOptions extends Partial<PlaybackOptions> {
     sprites?: Readonly<Record<string, AudioSpriteClip>>;
 }
 
+/** Per-call overrides for {@link Sound.play} and {@link Sound.playSprite}. */
 export interface PlayOptions extends Partial<PlaybackOptions> {
     bus?: AudioBus;
     /**
@@ -81,6 +88,24 @@ export interface PlayOptions extends Partial<PlaybackOptions> {
     replace?: boolean;
 }
 
+/**
+ * Pre-decoded short audio clip backed by an `AudioBuffer`. Each
+ * {@link Sound.play} call grabs a free `AudioBufferSourceNode` from the
+ * pool (default size 8) so the same sound can overlap itself; when the
+ * pool is full the configured {@link SoundPoolStrategy} decides which
+ * source to evict.
+ *
+ * Supports audio-sprite playback via {@link Sound.playSprite} — name a
+ * sub-region in the {@link AudioSpriteClip} options and trigger by name.
+ *
+ * Routes through any {@link AudioBus}; defaults to the engine's `sound`
+ * bus. Calling {@link Sound.makeSpatial} attaches a panner so the sound
+ * follows a {@link SceneNode} or world-space target with distance
+ * attenuation handled by Web Audio.
+ *
+ * Use {@link Music} for long-form streaming audio (single source, decoded
+ * lazily) — `Sound` is best for short, frequently-triggered clips.
+ */
 export class Sound extends AbstractMedia {
     private readonly _audioBuffer: AudioBuffer;
     private readonly _pooledSources: Array<PooledSource> = [];

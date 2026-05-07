@@ -203,6 +203,11 @@ export class WebGpuShaderFilter extends Filter {
         this.uniforms = { ...(options.uniforms ?? {}) };
     }
 
+    /**
+     * Execute the WGSL shader pass: flush uniforms, build bind groups, and
+     * render the input texture into `output`. Throws if the active backend is
+     * not WebGPU — use {@link WebGl2ShaderFilter} on WebGL2.
+     */
     public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void {
         if (backend.backendType !== RenderBackendType.WebGpu) {
             throw new Error(

@@ -10,6 +10,14 @@ export interface WebGl2RenderBufferRuntime {
     destroy(buffer: WebGl2RenderBuffer): void;
 }
 
+/**
+ * Backend-agnostic GPU buffer descriptor. Holds the buffer type
+ * (`ArrayBuffer` / `ElementArrayBuffer`), usage hint
+ * (`Static` / `Dynamic` / `Stream`), the typed-array CPU-side data, and a
+ * version counter so the runtime can detect mutations and re-upload
+ * lazily. The actual `WebGLBuffer` lifecycle is managed by the runtime
+ * binding via {@link WebGl2RenderBufferRuntime}.
+ */
 export class WebGl2RenderBuffer {
 
     private readonly _type: number;

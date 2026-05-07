@@ -63,6 +63,24 @@ export type MaskSource =
     | RenderNode
     | null;
 
+/**
+ * {@link SceneNode} that can produce visual output. Adds the rendering
+ * pipeline features on top of the structural transform/bounds carried by
+ * SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an
+ * optional `mask` (via {@link MaskSource}), bitmap caching
+ * (`cacheAsBitmap`), and the interaction surface
+ * (`interactive`, `draggable`, all the pointer Signals).
+ *
+ * `RenderNode.render(backend)` is the per-frame visual entry point each
+ * subclass implements. The base provides `renderVisualContent()` — a
+ * helper that wraps the subclass's draw work with cache / mask / filter /
+ * tint orchestration so subclasses focus on their own geometry.
+ *
+ * Subclasses of note: {@link Container} (children), {@link Sprite} (textured
+ * quad), {@link Mesh} (custom geometry), {@link Graphics} (immediate-mode
+ * shapes), {@link Text} (glyph-atlas text), {@link Video} (video texture),
+ * {@link ParticleSystem} (particles).
+ */
 export abstract class RenderNode extends SceneNode {
 
     private static _spriteFactory: (() => RenderNodeSpriteLike) | null = null;

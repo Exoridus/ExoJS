@@ -2,6 +2,20 @@ import { AudioBus } from './AudioBus';
 import { AudioListener } from './AudioListener';
 import type { Sound } from './Sound';
 
+/**
+ * Module-level singleton that owns the engine-wide audio mix: three
+ * pre-configured {@link AudioBus} instances (`master` ← `music` + `sound`),
+ * a single shared {@link AudioListener} for spatial audio, and a registry
+ * of any extra busses the user constructs.
+ *
+ * Access the singleton via {@link getAudioManager} (or `app.audio`). The
+ * instance is constructed lazily on first access so client code that does
+ * not need audio pays no startup cost.
+ *
+ * Drives the per-frame `_tick()` on the listener and every spatial sound;
+ * propagates visibility-driven mute when {@link AudioManager.muteOnHidden}
+ * is enabled.
+ */
 export class AudioManager {
     public readonly master: AudioBus;
     public readonly music: AudioBus;
@@ -24,6 +38,12 @@ export class AudioManager {
         this._registered.set('sound', this.sound);
     }
 
+    /**
+     * When `true`, the master bus is muted while `document.hidden` is true.
+     * Wired to {@link Application.onVisibilityChange} via
+     * {@link AudioManager._applyVisibility}; the application calls that
+     * hook automatically — set this flag to opt in to the behavior.
+     */
     public get muteOnHidden(): boolean {
         return this._muteOnHidden;
     }
@@ -60,6 +80,11 @@ export class AudioManager {
         }
     }
 
+    /**
+     * Register a user-constructed {@link AudioBus} so it can be looked up by
+     * name via {@link AudioManager.getBus}. Throws if a bus with the same
+     * name is already registered.
+     */
     public registerBus(bus: AudioBus): this {
         if (this._registered.has(bus.name)) {
             throw new Error(`Audio bus "${bus.name}" is already registered.`);
@@ -68,6 +93,11 @@ export class AudioManager {
         return this;
     }
 
+    /**
+     * Unregister and {@link AudioBus.destroy} a previously registered bus.
+     * Throws if you attempt to unregister one of the three built-ins
+     * (`master`, `music`, `sound`). No-op if the bus is unknown.
+     */
     public unregisterBus(bus: AudioBus): this {
         if (bus === this.master || bus === this.music || bus === this.sound) {
             throw new Error(`Cannot unregister built-in bus "${bus.name}".`);
@@ -82,6 +112,7 @@ export class AudioManager {
         return this;
     }
 
+    /** Look up a bus by name. Throws if the name is not registered. */
     public getBus(name: string): AudioBus {
         const bus = this._registered.get(name);
         if (!bus) {
@@ -90,6 +121,7 @@ export class AudioManager {
         return bus;
     }
 
+    /** `true` when a bus with `name` has been registered. */
     public hasBus(name: string): boolean {
         return this._registered.has(name);
     }
@@ -108,6 +140,11 @@ export class AudioManager {
 // Module-level singleton (lazy)
 let _manager: AudioManager | null = null;
 
+/**
+ * Lazy accessor for the singleton {@link AudioManager}. Constructs the
+ * instance on first call, returns the same instance for every subsequent
+ * call. Equivalent to `app.audio`.
+ */
 export function getAudioManager(): AudioManager {
     if (_manager === null) {
         _manager = new AudioManager();

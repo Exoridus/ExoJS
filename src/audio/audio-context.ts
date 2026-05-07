@@ -114,7 +114,16 @@ const onUserInteraction = (): void => {
     });
 };
 
+/**
+ * Specialised {@link Signal} that fires once the global `AudioContext` reaches
+ * the `running` state. Subscribing via `add` or `once` automatically begins
+ * monitoring for user-interaction events that are required to resume a
+ * suspended context in browsers with autoplay policy.
+ *
+ * @internal
+ */
 class AudioContextReadySignal extends Signal<[AudioContext]> {
+    /** Subscribe and immediately start interaction monitoring. */
     public override add(handler: (audioContext: AudioContext) => void | boolean, context?: object): this {
         super.add(handler, context);
         ensureAudioContextReadyMonitoring();
@@ -122,6 +131,7 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
         return this;
     }
 
+    /** Subscribe once and immediately start interaction monitoring. */
     public override once(handler: (audioContext: AudioContext) => void | boolean, context?: object): this {
         super.once(handler, context);
         ensureAudioContextReadyMonitoring();
@@ -130,8 +140,27 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
     }
 }
 
+/**
+ * Signal that dispatches once the global `AudioContext` enters the `running`
+ * state. Handles browser autoplay-policy by listening for user-interaction
+ * events (`mousedown`, `touchstart`, `touchend`) and resuming a suspended
+ * context automatically.
+ *
+ * @example
+ * ```ts
+ * onAudioContextReady.once((ctx) => {
+ *   // safe to schedule audio nodes
+ * });
+ * ```
+ */
 export const onAudioContextReady = new AudioContextReadySignal();
 
+/**
+ * Return the global singleton `AudioContext`, creating it if it does not yet
+ * exist. Also starts interaction-unlock monitoring so the context will resume
+ * on the first user gesture. Throws if `AudioContext` is not available in the
+ * current environment.
+ */
 export const getAudioContext = (): AudioContext => {
     const audioContext = getOrCreateAudioContext();
 
@@ -140,14 +169,33 @@ export const getAudioContext = (): AudioContext => {
     return audioContext;
 };
 
+/**
+ * Return `true` if the global `AudioContext` has been created and is currently
+ * in the `running` state. Safe to call before `getAudioContext`; returns
+ * `false` if no context exists yet.
+ */
 export const isAudioContextReady = (): boolean => {
     const audioContext = getExistingAudioContext();
 
     return audioContext !== null && audioContext.state === 'running';
 };
 
+/**
+ * Return the shared singleton `OfflineAudioContext` used for audio decoding.
+ * Its sample rate matches the live `AudioContext`. Creates the live context
+ * as a side effect if it does not exist yet.
+ */
 export const getOfflineAudioContext = (): OfflineAudioContext => getOrCreateOfflineAudioContext();
 
+/**
+ * Decode raw audio bytes into an `AudioBuffer` using the shared
+ * `OfflineAudioContext`. The context's sample rate is derived from the live
+ * `AudioContext`, ensuring decoded buffers are compatible with playback nodes.
+ *
+ * Note: on some older mobile WebKit versions `decodeAudioData` requires a
+ * running (live) context — decoding may fail with a browser-level error rather
+ * than an ExoJS-shaped error in those environments.
+ */
 // Decodes audio data using a shared OfflineAudioContext whose sample rate is derived from
 // the live AudioContext. OfflineAudioContext.decodeAudioData is spec-compliant and works
 // in all major browsers. On some older mobile WebKit versions, decodeAudioData may only

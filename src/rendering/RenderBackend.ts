@@ -10,6 +10,19 @@ import type { RenderTexture } from './texture/RenderTexture';
 import type { RenderStats } from './RenderStats';
 import type { BlendModes } from './types';
 
+/**
+ * Common interface implemented by both rendering backends
+ * ({@link WebGl2Backend}, {@link WebGpuBackend}). Owns the canvas root
+ * render target, exposes the active {@link View}, accepts {@link Drawable}
+ * submissions, manages an offscreen render-texture pool, and exposes the
+ * scissor-stack and alpha-mask compositing primitives used by
+ * {@link RenderNode}'s `mask` machinery.
+ *
+ * Application code rarely calls this directly — high-level code submits
+ * drawables via the scene graph and reads `app.backend.stats` for
+ * per-frame counters. Custom render passes (subclasses of
+ * {@link RenderPass}) interact with the interface directly.
+ */
 export interface RenderBackend {
     readonly backendType: RenderBackendType;
     readonly view: View;

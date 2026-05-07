@@ -133,12 +133,14 @@ export class PitchShiftFilter extends WorkletFilter {
         this._setAudioParam('wet', this._wet);
     }
 
+    /** Pitch ratio relative to the original. 1.0 = no change, 0.5 = one octave down, 2.0 = one octave up. Range 0.25..4.0, default 1.0. */
     public get pitch(): number { return this._pitch; }
     public set pitch(value: number) {
         this._pitch = Math.max(0.25, Math.min(4.0, value));
         this._setAudioParam('pitch', this._pitch);
     }
 
+    /** Wet (pitch-shifted) mix level, 0..1. Default 1.0 (full wet). */
     public get wet(): number { return this._wet; }
     public set wet(value: number) {
         this._wet = Math.max(0, Math.min(1.0, value));

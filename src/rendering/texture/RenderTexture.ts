@@ -3,6 +3,17 @@ import { RenderTarget } from '@/rendering/RenderTarget';
 import { ScaleModes, WrapModes } from '@/rendering/types';
 import type { SamplerOptions } from '@/rendering/texture/Sampler';
 
+/**
+ * An off-screen render target that can also be sampled as a texture.
+ *
+ * Combines {@link RenderTarget} (framebuffer attachment) with the sampler
+ * parameters of a {@link Texture} (scale mode, wrap mode, mip generation).
+ * A `textureVersion` counter is incremented on every mutation so backends
+ * can detect when to re-create the underlying GPU texture object.
+ *
+ * Mipmap generation is disabled by default because render targets are typically
+ * updated every frame and mip generation is expensive.
+ */
 export class RenderTexture extends RenderTarget {
 
     public static defaultSamplerOptions: SamplerOptions = {
@@ -82,10 +93,15 @@ export class RenderTexture extends RenderTarget {
         this._flipY = flipY;
     }
 
+    /** Whether both dimensions are powers of two. */
     public get powerOfTwo(): boolean {
         return isPowerOfTwo(this.width) && isPowerOfTwo(this.height);
     }
 
+    /**
+     * Monotonically increasing counter incremented whenever a sampler parameter changes
+     * or the source data is updated. Backends use this to detect stale GPU texture state.
+     */
     public get textureVersion(): number {
         return this._textureVersion;
     }

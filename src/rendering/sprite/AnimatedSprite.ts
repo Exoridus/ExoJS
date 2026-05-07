@@ -6,12 +6,14 @@ import type { Spritesheet } from './Spritesheet';
 import type { Texture } from '@/rendering/texture/Texture';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 
+/** Definition for a single animation clip registered on an {@link AnimatedSprite}. */
 export interface AnimatedSpriteClipDefinition {
     readonly frames: ReadonlyArray<Rectangle>;
     readonly fps?: number;
     readonly loop?: boolean;
 }
 
+/** Per-call options passed to {@link AnimatedSprite.play}. */
 export interface AnimatedSpritePlayOptions {
     loop?: boolean;
     restart?: boolean;
@@ -25,6 +27,19 @@ interface NormalizedAnimatedSpriteClip {
 
 const defaultClipFps = 12;
 
+/**
+ * A {@link Sprite} that advances through a sequence of texture-frame
+ * {@link Rectangle}s over time to produce frame-based animation.
+ *
+ * Multiple named clips can be registered via {@link defineClip} or the
+ * constructor. Call {@link play} to start a clip; call {@link update} each
+ * frame with the elapsed delta (seconds or a `Time` object) to advance
+ * playback. The `onFrame` signal fires on every frame advance and
+ * `onComplete` fires when a non-looping clip reaches its last frame.
+ *
+ * Use {@link AnimatedSprite.fromSpritesheet} to create an instance directly
+ * from a {@link Spritesheet}'s named animations.
+ */
 export class AnimatedSprite extends Sprite {
 
     private readonly _clips = new Map<string, NormalizedAnimatedSpriteClip>();
@@ -57,6 +72,10 @@ export class AnimatedSprite extends Sprite {
         return this._playing;
     }
 
+    /**
+     * Whether the current clip loops. Returns the per-call loop override if set,
+     * otherwise the clip's own `loop` flag.
+     */
     public get loop(): boolean {
         if (this._loopOverride !== null) {
             return this._loopOverride;
@@ -73,6 +92,7 @@ export class AnimatedSprite extends Sprite {
         this._loopOverride = loop;
     }
 
+    /** Replace all registered clips with the provided map. Clears any previously registered clips first. */
     public setClips(clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>): this {
         this._clips.clear();
 
@@ -83,6 +103,7 @@ export class AnimatedSprite extends Sprite {
         return this;
     }
 
+    /** Register a named clip. Frame rectangles are cloned so the caller may mutate the originals. */
     public defineClip(name: string, clip: AnimatedSpriteClipDefinition): this {
         if (name.trim().length === 0) {
             throw new Error('AnimatedSprite clip names must be non-empty strings.');
@@ -107,6 +128,7 @@ export class AnimatedSprite extends Sprite {
         return this;
     }
 
+    /** Remove a registered clip by name. Stops playback first if the clip is currently active. */
     public removeClip(name: string): this {
         if (this._currentClipName === name) {
             this.stop();
@@ -117,6 +139,11 @@ export class AnimatedSprite extends Sprite {
         return this;
     }
 
+    /**
+     * Start playing the named clip. By default restarts from frame 0; pass
+     * `{ restart: false }` to resume from the current frame if the same clip
+     * is already active. Optionally overrides the clip's loop setting.
+     */
     public play(name: string, options: AnimatedSpritePlayOptions = {}): this {
         const clip = this._clips.get(name);
 
@@ -141,6 +168,7 @@ export class AnimatedSprite extends Sprite {
         return this;
     }
 
+    /** Stop playback and rewind the active clip to frame 0. */
     public stop(): this {
         this._playing = false;
         this._elapsedFrameTimeMs = 0;
@@ -174,6 +202,11 @@ export class AnimatedSprite extends Sprite {
         return this;
     }
 
+    /**
+     * Advance playback by `delta` milliseconds (or a `Time` object). Call once
+     * per frame from the game loop. Dispatches `onFrame` for each frame
+     * boundary crossed and `onComplete` when a non-looping clip ends.
+     */
     public update(delta: Time | number): this {
         if (!this._playing || this._currentClipName === null) {
             return this;
@@ -237,6 +270,11 @@ export class AnimatedSprite extends Sprite {
         this._clips.clear();
     }
 
+    /**
+     * Construct an {@link AnimatedSprite} from the named animations defined on
+     * a {@link Spritesheet}. Each animation becomes a looping clip whose frames
+     * are the spritesheet frame rectangles in declaration order.
+     */
     public static fromSpritesheet(spritesheet: Spritesheet): AnimatedSprite {
         const clips: Record<string, AnimatedSpriteClipDefinition> = {};
 

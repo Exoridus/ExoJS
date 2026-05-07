@@ -156,36 +156,42 @@ export class GranularFilter extends WorkletFilter {
         this._setAudioParam('wet', this._wet);
     }
 
+    /** Duration of each grain in seconds. Range 0.005..0.5, default 0.05. */
     public get grainSize(): number { return this._grainSize; }
     public set grainSize(value: number) {
         this._grainSize = Math.max(0.005, Math.min(0.5, value));
         this._setAudioParam('grainSize', this._grainSize);
     }
 
+    /** Number of grains spawned per second. Range 1..500, default 50. */
     public get density(): number { return this._density; }
     public set density(value: number) {
         this._density = Math.max(1, Math.min(500, value));
         this._setAudioParam('density', this._density);
     }
 
+    /** Random time-offset spread for grain start positions, 0..1. Higher values scatter grains further into the past. Default 0.5. */
     public get spread(): number { return this._spread; }
     public set spread(value: number) {
         this._spread = Math.max(0, Math.min(1, value));
         this._setAudioParam('spread', this._spread);
     }
 
+    /** Minimum per-grain pitch ratio. Range 0.25..4, default 1.0. */
     public get pitchMin(): number { return this._pitchMin; }
     public set pitchMin(value: number) {
         this._pitchMin = Math.max(0.25, Math.min(4, value));
         this._setAudioParam('pitchMin', this._pitchMin);
     }
 
+    /** Maximum per-grain pitch ratio. Range 0.25..4, default 1.0. */
     public get pitchMax(): number { return this._pitchMax; }
     public set pitchMax(value: number) {
         this._pitchMax = Math.max(0.25, Math.min(4, value));
         this._setAudioParam('pitchMax', this._pitchMax);
     }
 
+    /** Wet (granular) mix level, 0..1. Default 1.0. */
     public get wet(): number { return this._wet; }
     public set wet(value: number) {
         this._wet = Math.max(0, Math.min(1, value));

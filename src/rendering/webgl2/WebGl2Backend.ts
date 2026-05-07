@@ -74,6 +74,19 @@ interface DestroyListenable {
     removeDestroyListener(listener: () => void): unknown;
 }
 
+/**
+ * WebGL 2.0 implementation of {@link RenderBackend}. Manages the GL
+ * context, texture and framebuffer caches keyed by user-side
+ * {@link Texture}/{@link RenderTexture} identity, the active VAO, shader
+ * program, blend mode, and scissor stack. Dispatches to per-drawable
+ * renderers ({@link WebGl2SpriteRenderer}, {@link WebGl2MeshRenderer},
+ * {@link WebGl2ParticleRenderer}) registered in the {@link RendererRegistry}.
+ *
+ * Emits {@link WebGl2Backend.onContextLost} / {@link WebGl2Backend.onContextRestored}
+ * Signals when the browser loses or regains the GL context. The browser
+ * recreates the context automatically; renderers reconnect their
+ * GPU-side state as needed on the next draw.
+ */
 export class WebGl2Backend implements RenderBackend {
 
     public readonly backendType = RenderBackendType.WebGl2;

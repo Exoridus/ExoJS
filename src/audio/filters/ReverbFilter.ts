@@ -1,6 +1,7 @@
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
 
+/** Construction options for {@link ReverbFilter}. */
 export interface ReverbFilterOptions {
     durationSeconds?: number;
     decay?: number;
@@ -15,6 +16,14 @@ interface ReverbFilterSetup {
     readonly wetGain: GainNode;
 }
 
+/**
+ * Convolution reverb using a procedurally-generated impulse response loaded
+ * into a `ConvolverNode`. The impulse response is a stereo noise burst whose
+ * amplitude decays exponentially, simulating room reflections. Adjusting
+ * `durationSeconds` or `decay` rebuilds the impulse response immediately, so
+ * avoid animating these properties at audio rate — use `wet` for real-time
+ * mix control instead.
+ */
 export class ReverbFilter extends AudioFilter {
     private _setup: ReverbFilterSetup | null = null;
     private _duration: number;
@@ -43,6 +52,7 @@ export class ReverbFilter extends AudioFilter {
         return this._setup.outputGain;
     }
 
+    /** Length of the generated impulse response in seconds. Range 0.1..5, default 2. Changing this rebuilds the IR buffer. */
     public get durationSeconds(): number {
         return this._duration;
     }
@@ -56,6 +66,7 @@ export class ReverbFilter extends AudioFilter {
         }
     }
 
+    /** Exponential decay rate of the impulse response. Higher values produce a tighter, drier reverb tail. Range 0.5..10, default 2. Changing this rebuilds the IR buffer. */
     public get decay(): number {
         return this._decay;
     }
@@ -69,6 +80,7 @@ export class ReverbFilter extends AudioFilter {
         }
     }
 
+    /** Wet (reverberated) mix level, 0..1. The dry level is automatically `1 - wet`. Default 0.4. */
     public get wet(): number {
         return this._wet;
     }

@@ -1,8 +1,13 @@
 import { Color } from '@/core/Color';
 import type { TextAlignment } from './types';
 
+/** A CSS color string, canvas gradient, or canvas pattern accepted as fill or stroke. */
 export type TextStyleColor = string | CanvasGradient | CanvasPattern;
 
+/**
+ * Construction-time options for a {@link TextStyle}.
+ * All properties are optional; defaults match the {@link TextStyle} constructor defaults.
+ */
 export interface TextStyleOptions {
     align?: TextAlignment;
     fill?: TextStyleColor;
@@ -22,6 +27,16 @@ export interface TextStyleOptions {
     padding?: number;
 }
 
+/**
+ * Immutable-style value bag that describes how a {@link Text} node should
+ * render its string. Every property setter marks the style as `dirty` so
+ * that the owning Text can detect changes and rebuild its glyph mesh.
+ *
+ * Glyphs are always rasterized in white; `fillColor` is applied as a
+ * `Mesh.tint` multiplier at draw time, so changing it never triggers
+ * atlas re-rasterization. The canvas `fill` / `stroke` properties are
+ * used only during glyph rasterization itself.
+ */
 export class TextStyle {
     private _align: TextAlignment;
     private _fill: TextStyleColor;
@@ -243,6 +258,10 @@ export class TextStyle {
         }
     }
 
+    /**
+     * Whether any property has changed since the last time this flag was
+     * cleared. {@link Text} reads this to decide whether to rebuild its mesh.
+     */
     public get dirty(): boolean {
         return this._dirty;
     }
@@ -251,10 +270,18 @@ export class TextStyle {
         this._dirty = dirty;
     }
 
+    /**
+     * CSS font string derived from `fontWeight`, `fontSize`, and `fontFamily`.
+     * Used as `CanvasRenderingContext2D.font` during glyph rasterization.
+     */
     public get font(): string {
         return `${this._fontWeight} ${this._fontSize}px ${this._fontFamily}`;
     }
 
+    /**
+     * Apply this style's properties to a canvas 2D context so the next
+     * `fillText` / `strokeText` call uses the correct font, color, and stroke.
+     */
     public apply(context: CanvasRenderingContext2D): this {
         context.font = this.font;
         context.fillStyle = this.fill;
@@ -267,6 +294,7 @@ export class TextStyle {
         return this;
     }
 
+    /** Copy all properties from `style` into this instance and return `this`. */
     public copy(style: TextStyle): this {
         if (style !== this) {
             this.align = style.align;
@@ -291,6 +319,7 @@ export class TextStyle {
         return this;
     }
 
+    /** Return a new {@link TextStyle} with all properties copied from this one. */
     public clone(): TextStyle {
         return new TextStyle().copy(this);
     }

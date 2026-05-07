@@ -1,13 +1,32 @@
 import type { ScaleModes, WrapModes } from '@/rendering/types';
 
+/**
+ * Full set of texture sampling and upload parameters.
+ * Used by both {@link Texture} and {@link RenderTexture} to configure the GPU sampler
+ * and the pixel-store state at upload time.
+ */
 export interface SamplerOptions {
+    /** Minification and magnification filter applied when sampling the texture. */
     scaleMode: ScaleModes;
+    /** Behaviour when UV coordinates exceed [0, 1]. */
     wrapMode: WrapModes;
+    /** Whether pixel values are premultiplied by their alpha before uploading to the GPU. */
     premultiplyAlpha: boolean;
+    /** Whether to generate a full mipmap chain after upload. */
     generateMipMap: boolean;
+    /** Whether to flip the image vertically during upload (WebGL's Y-axis convention). */
     flipY: boolean;
 }
 
+/**
+ * WebGL2 sampler object wrapper that controls texture filtering and wrapping.
+ *
+ * Creates a `WebGLSampler` on construction and updates its parameters whenever
+ * `scaleMode` or `wrapMode` changes. Bind the sampler to a texture unit with
+ * {@link bind} before issuing draw calls. Note: `premultiplyAlpha`, `generateMipMap`,
+ * and `flipY` are pixel-store parameters handled at texture upload time; this class
+ * only manages filter and wrap state.
+ */
 export class Sampler {
 
     private readonly _context: WebGL2RenderingContext;
@@ -70,6 +89,10 @@ export class Sampler {
         return this;
     }
 
+    /**
+     * Bind this sampler to `textureUnit` for the next draw call.
+     * Must be called each time the active texture unit changes.
+     */
     public bind(textureUnit: number): this {
         this._context.bindSampler(textureUnit, this._sampler);
 

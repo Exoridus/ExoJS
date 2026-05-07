@@ -110,6 +110,15 @@ export interface VocoderFilterOptions {
     envelopeSmoothing?: number;
 }
 
+/**
+ * Phase-vocoder-style effect implemented as a {@link WorkletFilter}. Analyzes
+ * the spectral envelope of a `modulator` {@link AudioBus} across a bank of
+ * log-spaced bandpass filters and applies that envelope to the carrier signal
+ * (the main input). The result is the classic "robot voice" or talking-synth
+ * effect. Band count, frequency range, and Q are compile-time parameters set
+ * at construction; only `wet` and `envelopeSmoothing` are adjustable at
+ * runtime.
+ */
 export class VocoderFilter extends WorkletFilter {
     // Declared nullable because super() may trigger _onWorkletReady before the
     // subclass constructor body runs (if construction is aborted by a throw).
@@ -172,12 +181,14 @@ export class VocoderFilter extends WorkletFilter {
         }
     }
 
+    /** Wet (vocoded) mix level, 0..1. Default 1.0. */
     public get wet(): number { return this._wet; }
     public set wet(value: number) {
         this._wet = Math.max(0, Math.min(1, value));
         this._setAudioParam('wet', this._wet);
     }
 
+    /** One-pole envelope follower coefficient. Smaller values produce slower, smoother envelope tracking. Range 0.0001..0.1, default 0.005. */
     public get envelopeSmoothing(): number { return this._envelopeSmoothing; }
     public set envelopeSmoothing(value: number) {
         this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, value));

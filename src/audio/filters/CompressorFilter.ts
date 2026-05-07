@@ -1,6 +1,7 @@
 import { onAudioContextReady, isAudioContextReady, getAudioContext } from '../audio-context';
 import { AudioFilter } from '../AudioFilter';
 
+/** Construction options for {@link CompressorFilter}. All values are clamped to their valid ranges on assignment. */
 export interface CompressorFilterOptions {
     threshold?: number;
     knee?: number;
@@ -9,6 +10,12 @@ export interface CompressorFilterOptions {
     release?: number;
 }
 
+/**
+ * Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`.
+ * Reduces the volume of loud signals above a threshold, evening out the
+ * perceived loudness of a mix. All parameter changes are applied with a short
+ * smoothing ramp so they are artifact-free during playback.
+ */
 export class CompressorFilter extends AudioFilter {
     private _node: DynamicsCompressorNode | null = null;
     private _threshold: number;
@@ -41,6 +48,7 @@ export class CompressorFilter extends AudioFilter {
         return this._node;
     }
 
+    /** Level above which compression begins, in dBFS. Range −100..0, default −24. */
     public get threshold(): number {
         return this._threshold;
     }
@@ -52,6 +60,7 @@ export class CompressorFilter extends AudioFilter {
         }
     }
 
+    /** Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 30. */
     public get knee(): number {
         return this._knee;
     }
@@ -63,6 +72,7 @@ export class CompressorFilter extends AudioFilter {
         }
     }
 
+    /** Input-to-output dB ratio above the threshold. Range 1..20, default 12. */
     public get ratio(): number {
         return this._ratio;
     }
@@ -74,6 +84,7 @@ export class CompressorFilter extends AudioFilter {
         }
     }
 
+    /** Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003. */
     public get attack(): number {
         return this._attack;
     }
@@ -85,6 +96,7 @@ export class CompressorFilter extends AudioFilter {
         }
     }
 
+    /** Time in seconds for the compressor to disengage after the signal drops below the threshold. Range 0..1, default 0.25. */
     public get release(): number {
         return this._release;
     }

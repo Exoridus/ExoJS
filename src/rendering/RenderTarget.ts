@@ -3,6 +3,16 @@ import { View } from './View';
 import { Rectangle } from '@/math/Rectangle';
 import { Vector } from '@/math/Vector';
 
+/**
+ * Renderable destination — either the on-screen canvas (the `root`
+ * target owned by the backend) or an offscreen texture (a
+ * {@link RenderTexture}). Owns a {@link View} that controls the
+ * camera transform and viewport, and emits a destroy event so backends
+ * can release backing GPU resources.
+ *
+ * Set `view` to swap cameras for this target; call `resize(w, h)` when
+ * the underlying canvas / texture dimensions change.
+ */
 export class RenderTarget {
 
     private readonly _root: boolean;

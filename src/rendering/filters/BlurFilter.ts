@@ -6,11 +6,20 @@ import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { Filter } from './Filter';
 
+/** Construction-time options for a {@link BlurFilter}. */
 export interface BlurFilterOptions {
     readonly radius?: number;
     readonly quality?: number;
 }
 
+/**
+ * Box-blur {@link Filter} implemented as multiple additive sprite passes.
+ *
+ * The blur is approximated by rendering the input texture `quality * 2 + 1`
+ * times offset symmetrically along each axis by up to ±`radius` pixels and
+ * blending them additively. Higher `quality` values add more samples and
+ * produce a smoother result at the cost of additional draw calls.
+ */
 export class BlurFilter extends Filter {
 
     private readonly _sprite: Sprite = new Sprite(null);

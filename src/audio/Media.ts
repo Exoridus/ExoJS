@@ -1,5 +1,16 @@
 import type { PlaybackOptions } from '@/core/types';
 
+/**
+ * Common public interface implemented by every playable audio source —
+ * {@link Sound}, {@link Music}, {@link OscillatorSound}. Extracted so that
+ * code routing audio through generic helpers (fade managers, audio
+ * scheduling) can operate against the abstraction rather than the concrete
+ * subclass.
+ *
+ * Mutator methods are dual-API: each `setX(value)` setter has a paired
+ * regular property setter, so both `media.volume = 0.5` and
+ * `media.setVolume(0.5)` work — pick whichever style fits the call site.
+ */
 export interface Media {
     readonly duration: number;
     readonly progress: number;

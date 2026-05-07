@@ -1,3 +1,4 @@
+/** Horizontal alignment mode for multi-line text layout. */
 export type TextAlignment = 'left' | 'center' | 'right';
 
 /**

@@ -3,6 +3,24 @@ import type { RenderBackend } from './RenderBackend';
 import { RenderNode } from './RenderNode';
 import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
 
+/**
+ * Scene-graph node that owns child {@link RenderNode}s. Renders its
+ * subtree in document order, optionally re-sorted each frame by
+ * `zIndex` + child-add-order when {@link Container.sortableChildren} is
+ * enabled.
+ *
+ * Bounds aggregate the local bounds + every visible child's bounds, so
+ * `container.bounds` always reflects the smallest axis-aligned rectangle
+ * containing the subtree. Width/height accessors derive from the bounds
+ * (× `scale`) and writing to them rescales `scale` to fit.
+ *
+ * Adding a child re-parents it: the previous parent is detached
+ * automatically. Removing a child cascades bounds invalidation up the
+ * ancestor chain so further-up containers also rebuild on next read.
+ *
+ * Subclassed by {@link Sprite}, {@link Mesh}, {@link Graphics}, {@link Text},
+ * etc. — the base `Container` is a non-drawing grouping node.
+ */
 export class Container extends RenderNode {
 
     private readonly _children: Array<RenderNode> = [];
@@ -14,6 +32,12 @@ export class Container extends RenderNode {
         return this._children;
     }
 
+    /**
+     * When `true`, children are re-sorted by `zIndex` (ascending; ties
+     * broken by add-order) before each render. Disabled by default to
+     * avoid the per-frame sort cost; enable on the few containers where
+     * z-ordering matters.
+     */
     public get sortableChildren(): boolean {
         return this._sortableChildren;
     }
@@ -57,6 +81,10 @@ export class Container extends RenderNode {
         return (this.y + this.height - this.origin.y);
     }
 
+    /**
+     * Append one or more children to the end of the child list. Each child
+     * is detached from its previous parent (if any) before being added.
+     */
     public addChild(...children: Array<RenderNode>): this {
         for (const child of children) {
             this.addChildAt(child, this._children.length);
@@ -65,6 +93,11 @@ export class Container extends RenderNode {
         return this;
     }
 
+    /**
+     * Insert `child` at `index` in the child list. The child is detached
+     * from any previous parent first. Throws if `index` is out of bounds.
+     * Self-as-child is a no-op.
+     */
     public addChildAt(child: RenderNode, index: number): this {
         if (index < 0 || index > this._children.length) {
             throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
@@ -139,6 +172,7 @@ export class Container extends RenderNode {
         return this._children[index];
     }
 
+    /** Remove `child` from this container. No-op if not present. */
     public removeChild(child: RenderNode): this {
         const index = this._children.indexOf(child);
 
@@ -168,6 +202,10 @@ export class Container extends RenderNode {
         return this;
     }
 
+    /**
+     * Remove children in the half-open range `[begin, end)`. Defaults to
+     * the entire child list. Throws if the range is invalid.
+     */
     public removeChildren(begin = 0, end: number = this._children.length): this {
         const range = (end - begin);
 
@@ -248,6 +286,11 @@ export class Container extends RenderNode {
         super.destroy();
     }
 
+    /**
+     * Flag the child list as needing a re-sort before next render. Called
+     * automatically by `addChild*`, `removeChild*`, `swapChildren`, and
+     * `setChildIndex`; expose for callers that mutate `zIndex` directly.
+     */
     public markSortDirty(): this {
         if (this._sortableChildren) {
             this._sortDirty = true;

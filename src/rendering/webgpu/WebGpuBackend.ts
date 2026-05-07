@@ -48,6 +48,26 @@ interface PixelClipBoundsState {
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 
+/**
+ * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,
+ * canvas context configuration, format selection, managed-texture cache
+ * (sized + format-aware), pre-warmed render pipelines per (blend-mode ×
+ * format) combination, the scissor stack, and a mipmap-generation
+ * compute path. Dispatches draws to per-drawable WebGPU renderers
+ * registered in the {@link RendererRegistry}.
+ *
+ * Detects device loss via the platform's `device.lost` Promise and
+ * automatically attempts recovery: drops dead GPU state, requests a
+ * fresh adapter+device with exponential backoff (up to 5 tries), then
+ * fires {@link WebGpuBackend.onDeviceRestored}. While recovering, draw
+ * submissions silently no-op so user code survives transient outages
+ * without explicit error handling.
+ *
+ * Initialization is async ({@link WebGpuBackend.initialize}); the
+ * {@link Application} class drives that during `start()` and
+ * automatically falls back to {@link WebGl2Backend} when adapter
+ * acquisition fails on `'auto'`.
+ */
 export class WebGpuBackend implements RenderBackend {
 
     public readonly backendType = RenderBackendType.WebGpu;
