@@ -161,6 +161,13 @@ export class ParticleSystem extends Drawable {
     private _gpuMode = false;
     private _compiled = false;
     private _spawnHint = 0;        // round-robin pointer for first-dead lookup in GPU mode
+    /**
+     * In GPU mode, slots whose CPU SoA values need re-uploading to the GPU
+     * (newly spawned, or just-expired with lifetime sentinel). Cleared
+     * after each compute dispatch. CPU never overwrites integrated GPU
+     * state — only dirty slots flow CPU → GPU.
+     */
+    private readonly _gpuDirtySlots: Set<number> = new Set();
 
     private _texture: Texture;
     private readonly _frames: Array<Rectangle> = [];
@@ -540,6 +547,12 @@ export class ParticleSystem extends Drawable {
 
         this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules, this._frames, this._texture);
         this._gpuMode = true;
+
+        // Mark every currently-alive slot dirty so the initial upload
+        // matches CPU state; subsequent frames only push deltas.
+        for (let i = 0; i < this.liveCount; i++) {
+            if (this.alive[i]) this._gpuDirtySlots.add(i);
+        }
     }
 
     private _spawnCpu(): number {
@@ -567,6 +580,7 @@ export class ParticleSystem extends Drawable {
                 this.elapsed[i] = 0;
                 this._spawnHint = i + 1 === capacity ? 0 : i + 1;
                 if (i >= this.liveCount) this.liveCount = i + 1;
+                this._gpuDirtySlots.add(i);
                 return i;
             }
         }
@@ -577,6 +591,7 @@ export class ParticleSystem extends Drawable {
                 this.elapsed[i] = 0;
                 this._spawnHint = i + 1;
                 if (i >= this.liveCount) this.liveCount = i + 1;
+                this._gpuDirtySlots.add(i);
                 return i;
             }
         }
@@ -630,8 +645,11 @@ export class ParticleSystem extends Drawable {
     }
 
     private _updateGpu(dt: number): void {
-        // CPU advances elapsed locally + detects expiries (cheap).
-        // No readback from GPU.
+        // CPU advances its own copy of `elapsed` for expire detection only.
+        // GPU's `timing[idx].x` is advanced independently inside the compute
+        // shader; the two are never synced after spawn. They tick at the
+        // same rate (both add `dt` per frame) so they stay equivalent in
+        // practice (modulo numerical drift).
         const elapsed = this.elapsed;
         const lifetime = this.lifetime;
         const alive = this.alive;
@@ -648,7 +666,8 @@ export class ParticleSystem extends Drawable {
                     deathModules[m].onDeath(this, i);
                 }
                 alive[i] = 0;
-                lifetime[i] = -1;  // sentinel for GPU shader skip
+                lifetime[i] = -1;  // sentinel — GPU shader skips
+                this._gpuDirtySlots.add(i);   // upload the sentinel so GPU sees the death
             }
         }
 
@@ -659,7 +678,15 @@ export class ParticleSystem extends Drawable {
         }
         this.liveCount = newLiveCount;
 
-        // Dispatch GPU compute (integration + module bodies + pack-instances).
+        // Push dirty slots (new spawns + just-expired) to GPU. CPU is NOT
+        // the source of truth for integrated position/velocity/etc. after
+        // spawn — uploading the full live range every frame would wipe
+        // out GPU's integrated state.
+        if (this._gpuDirtySlots.size > 0) {
+            this._gpuState!.uploadDirty(this, this._gpuDirtySlots);
+            this._gpuDirtySlots.clear();
+        }
+
         this._gpuState!.dispatch(this, dt);
     }
 

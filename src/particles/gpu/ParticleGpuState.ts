@@ -77,13 +77,6 @@ export class ParticleGpuState {
     private readonly _bindGroup0: GPUBindGroup;
     private readonly _bindGroup1: GPUBindGroup;
 
-    private readonly _packedPositions: Float32Array;
-    private readonly _packedVelocities: Float32Array;
-    private readonly _packedScales: Float32Array;
-    private readonly _packedRotInfo: Float32Array;
-    private readonly _packedTiming: Float32Array;
-    private readonly _packedTextureIndex: Uint32Array;
-
     public constructor(
         device: GPUDevice,
         capacity: number,
@@ -169,13 +162,6 @@ export class ParticleGpuState {
             size: capacity * instanceBytes,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
-
-        this._packedPositions = new Float32Array(capacity * 2);
-        this._packedVelocities = new Float32Array(capacity * 2);
-        this._packedScales = new Float32Array(capacity * 2);
-        this._packedRotInfo = new Float32Array(capacity * 2);
-        this._packedTiming = new Float32Array(capacity * 2);
-        this._packedTextureIndex = new Uint32Array(capacity);
 
         this._simUniformView = new DataView(this._simUniformData);
         this._simUniformBuffer = device.createBuffer({
@@ -287,7 +273,6 @@ export class ParticleGpuState {
             return;
         }
 
-        this._packAndUpload(system, liveCount);
         this._writeSimUniforms(dt, liveCount);
         this._writeModuleUniforms();
 
@@ -354,42 +339,55 @@ export class ParticleGpuState {
         this.device.queue.writeBuffer(this._framesUniformBuffer, 0, this._framesUniformData);
     }
 
-    private _packAndUpload(system: ParticleSystem, liveCount: number): void {
-        const packedPos = this._packedPositions;
-        const packedVel = this._packedVelocities;
-        const packedScale = this._packedScales;
-        const packedRot = this._packedRotInfo;
-        const packedTime = this._packedTiming;
-        const packedTexIdx = this._packedTextureIndex;
-
-        for (let i = 0; i < liveCount; i++) {
-            const o = i * 2;
-
-            packedPos[o + 0] = system.posX[i];
-            packedPos[o + 1] = system.posY[i];
-            packedVel[o + 0] = system.velX[i];
-            packedVel[o + 1] = system.velY[i];
-            packedScale[o + 0] = system.scaleX[i];
-            packedScale[o + 1] = system.scaleY[i];
-            packedRot[o + 0] = system.rotations[i];
-            packedRot[o + 1] = system.rotationSpeeds[i];
-            packedTime[o + 0] = system.elapsed[i];
-            packedTime[o + 1] = system.lifetime[i];
-            packedTexIdx[i] = system.textureIndex[i];
-        }
-
-        const vec2Bytes = liveCount * 8;
-        const u32Bytes = liveCount * 4;
+    /**
+     * Push the listed CPU SoA slots to the GPU. Called by `ParticleSystem`
+     * with newly-spawned slots and just-expired slots (lifetime sentinel).
+     * Slots not in the dirty set are left alone — GPU keeps the integrated
+     * state from previous compute dispatches.
+     *
+     * Each dirty slot triggers 7 small `queue.writeBuffer` calls (one per
+     * SoA channel). For typical spawn rates (≤200/s) this is negligible
+     * (≤1400 calls/s); contiguous-range batching is a future optimisation.
+     */
+    public uploadDirty(system: ParticleSystem, slots: Iterable<number>): void {
         const queue = this.device.queue;
+        const scratch2 = this._dirtyScratchVec2;
+        const scratch1 = this._dirtyScratchU32;
 
-        queue.writeBuffer(this._positions, 0, packedPos.buffer as ArrayBuffer, 0, vec2Bytes);
-        queue.writeBuffer(this._velocities, 0, packedVel.buffer as ArrayBuffer, 0, vec2Bytes);
-        queue.writeBuffer(this._scales, 0, packedScale.buffer as ArrayBuffer, 0, vec2Bytes);
-        queue.writeBuffer(this._rotInfo, 0, packedRot.buffer as ArrayBuffer, 0, vec2Bytes);
-        queue.writeBuffer(this._timing, 0, packedTime.buffer as ArrayBuffer, 0, vec2Bytes);
-        queue.writeBuffer(this._color, 0, system.color.buffer as ArrayBuffer, 0, u32Bytes);
-        queue.writeBuffer(this._textureIndex, 0, packedTexIdx.buffer as ArrayBuffer, 0, u32Bytes);
+        for (const slot of slots) {
+            const byteOffset2 = slot * 8;
+            const byteOffset1 = slot * 4;
+
+            scratch2[0] = system.posX[slot];
+            scratch2[1] = system.posY[slot];
+            queue.writeBuffer(this._positions, byteOffset2, scratch2.buffer as ArrayBuffer, 0, 8);
+
+            scratch2[0] = system.velX[slot];
+            scratch2[1] = system.velY[slot];
+            queue.writeBuffer(this._velocities, byteOffset2, scratch2.buffer as ArrayBuffer, 0, 8);
+
+            scratch2[0] = system.scaleX[slot];
+            scratch2[1] = system.scaleY[slot];
+            queue.writeBuffer(this._scales, byteOffset2, scratch2.buffer as ArrayBuffer, 0, 8);
+
+            scratch2[0] = system.rotations[slot];
+            scratch2[1] = system.rotationSpeeds[slot];
+            queue.writeBuffer(this._rotInfo, byteOffset2, scratch2.buffer as ArrayBuffer, 0, 8);
+
+            scratch2[0] = system.elapsed[slot];
+            scratch2[1] = system.lifetime[slot];
+            queue.writeBuffer(this._timing, byteOffset2, scratch2.buffer as ArrayBuffer, 0, 8);
+
+            scratch1[0] = system.color[slot];
+            queue.writeBuffer(this._color, byteOffset1, scratch1.buffer as ArrayBuffer, 0, 4);
+
+            scratch1[0] = system.textureIndex[slot];
+            queue.writeBuffer(this._textureIndex, byteOffset1, scratch1.buffer as ArrayBuffer, 0, 4);
+        }
     }
+
+    private readonly _dirtyScratchVec2 = new Float32Array(2);
+    private readonly _dirtyScratchU32 = new Uint32Array(1);
 
     private _writeSimUniforms(dt: number, liveCount: number): void {
         this._simUniformView.setFloat32(0, dt, true);
