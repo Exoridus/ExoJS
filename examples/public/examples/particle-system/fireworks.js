@@ -1,4 +1,22 @@
-import { Application, Color, seconds, Time, PolarVector, rand, Scene, Size, ParticleOptions, Vector, ParticleSystem, Timer, Texture } from '@codexo/exojs';
+import {
+    Application,
+    Color,
+    rand,
+    Scene,
+    Size,
+    Vector,
+    ParticleSystem,
+    BurstSpawn,
+    ApplyForce,
+    UpdateModule,
+    Range,
+    Constant,
+    Gradient,
+    ConeDirection,
+    Timer,
+    seconds,
+    Texture,
+} from '@codexo/exojs';
 
 const app = new Application({
     width: 800,
@@ -9,12 +27,9 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-const explosionInterval	= seconds(1);
-const explosionDuration	= seconds(0.2);
-const tailDuration = seconds(2.5);
-const tailsPerExplosion	= 15;
-const particlesPerTail = 25;
-const gravity = 30;
+const explosionInterval = seconds(1);
+const tailDuration = 2.5;
+const particlesPerExplosion = 375;
 const fireworkColors = [
     new Color(100, 255, 135),
     new Color(175, 255, 135),
@@ -27,51 +42,22 @@ const fireworkColors = [
     new Color(245, 215, 80),
 ];
 
-class FireworkEmitter {
+/**
+ * Custom update module: alpha fades with remaining lifetime ratio.
+ * Demonstrates how to extend the built-in modules with one-off effects.
+ */
+class AlphaFadeOverLifetime extends UpdateModule {
+    apply(system) {
+        const { color, elapsed, lifetime, liveCount } = system;
 
-    constructor(particleOptions) {
-        this.particleOptions = particleOptions;
-        this.accumulatedTime = new Time();
-        this.tailInterval = explosionDuration.milliseconds / tailsPerExplosion;
-    }
+        for (let i = 0; i < liveCount; i++) {
+            const remaining = 1 - (elapsed[i] / lifetime[i]);
+            // RGBA u32 layout is 0xAABBGGRR — replace alpha byte (high byte)
+            // with the remaining-ratio byte.
+            const alphaByte = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
 
-    apply(system, delta) {
-        this.accumulatedTime.addTime(delta);
-
-        while (this.accumulatedTime.milliseconds - this.tailInterval > 0) {
-            const velocity = new PolarVector(rand(30, 70), rand(0, 360));
-            const scale = this.particleOptions.scale.clone();
-
-            for (let i = 0; i < particlesPerTail; i++) {
-                const particle = system.requestParticle();
-
-                scale.multiply(0.8, 0.8);
-                velocity.radius *= 0.96;
-
-                particle.applyOptions(this.particleOptions);
-                particle.scale = scale;
-                particle.velocity = velocity.toVector();
-
-                system.emitParticle(particle);
-            }
-
-            this.accumulatedTime.milliseconds -= this.tailInterval;
+            color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
         }
-    }
-}
-
-class FireworkAffector {
-
-    /**
-     * @param {import('@codexo/exojs').Particle} particle
-     * @param {Time} delta
-     * @returns {FireworkAffector}
-     */
-    apply(particle, delta) {
-        particle.velocity.y += delta.seconds * gravity * particle.scale.x * particle.scale.y;
-        particle.tint.a = particle.remainingRatio * particle.scale.x;
-
-        return this;
     }
 }
 
@@ -83,51 +69,46 @@ app.start(new class extends Scene {
     init(loader) {
         const { width, height } = this.app.canvas;
 
-        /**
-         * @type {Size}
-         */
-        this.canvasSize = new Size(width, height);
+        this._canvasSize = new Size(width, height);
+        this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'), 8192);
 
-        /**
-         * @type {ParticleOptions}
-         */
-        this.particleOptions = new ParticleOptions({
-            position: new Vector(
-                rand(0, this.canvasSize.width),
-                rand(0, this.canvasSize.height)
-            ),
-            scale: new Vector(0.95, 0.95),
-            tint: fireworkColors[rand(0, fireworkColors.length - 1) | 0],
-            totalLifetime: tailDuration,
+        // Single-burst spawner — re-fired manually each explosion via reset().
+        this._burst = new BurstSpawn({
+            schedule: [{ time: 0, count: particlesPerExplosion }],
+            lifetime: new Range(tailDuration * 0.7, tailDuration),
+            position: new Constant(new Vector(0, 0)),
+            velocity: ConeDirection.omni(20, 70),
+            scale: new Constant(new Vector(0.95, 0.95)),
+            tint: new Constant(fireworkColors[0]),
         });
 
-        /**
-         * @type {ParticleSystem}
-         */
-        this.particleSystem = new ParticleSystem(loader.get(Texture, 'particle'));
-        this.particleSystem.addEmitter(new FireworkEmitter(this.particleOptions));
-        this.particleSystem.addAffector(new FireworkAffector());
+        this._particleSystem.addSpawnModule(this._burst);
+        this._particleSystem.addUpdateModule(new ApplyForce(0, 30));
+        this._particleSystem.addUpdateModule(new AlphaFadeOverLifetime());
 
-        /**
-         * @type {Timer}
-         */
-        this.explosionTimer = new Timer(explosionInterval, true);
+        this._explosionTimer = new Timer(explosionInterval, true);
+
+        this._scheduleNextExplosion();
+    }
+    _scheduleNextExplosion() {
+        const x = rand(80, this._canvasSize.width - 80);
+        const y = rand(80, this._canvasSize.height - 80);
+        const tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
+
+        this._particleSystem.setPosition(x, y);
+        this._burst.config.tint = new Constant(tint);
+        this._burst.reset();
     }
     update(delta) {
-        if (this.explosionTimer.expired) {
-            this.particleOptions.tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
-            this.particleOptions.position.set(
-                rand(0, this.canvasSize.width),
-                rand(0, this.canvasSize.height)
-            );
-
-            this.explosionTimer.restart();
+        if (this._explosionTimer.expired) {
+            this._scheduleNextExplosion();
+            this._explosionTimer.restart();
         }
 
-        this.particleSystem.update(delta);
+        this._particleSystem.update(delta);
     }
     draw(backend) {
         backend.clear();
-        this.particleSystem.render(backend);
+        this._particleSystem.render(backend);
     }
 });

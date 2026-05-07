@@ -128,7 +128,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             || texture.source === null
             || texture.width === 0
             || texture.height === 0
-            || system.particles.length === 0
+            || system.liveCount === 0
         ) {
             return;
         }
@@ -198,7 +198,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
             const drawCall = this._drawCalls[drawCallIndex];
             const system = drawCall.system;
-            const particleCount = system.particles.length;
+            const particleCount = system.liveCount;
 
             if (particleCount === 0) {
                 continue;
@@ -218,7 +218,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
             });
 
             this._ensureCapacity(particleCount);
-            this._writeInstanceData(system.vertices, system.texCoords, system.particles);
+            this._writeInstanceData(system);
             this._writeUniformData(backend, system, drawCall.texture);
 
             device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, particleCount * instanceStrideBytes);
@@ -409,17 +409,20 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         ]);
     }
 
-    private _writeInstanceData(_vertices: Float32Array, _texCoords: Uint32Array, particles: ParticleSystem['particles']): void {
-        for (let particleIndex = 0; particleIndex < particles.length; particleIndex++) {
-            const particle = particles[particleIndex];
+    private _writeInstanceData(system: ParticleSystem): void {
+        const { posX, posY, scaleX, scaleY, rotations, color, liveCount } = system;
+        const f32 = this._float32View;
+        const u32 = this._uint32View;
+
+        for (let particleIndex = 0; particleIndex < liveCount; particleIndex++) {
             const targetIndex = particleIndex * instanceWords;
 
-            this._float32View[targetIndex + 0] = particle.position.x;
-            this._float32View[targetIndex + 1] = particle.position.y;
-            this._float32View[targetIndex + 2] = particle.scale.x;
-            this._float32View[targetIndex + 3] = particle.scale.y;
-            this._float32View[targetIndex + 4] = particle.rotation;
-            this._uint32View[targetIndex + 5] = particle.tint.toRgba();
+            f32[targetIndex + 0] = posX[particleIndex];
+            f32[targetIndex + 1] = posY[particleIndex];
+            f32[targetIndex + 2] = scaleX[particleIndex];
+            f32[targetIndex + 3] = scaleY[particleIndex];
+            f32[targetIndex + 4] = rotations[particleIndex];
+            u32[targetIndex + 5] = color[particleIndex];
         }
     }
 

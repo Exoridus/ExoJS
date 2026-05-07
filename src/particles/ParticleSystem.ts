@@ -1,40 +1,108 @@
-import { Particle } from './Particle';
 import { Rectangle } from '@/math/Rectangle';
 import type { Time } from '@/core/Time';
 import { Drawable } from '@/rendering/Drawable';
 import type { Texture } from '@/rendering/texture/Texture';
-import type { ParticleEmitter } from '@/particles/emitters/ParticleEmitter';
-import type { ParticleAffector } from '@/particles/affectors/ParticleAffector';
+import type { SpawnModule } from './modules/SpawnModule';
+import type { UpdateModule } from './modules/UpdateModule';
+import type { DeathModule } from './modules/DeathModule';
+
+const DEFAULT_CAPACITY = 4096;
 
 /**
- * The central coordinator of the particle triad. `ParticleSystem` is a
- * {@link Drawable} that owns a list of {@link ParticleEmitter} spawners, a
- * list of {@link ParticleAffector} mutators, and the live/graveyard particle
- * pools. Each call to {@link ParticleSystem.update} runs all emitters to
- * spawn new particles, advances every live particle's position and lifetime,
- * retires expired ones to the graveyard for pooling, and runs all affectors
- * on the survivors.
+ * The central coordinator of the particle pipeline. `ParticleSystem` is a
+ * {@link Drawable} that owns:
  *
- * Rendering reads {@link ParticleSystem.vertices} and
- * {@link ParticleSystem.texCoords} (lazily recomputed on texture-frame
- * changes) plus the live {@link ParticleSystem.particles} array to draw each
- * sprite.
+ * - **SoA particle storage** — one `Float32Array` (or `Uint32Array` /
+ *   `Uint16Array`) per particle attribute, sized to a fixed capacity at
+ *   construction. Live particles occupy slots `[0, liveCount)`; expired
+ *   slots are recycled in place by the per-frame compaction pass.
+ * - **Spawn modules** — write new particles into freshly allocated slots.
+ * - **Update modules** — mutate the live range each frame (forces, color
+ *   blends, scale curves, drag, ...).
+ * - **Death modules** — fire once per dying particle, before its slot is
+ *   recycled (sub-emitters, event hooks).
+ *
+ * **Per-frame order in {@link update}:**
+ * 1. Run every spawn module (each may emit any number of particles).
+ * 2. Integrate position from velocity, rotation from rotationSpeed, and
+ *    advance `elapsed` by `dt`. One inner loop, no method calls.
+ * 3. Run every update module on the live range.
+ * 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired
+ *    slots, copy survivors down to fill gaps. `liveCount` shrinks to the
+ *    survivor count.
+ *
+ * **Coordinate space:** particle positions are LOCAL to the system. The
+ * system's `getGlobalTransform()` is applied on top during rendering — both
+ * the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`.
+ * Setting world-space positions on individual particles (e.g. `system.x +
+ * offset`) double-translates because the shader translates again. Position
+ * the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.
+ *
+ * **Capacity** is fixed at construction (default 4096). Spawn modules call
+ * {@link spawn} to allocate a slot; the call returns `-1` when at capacity
+ * — modules should bail cleanly in that case rather than overwriting live
+ * slots.
+ *
+ * @example
+ * const system = new ParticleSystem(loader.get(Texture, 'spark'), 8192);
+ * system.addSpawnModule(new RateSpawn({ rate: new Constant(60), ... }));
+ * system.addUpdateModule(new ApplyForce(0, 980));     // gravity
+ * system.addUpdateModule(new ColorOverLifetime(fireGradient));
+ * scene.addChild(system);
  */
 export class ParticleSystem extends Drawable {
+    /** Maximum particle count this system will store. Fixed at construction. */
+    public readonly capacity: number;
 
-    private _emitters: Array<ParticleEmitter> = [];
-    private _affectors: Array<ParticleAffector> = [];
-    private _particles: Array<Particle> = [];
-    private _graveyard: Array<Particle> = [];
+    // SoA storage — public + readonly references, but the array contents
+    // are mutable: spawn / update / death modules write into them directly.
+    public readonly posX: Float32Array;
+    public readonly posY: Float32Array;
+    public readonly velX: Float32Array;
+    public readonly velY: Float32Array;
+    public readonly scaleX: Float32Array;
+    public readonly scaleY: Float32Array;
+    public readonly rotations: Float32Array;
+    public readonly rotationSpeeds: Float32Array;
+    public readonly color: Uint32Array;        // packed 0xAABBGGRR
+    public readonly elapsed: Float32Array;     // seconds since spawn
+    public readonly lifetime: Float32Array;    // total seconds before expiry
+    public readonly textureIndex: Uint16Array; // atlas frame index (reserved; renderer uses single frame currently)
+
+    /** Number of currently live particles. Slots `[0, liveCount)` are valid; `[liveCount, capacity)` are dead. */
+    public liveCount = 0;
+
+    private readonly _spawnModules: Array<SpawnModule> = [];
+    private readonly _updateModules: Array<UpdateModule> = [];
+    private readonly _deathModules: Array<DeathModule> = [];
+
     private _texture: Texture;
-    private _textureFrame: Rectangle = new Rectangle();
-    private _vertices: Float32Array = new Float32Array(4);
-    private _texCoords: Uint32Array = new Uint32Array(4);
+    private readonly _textureFrame: Rectangle = new Rectangle();
+    private readonly _vertices: Float32Array = new Float32Array(4);
+    private readonly _texCoords: Uint32Array = new Uint32Array(4);
     private _updateTexCoords = true;
     private _updateVertices = true;
 
-    public constructor(texture: Texture) {
+    public constructor(texture: Texture, capacity: number = DEFAULT_CAPACITY) {
         super();
+
+        if (capacity <= 0 || !Number.isInteger(capacity)) {
+            throw new Error(`ParticleSystem capacity must be a positive integer (got ${capacity}).`);
+        }
+
+        this.capacity = capacity;
+        this.posX = new Float32Array(capacity);
+        this.posY = new Float32Array(capacity);
+        this.velX = new Float32Array(capacity);
+        this.velY = new Float32Array(capacity);
+        this.scaleX = new Float32Array(capacity);
+        this.scaleY = new Float32Array(capacity);
+        this.rotations = new Float32Array(capacity);
+        this.rotationSpeeds = new Float32Array(capacity);
+        this.color = new Uint32Array(capacity);
+        this.elapsed = new Float32Array(capacity);
+        this.lifetime = new Float32Array(capacity);
+        this.textureIndex = new Uint16Array(capacity);
 
         this._texture = texture;
         this.resetTextureFrame();
@@ -62,7 +130,7 @@ export class ParticleSystem extends Drawable {
      * `textureFrame` changes. Used by the renderer to position each particle
      * sprite relative to its world position.
      */
-    public get vertices(): Float32Array  {
+    public get vertices(): Float32Array {
         if (this._updateVertices) {
             const { x, y, width, height } = this._textureFrame;
             const offsetX = (width / 2);
@@ -82,8 +150,8 @@ export class ParticleSystem extends Drawable {
     /**
      * Packed UV coordinates for the current {@link textureFrame} as four
      * `Uint32` values, each encoding a `(u, v)` pair in the upper/lower 16
-     * bits (normalised to 0–65535). Vertex order respects
-     * {@link Texture.flipY}. Recomputed lazily on texture or frame changes.
+     * bits (normalised to 0–65535). Vertex order respects {@link Texture.flipY}.
+     * Recomputed lazily on texture or frame changes.
      */
     public get texCoords(): Uint32Array {
         if (this._updateTexCoords) {
@@ -112,31 +180,19 @@ export class ParticleSystem extends Drawable {
         return this._texCoords;
     }
 
-    public get emitters(): Array<ParticleEmitter> {
-        return this._emitters;
+    public get spawnModules(): ReadonlyArray<SpawnModule> {
+        return this._spawnModules;
     }
 
-    public get affectors(): Array<ParticleAffector> {
-        return this._affectors;
+    public get updateModules(): ReadonlyArray<UpdateModule> {
+        return this._updateModules;
     }
 
-    public get particles(): Array<Particle> {
-        return this._particles;
+    public get deathModules(): ReadonlyArray<DeathModule> {
+        return this._deathModules;
     }
 
-    /**
-     * Pool of expired {@link Particle} instances waiting to be recycled.
-     * {@link requestParticle} pops from this array before allocating a new
-     * instance, keeping GC pressure low during sustained emission.
-     */
-    public get graveyard(): Array<Particle> {
-        return this._graveyard;
-    }
-
-    /**
-     * Replaces the particle sprite texture and resets the texture frame to
-     * cover the full new texture. No-ops if `texture` is the same instance.
-     */
+    /** Replaces the particle sprite texture and resets the texture frame to cover the new texture. */
     public setTexture(texture: Texture): this {
         if (this._texture !== texture) {
             this._texture = texture;
@@ -146,11 +202,7 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
-    /**
-     * Sets the sub-rectangle of the texture used as the particle sprite,
-     * invalidating cached vertices and UV coordinates and updating the system's
-     * local bounds to match the frame dimensions.
-     */
+    /** Sets the sub-rectangle of the texture used as the particle sprite. */
     public setTextureFrame(frame: Rectangle): this {
         this._textureFrame.copy(frame);
         this._updateTexCoords = true;
@@ -167,138 +219,124 @@ export class ParticleSystem extends Drawable {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
-    /** Registers `emitter` to be called each tick during {@link update}. */
-    public addEmitter(emitter: ParticleEmitter): this {
-        this._emitters.push(emitter);
+    public addSpawnModule(mod: SpawnModule): this {
+        this._spawnModules.push(mod);
 
         return this;
     }
 
-    /** Destroys and removes all registered emitters. */
-    public clearEmitters(): this {
-        for (const emitter of this._emitters) {
-            emitter.destroy();
+    public addUpdateModule(mod: UpdateModule): this {
+        this._updateModules.push(mod);
+
+        return this;
+    }
+
+    public addDeathModule(mod: DeathModule): this {
+        this._deathModules.push(mod);
+
+        return this;
+    }
+
+    public clearSpawnModules(): this {
+        for (const mod of this._spawnModules) mod.destroy();
+
+        this._spawnModules.length = 0;
+
+        return this;
+    }
+
+    public clearUpdateModules(): this {
+        for (const mod of this._updateModules) mod.destroy();
+
+        this._updateModules.length = 0;
+
+        return this;
+    }
+
+    public clearDeathModules(): this {
+        for (const mod of this._deathModules) mod.destroy();
+
+        this._deathModules.length = 0;
+
+        return this;
+    }
+
+    /**
+     * Allocates a fresh particle slot and returns its index. Returns `-1`
+     * when the system is at {@link capacity} — spawn modules should bail
+     * cleanly in that case. The slot's previous data is overwritten by the
+     * spawn module; only `elapsed` is reset to 0 here so a partially
+     * initialised slot still expires correctly.
+     */
+    public spawn(): number {
+        if (this.liveCount >= this.capacity) {
+            return -1;
         }
 
-        this._emitters.length = 0;
+        const slot = this.liveCount++;
 
-        return this;
+        this.elapsed[slot] = 0;
+
+        return slot;
     }
 
-    /** Registers `affector` to run on every live particle each tick during {@link update}. */
-    public addAffector(affector: ParticleAffector): this {
-        this._affectors.push(affector);
-
-        return this;
-    }
-
-    /** Destroys and removes all registered affectors. */
-    public clearAffectors(): this {
-        for (const affector of this._affectors) {
-            affector.destroy();
-        }
-
-        this._affectors.length = 0;
-
-        return this;
-    }
-
-    /**
-     * Returns a recycled particle from the {@link graveyard}, or allocates a
-     * new one if the pool is empty. Call {@link Particle.applyOptions}
-     * immediately after to reset its state before passing it to
-     * {@link emitParticle}.
-     */
-    public requestParticle(): Particle {
-        return this._graveyard.pop() || new Particle();
-    }
-
-    /** Adds a fully-configured `particle` to the live pool. Typically called by emitters. */
-    public emitParticle(particle: Particle): this {
-        this._particles.push(particle);
-
-        return this;
-    }
-
-    /**
-     * Advances a single particle by one `delta` step: increments
-     * `elapsedLifetime`, integrates velocity into position, and applies
-     * `rotationSpeed` to rotation. Called for every live particle by
-     * {@link update} before the affector pass.
-     */
-    public updateParticle(particle: Particle, delta: Time): this {
-        const seconds = delta.seconds;
-
-        particle.elapsedLifetime.addTime(delta);
-
-        particle.position.add(seconds * particle.velocity.x, seconds * particle.velocity.y);
-        particle.rotation += (seconds * particle.rotationSpeed);
-
-        return this;
-    }
-
-    /**
-     * Destroys and removes all particles from both the live pool and the
-     * graveyard. Use when resetting or recycling the entire system.
-     */
+    /** Resets the system to zero live particles without destroying it. */
     public clearParticles(): this {
-        for (const particle of this._particles) {
-            particle.destroy();
-        }
-
-        for (const particle of this._graveyard) {
-            particle.destroy();
-        }
-
-        this._particles.length = 0;
-        this._graveyard.length = 0;
+        this.liveCount = 0;
 
         return this;
     }
 
     /**
-     * Advances the full simulation by one `delta` step: runs all emitters,
-     * then for each live particle calls {@link updateParticle}, moves expired
-     * ones to the {@link graveyard}, and runs all affectors on survivors.
-     * The particle array is iterated in reverse to allow in-place splice
-     * without re-indexing.
+     * Advances the full simulation by one `delta` step. See class JSDoc for
+     * the exact spawn → integrate → update → expire ordering.
      */
     public update(delta: Time): this {
-        const emitters = this._emitters;
-        const affectors = this._affectors;
-        const particles = this._particles;
-        const graveyard = this._graveyard;
-        const len = particles.length;
+        const dt = delta.seconds;
 
-        for (const emitter of emitters) {
-            emitter.apply(this, delta);
+        // 1. Spawn.
+        for (let i = 0; i < this._spawnModules.length; i++) {
+            this._spawnModules[i].apply(this, dt);
         }
 
-        let expireCount = 0;
+        // 2. Integrate position + rotation, advance lifetime. Tight inner loop.
+        const { posX, posY, velX, velY, rotations, rotationSpeeds, elapsed } = this;
+        const liveCount = this.liveCount;
 
-        for (let i = len - 1; i >= 0; i--) {
-            this.updateParticle(particles[i], delta);
+        for (let i = 0; i < liveCount; i++) {
+            posX[i] += velX[i] * dt;
+            posY[i] += velY[i] * dt;
+            rotations[i] += rotationSpeeds[i] * dt;
+            elapsed[i] += dt;
+        }
 
-            if (particles[i].expired) {
-                graveyard.push(particles[i]);
-                expireCount++;
+        // 3. Update modules — operate on the live range.
+        for (let i = 0; i < this._updateModules.length; i++) {
+            this._updateModules[i].apply(this, dt);
+        }
+
+        // 4. Compact: forward pass, fire death modules, copy survivors down.
+        const lifetime = this.lifetime;
+        const deathModules = this._deathModules;
+        let writeIndex = 0;
+
+        for (let readIndex = 0; readIndex < this.liveCount; readIndex++) {
+            if (elapsed[readIndex] >= lifetime[readIndex]) {
+                for (let m = 0; m < deathModules.length; m++) {
+                    deathModules[m].onDeath(this, readIndex);
+                }
 
                 continue;
             }
 
-            if (expireCount > 0) {
-                particles.splice(i + 1, expireCount);
-                expireCount = 0;
+            if (writeIndex !== readIndex) {
+                this._copySlot(readIndex, writeIndex);
             }
 
-            for (const affector of affectors) {
-                affector.apply(particles[i], delta);
-            }
+            writeIndex++;
         }
 
-        if (expireCount > 0) {
-            particles.splice(0, expireCount);
-        }
+        this.liveCount = writeIndex;
 
         return this;
     }
@@ -306,10 +344,25 @@ export class ParticleSystem extends Drawable {
     public override destroy(): void {
         super.destroy();
 
-        this.clearEmitters();
-        this.clearAffectors();
-        this.clearParticles();
-
+        this.clearSpawnModules();
+        this.clearUpdateModules();
+        this.clearDeathModules();
+        this.liveCount = 0;
         this._textureFrame.destroy();
+    }
+
+    private _copySlot(from: number, to: number): void {
+        this.posX[to] = this.posX[from];
+        this.posY[to] = this.posY[from];
+        this.velX[to] = this.velX[from];
+        this.velY[to] = this.velY[from];
+        this.scaleX[to] = this.scaleX[from];
+        this.scaleY[to] = this.scaleY[from];
+        this.rotations[to] = this.rotations[from];
+        this.rotationSpeeds[to] = this.rotationSpeeds[from];
+        this.color[to] = this.color[from];
+        this.elapsed[to] = this.elapsed[from];
+        this.lifetime[to] = this.lifetime[from];
+        this.textureIndex[to] = this.textureIndex[from];
     }
 }

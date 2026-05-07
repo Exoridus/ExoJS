@@ -2,15 +2,17 @@ import {
     Application,
     BlendModes,
     Color,
-    ForceAffector,
-    ParticleOptions,
-    ParticleSystem,
-    ScaleAffector,
     Scene,
+    ParticleSystem,
+    RateSpawn,
+    ApplyForce,
+    ScaleOverLifetime,
+    UpdateModule,
+    Range,
+    Constant,
+    VectorRange,
+    Curve,
     Texture,
-    UniversalEmitter,
-    Vector,
-    seconds,
 } from '@codexo/exojs';
 
 const app = new Application({
@@ -22,64 +24,82 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
+class AlphaFadeOverLifetime extends UpdateModule {
+    apply(system) {
+        const { color, elapsed, lifetime, liveCount } = system;
+
+        for (let i = 0; i < liveCount; i++) {
+            const remaining = 1 - (elapsed[i] / lifetime[i]);
+            const alphaByte = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
+
+            color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
+        }
+    }
+}
+
+const palette = [
+    Color.gold,
+    Color.orange,
+    Color.tomato,
+    Color.hotPink,
+    Color.deepSkyBlue,
+    Color.violet,
+];
+
+class TintCycle extends UpdateModule {
+    constructor() {
+        super();
+        this._next = 0;
+    }
+    apply(system) {
+        const { color, liveCount, elapsed } = system;
+        for (let i = 0; i < liveCount; i++) {
+            if (elapsed[i] === 0) {
+                color[i] = palette[(this._next++) % palette.length].toRgba();
+            }
+        }
+    }
+}
+
 app.start(new class extends Scene {
 
     init() {
         const { width, height } = this.app.canvas;
 
-        this._particleOptions = new ParticleOptions({
-            totalLifetime: seconds(1.4),
-            position: new Vector(0, 0),
-            velocity: new Vector(0, -180),
-            scale: new Vector(0.65, 0.65),
-            rotationSpeed: 140,
-            tint: Color.gold,
-        });
-        this._particleEmitter = new UniversalEmitter(92, this._particleOptions);
-        this._gravityAffector = new ForceAffector(0, 96);
-        this._scaleAffector = new ScaleAffector(-0.24, -0.24);
-        this._alphaFadeAffector = new AlphaFadeAffector();
-
-        this._particleSystem = new ParticleSystem(createParticleTexture());
+        this._particleSystem = new ParticleSystem(createParticleTexture(), 4096);
         this._particleSystem.setPosition(width / 2, height * 0.7);
         this._particleSystem.setBlendMode(BlendModes.Additive);
-        this._particleSystem.addEmitter(this._particleEmitter);
-        this._particleSystem.addAffector(this._gravityAffector);
-        this._particleSystem.addAffector(this._scaleAffector);
-        this._particleSystem.addAffector(this._alphaFadeAffector);
+
+        this._particleSystem.addSpawnModule(new RateSpawn({
+            rate: new Constant(92),
+            lifetime: new Range(0.9, 1.6),
+            position: new VectorRange(-34, 34, -12, 12),
+            velocity: new VectorRange(-95, 95, -255, -150),
+            scale: new VectorRange(0.42, 0.95, 0.42, 0.95),
+            rotationSpeed: new Range(-220, 220),
+        }));
+        this._particleSystem.addUpdateModule(new ApplyForce(0, 96));
+        this._particleSystem.addUpdateModule(new ScaleOverLifetime(new Curve([
+            { t: 0, v: 0.65 },
+            { t: 1, v: 0.0 },
+        ])));
+        this._particleSystem.addUpdateModule(new TintCycle());
+        this._particleSystem.addUpdateModule(new AlphaFadeOverLifetime());
     }
     update(delta) {
-        this._particleOptions.totalLifetime = seconds(randomRange(0.9, 1.6));
-        this._particleOptions.position.set(randomRange(-34, 34), randomRange(-12, 12));
-        this._particleOptions.velocity.set(randomRange(-95, 95), randomRange(-255, -150));
-        this._particleOptions.scale.set(randomRange(0.42, 0.95), randomRange(0.42, 0.95));
-        this._particleOptions.rotationSpeed = randomRange(-220, 220);
-        this._particleOptions.tint = pickTint();
-
         this._particleSystem.update(delta);
     }
     draw(backend) {
         backend.clear();
         this._particleSystem.render(backend);
-
     }
     unload() {
         this._particleSystem?.destroy();
         this._particleSystem = null;
-        this._particleEmitter = null;
-        this._gravityAffector = null;
-        this._scaleAffector = null;
-        this._alphaFadeAffector = null;
-        this._particleOptions = null;
     }
     destroy() {
         this._particleSystem?.destroy();
         this._particleSystem = null;
-        this._particleEmitter = null;
-        this._gravityAffector = null;
-        this._scaleAffector = null;
-        this._alphaFadeAffector = null;
-        this._particleOptions = null;
     }
 }).catch((error) => {
     app.canvas.remove();
@@ -87,18 +107,6 @@ app.start(new class extends Scene {
 
     throw error;
 });
-
-class AlphaFadeAffector {
-
-    apply(particle) {
-        particle.tint.a = particle.remainingRatio;
-
-        return this;
-    }
-
-    destroy() {
-    }
-}
 
 function createParticleTexture() {
     const canvas = document.createElement('canvas');
@@ -123,25 +131,4 @@ function createParticleTexture() {
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     return new Texture(canvas);
-}
-
-function pickTint() {
-    const palette = [
-        Color.gold,
-        Color.orange,
-        Color.tomato,
-        Color.hotPink,
-        Color.deepSkyBlue,
-        Color.violet,
-    ];
-
-    return palette[randomInt(0, palette.length - 1)];
-}
-
-function randomInt(min, max) {
-    return Math.floor(randomRange(min, max + 1));
-}
-
-function randomRange(min, max) {
-    return min + (Math.random() * (max - min));
 }

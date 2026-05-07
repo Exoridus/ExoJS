@@ -1,4 +1,18 @@
-import { Application, Color, Scene, ParticleOptions, ColorAffector, UniversalEmitter, ParticleSystem, BlendModes, rand, seconds, Texture } from '@codexo/exojs';
+import {
+    Application,
+    Color,
+    Scene,
+    ParticleSystem,
+    RateSpawn,
+    ColorOverLifetime,
+    Range,
+    Constant,
+    VectorRange,
+    ConeDirection,
+    Gradient,
+    BlendModes,
+    Texture,
+} from '@codexo/exojs';
 
 const app = new Application({
     width: 800,
@@ -17,27 +31,27 @@ app.start(new class extends Scene {
     init(loader) {
         const { width, height } = this.app.canvas;
 
-        this._particleOptions = new ParticleOptions();
-        this._colorAffector = new ColorAffector(new Color(194, 64, 30, 1), new Color(0, 0, 0, 0));
-        this._particleEmitter = new UniversalEmitter(50, this._particleOptions);
-
         this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'));
         this._particleSystem.setPosition(width * 0.5, height * 0.75);
         this._particleSystem.setBlendMode(BlendModes.Additive);
-        this._particleSystem.addAffector(this._colorAffector);
-        this._particleSystem.addEmitter(this._particleEmitter);
+
+        // Constant 50 particles/s, randomised position and upward velocity.
+        // Particle positions are LOCAL — the system's own transform places
+        // them in world space.
+        this._particleSystem.addSpawnModule(new RateSpawn({
+            rate: new Constant(50),
+            lifetime: new Range(5, 10),
+            position: new VectorRange(-50, 50, -10, 10),
+            velocity: new ConeDirection(-Math.PI / 2, Math.PI / 36, 60, 80),
+        }));
+
+        // Hot ember-orange fading to transparent black over lifetime.
+        this._particleSystem.addUpdateModule(new ColorOverLifetime(new Gradient([
+            { t: 0, color: new Color(194, 64, 30, 1) },
+            { t: 1, color: new Color(0, 0, 0, 0) },
+        ])));
     }
     update(delta) {
-        const angle = rand(90, 100) * (Math.PI / 180);
-        const speed = rand(60, 80);
-
-        this._particleOptions.totalLifetime.copy(seconds(rand(5, 10)));
-        // Particle positions are LOCAL to the system; the system's own
-        // transform places them in world space. Setting world coordinates
-        // here would double the translation and push the emitter off-screen.
-        this._particleOptions.position.set(rand(-50, 50), rand(-10, 10));
-        this._particleOptions.velocity.set(Math.cos(angle) * speed, -Math.sin(angle) * speed);
-
         this._particleSystem.update(delta);
     }
     draw(backend) {

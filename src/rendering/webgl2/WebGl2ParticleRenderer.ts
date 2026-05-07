@@ -83,7 +83,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     public render(system: ParticleSystem): this {
         const backend = this.getBackend();
-        const { texture, particles, blendMode } = system;
+        const { texture, blendMode } = system;
         const textureChanged = texture !== this._currentTexture;
         const blendModeChanged = blendMode !== this._currentBlendMode;
 
@@ -119,18 +119,18 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
         const f32 = this._instanceFloat32;
         const u32 = this._instanceUint32;
-        const limit = Math.min(particles.length, this._batchSize);
+        const { posX, posY, scaleX, scaleY, rotations, color } = system;
+        const limit = Math.min(system.liveCount, this._batchSize);
 
         for (let i = 0; i < limit; i++) {
-            const particle = particles[i];
             const offset = i * wordsPerInstance;
 
-            f32[offset + 0] = particle.position.x;
-            f32[offset + 1] = particle.position.y;
-            f32[offset + 2] = particle.scale.x;
-            f32[offset + 3] = particle.scale.y;
-            f32[offset + 4] = particle.rotation;
-            u32[offset + 5] = particle.tint.toRgba();
+            f32[offset + 0] = posX[i];
+            f32[offset + 1] = posY[i];
+            f32[offset + 2] = scaleX[i];
+            f32[offset + 3] = scaleY[i];
+            f32[offset + 4] = rotations[i];
+            u32[offset + 5] = color[i];
         }
 
         this._instanceCount = limit;
