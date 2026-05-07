@@ -136,7 +136,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     test('CPU mode (no device passed) — first update does not allocate GPU resources', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 64 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 64 });
 
         system.addUpdateModule(new ApplyForce(0, 100));
 
@@ -152,7 +152,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     test('GPU mode (device passed, all modules WGSL-eligible) — compiles compute pipeline at first update', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 256, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 256, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 980));
         system.addUpdateModule(new Drag(0.5));
@@ -185,7 +185,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
         }
 
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 64, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 100));
         system.addUpdateModule(new CpuOnly());
@@ -201,7 +201,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     test('Curve / Gradient modules trigger texture allocation in GPU mode', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 256, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 256, device: env.device });
 
         system.addUpdateModule(new ScaleOverLifetime(new Curve([
             { t: 0, v: 1 },
@@ -224,7 +224,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     test('GPU mode dispatches compute on every update with non-zero liveCount', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 64, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 100));
 
@@ -245,7 +245,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     test('Adding update modules after compile throws', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 64, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 100));
         system.spawn();   // sets up state
@@ -256,7 +256,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     test('destroy releases GPU resources', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 64, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 100));
         system.spawn();
@@ -287,7 +287,7 @@ describe('ParticleSystem alive-flag in GPU mode', () => {
 
     test('spawn finds first dead slot via round-robin hint', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 0));
 
@@ -318,7 +318,7 @@ describe('ParticleSystem alive-flag in GPU mode', () => {
 
     test('expired particle in GPU mode sets lifetime=-1 sentinel + alive=0', () => {
         const env = makeMockDevice();
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4, device: env.device });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
 
         system.addUpdateModule(new ApplyForce(0, 0));
 
@@ -363,7 +363,7 @@ describe('ParticleSystem texture configuration', () => {
             new Rectangle(8, 0, 8, 8),
             new Rectangle(0, 8, 8, 8),
         ];
-        const system = new ParticleSystem({ texture: tex, frames, capacity: 4 });
+        const system = new ParticleSystem(tex, frames, { capacity: 4 });
 
         expect(system.frames.length).toBe(3);
         expect(system.hasAtlas).toBe(true);
@@ -393,7 +393,7 @@ describe('ParticleSystem render-inject backend detection', () => {
         const fakeBackend = Object.create(WebGpuBackend.prototype) as object;
         Object.defineProperty(fakeBackend, 'device', { value: env.device, configurable: true });
 
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         system.addUpdateModule(new ApplyForce(0, 0));
 
         // Frame 0: no backend known yet, update runs CPU.

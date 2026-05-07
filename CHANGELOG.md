@@ -265,25 +265,44 @@ system.scaleX[slot] = 1;
 system.scaleY[slot] = 1;
 ```
 
-### Changed — `ParticleSystem` constructor: options-only (BREAKING)
+### Changed — `ParticleSystem` constructor: typed overloads (BREAKING)
 
-The constructor now takes a single `ParticleSystemOptions` object — no
-positional `texture` argument. Texture, capacity, atlas frames, and the
-test-only `device` override all live in the same place:
+Source material (texture / atlas frames / spritesheet) lives in
+**positional arguments** — TypeScript overload signatures enforce mutual
+exclusivity at compile time so you can't pass nonsense combinations like
+texture-and-spritesheet-at-once. Capacity and the test-only `device`
+escape hatch live in the trailing options object.
 
 ```ts
-// 0.7.x and Phase 3 of 0.8.0 (work-in-progress, never released):
+// 0.7.x:
 new ParticleSystem(texture);
 new ParticleSystem(texture, 4096);
-new ParticleSystem(texture, { capacity: 4096, backend: app.backend });
 
-// 0.8.0 final:
-new ParticleSystem();                                              // untextured (1×1 white default), CPU/GPU auto-routed
-new ParticleSystem({ texture: spark });                            // simple textured particles
-new ParticleSystem({ texture: spark, capacity: 8192 });            // explicit capacity
-new ParticleSystem({ texture: atlas, frames: rectangles });        // multi-frame atlas
-new ParticleSystem({ spritesheet: sheet });                        // shorthand: extract texture + frames
-new ParticleSystem({ texture, device: mockGpuDevice });            // tests / advanced device-bypass
+// 0.8.0:
+new ParticleSystem();                                  // untextured (1×1 white), CPU/GPU auto-routed
+new ParticleSystem(spark);                             // simple textured particles
+new ParticleSystem(spark, { capacity: 8192 });         // explicit capacity
+new ParticleSystem(atlas, [r0, r1, r2]);               // multi-frame atlas
+new ParticleSystem(atlas, frames, { capacity: 8192 }); // atlas + capacity
+new ParticleSystem(sheet);                             // spritesheet shorthand
+new ParticleSystem(sheet, { capacity: 4096 });
+```
+
+The four overload signatures:
+
+```ts
+constructor(options?: ParticleSystemOptions);
+constructor(texture: Texture, options?: ParticleSystemOptions);
+constructor(texture: Texture, frames: ReadonlyArray<Rectangle>, options?: ParticleSystemOptions);
+constructor(spritesheet: Spritesheet, options?: ParticleSystemOptions);
+```
+
+Compile-time errors for illegal combinations:
+
+```ts
+new ParticleSystem(spark, sheet);                  // ✗ no overload matches
+new ParticleSystem(sheet, frames);                 // ✗ frames only valid with Texture
+new ParticleSystem({ frames });                    // ✗ frames isn't an option
 ```
 
 **No `backend` option** — the renderer auto-discovers the active backend

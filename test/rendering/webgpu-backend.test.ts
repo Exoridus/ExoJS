@@ -1433,7 +1433,7 @@ describe('WebGpuBackend', () => {
             const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
-            const system = new ParticleSystem({ texture });
+            const system = new ParticleSystem(texture);
             const slot = system.spawn();
 
             sourceCanvas.width = 16;
@@ -1478,7 +1478,7 @@ describe('WebGpuBackend', () => {
             const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
-            const system = new ParticleSystem({ texture });
+            const system = new ParticleSystem(texture);
             const firstSlot = system.spawn();
             const secondSlot = system.spawn();
 
@@ -1529,7 +1529,7 @@ describe('WebGpuBackend', () => {
             const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
-            const system = new ParticleSystem({ texture });
+            const system = new ParticleSystem(texture);
             const slot = system.spawn();
 
             sourceCanvas.width = 16;
@@ -1578,7 +1578,7 @@ describe('WebGpuBackend', () => {
             const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
-            const system = new ParticleSystem({ texture });
+            const system = new ParticleSystem(texture);
             const slot = system.spawn();
 
             sourceCanvas.width = 16;
@@ -1627,7 +1627,7 @@ describe('WebGpuBackend', () => {
             const manager = new WebGpuBackend(app);
             const sourceCanvas = document.createElement('canvas');
             const texture = new Texture(sourceCanvas);
-            const system = new ParticleSystem({ texture });
+            const system = new ParticleSystem(texture);
             const slot = system.spawn();
 
             sourceCanvas.width = 16;

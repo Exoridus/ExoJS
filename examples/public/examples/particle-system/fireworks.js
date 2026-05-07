@@ -70,7 +70,7 @@ app.start(new class extends Scene {
         const { width, height } = this.app.canvas;
 
         this._canvasSize = new Size(width, height);
-        this._particleSystem = new ParticleSystem({ texture: loader.get(Texture, 'particle'), capacity: 8192 });
+        this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 8192 });
 
         // Single-burst spawner — re-fired manually each explosion via reset().
         this._burst = new BurstSpawn({

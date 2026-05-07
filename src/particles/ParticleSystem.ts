@@ -6,7 +6,7 @@ import { Drawable } from '@/rendering/Drawable';
 import { Texture } from '@/rendering/texture/Texture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
-import type { Spritesheet } from '@/rendering/sprite/Spritesheet';
+import { Spritesheet } from '@/rendering/sprite/Spritesheet';
 import type { SpawnModule } from './modules/SpawnModule';
 import type { UpdateModule } from './modules/UpdateModule';
 import type { DeathModule } from './modules/DeathModule';
@@ -42,40 +42,21 @@ const getDefaultWhiteTexture = (): Texture => {
     return defaultWhiteTexture;
 };
 
-/** Options for {@link ParticleSystem}'s constructor. */
+/**
+ * Options for {@link ParticleSystem}'s constructor — orthogonal config
+ * that's independent of the texture source. Texture / frames / spritesheet
+ * live in positional arguments to enforce mutual exclusivity at the type
+ * level (you can't pass both a texture and a spritesheet by accident).
+ */
 export interface ParticleSystemOptions {
     /** Maximum particle count. Fixed at construction. Default 4096. */
     capacity?: number;
     /**
-     * Sprite texture for every rendered particle. Optional — when omitted,
-     * the system uses a 1×1 opaque-white default and particles render as
-     * solid-color quads driven by the per-particle `color` channel.
-     */
-    texture?: Texture;
-    /**
-     * Atlas-frame rectangles. When supplied, each particle's `textureIndex`
-     * value selects which frame to render — `RateSpawn` /
-     * `BurstSpawn`'s `textureIndex: Distribution<number>` becomes the
-     * per-spawn frame chooser. Indices outside `[0, frames.length)` clamp
-     * to 0.
-     *
-     * When omitted, the system treats the whole texture as one frame
-     * (legacy single-frame behaviour). Mutually exclusive with
-     * {@link spritesheet} — pass one or the other.
-     */
-    frames?: ReadonlyArray<Rectangle>;
-    /**
-     * Convenience: pull `texture` and `frames` from a {@link Spritesheet}
-     * in insertion order. Equivalent to passing `{ texture: sheet.texture,
-     * frames: [...sheet.frames.values()] }`.
-     */
-    spritesheet?: Spritesheet;
-    /**
      * Direct GPU device. Lets advanced consumers wire a `GPUDevice` owned
      * outside an `Application` (or a mock device in tests). When omitted,
      * the backend reference is captured automatically on the first
-     * {@link render} call — `WebGpuBackend` ⇒ GPU mode, anything else
-     * (incl. WebGL2) ⇒ CPU mode.
+     * {@link ParticleSystem.render} call — `WebGpuBackend` ⇒ GPU mode,
+     * anything else (incl. WebGL2) ⇒ CPU mode.
      */
     device?: GPUDevice;
 }
@@ -190,8 +171,45 @@ export class ParticleSystem extends Drawable {
     private _updateTexCoords = true;
     private _updateVertices = true;
 
-    public constructor(options: ParticleSystemOptions = {}) {
+    /** No texture — particles render as solid-color quads on a 1×1 white default. */
+    public constructor(options?: ParticleSystemOptions);
+    /** Single texture, no atlas — every particle uses the full texture as one frame. */
+    public constructor(texture: Texture, options?: ParticleSystemOptions);
+    /** Multi-frame atlas — each particle's `textureIndex` selects a frame. */
+    public constructor(texture: Texture, frames: ReadonlyArray<Rectangle>, options?: ParticleSystemOptions);
+    /** Spritesheet shorthand — texture + frames pulled from the sheet. */
+    public constructor(spritesheet: Spritesheet, options?: ParticleSystemOptions);
+    public constructor(
+        arg1?: Texture | Spritesheet | ParticleSystemOptions,
+        arg2?: ReadonlyArray<Rectangle> | ParticleSystemOptions,
+        arg3?: ParticleSystemOptions,
+    ) {
         super();
+
+        // Disambiguate the four valid call shapes via instanceof checks.
+        // The TS overloads above already prevent illegal combinations like
+        // `(texture, sheet)` or `(sheet, frames)` at compile time; this
+        // narrowing only sorts out the legal ones.
+        let texture: Texture | null = null;
+        let frames: ReadonlyArray<Rectangle> | null = null;
+        let options: ParticleSystemOptions = {};
+
+        if (arg1 instanceof Texture) {
+            texture = arg1;
+
+            if (Array.isArray(arg2)) {
+                frames = arg2;
+                options = arg3 ?? {};
+            } else {
+                options = (arg2 as ParticleSystemOptions | undefined) ?? {};
+            }
+        } else if (arg1 instanceof Spritesheet) {
+            texture = arg1.texture;
+            frames = [...arg1.frames.values()];
+            options = (arg2 as ParticleSystemOptions | undefined) ?? {};
+        } else {
+            options = (arg1 as ParticleSystemOptions | undefined) ?? {};
+        }
 
         const capacity = options.capacity ?? defaultCapacity;
 
@@ -215,17 +233,6 @@ export class ParticleSystem extends Drawable {
         this.alive = new Uint8Array(capacity);
 
         this._device = options.device ?? null;
-
-        // Resolve texture + frames. Mutually exclusive: spritesheet wins
-        // when both are passed (with a defensive override of texture).
-        let texture = options.texture ?? null;
-        let frames: ReadonlyArray<Rectangle> | null = options.frames ?? null;
-
-        if (options.spritesheet) {
-            texture = options.spritesheet.texture;
-            frames = [...options.spritesheet.frames.values()];
-        }
-
         this._texture = texture ?? getDefaultWhiteTexture();
 
         if (frames !== null) {

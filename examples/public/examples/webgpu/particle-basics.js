@@ -69,10 +69,7 @@ app.start(new class extends Scene {
 
         // Backend auto-detected on first render(); WebGPU → GPU compute path,
         // WebGL2 → CPU path. No explicit configuration needed here.
-        this._particleSystem = new ParticleSystem({
-            texture: createParticleTexture(),
-            capacity: 4096,
-        });
+        this._particleSystem = new ParticleSystem(createParticleTexture(), { capacity: 4096 });
         this._particleSystem.setPosition(width / 2, height * 0.82);
 
         this._particleSystem.addSpawnModule(new RateSpawn({

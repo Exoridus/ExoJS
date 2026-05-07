@@ -27,7 +27,7 @@ const tick = (s: number): Time => Time.zero.clone().set(s * 1000);
 
 describe('ParticleSystem SoA storage', () => {
     test('allocates typed arrays sized to capacity', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 1024 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 1024 });
 
         expect(system.capacity).toBe(1024);
         expect(system.posX.length).toBe(1024);
@@ -41,13 +41,13 @@ describe('ParticleSystem SoA storage', () => {
     test('rejects non-positive capacity', () => {
         const tex = makeTexture();
 
-        expect(() => new ParticleSystem({ texture: tex, capacity: 0 })).toThrow();
-        expect(() => new ParticleSystem({ texture: tex, capacity: -1 })).toThrow();
-        expect(() => new ParticleSystem({ texture: tex, capacity: 1.5 })).toThrow();
+        expect(() => new ParticleSystem(tex, { capacity: 0 })).toThrow();
+        expect(() => new ParticleSystem(tex, { capacity: -1 })).toThrow();
+        expect(() => new ParticleSystem(tex, { capacity: 1.5 })).toThrow();
     });
 
     test('spawn returns sequential slots up to capacity', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 3 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 3 });
 
         expect(system.spawn()).toBe(0);
         expect(system.spawn()).toBe(1);
@@ -57,7 +57,7 @@ describe('ParticleSystem SoA storage', () => {
     });
 
     test('compaction removes expired particles in update()', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 8 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 8 });
 
         for (let i = 0; i < 4; i++) {
             const slot = system.spawn();
@@ -75,7 +75,7 @@ describe('ParticleSystem SoA storage', () => {
     });
 
     test('integration advances position by velocity * dt', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         const slot = system.spawn();
 
         system.lifetime[slot] = 10;
@@ -158,7 +158,7 @@ describe('Distribution', () => {
 
 describe('SpawnModule', () => {
     test('RateSpawn emits at configured rate', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 1024 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 1024 });
 
         system.addSpawnModule(new RateSpawn({
             rate: new Constant(60),
@@ -174,7 +174,7 @@ describe('SpawnModule', () => {
     });
 
     test('RateSpawn applies distributions to spawned particle fields', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 64 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 64 });
 
         system.addSpawnModule(new RateSpawn({
             rate: new Constant(10),
@@ -199,7 +199,7 @@ describe('SpawnModule', () => {
     });
 
     test('BurstSpawn fires at scheduled times', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 128 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 128 });
 
         system.addSpawnModule(new BurstSpawn({
             schedule: [
@@ -221,7 +221,7 @@ describe('SpawnModule', () => {
 
 describe('UpdateModule', () => {
     test('ApplyForce accumulates velocity', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         const slot = system.spawn();
 
         system.lifetime[slot] = 10;
@@ -235,7 +235,7 @@ describe('UpdateModule', () => {
     });
 
     test('Drag damps velocity', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         const slot = system.spawn();
 
         system.lifetime[slot] = 10;
@@ -249,7 +249,7 @@ describe('UpdateModule', () => {
     });
 
     test('ColorOverLifetime samples gradient', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         const slot = system.spawn();
 
         system.lifetime[slot] = 1;
@@ -270,7 +270,7 @@ describe('UpdateModule', () => {
     });
 
     test('ScaleOverLifetime applies curve to both axes', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         const slot = system.spawn();
 
         system.lifetime[slot] = 1;
@@ -286,7 +286,7 @@ describe('UpdateModule', () => {
     });
 
     test('RotateOverLifetime accumulates rotation speed', () => {
-        const system = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
         const slot = system.spawn();
 
         system.lifetime[slot] = 10;
@@ -301,8 +301,8 @@ describe('UpdateModule', () => {
 
 describe('DeathModule', () => {
     test('SpawnOnDeath fires when particle expires and copies position', () => {
-        const parent = new ParticleSystem({ texture: makeTexture(), capacity: 4 });
-        const child = new ParticleSystem({ texture: makeTexture(), capacity: 16 });
+        const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const child = new ParticleSystem(makeTexture(), { capacity: 16 });
 
         const parentSlot = parent.spawn();
         parent.lifetime[parentSlot] = 0.05;

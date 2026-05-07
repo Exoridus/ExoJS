@@ -31,7 +31,7 @@ app.start(new class extends Scene {
     init(loader) {
         const { width, height } = this.app.canvas;
 
-        this._particleSystem = new ParticleSystem({ texture: loader.get(Texture, 'particle') });
+        this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'));
         this._particleSystem.setPosition(width * 0.5, height * 0.75);
         this._particleSystem.setBlendMode(BlendModes.Additive);
 
