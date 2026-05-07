@@ -5,6 +5,7 @@ import monacoEditorCss from 'monaco-editor/min/vs/editor/editor.main.css?inline'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 import { buildPublicUrl } from '../lib/url-builder';
+import { CURRENT_VERSION_ID } from '../lib/versions';
 import componentStyles from './EditorCode.scss?inline';
 import './Toolbar';
 import './Button';
@@ -894,6 +895,12 @@ export class EditorCode extends LitElement {
   // we return an empty list — the editor stays usable, just without
   // ExoJS-aware IntelliSense.
   private async _loadVersionedExoJsTypings(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
+    // The "current" id always maps to the locally vendor-synced flat path —
+    // there is no versioned snapshot for it. Skip the lookup that would 404.
+    if (versionId === CURRENT_VERSION_ID) {
+      return this._loadExoJsTypingsFromBase('vendor/exojs/');
+    }
+
     const versionedBase = `vendor/exojs/${versionId}/`;
 
     const fromVersioned = await this._loadExoJsTypingsFromBase(versionedBase);
