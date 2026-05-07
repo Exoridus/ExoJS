@@ -21,6 +21,18 @@ import { AbstractVector } from './AbstractVector';
 
 let temp: Vector | null = null;
 
+/**
+ * Concrete mutable 2D vector with full {@link AbstractVector} arithmetic and
+ * {@link ShapeLike} collision support (treated as a point collider).
+ *
+ * `Vector.temp` provides a shared scratch instance for intermediate
+ * calculations — never store the reference across frames. `Vector.zero` and
+ * `Vector.one` are read-only sentinel constants.
+ *
+ * The four static factory methods (`add`, `subtract`, `multiply`, `divide`)
+ * always allocate a new `Vector`. Instance methods mutate in place and return
+ * `this` for chaining.
+ */
 export class Vector extends AbstractVector implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.Point;
@@ -95,18 +107,22 @@ export class Vector extends AbstractVector implements ShapeLike {
     public static readonly zero = new Vector(0, 0);
     public static readonly one = new Vector(1, 1);
 
+    /** Return a new `Vector` equal to `v1 + v2`. Does not mutate either operand. */
     public static add(v1: Vector, v2: Vector): Vector {
         return new Vector(v1.x + v2.x, v1.y + v2.y);
     }
 
+    /** Return a new `Vector` equal to `v1 - v2`. Does not mutate either operand. */
     public static subtract(v1: Vector, v2: Vector): Vector {
         return new Vector(v1.x - v2.x, v1.y - v2.y);
     }
 
+    /** Return a new `Vector` equal to the component-wise product of `v1` and `v2`. Does not mutate either operand. */
     public static multiply(v1: Vector, v2: Vector): Vector {
         return new Vector(v1.x * v2.x, v1.y * v2.y);
     }
 
+    /** Return a new `Vector` equal to the component-wise quotient of `v1` / `v2`. Does not mutate either operand. */
     public static divide(v1: Vector, v2: Vector): Vector {
         return new Vector(v1.x / v2.x, v1.y / v2.y);
     }

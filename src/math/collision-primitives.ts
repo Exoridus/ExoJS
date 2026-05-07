@@ -27,6 +27,7 @@ const getCurveSegments = (radiusA: number, radiusB = radiusA): number => (
     Math.max(16, Math.ceil(Math.sqrt(Math.max(radiusA, radiusB)) * 8))
 );
 
+/** Generate a polygon approximation of an ellipse as an array of world-space points. Segment count scales with the larger radius. */
 const buildEllipsePoints = ({ x: centerX, y: centerY, rx, ry }: EllipseLikeLike): Array<PointLike> => {
     if (rx <= 0 || ry <= 0) {
         return [];
@@ -48,6 +49,7 @@ const buildEllipsePoints = ({ x: centerX, y: centerY, rx, ry }: EllipseLikeLike)
     return points;
 };
 
+/** Generate a polygon approximation of a circle as an array of world-space points. Segment count scales with the radius. */
 const buildCirclePoints = ({ x: centerX, y: centerY, radius }: CircleLikeLike): Array<PointLike> => {
     if (radius <= 0) {
         return [];
@@ -69,6 +71,7 @@ const buildCirclePoints = ({ x: centerX, y: centerY, radius }: CircleLikeLike): 
     return points;
 };
 
+/** Return the four corner points of a rectangle in TL → TR → BR → BL order. */
 const buildRectanglePoints = ({ x, y, width, height }: RectangleLikeLike): Array<PointLike> => ([
     { x, y },
     { x: x + width, y },
@@ -76,6 +79,7 @@ const buildRectanglePoints = ({ x, y, width, height }: RectangleLikeLike): Array
     { x, y: y + height },
 ]);
 
+/** Translate a polygon's local-space `points` by its world offset `(x, y)`. */
 const buildPolygonWorldPoints = ({ x: offsetX, y: offsetY, points }: PolygonLikeLike): Array<PointLike> => (
     points.map(({ x, y }) => ({ x: x + offsetX, y: y + offsetY }))
 );
@@ -147,6 +151,11 @@ const polygonContainsPoint = ({ x, y }: PointLike, points: Array<PointLike>): bo
     return inside;
 };
 
+/**
+ * Return `true` when two convex or concave polygons (as flat point arrays)
+ * intersect. Tests all edge pairs for segment intersection and falls back to
+ * a point-in-polygon test for the containment case.
+ */
 const polygonsIntersect = (polygonA: Array<PointLike>, polygonB: Array<PointLike>): boolean => {
     if (polygonA.length === 0 || polygonB.length === 0) {
         return false;
@@ -170,10 +179,16 @@ const polygonsIntersect = (polygonA: Array<PointLike>, polygonB: Array<PointLike
         || polygonContainsPoint(polygonB[0], polygonA);
 };
 
+/** Return `true` when two points are within `threshold` distance of each other. */
 const intersectionPointPoint = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0): boolean => (
     getDistance(x1, y1, x2, y2) <= threshold
 );
 
+/**
+ * Return `true` when `point` lies on the line segment `(x1,y1)–(x2,y2)`
+ * within `threshold`. Uses sum-of-distances: the point is "on" the segment
+ * when `d1 + d2 ≈ d3` within the tolerance.
+ */
 const intersectionPointLineSegment = ({ x, y }: PointLike, { x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0.1): boolean => {
     const d1 = getDistance(x, y, x1, y1);
     const d2 = getDistance(x, y, x2, y2);
@@ -232,12 +247,20 @@ const intersectionRectRect = ({ x: x1, y: y1, width: w1, height: h1 }: Rectangle
     return true;
 };
 
+/** Euclidean length of the 2D vector `(x, y)`. */
 const getVectorLength = (x: number, y: number): number => Math.sqrt((x * x) + (y * y));
 
+/** Squared length of the 2D vector `(x, y)`. Avoids the `sqrt`. */
 const getVectorLengthSquared = (x: number, y: number): number => (x * x) + (y * y);
 
+/** Dot product of `(x1, y1)` and `(x2, y2)`. */
 const getDotProduct = (x1: number, y1: number, x2: number, y2: number): number => (x1 * x2) + (y1 * y2);
 
+/**
+ * Classify `(pointX, pointY)` relative to the directed edge `(lineX, lineY)`
+ * using the dot product. Returns `left` when before the edge start, `right`
+ * when past the edge end, `middle` when projecting onto the edge.
+ */
 const getVoronoiRegion = (lineX: number, lineY: number, pointX: number, pointY: number): VoronoiRegion => {
     const product = getDotProduct(pointX, pointY, lineX, lineY);
     const lengthSq = getVectorLengthSquared(lineX, lineY);

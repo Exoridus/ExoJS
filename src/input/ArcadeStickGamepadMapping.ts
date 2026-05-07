@@ -21,6 +21,13 @@ const arcadeStickButtonDefinitions: ReadonlyArray<GamepadControlDefinition> = [
     [16, GamepadChannel.Guide],
 ];
 
+/**
+ * Mapping for generic arcade-stick controllers.
+ *
+ * Covers the standard 8-button + shoulder/trigger layout common to most
+ * fightsticks. No analog sticks are present; the axes array is empty.
+ * D-pad inputs are exposed as discrete buttons (indices 12–15).
+ */
 export class ArcadeStickGamepadMapping extends GamepadMapping {
     public readonly family = GamepadMappingFamily.ArcadeStick;
 

@@ -31,6 +31,15 @@ let temp: Rectangle | null = null;
 const noop = (): void => {};
 const tempPoint = new ObservableVector(noop);
 
+/**
+ * Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and
+ * dimensions `(width, height)`. Implements {@link ShapeLike} with full SAT
+ * collision response for rectangles and polygons, and specialised algorithms
+ * for circle and ellipse intersections.
+ *
+ * `Rectangle.temp` is a shared scratch instance. Edge normals are lazily
+ * computed and cached; they are invalidated when position or size mutates.
+ */
 export class Rectangle implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.Rectangle;
@@ -186,6 +195,11 @@ export class Rectangle implements ShapeLike {
         );
     }
 
+    /**
+     * Apply a 3×3 affine `matrix` to all four corners of this rectangle, then
+     * return the axis-aligned bounding box of the transformed corners written
+     * into `result`. Defaults to mutating `this` in place. Returns `result`.
+     */
     public transform(matrix: Matrix, result: Rectangle = this): Rectangle {
         const point = tempPoint.set(this.left, this.top).transform(matrix);
 
@@ -222,6 +236,7 @@ export class Rectangle implements ShapeLike {
         return intersectionPointRect(tempPoint.set(x, y), this);
     }
 
+    /** Return `true` when `rect` is entirely within this rectangle (all four edges inside). */
     public containsRect(rect: Rectangle): boolean {
         return inRange(rect.left, this.left, this.right)
             && inRange(rect.right, this.left, this.right)

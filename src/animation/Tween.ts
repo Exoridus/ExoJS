@@ -3,6 +3,34 @@ import { TweenState } from './types';
 import type { EasingFunction, TweenLifecycleCallback, TweenUpdateCallback } from './types';
 import type { TweenManager } from './TweenManager';
 
+/**
+ * Animates numeric properties of `target` from their current value to a
+ * configured end value over a duration in seconds. Supports easing, delay,
+ * repeat (with optional yoyo), chaining, and lifecycle callbacks
+ * ({@link Tween.onStart}, {@link Tween.onUpdate}, {@link Tween.onComplete},
+ * {@link Tween.onRepeat}).
+ *
+ * Tweens are typically created via {@link TweenManager.create}, which attaches
+ * them to the manager so they advance once per frame. Stand-alone usage is
+ * supported by calling {@link Tween.update} manually with a frame delta.
+ *
+ * Start values are captured lazily on the first update after {@link Tween.start},
+ * so target properties may be mutated between configuration and start without
+ * affecting the captured baseline.
+ *
+ * Only number-typed properties on `target` are interpolated; non-number
+ * properties listed in {@link Tween.to} emit a console warning and are skipped.
+ *
+ * @example
+ * ```ts
+ * app.tweens.create(sprite.position)
+ *     .to({ x: 200 }, 1.5)
+ *     .easing(Ease.cubicInOut)
+ *     .yoyo()
+ *     .repeat(-1)
+ *     .start();
+ * ```
+ */
 export class Tween<T extends object = object> {
     private readonly _target: T;
     private _state: TweenState = TweenState.Idle;
@@ -109,24 +137,44 @@ export class Tween<T extends object = object> {
         return this;
     }
 
+    /**
+     * Register a callback fired once when the tween begins interpolating
+     * (after any configured delay has elapsed). Fires only on the first
+     * cycle — repeats do not re-trigger it.
+     */
     public onStart(callback: TweenLifecycleCallback): this {
         this._onStart = callback;
 
         return this;
     }
 
+    /**
+     * Register a callback fired on every active update. Receives the eased
+     * progress in 0..1 — already direction-flipped for yoyo cycles.
+     */
     public onUpdate(callback: TweenUpdateCallback): this {
         this._onUpdate = callback;
 
         return this;
     }
 
+    /**
+     * Register a callback fired when the tween finishes naturally (all repeat
+     * cycles exhausted). Does NOT fire when the tween is stopped via
+     * {@link Tween.stop}.
+     */
     public onComplete(callback: TweenLifecycleCallback): this {
         this._onComplete = callback;
 
         return this;
     }
 
+    /**
+     * Register a callback fired at the boundary of each repeat cycle, after
+     * the cycle counter is decremented and before the next cycle begins. Not
+     * fired on the final cycle's completion (use {@link Tween.onComplete}
+     * for that).
+     */
     public onRepeat(callback: TweenLifecycleCallback): this {
         this._onRepeat = callback;
 

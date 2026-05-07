@@ -22,8 +22,23 @@ import type { Polygon } from '@/math/Polygon';
 
 let temp: Circle | null = null;
 
+/**
+ * Mutable circle shape defined by a centre position and radius. Implements
+ * {@link ShapeLike} for use in the collision pipeline.
+ *
+ * For SAT-based collision the circle is approximated as a regular polygon with
+ * {@link Circle.collisionSegments} sides; normals and vertices are cached and
+ * regenerated lazily when the shape mutates.
+ *
+ * `Circle.temp` is a shared scratch instance for intermediate calculations.
+ */
 export class Circle implements ShapeLike {
 
+    /**
+     * Number of polygon segments used to approximate the circle boundary for
+     * SAT collision tests. Increasing this improves accuracy at the cost of
+     * more normal comparisons. Default: `32`.
+     */
     public static collisionSegments = 32;
 
     public readonly collisionType: CollisionType = CollisionType.Circle;
@@ -92,6 +107,10 @@ export class Circle implements ShapeLike {
         this._normalsDirty = true;
     }
 
+    /**
+     * Set the circle's centre to `(x, y)`. Invalidates the normal and vertex
+     * caches. Returns `this` for chaining.
+     */
     public setPosition(x: number, y: number): this {
         this._position.set(x, y);
         this._verticesDirty = true;
@@ -100,6 +119,10 @@ export class Circle implements ShapeLike {
         return this;
     }
 
+    /**
+     * Set the circle's radius. No-op when the value has not changed. Invalidates
+     * the normal and vertex caches. Returns `this` for chaining.
+     */
     public setRadius(radius: number): this {
         if (this._radius !== radius) {
             this._radius = radius;
@@ -182,6 +205,10 @@ export class Circle implements ShapeLike {
         return this._normals!;
     }
 
+    /**
+     * Project this circle onto `axis` and write the scalar interval into
+     * `result`. The projection accounts for both the centre and the radius.
+     */
     public project(axis: Vector, result: Interval = new Interval()): Interval {
         const center = axis.dot(this.x, this.y);
         const radius = this.radius * axis.length;
@@ -265,6 +292,11 @@ export class Circle implements ShapeLike {
         return this._collisionVertices!;
     }
 
+    /**
+     * Shared scratch `Circle` instance for intermediate calculations. Never
+     * retain the reference across frames or async boundaries.
+     * @internal
+     */
     public static get temp(): Circle {
         if (temp === null) {
             temp = new Circle();

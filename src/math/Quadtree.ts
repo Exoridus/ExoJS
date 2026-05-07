@@ -1,10 +1,32 @@
 import { Rectangle } from './Rectangle';
 
+/** An item stored in a {@link Quadtree}. Carries an axis-aligned bounding box and an arbitrary `payload`. */
 export interface QuadtreeItem<T> {
     bounds: Rectangle;
     payload: T;
 }
 
+/**
+ * Generic recursive spatial index used by the engine's `InteractionManager`
+ * to accelerate per-frame hit-testing of scene nodes.
+ *
+ * Items are inserted with their axis-aligned bounding box; the tree
+ * automatically subdivides into four quadrants (NW/NE/SW/SE) when a node
+ * accumulates more than `maxItems` entries and the current depth is below
+ * `maxDepth`. Items that span multiple quadrants are kept at the current node
+ * rather than duplicated.
+ *
+ * The tree is persistent: `insert` and `remove` modify the tree in place
+ * without full rebuilds. Call `clear()` for bulk reset, or `destroy()` to
+ * release all memory including child rectangles.
+ *
+ * @example
+ * ```ts
+ * const qt = new Quadtree<SceneNode>(new Rectangle(0, 0, 1920, 1080));
+ * qt.insert({ bounds: node.getBounds(), payload: node });
+ * const hits = qt.queryPoint(mouseX, mouseY);
+ * ```
+ */
 export class Quadtree<T> {
     private readonly _bounds: Rectangle;
     private readonly _maxItems: number;
@@ -22,6 +44,11 @@ export class Quadtree<T> {
         this._children = null;
     }
 
+    /**
+     * Insert `item` into the tree. If this node is full and below `maxDepth`,
+     * it subdivides first. Items whose bounds span multiple child quadrants are
+     * stored at the current node to avoid duplication.
+     */
     public insert(item: QuadtreeItem<T>): void {
         // If not subdivided and under capacity, store here.
         if (this._children === null && this._items.length < this._maxItems) {
@@ -81,6 +108,13 @@ export class Quadtree<T> {
         return results;
     }
 
+    /**
+     * Return all items whose bounds overlap the axis-aligned `rect`.
+     *
+     * Same reuse semantics as {@link queryPoint}: pass a persistent buffer and
+     * reset it (`buf.length = 0`) before each call to avoid allocations on hot
+     * paths.
+     */
     public queryRect(rect: Rectangle, results: Array<QuadtreeItem<T>> = []): Array<QuadtreeItem<T>> {
         // Check intersection using left/right/top/bottom comparisons to avoid
         // needing a full Rectangle.intersectsWith() call with collision dispatch.
@@ -139,6 +173,7 @@ export class Quadtree<T> {
         return false;
     }
 
+    /** Remove all items and collapse all child nodes. Child `Quadtree` instances are retained but reset. */
     public clear(): void {
         this._items.length = 0;
 

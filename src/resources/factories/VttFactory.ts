@@ -1,5 +1,11 @@
 import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
 
+/**
+ * Converts a WebVTT timestamp string (`HH:MM:SS.mmm`, `MM:SS.mmm`, or
+ * `SS.mmm`) into a floating-point number of seconds.
+ *
+ * @internal
+ */
 const parseTimestamp = (value: string): number => {
     const parts = value.split(':');
     let seconds = 0;
@@ -15,14 +21,32 @@ const parseTimestamp = (value: string): number => {
     return seconds;
 };
 
+/**
+ * {@link AssetFactory} implementation that parses WebVTT (`.vtt`) subtitle and
+ * caption files and produces an array of {@link VTTCue} instances.
+ *
+ * The parser handles CRLF and CR line endings, skips the `WEBVTT` header and
+ * any metadata blocks, and supports optional cue settings on the timestamp
+ * line. Inline cue settings are stripped; only start time, end time, and cue
+ * text are preserved.
+ */
 export class VttFactory extends AbstractAssetFactory<Array<VTTCue>> {
 
     public readonly storageName = 'vtt';
 
+    /**
+     * Reads the response body as a UTF-8 string containing the raw VTT markup.
+     */
     public async process(response: Response): Promise<string> {
         return response.text();
     }
 
+    /**
+     * Parses VTT markup into an ordered array of {@link VTTCue} instances.
+     *
+     * Line endings are normalised before parsing. Cues are emitted in document
+     * order; overlapping or out-of-order timestamps are preserved as-is.
+     */
     public async create(source: string): Promise<Array<VTTCue>> {
         const cues: Array<VTTCue> = [];
         const lines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');

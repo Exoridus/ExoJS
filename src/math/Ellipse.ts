@@ -17,6 +17,14 @@ import type { Line } from '@/math/Line';
 import type { Circle } from '@/math/Circle';
 import type { SceneNode } from '@/core/SceneNode';
 
+/**
+ * Mutable axis-aligned ellipse shape defined by a centre position and
+ * separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements
+ * {@link ShapeLike} for use in the intersection pipeline.
+ *
+ * Note: `collidesWith` always returns `null` — the ellipse supports boolean
+ * intersection tests only; full SAT response is not yet implemented.
+ */
 export class Ellipse implements ShapeLike {
     public readonly collisionType: CollisionType = CollisionType.Ellipse;
 

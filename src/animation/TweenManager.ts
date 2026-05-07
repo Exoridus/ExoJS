@@ -1,5 +1,15 @@
 import { Tween } from './Tween';
 
+/**
+ * Owns and advances a collection of {@link Tween} instances, driving them
+ * once per frame from {@link Application.update}. Created tweens are tracked
+ * automatically; manually constructed tweens can be opted in via
+ * {@link TweenManager.add}.
+ *
+ * Update iteration uses a snapshot so callbacks may freely add or remove
+ * tweens during the same frame without corrupting the loop. Completed and
+ * stopped tweens are evicted automatically.
+ */
 export class TweenManager {
     private _tweens: Array<Tween> = [];
     private _destroyed = false;

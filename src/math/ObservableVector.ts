@@ -1,5 +1,14 @@
 import { AbstractVector } from '@/math/AbstractVector';
 
+/**
+ * A {@link AbstractVector} subclass that fires a callback whenever its
+ * components change. Used internally by {@link Rectangle} and other types to
+ * invalidate cached state (e.g. normals) on position mutations.
+ *
+ * Setting individual components (`x`, `y`) fires the callback only when the
+ * value actually changes. Batch mutations via `set()` fire at most one
+ * callback per call.
+ */
 export class ObservableVector extends AbstractVector {
 
     private _x: number;

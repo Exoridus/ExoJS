@@ -29,6 +29,11 @@ import type { PointLike } from '@/math/PointLike';
  * INTERSECTION
  */
 
+/**
+ * Generic SAT (Separating Axis Theorem) boolean intersection test. Tests all
+ * edge normals from both shapes and returns `false` as soon as a separating
+ * axis is found.
+ */
 const intersectionSat = (shapeA: Collidable, shapeB: Collidable): boolean => {
     const normalsA = shapeA.getNormals();
     const normalsB = shapeB.getNormals();
@@ -309,6 +314,12 @@ const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => 
  * COLLISION DETECTION
  */
 
+/**
+ * Compute a {@link CollisionResponse} for two overlapping axis-aligned
+ * rectangles. Returns `null` when they do not overlap. Note: `projectionN` and
+ * `projectionV` are zero vectors in this implementation — only `overlap` and
+ * containment flags are meaningful.
+ */
 const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): CollisionResponse | null => {
     if ((rectB.left > rectA.right) || (rectB.top > rectA.bottom)) {
         return null;
@@ -336,6 +347,7 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
     };
 };
 
+/** Compute a {@link CollisionResponse} for two overlapping circles. Returns `null` when they do not overlap. */
 const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): CollisionResponse | null => {
     const difference = circleB.position.clone().subtract(circleA.x, circleA.y);
     const distance = difference.length;
@@ -360,6 +372,12 @@ const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): CollisionRe
     };
 };
 
+/**
+ * Compute a {@link CollisionResponse} for a circle against an axis-aligned
+ * rectangle. Returns `null` when they do not overlap. When `swap` is `true`,
+ * `shapeA`/`shapeB` in the response are swapped (used when the rectangle calls
+ * this internally as the "other" shape).
+ */
 const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = false): CollisionResponse | null => {
     const radius = circle.radius;
     const centerWidth = rect.width / 2;
@@ -386,6 +404,11 @@ const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = fal
     };
 };
 
+/**
+ * Compute a {@link CollisionResponse} for a convex polygon against a circle
+ * using Voronoi-region classification. Returns `null` when they do not overlap.
+ * When `swap` is `true`, `shapeA`/`shapeB` roles are swapped in the response.
+ */
 const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): CollisionResponse | null => {
     const radius = circle.radius;
     const points = polygon.points;
@@ -494,6 +517,11 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
     };
 };
 
+/**
+ * Full SAT collision response for any two {@link Collidable} shapes. Tests all
+ * edge normals from both shapes and computes the minimum-translation axis.
+ * Returns `null` when they do not overlap.
+ */
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
     const normalsA = shapeA.getNormals();
     const normalsB = shapeB.getNormals();

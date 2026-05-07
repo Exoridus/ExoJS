@@ -1,5 +1,12 @@
 import { Size } from './Size';
 
+/**
+ * A {@link Size} subclass that fires a callback whenever `width` or `height`
+ * changes. Used internally by layout-aware types to invalidate cached geometry
+ * on dimension mutations.
+ *
+ * Batch mutations via `set()` fire at most one callback per call.
+ */
 export class ObservableSize extends Size {
 
     private readonly _callback: () => void;

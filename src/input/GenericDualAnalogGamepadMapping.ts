@@ -46,6 +46,16 @@ const genericDualAnalogAxisDefinitions: ReadonlyArray<GamepadControlDefinition> 
     [7, GamepadChannel.AuxiliaryAxis3Positive],
 ];
 
+/**
+ * Baseline mapping for dual-analog controllers that follow the standard
+ * W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary).
+ *
+ * Each signed axis is split into two directional channels — one for the
+ * negative half and one for the positive half — with the negative channel
+ * inverted so all channel values are non-negative during normal use.
+ * Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit
+ * this layout and override only {@link GamepadMapping.family}.
+ */
 export class GenericDualAnalogGamepadMapping extends GamepadMapping {
     public readonly family: GamepadMappingFamily = GamepadMappingFamily.GenericDualAnalog;
 

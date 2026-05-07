@@ -4,9 +4,21 @@ import type { Cloneable } from '@/core/types';
 let temp: Matrix | null = null;
 
 /**
- * | a | b | x |
- * | c | d | y |
- * | e | f | z |
+ * Mutable 3×3 row-major affine transformation matrix used throughout the
+ * rendering and physics pipeline.
+ *
+ * Layout (row, column):
+ * ```
+ * | a  b  x |
+ * | c  d  y |
+ * | e  f  z |
+ * ```
+ * `a`/`d` are the X/Y scale + rotation cosines, `b`/`c` are the shear/rotation
+ * sines, `x`/`y` are the translation components, and `e`/`f`/`z` are the
+ * homogeneous row (typically `0, 0, 1`).
+ *
+ * All mutating methods return `this` for chaining. `Matrix.temp` is a shared
+ * scratch instance. `Matrix.identity` is a read-only identity constant.
  */
 export class Matrix implements Cloneable {
 
@@ -84,6 +96,11 @@ export class Matrix implements Cloneable {
             && (z === undefined || this.z === z);
     }
 
+    /**
+     * Post-multiply this matrix by `matrix` (i.e. `this = this × matrix`).
+     * Applies `matrix`'s transform after this matrix's transform. Mutates in
+     * place and returns `this` for chaining.
+     */
     public combine(matrix: Matrix): this {
         return this.set(
             (this.a * matrix.a) + (this.c * matrix.b) + (this.e * matrix.x),
@@ -100,6 +117,11 @@ export class Matrix implements Cloneable {
         );
     }
 
+    /**
+     * Compute the inverse of this matrix and write it into `result`. Defaults
+     * to `this` (in-place inversion). When the matrix is singular (determinant
+     * = 0) `result` is set to the identity. Returns `result`.
+     */
     public getInverse(result: Matrix = this): Matrix {
         const determinant =
             (this.a * (this.z * this.d - this.y * this.f)) -
@@ -125,6 +147,10 @@ export class Matrix implements Cloneable {
         );
     }
 
+    /**
+     * Apply a translation of `(x, y)` to this matrix. Mutates in place and
+     * returns `this` for chaining.
+     */
     public translate(x: number, y: number = x): Matrix {
         return this.combine(Matrix.temp.set(
             1, 0, x,
@@ -133,6 +159,10 @@ export class Matrix implements Cloneable {
         ));
     }
 
+    /**
+     * Apply a rotation of `angle` **degrees** around `(centerX, centerY)` to
+     * this matrix. Mutates in place and returns `this` for chaining.
+     */
     public rotate(angle: number, centerX = 0, centerY: number = centerX): Matrix {
         const radian = degreesToRadians(angle);
         const cos = Math.cos(radian);
@@ -145,6 +175,10 @@ export class Matrix implements Cloneable {
         ));
     }
 
+    /**
+     * Apply a scale of `(scaleX, scaleY)` around `(centerX, centerY)` to this
+     * matrix. Mutates in place and returns `this` for chaining.
+     */
     public scale(scaleX: number, scaleY: number = scaleX, centerX = 0, centerY: number = centerX): Matrix {
         return this.combine(Matrix.temp.set(
             scaleX, 0, (centerX * (1 - scaleX)),
@@ -153,6 +187,13 @@ export class Matrix implements Cloneable {
         ));
     }
 
+    /**
+     * Serialise this matrix into a `Float32Array` suitable for a WebGL uniform.
+     * The internal `Float32Array` is lazily allocated and reused across calls.
+     *
+     * When `transpose` is `false` (default) the array is in column-major order
+     * (as OpenGL expects). When `true` it is row-major.
+     */
     public toArray(transpose = false): Float32Array {
         const array = this._array || (this._array = new Float32Array(9));
 

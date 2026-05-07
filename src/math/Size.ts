@@ -2,6 +2,15 @@ import type { Cloneable } from '@/core/types';
 
 let temp: Size | null = null;
 
+/**
+ * Mutable 2D size (width × height) value type. All arithmetic methods mutate
+ * in place and return `this` for chaining. When `height` is omitted from
+ * `set`, `add`, `subtract`, `scale`, or `divide` it defaults to the same
+ * value as `width` (uniform operation).
+ *
+ * `Size.temp` provides a shared scratch instance. `Size.zero` is a read-only
+ * sentinel.
+ */
 export class Size implements Cloneable {
 
     protected _width: number;

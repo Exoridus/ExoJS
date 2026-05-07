@@ -2,12 +2,22 @@ import { triangulate } from '@/math/triangulate';
 import { Vector } from '@/math/Vector';
 import { tau } from '@/math/utils';
 
+/**
+ * Raw mesh data produced by geometry builders. `vertices` is a flat `Float32Array`
+ * of `(x, y)` pairs, `indices` is a triangle list for indexed rendering, and
+ * `points` is the original outline/perimeter path as a flat number array.
+ */
 export interface MeshGeometryData {
     readonly vertices: Float32Array;
     readonly indices: Uint16Array;
     readonly points: Array<number>;
 }
 
+/**
+ * Build a single straight line segment as a triangle-list mesh with the given
+ * pixel `width`. Returns {@link MeshGeometryData} with 4 vertices and 2
+ * triangles.
+ */
 export const buildLine = (startX: number, startY: number, endX: number, endY: number, width: number): MeshGeometryData => {
     const points = [startX, startY, endX, endY];
     const distance = width / 2;
@@ -29,6 +39,15 @@ export const buildLine = (startX: number, startY: number, endX: number, endY: nu
     return { vertices, indices, points };
 };
 
+/**
+ * Build a multi-point polyline as a triangle-list mesh. `points` must contain
+ * at least two `(x, y)` pairs (minimum 4 values). When the first and last
+ * points coincide the path is treated as closed and an interpolated midpoint
+ * is inserted to avoid degenerate geometry.
+ *
+ * Uses miter joints at each interior vertex; joints exceeding 14× lineWidth
+ * are bevelled to avoid extremely long spikes.
+ */
 export const buildPath = (points: Array<number>, width: number): MeshGeometryData => {
     if (points.length < 4) {
         throw new Error('At least two X/Y pairs are required to build a line.');
@@ -201,6 +220,11 @@ export const buildPath = (points: Array<number>, width: number): MeshGeometryDat
     return { vertices, indices, points: outlinePoints };
 };
 
+/**
+ * Build a filled circle as a triangle-list mesh. Vertex count scales with
+ * `radius` (approximately `15√(2r)` segments) so small circles use fewer
+ * triangles than large ones.
+ */
 export const buildCircle = (centerX: number, centerY: number, radius: number): MeshGeometryData => {
     const length = Math.floor(15 * Math.sqrt(radius + radius));
     const segment = (Math.PI * 2) / length;
@@ -237,6 +261,10 @@ export const buildCircle = (centerX: number, centerY: number, radius: number): M
     return { vertices, indices, points };
 };
 
+/**
+ * Build a filled axis-aligned ellipse as a triangle-list mesh. Segment count
+ * scales with the sum of the two radii so elongated ellipses remain smooth.
+ */
 export const buildEllipse = (centerX: number, centerY: number, radiusX: number, radiusY: number): MeshGeometryData => {
     const length = Math.floor(15 * Math.sqrt(radiusX + radiusY));
     const segment = (Math.PI * 2) / length;
@@ -272,6 +300,11 @@ export const buildEllipse = (centerX: number, centerY: number, radiusX: number, 
     return { vertices, indices, points };
 };
 
+/**
+ * Build a filled simple (non-self-intersecting) polygon as a triangle-list
+ * mesh via ear-clipping triangulation. `points` must contain at least three
+ * `(x, y)` pairs (minimum 6 values); throws otherwise.
+ */
 export const buildPolygon = (points: Array<number>): MeshGeometryData => {
     if (points.length < 6) {
         throw new Error('At least three X/Y pairs are required to build a polygon.');
@@ -291,6 +324,10 @@ export const buildPolygon = (points: Array<number>): MeshGeometryData => {
     return { vertices, indices, points };
 };
 
+/**
+ * Build a filled axis-aligned rectangle as a triangle-list mesh. Produces
+ * exactly 4 vertices and 2 triangles regardless of dimensions.
+ */
 export const buildRectangle = (x: number, y: number, width: number, height: number): MeshGeometryData => {
     // 4 vertices: TL, TR, BL, BR. Triangles [0, 1, 2,  1, 3, 2] (clockwise).
     const vertices = new Float32Array([
@@ -306,6 +343,11 @@ export const buildRectangle = (x: number, y: number, width: number, height: numb
     return { vertices, indices, points };
 };
 
+/**
+ * Build a filled star polygon as a triangle-list mesh. `points` is the number
+ * of outer tips (e.g. `5` for a five-pointed star). `innerRadius` defaults to
+ * half of `radius`. `rotation` offsets the first tip angle in radians.
+ */
 export const buildStar = (centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): MeshGeometryData => {
     const startAngle = (Math.PI / -2) + rotation;
     const length = points * 2;

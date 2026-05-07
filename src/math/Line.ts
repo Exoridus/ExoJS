@@ -19,6 +19,17 @@ import type { Ellipse } from '@/math/Ellipse';
 
 let temp: Line | null = null;
 
+/**
+ * Mutable line segment defined by two endpoint positions. Implements
+ * {@link ShapeLike} for intersection tests against all shape types.
+ *
+ * Note: `collidesWith` always returns `null` — lines support boolean
+ * intersection only; SAT response is not implemented for line segments.
+ * `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment
+ * within a configurable threshold (default `0.1`).
+ *
+ * `Line.temp` is a shared scratch instance.
+ */
 export class Line implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.Line;

@@ -23,6 +23,16 @@ import type { Line } from '@/math/Line';
 
 let temp: Polygon | null = null;
 
+/**
+ * Mutable convex polygon defined by a world-space offset `(x, y)` and an
+ * array of local-space vertex {@link Vector}s. Implements {@link ShapeLike}
+ * with full SAT collision response.
+ *
+ * Edge vectors are recomputed whenever `setPoints` is called; normals are
+ * cached lazily and invalidated on any positional or point mutation.
+ *
+ * `Polygon.temp` is a shared scratch instance.
+ */
 export class Polygon implements ShapeLike {
 
     public readonly collisionType: CollisionType = CollisionType.Polygon;
@@ -74,6 +84,11 @@ export class Polygon implements ShapeLike {
         this.setPoints(points);
     }
 
+    /**
+     * The precomputed edge vectors (each edge is `points[i+1] - points[i]`).
+     * Updated automatically by {@link setPoints}. Read-only — mutating the
+     * returned array directly will desync the internal state.
+     */
     public get edges(): Array<Vector> {
         return this._edges;
     }
@@ -90,6 +105,11 @@ export class Polygon implements ShapeLike {
         return this;
     }
 
+    /**
+     * Replace this polygon's vertex array with `newPoints`. Reuses existing
+     * `Vector` instances where possible to avoid allocation. Recomputes edge
+     * vectors and invalidates the normal cache. Returns `this` for chaining.
+     */
     public setPoints(newPoints: Array<Vector>): this {
         const len = this._points.length;
         const newLen = newPoints.length;

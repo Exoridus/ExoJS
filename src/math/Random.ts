@@ -1,5 +1,14 @@
 const limit = (2 ** 32) - 1;
 
+/**
+ * Seedable pseudo-random number generator based on the Mersenne Twister
+ * (MT19937) algorithm. Produces 32-bit unsigned integers with period 2^19937−1,
+ * normalised to the `[min, max)` range requested by each {@link next} call.
+ *
+ * The generator is deterministic: calling `setSeed(s)` followed by the same
+ * sequence of `next()` calls always produces the same output. Use `reset()`
+ * to replay from the current seed without changing it.
+ */
 export class Random {
 
     private _state: Uint32Array = new Uint32Array(624);
@@ -12,18 +21,25 @@ export class Random {
         this._twist();
     }
 
+    /** The seed value currently in use. */
     public get seed(): number {
         return this._seed;
     }
 
+    /** The last raw random value produced by {@link next}, normalised to the requested range. */
     public get value(): number {
         return this._value;
     }
 
+    /** How many values have been drawn from the current state array before the next twist. */
     public get iteration(): number {
         return this._iteration;
     }
 
+    /**
+     * Set a new seed and reset the generator state. Returns `this` for
+     * chaining.
+     */
     public setSeed(seed: number): this {
         this._seed = seed;
         this.reset();
@@ -31,6 +47,11 @@ export class Random {
         return this;
     }
 
+    /**
+     * Reinitialise the generator from the current {@link seed} without
+     * changing it — equivalent to rewinding to the start of the sequence.
+     * Returns `this` for chaining.
+     */
     public reset(): this {
         this._state[0] = this._seed;
 
@@ -46,6 +67,10 @@ export class Random {
         return this;
     }
 
+    /**
+     * Advance the generator and return a uniformly-distributed float in the
+     * half-open interval `[min, max)`. Defaults to `[0, 1)`.
+     */
     public next(min = 0, max = 1): number {
         if (this._iteration >= 624) {
             this._twist();
