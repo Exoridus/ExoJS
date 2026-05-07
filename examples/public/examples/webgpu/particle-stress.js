@@ -6,6 +6,7 @@ import {
     RateSpawn,
     ApplyForce,
     ScaleOverLifetime,
+    AlphaFadeOverLifetime,
     UpdateModule,
     Range,
     Constant,
@@ -22,19 +23,6 @@ const app = new Application({
 });
 
 document.body.append(app.canvas);
-
-class AlphaFadeOverLifetime extends UpdateModule {
-    apply(system) {
-        const { color, elapsed, lifetime, liveCount } = system;
-
-        for (let i = 0; i < liveCount; i++) {
-            const remaining = 1 - (elapsed[i] / lifetime[i]);
-            const alphaByte = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
-
-            color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
-        }
-    }
-}
 
 class TintCycle extends UpdateModule {
     constructor(palette) {
@@ -139,7 +127,10 @@ app.start(new class extends Scene {
             { t: 1, v: 0.05 },
         ])));
         system.addUpdateModule(new TintCycle(config.palette));
-        system.addUpdateModule(new AlphaFadeOverLifetime());
+        system.addUpdateModule(new AlphaFadeOverLifetime(new Curve([
+            { t: 0, v: 1 },
+            { t: 1, v: 0 },
+        ])));
 
         return { instance: system, baseX: config.x, baseY: config.y };
     }
@@ -157,19 +148,6 @@ app.start(new class extends Scene {
             entry.instance.rotation = Math.sin(wave * 0.9) * 5;
             entry.instance.update(delta);
         }
-
-        this._logBackendModeOnce();
-    }
-    _logBackendModeOnce() {
-        if (this._modeLogged) return;
-        this._modeFrames = (this._modeFrames ?? 0) + 1;
-        if (this._modeFrames < 3) return;
-        this._modeLogged = true;
-        const backendName = this.app.backend?.constructor?.name ?? 'unknown';
-        const modes = this._particleSystems.map((entry, i) =>
-            `system[${i}]=${entry.instance.gpuMode ? 'GPU compute' : 'CPU'}`
-        ).join(', ');
-        console.info(`[particle-stress] backend=${backendName} | ${modes}`);
     }
     draw(backend) {
         backend.clear();

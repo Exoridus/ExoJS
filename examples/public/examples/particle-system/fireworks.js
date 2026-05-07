@@ -8,9 +8,10 @@ import {
     ParticleSystem,
     BurstSpawn,
     ApplyForce,
-    UpdateModule,
+    AlphaFadeOverLifetime,
     Range,
     Constant,
+    Curve,
     Gradient,
     ConeDirection,
     Timer,
@@ -42,25 +43,6 @@ const fireworkColors = [
     new Color(245, 215, 80),
 ];
 
-/**
- * Custom update module: alpha fades with remaining lifetime ratio.
- * Demonstrates how to extend the built-in modules with one-off effects.
- */
-class AlphaFadeOverLifetime extends UpdateModule {
-    apply(system) {
-        const { color, elapsed, lifetime, liveCount } = system;
-
-        for (let i = 0; i < liveCount; i++) {
-            const remaining = 1 - (elapsed[i] / lifetime[i]);
-            // RGBA u32 layout is 0xAABBGGRR — replace alpha byte (high byte)
-            // with the remaining-ratio byte.
-            const alphaByte = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
-
-            color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
-        }
-    }
-}
-
 app.start(new class extends Scene {
 
     async load(loader) {
@@ -70,13 +52,17 @@ app.start(new class extends Scene {
         const { width, height } = this.app.canvas;
 
         this._canvasSize = new Size(width, height);
+        // Particle positions live in world space — the system itself stays
+        // at the origin. Each explosion writes its absolute position into
+        // the burst's `position` distribution so older bursts keep their
+        // own coordinates instead of teleporting with the system transform.
         this._particleSystem = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 8192 });
 
-        // Single-burst spawner — re-fired manually each explosion via reset().
+        this._burstPosition = new Vector(0, 0);
         this._burst = new BurstSpawn({
             schedule: [{ time: 0, count: particlesPerExplosion }],
             lifetime: new Range(tailDuration * 0.7, tailDuration),
-            position: new Constant(new Vector(0, 0)),
+            position: new Constant(this._burstPosition),
             velocity: ConeDirection.omni(20, 70),
             scale: new Constant(new Vector(0.95, 0.95)),
             tint: new Constant(fireworkColors[0]),
@@ -84,7 +70,10 @@ app.start(new class extends Scene {
 
         this._particleSystem.addSpawnModule(this._burst);
         this._particleSystem.addUpdateModule(new ApplyForce(0, 30));
-        this._particleSystem.addUpdateModule(new AlphaFadeOverLifetime());
+        this._particleSystem.addUpdateModule(new AlphaFadeOverLifetime(new Curve([
+            { t: 0, v: 1 },
+            { t: 1, v: 0 },
+        ])));
 
         this._explosionTimer = new Timer(explosionInterval, true);
 
@@ -95,7 +84,7 @@ app.start(new class extends Scene {
         const y = rand(80, this._canvasSize.height - 80);
         const tint = fireworkColors[rand(0, fireworkColors.length - 1) | 0];
 
-        this._particleSystem.setPosition(x, y);
+        this._burstPosition.set(x, y);
         this._burst.config.tint = new Constant(tint);
         this._burst.reset();
     }
@@ -106,16 +95,6 @@ app.start(new class extends Scene {
         }
 
         this._particleSystem.update(delta);
-        this._logBackendModeOnce();
-    }
-    _logBackendModeOnce() {
-        if (this._modeLogged) return;
-        this._modeFrames = (this._modeFrames ?? 0) + 1;
-        if (this._modeFrames < 3) return;
-        this._modeLogged = true;
-        const backendName = this.app.backend?.constructor?.name ?? 'unknown';
-        const mode = this._particleSystem.gpuMode ? 'GPU compute' : 'CPU';
-        console.info(`[fireworks] backend=${backendName} | particle pipeline=${mode}`);
     }
     draw(backend) {
         backend.clear();
