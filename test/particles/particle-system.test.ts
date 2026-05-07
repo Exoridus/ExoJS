@@ -4,8 +4,15 @@ import { BurstSpawn } from '@/particles/modules/BurstSpawn';
 import { ApplyForce } from '@/particles/modules/ApplyForce';
 import { Drag } from '@/particles/modules/Drag';
 import { ColorOverLifetime } from '@/particles/modules/ColorOverLifetime';
+import { ColorOverSpeed } from '@/particles/modules/ColorOverSpeed';
 import { ScaleOverLifetime } from '@/particles/modules/ScaleOverLifetime';
 import { RotateOverLifetime } from '@/particles/modules/RotateOverLifetime';
+import { AlphaFadeOverLifetime } from '@/particles/modules/AlphaFadeOverLifetime';
+import { VelocityOverLifetime } from '@/particles/modules/VelocityOverLifetime';
+import { AttractToPoint } from '@/particles/modules/AttractToPoint';
+import { RepelFromPoint } from '@/particles/modules/RepelFromPoint';
+import { OrbitalForce } from '@/particles/modules/OrbitalForce';
+import { Turbulence } from '@/particles/modules/Turbulence';
 import { SpawnOnDeath } from '@/particles/modules/SpawnOnDeath';
 import { Constant } from '@/particles/distributions/Constant';
 import { Range } from '@/particles/distributions/Range';
@@ -296,6 +303,167 @@ describe('UpdateModule', () => {
         system.update(tick(1));
 
         expect(system.rotationSpeeds[slot]).toBeCloseTo(360);
+    });
+
+    test('AlphaFadeOverLifetime fades alpha while preserving RGB', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 1;
+        // RGBA u32: 0xAABBGGRR — set RGB to mid-grey, alpha to 0xff.
+        system.color[slot] = 0xff808080;
+        system.addUpdateModule(new AlphaFadeOverLifetime(new Curve([
+            { t: 0, v: 1 },
+            { t: 1, v: 0 },
+        ])));
+
+        system.update(tick(0.5));
+
+        const rgba = system.color[slot];
+        const r = rgba & 0xff;
+        const g = (rgba >>> 8) & 0xff;
+        const b = (rgba >>> 16) & 0xff;
+        const a = (rgba >>> 24) & 0xff;
+
+        expect(r).toBe(0x80);
+        expect(g).toBe(0x80);
+        expect(b).toBe(0x80);
+        // After 0.5s of 1s lifetime, alpha ≈ 0.5 → ~127.
+        expect(a).toBeGreaterThan(100);
+        expect(a).toBeLessThan(155);
+    });
+
+    test('VelocityOverLifetime scales velocity by curve ratio', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 1;
+        system.velX[slot] = 100;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new VelocityOverLifetime(new Curve([
+            { t: 0, v: 1 },
+            { t: 1, v: 0 },
+        ])));
+
+        // Step in small increments — at t=0.5 the curve sample is ~0.5
+        // and the velocity should be roughly half.
+        for (let i = 0; i < 5; i++) {
+            system.update(tick(0.1));
+        }
+
+        // |v| should have decayed substantially toward 0.
+        expect(Math.abs(system.velX[slot])).toBeLessThan(80);
+        expect(Math.abs(system.velX[slot])).toBeGreaterThan(20);
+    });
+
+    test('AttractToPoint pulls particle toward target', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 10;
+        system.posX[slot] = 0;
+        system.posY[slot] = 0;
+        system.velX[slot] = 0;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new AttractToPoint(100, 0, 50));
+
+        system.update(tick(1));
+
+        // Pull is along +x; velocity should now be positive in x.
+        expect(system.velX[slot]).toBeGreaterThan(0);
+        expect(Math.abs(system.velY[slot])).toBeLessThan(0.001);
+    });
+
+    test('RepelFromPoint pushes particle away from source', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 10;
+        system.posX[slot] = 10;
+        system.posY[slot] = 0;
+        system.velX[slot] = 0;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new RepelFromPoint(0, 0, 50));
+
+        system.update(tick(1));
+
+        expect(system.velX[slot]).toBeGreaterThan(0);
+    });
+
+    test('RepelFromPoint respects radius cutoff', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 10;
+        system.posX[slot] = 1000;
+        system.posY[slot] = 0;
+        system.velX[slot] = 0;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new RepelFromPoint(0, 0, 50, 100));
+
+        system.update(tick(1));
+
+        // Particle is outside the radius; no force applied.
+        expect(system.velX[slot]).toBe(0);
+    });
+
+    test('OrbitalForce produces tangential velocity', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 10;
+        system.posX[slot] = 100;  // east of center
+        system.posY[slot] = 0;
+        system.velX[slot] = 0;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new OrbitalForce(0, 0, 1));  // ω = 1 rad/s CCW
+
+        system.update(tick(0.1));
+
+        // Particle east of center, CCW rotation → velocity should point +y.
+        expect(system.velY[slot]).toBeGreaterThan(0);
+        expect(Math.abs(system.velX[slot])).toBeLessThan(0.001);
+    });
+
+    test('Turbulence perturbs particle velocity', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 10;
+        system.posX[slot] = 250;
+        system.posY[slot] = 130;
+        system.velX[slot] = 0;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new Turbulence(100, 0.05, 1));
+
+        system.update(tick(0.1));
+
+        // Some net velocity should have been added (could be either sign,
+        // but shouldn't be exactly zero).
+        const speed = Math.hypot(system.velX[slot], system.velY[slot]);
+        expect(speed).toBeGreaterThan(0);
+    });
+
+    test('ColorOverSpeed samples gradient by velocity magnitude', () => {
+        const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+        const slot = system.spawn();
+
+        system.lifetime[slot] = 10;
+        system.velX[slot] = 50;
+        system.velY[slot] = 0;
+        system.addUpdateModule(new ColorOverSpeed(new Gradient([
+            { t: 0, color: new Color(0, 0, 0, 1) },
+            { t: 1, color: new Color(255, 255, 255, 1) },
+        ]), 0, 100));
+
+        system.update(tick(0.01));
+
+        const rgba = system.color[slot];
+        const r = rgba & 0xff;
+
+        // Speed = 50 / span 100 → t = 0.5 → mid-grey.
+        expect(r).toBeGreaterThan(80);
+        expect(r).toBeLessThan(180);
     });
 });
 

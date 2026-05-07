@@ -71,7 +71,8 @@ export class ParticleGpuState {
     private readonly _frameCount: number;
 
     private readonly _moduleTextures: Map<string, GPUTexture> = new Map();
-    private readonly _sampler: GPUSampler;
+    private readonly _samplerFiltering: GPUSampler;
+    private readonly _samplerNonFiltering: GPUSampler;
 
     private readonly _pipeline: GPUComputePipeline;
     private readonly _bindGroup0: GPUBindGroup;
@@ -170,10 +171,20 @@ export class ParticleGpuState {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
-        this._sampler = device.createSampler({
-            label: 'particle-lookup-sampler',
+        // r32float textures aren't filterable in core WebGPU (would require
+        // the optional `float32-filterable` feature). Use `nearest` for
+        // r32float curve LUTs (256 taps is fine without interpolation) and
+        // `linear` for rgba8unorm gradients which support filtering natively.
+        this._samplerFiltering = device.createSampler({
+            label: 'particle-lookup-sampler-filtering',
             minFilter: 'linear',
             magFilter: 'linear',
+            addressModeU: 'clamp-to-edge',
+        });
+        this._samplerNonFiltering = device.createSampler({
+            label: 'particle-lookup-sampler-non-filtering',
+            minFilter: 'nearest',
+            magFilter: 'nearest',
             addressModeU: 'clamp-to-edge',
         });
 
@@ -274,7 +285,7 @@ export class ParticleGpuState {
         }
 
         this._writeSimUniforms(dt, liveCount);
-        this._writeModuleUniforms();
+        this._writeModuleUniforms(dt);
 
         const encoder = this.device.createCommandEncoder({ label: 'particle-compute' });
         const pass = encoder.beginComputePass({ label: 'particle-compute-pass' });
@@ -395,13 +406,13 @@ export class ParticleGpuState {
         this.device.queue.writeBuffer(this._simUniformBuffer, 0, this._simUniformData);
     }
 
-    private _writeModuleUniforms(): void {
+    private _writeModuleUniforms(dt: number): void {
         if (this._moduleUniformView === null || this._moduleUniformBuffer === null || this._moduleUniformData === null) {
             return;
         }
 
         for (const slot of this._moduleSlots) {
-            slot.module.writeUniforms?.(this._moduleUniformView, slot.uniformByteOffset);
+            slot.module.writeUniforms?.(this._moduleUniformView, slot.uniformByteOffset, dt);
         }
 
         this.device.queue.writeBuffer(this._moduleUniformBuffer, 0, this._moduleUniformData);
@@ -420,16 +431,21 @@ export class ParticleGpuState {
         let textureBindingIdx = this._moduleUniformBuffer !== null ? 3 : 2;
 
         for (const slot of slots) {
-            for (const _t of slot.contribution.textures ?? []) {
+            for (const t of slot.contribution.textures ?? []) {
+                const filterable = t.format !== 'r32float';
+
                 entries.push({
                     binding: textureBindingIdx++,
                     visibility: GPUShaderStage.COMPUTE,
-                    texture: { viewDimension: '1d', sampleType: 'float' },
+                    texture: {
+                        viewDimension: '1d',
+                        sampleType: filterable ? 'float' : 'unfilterable-float',
+                    },
                 });
                 entries.push({
                     binding: textureBindingIdx++,
                     visibility: GPUShaderStage.COMPUTE,
-                    sampler: { type: 'filtering' },
+                    sampler: { type: filterable ? 'filtering' : 'non-filtering' },
                 });
             }
         }
@@ -452,9 +468,11 @@ export class ParticleGpuState {
         for (const slot of slots) {
             for (const t of slot.contribution.textures ?? []) {
                 const tex = this._moduleTextures.get(`${slot.contribution.key}_${t.name}`)!;
+                const filterable = t.format !== 'r32float';
+                const sampler = filterable ? this._samplerFiltering : this._samplerNonFiltering;
 
                 entries.push({ binding: textureBindingIdx++, resource: tex.createView({ dimension: '1d' }) });
-                entries.push({ binding: textureBindingIdx++, resource: this._sampler });
+                entries.push({ binding: textureBindingIdx++, resource: sampler });
             }
         }
 
@@ -525,6 +543,22 @@ ${moduleStructFields.map((s) => `    ${s}`).join('\n')}
 @group(1) @binding(6) var<storage, read>       textureIndex: array<u32>;
 @group(1) @binding(7) var<storage, read_write> instanceOutput: array<u32>;
         `);
+
+        // Module preludes (helper functions/constants). Concatenated in
+        // registration order; modules sharing the same key are emitted only
+        // once (the contribution body strings are still inlined per-instance,
+        // but the prelude function definitions can't be duplicated).
+        const seenPreludeKeys = new Set<string>();
+
+        for (const slot of slots) {
+            const prelude = slot.contribution.prelude;
+
+            if (prelude === undefined || prelude.trim() === '') continue;
+            if (seenPreludeKeys.has(slot.contribution.key)) continue;
+
+            seenPreludeKeys.add(slot.contribution.key);
+            sections.push(prelude);
+        }
 
         const moduleBodies = slots.map((s) => s.contribution.body).join('\n');
         const frameCountConst = this._frameCount;

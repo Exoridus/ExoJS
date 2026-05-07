@@ -75,10 +75,15 @@ export abstract class UpdateModule {
      * buffer at `byteOffset`. Layout must match the field declarations
      * returned by {@link wgsl} (in the same order).
      *
+     * Receives the current frame `dt` (seconds). Modules tracking
+     * accumulated time (e.g. noise/turbulence) should advance their
+     * internal counter here to stay in sync when running in GPU mode
+     * (where {@link apply} is not called).
+     *
      * Required when {@link wgsl} declares uniforms. Called every frame by
      * the system before dispatching compute.
      */
-    public writeUniforms?(view: DataView, byteOffset: number): void;
+    public writeUniforms?(view: DataView, byteOffset: number, dt: number): void;
 
     /**
      * Upload texture data (Curve/Gradient lookup tables) to the GPU at

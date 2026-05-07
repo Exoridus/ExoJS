@@ -58,6 +58,15 @@ export interface WgslContribution {
     key: string;
     uniforms?: ReadonlyArray<WgslUniformField>;
     textures?: ReadonlyArray<WgslTextureBinding>;
+    /**
+     * Optional WGSL declarations (functions, constants) emitted at module
+     * scope before `main()`. Use this for noise/hash helpers or any
+     * supporting function the {@link body} calls. Multiple modules can
+     * declare preludes; they're concatenated in registration order. Naming
+     * collisions across modules are the author's problem — prefix helpers
+     * with the module key (e.g. `myModule_hash`) to avoid clashes.
+     */
+    prelude?: string;
     body: string;
 }
 
