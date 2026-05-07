@@ -15,12 +15,13 @@ export class PolarVector {
     }
 
     /**
-     * Create a `PolarVector` from a Cartesian `vector`. The `phi` component is
-     * set to `0` — call `toVector()` and back-convert if you need the actual
-     * angle.
+     * Create a `PolarVector` from a Cartesian `vector`, preserving both
+     * magnitude and direction. The roundtrip
+     * `PolarVector.fromVector(v).toVector()` reproduces `v` (modulo float
+     * precision).
      */
     public static fromVector(vector: Vector): PolarVector {
-        return new PolarVector(vector.length, 0);
+        return new PolarVector(vector.length, vector.angle);
     }
 
     /**

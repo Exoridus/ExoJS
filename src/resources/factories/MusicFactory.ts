@@ -55,17 +55,31 @@ export class MusicFactory extends AbstractAssetFactory<Music> {
     public async create(source: ArrayBuffer, options: MusicFactoryOptions = {}): Promise<Music> {
         const { mimeType, loadEvent, playbackOptions } = options;
         const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
+        const objectUrl = this.createObjectUrl(blob);
 
         return new Promise((resolve, reject) => {
             const audio = document.createElement('audio');
             this._audioElements.push(audio);
 
-            audio.addEventListener('error', () => reject(Error('Error loading audio source.')), onceListenerOption);
-            audio.addEventListener('abort', () => reject(Error('Audio loading was canceled.')), onceListenerOption);
-            audio.addEventListener(loadEvent ?? 'canplaythrough', () => resolve(new Music(audio, playbackOptions)), onceListenerOption);
+            const finalize = (): void => {
+                this.revokeObjectUrl(objectUrl);
+            };
+
+            audio.addEventListener('error', () => {
+                finalize();
+                reject(Error('Error loading audio source.'));
+            }, onceListenerOption);
+            audio.addEventListener('abort', () => {
+                finalize();
+                reject(Error('Audio loading was canceled.'));
+            }, onceListenerOption);
+            audio.addEventListener(loadEvent ?? 'canplaythrough', () => {
+                finalize();
+                resolve(new Music(audio, playbackOptions));
+            }, onceListenerOption);
 
             audio.preload = 'auto';
-            audio.src = this.createObjectUrl(blob);
+            audio.src = objectUrl;
         });
     }
 

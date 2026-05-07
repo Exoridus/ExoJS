@@ -58,20 +58,37 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
     public async create(source: ArrayBuffer, options: VideoFactoryOptions = {}): Promise<Video> {
         const { mimeType, loadEvent, playbackOptions, samplerOptions } = options;
         const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
+        const objectUrl = this.createObjectUrl(blob);
 
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
             this._videoElements.push(video);
 
-            video.addEventListener('error', () => reject(Error('Video loading error.')), onceListenerOption);
-            video.addEventListener('abort', () => reject(Error('Video loading error: cancelled.')), onceListenerOption);
-            video.addEventListener('emptied', () => reject(Error('Video loading error: emptied.')), onceListenerOption);
+            const finalize = (): void => {
+                this.revokeObjectUrl(objectUrl);
+            };
+
+            video.addEventListener('error', () => {
+                finalize();
+                reject(Error('Video loading error.'));
+            }, onceListenerOption);
+            video.addEventListener('abort', () => {
+                finalize();
+                reject(Error('Video loading error: cancelled.'));
+            }, onceListenerOption);
+            video.addEventListener('emptied', () => {
+                finalize();
+                reject(Error('Video loading error: emptied.'));
+            }, onceListenerOption);
             // 'stalled' is intentionally omitted: it fires transiently during normal buffering
             // and would cause spurious rejections for large files on slow connections.
-            video.addEventListener(loadEvent ?? 'canplaythrough', () => resolve(new Video(video, playbackOptions, samplerOptions)), onceListenerOption);
+            video.addEventListener(loadEvent ?? 'canplaythrough', () => {
+                finalize();
+                resolve(new Video(video, playbackOptions, samplerOptions));
+            }, onceListenerOption);
 
             video.preload = 'auto';
-            video.src = this.createObjectUrl(blob);
+            video.src = objectUrl;
         });
     }
 
