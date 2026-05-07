@@ -222,7 +222,7 @@ export class ParticleGpuState {
                 { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
                 { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
                 { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-                { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+                { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },  // textureIndex (matches WGSL `var<storage, read>`)
                 { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
             ],
         });
