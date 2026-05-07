@@ -127,6 +127,7 @@ describe('Application.setCursor', () => {
                 stats: { frameTimeMs: 0 },
                 renderTarget: { setView: jest.fn() },
                 onContextLost: { add: jest.fn(), destroy: jest.fn() },
+                onContextRestored: { add: jest.fn(), destroy: jest.fn() },
             })),
         }));
         jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({

@@ -101,6 +101,7 @@ export class Application {
     public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
     public readonly onVisibilityChange = new Signal<[visible: boolean]>();
     public readonly onBackendLost = new Signal<[]>();
+    public readonly onBackendRestored = new Signal<[]>();
     public pauseOnHidden: boolean = false;
 
     private readonly _updateHandler: () => void;
@@ -333,6 +334,7 @@ export class Application {
         this.onCanvasFocusChange.destroy();
         this.onVisibilityChange.destroy();
         this.onBackendLost.destroy();
+        this.onBackendRestored.destroy();
     }
 
     private _onDocumentVisibilityChange(): void {
@@ -363,6 +365,7 @@ export class Application {
             const backend = new WebGpuBackend(this);
 
             backend.onDeviceLost.add(() => { this.onBackendLost.dispatch(); });
+            backend.onDeviceRestored.add(() => { this.onBackendRestored.dispatch(); });
 
             return backend;
         }
@@ -370,6 +373,7 @@ export class Application {
         const backend = new WebGl2Backend(this);
 
         backend.onContextLost.add(() => { this.onBackendLost.dispatch(); });
+        backend.onContextRestored.add(() => { this.onBackendRestored.dispatch(); });
 
         return backend;
     }

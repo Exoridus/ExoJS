@@ -53,11 +53,17 @@ export class WebGpuBackend implements RenderBackend {
     public readonly backendType = RenderBackendType.WebGpu;
     public readonly rendererRegistry = new RendererRegistry<WebGpuBackend>();
     public readonly onDeviceLost = new Signal<[GPUDeviceLostInfo]>();
+    public readonly onDeviceRestored = new Signal<[]>();
 
     private readonly _canvas: HTMLCanvasElement;
     private readonly _rootRenderTarget: RenderTarget;
     private _clearColor: Color = new Color();
     private _deviceLost: boolean = false;
+    private _isRecovering: boolean = false;
+    private _destroyed: boolean = false;
+    private _recoveryAttempt: number = 0;
+    private _maxRecoveryAttempts: number = 5;
+    private _recoveryBackoffMs: number = 100;
     private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
     private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
     private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
@@ -181,6 +187,10 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     public draw(drawable: Drawable): this {
+        if (this._deviceLost || this._device === null) {
+            return this;
+        }
+
         const renderer = this.rendererRegistry.resolve(drawable);
 
         this._setActiveRenderer(renderer);
@@ -191,6 +201,10 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     public execute(pass: RenderPass): this {
+        if (this._deviceLost || this._device === null) {
+            return this;
+        }
+
         this._flushActiveRenderer();
         this._stats.renderPasses++;
         pass.execute(this);
@@ -252,6 +266,10 @@ export class WebGpuBackend implements RenderBackend {
         blendMode: BlendModes,
     ): this {
         if (width <= 0 || height <= 0) {
+            return this;
+        }
+
+        if (this._deviceLost || this._device === null) {
             return this;
         }
 
@@ -374,7 +392,9 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     public destroy(): void {
+        this._destroyed = true;
         this.onDeviceLost.destroy();
+        this.onDeviceRestored.destroy();
         this._setActiveRenderer(null);
         this.rendererRegistry.destroy();
         this._destroyManagedTextures();
@@ -579,12 +599,126 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     private _subscribeToDeviceLoss(): void {
-        if (this._device) {
-            void this._device.lost.then((info) => {
-                this._deviceLost = true;
-                this.onDeviceLost.dispatch(info);
-            });
+        if (!this._device) {
+            return;
         }
+
+        const subscribedDevice = this._device;
+
+        void subscribedDevice.lost.then((info) => {
+            // Recovery may have already replaced this._device with a fresh one;
+            // the old promise still resolves when the previous device is gone.
+            // Only react if the lost device is still the current one.
+            if (this._destroyed || this._device !== subscribedDevice) {
+                return;
+            }
+
+            this._handleDeviceLoss(info);
+        });
+    }
+
+    private _handleDeviceLoss(info: GPUDeviceLostInfo): void {
+        this._deviceLost = true;
+        this.onDeviceLost.dispatch(info);
+
+        // Reason 'destroyed' means destroy() was called explicitly (by us or by
+        // user code). Don't try to recover — the loss is intentional.
+        if (info.reason === 'destroyed') {
+            return;
+        }
+
+        void this._attemptRecovery();
+    }
+
+    private async _attemptRecovery(): Promise<void> {
+        if (this._isRecovering || this._destroyed) {
+            return;
+        }
+
+        this._isRecovering = true;
+
+        try {
+            while (this._recoveryAttempt < this._maxRecoveryAttempts && !this._destroyed) {
+                this._recoveryAttempt++;
+
+                this._teardownDeviceState();
+
+                try {
+                    await this._initialize();
+
+                    if (this._destroyed) {
+                        return;
+                    }
+
+                    this._deviceLost = false;
+                    this._recoveryAttempt = 0;
+                    // Re-cache the resolved init promise so a subsequent external
+                    // initialize() call returns the live state instead of running
+                    // a second initialization (which would tear the working
+                    // backend down).
+                    this._initializePromise = Promise.resolve(this);
+                    this.onDeviceRestored.dispatch();
+
+                    return;
+                } catch {
+                    if (this._destroyed) {
+                        return;
+                    }
+
+                    const delay = this._recoveryBackoffMs * Math.pow(2, this._recoveryAttempt - 1);
+
+                    await new Promise<void>((resolve) => { setTimeout(resolve, delay); });
+                }
+            }
+        } finally {
+            this._isRecovering = false;
+        }
+    }
+
+    /**
+     * Tear down all device-bound state in preparation for re-initialization.
+     * User-facing handles (Texture, RenderTexture, RenderTarget) keep their
+     * identity — their GPU-side state is rebuilt lazily on next use against
+     * the new device.
+     */
+    private _teardownDeviceState(): void {
+        // Detach destroy listeners from cached textures, then drop the cache.
+        // The underlying GPUTexture objects belonged to the dead device, so we
+        // do not (and cannot) call .destroy() on them — the dead device will
+        // garbage-collect them. A fresh GPUTexture is created on next access.
+        for (const [texture, handler] of this._textureDestroyHandlers) {
+            texture.removeDestroyListener(handler);
+        }
+
+        this._textureDestroyHandlers.clear();
+        this._textureStates.clear();
+
+        // Recycled RenderTexture pool: drop entries — their backing GPUTexture
+        // is gone with the dead device.
+        this._temporaryRenderTextures.length = 0;
+
+        // Disconnect renderers so they release pipelines / buffers / bind
+        // groups tied to the dead device. They reconnect during _initialize().
+        this.rendererRegistry.disconnect();
+
+        if (this._maskCompositorConnected) {
+            this._maskCompositor.disconnect();
+            this._maskCompositorConnected = false;
+        }
+
+        // Mipmap pipeline cache is keyed to the dead device — drop it.
+        this._mipmapShaderModule = null;
+        this._mipmapBindGroupLayout = null;
+        this._mipmapPipelineLayout = null;
+        this._mipmapPipeline = null;
+        this._mipmapSampler = null;
+
+        this._context?.unconfigure();
+        this._context = null;
+        this._device = null;
+        this._format = null;
+        this._initializePromise = null;
+        this._hasPresentedFrame = false;
     }
 
     private async _prewarmRendererPipelines(formats: ReadonlyArray<GPUTextureFormat>): Promise<void> {
