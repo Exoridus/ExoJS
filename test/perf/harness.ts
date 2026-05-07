@@ -8,9 +8,10 @@
  */
 
 import { performance } from 'node:perf_hooks';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -125,6 +126,40 @@ export const formatResults = (
     return [header, separator, ...rows].join('\n');
 };
 
+/**
+ * Returns a short identifier for the current build state, used as a suffix
+ * for benchmark output files. Format: `{version}-{shortSha}`, e.g.
+ * `0.7.11-c2cb133`. Falls back to just `{version}` when not in a git
+ * repository or git is unavailable.
+ *
+ * Files are commit-named so multiple local runs over time accumulate in
+ * `test/perf/results/` without overwriting each other — useful for diffing
+ * perf characteristics across versions / commits. All result files are
+ * gitignored; the suffix is purely a local-retention convenience.
+ */
+const buildIdentifier = (() => {
+    let version = 'unknown';
+    try {
+        const pkg = JSON.parse(
+            readFileSync(resolve(resultsDir, '../../../package.json'), 'utf-8'),
+        ) as { version?: string };
+        if (typeof pkg.version === 'string') version = pkg.version;
+    } catch {
+        // ignore
+    }
+
+    let sha = '';
+    try {
+        sha = execSync('git rev-parse --short HEAD', {
+            stdio: ['ignore', 'pipe', 'ignore'],
+        }).toString().trim();
+    } catch {
+        // ignore — not in a git repo or git unavailable
+    }
+
+    return sha ? `${version}-${sha}` : version;
+})();
+
 export const writeResults = (
     filename: string,
     sectionTitle: string,
@@ -133,14 +168,16 @@ export const writeResults = (
 ): void => {
     mkdirSync(resultsDir, { recursive: true });
 
+    const suffixedName = `${filename}-${buildIdentifier}`;
+
     // JSON
-    const jsonPath = resolve(resultsDir, `${filename}.json`);
+    const jsonPath = resolve(resultsDir, `${suffixedName}.json`);
     writeFileSync(jsonPath, JSON.stringify(results, null, 2) + '\n', 'utf-8');
 
     // Markdown
     const table = formatResults(results, columns);
-    const md = `# ${sectionTitle}\n\n${table}\n`;
-    const mdPath = resolve(resultsDir, `${filename}.md`);
+    const md = `# ${sectionTitle} (${buildIdentifier})\n\n${table}\n`;
+    const mdPath = resolve(resultsDir, `${suffixedName}.md`);
     writeFileSync(mdPath, md, 'utf-8');
 
     console.log(`\nResults written to:\n  ${jsonPath}\n  ${mdPath}`);

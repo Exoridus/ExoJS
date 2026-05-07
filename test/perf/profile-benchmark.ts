@@ -11,9 +11,10 @@
  */
 
 import { performance } from 'node:perf_hooks';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 import { SubTimingTracker, MemoryTracker, CallCounter } from './profile-runner';
 import type { ProfileScenarioResult } from './profile-runner';
@@ -668,8 +669,23 @@ const md = [
     scenarioResults.map(formatScenario).join('\n\n'),
 ].join('\n');
 
+// Suffix output with package version + short git SHA so multiple local
+// runs accumulate without overwriting each other (all gitignored).
+const buildIdentifier = (() => {
+    let version = 'unknown';
+    try {
+        const pkg = JSON.parse(readFileSync(resolve(resultsDir, '../../../package.json'), 'utf-8')) as { version?: string };
+        if (typeof pkg.version === 'string') version = pkg.version;
+    } catch { /* ignore */ }
+    let sha = '';
+    try {
+        sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch { /* ignore */ }
+    return sha ? `${version}-${sha}` : version;
+})();
+
 mkdirSync(resultsDir, { recursive: true });
-const outPath = resolve(resultsDir, 'findings.md');
+const outPath = resolve(resultsDir, `findings-${buildIdentifier}.md`);
 writeFileSync(outPath, md + '\n', 'utf-8');
 
 console.log('\nExoJS Phase 2 Auto-Profiler complete.');

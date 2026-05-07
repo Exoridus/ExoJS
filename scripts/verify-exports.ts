@@ -2,19 +2,27 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+interface PackageJson {
+    main?: string;
+    module?: string;
+    browser?: string;
+    types?: string;
+    exports?: unknown;
+    files?: ReadonlyArray<string>;
+}
+
 const here = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(here, '..');
 const packageJsonPath = resolve(rootDir, 'package.json');
-const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+const packageJson: PackageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 
-const normalizePath = (value) => {
+const normalizePath = (value: string): string => {
     return value.replace(/\\/g, '/').replace(/^\.\//, '');
 };
 
-const collectExportTargets = (value, targets) => {
+const collectExportTargets = (value: unknown, targets: Set<string>): void => {
     if (typeof value === 'string') {
         targets.add(value);
-
         return;
     }
 
@@ -22,17 +30,16 @@ const collectExportTargets = (value, targets) => {
         return;
     }
 
-    for (const nested of Object.values(value)) {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
         collectExportTargets(nested, targets);
     }
 };
 
-const targets = new Set();
-const entryPointKeys = ['main', 'module', 'browser', 'types'];
+const targets = new Set<string>();
+const entryPointKeys: ReadonlyArray<keyof PackageJson> = ['main', 'module', 'browser', 'types'];
 
 for (const key of entryPointKeys) {
     const value = packageJson[key];
-
     if (typeof value === 'string') {
         targets.add(value);
     }
@@ -40,12 +47,12 @@ for (const key of entryPointKeys) {
 
 collectExportTargets(packageJson.exports, targets);
 
-const filesAllowList = Array.isArray(packageJson.files)
+const filesAllowList: ReadonlyArray<string> = Array.isArray(packageJson.files)
     ? packageJson.files.map((value) => normalizePath(String(value)))
     : [];
 
-const missingTargets = [];
-const filesCoverageIssues = [];
+const missingTargets: Array<string> = [];
+const filesCoverageIssues: Array<string> = [];
 
 for (const target of targets) {
     if (typeof target !== 'string' || !target.startsWith('./')) {
@@ -68,7 +75,6 @@ for (const target of targets) {
         if (entry.endsWith('/')) {
             return normalizedTarget.startsWith(entry);
         }
-
         return normalizedTarget === entry;
     });
 
@@ -81,7 +87,6 @@ for (const target of targets) {
 
 if (missingTargets.length > 0) {
     console.error('Missing package entry targets:');
-
     for (const target of missingTargets) {
         console.error(`- ${target}`);
     }
@@ -89,7 +94,6 @@ if (missingTargets.length > 0) {
 
 if (filesCoverageIssues.length > 0) {
     console.error('Package allow-list coverage issues:');
-
     for (const issue of filesCoverageIssues) {
         console.error(`- ${issue}`);
     }
