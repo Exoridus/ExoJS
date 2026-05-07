@@ -106,6 +106,16 @@ app.start(new class extends Scene {
         }
 
         this._particleSystem.update(delta);
+        this._logBackendModeOnce();
+    }
+    _logBackendModeOnce() {
+        if (this._modeLogged) return;
+        this._modeFrames = (this._modeFrames ?? 0) + 1;
+        if (this._modeFrames < 3) return;
+        this._modeLogged = true;
+        const backendName = this.app.backend?.constructor?.name ?? 'unknown';
+        const mode = this._particleSystem.gpuMode ? 'GPU compute' : 'CPU';
+        console.info(`[fireworks] backend=${backendName} | particle pipeline=${mode}`);
     }
     draw(backend) {
         backend.clear();
