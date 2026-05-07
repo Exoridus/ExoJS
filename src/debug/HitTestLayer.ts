@@ -19,7 +19,8 @@ const colorQuadrant = new Color(0.5,  0.5,  0.5,  0.3); // faint gray
  * - Magenta: interactive but idle.
  * - Yellow: currently hovered.
  * - Cyan: pointer-captured (drag in progress).
- * - Faint gray quadrant outlines when useSpatialIndex is enabled.
+ * - Faint gray quadrant outlines when the spatial index is active (i.e.
+ *   at least one interactive node is present in the scene).
  * World-space.
  */
 export class HitTestLayer extends DebugLayer {
@@ -61,21 +62,19 @@ export class HitTestLayer extends DebugLayer {
         // Walk scene and draw outlines for interactive nodes.
         this._walkNode(root as RenderNode, gfx, hoveredNode, capturedNodes);
 
-        // Draw quadtree regions when spatial index is enabled.
-        if (interaction.useSpatialIndex) {
-            const quadtree = interaction._getDebugQuadtree();
+        // Draw quadtree regions when the spatial index is active.
+        const quadtree = interaction._getDebugQuadtree();
 
-            if (quadtree !== null) {
-                gfx.lineColor = colorQuadrant;
+        if (quadtree !== null) {
+            gfx.lineColor = colorQuadrant;
 
-                quadtree._walkBounds((rect) => {
-                    gfx.moveTo(rect.left,  rect.top);
-                    gfx.lineTo(rect.right, rect.top);
-                    gfx.lineTo(rect.right, rect.bottom);
-                    gfx.lineTo(rect.left,  rect.bottom);
-                    gfx.lineTo(rect.left,  rect.top);
-                });
-            }
+            quadtree._walkBounds((rect) => {
+                gfx.moveTo(rect.left,  rect.top);
+                gfx.lineTo(rect.right, rect.top);
+                gfx.lineTo(rect.right, rect.bottom);
+                gfx.lineTo(rect.left,  rect.bottom);
+                gfx.lineTo(rect.left,  rect.top);
+            });
         }
 
         gfx.render(backend);

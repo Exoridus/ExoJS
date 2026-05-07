@@ -5,7 +5,9 @@ import { Bounds } from './Bounds';
 import { Flags } from '@/math/Flags';
 import { degreesToRadians, trimRotation } from '@/math/utils';
 import type { Container } from '@/rendering/Container';
+import type { RenderNode } from '@/rendering/RenderNode';
 import type { Vector } from '@/math/Vector';
+import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
 import { Interval } from '@/math/Interval';
 import type { Collidable, CollisionResponse} from '@/math/Collision';
 import { CollisionType } from '@/math/Collision';
@@ -407,6 +409,11 @@ export class SceneNode implements Collidable {
     /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
     public _invalidateBoundsCascade(): void {
         this.flags.push(SceneNodeTransformFlags.BoundsRect);
+
+        // Notify the InteractionManager so it can mark the quadtree entry stale.
+        // The manager filters to only tracked interactive nodes so this call is
+        // O(1) for the common case (non-interactive node — fast Set.has miss).
+        _getCurrentInteractionManager()?._notifyBoundsInvalidated(this as unknown as RenderNode);
 
         if (this._parentNode) {
             this._parentNode._invalidateBoundsCascade();

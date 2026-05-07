@@ -10,6 +10,7 @@ import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { Filter } from '@/rendering/filters/Filter';
 import type { InteractionEvent } from '@/input/InteractionEvent';
+import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
 
 interface DestroyableFilter {
     destroy(): void;
@@ -66,8 +67,21 @@ export abstract class RenderNode extends SceneNode {
 
     private static _spriteFactory: (() => RenderNodeSpriteLike) | null = null;
 
-    public interactive: boolean = false;
+    private _interactive: boolean = false;
     public cursor: string | null = null;
+
+    public get interactive(): boolean {
+        return this._interactive;
+    }
+
+    public set interactive(value: boolean) {
+        if (this._interactive === value) {
+            return;
+        }
+
+        this._interactive = value;
+        _getCurrentInteractionManager()?._notifyInteractiveChanged(this, value);
+    }
 
     /**
      * When `true` and `interactive` is also `true`, this node will be

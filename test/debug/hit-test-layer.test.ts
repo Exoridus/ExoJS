@@ -82,12 +82,11 @@ function makeNode(opts: {
 const makeInteraction = (opts: {
     hovered?: FakeNode | null;
     captured?: Array<FakeNode>;
-    useSpatialIndex?: boolean;
+    quadtree?: { _walkBounds: jest.Mock } | null;
 } = {}) => ({
     getHoveredNode: jest.fn(() => opts.hovered ?? null),
     getCapturedNodes: jest.fn(() => opts.captured ?? []),
-    useSpatialIndex: opts.useSpatialIndex ?? false,
-    _getDebugQuadtree: jest.fn(() => null),
+    _getDebugQuadtree: jest.fn(() => opts.quadtree ?? null),
 });
 
 const makeApp = (
@@ -239,7 +238,7 @@ describe('HitTestLayer', () => {
         expect(colorAssignments.some(c => c.r === 1 && c.g === 0 && c.b === 1)).toBe(true);
     });
 
-    test('quadtree regions rendered when useSpatialIndex is true', () => {
+    test('quadtree regions rendered when spatial index is active (quadtree non-null)', () => {
         const { HitTestLayer } = require('../../src/debug/HitTestLayer') as typeof import('../../src/debug/HitTestLayer');
 
         const node = makeNode({ interactive: false, boundsW: 10, boundsH: 10 });
@@ -248,12 +247,9 @@ describe('HitTestLayer', () => {
         const walkBoundsSpy = jest.fn((_cb: (rect: unknown) => void) => {
             _cb({ left: 0, top: 0, right: 100, bottom: 100 });
         });
-        const interaction = {
-            getHoveredNode: jest.fn(() => null),
-            getCapturedNodes: jest.fn(() => []),
-            useSpatialIndex: true,
-            _getDebugQuadtree: jest.fn(() => ({ _walkBounds: walkBoundsSpy })),
-        };
+        const interaction = makeInteraction({
+            quadtree: { _walkBounds: walkBoundsSpy },
+        });
         const app = makeApp(node as unknown as FakeNode, interaction );
         const layer = new HitTestLayer(app);
         const backend = app.backend;
@@ -263,17 +259,12 @@ describe('HitTestLayer', () => {
         expect(walkBoundsSpy).toHaveBeenCalled();
     });
 
-    test('quadtree regions NOT rendered when useSpatialIndex is false', () => {
+    test('quadtree regions NOT rendered when spatial index is inactive (quadtree null)', () => {
         const { HitTestLayer } = require('../../src/debug/HitTestLayer') as typeof import('../../src/debug/HitTestLayer');
 
         const node = makeNode({ interactive: false, boundsW: 10, boundsH: 10 });
         const walkBoundsSpy = jest.fn();
-        const interaction = {
-            getHoveredNode: jest.fn(() => null),
-            getCapturedNodes: jest.fn(() => []),
-            useSpatialIndex: false,
-            _getDebugQuadtree: jest.fn(() => ({ _walkBounds: walkBoundsSpy })),
-        };
+        const interaction = makeInteraction({ quadtree: null });
         const app = makeApp(node as unknown as FakeNode, interaction );
         const layer = new HitTestLayer(app);
         const backend = app.backend;

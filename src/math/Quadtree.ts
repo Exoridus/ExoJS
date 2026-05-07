@@ -48,6 +48,19 @@ export class Quadtree<T> {
         this._items.push(item);
     }
 
+    /**
+     * Returns all items whose bounds contain the point `(x, y)`.
+     *
+     * The optional `results` parameter allows callers to provide a
+     * pre-allocated array that will be reused across calls. The array is
+     * **appended to** (not replaced), so callers should reset it (e.g.
+     * `buf.length = 0`) before passing it in when a fresh result set is
+     * needed. The same array reference is returned.
+     *
+     * Omitting `results` allocates a new array on every call. For
+     * hot paths (e.g. per-frame hit-testing) prefer passing a persistent
+     * buffer to avoid allocation pressure.
+     */
     public queryPoint(x: number, y: number, results: Array<QuadtreeItem<T>> = []): Array<QuadtreeItem<T>> {
         if (!this._bounds.contains(x, y)) {
             return results;
@@ -98,6 +111,32 @@ export class Quadtree<T> {
         }
 
         return results;
+    }
+
+    /**
+     * Remove the first occurrence of `item` from this subtree by object
+     * identity. Returns `true` if the item was found and removed, `false`
+     * otherwise. This is an O(n) walk of every node in the affected
+     * subtree; prefer `clear()` for bulk removal.
+     */
+    public remove(item: QuadtreeItem<T>): boolean {
+        const index = this._items.indexOf(item);
+
+        if (index !== -1) {
+            this._items.splice(index, 1);
+
+            return true;
+        }
+
+        if (this._children !== null) {
+            for (const child of this._children) {
+                if (child.remove(item)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public clear(): void {

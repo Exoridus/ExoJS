@@ -11,7 +11,7 @@ import type { Pointer } from '@/input/Pointer';
 import type { Signal } from '@/core/Signal';
 
 // ---------------------------------------------------------------------------
-// TestSprite — same helper as interaction.test.ts but also overrides getBounds
+// TestSprite — overrides both contains() and getBounds() for spatial-index tests
 // ---------------------------------------------------------------------------
 
 class TestSprite extends Drawable {
@@ -278,18 +278,118 @@ describe('Quadtree — results buffer reuse', () => {
 
         qt.destroy();
     });
+
+    test('same buffer reference is returned from queryPoint', () => {
+        const qt = new Quadtree<string>(new Rectangle(0, 0, 100, 100));
+
+        qt.insert({ bounds: new Rectangle(10, 10, 30, 30), payload: 'A' });
+
+        const buf: ReturnType<typeof qt.queryPoint> = [];
+        const returned = qt.queryPoint(20, 20, buf);
+
+        expect(returned).toBe(buf);
+
+        qt.destroy();
+    });
+});
+
+describe('Quadtree — remove', () => {
+    test('remove() deletes an inserted item so it is no longer returned by queryPoint', () => {
+        const qt = new Quadtree<string>(new Rectangle(0, 0, 100, 100));
+        const item = { bounds: new Rectangle(10, 10, 30, 30), payload: 'A' };
+
+        qt.insert(item);
+        expect(qt.queryPoint(20, 20)).toHaveLength(1);
+
+        const removed = qt.remove(item);
+
+        expect(removed).toBe(true);
+        expect(qt.queryPoint(20, 20)).toHaveLength(0);
+
+        qt.destroy();
+    });
+
+    test('remove() returns false for an item not in the tree', () => {
+        const qt = new Quadtree<string>(new Rectangle(0, 0, 100, 100));
+        const item = { bounds: new Rectangle(10, 10, 30, 30), payload: 'A' };
+
+        const removed = qt.remove(item);
+
+        expect(removed).toBe(false);
+
+        qt.destroy();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// 2. InteractionManager with useSpatialIndex = true
+// 2. InteractionManager — persistent spatial index lifecycle
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — spatial index: basic hit', () => {
-    test('pointerdown over interactive sprite fires onPointerDown (spatial index)', () => {
-        const { app, scene, signals } = createApp();
+describe('InteractionManager — lazy-init: quadtree null with no interactive nodes', () => {
+    test('_getDebugQuadtree() returns null before any interactive node is added', () => {
+        const { app } = createApp();
         const im = new InteractionManager(app);
 
-        im.useSpatialIndex = true;
+        expect(im._getDebugQuadtree()).toBeNull();
+
+        im.destroy();
+    });
+});
+
+describe('InteractionManager — lazy-init: quadtree created on first interactive node', () => {
+    test('setting interactive=true on a node creates the quadtree', () => {
+        const { app } = createApp();
+        const im = new InteractionManager(app);
+        const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+        expect(im._getDebugQuadtree()).toBeNull();
+
+        sprite.interactive = true;
+
+        expect(im._getDebugQuadtree()).not.toBeNull();
+
+        im.destroy();
+        sprite.destroy();
+    });
+});
+
+describe('InteractionManager — lazy-dispose: quadtree null when last interactive node removed', () => {
+    test('quadtree is destroyed when last interactive node becomes non-interactive', () => {
+        const { app } = createApp();
+        const im = new InteractionManager(app);
+        const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+        sprite.interactive = true;
+        expect(im._getDebugQuadtree()).not.toBeNull();
+
+        sprite.interactive = false;
+        expect(im._getDebugQuadtree()).toBeNull();
+
+        im.destroy();
+        sprite.destroy();
+    });
+
+    test('quadtree is destroyed when last interactive node is removed from scene', () => {
+        const { app, scene } = createApp();
+        const im = new InteractionManager(app);
+        const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+        sprite.interactive = true;
+        scene.addChild(sprite);
+        expect(im._getDebugQuadtree()).not.toBeNull();
+
+        scene.removeChild(sprite);
+        expect(im._getDebugQuadtree()).toBeNull();
+
+        im.destroy();
+        sprite.destroy();
+    });
+});
+
+describe('InteractionManager — spatial index: basic hit', () => {
+    test('pointerdown over interactive sprite fires onPointerDown', () => {
+        const { app, scene, signals } = createApp();
+        const im = new InteractionManager(app);
 
         const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -309,11 +409,9 @@ describe('InteractionManager — spatial index: basic hit', () => {
         sprite.destroy();
     });
 
-    test('pointer missing sprite does NOT fire onPointerDown (spatial index)', () => {
+    test('pointer missing sprite does NOT fire onPointerDown', () => {
         const { app, scene, signals } = createApp();
         const im = new InteractionManager(app);
-
-        im.useSpatialIndex = true;
 
         const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -334,11 +432,9 @@ describe('InteractionManager — spatial index: basic hit', () => {
 });
 
 describe('InteractionManager — spatial index: z-order preserved', () => {
-    test('top sprite (added last) wins over bottom sprite at same point', () => {
+    test('top sprite (added last, higher order) wins over bottom sprite at same point', () => {
         const { app, scene, signals } = createApp();
         const im = new InteractionManager(app);
-
-        im.useSpatialIndex = true;
 
         const bottom = new TestSprite().setBounds(0, 0, 100, 100);
         const top = new TestSprite().setBounds(0, 0, 100, 100);
@@ -357,8 +453,8 @@ describe('InteractionManager — spatial index: z-order preserved', () => {
         signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
         flushInteractions(im);
 
-        // The spatial index uses depth-first insertion order so "top" (added
-        // last, visited last) gets the higher order number and wins.
+        // The spatial index uses insertion-order so "top" (set interactive later)
+        // gets the higher order number and wins.
         expect(topHandler).toHaveBeenCalledTimes(1);
         expect(bottomHandler).not.toHaveBeenCalled();
 
@@ -368,12 +464,64 @@ describe('InteractionManager — spatial index: z-order preserved', () => {
     });
 });
 
-describe('InteractionManager — spatial index: toggle mid-test', () => {
-    test('toggling useSpatialIndex false→true between dispatches produces same hit result', () => {
+describe('InteractionManager — spatial index: addChild registers subtree', () => {
+    test('addChild of Container with interactive descendants registers all of them', () => {
+        const { app, scene } = createApp();
+        const im = new InteractionManager(app);
+
+        const container = new Container();
+        const child1 = new TestSprite().setBounds(0, 0, 50, 50);
+        const child2 = new TestSprite().setBounds(50, 0, 50, 50);
+
+        child1.interactive = true;
+        child2.interactive = true;
+        container.addChild(child1);
+        container.addChild(child2);
+
+        // Before adding container to scene — both children already registered
+        // because interactive=true triggered _registerNode individually.
+        expect(im._getDebugQuadtree()).not.toBeNull();
+
+        scene.addChild(container);
+
+        // Both children should be discoverable via hit test.
+        im.update(); // flush stale entries
+
+        im.destroy();
+        container.destroy();
+    });
+});
+
+describe('InteractionManager — spatial index: removeChild unregisters subtree', () => {
+    test('removeChild unregisters all interactive descendants', () => {
+        const { app, scene } = createApp();
+        const im = new InteractionManager(app);
+
+        const container = new Container();
+        const child = new TestSprite().setBounds(0, 0, 50, 50);
+
+        child.interactive = true;
+        container.addChild(child);
+        scene.addChild(container);
+
+        expect(im._getDebugQuadtree()).not.toBeNull();
+
+        scene.removeChild(container);
+
+        // child was unregistered → no more interactive nodes → quadtree disposed.
+        expect(im._getDebugQuadtree()).toBeNull();
+
+        im.destroy();
+        container.destroy();
+    });
+});
+
+describe('InteractionManager — spatial index: transform mutation reflected at next query', () => {
+    test('moving node between queries updates its quadtree entry', () => {
         const { app, scene, signals } = createApp();
         const im = new InteractionManager(app);
 
-        const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+        const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
         sprite.interactive = true;
         scene.addChild(sprite);
@@ -382,21 +530,91 @@ describe('InteractionManager — spatial index: toggle mid-test', () => {
 
         sprite.onPointerDown.add(handler);
 
-        // First dispatch with spatial index OFF (default)
-        im.useSpatialIndex = false;
-        signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+        // Initial query: hit inside original bounds.
+        signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
         flushInteractions(im);
-
         expect(handler).toHaveBeenCalledTimes(1);
 
-        // Second dispatch with spatial index ON
-        im.useSpatialIndex = true;
-        signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+        handler.mockClear();
+
+        // Move sprite so it no longer covers (25, 25).
+        sprite.setBounds(200, 200, 50, 50);
+
+        signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
         flushInteractions(im);
 
-        expect(handler).toHaveBeenCalledTimes(2);
+        // After move, (25,25) is outside bounds — handler must not fire.
+        expect(handler).not.toHaveBeenCalled();
 
         im.destroy();
         sprite.destroy();
+    });
+});
+
+describe('InteractionManager — spatial index: query results match recursive-walk results', () => {
+    test('indexed hit result matches recursive-walk hit result for same scene', () => {
+        const { app, scene, signals } = createApp();
+        const im = new InteractionManager(app);
+
+        // Two non-overlapping sprites.
+        const spriteA = new TestSprite().setBounds(0, 0, 100, 100);
+        const spriteB = new TestSprite().setBounds(200, 200, 100, 100);
+
+        spriteA.interactive = true;
+        spriteB.interactive = true;
+        scene.addChild(spriteA);
+        scene.addChild(spriteB);
+
+        const aHandler = jest.fn();
+        const bHandler = jest.fn();
+
+        spriteA.onPointerDown.add(aHandler);
+        spriteB.onPointerDown.add(bHandler);
+
+        // Hit spriteA
+        signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+        flushInteractions(im);
+        expect(aHandler).toHaveBeenCalledTimes(1);
+        expect(bHandler).not.toHaveBeenCalled();
+
+        aHandler.mockClear();
+        bHandler.mockClear();
+
+        // Hit spriteB
+        signals.onPointerDown.dispatch(makePointer({ x: 250, y: 250 }));
+        flushInteractions(im);
+        expect(bHandler).toHaveBeenCalledTimes(1);
+        expect(aHandler).not.toHaveBeenCalled();
+
+        im.destroy();
+        spriteA.destroy();
+        spriteB.destroy();
+    });
+});
+
+describe('InteractionManager — spatial index: removing all interactive nodes mid-frame', () => {
+    test('quadtree disposes correctly when all interactive nodes are removed', () => {
+        const { app, scene } = createApp();
+        const im = new InteractionManager(app);
+
+        const sprite1 = new TestSprite().setBounds(0, 0, 50, 50);
+        const sprite2 = new TestSprite().setBounds(100, 0, 50, 50);
+
+        sprite1.interactive = true;
+        sprite2.interactive = true;
+        scene.addChild(sprite1);
+        scene.addChild(sprite2);
+
+        expect(im._getDebugQuadtree()).not.toBeNull();
+
+        sprite1.interactive = false;
+        expect(im._getDebugQuadtree()).not.toBeNull(); // sprite2 still interactive
+
+        sprite2.interactive = false;
+        expect(im._getDebugQuadtree()).toBeNull(); // all gone → disposed
+
+        im.destroy();
+        sprite1.destroy();
+        sprite2.destroy();
     });
 });

@@ -1,7 +1,7 @@
 {
   "name": "@codexo/exojs",
   "description": "A TypeScript-first browser 2D runtime for games and interactive apps.",
-  "version": "0.7.10",
+  "version": "0.7.11",
   "type": "module",
   "files": [
     "dist/esm/",
@@ -53,7 +53,14 @@
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "perf:benchmark": "tsx test/perf/rendering-benchmark.ts",
+    "perf:bench:rendering": "tsx test/perf/rendering-benchmark.ts",
+    "perf:bench:audio": "tsx test/perf/audio-benchmark.ts",
+    "perf:bench:collision": "tsx test/perf/collision-benchmark.ts",
+    "perf:bench:scene-graph": "tsx test/perf/scene-graph-benchmark.ts",
+    "perf:bench:interaction": "tsx test/perf/interaction-benchmark.ts",
+    "perf:bench:all": "npm run perf:bench:rendering && npm run perf:bench:audio && npm run perf:bench:collision && npm run perf:bench:scene-graph && npm run perf:bench:interaction",
+    "perf:profile": "tsx test/perf/profile-benchmark.ts",
+    "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "prepare": "husky",
     "commit": "gitmoji -c"
   },

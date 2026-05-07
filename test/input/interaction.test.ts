@@ -1,6 +1,7 @@
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
 import { InteractionManager } from '@/input/InteractionManager';
+import { Rectangle } from '@/math/Rectangle';
 import { Scene } from '@/core/Scene';
 import type { InteractionEvent } from '@/input/InteractionEvent';
 import type { Application } from '@/core/Application';
@@ -36,6 +37,11 @@ class TestSprite extends Drawable {
             && y >= this._top
             && y < this._top + this._height
         );
+    }
+
+    /** Override getBounds() so the persistent spatial index can locate the node. */
+    public override getBounds(): Rectangle {
+        return new Rectangle(this._left, this._top, this._width, this._height);
     }
 }
 

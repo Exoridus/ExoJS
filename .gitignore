@@ -14,3 +14,7 @@ pnpm-debug.log*
 .rollup.cache/
 !.gitignore
 !.gitkeep
+test/perf/results/*.json
+test/perf/results/*.md
+!test/perf/results/baseline.md
+!test/perf/results/findings.md

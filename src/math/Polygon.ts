@@ -30,7 +30,9 @@ export class Polygon implements ShapeLike {
     private readonly _position: Vector;
     private readonly _points: Array<Vector> = [];
     private readonly _edges: Array<Vector> = [];
-    private readonly _normals: Array<Vector> = [];
+    /** Cached normals — null until first getNormals() call; reused across calls. */
+    private _cachedNormals: Array<Vector> | null = null;
+    private _normalsDirty: boolean = true;
 
     public constructor(points: Array<Vector> = [], x = 0, y = 0) {
         this._position = new Vector(x, y);
@@ -43,6 +45,7 @@ export class Polygon implements ShapeLike {
 
     public set position(position: Vector) {
         this._position.copy(position);
+        this._normalsDirty = true;
     }
 
     public get x(): number {
@@ -51,6 +54,7 @@ export class Polygon implements ShapeLike {
 
     public set x(x: number) {
         this._position.x = x;
+        this._normalsDirty = true;
     }
 
     public get y(): number {
@@ -59,6 +63,7 @@ export class Polygon implements ShapeLike {
 
     public set y(y: number) {
         this._position.y = y;
+        this._normalsDirty = true;
     }
 
     public get points(): Array<Vector> {
@@ -73,12 +78,14 @@ export class Polygon implements ShapeLike {
         return this._edges;
     }
 
+    /** @deprecated Use {@link getNormals} for a stable cached reference. */
     public get normals(): Array<Vector> {
-        return this._normals;
+        return this.getNormals();
     }
 
     public setPosition(x: number, y: number): this {
         this._position.set(x, y);
+        this._normalsDirty = true;
 
         return this;
     }
@@ -96,12 +103,18 @@ export class Polygon implements ShapeLike {
         if (diff > 0) {
             this._points.splice(newLen).forEach(point => point.destroy());
             this._edges.splice(newLen).forEach(point => point.destroy());
-            this._normals.splice(newLen).forEach(point => point.destroy());
+            // Trim the cached normals array if it exists and is longer than newLen.
+            if (this._cachedNormals !== null && this._cachedNormals.length > newLen) {
+                const removed = this._cachedNormals.splice(newLen);
+
+                for (const v of removed) {
+                    v.destroy();
+                }
+            }
         } else if (diff < 0) {
             for (let i = len; i < newLen; i++) {
                 this._points.push(newPoints[i].clone());
                 this._edges.push(newPoints[i].clone());
-                this._normals.push(newPoints[i].clone());
             }
         }
 
@@ -110,8 +123,9 @@ export class Polygon implements ShapeLike {
             const next = this._points[(i + 1) % newLen];
 
             this._edges[i].set(next.x - curr.x, next.y - curr.y);
-            this._normals[i].copy(this._edges[i]).rperp().normalize();
         }
+
+        this._normalsDirty = true;
 
         return this;
     }
@@ -119,6 +133,7 @@ export class Polygon implements ShapeLike {
     public set(x: number, y: number, points: Array<Vector>): this {
         this._position.set(x, y);
         this.setPoints(points);
+        this._normalsDirty = true;
 
         return this;
     }
@@ -126,6 +141,7 @@ export class Polygon implements ShapeLike {
     public copy(polygon: Polygon): this {
         this._position.copy(polygon.position);
         this.setPoints(polygon.points);
+        this._normalsDirty = true;
 
         return this;
     }
@@ -163,8 +179,41 @@ export class Polygon implements ShapeLike {
         );
     }
 
+    /**
+     * Returns the edge normals for this polygon.
+     *
+     * The returned array is cached and reused across calls — the same array
+     * reference is returned on consecutive calls when the polygon has not
+     * changed. The cache is invalidated automatically when `setPoints`,
+     * `setPosition`, `set`, or `copy` mutate the polygon.
+     *
+     * This matches the `Circle.getNormals()` and `Sprite.getNormals()`
+     * behaviour introduced in 0.6.19.
+     */
     public getNormals(): Array<Vector> {
-        return this._normals;
+        if (this._normalsDirty) {
+            const n = this._points.length;
+
+            if (this._cachedNormals === null) {
+                this._cachedNormals = [];
+            }
+
+            // Grow the cache if needed (shrinking is handled in setPoints).
+            while (this._cachedNormals.length < n) {
+                this._cachedNormals.push(new Vector());
+            }
+
+            for (let i = 0; i < n; i++) {
+                this._cachedNormals[i]
+                    .copy(this._edges[i])
+                    .rperp()
+                    .normalize();
+            }
+
+            this._normalsDirty = false;
+        }
+
+        return this._cachedNormals!;
     }
 
     public project(axis: Vector, result: Interval = new Interval()): Interval {
@@ -213,8 +262,21 @@ export class Polygon implements ShapeLike {
             point.destroy();
         }
 
+        for (const edge of this._edges) {
+            edge.destroy();
+        }
+
+        if (this._cachedNormals !== null) {
+            for (const v of this._cachedNormals) {
+                v.destroy();
+            }
+
+            this._cachedNormals = null;
+        }
+
         this._position.destroy();
         this._points.length = 0;
+        this._edges.length = 0;
     }
 
     public static get temp(): Polygon {

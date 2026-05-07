@@ -4,6 +4,124 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.11] - 2026-05-07
+
+Performance pass — adds a multi-domain benchmark suite, an auto-profiler
+that finds Top-3-Wins from baseline data, and three measured optimizations
+those benchmarks identified. Includes a breaking change to
+`InteractionManager` (the `useSpatialIndex` flag is removed; spatial
+indexing is now automatic and persistent).
+
+### Added — Performance infrastructure
+
+- **`test/perf/` benchmark suite** covering five domains: rendering,
+  audio, collision, scene-graph, interaction. Each domain has its own
+  script (`npm run perf:bench:rendering`, `:audio`, `:collision`,
+  `:scene-graph`, `:interaction`) plus `:all` aggregator. Output: JSON
+  + Markdown to `test/perf/results/`.
+- **Baseline snapshot** committed as `test/perf/results/baseline.md` —
+  reference numbers at 0.7.10 for future regression detection.
+- **Auto-profiler** (`npm run perf:profile`, `:gc` variant with
+  `--expose-gc`) that re-runs the hottest scenarios with granular
+  sub-timings, heap-delta tracking, and call counters. Writes
+  `test/perf/results/findings.md` with auto-derived Top-3 Wins
+  recommendations.
+- Profile helpers (`SubTimingTracker`, `CallCounter`, `MemoryTracker`)
+  in `test/perf/profile-runner.ts` for future ad-hoc profiling.
+
+### Performance — Win 1: `Polygon.getNormals()` cached
+
+Mirrors the 0.6.19 dirty-flag pattern from `Sprite.getNormals()` and the
+0.7.8 work on `Circle.getNormals()`. `Polygon.getNormals()` now caches
+the result and recomputes only when shape mutates. Returns the same
+array reference on subsequent calls. Eliminates per-call allocation of
+N `Vector` instances during SAT collision — significant for collision-
+heavy scenes. Cache invalidated on `setPoints`, `setPosition`, `set`,
+`copy`, and the `x` / `y` / `position` setters.
+
+The legacy `normals` getter is now `@deprecated` — call `getNormals()`
+directly. Behavior is identical; the getter just delegates.
+
+### Performance — Win 2: `Quadtree.queryPoint()` documented buffer reuse
+
+The `results?: Array<QuadtreeItem<T>>` parameter has been there since
+0.6.16 but was undocumented. JSDoc now explicitly documents the
+buffer-reuse pattern for zero-allocation hot-path queries. Added a
+`Quadtree.remove(item)` method (needed internally by Win 3); also
+publicly available for users who want to maintain quadtrees externally.
+
+### Performance — Win 3: Persistent Spatial-Index (BREAKING)
+
+`InteractionManager`'s spatial index now lives across frames and is
+incrementally maintained — replaces the per-frame full rebuild. This
+also makes the `useSpatialIndex` opt-in flag unnecessary and **the
+flag has been removed entirely**.
+
+**How it works now:**
+- A persistent quadtree is created lazily when the first interactive
+  node enters the scene.
+- `Container.addChild` / `removeChild` walk subtrees and add/remove
+  interactive descendants from the index.
+- `RenderNode.interactive = true/false` toggles registration.
+- Transform mutations on interactive nodes (position / rotation / scale)
+  mark the node as "stale" via `_invalidateBoundsCascade`.
+- Stale entries are lazy-updated at the start of `InteractionManager.update()`
+  on the next frame, before queries are dispatched.
+- When the last interactive node is removed, the quadtree is disposed
+  and lifecycle returns to zero overhead.
+
+**Practical effect:** scenes with many interactive nodes get the same
+~5× faster hit-testing the old `useSpatialIndex = true` provided, but
+without the per-frame rebuild cost. Mostly-static scenes (the common
+case) see particularly large wins — incremental updates only fire on
+actually-moved nodes.
+
+### Changed (BREAKING)
+
+- **`InteractionManager.useSpatialIndex` removed.** Spatial indexing is
+  now automatic. Code that explicitly set the flag (`= true` or
+  `= false`) gets a TypeScript error; the value should simply be
+  removed. Old `useSpatialIndex = true` users get the same speedup
+  automatically. Old `useSpatialIndex = false` users get a faster hit
+  path with negligible mutation overhead.
+- **`RenderNode.interactive` is now a getter/setter** (was a public
+  field). External behavior is identical for normal usage
+  (`node.interactive = true`). Any code that relied on the field's
+  shape (descriptor inspection, etc.) needs to adapt. Reading the value
+  is a getter call — same observable behavior.
+- The `HitTestLayer` debug overlay no longer requires
+  `useSpatialIndex = true` to draw quadtree quadrants; it draws them
+  whenever the persistent quadtree is non-null (i.e., whenever any
+  interactive node exists in the active scene).
+
+### Migration
+
+```ts
+// Before:
+app.interaction.useSpatialIndex = true;   // flag opt-in
+
+// After:
+// Nothing — index is automatic. Just have at least one interactive
+// node in the scene and queries use the persistent quadtree.
+```
+
+### Notes
+
+- This release adds 30 net new tests (Polygon-cache + persistent-index
+  lifecycle), removes a few `useSpatialIndex`-flag assertion tests, and
+  modifies `interaction.test.ts` `TestSprite` to expose `getBounds()`
+  for the persistent index. Test count: 1196 → 1212.
+- The benchmark suite and auto-profiler are dev infrastructure — they
+  live in `test/perf/` and are not shipped via npm (the `files` array
+  in package.json controls what's packed).
+- The findings.md committed alongside baseline.md is a snapshot of
+  performance characteristics at 0.7.11 baseline — re-running profiles
+  will overwrite locally but the committed reference remains for
+  diff comparisons.
+- Future perf passes can use the same auto-profiler tooling to identify
+  the next round of Wins. CI-integrated regression detection is a
+  future Phase 4 if there's demand.
+
 ## [0.7.10] - 2026-05-07
 
 Closes the audio chapter. Adds the long-deferred fade transition helper,

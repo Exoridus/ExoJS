@@ -2,6 +2,7 @@ import { Container } from '@/rendering/Container';
 import { InteractionEvent } from './InteractionEvent';
 import { Rectangle } from '@/math/Rectangle';
 import { Quadtree } from '@/math/Quadtree';
+import { _setCurrentInteractionManager } from './interaction-hooks';
 
 import type { QuadtreeItem } from '@/math/Quadtree';
 import type { RenderNode } from '@/rendering/RenderNode';
@@ -50,11 +51,21 @@ interface IndexedNode {
 export class InteractionManager {
     private readonly _app: Application;
 
-    /** Opt-in: use a per-frame quadtree for hit-testing. Off by default. */
-    public useSpatialIndex: boolean = false;
-
+    // Persistent quadtree — null when no interactive nodes are present.
     private _quadtree: Quadtree<IndexedNode> | null = null;
+
+    // All currently-tracked interactive RenderNodes.
+    private _interactiveNodes: Set<RenderNode> = new Set();
+
+    // Nodes whose quadtree entry is stale (bounds changed since last insert).
+    private _staleNodes: Set<RenderNode> = new Set();
+
+    // Items stored in the quadtree, keyed by node for fast removal.
+    private _quadtreeItems: Map<RenderNode, QuadtreeItem<IndexedNode>> = new Map();
+
+    // Running insertion-order counter used to break hit-test ties.
     private _quadtreeOrderCounter: number = 0;
+
     private readonly _quadtreeQueryBuffer: Array<QuadtreeItem<IndexedNode>> = [];
 
     /** Maps pointerId → the deepest interactive RenderNode that pointer is currently over. */
@@ -81,6 +92,10 @@ export class InteractionManager {
 
     public constructor(app: Application) {
         this._app = app;
+
+        // Register as the active singleton so RenderNode / Container / SceneNode hooks
+        // can reach the manager without holding an explicit reference.
+        _setCurrentInteractionManager(this);
 
         this._onPointerDownHandler = this._handlePointerDown.bind(this);
         this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -122,8 +137,10 @@ export class InteractionManager {
 
     /**
      * Returns the internal quadtree used for spatial hit-testing, or null when
-     * the spatial index is not enabled or not yet built. Prefixed with underscore
-     * to signal "internal-but-public" (debug use only).
+     * no interactive nodes are present. The quadtree is automatically created
+     * when the first interactive node is registered and disposed when the last
+     * interactive node is removed. Prefixed with underscore to signal
+     * "internal-but-public" (debug use only).
      */
     public _getDebugQuadtree(): Quadtree<{ node: RenderNode; order: number }> | null {
         return this._quadtree;
@@ -140,12 +157,17 @@ export class InteractionManager {
         this._pending.clear();
         this._capturedPointers.clear();
         this._drags.clear();
+        this._interactiveNodes.clear();
+        this._staleNodes.clear();
+        this._quadtreeItems.clear();
         this._dirty = false;
 
         if (this._quadtree !== null) {
             this._quadtree.destroy();
             this._quadtree = null;
         }
+
+        _setCurrentInteractionManager(null);
     }
 
     /**
@@ -163,9 +185,7 @@ export class InteractionManager {
         if (!this._dirty) return;
         this._dirty = false;
 
-        if (this.useSpatialIndex) {
-            this._buildIndex();
-        }
+        this._flushStaleEntries();
 
         for (const queue of this._pending.values()) {
             this._processQueue(queue);
@@ -173,6 +193,65 @@ export class InteractionManager {
 
         this._pending.clear();
         this._updateCursor();
+    }
+
+    // ---------------------------------------------------------------------------
+    // Hooks called by RenderNode / Container / SceneNode
+    // These are prefixed _ to signal "internal-but-public".
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Called when a subtree rooted at `node` has been added to the scene.
+     * Walks the subtree and registers any interactive nodes found.
+     *
+     * @internal
+     */
+    public _notifyNodeAdded(node: RenderNode): void {
+        this._walkSubtree(node, (n) => {
+            if (n.interactive) {
+                this._registerNode(n);
+            }
+        });
+    }
+
+    /**
+     * Called when a subtree rooted at `node` is about to be removed from the
+     * scene. Walks the subtree and unregisters any interactive nodes found.
+     *
+     * @internal
+     */
+    public _notifyNodeRemoved(node: RenderNode): void {
+        this._walkSubtree(node, (n) => {
+            if (this._interactiveNodes.has(n)) {
+                this._unregisterNode(n);
+            }
+        });
+    }
+
+    /**
+     * Called when a node's `interactive` property changes.
+     *
+     * @internal
+     */
+    public _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void {
+        if (becameInteractive) {
+            this._registerNode(node);
+        } else {
+            this._unregisterNode(node);
+        }
+    }
+
+    /**
+     * Called when a node's world transform / bounds are invalidated. If the
+     * node is currently tracked as interactive, mark it stale so its quadtree
+     * entry is refreshed on the next query.
+     *
+     * @internal
+     */
+    public _notifyBoundsInvalidated(node: RenderNode): void {
+        if (this._interactiveNodes.has(node)) {
+            this._staleNodes.add(node);
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -338,7 +417,7 @@ export class InteractionManager {
     // ---------------------------------------------------------------------------
 
     private _hitTest(x: number, y: number): RenderNode | null {
-        if (this.useSpatialIndex && this._quadtree !== null) {
+        if (this._quadtree !== null) {
             return this._hitTestIndexed(x, y);
         }
 
@@ -400,57 +479,133 @@ export class InteractionManager {
     }
 
     // ---------------------------------------------------------------------------
-    // Spatial index building
+    // Persistent spatial index management
     // ---------------------------------------------------------------------------
 
-    private _buildIndex(): void {
-        const root = this._app.sceneManager.scene?.root;
-
-        if (!root) {
-            if (this._quadtree !== null) {
-                this._quadtree.destroy();
-                this._quadtree = null;
-            }
-
+    /**
+     * Register an interactive node: add it to the tracking set, create the
+     * quadtree if this is the first interactive node, and insert the node.
+     */
+    private _registerNode(node: RenderNode): void {
+        if (this._interactiveNodes.has(node)) {
             return;
         }
 
-        const canvas = this._app.canvas;
-        const indexBounds = new Rectangle(0, 0, canvas.width, canvas.height);
-        const rootBounds = root.getBounds();
+        this._interactiveNodes.add(node);
 
-        // Expand to include any off-canvas interactive nodes.
-        const minX = Math.min(indexBounds.left, rootBounds.left);
-        const minY = Math.min(indexBounds.top, rootBounds.top);
-        const maxX = Math.max(indexBounds.right, rootBounds.right);
-        const maxY = Math.max(indexBounds.bottom, rootBounds.bottom);
-
-        indexBounds.set(minX, minY, maxX - minX, maxY - minY);
-
-        if (this._quadtree !== null) {
-            this._quadtree.destroy();
+        // Lazy-init the quadtree on the first interactive node.
+        if (this._quadtree === null) {
+            this._quadtree = this._createQuadtree();
         }
 
-        this._quadtree = new Quadtree<IndexedNode>(indexBounds);
-        this._quadtreeOrderCounter = 0;
-        this._collectInteractive(root);
+        this._insertNode(node);
     }
 
-    private _collectInteractive(node: RenderNode): void {
-        if (!node.visible) return;
-
-        if (node.interactive) {
-            const order = this._quadtreeOrderCounter++;
-
-            this._quadtree!.insert({
-                bounds: node.getBounds(),
-                payload: { node, order },
-            });
+    /**
+     * Unregister an interactive node: remove from the quadtree and tracking
+     * set. Dispose the quadtree when it becomes empty.
+     */
+    private _unregisterNode(node: RenderNode): void {
+        if (!this._interactiveNodes.has(node)) {
+            return;
         }
+
+        this._interactiveNodes.delete(node);
+        this._staleNodes.delete(node);
+
+        const item = this._quadtreeItems.get(node);
+
+        if (item !== undefined && this._quadtree !== null) {
+            this._quadtree.remove(item);
+        }
+
+        this._quadtreeItems.delete(node);
+
+        if (this._interactiveNodes.size === 0 && this._quadtree !== null) {
+            this._quadtree.destroy();
+            this._quadtree = null;
+            this._quadtreeOrderCounter = 0;
+        }
+    }
+
+    /**
+     * Insert a single node into the quadtree (or mark it stale to be inserted
+     * at next flush if the quadtree is not yet ready).
+     */
+    private _insertNode(node: RenderNode): void {
+        if (this._quadtree === null) {
+            return;
+        }
+
+        const bounds = node.getBounds();
+        const item: QuadtreeItem<IndexedNode> = {
+            bounds: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
+            payload: { node, order: this._quadtreeOrderCounter++ },
+        };
+
+        this._quadtree.insert(item);
+        this._quadtreeItems.set(node, item);
+    }
+
+    /**
+     * Flush stale entries: remove each stale node's old quadtree entry and
+     * re-insert it with fresh bounds. Called at the start of update().
+     */
+    private _flushStaleEntries(): void {
+        if (this._quadtree === null || this._staleNodes.size === 0) {
+            return;
+        }
+
+        for (const node of this._staleNodes) {
+            const oldItem = this._quadtreeItems.get(node);
+
+            if (oldItem !== undefined) {
+                this._quadtree.remove(oldItem);
+                oldItem.bounds.destroy();
+            }
+
+            this._quadtreeItems.delete(node);
+
+            // Re-insert with current bounds.
+            const bounds = node.getBounds();
+            const newItem: QuadtreeItem<IndexedNode> = {
+                bounds: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
+                payload: { node, order: oldItem?.payload.order ?? this._quadtreeOrderCounter++ },
+            };
+
+            this._quadtree.insert(newItem);
+            this._quadtreeItems.set(node, newItem);
+        }
+
+        this._staleNodes.clear();
+    }
+
+    /** Build a fresh Quadtree sized to encompass the canvas + current scene root. */
+    private _createQuadtree(): Quadtree<IndexedNode> {
+        const canvas = this._app.canvas;
+        const bounds = new Rectangle(0, 0, canvas.width || 800, canvas.height || 600);
+        const root = this._app.sceneManager.scene?.root;
+
+        if (root) {
+            const rootBounds = root.getBounds();
+            const minX = Math.min(bounds.left, rootBounds.left);
+            const minY = Math.min(bounds.top, rootBounds.top);
+            const maxX = Math.max(bounds.right, rootBounds.right);
+            const maxY = Math.max(bounds.bottom, rootBounds.bottom);
+
+            bounds.set(minX, minY, maxX - minX, maxY - minY);
+        }
+
+        return new Quadtree<IndexedNode>(bounds);
+    }
+
+    /** Walk a subtree, calling `callback` for every RenderNode (including root). */
+    private _walkSubtree(node: RenderNode, callback: (n: RenderNode) => void): void {
+        callback(node);
 
         if (node instanceof Container) {
             for (const child of node.children) {
-                this._collectInteractive(child);
+                this._walkSubtree(child, callback);
             }
         }
     }
