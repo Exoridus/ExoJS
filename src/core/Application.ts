@@ -56,6 +56,11 @@ export interface AutoBackendConfig {
     type: 'auto';
 }
 
+/**
+ * Discriminated union of backend selection options. `'auto'` picks WebGPU
+ * when available, falling back to WebGL2 if adapter acquisition fails;
+ * the explicit values pin the choice and skip the fallback path.
+ */
 export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
 
 const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas') as HTMLCanvasElement;
@@ -88,6 +93,29 @@ const defaultAppSettings: DefaultApplicationOptions = {
     backend: defaultBackendConfig,
 };
 
+/**
+ * Top-level engine instance. Owns the canvas, render backend, scene-stack
+ * controller, input + interaction managers, asset loader, tween manager,
+ * shared audio singleton, and the per-frame loop.
+ *
+ * Lifecycle: construct with options → `await app.start(scene)` → engine
+ * runs the request-animation-frame loop until `app.stop()` or
+ * `app.destroy()`. The render backend is chosen and initialized during
+ * `start()`; query {@link Application.backend} or
+ * {@link Application.capabilities} after start has resolved.
+ *
+ * The class exposes Signals for the major state-change points
+ * ({@link Application.onResize}, {@link Application.onFrame},
+ * {@link Application.onCanvasFocusChange},
+ * {@link Application.onVisibilityChange},
+ * {@link Application.onBackendLost}, {@link Application.onBackendRestored})
+ * so subscribers can react without subclassing.
+ *
+ * `pauseOnHidden = true` short-circuits the per-frame work while
+ * `document.hidden` is true (still consumes RAF callbacks but skips
+ * scene update + render). Useful for games; leave off for tools and
+ * background-active simulations.
+ */
 export class Application {
     public readonly options: ApplicationOptions;
     public readonly canvas: HTMLCanvasElement;
@@ -217,6 +245,12 @@ export class Application {
         return getAudioManager();
     }
 
+    /**
+     * Initialize the render backend, await capability detection, set the
+     * initial scene, and start the per-frame loop. Idempotent — if the
+     * application is already running the call is a no-op. On error the
+     * status returns to `Stopped` and the error propagates.
+     */
     public async start(scene: Scene): Promise<this> {
         if (this._status === ApplicationStatus.Stopped) {
             this._status = ApplicationStatus.Loading;
@@ -242,6 +276,13 @@ export class Application {
         return this;
     }
 
+    /**
+     * One iteration of the per-frame loop. Invoked by `requestAnimationFrame`.
+     * Skips the body when the document is hidden and `pauseOnHidden` is
+     * `true`. Order: reset render stats → input + interaction update →
+     * audio update → tween update → optional view runtime update →
+     * scene-graph update → onFrame dispatch → backend flush → reschedule.
+     */
     public update(): this {
         if (this._status === ApplicationStatus.Running) {
             if (this.pauseOnHidden && !this._documentVisible) {
@@ -279,6 +320,11 @@ export class Application {
         return this;
     }
 
+    /**
+     * Halt the per-frame loop, unload the active scene, and stop the active
+     * + frame clocks. Leaves backend, input, audio, etc. intact — call
+     * {@link Application.destroy} to release everything.
+     */
     public stop(): this {
         if (this._status === ApplicationStatus.Running) {
             this._status = ApplicationStatus.Halting;
@@ -294,6 +340,11 @@ export class Application {
         return this;
     }
 
+    /**
+     * Resize the canvas and the active backend's root render target.
+     * Dispatches {@link Application.onResize} after the backend has been
+     * notified.
+     */
     public resize(width: number, height: number): this {
         this.backend.resize(width, height);
         this.onResize.dispatch(width, height, this);
@@ -301,6 +352,12 @@ export class Application {
         return this;
     }
 
+    /**
+     * Set the canvas cursor. Strings are passed through to `canvas.style.cursor`
+     * verbatim (CSS values like `'pointer'`, `'crosshair'`, or `url(...)`).
+     * Image-based sources are rasterized to a `data:` URL via the shared
+     * scratch canvas and used as the cursor image.
+     */
     public setCursor(cursor: string | Texture | HTMLImageElement | HTMLCanvasElement): this {
         const source = (cursor instanceof Texture) ? cursor.source : cursor;
 
@@ -314,6 +371,11 @@ export class Application {
         return this;
     }
 
+    /**
+     * Tear down every owned subsystem (loader, interaction, input, tweens,
+     * backend, scene manager, all clocks, all signals) and release event
+     * listeners. The application instance is unusable after this call.
+     */
     public destroy(): void {
         if (typeof document !== 'undefined') {
             document.removeEventListener('visibilitychange', this._visibilityChangeHandler);

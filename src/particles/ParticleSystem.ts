@@ -6,6 +6,20 @@ import type { Texture } from '@/rendering/texture/Texture';
 import type { ParticleEmitter } from '@/particles/emitters/ParticleEmitter';
 import type { ParticleAffector } from '@/particles/affectors/ParticleAffector';
 
+/**
+ * The central coordinator of the particle triad. `ParticleSystem` is a
+ * {@link Drawable} that owns a list of {@link ParticleEmitter} spawners, a
+ * list of {@link ParticleAffector} mutators, and the live/graveyard particle
+ * pools. Each call to {@link ParticleSystem.update} runs all emitters to
+ * spawn new particles, advances every live particle's position and lifetime,
+ * retires expired ones to the graveyard for pooling, and runs all affectors
+ * on the survivors.
+ *
+ * Rendering reads {@link ParticleSystem.vertices} and
+ * {@link ParticleSystem.texCoords} (lazily recomputed on texture-frame
+ * changes) plus the live {@link ParticleSystem.particles} array to draw each
+ * sprite.
+ */
 export class ParticleSystem extends Drawable {
 
     private _emitters: Array<ParticleEmitter> = [];
@@ -42,6 +56,12 @@ export class ParticleSystem extends Drawable {
         this.setTextureFrame(frame);
     }
 
+    /**
+     * Quad corner offsets for the current {@link textureFrame}, in local
+     * space as `[minX, minY, maxX, maxY]`. Recomputed lazily whenever
+     * `textureFrame` changes. Used by the renderer to position each particle
+     * sprite relative to its world position.
+     */
     public get vertices(): Float32Array  {
         if (this._updateVertices) {
             const { x, y, width, height } = this._textureFrame;
@@ -59,6 +79,12 @@ export class ParticleSystem extends Drawable {
         return this._vertices;
     }
 
+    /**
+     * Packed UV coordinates for the current {@link textureFrame} as four
+     * `Uint32` values, each encoding a `(u, v)` pair in the upper/lower 16
+     * bits (normalised to 0–65535). Vertex order respects
+     * {@link Texture.flipY}. Recomputed lazily on texture or frame changes.
+     */
     public get texCoords(): Uint32Array {
         if (this._updateTexCoords) {
             const { width, height } = this._texture;
@@ -98,10 +124,19 @@ export class ParticleSystem extends Drawable {
         return this._particles;
     }
 
+    /**
+     * Pool of expired {@link Particle} instances waiting to be recycled.
+     * {@link requestParticle} pops from this array before allocating a new
+     * instance, keeping GC pressure low during sustained emission.
+     */
     public get graveyard(): Array<Particle> {
         return this._graveyard;
     }
 
+    /**
+     * Replaces the particle sprite texture and resets the texture frame to
+     * cover the full new texture. No-ops if `texture` is the same instance.
+     */
     public setTexture(texture: Texture): this {
         if (this._texture !== texture) {
             this._texture = texture;
@@ -111,6 +146,11 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /**
+     * Sets the sub-rectangle of the texture used as the particle sprite,
+     * invalidating cached vertices and UV coordinates and updating the system's
+     * local bounds to match the frame dimensions.
+     */
     public setTextureFrame(frame: Rectangle): this {
         this._textureFrame.copy(frame);
         this._updateTexCoords = true;
@@ -122,16 +162,19 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /** Resets the texture frame to the full dimensions of the current texture. */
     public resetTextureFrame(): this {
         return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
     }
 
+    /** Registers `emitter` to be called each tick during {@link update}. */
     public addEmitter(emitter: ParticleEmitter): this {
         this._emitters.push(emitter);
 
         return this;
     }
 
+    /** Destroys and removes all registered emitters. */
     public clearEmitters(): this {
         for (const emitter of this._emitters) {
             emitter.destroy();
@@ -142,12 +185,14 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /** Registers `affector` to run on every live particle each tick during {@link update}. */
     public addAffector(affector: ParticleAffector): this {
         this._affectors.push(affector);
 
         return this;
     }
 
+    /** Destroys and removes all registered affectors. */
     public clearAffectors(): this {
         for (const affector of this._affectors) {
             affector.destroy();
@@ -158,16 +203,29 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /**
+     * Returns a recycled particle from the {@link graveyard}, or allocates a
+     * new one if the pool is empty. Call {@link Particle.applyOptions}
+     * immediately after to reset its state before passing it to
+     * {@link emitParticle}.
+     */
     public requestParticle(): Particle {
         return this._graveyard.pop() || new Particle();
     }
 
+    /** Adds a fully-configured `particle` to the live pool. Typically called by emitters. */
     public emitParticle(particle: Particle): this {
         this._particles.push(particle);
 
         return this;
     }
 
+    /**
+     * Advances a single particle by one `delta` step: increments
+     * `elapsedLifetime`, integrates velocity into position, and applies
+     * `rotationSpeed` to rotation. Called for every live particle by
+     * {@link update} before the affector pass.
+     */
     public updateParticle(particle: Particle, delta: Time): this {
         const seconds = delta.seconds;
 
@@ -179,6 +237,10 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /**
+     * Destroys and removes all particles from both the live pool and the
+     * graveyard. Use when resetting or recycling the entire system.
+     */
     public clearParticles(): this {
         for (const particle of this._particles) {
             particle.destroy();
@@ -194,6 +256,13 @@ export class ParticleSystem extends Drawable {
         return this;
     }
 
+    /**
+     * Advances the full simulation by one `delta` step: runs all emitters,
+     * then for each live particle calls {@link updateParticle}, moves expired
+     * ones to the {@link graveyard}, and runs all affectors on survivors.
+     * The particle array is iterated in reverse to allow in-place splice
+     * without re-indexing.
+     */
     public update(delta: Time): this {
         const emitters = this._emitters;
         const affectors = this._affectors;

@@ -1,6 +1,14 @@
 import type { CacheStore } from './CacheStore';
 import { IndexedDbDatabase } from './IndexedDbDatabase';
 
+/**
+ * Configuration options for {@link IndexedDbStore}.
+ *
+ * `name` is the IndexedDB database name; `version` defaults to `1`.
+ * `storeNames` overrides the default asset-type object stores, and
+ * `migrations` provides explicit per-version schema callbacks (see
+ * {@link IndexedDbDatabase} for migration semantics).
+ */
 export interface IndexedDbStoreOptions {
     name: string;
     version?: number;
@@ -8,6 +16,18 @@ export interface IndexedDbStoreOptions {
     migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>;
 }
 
+/**
+ * {@link CacheStore} implementation that persists processed asset data in an
+ * IndexedDB database via {@link IndexedDbDatabase}.
+ *
+ * Pass an instance to {@link LoaderOptions.cache} to enable cross-session
+ * asset caching with no additional configuration beyond a database name.
+ *
+ * @example
+ * ```ts
+ * const loader = new Loader({ cache: new IndexedDbStore('my-game-assets') });
+ * ```
+ */
 export class IndexedDbStore implements CacheStore {
 
     private readonly _db: IndexedDbDatabase;

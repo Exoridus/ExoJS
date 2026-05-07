@@ -1,6 +1,16 @@
 import { Time } from './Time';
 import { getPreciseTime } from '@/core/utils';
 
+/**
+ * High-precision wall-clock that accumulates elapsed time while running.
+ * Reads from {@link performance.now} via `getPreciseTime`. Use
+ * {@link Clock.start}, {@link Clock.stop}, {@link Clock.reset}, and
+ * {@link Clock.restart} to control the running state; read elapsed time via
+ * {@link Clock.elapsedTime} (the {@link Time} instance is shared — copy it
+ * if you need to keep a snapshot).
+ *
+ * Use {@link Timer} for a clock with a fixed limit and `expired` flag.
+ */
 export class Clock {
 
     private _startTime: Time;
@@ -19,6 +29,13 @@ export class Clock {
         return this._running;
     }
 
+    /**
+     * Total accumulated time since the last {@link Clock.reset}. While the
+     * clock is running, the value advances on every read by folding in the
+     * delta since the previous read; while stopped, the value is fixed at
+     * the stop point. Returns the same {@link Time} instance — read the
+     * scalar fields if you need an unchanging snapshot.
+     */
     public get elapsedTime(): Time {
         if (this._running) {
             const now = getPreciseTime();
@@ -46,6 +63,7 @@ export class Clock {
         return this.elapsedTime.hours;
     }
 
+    /** Begin accumulating time. No-op when already running. */
     public start(): this {
         if (!this._running) {
             this._running = true;
@@ -55,6 +73,7 @@ export class Clock {
         return this;
     }
 
+    /** Halt accumulation. Elapsed time stays at the moment of stopping. */
     public stop(): this {
         if (this._running) {
             this._running = false;
@@ -64,6 +83,7 @@ export class Clock {
         return this;
     }
 
+    /** Halt and zero the accumulated time. The clock is left stopped. */
     public reset(): this {
         this._running = false;
         this._elapsedTime.setMilliseconds(0);
@@ -71,6 +91,7 @@ export class Clock {
         return this;
     }
 
+    /** Reset accumulated time to zero, then immediately start. Common per-frame pattern. */
     public restart(): this {
         this.reset();
         this.start();

@@ -15,8 +15,17 @@ interface LongPressEntry {
 }
 
 /**
- * Internal gesture recognizer — NOT exported publicly.
- * Receives pointer lifecycle events from InputManager and fires gesture signals.
+ * Internal multi-touch gesture recognizer used by {@link InputManager}.
+ * Tracks active touch pointers, derives pinch/rotate deltas from the two
+ * primary touches, and fires long-press signals when a single pointer is
+ * held still for {@link longPressMs} (500 ms). Long-press cancels if the
+ * pointer moves beyond `distanceThreshold` pixels from the down position.
+ *
+ * The associated Signals (`onPinch`, `onRotate`, `onLongPress`) are owned
+ * by {@link InputManager} and re-exposed there as part of the public API;
+ * the recognizer just dispatches into them.
+ *
+ * @internal
  */
 export class GestureRecognizer {
     public readonly onPinch: Signal<[scale: number, center: Vector]>;

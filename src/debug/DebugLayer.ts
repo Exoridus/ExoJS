@@ -2,12 +2,20 @@ import type { Time } from '@/core/Time';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 import type { Application } from '@/core/Application';
 
+/**
+ * Determines the coordinate space a {@link DebugLayer} renders into.
+ * `'screen'` uses the overlay's pixel-space view; `'world'` uses the scene's
+ * current world-space view and renders beneath screen-space panels.
+ */
 export type DebugLayerViewMode = 'screen' | 'world';
 
 /**
- * Base class for a debug layer. Subclasses build a visual
- * (text, outlines, etc.) that the DebugOverlay renders each frame when
- * `visible` is true. Tree-shake-able via the @codexo/exojs/debug subpath.
+ * Abstract base for a single diagnostic overlay layer. Subclasses produce a
+ * visual (outlines, text panels, sparklines, etc.) that
+ * {@link DebugOverlay} composites each frame when {@link visible} is `true`.
+ *
+ * Concrete layers are tree-shakeable via the `@codexo/exojs/debug` subpath
+ * and are not loaded unless explicitly imported.
  */
 export abstract class DebugLayer {
     public visible: boolean = false;
@@ -33,6 +41,11 @@ export abstract class DebugLayer {
      */
     public abstract render(backend: RenderBackend): void;
 
+    /**
+     * Release any scene-graph nodes or resources owned by this layer.
+     * Called by {@link DebugOverlay.destroy}. The base implementation is a
+     * no-op; subclasses override to tear down their {@link Container} subtrees.
+     */
     public destroy(): void {
         // Default: nothing. Subclasses override to release Container subtrees etc.
     }

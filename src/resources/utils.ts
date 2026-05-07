@@ -123,6 +123,16 @@ const matchesWebmVideo = (arrayBuffer: ArrayBuffer): boolean => {
     return String.fromCharCode(...sliced.subarray(index + 3, index + 7)) === 'webm';
 };
 
+/**
+ * Sniffs the MIME type of binary data by inspecting its magic bytes.
+ *
+ * Checks a built-in table of byte patterns covering common image, audio, and
+ * video formats (PNG, JPEG, GIF, BMP, WebP, AVIF, MP4, WebM, WAV, MP3, OGG,
+ * MIDI, AIFF, AVI, and AU). Falls back to `"text/plain"` when no pattern
+ * matches.
+ *
+ * Throws if `arrayBuffer` contains no data.
+ */
 export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
     const header = new Uint8Array(arrayBuffer);
 

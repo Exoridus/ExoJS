@@ -30,14 +30,22 @@ export class HitTestLayer extends DebugLayer {
         super(app);
     }
 
+    /** Renders in world-space so outlines align with interactive node positions. */
     public override get viewMode(): DebugLayerViewMode {
         return 'world';
     }
 
+    /** No per-frame pre-computation required; all state is derived in {@link render}. */
     public override update(_delta: Time): void {
         // Nothing to pre-compute; all state is read in render().
     }
 
+    /**
+     * Walk the scene tree and draw color-coded outlines around interactive
+     * nodes (magenta = idle, yellow = hovered, cyan = pointer-captured).
+     * Also draws faint gray quadrant boundaries when the spatial index is
+     * active, helping diagnose partitioning behavior.
+     */
     public override render(backend: RenderBackend): void {
         const root = this._app.sceneManager.scene?.root;
 
@@ -80,6 +88,7 @@ export class HitTestLayer extends DebugLayer {
         gfx.render(backend);
     }
 
+    /** Release the internal {@link Graphics} primitive. */
     public override destroy(): void {
         if (this._graphics !== null) {
             this._graphics.destroy();

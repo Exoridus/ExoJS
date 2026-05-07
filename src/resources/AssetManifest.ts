@@ -1,5 +1,12 @@
 import type { Loadable } from './Loader';
 
+/**
+ * A single asset declaration inside an {@link AssetManifest} bundle.
+ *
+ * `type` is the loadable class token (e.g. `Texture`, `Sound`), `alias` is
+ * the key used to retrieve the asset from the {@link Loader}, and `path` is
+ * the URL or relative path used to fetch it.
+ */
 export interface AssetEntry<T extends Loadable = Loadable> {
     readonly type: T;
     readonly alias: string;
@@ -7,15 +14,35 @@ export interface AssetEntry<T extends Loadable = Loadable> {
     readonly options?: unknown;
 }
 
+/**
+ * Static description of all asset bundles in an application.
+ *
+ * Pass to {@link Loader.registerManifest} and then load individual bundles on
+ * demand with {@link Loader.loadBundle}. Use {@link defineAssetManifest} to
+ * construct a validated, type-safe manifest at authoring time.
+ */
 export interface AssetManifest {
     readonly bundles: Readonly<Record<string, ReadonlyArray<AssetEntry>>>;
 }
 
+/**
+ * Options controlling how a bundle is loaded by {@link Loader.loadBundle}.
+ *
+ * Set `background` to `true` to load the bundle through the low-priority
+ * background queue, and supply `onProgress` for per-bundle progress updates.
+ */
 export interface LoadBundleOptions {
     background?: boolean;
     onProgress?: (loaded: number, total: number) => void;
 }
 
+/**
+ * Thrown by {@link Loader.loadBundle} when one or more assets in the bundle
+ * fail to load.
+ *
+ * The `failures` array contains every entry that errored, letting callers
+ * distinguish individual per-asset failures from a wholesale network outage.
+ */
 export class BundleLoadError extends Error {
 
     public readonly bundle: string;
@@ -41,6 +68,24 @@ export class BundleLoadError extends Error {
     }
 }
 
+/**
+ * Validates and returns a strongly-typed {@link AssetManifest}.
+ *
+ * Validates the manifest shape at runtime (non-empty bundle names, valid entry
+ * fields, no duplicate aliases per type/bundle) and preserves the literal
+ * types of the input for downstream type inference. Throws a descriptive
+ * `Error` on any validation failure.
+ *
+ * @example
+ * ```ts
+ * const manifest = defineAssetManifest({
+ *   bundles: {
+ *     ui: [{ type: Texture, alias: 'button', path: 'assets/button.png' }],
+ *   },
+ * });
+ * loader.registerManifest(manifest);
+ * ```
+ */
 export function defineAssetManifest<const M extends AssetManifest>(manifest: M): M {
     validateAssetManifest(manifest);
 

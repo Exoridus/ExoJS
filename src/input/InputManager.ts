@@ -22,6 +22,22 @@ enum InputManagerFlag {
     PointerUpdate = 1 << 3,
 }
 
+/**
+ * Owns the unified input pipeline for an {@link Application}: keyboard
+ * events, pointer (mouse/touch/pen) events with multi-touch slot
+ * management, gamepad polling with mapping detection, mouse-wheel events,
+ * canvas-focus tracking, and high-level gesture recognition (pinch /
+ * rotate / long-press).
+ *
+ * All raw inputs are written into a shared `Float32Array` channel buffer.
+ * Bind {@link Input} instances to channel indices to react to specific
+ * keys, gamepad controls, or pointer slots without rolling your own event
+ * routing. Direct subscribers can use the per-event Signals
+ * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onPinch`, …).
+ *
+ * Driven each frame by {@link Application.update}; constructed
+ * automatically — you do not instantiate this class yourself.
+ */
 export class InputManager {
     private readonly canvas: HTMLCanvasElement;
     private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
@@ -145,6 +161,11 @@ export class InputManager {
         return this.gamepadsByIndex.get(index) ?? null;
     }
 
+    /**
+     * Register one or more {@link Input} bindings so they participate in the
+     * per-frame channel-buffer reads. Idempotent for already-registered
+     * inputs; chainable.
+     */
     public add(inputs: Input | Array<Input>): this {
         if (Array.isArray(inputs)) {
             inputs.forEach((input) => this.add(input));
@@ -157,6 +178,7 @@ export class InputManager {
         return this;
     }
 
+    /** Unregister one or more {@link Input} bindings. */
     public remove(inputs: Input | Array<Input>): this {
         if (Array.isArray(inputs)) {
             inputs.forEach((input) => this.remove(input));
@@ -169,6 +191,11 @@ export class InputManager {
         return this;
     }
 
+    /**
+     * Drop every registered {@link Input}. Pass `destroyInputs = true` to
+     * also call `.destroy()` on each one (releases its Signals); default
+     * `false` leaves them intact for re-registration.
+     */
     public clear(destroyInputs = false): this {
         if (destroyInputs) {
             for (const input of this.inputs) {
@@ -181,6 +208,12 @@ export class InputManager {
         return this;
     }
 
+    /**
+     * Per-frame entry point invoked by {@link Application.update}. Polls
+     * the gamepad API, drains queued keyboard/pointer/wheel deltas into
+     * the channel buffer, fires the corresponding Signals, then evaluates
+     * each registered {@link Input}.
+     */
     public update(): this {
         this.updateGamepads();
 

@@ -44,6 +44,30 @@ enum SceneNodeTransformFlags {
     BoundsRect = 1 << 9,       // own _bounds is stale
 }
 
+/**
+ * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
+ * rotation, scale, origin, and a 2-component {@link Vector} `anchor` used to
+ * derive `origin` from the local bounds. Implements {@link Collidable} so
+ * any node can participate directly in the SAT collision pipeline via its
+ * AABB or rotated quad.
+ *
+ * Transform state is dirty-flag-cached: position/rotation/scale/origin
+ * mutations invalidate the local transform; either kind of mutation also
+ * invalidates the global transform (own + descendants) and the bounds rect
+ * for this node and every {@link Container} ancestor up the parent chain.
+ * The caches rebuild lazily on the next read.
+ *
+ * The fast-path `isAlignedBox` getter reports `true` when the rotation is a
+ * multiple of 90°; in that case the (cheaper) AABB-based collision test is
+ * used instead of the rotated-quad SAT path.
+ *
+ * `_invalidate*` methods are exported as `public` for friend-class access
+ * from {@link Container} and {@link InteractionManager}; treat them as
+ * `@internal`.
+ *
+ * Subclasses: {@link Container} (carries children), {@link RenderNode}
+ * (carries draw payloads).
+ */
 export class SceneNode implements Collidable {
 
     public readonly collisionType: CollisionType = CollisionType.SceneNode;
@@ -97,6 +121,7 @@ export class SceneNode implements Collidable {
         this._position.y = y;
     }
 
+    /** Rotation angle in degrees. Wraps via `trimRotation` on assignment. */
     public get rotation(): number {
         return this._rotation;
     }
@@ -121,6 +146,12 @@ export class SceneNode implements Collidable {
         this._origin.copy(origin);
     }
 
+    /**
+     * Normalized anchor in 0..1 along each axis that derives `origin` from
+     * the current bounds size. `(0, 0)` = top-left, `(0.5, 0.5)` = center,
+     * `(1, 1)` = bottom-right. Updates `origin` whenever the anchor or the
+     * local bounds change.
+     */
     public get anchor(): ObservableVector {
         return this._anchor;
     }

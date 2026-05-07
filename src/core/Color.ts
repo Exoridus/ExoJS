@@ -1,6 +1,20 @@
 import { clamp } from '@/math/utils';
 import type { Cloneable } from '@/core/types';
 
+/**
+ * 32-bit RGBA color value with channel-wise accessors. Red, green, and blue
+ * are integers in 0..255; alpha is a float in 0..1. Out-of-range values are
+ * clipped on assignment (RGB via bitwise mask, alpha via `clamp`).
+ *
+ * The class predefines every CSS named color as a static readonly instance
+ * (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are
+ * intentionally shared — do not mutate them; clone first if you need to
+ * customize a starting color.
+ *
+ * Internally caches the packed RGBA32 representation and a normalized
+ * `Float32Array` for upload to GPU buffers; both are invalidated on
+ * channel writes and rebuilt lazily.
+ */
 export class Color implements Cloneable {
 
     private _r: number;
@@ -85,6 +99,11 @@ export class Color implements Cloneable {
         this.a = alpha;
     }
 
+    /**
+     * Set any subset of channels. Omitted parameters default to the current
+     * channel value (use this for "set red, leave the rest"). RGB are masked
+     * to 0..255; alpha is clamped to 0..1.
+     */
     public set(r: number = this._r, g: number = this._g, b: number = this._b, a: number = this._a): this {
         this._r = r & 255;
         this._g = g & 255;
@@ -111,6 +130,12 @@ export class Color implements Cloneable {
             && (a === undefined || this.a === a);
     }
 
+    /**
+     * Return an RGBA `Float32Array` view backed by an internal cache. Pass
+     * `normalized = true` to map RGB into 0..1 (typical for shader uploads);
+     * default returns 0..255 RGB and 0..1 alpha. The returned array is the
+     * same instance across calls — copy it if you need a stable snapshot.
+     */
     public toArray(normalized = false): Float32Array {
         if (!this._array) {
             this._array = new Float32Array(4);
@@ -131,10 +156,20 @@ export class Color implements Cloneable {
         return this._array;
     }
 
+    /**
+     * Return the RGB channels as a 6-digit hex string. Pass `prefixed = false`
+     * to omit the leading `#`. Alpha is not included — use {@link Color.toRgba}
+     * for the full RGBA32 packed form.
+     */
     public toString(prefixed = true): string {
         return `${prefixed ? '#' : ''}${((1 << 24) + (this._r << 16) + (this._g << 8) + this._b).toString(16).substr(1)}`;
     }
 
+    /**
+     * Return the color packed into a single 32-bit RGBA value (R in low byte,
+     * A in high byte). Cached after first call until any channel is written.
+     * Returns `0` when alpha is zero.
+     */
     public toRgba(): number {
         if (this._rgba === null) {
             this._rgba = this._a && (((this._a * 255 | 0) << 24) + (this._b << 16) + (this._g << 8) + this._r) >>> 0;

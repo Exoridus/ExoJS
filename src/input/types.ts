@@ -1,10 +1,21 @@
 
+/**
+ * Slot-count constants for the unified channels buffer. The buffer is split
+ * into three categories (`Keyboard`, `Pointers`, `Gamepads`) of 256 slots
+ * each — `Category`. `Gamepad` is the per-device sub-allocation inside the
+ * `Gamepads` category (4 devices × 64 channels each).
+ */
 export enum ChannelSize {
     Container = 3 << 8,
     Category = 1 << 8,
     Gamepad = 1 << 6,
 }
 
+/**
+ * Base offsets of each input category inside the unified channels buffer.
+ * Add a per-key/per-slot value to one of these to get an absolute channel
+ * index suitable for {@link Input} construction.
+ */
 export const enum ChannelOffset {
     Keyboard = 0 * ChannelSize.Category,
     Pointers = 1 * ChannelSize.Category,
@@ -97,6 +108,15 @@ export enum PointerChannel {
     Slot15Y      = ChannelOffset.Pointers + 15 * 16 + 2,
 }
 
+/**
+ * Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode`
+ * map. Pass any value to the {@link Input} constructor to react to that key.
+ *
+ * @example
+ * ```ts
+ * const jump = new Input(Keyboard.Space, { onTrigger: () => player.jump() });
+ * ```
+ */
 export enum Keyboard {
     Backspace = ChannelOffset.Keyboard + 8,
     Tab = ChannelOffset.Keyboard + 9,

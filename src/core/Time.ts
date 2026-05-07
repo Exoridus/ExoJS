@@ -2,6 +2,18 @@ import type { Cloneable, TimeInterval } from '@/core/types';
 
 let temp: Time | null = null;
 
+/**
+ * Time-duration value object stored internally in milliseconds. Provides
+ * unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic
+ * helpers ({@link Time.add}, {@link Time.subtract}, {@link Time.addTime}).
+ *
+ * Constants on the class hold canonical durations: {@link Time.zero},
+ * {@link Time.oneSecond}, {@link Time.oneMinute}, {@link Time.oneHour}, plus
+ * the {@link TimeInterval} multipliers used by the `factor` parameter.
+ *
+ * `Time.temp` is a shared scratch instance for hot paths — do not store the
+ * reference across calls.
+ */
 export class Time implements Cloneable {
 
     private _milliseconds: number;
@@ -42,6 +54,11 @@ export class Time implements Cloneable {
         this._milliseconds = hours * Time.hours;
     }
 
+    /**
+     * Replace the stored duration with `time * factor` milliseconds. Pair
+     * with {@link Time.seconds}, {@link Time.minutes}, or {@link Time.hours}
+     * as the `factor` to construct from non-millisecond units.
+     */
     public set(time = 0, factor: TimeInterval = Time.milliseconds): this {
         this._milliseconds = time * factor;
 
@@ -97,24 +114,28 @@ export class Time implements Cloneable {
         return this;
     }
 
+    /** Add `value * factor` milliseconds in place. Mutates this instance. */
     public add(value = 0, factor: TimeInterval = Time.milliseconds): this {
         this._milliseconds += (value * factor);
 
         return this;
     }
 
+    /** Add another `Time` value in place. Mutates this instance. */
     public addTime(time: Time): this {
         this._milliseconds += time.milliseconds;
 
         return this;
     }
 
+    /** Subtract `value * factor` milliseconds in place. Mutates this instance. */
     public subtract(value = 0, factor: TimeInterval = Time.milliseconds): this {
         this._milliseconds -= (value * factor);
 
         return this;
     }
 
+    /** Subtract another `Time` value in place. Mutates this instance. */
     public subtractTime(time: Time): this {
         this._milliseconds -= time.milliseconds;
 

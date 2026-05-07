@@ -1,5 +1,13 @@
 import { ChannelOffset } from '@/input/types';
 
+/**
+ * Canonical channel identifiers for every control a standard gamepad can expose.
+ *
+ * Values are absolute offsets into the engine's shared {@link Float32Array} input
+ * channel buffer — each member equals `ChannelOffset.Gamepads + localIndex`.
+ * Use {@link Gamepad.resolveChannelOffset} to account for per-slot skew when
+ * reading a specific gamepad's data.
+ */
 export enum GamepadChannel {
     ButtonSouth = ChannelOffset.Gamepads + 0,
     ButtonWest = ChannelOffset.Gamepads + 1,

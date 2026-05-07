@@ -1,6 +1,11 @@
 import type { Pointer } from './Pointer';
 import type { RenderNode } from '@/rendering/RenderNode';
 
+/**
+ * String literal union of every interaction event the
+ * {@link InteractionManager} can deliver to a {@link RenderNode}.
+ * Handlers attach via the node's `interactive*` API.
+ */
 export type InteractionEventType =
     | 'pointerdown'
     | 'pointerup'
@@ -12,6 +17,13 @@ export type InteractionEventType =
     | 'drag'
     | 'dragend';
 
+/**
+ * DOM-Event-shaped envelope dispatched by {@link InteractionManager} to
+ * interactive scene nodes. Bubbles up the parent chain — `target` stays
+ * pinned to the hit-deepest node while `currentTarget` advances to each
+ * ancestor that receives the event. Handlers may call
+ * {@link InteractionEvent.stopPropagation} to halt the bubble.
+ */
 export class InteractionEvent {
     public readonly type: InteractionEventType;
     /** The node that was originally hit (deepest interactive). Stable across bubble. */
@@ -43,6 +55,7 @@ export class InteractionEvent {
         return this._stopped;
     }
 
+    /** Halt further bubbling up the parent chain for this event. */
     public stopPropagation(): void {
         this._stopped = true;
     }

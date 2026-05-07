@@ -8,6 +8,11 @@ import type { Application } from '@/core/Application';
 import type { Time } from '@/core/Time';
 import type { DebugLayer } from './DebugLayer';
 
+/**
+ * Typed map of the four built-in diagnostic layers managed by
+ * {@link DebugOverlay}. Access individual layers to toggle visibility or
+ * interact with layer-specific state.
+ */
 export interface DebugLayers {
     readonly performance: PerformanceLayer;
     readonly boundingBoxes: BoundingBoxesLayer;
@@ -41,6 +46,7 @@ export class DebugOverlay {
     /** Master visibility switch. When false, no layers render regardless of their individual flags. */
     public visible: boolean = true;
 
+    /** The four built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1–F4 keybindings. */
     public readonly layers: DebugLayers;
 
     private readonly _app: Application;
@@ -69,6 +75,11 @@ export class DebugOverlay {
         app.onResize.add(this._onResizeHandler);
     }
 
+    /**
+     * Unsubscribe from all application events, destroy every layer, and
+     * release the overlay's internal {@link View}. Call this when you no
+     * longer need the overlay to avoid memory leaks.
+     */
     public destroy(): void {
         this._app.onFrame.remove(this._onFrameHandler);
         this._app.inputManager.onKeyDown.remove(this._onKeyDownHandler);

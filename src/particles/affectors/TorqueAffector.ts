@@ -2,6 +2,13 @@ import type { ParticleAffector } from '@/particles/affectors/ParticleAffector';
 import type { Particle } from '@/particles/Particle';
 import type { Time } from '@/core/Time';
 
+/**
+ * Accelerates a particle's angular velocity ({@link Particle.rotationSpeed})
+ * by a constant `angularAcceleration` (degrees per second²) each tick.
+ * The updated `rotationSpeed` is then integrated into
+ * {@link Particle.rotation} by {@link ParticleSystem.updateParticle}.
+ * Use a negative value to decelerate spin over time.
+ */
 export class TorqueAffector implements ParticleAffector {
 
     private _angularAcceleration: number;
@@ -24,6 +31,10 @@ export class TorqueAffector implements ParticleAffector {
         return this;
     }
 
+    /**
+     * Adds `angularAcceleration * delta.seconds` to `particle.rotationSpeed`,
+     * increasing or decreasing spin rate for this timestep.
+     */
     public apply(particle: Particle, delta: Time): this {
         particle.rotationSpeed += (delta.seconds * this._angularAcceleration);
 

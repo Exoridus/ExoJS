@@ -3,6 +3,12 @@ import { Size } from '@/math/Size';
 import { Flags } from '@/math/Flags';
 import { ChannelOffset, PointerChannel, pointerSlotSize } from '@/input/types';
 
+/**
+ * Bit flags accumulated on a {@link Pointer} between frames so consumers can
+ * detect transient events (entered the canvas, was released, was cancelled)
+ * even if the pointer's `currentState` has already moved on. Cleared each
+ * frame by the {@link InteractionManager}.
+ */
 export enum PointerStateFlag {
     None = 0,
     Over = 1 << 0,
@@ -13,6 +19,7 @@ export enum PointerStateFlag {
     Cancel = 1 << 5,
 }
 
+/** High-level lifecycle state of a {@link Pointer}. */
 export enum PointerState {
     Unknown,
     InsideCanvas,
@@ -23,6 +30,21 @@ export enum PointerState {
     Cancelled,
 }
 
+/**
+ * Unified mouse / touch / pen pointer. Wraps a single browser
+ * `PointerEvent.pointerId` and writes its state (position, buttons,
+ * pressure, tilt, etc.) into the engine's shared channels buffer so it can
+ * be polled by {@link Input} bindings or read directly by interaction-aware
+ * scene nodes.
+ *
+ * Coordinates are stored in canvas-local pixel space. The channel writes
+ * are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic
+ * sampling.
+ *
+ * Pointers are owned by the {@link InputManager}, which assigns them a slot
+ * index in 0..15 (see {@link maxPointers}) and exposes their per-slot
+ * channel offsets via the {@link Pointer} class namespace constants.
+ */
 export class Pointer {
     public readonly id: number;
     public readonly type: string;

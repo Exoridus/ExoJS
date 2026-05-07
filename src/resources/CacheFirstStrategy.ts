@@ -1,6 +1,18 @@
 import type { CacheRequest, CacheStrategy } from './CacheStrategy';
 import type { CacheStore } from './CacheStore';
 
+/**
+ * {@link CacheStrategy} that checks every provided {@link CacheStore} before
+ * falling back to the network.
+ *
+ * On a cache hit the stored value is validated by calling
+ * {@link AssetFactory.create | factory.create}; if that throws (stale or
+ * corrupt entry) the entry is deleted and the next store is tried. Only once
+ * all stores miss does the strategy fetch from the network and write the
+ * result back to every store. Quota or serialisation errors during write are
+ * swallowed silently so that a full storage can never prevent an asset from
+ * loading.
+ */
 export class CacheFirstStrategy implements CacheStrategy {
 
     public async resolve(request: CacheRequest, stores: ReadonlyArray<CacheStore>): Promise<unknown> {

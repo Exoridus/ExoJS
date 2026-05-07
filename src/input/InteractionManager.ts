@@ -48,6 +48,23 @@ interface IndexedNode {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Routes pointer events from the {@link InputManager} to interactive
+ * scene-graph nodes via DOM-style event bubbling. Maintains a persistent
+ * quadtree spatial index of interactive {@link RenderNode}s for hit-testing
+ * and updates it incrementally — nodes notify the manager via the
+ * `_notify*` hooks when they enter/leave the scene, change interactivity,
+ * or move (causing bounds to dirty).
+ *
+ * Dispatches {@link InteractionEvent}s of every type in
+ * {@link InteractionEventType}: `pointerdown` / `pointerup` /
+ * `pointermove` / `pointerover` / `pointerout` / `pointertap` /
+ * `dragstart` / `drag` / `dragend`. Drag events are derived from
+ * threshold-based pointer movement after a `pointerdown`.
+ *
+ * Constructed automatically by {@link Application}; you do not instantiate
+ * this class yourself.
+ */
 export class InteractionManager {
     private readonly _app: Application;
 
@@ -117,6 +134,12 @@ export class InteractionManager {
      * If pointerId is omitted, returns the hovered node for the first pointer
      * in iteration order (typically the primary mouse pointer).
      */
+    /**
+     * Return the deepest interactive node currently under the given pointer,
+     * or under any active pointer when `pointerId` is omitted (the first
+     * pointer with a hit wins). `null` when no pointer is hovering an
+     * interactive node.
+     */
     public getHoveredNode(pointerId?: number): RenderNode | null {
         if (pointerId !== undefined) {
             return this._lastHit.get(pointerId) ?? null;
@@ -130,6 +153,11 @@ export class InteractionManager {
     /**
      * Returns all currently captured RenderNodes (nodes that have an active
      * drag / pointer-capture in progress). Used by debug layers.
+     */
+    /**
+     * Snapshot of nodes that currently have pointer-capture (a pointer
+     * pressed inside them and is being dragged). Used internally for drag
+     * routing; exposed read-only for diagnostic / debug consumers.
      */
     public getCapturedNodes(): ReadonlyArray<RenderNode> {
         return Array.from(this._capturedPointers.values());

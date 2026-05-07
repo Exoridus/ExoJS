@@ -5,6 +5,17 @@ import type { ParticleOptions } from './emitters/ParticleOptions';
 import type { ParticleProperties } from '@/particles/ParticleProperties';
 import { trimRotation } from '@/math/utils';
 
+/**
+ * Mutable per-instance state for a single live particle. Implements
+ * {@link ParticleProperties} so affectors can mutate it through the shared
+ * interface. Particles are pooled by {@link ParticleSystem}: expired instances
+ * are moved to the graveyard and reused via {@link ParticleSystem.requestParticle}
+ * rather than garbage-collected.
+ *
+ * Do not construct directly — use {@link ParticleSystem.requestParticle} to
+ * obtain a recycled or fresh instance, then configure it through
+ * {@link Particle.applyOptions}.
+ */
 export class Particle implements ParticleProperties {
     private _totalLifetime = Time.oneSecond.clone();
     private _elapsedLifetime = Time.zero.clone();
@@ -88,22 +99,42 @@ export class Particle implements ParticleProperties {
         this._textureIndex = textureIndex;
     }
 
+    /**
+     * Time remaining before this particle expires, returned via the shared
+     * `Time.temp` scratch value — copy before storing if you need it beyond
+     * the current frame.
+     */
     public get remainingLifetime(): Time {
         return Time.temp.set(this._totalLifetime.milliseconds - this._elapsedLifetime.milliseconds);
     }
 
+    /**
+     * Fraction of total lifetime already elapsed, in [0, 1]. Used by
+     * {@link ColorAffector} as the interpolation factor for tint blending.
+     */
     public get elapsedRatio(): number {
         return this._elapsedLifetime.milliseconds / this._totalLifetime.milliseconds;
     }
 
+    /** Fraction of total lifetime still remaining, in [0, 1]. */
     public get remainingRatio(): number {
         return this.remainingLifetime.milliseconds / this._totalLifetime.milliseconds;
     }
 
+    /**
+     * Returns `true` once `elapsedLifetime` exceeds `totalLifetime`. Expired
+     * particles are moved to the graveyard by {@link ParticleSystem.update}
+     * before affectors run.
+     */
     public get expired(): boolean {
         return this._elapsedLifetime.greaterThan(this._totalLifetime);
     }
 
+    /**
+     * Bulk-copies every field from `options` into this particle, replacing all
+     * previous state. Called immediately after {@link ParticleSystem.requestParticle}
+     * to configure a recycled particle for reuse.
+     */
     public applyOptions(options: ParticleOptions): this {
         const {
             totalLifetime,
@@ -130,6 +161,12 @@ export class Particle implements ParticleProperties {
         return this;
     }
 
+    /**
+     * Destroys all owned value objects. Called by
+     * {@link ParticleSystem.clearParticles} when the pool is flushed entirely.
+     * Do not call on individual particles mid-simulation; let the system
+     * recycle them via the graveyard instead.
+     */
     public destroy(): void {
         this._totalLifetime.destroy();
         this._elapsedLifetime.destroy();

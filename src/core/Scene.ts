@@ -7,14 +7,34 @@ import type { Application } from './Application';
 import type { Pointer } from '@/input/Pointer';
 import type { Vector } from '@/math/Vector';
 
+/**
+ * How a {@link Scene} composes with scenes already on the stack.
+ * - `'overlay'`: render on top, scenes below also render and update.
+ * - `'modal'`: render on top, scenes below render but do not update.
+ * - `'opaque'`: render on top, scenes below neither render nor update.
+ */
 export type SceneStackMode = 'overlay' | 'modal' | 'opaque';
+
+/**
+ * How a {@link Scene} interacts with the input event stream.
+ * - `'capture'`: receive events; do not forward to scenes below.
+ * - `'passthrough'`: receive events; also forward to scenes below.
+ * - `'transparent'`: do not receive events; forward to scenes below.
+ */
 export type SceneInputMode = 'capture' | 'passthrough' | 'transparent';
 
+/** Bag of overrides for {@link Scene.setParticipationPolicy}. */
 export interface SceneParticipationPolicy {
     mode?: SceneStackMode;
     input?: SceneInputMode;
 }
 
+/**
+ * Discriminated union of input events delivered to {@link Scene.handleInput}.
+ * Returning `true` from the handler stops further propagation down the
+ * scene stack (consume the event); falsy/`undefined` lets the next scene
+ * see it (subject to the receiving scene's {@link SceneInputMode}).
+ */
 export type SceneInputEvent =
     | { type: 'keyDown'; channel: number; }
     | { type: 'keyUp'; channel: number; }
@@ -125,14 +145,30 @@ export class Scene {
         };
     }
 
+    /**
+     * Async asset preload hook. Called once before {@link Scene.init} the
+     * first time the scene is pushed. Use the loader to register and
+     * resolve assets needed by the scene; await any returned promise from
+     * `loader.load()`.
+     */
     public load(_loader: Loader): Promise<void> | void {
         // override in subclass
     }
 
+    /**
+     * One-shot setup hook. Called after {@link Scene.load} resolves, before
+     * the first update. Build the scene-graph subtree, register signal
+     * handlers, etc. Override in subclass.
+     */
     public init(_loader: Loader): Promise<void> | void {
         // override in subclass
     }
 
+    /**
+     * Per-frame logic hook. Receives the time elapsed since the previous
+     * frame. The scene-graph transforms are still authoritative — mutate
+     * positions, advance timers, drive AI here. Override in subclass.
+     */
     public update(_delta: Time): void {
         // override in subclass
     }
@@ -156,10 +192,21 @@ export class Scene {
         // override in subclass
     }
 
+    /**
+     * Input event hook. Override to react to keyboard, pointer, and wheel
+     * events delivered to this scene by the {@link InputManager}. Return
+     * `true` to consume the event (stops it propagating to scenes below);
+     * any other return value lets it through.
+     */
     public handleInput(_event: SceneInputEvent): boolean | void {
         // override in subclass
     }
 
+    /**
+     * Async asset teardown hook. Called when the scene is finally popped
+     * off the stack. Use the loader to release assets that are scene-private
+     * and not shared with another scene still on the stack.
+     */
     public unload(_loader: Loader): Promise<void> | void {
         // override in subclass
     }

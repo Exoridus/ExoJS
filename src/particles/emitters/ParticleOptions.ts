@@ -4,6 +4,14 @@ import { Time } from '@/core/Time';
 import type { ParticleProperties } from '@/particles/ParticleProperties';
 import { trimRotation } from '@/math/utils';
 
+/**
+ * Spawn-time configuration snapshot passed to {@link ParticleEmitter.apply}
+ * implementations. Implements {@link ParticleProperties} so the same affector
+ * interface can read default values when needed. All fields have sensible
+ * defaults (1 s lifetime, zero position/velocity, unit scale, white tint)
+ * and every object-valued field is deep-cloned on construction, making it
+ * safe to share one `ParticleOptions` instance across multiple emitters.
+ */
 export class ParticleOptions implements ParticleProperties {
     private readonly _totalLifetime: Time;
     private readonly _elapsedLifetime: Time;
@@ -15,6 +23,13 @@ export class ParticleOptions implements ParticleProperties {
     private _rotationSpeed: number;
     private _textureIndex: number;
 
+    /**
+     * Creates a new options snapshot. Any omitted field falls back to its
+     * default value (1 s lifetime, zero position/velocity, unit scale,
+     * zero rotation, white tint, texture index 0). All object values are
+     * cloned so later mutations to the source objects do not affect this
+     * instance.
+     */
     public constructor(options: Partial<ParticleProperties> = {}) {
         const {
             totalLifetime,
@@ -122,6 +137,7 @@ export class ParticleOptions implements ParticleProperties {
         this._tint.copy(color);
     }
 
+    /** Destroys all owned value objects. Called by the owning emitter's `destroy()`. */
     public destroy(): void {
         this._totalLifetime.destroy();
         this._elapsedLifetime.destroy();

@@ -18,22 +18,35 @@ interface SceneStackEntry {
     readonly policy: ResolvedSceneParticipationPolicy;
 }
 
+/**
+ * Fade-to-color scene transition. The screen fades to `color` (default black)
+ * over `duration` ms (default 220), the scene change happens at full
+ * opacity, then the screen fades back in.
+ */
 export interface FadeSceneTransition {
     type: 'fade';
     duration?: number;
     color?: Color;
 }
 
+/** Discriminated union of supported {@link SceneManager} transitions. */
 export type SceneTransition = FadeSceneTransition;
 
+/** Options passed to {@link SceneManager.setScene}. */
 export interface SetSceneOptions {
     transition?: SceneTransition;
 }
 
+/**
+ * Options passed to {@link SceneManager.pushScene}. Inherits
+ * {@link SceneParticipationPolicy} so the pushed scene's stack/input mode
+ * can be overridden at the call site without subclassing.
+ */
 export interface PushSceneOptions extends SceneParticipationPolicy {
     transition?: SceneTransition;
 }
 
+/** Options passed to {@link SceneManager.popScene}. */
 export interface PopSceneOptions {
     transition?: SceneTransition;
 }
@@ -67,6 +80,24 @@ const createOverlayMesh = (): TransitionOverlayMesh => new TransitionOverlayMesh
 
 const defaultFadeTransitionDuration = 220;
 
+/**
+ * Stack-based scene controller owned by {@link Application}. Maintains an
+ * ordered stack of {@link Scene} instances, each tagged with its
+ * participation policy ({@link SceneStackMode} + {@link SceneInputMode}).
+ * Scenes higher on the stack overlay scenes lower; the policy of each
+ * scene determines whether scenes below continue to update / render and
+ * whether input events propagate down past it.
+ *
+ * Use {@link SceneManager.setScene} to replace the entire stack with one
+ * scene, {@link SceneManager.pushScene} to overlay a new scene on top, and
+ * {@link SceneManager.popScene} to remove the topmost. All three accept an
+ * optional fade transition.
+ *
+ * Input from the {@link InputManager} is automatically routed through the
+ * stack top-to-bottom; each scene's {@link Scene.handleInput} return value
+ * plus the scene's input policy decide whether the next scene below
+ * receives the event.
+ */
 export class SceneManager {
 
     private readonly _app: Application;
@@ -74,9 +105,13 @@ export class SceneManager {
     private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
     private _transition: ActiveFadeTransition | null = null;
 
+    /** Fires whenever the topmost scene changes (push, pop, set, or clear). Payload is the new top, or `null` when the stack becomes empty. */
     public readonly onChangeScene = new Signal<[Scene | null]>();
+    /** Fires after a scene's `init` resolves and it joins the stack. */
     public readonly onStartScene = new Signal<[Scene]>();
+    /** Fires once per frame for the topmost scene after its `update` ran. */
     public readonly onUpdateScene = new Signal<[Scene]>();
+    /** Fires just before a scene is unloaded (`unload` then `destroy`). */
     public readonly onStopScene = new Signal<[Scene]>();
 
     public constructor(app: Application) {
@@ -97,6 +132,14 @@ export class SceneManager {
         return this._stack.map(entry => entry.scene);
     }
 
+    /**
+     * Replace the entire scene stack with `scene`, or clear it when `scene`
+     * is `null`. Existing scenes are unloaded in reverse order. If `scene`
+     * is already the topmost, only the scenes underneath are unloaded
+     * (no-op when it is also the only scene).
+     *
+     * Throws if `scene` is somewhere in the stack but not the top.
+     */
     public async setScene(scene: Scene | null, options: SetSceneOptions = {}): Promise<this> {
         await this._runWithTransition(async () => {
             if (scene === null) {
@@ -130,6 +173,14 @@ export class SceneManager {
         return this;
     }
 
+    /**
+     * Push `scene` onto the stack, leaving any underlying scenes intact.
+     * Resolves once the pushed scene's async `load` + `init` complete.
+     * `options` may override the scene's declared participation policy
+     * (stack mode, input mode) for this particular push.
+     *
+     * Throws if `scene` is already present in the stack.
+     */
     public async pushScene(scene: Scene, options: PushSceneOptions = {}): Promise<this> {
         await this._runWithTransition(async () => {
             if (this._stack.some((entry) => entry.scene === scene)) {
@@ -147,6 +198,10 @@ export class SceneManager {
         return this;
     }
 
+    /**
+     * Remove the topmost scene from the stack. Resolves once the scene's
+     * `unload` finishes. No-op when the stack is empty.
+     */
     public async popScene(options: PopSceneOptions = {}): Promise<this> {
         await this._runWithTransition(async () => {
             if (this._stack.length === 0) {
@@ -167,6 +222,13 @@ export class SceneManager {
         return this;
     }
 
+    /**
+     * Per-frame entry point called by {@link Application.update}. Advances
+     * any active fade transition, then iterates the stack top-to-bottom
+     * deciding which scenes update and which draw based on each scene's
+     * participation policy (`opaque` covers everything below, `modal`
+     * covers only updates).
+     */
     public update(delta: Time): this {
         this._advanceTransition(delta.milliseconds);
 

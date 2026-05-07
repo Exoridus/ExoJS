@@ -51,6 +51,13 @@ function countNodes(node: RenderNode): number {
     return count;
 }
 
+/**
+ * Debug layer that renders a compact screen-space HUD (top-left) showing
+ * rolling-average FPS, per-frame time in milliseconds, draw-call count, and
+ * scene-node count, alongside a 120-sample frame-time sparkline.
+ *
+ * Enable via {@link DebugOverlay} or by pressing F1 while the canvas has focus.
+ */
 export class PerformanceLayer extends DebugLayer {
     // Rolling FPS sample buffer (60 samples).
     private readonly _fpsSamples: Float32Array = new Float32Array(fpsSampleCount);
@@ -73,6 +80,12 @@ export class PerformanceLayer extends DebugLayer {
         super(app);
     }
 
+    /**
+     * Sample the current frame time, recompute the rolling FPS average,
+     * update stat text nodes, and rebuild the sparkline geometry. Lazily
+     * initializes the panel scene graph on first call to avoid touching the
+     * glyph atlas until the layer is actually shown.
+     */
     public override update(delta: Time): void {
         // Lazily build the scene graph on first update so that Text (which
         // touches the glyph atlas immediately) is only constructed when the
@@ -156,10 +169,12 @@ export class PerformanceLayer extends DebugLayer {
         }
     }
 
+    /** Submit the panel's {@link Container} subtree to the backend for drawing. */
     public override render(backend: RenderBackend): void {
         this._root?.render(backend);
     }
 
+    /** Destroy the panel's {@link Container} subtree and release all child references. */
     public override destroy(): void {
         if (this._root !== null) {
             this._root.destroy();

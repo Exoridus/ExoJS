@@ -1,6 +1,13 @@
 import { GamepadChannel } from './GamepadChannels';
 import { GamepadMappingFamily } from './GamepadMapping';
 
+/**
+ * Named controls that can appear in an in-game prompt or button-hint UI.
+ *
+ * Intentionally a subset of {@link GamepadChannel} — covers the controls a
+ * typical prompt overlay needs to label, including the composite `'DPad'` token
+ * which has no single channel equivalent.
+ */
 export type GamepadPromptControl =
     | 'DPad'
     | 'DPadUp'
@@ -131,7 +138,16 @@ const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPr
     [GamepadMappingFamily.ArcadeStick, genericLabels],
 ]);
 
+/**
+ * Static utility that drives in-game controller-prompt UI.
+ *
+ * Provides the canonical set of prompt controls, their normalised [x, y] positions
+ * on a generic controller silhouette, device-family label strings (e.g. "A" for
+ * Xbox, "Cross" for PlayStation, "B" for Switch), and the mapping from prompt
+ * control names to {@link GamepadChannel} values.
+ */
 export class GamepadPromptLayouts {
+    /** Complete ordered list of every {@link GamepadPromptControl} token. */
     public static readonly controls: Array<GamepadPromptControl> = [
         'DPad',
         'DPadUp',
@@ -152,14 +168,29 @@ export class GamepadPromptLayouts {
         'RightStick',
     ];
 
+    /**
+     * Returns the normalised [x, y] position of `control` on a generic controller
+     * silhouette, where (0, 0) is the top-left and (1, 1) the bottom-right.
+     * Falls back to [0.5, 0.5] (centre) when the control has no registered position.
+     */
     public static getControlPosition(control: GamepadPromptControl): readonly [number, number] {
         return basePositions.get(control) ?? [0.5, 0.5];
     }
 
+    /**
+     * Returns the label map for the given device family, e.g. `{ ButtonSouth → "A" }`
+     * for Xbox or `{ ButtonSouth → "Cross" }` for PlayStation.
+     * Falls back to generic labels when `family` has no registered label set.
+     */
     public static getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string> {
         return promptLabelsByFamily.get(family) ?? genericLabels;
     }
 
+    /**
+     * Returns the static mapping from each {@link GamepadPromptControl} to its
+     * corresponding {@link GamepadChannel}. The composite `'DPad'` control has no
+     * channel entry and is absent from the returned map.
+     */
     public static buildControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadChannel> {
         return channelMap;
     }

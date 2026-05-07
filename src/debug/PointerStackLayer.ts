@@ -41,10 +41,16 @@ export class PointerStackLayer extends DebugLayer {
         super(app);
     }
 
+    /** Renders in screen-space so the panel stays fixed in the top-right corner. */
     public override get viewMode(): DebugLayerViewMode {
         return 'screen';
     }
 
+    /**
+     * Lazily initialize the panel on first call, reposition it to the
+     * top-right corner, and populate text lines with the current pointer
+     * stack (up to 10 entries, sorted by zIndex descending).
+     */
     public override update(_delta: Time): void {
         if (this._root === null) {
             this._build();
@@ -77,10 +83,12 @@ export class PointerStackLayer extends DebugLayer {
         }
     }
 
+    /** Submit the panel's {@link Container} subtree to the backend for drawing. */
     public override render(backend: RenderBackend): void {
         this._root?.render(backend);
     }
 
+    /** Destroy the panel's {@link Container} subtree and release all child references. */
     public override destroy(): void {
         if (this._root !== null) {
             this._root.destroy();

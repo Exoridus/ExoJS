@@ -10,8 +10,16 @@ import { XboxGamepadMapping } from './XboxGamepadMapping';
 
 import type { GamepadMapping } from './GamepadMapping';
 
+/** Convenience alias for the non-null element type returned by `navigator.getGamepads()`. */
 export type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 
+/**
+ * Value a {@link GamepadDefinition.resolve} callback may return.
+ *
+ * Return a bare {@link GamepadMapping} to accept the device with the definition's
+ * default name, an object with an optional `name` override, or `null`/`undefined`
+ * to decline the device and let the next definition in the list try.
+ */
 export type GamepadDefinitionResult =
     | GamepadMapping
     | {
@@ -21,6 +29,14 @@ export type GamepadDefinitionResult =
     | null
     | undefined;
 
+/**
+ * Parsed metadata extracted from a browser `Gamepad.id` string.
+ *
+ * `vendorId` and `productId` are four-hex-digit strings (e.g. `"045e"`, `"028e"`).
+ * `productKey` is the colon-joined pair (`"045e:028e"`), used as a compact lookup key.
+ * `name` is the human-readable portion of the id with the vendor/product tokens removed,
+ * or `null` when the id contained only identifiers.
+ */
 export interface GamepadDescriptor {
     id: string;
     index: number;
@@ -31,12 +47,25 @@ export interface GamepadDescriptor {
     name: string | null;
 }
 
+/**
+ * A rule that matches one or more physical gamepads and produces a {@link GamepadMapping}.
+ *
+ * `ids` is an optional allow-list of vendor IDs (`"045e"`) or `vendorId:productId`
+ * pairs (`"045e:028e"`); when omitted the definition matches every device.
+ * `resolve` is called with the parsed {@link GamepadDescriptor} and must return a
+ * {@link GamepadDefinitionResult} — `null`/`undefined` to skip, a mapping otherwise.
+ */
 export interface GamepadDefinition {
     ids?: string | Array<string>;
     name?: string;
     resolve: (descriptor: GamepadDescriptor) => GamepadDefinitionResult;
 }
 
+/**
+ * The fully resolved product of running a {@link GamepadDefinition} against a
+ * connected gamepad — bundles the original descriptor, the resolved display name,
+ * and the chosen {@link GamepadMapping} together for use by {@link Gamepad}.
+ */
 export interface ResolvedGamepadDefinition {
     descriptor: GamepadDescriptor;
     name: string;
@@ -110,6 +139,11 @@ const resolveDefinitionResult = (definition: GamepadDefinition, descriptor: Game
     };
 };
 
+/**
+ * Normalises an `ids` value into a trimmed, lower-case string array ready for
+ * comparison against a {@link GamepadDescriptor}.
+ * @internal
+ */
 export const normalizeIds = (ids?: string | Array<string>): Array<string> => {
     if (!ids) {
         return [];
@@ -120,6 +154,13 @@ export const normalizeIds = (ids?: string | Array<string>): Array<string> => {
     return values.map(normalizeId);
 };
 
+/**
+ * Returns `true` when `descriptor` matches any entry in `ids`.
+ *
+ * A colon-containing id (e.g. `"045e:028e"`) is matched against
+ * `descriptor.productKey`; a bare four-hex id is matched against
+ * `descriptor.vendorId`. Passing no `ids` always returns `true`.
+ */
 export const matchesIds = (descriptor: GamepadDescriptor, ids?: string | Array<string>): boolean => {
     if (!ids) {
         return true;
@@ -142,6 +183,12 @@ export const matchesIds = (descriptor: GamepadDescriptor, ids?: string | Array<s
     return false;
 };
 
+/**
+ * Parses the raw browser `Gamepad.id` string into a structured {@link GamepadDescriptor}.
+ *
+ * Attempts multiple vendor/product ID patterns (hex-prefixed, plain, VID/PID, bare pair)
+ * in order of specificity, then strips the matched tokens to derive a clean `name`.
+ */
 export const parseGamepadDescriptor = (gamepad: BrowserGamepad): GamepadDescriptor => {
     const label = gamepad.id.trim() || `Gamepad ${gamepad.index}`;
     const productKey = parseProductKey(label);
@@ -159,6 +206,10 @@ export const parseGamepadDescriptor = (gamepad: BrowserGamepad): GamepadDescript
     };
 };
 
+/**
+ * Runs a single {@link GamepadDefinition} against a descriptor, respecting its
+ * `ids` filter. Returns `null` when the definition declines the device.
+ */
 export const resolveDefinition = (definition: GamepadDefinition, descriptor: GamepadDescriptor): ResolvedGamepadDefinition | null => {
     if (!matchesIds(descriptor, definition.ids)) {
         return null;
@@ -167,6 +218,17 @@ export const resolveDefinition = (definition: GamepadDefinition, descriptor: Gam
     return resolveDefinitionResult(definition, descriptor);
 };
 
+/**
+ * Resolves the best-matching {@link ResolvedGamepadDefinition} for a connected gamepad.
+ *
+ * Iterates `definitions` in order — exact product IDs first, then vendor fallbacks,
+ * then a generic catch-all — and returns the first match. Falls back to
+ * {@link GenericDualAnalogGamepadMapping} when no definition matches.
+ *
+ * @example
+ * const resolved = resolveGamepadDefinition(navigator.getGamepads()[0]!);
+ * const gamepad = new Gamepad(browserGamepad, channels, resolved);
+ */
 export const resolveGamepadDefinition = (
     gamepadOrDescriptor: BrowserGamepad | GamepadDescriptor,
     definitions: ReadonlyArray<GamepadDefinition> = builtInGamepadDefinitions
@@ -238,6 +300,13 @@ const vendorFallbackDefinitions: Array<GamepadDefinition> = [
 
 const genericFallbackDefinition = createStaticGamepadDefinition('Generic Gamepad', () => new GenericDualAnalogGamepadMapping());
 
+/**
+ * The default ordered list of {@link GamepadDefinition} entries used by
+ * {@link resolveGamepadDefinition} when no custom list is supplied.
+ *
+ * Ordered as: exact product-ID matches → vendor-ID fallbacks → generic catch-all.
+ * Register custom definitions by prepending to a copy and passing it explicitly.
+ */
 export const builtInGamepadDefinitions: Array<GamepadDefinition> = [
     ...exactDeviceDefinitions,
     ...vendorFallbackDefinitions,

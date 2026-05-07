@@ -1,6 +1,12 @@
 import { Clock } from './Clock';
 import { Time } from '@/core/Time';
 
+/**
+ * {@link Clock} variant with a fixed limit. Inherits start/stop/reset/restart
+ * semantics; adds {@link Timer.expired} (true once `elapsedTime >= limit`)
+ * and remaining-time accessors. Useful for cooldowns, delays, and any timed
+ * gating logic where you want to ask "is the duration up?" each frame.
+ */
 export class Timer extends Clock {
 
     private readonly _limit: Time;
@@ -19,6 +25,7 @@ export class Timer extends Clock {
         this._limit.copy(limit);
     }
 
+    /** `true` once the elapsed time has reached or exceeded the configured limit. */
     public get expired(): boolean {
         return this.elapsedMilliseconds >= this._limit.milliseconds;
     }

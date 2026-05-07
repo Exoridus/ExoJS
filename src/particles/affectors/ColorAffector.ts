@@ -3,6 +3,13 @@ import type { Color } from '@/core/Color';
 import type { Particle } from '@/particles/Particle';
 import type { Time } from '@/core/Time';
 
+/**
+ * Linearly interpolates a particle's {@link Particle.tint} from `fromColor`
+ * to `toColor` over the particle's full lifetime. The blend factor is
+ * {@link Particle.elapsedRatio} — 0 at birth, 1 at expiry — so the
+ * transition is always proportional to how long the particle has lived
+ * regardless of delta size.
+ */
 export class ColorAffector implements ParticleAffector {
 
     private readonly _fromColor: Color;
@@ -41,6 +48,12 @@ export class ColorAffector implements ParticleAffector {
         return this;
     }
 
+    /**
+     * Sets `particle.tint` to the RGBA value interpolated between
+     * {@link fromColor} and {@link toColor} at the particle's current
+     * {@link Particle.elapsedRatio}. `delta` is unused but required by the
+     * {@link ParticleAffector} contract.
+     */
     public apply(particle: Particle, delta: Time): this {
         const ratio = particle.elapsedRatio;
          const { r: r1, g: g1, b: b1, a: a1 } = this._fromColor;

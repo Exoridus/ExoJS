@@ -6,6 +6,11 @@ import type { GamepadChannel } from './GamepadChannels';
 import type { BrowserGamepad, ResolvedGamepadDefinition } from './GamepadDefinitions';
 import type { GamepadMappingFamily, GamepadMapping } from './GamepadMapping';
 
+/**
+ * Human-readable identity metadata for a connected gamepad.
+ * Populated from a {@link ResolvedGamepadDefinition} on connect and available
+ * through the matching getters on {@link Gamepad}.
+ */
 export interface GamepadInfo {
     name: string;
     label: string;
@@ -14,6 +19,15 @@ export interface GamepadInfo {
     productKey: string | null;
 }
 
+/**
+ * Runtime wrapper for a single browser gamepad slot.
+ *
+ * Owns the slot's {@link GamepadMapping}, reads raw button and axis values from
+ * the browser's Gamepad API each frame via {@link update}, and writes transformed
+ * values into the shared `Float32Array` channel buffer. Emits {@link onConnect},
+ * {@link onDisconnect}, and per-channel {@link onUpdate} signals so consumers can
+ * react without polling.
+ */
 export class Gamepad {
     public readonly onConnect = new Signal<[Gamepad]>();
     public readonly onDisconnect = new Signal<[Gamepad]>();
@@ -69,6 +83,7 @@ export class Gamepad {
         this.mappingValue = mapping;
     }
 
+    /** The {@link GamepadMappingFamily} of the currently active mapping. */
     public get mappingFamily(): GamepadMappingFamily {
         return this.mappingValue.family;
     }
@@ -85,6 +100,7 @@ export class Gamepad {
         return this.indexValue;
     }
 
+    /** Whether a browser gamepad is currently attached to this slot. */
     public get connected(): boolean {
         return this.browserGamepad !== null;
     }
@@ -109,12 +125,21 @@ export class Gamepad {
         return this.info.productKey;
     }
 
+    /**
+     * Replaces the gamepad's identity metadata.
+     * Called automatically during construction when a {@link BrowserGamepad} is
+     * provided; exposed publicly to allow runtime overrides.
+     */
     public setInfo(info: GamepadInfo): this {
         this.info = info;
 
         return this;
     }
 
+    /**
+     * Attaches a live browser gamepad to this slot and dispatches {@link onConnect}
+     * if the slot was previously disconnected.
+     */
     public connect(gamepad: BrowserGamepad): this {
         const wasConnected = this.connected;
 
@@ -127,6 +152,10 @@ export class Gamepad {
         return this;
     }
 
+    /**
+     * Detaches the browser gamepad, zeros all mapped channels, and dispatches
+     * {@link onDisconnect}. No-op when already disconnected.
+     */
     public disconnect(): this {
         if (this.connected) {
             this.browserGamepad = null;
@@ -137,6 +166,12 @@ export class Gamepad {
         return this;
     }
 
+    /**
+     * Samples the browser gamepad's current state and writes transformed values
+     * into the shared channel buffer, dispatching {@link onUpdate} for each channel
+     * whose value changed. Should be called once per frame by the engine's input loop.
+     * No-op when disconnected.
+     */
     public update(): this {
         if (this.browserGamepad === null) {
             return this;
@@ -174,12 +209,17 @@ export class Gamepad {
         return this;
     }
 
+    /** Zeroes all channel buffer entries that belong to this gamepad's mapping. */
     public clearChannels(): this {
         this.clearMappedChannels();
 
         return this;
     }
 
+    /**
+     * Disconnects the gamepad, clears its channels, and destroys all signals.
+     * The instance must not be used after this call.
+     */
     public destroy(): void {
         this.disconnect();
         this.clearMappedChannels();
@@ -189,10 +229,18 @@ export class Gamepad {
         this.onUpdate.destroy();
     }
 
+    /**
+     * Converts a {@link GamepadChannel} to its absolute index in the shared channel
+     * buffer for this gamepad instance.
+     */
     public resolveChannelOffset(channel: GamepadChannel): number {
         return this.channelOffset + (channel ^ ChannelOffset.Gamepads);
     }
 
+    /**
+     * Converts a gamepad slot index and {@link GamepadChannel} to an absolute
+     * channel buffer offset without requiring a {@link Gamepad} instance.
+     */
     public static resolveChannelOffset(gamepadIndex: number, channel: GamepadChannel): number {
         return ChannelOffset.Gamepads + (gamepadIndex * ChannelSize.Gamepad) + (channel ^ ChannelOffset.Gamepads);
     }

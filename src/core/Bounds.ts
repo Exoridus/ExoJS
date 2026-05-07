@@ -1,6 +1,17 @@
 import { Rectangle } from '@/math/Rectangle';
 import type { Matrix } from '@/math/Matrix';
 
+/**
+ * Mutable axis-aligned bounding box accumulator. Starts as the empty bounds
+ * (`-Infinity..Infinity` reversed) and grows monotonically as points or
+ * rectangles are merged in via {@link Bounds.addCoords} and
+ * {@link Bounds.addRect}. Used during scene-graph traversal to accumulate a
+ * subtree's combined extent for culling and hit-testing.
+ *
+ * The {@link Bounds.getRect} accessor lazily folds the current min/max into
+ * a shared {@link Rectangle} — copy the result if you need to retain it
+ * across further accumulation.
+ */
 export class Bounds {
 
     private _minX = Infinity;
@@ -26,6 +37,7 @@ export class Bounds {
         return this._maxY;
     }
 
+    /** Expand the bounds to include `(x, y)`. */
     public addCoords(x: number, y: number): this {
         this._minX = Math.min(this._minX, x);
         this._minY = Math.min(this._minY, y);
@@ -37,6 +49,11 @@ export class Bounds {
         return this;
     }
 
+    /**
+     * Expand the bounds to include `rectangle`. When `transform` is provided
+     * the rectangle's corners are transformed into the bounds' coordinate
+     * space first (via `Rectangle.temp` — does not mutate `rectangle`).
+     */
     public addRect(rectangle: Rectangle, transform?: Matrix): this {
         if (transform) {
             rectangle = rectangle.transform(transform, Rectangle.temp);
@@ -47,6 +64,11 @@ export class Bounds {
             .addCoords(rectangle.right, rectangle.bottom);
     }
 
+    /**
+     * Materialize the accumulated min/max as a {@link Rectangle}. Returns
+     * the same instance across calls — copy if you need to retain it past
+     * the next mutation.
+     */
     public getRect(): Rectangle {
         if (this._dirty) {
             this._rect.set(
@@ -62,6 +84,7 @@ export class Bounds {
         return this._rect;
     }
 
+    /** Restore the empty-bounds state for reuse across frames. */
     public reset(): this {
         this._minX = Infinity;
         this._minY = Infinity;

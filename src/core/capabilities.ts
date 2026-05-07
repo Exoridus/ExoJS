@@ -33,6 +33,18 @@ interface CapabilityValues {
     readonly devicePixelRatio: number;
 }
 
+/**
+ * Frozen snapshot of host-environment feature support: which renderer
+ * backends are available, which input modalities are present, audio /
+ * fullscreen / vibration / OffscreenCanvas / Worker support, max touch
+ * points, and the resolved devicePixelRatio.
+ *
+ * Construction is private — the only public entry is
+ * {@link Capabilities.ready}, a lazy-cached `Promise<Capabilities>` that
+ * fires the (mostly) async probes on first access. The resolved instance
+ * is frozen and never mutates. {@link Application.capabilities} returns
+ * the same instance once `app.start()` has resolved.
+ */
 export class Capabilities {
 
     private static _readyPromise: Promise<Capabilities> | null = null;

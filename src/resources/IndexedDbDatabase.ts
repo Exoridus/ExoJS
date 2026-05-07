@@ -6,6 +6,21 @@ const defaultStoreNames: ReadonlyArray<string> = [
     'text', 'svg', 'json', 'binary', 'wasm', 'vtt',
 ];
 
+/**
+ * {@link Database} implementation backed by the browser's IndexedDB API.
+ *
+ * Each object store is created with a `keyPath` of `"name"`, so records are
+ * stored as `{ name, data }` objects. By default the database is initialised
+ * with stores for every built-in asset type (font, image, sound, etc.); pass
+ * a custom `storeNames` list to restrict or extend the set.
+ *
+ * Schema migrations are handled in two modes:
+ * - **Default** — the constructor-supplied `storeNames` list is diff'd
+ *   against the existing stores and objects stores added/deleted accordingly.
+ * - **Explicit** — a `migrations` map keyed by target version runs the
+ *   corresponding callback for each version between `oldVersion` and
+ *   `newVersion`, allowing precise schema evolution.
+ */
 export class IndexedDbDatabase implements Database {
 
     public readonly name: string;
@@ -37,6 +52,13 @@ export class IndexedDbDatabase implements Database {
         this._migrations = migrations;
     }
 
+    /**
+     * Opens (or re-uses) an IDBObjectStore for `type` in the given
+     * `transactionMode`. Calls {@link connect} automatically if the database
+     * is not yet open.
+     *
+     * @internal Used internally by the load/save/delete methods.
+     */
     public async getObjectStore(type: string, transactionMode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
         await this.connect();
 

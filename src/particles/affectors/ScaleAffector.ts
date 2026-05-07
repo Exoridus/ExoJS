@@ -3,6 +3,12 @@ import { Vector } from '@/math/Vector';
 import type { Time } from '@/core/Time';
 import type { Particle } from '@/particles/Particle';
 
+/**
+ * Additively grows or shrinks a particle's {@link Particle.scale} each tick
+ * by a constant rate vector. A positive factor enlarges the sprite; a
+ * negative factor shrinks it. Use `new ScaleAffector(-1, -1)` to make
+ * particles fade out in size over one second.
+ */
 export class ScaleAffector implements ParticleAffector {
 
     private readonly _scaleFactor: Vector;
@@ -25,6 +31,10 @@ export class ScaleAffector implements ParticleAffector {
         return this;
     }
 
+    /**
+     * Adds `scaleFactor * delta.seconds` to `particle.scale` on both axes,
+     * implementing linear scale drift for the configured rate.
+     */
     public apply(particle: Particle, delta: Time): this {
         particle.scale.add(
             delta.seconds * this._scaleFactor.x,

@@ -48,14 +48,21 @@ export class BoundingBoxesLayer extends DebugLayer {
         super(app);
     }
 
+    /** Renders in world-space so outlines align with scene node positions. */
     public override get viewMode(): DebugLayerViewMode {
         return 'world';
     }
 
+    /** No per-frame pre-computation required; all state is derived in {@link render}. */
     public override update(_delta: Time): void {
         // State is built in render() each frame; nothing to pre-compute here.
     }
 
+    /**
+     * Walk the scene tree and draw a colored rectangle outline around every
+     * visible node that has non-zero bounds. Outline hue cycles by `zIndex`
+     * so overlapping nodes are visually distinguishable.
+     */
     public override render(backend: RenderBackend): void {
         const root = this._app.sceneManager.scene?.root;
 
@@ -77,6 +84,7 @@ export class BoundingBoxesLayer extends DebugLayer {
         gfx.render(backend);
     }
 
+    /** Release the internal {@link Graphics} primitive. */
     public override destroy(): void {
         if (this._graphics !== null) {
             this._graphics.destroy();
