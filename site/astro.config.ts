@@ -1,5 +1,10 @@
 import { defineConfig } from 'astro/config';
 import lit from '@astrojs/lit';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
     integrations: [lit()],
@@ -9,6 +14,16 @@ export default defineConfig({
         assets: '_astro',
     },
     vite: {
+        resolve: {
+            alias: {
+                '~examples': path.resolve(__dirname, '../examples'),
+            },
+        },
+        server: {
+            fs: {
+                allow: ['..'],
+            },
+        },
         build: {
             target: 'es2020',
             // Monaco core is irreducibly large (~4.5 MB) and is now lazy-loaded via a

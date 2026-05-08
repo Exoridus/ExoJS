@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const distDir = path.join(projectRoot, 'dist');
 const defaultMountPath = '/nested/exo/';
-const examplesCatalogPath = path.join(projectRoot, 'public', 'examples', 'examples.json');
+const examplesCatalogPath = path.join(projectRoot, '..', 'examples', 'examples.json');
 const examplesCatalog = JSON.parse(fs.readFileSync(examplesCatalogPath, 'utf8'));
 const allExampleRoutes = Object.entries(examplesCatalog).flatMap(([section, examples]) =>
     examples.map(example => ({

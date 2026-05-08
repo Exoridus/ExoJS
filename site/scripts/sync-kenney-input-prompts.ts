@@ -10,8 +10,8 @@ const sourceRoot = process.env.KENNEY_INPUT_PROMPTS_DIR
     ? path.resolve(projectRoot, process.env.KENNEY_INPUT_PROMPTS_DIR)
     : 'C:/Users/User/Desktop/kenney_input-prompts_1.4.1';
 
-const targetImageDir = path.resolve(projectRoot, 'public', 'assets', 'image');
-const targetJsonDir = path.resolve(projectRoot, 'public', 'assets', 'json');
+const targetImageDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'image');
+const targetJsonDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'json');
 
 interface Attributes {
     [key: string]: string;

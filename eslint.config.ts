@@ -14,10 +14,10 @@ export default defineConfig([
       'dist/**',
       'node_modules/**',
       'src/vendor/**',
-      'examples/dist/**',
-      'examples/node_modules/**',
-      'examples/public/vendor/**',
-      'examples/src/**',
+      'site/dist/**',
+      'site/node_modules/**',
+      'site/public/vendor/**',
+      'site/src/**',
       'coverage/**',
       '**/*.min.*',
     ],
@@ -589,11 +589,11 @@ export default defineConfig([
 
   // Examples (plain browser JS) — disable all type-aware TS rules first
   {
-    files: ['examples/public/examples/**/*.js'],
+    files: ['examples/**/*.js'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['examples/public/examples/**/*.js'],
+    files: ['examples/**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -636,7 +636,7 @@ export default defineConfig([
 
   // Allow console only in the dedicated debug-layer inspector example
   {
-    files: ['examples/public/examples/debug-layer/signal-bus-inspector.js'],
+    files: ['examples/debug-layer/signal-bus-inspector.js'],
     rules: {
       'no-console': 'warn',
     },

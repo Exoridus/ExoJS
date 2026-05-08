@@ -48,7 +48,7 @@ export function buildExampleUrl(path: string, params?: UrlParams): string {
 // path is hardcoded — it has not changed since the project's pre-1.0 line and
 // changing it would be a deliberate architectural move.
 export function buildGithubRawExampleUrl(versionId: string, filePath: string, params?: UrlParams): string {
-    const url = new URL(`https://raw.githubusercontent.com/Exoridus/ExoJS/v${versionId}/examples/public/examples/${filePath}`);
+    const url = new URL(`https://raw.githubusercontent.com/Exoridus/ExoJS/v${versionId}/examples/${filePath}`);
 
     if (params) {
         for (const [key, value] of Object.entries(params)) {

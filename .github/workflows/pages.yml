@@ -19,7 +19,7 @@ env:
 
 jobs:
   build:
-    name: Build examples site
+    name: Build site
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,18 +37,18 @@ jobs:
       - name: Build library
         run: npm run build
 
-      - name: Install examples dependencies
-        working-directory: examples
+      - name: Install site dependencies
+        working-directory: site
         run: npm install --no-audit --fund=false
 
-      - name: Build examples site
-        working-directory: examples
+      - name: Build site
+        working-directory: site
         run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: examples/dist
+          path: site/dist
 
   deploy:
     name: Deploy to GitHub Pages
