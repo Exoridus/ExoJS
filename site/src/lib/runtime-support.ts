@@ -1,9 +1,11 @@
 import { Capabilities } from '@codexo/exojs';
+import type { Capability } from './examples-catalog';
 import type { AutoRendererStatus, Example, ExampleAvailability, ExampleBackend } from './types';
 
 let _autoRendererStatus: AutoRendererStatus = 'checking';
 let _webgpuSupported = false;
 let _webgl2Supported = false;
+let _capabilitySnapshot: Record<Capability, boolean> | null = null;
 
 const _listeners = new Set<() => void>();
 
@@ -65,7 +67,42 @@ export async function detectRuntimeSupport(): Promise<void> {
     _webgl2Supported = caps.webgl2;
     _autoRendererStatus = _webgpuSupported ? 'webgpu' : _webgl2Supported ? 'webgl2' : 'unsupported';
 
+    _capabilitySnapshot = {
+        webgl2: caps.webgl2,
+        // Use the strict "real adapter" signal so headless / blacklisted-GPU
+        // browsers don't claim webgpu support purely on the API surface.
+        webgpu: caps.webgpuAdapter !== null,
+        pointer: caps.pointer,
+        keyboard: caps.keyboard,
+        gamepad: caps.gamepad,
+        touch: caps.touch,
+        audio: caps.audio,
+        fullscreen: caps.fullscreen,
+        vibration: caps.vibration,
+        offscreenCanvas: caps.offscreenCanvas,
+        webWorkers: caps.webWorkers,
+    };
+
     for (const listener of _listeners) {
         listener();
     }
+}
+
+/**
+ * Returns the resolved capability snapshot, or `null` if
+ * {@link detectRuntimeSupport} hasn't run yet. Read-only.
+ */
+export function getCapabilitySnapshot(): Readonly<Record<Capability, boolean>> | null {
+    return _capabilitySnapshot;
+}
+
+/**
+ * Filters `required` to the subset that is currently `false` in the
+ * snapshot. Returns `null` while detection is still in progress (caller
+ * should treat as "not yet known"). Returns an empty array when all
+ * required capabilities are met.
+ */
+export function getMissingCapabilities(required: ReadonlyArray<Capability>): ReadonlyArray<Capability> | null {
+    if (_capabilitySnapshot === null) return null;
+    return required.filter(cap => !_capabilitySnapshot![cap]);
 }

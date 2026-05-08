@@ -1,3 +1,5 @@
+import type { Capability } from './examples-catalog';
+
 export interface UrlParams {
     [param: string]: string | number;
 }
@@ -10,6 +12,7 @@ export interface ExampleDefinition {
     title: string;
     description: string;
     backend: ExampleBackend;
+    capabilities?: Array<Capability>;
     notes?: Array<string>;
     unsupportedNote?: string;
     tags?: Array<string>;

@@ -1,11 +1,25 @@
 import examplesCatalog from '../../../examples/examples.json';
 
+export type Capability =
+    | 'webgl2'
+    | 'webgpu'
+    | 'pointer'
+    | 'keyboard'
+    | 'gamepad'
+    | 'touch'
+    | 'audio'
+    | 'fullscreen'
+    | 'vibration'
+    | 'offscreenCanvas'
+    | 'webWorkers';
+
 export interface CatalogEntry {
     slug: string;
     path: string;
     title: string;
     description: string;
     backend: string;
+    capabilities?: Array<Capability>;
     tags?: Array<string>;
 }
 

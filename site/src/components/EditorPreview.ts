@@ -1,9 +1,25 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
+import type { Capability } from '../lib/examples-catalog';
+import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
 import { buildIframeUrl } from '../lib/url-builder';
 import componentStyles from './EditorPreview.scss?inline';
 import './LoadingSpinner';
+
+const CAPABILITY_LABELS: Record<Capability, string> = {
+    webgl2: 'WebGL2',
+    webgpu: 'WebGPU',
+    pointer: 'Pointer (mouse / pen)',
+    keyboard: 'Keyboard',
+    gamepad: 'Gamepad',
+    touch: 'Touch',
+    audio: 'Web Audio',
+    fullscreen: 'Fullscreen API',
+    vibration: 'Vibration API',
+    offscreenCanvas: 'OffscreenCanvas',
+    webWorkers: 'Web Workers',
+};
 
 interface ExamplePreviewWindow extends Window {
     __EXAMPLE_META__?: Example | null;
@@ -341,13 +357,110 @@ export class EditorPreview extends LitElement {
         );
     }
 
-    private _executePreviewSource(iframeBody: HTMLBodyElement): void {
+    private async _executePreviewSource(iframeBody: HTMLBodyElement): Promise<void> {
         if (!this.sourceCode) return;
+
+        const required = this.exampleMeta?.capabilities ?? [];
+        if (required.length > 0) {
+            // Resolve the cached snapshot — kicks off detection on first call.
+            let missing = getMissingCapabilities(required);
+            if (missing === null) {
+                await detectRuntimeSupport();
+                missing = getMissingCapabilities(required);
+            }
+            if (missing && missing.length > 0) {
+                this._renderCapabilityOverlay(iframeBody, required, missing);
+                return;
+            }
+        }
 
         const script = iframeBody.ownerDocument.createElement('script');
         script.type = 'module';
         script.textContent = `${this.sourceCode}\n`;
         iframeBody.appendChild(script);
+    }
+
+    private _renderCapabilityOverlay(iframeBody: HTMLBodyElement, required: ReadonlyArray<Capability>, missing: ReadonlyArray<Capability>): void {
+        const doc = iframeBody.ownerDocument;
+        const iframeWindow = doc.defaultView as ExamplePreviewWindow | null;
+        if (iframeWindow) {
+            iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
+        }
+
+        iframeBody.setAttribute('data-preview-blanked', 'capabilities');
+        iframeBody.replaceChildren();
+        Object.assign(iframeBody.style, {
+            margin: '0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '100vh',
+            background: '#0b0d12',
+            color: '#f4f6fb',
+            fontFamily: '"Segoe UI", sans-serif',
+            padding: '2rem',
+            boxSizing: 'border-box',
+        });
+
+        const overlay = doc.createElement('div');
+        Object.assign(overlay.style, {
+            maxWidth: '480px',
+            border: '1px solid rgba(248, 113, 113, 0.45)',
+            borderRadius: '12px',
+            background: 'rgba(15, 23, 42, 0.85)',
+            padding: '1.5rem 1.75rem',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45)',
+        });
+        overlay.setAttribute('role', 'alert');
+
+        const heading = doc.createElement('div');
+        Object.assign(heading.style, {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            marginBottom: '0.75rem',
+            fontSize: '1.05rem',
+            fontWeight: '600',
+            color: '#fca5a5',
+        });
+        heading.innerHTML = '<span aria-hidden="true">⚠</span><span>Missing browser capabilities</span>';
+        overlay.appendChild(heading);
+
+        const intro = doc.createElement('p');
+        Object.assign(intro.style, { margin: '0 0 0.9rem', fontSize: '0.92rem', lineHeight: '1.5', color: '#cbd5e1' });
+        intro.textContent = 'This example needs browser features that are not available in the current environment. Required capabilities (missing ones highlighted):';
+        overlay.appendChild(intro);
+
+        const list = doc.createElement('ul');
+        Object.assign(list.style, { margin: '0', padding: '0', listStyle: 'none', display: 'grid', gap: '0.4rem' });
+        const missingSet = new Set(missing);
+        for (const cap of required) {
+            const item = doc.createElement('li');
+            const isMissing = missingSet.has(cap);
+            Object.assign(item.style, {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.55rem',
+                padding: '0.4rem 0.6rem',
+                borderRadius: '6px',
+                background: isMissing ? 'rgba(248, 113, 113, 0.15)' : 'rgba(34, 197, 94, 0.12)',
+                color: isMissing ? '#fecaca' : '#bbf7d0',
+                fontSize: '0.88rem',
+                fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+            });
+            const dot = doc.createElement('span');
+            dot.setAttribute('aria-hidden', 'true');
+            dot.textContent = isMissing ? '✗' : '✓';
+            Object.assign(dot.style, { fontWeight: '700' });
+            item.appendChild(dot);
+            const text = doc.createElement('span');
+            text.textContent = `${CAPABILITY_LABELS[cap]} (${cap})`;
+            item.appendChild(text);
+            list.appendChild(item);
+        }
+        overlay.appendChild(list);
+
+        iframeBody.appendChild(overlay);
     }
 
     private _onInteractWithPreview(): void {

@@ -1,5 +1,6 @@
 ---
 import { Code } from 'astro/components';
+import type { Capability } from '../lib/examples-catalog';
 import { getExamplesForChapter } from '../lib/examples-catalog';
 import { getExampleSource } from '../lib/example-sources';
 
@@ -8,10 +9,26 @@ interface Props {
     slug: string;
 }
 
+const CAPABILITY_LABELS: Record<Capability, string> = {
+    webgl2: 'WebGL2',
+    webgpu: 'WebGPU',
+    pointer: 'Pointer',
+    keyboard: 'Keyboard',
+    gamepad: 'Gamepad',
+    touch: 'Touch',
+    audio: 'Audio',
+    fullscreen: 'Fullscreen',
+    vibration: 'Vibration',
+    offscreenCanvas: 'OffscreenCanvas',
+    webWorkers: 'Workers',
+};
+
 const { chapter, slug } = Astro.props;
 const example = getExamplesForChapter(chapter).find(entry => entry.slug === slug);
 const sourceCode = getExampleSource(chapter, slug);
 const exampleTitle = example?.title ?? slug;
+const capabilities = example?.capabilities ?? [];
+const capabilitiesAttr = JSON.stringify(capabilities);
 ---
 
 <section class="example-preview">
@@ -19,8 +36,19 @@ const exampleTitle = example?.title ?? slug;
         <h3>{exampleTitle}</h3>
         <a href={`${import.meta.env.BASE_URL}playground/?example=${chapter}/${slug}`}>Open in Playground</a>
     </header>
+    {
+        capabilities.length > 0 && (
+            <ul class="example-preview__caps" aria-label="Required browser capabilities">
+                {capabilities.map(cap => (
+                    <li class="example-preview__cap" title={`Required: ${cap}`}>
+                        {CAPABILITY_LABELS[cap]}
+                    </li>
+                ))}
+            </ul>
+        )
+    }
     <div class="example-preview__live">
-        <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode}></guide-example-preview>
+        <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode} capabilities={capabilitiesAttr}></guide-example-preview>
     </div>
     <div class="example-preview__code">
         <Code code={sourceCode} lang="js" />
@@ -62,6 +90,26 @@ const exampleTitle = example?.title ?? slug;
     .example-preview__live {
         margin-bottom: 0.8rem;
     }
+
+    .example-preview__caps {
+        list-style: none;
+        margin: 0 0 0.7rem;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .example-preview__cap {
+        font-size: 0.72rem;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        padding: 0.18rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.16);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        color: #e0f2fe;
+    }
+
     :global(.example-preview pre) {
         margin: 0;
     }

@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import type { Capability } from '../lib/examples-catalog';
 import type { Example } from '../lib/types';
 import './EditorPreview';
 
@@ -24,8 +25,17 @@ export class GuideExamplePreview extends LitElement {
     @property({ type: String }) public slug = '';
     @property({ type: String }) public title = '';
     @property({ type: String }) public sourceCode = '';
+    @property({ type: String }) public capabilities = '[]';
 
     public override render(): ReturnType<LitElement['render']> {
+        let parsedCapabilities: Array<Capability> = [];
+        try {
+            const raw = JSON.parse(this.capabilities) as unknown;
+            if (Array.isArray(raw)) parsedCapabilities = raw as Array<Capability>;
+        } catch {
+            // attribute is malformed; fall through with empty list
+        }
+
         const exampleMeta: Example = {
             slug: this.slug,
             path: `${this.chapter}/${this.slug}.js`,
@@ -34,6 +44,7 @@ export class GuideExamplePreview extends LitElement {
             backend: 'core',
             section: this.chapter,
             tags: [],
+            capabilities: parsedCapabilities,
         };
 
         return html`<exo-preview .sourceCode=${this.sourceCode} .exampleMeta=${exampleMeta} selectedVersionId="current"></exo-preview>`;
