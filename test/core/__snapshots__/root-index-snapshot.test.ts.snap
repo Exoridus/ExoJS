@@ -89,6 +89,7 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "LineSegment",
   "Loader",
   "LowpassFilter",
+  "LutFilter",
   "Matrix",
   "Mesh",
   "Music",

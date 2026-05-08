@@ -6,6 +6,7 @@ export * from './Drawable';
 export * from './filters/BlurFilter';
 export * from './filters/ColorFilter';
 export * from './filters/Filter';
+export * from './filters/LutFilter';
 export * from './filters/WebGl2ShaderFilter';
 export * from './filters/WebGpuShaderFilter';
 export * from './mesh/Mesh';

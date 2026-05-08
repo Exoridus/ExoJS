@@ -291,6 +291,14 @@
             "description": "Example: Noise Vignette.",
             "backend": "core",
             "tags": ["noise", "vignette"]
+        },
+        {
+            "slug": "palette-cycling",
+            "path": "filters/palette-cycling.js",
+            "title": "Palette Cycling",
+            "description": "Animate a 1D LUT each frame to recolour a sprite — classic indexed-colour palette-cycling effect (DOS-demo style).",
+            "backend": "core",
+            "tags": ["lut", "palette", "color"]
         }
     ],
     "geometry-graphics": [
@@ -643,6 +651,14 @@
             "description": "Example: Boss Intro Cinematic.",
             "backend": "core",
             "tags": ["boss", "intro", "cinematic"]
+        },
+        {
+            "slug": "color-grading",
+            "path": "showcase/color-grading.js",
+            "title": "Color Grading",
+            "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) on a single sprite.",
+            "backend": "core",
+            "tags": ["lut", "color", "grading"]
         },
         {
             "slug": "damage-flash",
