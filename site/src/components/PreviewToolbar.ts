@@ -24,7 +24,7 @@ export class PreviewToolbar extends LitElement {
                 ${this.capabilities.map(capability => html`<span class="cap">${capability}</span>`)}
                 ${hasDimensions
                     ? html`
-                          <span class="dimensions" aria-label="Preview canvas size">
+                          <span class="dimensions" title="Preview canvas size">
                               ${this.canvasWidth}×${this.canvasHeight}${zoomPercent !== null ? html` · ${zoomPercent}%` : nothing}
                           </span>
                       `
@@ -35,11 +35,11 @@ export class PreviewToolbar extends LitElement {
                     class="button button--ghost"
                     type="button"
                     title="Open preview in a new tab"
-                    aria-label="Open preview in a new tab"
+                    aria-label="Open in new tab"
                     ?disabled=${this.disabled}
                     @click=${this._onOpenInTab}
                 >
-                    Open tab
+                    Open in new tab
                 </button>
                 <button
                     class="button button--primary"

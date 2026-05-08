@@ -46,7 +46,7 @@ export class VersionPill extends LitElement {
                 data-track=${selected.track}
                 aria-haspopup="menu"
                 aria-expanded=${String(this._menuOpen)}
-                aria-label=${`ExoJS version ${selected.id}, ${selected.track}. Change version.`}
+                aria-label=${`v${selected.id} ${selected.track} — change ExoJS version`}
                 title="Change ExoJS version"
                 @click=${this._onTogglePill}
                 @keydown=${this._onPillKeyDown}
