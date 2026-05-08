@@ -27,6 +27,8 @@ app.start(
             app.audio.music.addFilter(this._filter);
             this._gfx = new Graphics();
             this._labels = sliders.map(() => new Text('', { fill: 'white', fontSize: 16 }));
+            this._meterLabel = new Text('', { fill: 'white', fontSize: 16 });
+            this._meterLabel.setPosition(120, 478);
             this._drag = -1;
             this.app.input.onPointerDown.add(p => {
                 this._drag = this._sliderAt(p.y);
@@ -67,6 +69,17 @@ app.start(
                 this._labels[i].setPosition(120, def.y - 12);
                 this._labels[i].render(backend);
             }
+
+            // Live gain-reduction meter (bottom). reduction is in dB, always <= 0.
+            const reduction = this._filter.reduction;
+            const meterT = Math.max(0, Math.min(1, -reduction / 24));
+            this._gfx.fillColor = new Color(70, 70, 70);
+            this._gfx.drawRectangle(260, 484, 420, 12);
+            this._gfx.fillColor = new Color(255, 140, 140);
+            this._gfx.drawRectangle(260, 484, 420 * meterT, 12);
+            this._meterLabel.setText(`gain reduction: ${reduction.toFixed(1)} dB`);
+            this._meterLabel.render(backend);
+
             this._gfx.render(backend);
         }
     })()

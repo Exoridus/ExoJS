@@ -108,6 +108,18 @@ export class CompressorFilter extends AudioFilter {
     }
   }
 
+  /**
+   * Live gain reduction in dB applied by the compressor right now. Always
+   * `<= 0` (or `0` when the compressor isn't engaging). Read-only — drive
+   * input level meters / sidechain visualisations off this value.
+   *
+   * Returns `0` until the underlying node has been created (before the
+   * audio context is ready).
+   */
+  public get reduction(): number {
+    return this._node?.reduction ?? 0;
+  }
+
   public override destroy(): void {
     onAudioContextReady.clearByContext(this);
     this._node?.disconnect();
