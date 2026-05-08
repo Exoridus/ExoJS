@@ -34,6 +34,7 @@
         "@codexo/exojs": "file:..",
         "@fontsource/inter": "^5.2.8",
         "@fontsource/jetbrains-mono": "^5.2.8",
+        "@fontsource/space-grotesk": "^5.2.10",
         "monaco-editor": "0.55.1",
         "typedoc": "^0.28.19",
         "typedoc-plugin-markdown": "^4.11.0"

@@ -1,4 +1,6 @@
 ---
+import AppShell from './AppShell.astro';
+
 interface Props {
     title: string;
     description?: string;
@@ -8,100 +10,20 @@ const { title, description = 'ExoJS documentation' } = Astro.props;
 const hasSidebar = Astro.slots.has('sidebar');
 ---
 
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{title}</title>
-        <meta name="description" content={description} />
-    </head>
-    <body>
-        <a class="skip-link" href="#main-content">Skip to main content</a>
-        <header class="top-nav" role="banner">
-            <a href={`${import.meta.env.BASE_URL}`}>ExoJS</a>
-            <nav>
-                <a href={`${import.meta.env.BASE_URL}guide/`}>Guide</a>
-                <a href={`${import.meta.env.BASE_URL}playground/`}>Playground</a>
-                <a href={`${import.meta.env.BASE_URL}api/`}>API</a>
-            </nav>
-        </header>
-        <div id="main-content" tabindex="-1">
-            <main class:list={['docs-shell', !hasSidebar && 'docs-shell--full']}>
-                <div class="docs-shell__sidebar"><slot name="sidebar" /></div>
-                <article class="docs-shell__content"><slot /></article>
-            </main>
-        </div>
-    </body>
-</html>
+<AppShell title={title} description={description}>
+    <section class:list={['docs-shell', !hasSidebar && 'docs-shell--full']}>
+        <aside class="docs-shell__sidebar"><slot name="sidebar" /></aside>
+        <article class="docs-shell__content"><slot /></article>
+    </section>
+</AppShell>
 
-<style is:global>
-    :root {
-        color-scheme: light;
-        font-family: 'Inter', 'Segoe UI', sans-serif;
-        background: #f1f5f9;
-        color: #0f172a;
-    }
-
-    body {
-        margin: 0;
-        background:
-            radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.14), transparent 40%),
-            radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.14), transparent 45%),
-            #f1f5f9;
-    }
-
-    .skip-link {
-        position: absolute;
-        left: -9999px;
-        top: 0;
-        padding: 0.6rem 1rem;
-        background: #0f172a;
-        color: #f1f5f9;
-        text-decoration: none;
-        z-index: 1000;
-        border-radius: 0 0 6px 0;
-    }
-
-    .skip-link:focus {
-        left: 0;
-    }
-
-    #main-content:focus {
-        outline: none;
-    }
-
-    .top-nav {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.8rem 1.2rem;
-        border-bottom: 1px solid rgba(15, 23, 42, 0.16);
-        backdrop-filter: blur(8px);
-    }
-
-    .top-nav > a {
-        font-weight: 700;
-        text-decoration: none;
-        color: #0f172a;
-    }
-
-    .top-nav nav {
-        display: flex;
-        gap: 0.9rem;
-    }
-
-    .top-nav nav a {
-        text-decoration: none;
-        color: #0f172a;
-    }
-
+<style>
     .docs-shell {
-        width: min(1220px, 100% - 2rem);
-        margin: 1rem auto 2rem;
+        width: min(1280px, 100% - 2rem);
+        margin: 1.25rem auto 2rem;
         display: grid;
         gap: 1rem;
-        grid-template-columns: 280px minmax(0, 1fr);
+        grid-template-columns: 300px minmax(0, 1fr);
     }
 
     .docs-shell--full {
@@ -113,16 +35,17 @@ const hasSidebar = Astro.slots.has('sidebar');
     }
 
     .docs-shell__content {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 14px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
         padding: 1.25rem;
-        background: #ffffff;
+        background: var(--bg-elevated);
         min-width: 0;
     }
 
     @media (max-width: 960px) {
         .docs-shell {
             grid-template-columns: 1fr;
+            width: min(1280px, 100% - 1rem);
         }
     }
 </style>

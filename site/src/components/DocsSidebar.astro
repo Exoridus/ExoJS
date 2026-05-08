@@ -64,12 +64,12 @@ const currentPath = Astro.url.pathname;
 <style>
     .docs-sidebar {
         position: sticky;
-        top: 1rem;
-        max-height: calc(100vh - 2rem);
+        top: 70px;
+        max-height: calc(100vh - 82px);
         overflow: auto;
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        border-radius: 12px;
-        background: #f8fafc;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-elevated);
         padding: 0.85rem;
     }
 
@@ -86,14 +86,14 @@ const currentPath = Astro.url.pathname;
         font-size: 0.78rem;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #475569;
+        color: var(--fg-faint);
     }
 
     .docs-sidebar details {
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        border-radius: 10px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
         padding: 0.35rem 0.45rem;
-        background: rgba(255, 255, 255, 0.72);
+        background: color-mix(in oklab, var(--bg-panel), transparent 12%);
     }
 
     .docs-sidebar summary {
@@ -114,7 +114,7 @@ const currentPath = Astro.url.pathname;
         font-size: 0.85rem;
         letter-spacing: 0.02em;
         text-transform: uppercase;
-        color: #0f172a;
+        color: var(--fg);
         font-weight: 600;
     }
 
@@ -131,12 +131,12 @@ const currentPath = Astro.url.pathname;
         border-radius: 8px;
         padding: 0.36rem 0.5rem;
         font-size: 0.85rem;
-        color: #0f172a;
+        color: var(--fg-muted);
         text-decoration: none;
     }
 
     .docs-sidebar a.active {
-        background: #0f172a;
-        color: #f8fafc;
+        background: var(--accent-soft);
+        color: var(--fg);
     }
 </style>
