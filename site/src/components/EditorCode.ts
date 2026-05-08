@@ -242,7 +242,7 @@ export class EditorCode extends LitElement {
 
     public render(): ReturnType<LitElement['render']> {
         return html`
-            <exo-toolbar title=${`Edit Code: ${this.exampleTitle}`}>
+            <exo-toolbar title="Code">
                 <div class="menu-anchor">
                     <button
                         class="auto-button${this._autoRefresh ? ' auto-button--active' : ''}"

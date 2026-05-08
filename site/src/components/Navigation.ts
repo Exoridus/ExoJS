@@ -1,13 +1,26 @@
 import { LitElement, html, nothing, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { GUIDE_PARTS } from '../lib/guide-structure';
+import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
 import type { VersionInfo } from '../lib/versions';
-import { getExampleAvailability } from '../lib/runtime-support';
 import { buildExampleHref } from '../lib/url-state';
 import componentStyles from './Navigation.scss?inline';
+import './LoadingSpinner';
 import './NavigationLink';
 import './NavigationSection';
-import './LoadingSpinner';
+
+interface ChapterGroup {
+    key: string;
+    title: string;
+    examples: Array<Example>;
+}
+
+interface PartGroup {
+    key: string;
+    title: string;
+    chapters: Array<ChapterGroup>;
+}
 
 @customElement('exo-navigation')
 export class Navigation extends LitElement {
@@ -22,18 +35,20 @@ export class Navigation extends LitElement {
 
     @state() private _tagInputValue = '';
     @state() private _activeTagFilter: string | null = null;
-    @state() private _overriddenSections: Map<string, boolean> = new Map();
+    @state() private _overriddenParts: Map<string, boolean> = new Map();
+    @state() private _overriddenChapters: Map<string, boolean> = new Map();
 
     protected override willUpdate(changedProperties: Map<PropertyKey, unknown>): void {
-        if (changedProperties.has('activeExample') && this._overriddenSections.size > 0) {
-            this._overriddenSections = new Map();
+        if (changedProperties.has('activeExample') && (this._overriddenParts.size > 0 || this._overriddenChapters.size > 0)) {
+            this._overriddenParts = new Map();
+            this._overriddenChapters = new Map();
         }
     }
 
     public render(): ReturnType<LitElement['render']> {
         return html`
             <header class="header">
-                <h1 class="heading">ExoJS Examples</h1>
+                <h1 class="heading">Examples</h1>
             </header>
             <section class="filter-bar">
                 <label class="filter-label" for="tag-filter">Filter by tag</label>
@@ -57,46 +72,85 @@ export class Navigation extends LitElement {
     }
 
     private _renderContent(): ReturnType<LitElement['render']> {
-        if (this.loadError) {
-            return html`<p class="error">${this.loadError}</p>`;
-        }
+        if (this.loadError) return html`<p class="error">${this.loadError}</p>`;
+        if (!this.loaded) return html`<exo-spinner centered></exo-spinner>`;
 
-        if (!this.loaded) {
-            return html`<exo-spinner centered></exo-spinner>`;
-        }
-
-        const filtered = this._getFilteredExamples();
-        return html`${Array.from(filtered.entries()).map(([category, entries]) => this._renderCategory(category, entries))}`;
+        const groups = this._buildGroups();
+        return html`${groups.map(group => this._renderPart(group))}`;
     }
 
-    private _getFilteredExamples(): ExamplesMap {
-        if (!this._activeTagFilter) {
-            return this.examples;
-        }
+    private _buildGroups(): Array<PartGroup> {
+        const allExamples = Array.from(this.examples.values()).flat();
+        const examplesByPath = new Map(allExamples.map(example => [example.path, example]));
 
-        const filtered = Array.from(this.examples.entries())
-            .map(([section, examples]) => [section, examples.filter(ex => (ex.tags ?? []).includes(this._activeTagFilter!))] as [string, Array<Example>])
-            .filter(([, examples]) => examples.length > 0);
+        return GUIDE_PARTS.map(part => {
+            const chapters: Array<ChapterGroup> = part.chapters
+                .map(chapter => {
+                    const mapped = chapter.examples
+                        .map(path => examplesByPath.get(path))
+                        .filter((example): example is Example => Boolean(example))
+                        .filter(example => (this._activeTagFilter ? (example.tags ?? []).includes(this._activeTagFilter) : true));
 
-        return new Map(filtered);
+                    return {
+                        key: chapter.path,
+                        title: chapter.title,
+                        examples: mapped,
+                    };
+                })
+                .filter(chapter => chapter.examples.length > 0);
+
+            return {
+                key: part.slug,
+                title: part.title,
+                chapters,
+            };
+        }).filter(part => part.chapters.length > 0);
     }
 
-    private _isSectionExpanded(headline: string, entries: Array<Example>): boolean {
-        if (this._overriddenSections.has(headline)) {
-            return this._overriddenSections.get(headline)!;
-        }
-
-        return entries.some(entry => entry.path === this.activeExample?.path);
+    private _isPartExpanded(group: PartGroup): boolean {
+        if (this._overriddenParts.has(group.key)) return this._overriddenParts.get(group.key)!;
+        return group.chapters.some(chapter => chapter.examples.some(example => example.path === this.activeExample?.path));
     }
 
-    private _renderCategory(headline: string, entries: Array<Example>): ReturnType<LitElement['render']> {
-        const expanded = this._isSectionExpanded(headline, entries);
-        const unavailableCount = entries.filter(entry => !getExampleAvailability(entry).available).length;
+    private _isChapterExpanded(chapter: ChapterGroup): boolean {
+        if (this._overriddenChapters.has(chapter.key)) return this._overriddenChapters.get(chapter.key)!;
+        return chapter.examples.some(example => example.path === this.activeExample?.path);
+    }
+
+    private _renderPart(group: PartGroup): ReturnType<LitElement['render']> {
+        const expanded = this._isPartExpanded(group);
+        const unavailableCount = group.chapters
+            .flatMap(chapter => chapter.examples)
+            .filter(example => !getExampleAvailability(example).available).length;
 
         return html`
-            <exo-nav-section headline=${headline} .expanded=${expanded} .unavailableCount=${unavailableCount} @toggle-section=${this._onToggleSection}>
-                ${entries.map(entry => this._renderLink(entry))}
+            <exo-nav-section
+                headline=${group.title}
+                .expanded=${expanded}
+                .unavailableCount=${unavailableCount}
+                @toggle-section=${() => this._onTogglePart(group.key)}
+            >
+                ${group.chapters.map(chapter => this._renderChapter(chapter))}
             </exo-nav-section>
+        `;
+    }
+
+    private _renderChapter(chapter: ChapterGroup): ReturnType<LitElement['render']> {
+        const expanded = this._isChapterExpanded(chapter);
+        return html`
+            <section class="chapter">
+                <button class="chapter__toggle" type="button" aria-expanded=${String(expanded)} @click=${() => this._onToggleChapter(chapter.key)}>
+                    <span class="chapter__title">${chapter.title}</span>
+                    <span class="chapter__chevron" ?data-expanded=${expanded}></span>
+                </button>
+                ${expanded
+                    ? html`
+                          <div class="chapter__examples">
+                              ${chapter.examples.map(example => this._renderLink(example))}
+                          </div>
+                      `
+                    : nothing}
+            </section>
         `;
     }
 
@@ -138,7 +192,6 @@ export class Navigation extends LitElement {
 
     private _applyTagFilter(value: string): void {
         const normalized = value.trim();
-
         if (normalized === '') {
             this._tagInputValue = '';
             this._activeTagFilter = null;
@@ -146,7 +199,6 @@ export class Navigation extends LitElement {
         }
 
         const matched = this.availableTags.find(tag => tag === normalized);
-
         if (!matched) {
             this._tagInputValue = this._activeTagFilter ?? '';
             return;
@@ -156,13 +208,23 @@ export class Navigation extends LitElement {
         this._activeTagFilter = matched;
     }
 
-    private _onToggleSection(event: CustomEvent<{ headline: string }>): void {
-        const headline = event.detail.headline;
-        const entries = this.examples.get(headline) ?? [];
-        const current = this._isSectionExpanded(headline, entries);
-        const next = new Map(this._overriddenSections);
-        next.set(headline, !current);
-        this._overriddenSections = next;
+    private _onTogglePart(key: string): void {
+        const next = new Map(this._overriddenParts);
+        const group = this._buildGroups().find(entry => entry.key === key);
+        if (!group) return;
+        const current = next.get(key) ?? this._isPartExpanded(group);
+        next.set(key, !current);
+        this._overriddenParts = next;
+    }
+
+    private _onToggleChapter(key: string): void {
+        const next = new Map(this._overriddenChapters);
+        const groups = this._buildGroups();
+        const chapter = groups.flatMap(group => group.chapters).find(entry => entry.key === key);
+        if (!chapter) return;
+        const current = next.get(key) ?? this._isChapterExpanded(chapter);
+        next.set(key, !current);
+        this._overriddenChapters = next;
     }
 }
 

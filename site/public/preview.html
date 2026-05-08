@@ -58,5 +58,28 @@
         <link rel="icon" type="image/svg+xml" href="favicon.svg" />
         <link rel="shortcut icon" href="favicon.ico" />
     </head>
-    <body></body>
+    <body>
+        <script>
+            (function () {
+                var params = new URLSearchParams(window.location.search);
+                var sourceKey = params.get('source-key');
+                if (!sourceKey) return;
+
+                var source = null;
+                try {
+                    source = window.sessionStorage.getItem(sourceKey);
+                    window.sessionStorage.removeItem(sourceKey);
+                } catch {
+                    source = null;
+                }
+
+                if (!source) return;
+
+                var script = document.createElement('script');
+                script.type = 'module';
+                script.textContent = source + '\n';
+                document.body.appendChild(script);
+            })();
+        </script>
+    </body>
 </html>

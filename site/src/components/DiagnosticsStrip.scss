@@ -1,156 +1,75 @@
-@use '../styles/colors' as *;
-@use '../styles/tokens' as *;
-@use '../styles/typography' as *;
-@use '../styles/variables' as *;
-
-* {
-    box-sizing: border-box;
-}
-
-// Empty by default — only laid out when the host carries diagnostics. Phase 1
-// uses the `has-diagnostics` reflected attribute so the negative top margin
-// (which tucks the strip up under the preview frame) only applies when there
-// is actually a strip to show.
 :host {
     display: none;
 }
 
 :host([has-diagnostics]) {
     display: block;
-    width: min(100%, #{$workbench-width});
-    margin: -16px auto 16px;
-}
-
-@media (max-width: #{$breakpoint-desktop - 1px}) {
-    :host([has-diagnostics]) {
-        width: 100%;
-        max-width: none;
-        margin: 0 0 12px;
-    }
+    width: min(100%, 1180px);
+    margin: -0.82rem auto 0.75rem;
 }
 
 .strip {
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-height: 32px;
-    padding: 6px 12px 6px 14px;
-    border-radius: $r-md;
-    border: 1px solid $line-strong;
-    background: $bg-2;
-    color: $fg-1;
-    font-size: 12px;
+    gap: 0.55rem;
+    min-height: 34px;
+    padding: 0.38rem 0.62rem;
+    border-radius: var(--r-2);
+    border: 1px solid var(--line-soft);
+    background: var(--bg-panel);
+    color: var(--fg-muted);
+    font-size: 0.74rem;
     line-height: 1.35;
-    animation: diag-enter 140ms ease-out;
+}
 
-    &[data-severity='error'] {
-        border-color: rgba($err, 0.45);
-        background: rgba($err, 0.06);
-    }
+.strip[data-severity='error'] {
+    border-color: oklch(76% 0.15 27 / 0.5);
+    background: oklch(76% 0.15 27 / 0.12);
+}
 
-    &[data-severity='warning'] {
-        border-color: rgba($warn, 0.4);
-        background: rgba($warn, 0.05);
-    }
-
-    &[data-severity='info'],
-    &[data-severity='hint'] {
-        border-color: rgba($info, 0.3);
-        background: rgba($info, 0.04);
-    }
+.strip[data-severity='warning'] {
+    border-color: oklch(74% 0.13 62 / 0.45);
+    background: oklch(74% 0.13 62 / 0.12);
 }
 
 .severity-dot {
-    flex: 0 0 auto;
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: $info;
-
-    &[data-severity='error'] {
-        background: $err;
-        box-shadow: 0 0 6px rgba($err, 0.5);
-    }
-    &[data-severity='warning'] {
-        background: $warn;
-        box-shadow: 0 0 6px rgba($warn, 0.45);
-    }
-    &[data-severity='info'] {
-        background: $info;
-    }
-    &[data-severity='hint'] {
-        background: $fg-2;
-    }
+    background: var(--fg-faint);
 }
 
 .counts {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    flex: 0 0 auto;
-    font-family: $font-family-mono;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-
-.count {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: $fg-1;
-
-    &--error {
-        color: $err;
-    }
-    &--warning {
-        color: $warn;
-    }
-    &--info {
-        color: $info;
-    }
+    gap: 0.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
 }
 
 .separator {
-    flex: 0 0 auto;
-    color: $fg-3;
+    color: var(--fg-faint);
 }
 
 .message {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.4rem;
     flex: 1 1 auto;
     min-width: 0;
-    color: $fg-0;
+    color: var(--fg);
 }
 
 .code {
-    flex: 0 0 auto;
-    font-family: $font-family-mono;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    padding: 1px 6px;
-    border-radius: $r-sm;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid $line-strong;
-    color: $fg-1;
-
-    .strip[data-severity='error'] & {
-        color: $err;
-        border-color: rgba($err, 0.4);
-    }
-    .strip[data-severity='warning'] & {
-        color: $warn;
-        border-color: rgba($warn, 0.4);
-    }
+    font-family: var(--f-mono);
+    font-size: 0.64rem;
+    padding: 1px 5px;
+    border-radius: var(--r-1);
+    border: 1px solid var(--line-soft);
+    color: var(--fg-faint);
 }
 
 .text {
-    flex: 1 1 auto;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -158,52 +77,27 @@
 
 .jump {
     appearance: none;
-    flex: 0 0 auto;
-    height: 22px;
-    padding: 0 9px;
-    border: 1px solid $line-strong;
-    border-radius: $r-sm;
+    min-height: 24px;
+    padding: 0 0.55rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-1);
     background: transparent;
-    color: $fg-1;
-    font-family: $font-family-mono;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    color: var(--fg-muted);
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
     cursor: pointer;
-    transition:
-        background-color 100ms ease-in-out,
-        color 100ms ease-in-out,
-        border-color 100ms ease-in-out;
-
-    &:hover {
-        background: $bg-3;
-        color: $fg-0;
-        border-color: rgba(255, 255, 255, 0.14);
-    }
-
-    &:focus-visible {
-        outline: 2px solid rgba($ex-500, 0.6);
-        outline-offset: 2px;
-    }
 }
 
-@keyframes diag-enter {
-    from {
-        opacity: 0;
-        transform: translateY(-2px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.jump:hover,
+.jump:focus-visible {
+    background: var(--accent-soft);
+    color: var(--fg);
+    outline: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .strip {
-        animation: none;
-    }
-
-    .jump {
-        transition: none;
+@media (max-width: 1119px) {
+    :host([has-diagnostics]) {
+        width: 100%;
+        margin: 0 0 0.62rem;
     }
 }

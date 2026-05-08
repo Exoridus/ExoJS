@@ -59,14 +59,7 @@ export class EditorPreview extends LitElement {
             return html`<exo-spinner centered></exo-spinner>`;
         }
 
-        // Pass the selected version through to preview.html so it can build a
-        // versioned import map (`vendor/exojs/<v>/exo.esm.js`). Omit the key when
-        // empty so direct preview.html opens can use the flat vendor fallback.
-        const params: UrlParams = { 'no-cache': this._updateId };
-        if (this.selectedVersionId) {
-            params.v = this.selectedVersionId;
-        }
-        const iframeUrl = buildIframeUrl(params);
+        const iframeUrl = this._buildPreviewUrl({ noCache: this._updateId });
 
         return html`
             <iframe
@@ -113,6 +106,14 @@ export class EditorPreview extends LitElement {
         this._iframeElement?.focus();
         this._iframeElement?.contentWindow?.focus();
         this._iframeElement?.contentDocument?.body?.focus();
+    }
+
+    public openPreviewInTab(): void {
+        if (!this.sourceCode) return;
+        const storageKey = `exo-preview-source:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+        window.sessionStorage.setItem(storageKey, this.sourceCode);
+        const target = this._buildPreviewUrl({ noCache: Date.now(), sourceKey: storageKey });
+        window.open(target, '_blank', 'noopener,noreferrer');
     }
 
     private _onLoadIframe(event: Event): void {
@@ -465,6 +466,20 @@ export class EditorPreview extends LitElement {
 
     private _onInteractWithPreview(): void {
         this.focusPreviewSurface();
+    }
+
+    private _buildPreviewUrl(options: { noCache: number; sourceKey?: string }): string {
+        // Pass the selected version through to preview.html so it can build a
+        // versioned import map (`vendor/exojs/<v>/exo.esm.js`). Omit the key when
+        // empty so direct preview.html opens can use the flat vendor fallback.
+        const params: UrlParams = { 'no-cache': options.noCache };
+        if (this.selectedVersionId) {
+            params.v = this.selectedVersionId;
+        }
+        if (options.sourceKey) {
+            params['source-key'] = options.sourceKey;
+        }
+        return buildIframeUrl(params);
     }
 }
 

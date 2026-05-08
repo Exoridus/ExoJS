@@ -1,20 +1,16 @@
-@use '../styles/colors' as *;
-@use '../styles/tokens' as *;
-@use '../styles/typography' as *;
-
 :host {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    min-height: 24px;
-    padding: 4px 14px;
+    gap: 0.55rem;
+    min-height: 26px;
+    padding: 0.28rem 0.75rem;
     box-sizing: border-box;
-    background: $bg-1;
-    border-top: 1px solid $line;
-    color: $fg-2;
-    font-family: $font-family-mono;
-    font-size: 10.5px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--line-soft);
+    color: var(--fg-faint);
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
     letter-spacing: 0.01em;
     user-select: none;
 }
@@ -23,19 +19,13 @@
 .right {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 0.65rem;
     min-width: 0;
-}
-
-.left {
-    flex: 0 0 auto;
 }
 
 .right {
     flex: 1 1 auto;
     justify-content: flex-end;
-    flex-wrap: nowrap;
-    min-width: 0;
 }
 
 .chip {
@@ -45,56 +35,28 @@
     white-space: nowrap;
 }
 
-.chip--lang {
-    color: $fg-1;
-
-    .lang-dot {
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        border-radius: 999px;
-        background: $ex-500;
-        box-shadow: 0 0 4px rgba($ex-500, 0.4);
-    }
+.chip--lang .lang-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent);
 }
 
-.chip--cursor {
-    color: $fg-1;
-    font-variant-numeric: tabular-nums;
-}
-
-.chip--selection {
-    color: $fg-2;
-    font-variant-numeric: tabular-nums;
-}
-
-.chip--encoding {
-    color: $fg-3;
-}
-
-.chip--dirty {
-    color: $fg-2;
-
-    &[data-dirty='true'] {
-        color: $warn;
-    }
+.chip--dirty[data-dirty='true'] {
+    color: oklch(74% 0.13 62);
 }
 
 .dirty-dot {
-    font-size: 12px;
+    font-size: 0.78rem;
     line-height: 1;
 }
 
 @media (max-width: 640px) {
     :host {
-        padding: 4px 10px;
-        gap: 8px;
+        padding: 0.28rem 0.5rem;
     }
 
-    .chip--encoding {
-        display: none;
-    }
-
+    .chip--encoding,
     .chip--selection {
         display: none;
     }

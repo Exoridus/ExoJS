@@ -4,6 +4,7 @@ import type { Example, PreviewErrorEntry } from '../lib/types';
 import { getExampleAvailability } from '../lib/runtime-support';
 import { loadExampleSource } from '../lib/example-store';
 import type { EditorCode, EditorCursorEvent, EditorDiagnostic, EditorDiagnosticEvent, EditorDirtyEvent, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
+import type { EditorPreview } from './EditorPreview';
 import type { DiagnosticJumpEvent } from './DiagnosticsStrip';
 import componentStyles from './Editor.scss?inline';
 import './EditorPreview';
@@ -39,6 +40,7 @@ export class Editor extends LitElement {
     @state() private _diagnostics: ReadonlyArray<EditorDiagnostic> = [];
 
     @query('exo-code-editor') private _codeEditor?: EditorCode;
+    @query('exo-preview') private _previewElement?: EditorPreview;
 
     // Tracks the (versionId, path) pair the source loader last fetched. Phase 2
     // re-fetches when either side changes, so a version switch reloads source
@@ -108,12 +110,13 @@ export class Editor extends LitElement {
             <section class="preview-frame" aria-label="Example preview">
                 <exo-preview-toolbar
                     .exampleTitle=${activeExample?.title ?? ''}
-                    .version=${this.selectedVersionId}
+                    .capabilities=${activeExample?.capabilities ?? []}
                     .canvasWidth=${this._canvasWidth}
                     .canvasHeight=${this._canvasHeight}
                     .zoom=${this._previewZoom}
                     .disabled=${!this._sourceCode}
                     @request-reload=${this._onRequestReload}
+                    @request-open-tab=${this._onRequestOpenTab}
                 ></exo-preview-toolbar>
                 <div class="preview-surface">
                     <exo-preview
@@ -188,6 +191,10 @@ export class Editor extends LitElement {
         // current value — matching the in-editor Refresh button and the
         // Ctrl+Enter / Ctrl+S shortcuts.
         this._codeEditor?.triggerRefresh();
+    }
+
+    private _onRequestOpenTab(): void {
+        this._previewElement?.openPreviewInTab();
     }
 
     private _onEditorCursor(event: CustomEvent<EditorCursorEvent>): void {

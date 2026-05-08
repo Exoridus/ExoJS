@@ -15,7 +15,6 @@ import {
 import type { VersionInfo } from '../lib/versions';
 import { getLatestStableId, getVersionById, getVersionLoadError, getVersions, hasVersions, loadVersionCatalog, onVersionsLoaded } from '../lib/versions';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
-import { appInfo } from '../lib/app-info';
 import { loadStoredVersion, readUrlState, storeSelectedVersion, writeUrlState } from '../lib/url-state';
 import { showToast } from '../lib/toast-store';
 import type { SelectExampleEvent } from './NavigationLink';
@@ -338,11 +337,6 @@ export class ExampleBrowser extends LitElement {
                     role="banner"
                     .activeExample=${this._activeExample}
                     .sidebarOpen=${this._sidebarOpen}
-                    .version=${appInfo.version}
-                    .packageName=${appInfo.packageName}
-                    .repositoryUrl=${appInfo.repositoryUrl}
-                    .license=${appInfo.license}
-                    .author=${appInfo.author}
                     .versions=${this._versions}
                     .selectedVersion=${this._selectedVersion}
                     @toggle-sidebar=${this._onToggleSidebar}

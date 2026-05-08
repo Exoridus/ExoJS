@@ -1,82 +1,81 @@
-@use '../styles/variables' as *;
-@use '../styles/mixins' as *;
-
 * {
     box-sizing: border-box;
 }
 
 :host {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-    flex-direction: row;
+    --nav-width: 320px;
+    display: grid;
+    grid-template-columns: var(--nav-width) minmax(0, 1fr);
+    min-height: calc(100vh - 64px);
     position: relative;
+    background: var(--bg-canvas);
 }
 
-// Sidebar — desktop: docked with max-width collapse animation
 .side-content {
-    flex: 0 0 auto;
-    width: $navigation-width;
-    max-width: $navigation-width;
-    overflow: hidden;
-    transition: max-width 200ms ease-in-out;
+    min-width: 0;
+    background: var(--bg-elevated);
+    border-right: 1px solid var(--line-soft);
 }
 
-// Right column: header + scrollable content
 .right-column {
-    flex: 1 0 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 }
 
 .main-content {
-    @include custom-scrollbar;
-    flex: 1 0 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.7rem 0.9rem 1rem;
 }
 
-// Backdrop: only rendered when sidebar is open, only visible on mobile
 .backdrop {
     position: fixed;
     inset: 0;
     z-index: 199;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.45);
+}
 
-    @media (min-width: $breakpoint-desktop) {
+@media (min-width: 1120px) {
+    .side-content:not([data-open]) {
+        display: none;
+    }
+
+    .backdrop {
         display: none;
     }
 }
 
-// Suppress all sidebar transitions while crossing breakpoints
-:host([data-resizing]) .side-content {
-    transition: none;
-}
-
-// Desktop: collapse sidebar via max-width when closed
-@media (min-width: $breakpoint-desktop) {
-    .side-content:not([data-open]) {
-        max-width: 0;
-        overflow: hidden;
+@media (max-width: 1119px) {
+    :host {
+        grid-template-columns: minmax(0, 1fr);
     }
-}
 
-// Mobile: sidebar becomes a fixed overlay
-@media (max-width: #{$breakpoint-desktop - 1px}) {
     .side-content {
         position: fixed;
         top: 0;
         left: 0;
-        height: 100%;
+        bottom: 0;
+        width: min(92vw, 360px);
         z-index: 200;
-        max-width: $navigation-width;
         transform: translateX(0);
-        transition: transform 200ms ease-in-out;
+        transition: transform var(--transition-fast);
+        border-right: 1px solid var(--line-soft);
+        box-shadow: var(--shadow-2);
+    }
 
-        &:not([data-open]) {
-            transform: translateX(-100%);
-        }
+    .side-content:not([data-open]) {
+        transform: translateX(-102%);
+    }
+
+    .main-content {
+        padding: 0.5rem 0 0.8rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .side-content {
+        transition: none;
     }
 }
