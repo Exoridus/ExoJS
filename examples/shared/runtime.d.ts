@@ -1,9 +1,43 @@
+/**
+ * Boolean fields of the engine `Capabilities` object that an example may
+ * declare as a hard runtime requirement. Each value here maps 1:1 to a
+ * field of `Capabilities` (see `src/core/capabilities.ts`). When any
+ * declared capability resolves to `false` at runtime, the playground/guide
+ * shows an overlay listing required capabilities and which are missing,
+ * and skips mounting the example.
+ *
+ * Implicit default: every example is assumed to need a working `webgl2`
+ * context (the default render backend). Declare `webgl2` only if the
+ * example also runs on a WebGPU-only path or the requirement is
+ * subsystem-specific. Declare `webgpu` if the example explicitly needs
+ * the WebGPU backend (custom shaders, compute, GPU stress).
+ */
+export type Capability =
+    | 'webgl2'
+    | 'webgpu'
+    | 'pointer'
+    | 'keyboard'
+    | 'gamepad'
+    | 'touch'
+    | 'audio'
+    | 'fullscreen'
+    | 'vibration'
+    | 'offscreenCanvas'
+    | 'webWorkers';
+
 export interface ExampleRuntimeMeta {
     slug?: string;
     path?: string;
     title?: string;
     description?: string;
     backend?: 'core' | 'webgl2' | 'webgpu' | 'advanced' | string;
+    /**
+     * Hard runtime requirements. The runner verifies each entry against
+     * the resolved engine `Capabilities` instance before mounting the
+     * example, and replaces the canvas with an unmet-capabilities overlay
+     * if any entry is `false`.
+     */
+    capabilities?: Array<Capability>;
     notes?: Array<string>;
     unsupportedNote?: string;
     tags?: Array<string>;

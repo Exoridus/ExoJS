@@ -6,7 +6,14 @@
             "title": "Camera And View",
             "description": "Example: Camera And View.",
             "backend": "core",
-            "tags": ["camera", "and", "view"]
+            "tags": [
+                "camera",
+                "and",
+                "view"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "hud-overlay-scene",
@@ -14,7 +21,11 @@
             "title": "Hud Overlay Scene",
             "description": "Example: Hud Overlay Scene.",
             "backend": "core",
-            "tags": ["hud", "overlay", "scene"]
+            "tags": [
+                "hud",
+                "overlay",
+                "scene"
+            ]
         },
         {
             "slug": "multi-view-split-screen",
@@ -22,7 +33,15 @@
             "title": "Multi View Split Screen",
             "description": "Example: Multi View Split Screen.",
             "backend": "core",
-            "tags": ["multi", "view", "split", "screen"]
+            "tags": [
+                "multi",
+                "view",
+                "split",
+                "screen"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "multiple-scenes",
@@ -30,7 +49,14 @@
             "title": "Multiple Scenes",
             "description": "Example: Multiple Scenes.",
             "backend": "core",
-            "tags": ["multiple", "scenes"]
+            "tags": [
+                "multiple",
+                "scenes"
+            ],
+            "capabilities": [
+                "pointer",
+                "keyboard"
+            ]
         },
         {
             "slug": "pause-and-resume",
@@ -38,7 +64,14 @@
             "title": "Pause And Resume",
             "description": "Example: Pause And Resume.",
             "backend": "core",
-            "tags": ["pause", "and", "resume"]
+            "tags": [
+                "pause",
+                "and",
+                "resume"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "picture-in-picture",
@@ -46,7 +79,11 @@
             "title": "Picture In Picture",
             "description": "Example: Picture In Picture.",
             "backend": "core",
-            "tags": ["picture", "in", "picture"]
+            "tags": [
+                "picture",
+                "in",
+                "picture"
+            ]
         },
         {
             "slug": "scene-lifecycle",
@@ -54,7 +91,10 @@
             "title": "Scene Lifecycle",
             "description": "Example: Scene Lifecycle.",
             "backend": "core",
-            "tags": ["scene", "lifecycle"]
+            "tags": [
+                "scene",
+                "lifecycle"
+            ]
         },
         {
             "slug": "world-vs-screen-coords",
@@ -62,7 +102,15 @@
             "title": "World Vs Screen Coords",
             "description": "Example: World Vs Screen Coords.",
             "backend": "core",
-            "tags": ["world", "vs", "screen", "coords"]
+            "tags": [
+                "world",
+                "vs",
+                "screen",
+                "coords"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         }
     ],
     "audio-basics": [
@@ -72,7 +120,14 @@
             "title": "Audio Buses",
             "description": "Example: Audio Buses.",
             "backend": "core",
-            "tags": ["audio", "buses"]
+            "tags": [
+                "audio",
+                "buses"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "crossfade-tracks",
@@ -80,7 +135,14 @@
             "title": "Crossfade Tracks",
             "description": "Example: Crossfade Tracks.",
             "backend": "core",
-            "tags": ["crossfade", "tracks"]
+            "tags": [
+                "crossfade",
+                "tracks"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "music-loop",
@@ -88,7 +150,14 @@
             "title": "Music Loop",
             "description": "Example: Music Loop.",
             "backend": "core",
-            "tags": ["music", "loop"]
+            "tags": [
+                "music",
+                "loop"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "play-sound",
@@ -96,7 +165,14 @@
             "title": "Play Sound",
             "description": "Example: Play Sound.",
             "backend": "core",
-            "tags": ["play", "sound"]
+            "tags": [
+                "play",
+                "sound"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "random-pitch-pool",
@@ -104,7 +180,15 @@
             "title": "Random Pitch Pool",
             "description": "Example: Random Pitch Pool.",
             "backend": "core",
-            "tags": ["random", "pitch", "pool"]
+            "tags": [
+                "random",
+                "pitch",
+                "pool"
+            ],
+            "capabilities": [
+                "keyboard",
+                "audio"
+            ]
         },
         {
             "slug": "sound-pool",
@@ -112,7 +196,14 @@
             "title": "Sound Pool",
             "description": "Example: Sound Pool.",
             "backend": "core",
-            "tags": ["sound", "pool"]
+            "tags": [
+                "sound",
+                "pool"
+            ],
+            "capabilities": [
+                "keyboard",
+                "audio"
+            ]
         }
     ],
     "audio-fx": [
@@ -122,7 +213,13 @@
             "title": "Compressor",
             "description": "Example: Compressor.",
             "backend": "core",
-            "tags": ["compressor"]
+            "tags": [
+                "compressor"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "ducking",
@@ -130,7 +227,13 @@
             "title": "Ducking",
             "description": "Example: Ducking.",
             "backend": "core",
-            "tags": ["ducking"]
+            "tags": [
+                "ducking"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "reverb-and-delay",
@@ -138,7 +241,15 @@
             "title": "Reverb And Delay",
             "description": "Example: Reverb And Delay.",
             "backend": "core",
-            "tags": ["reverb", "and", "delay"]
+            "tags": [
+                "reverb",
+                "and",
+                "delay"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "vocoder",
@@ -146,7 +257,13 @@
             "title": "Vocoder",
             "description": "Example: Vocoder.",
             "backend": "core",
-            "tags": ["vocoder"]
+            "tags": [
+                "vocoder"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         }
     ],
     "beat-detection": [
@@ -156,7 +273,14 @@
             "title": "Beat Sync Pulse",
             "description": "Example: Beat Sync Pulse.",
             "backend": "core",
-            "tags": ["beat", "sync", "pulse"]
+            "tags": [
+                "beat",
+                "sync",
+                "pulse"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "frequency-bands",
@@ -164,7 +288,13 @@
             "title": "Frequency Bands",
             "description": "Example: Frequency Bands.",
             "backend": "core",
-            "tags": ["frequency", "bands"]
+            "tags": [
+                "frequency",
+                "bands"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "tempo-tracking",
@@ -172,7 +302,13 @@
             "title": "Tempo Tracking",
             "description": "Example: Tempo Tracking.",
             "backend": "core",
-            "tags": ["tempo", "tracking"]
+            "tags": [
+                "tempo",
+                "tracking"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         }
     ],
     "custom-renderers": [
@@ -182,7 +318,11 @@
             "title": "Custom Render Pass",
             "description": "Example: Custom Render Pass.",
             "backend": "advanced",
-            "tags": ["custom", "render", "pass"]
+            "tags": [
+                "custom",
+                "render",
+                "pass"
+            ]
         },
         {
             "slug": "custom-triangle-renderer",
@@ -190,7 +330,14 @@
             "title": "Custom Triangle Renderer",
             "description": "Example: Custom Triangle Renderer.",
             "backend": "advanced",
-            "tags": ["custom", "triangle", "renderer"]
+            "tags": [
+                "custom",
+                "triangle",
+                "renderer"
+            ],
+            "capabilities": [
+                "webgpu"
+            ]
         }
     ],
     "debug-layer": [
@@ -200,7 +347,10 @@
             "title": "Bounding Boxes",
             "description": "Example: Bounding Boxes.",
             "backend": "core",
-            "tags": ["bounding", "boxes"]
+            "tags": [
+                "bounding",
+                "boxes"
+            ]
         },
         {
             "slug": "performance-overlay",
@@ -208,7 +358,13 @@
             "title": "Performance Overlay",
             "description": "Example: Performance Overlay.",
             "backend": "core",
-            "tags": ["performance", "overlay"]
+            "tags": [
+                "performance",
+                "overlay"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "pointer-and-hittest",
@@ -216,7 +372,11 @@
             "title": "Pointer And Hittest",
             "description": "Example: Pointer And Hittest.",
             "backend": "core",
-            "tags": ["pointer", "and", "hittest"]
+            "tags": [
+                "pointer",
+                "and",
+                "hittest"
+            ]
         },
         {
             "slug": "signal-bus-inspector",
@@ -224,7 +384,11 @@
             "title": "Signal Bus Inspector",
             "description": "Example: Signal Bus Inspector.",
             "backend": "core",
-            "tags": ["signal", "bus", "inspector"]
+            "tags": [
+                "signal",
+                "bus",
+                "inspector"
+            ]
         }
     ],
     "filters": [
@@ -234,7 +398,13 @@
             "title": "Blur Filter",
             "description": "Example: Blur Filter.",
             "backend": "core",
-            "tags": ["blur", "filter"]
+            "tags": [
+                "blur",
+                "filter"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "chromatic-aberration",
@@ -242,7 +412,13 @@
             "title": "Chromatic Aberration",
             "description": "Example: Chromatic Aberration.",
             "backend": "core",
-            "tags": ["chromatic", "aberration"]
+            "tags": [
+                "chromatic",
+                "aberration"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "color-filter",
@@ -250,7 +426,13 @@
             "title": "Color Filter",
             "description": "Example: Color Filter.",
             "backend": "core",
-            "tags": ["color", "filter"]
+            "tags": [
+                "color",
+                "filter"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "crt-scanlines",
@@ -258,7 +440,10 @@
             "title": "Crt Scanlines",
             "description": "Example: Crt Scanlines.",
             "backend": "core",
-            "tags": ["crt", "scanlines"]
+            "tags": [
+                "crt",
+                "scanlines"
+            ]
         },
         {
             "slug": "custom-fragment-shader",
@@ -266,7 +451,11 @@
             "title": "Custom Fragment Shader",
             "description": "Example: Custom Fragment Shader.",
             "backend": "core",
-            "tags": ["custom", "fragment", "shader"]
+            "tags": [
+                "custom",
+                "fragment",
+                "shader"
+            ]
         },
         {
             "slug": "filter-stack",
@@ -274,7 +463,10 @@
             "title": "Filter Stack",
             "description": "Example: Filter Stack.",
             "backend": "core",
-            "tags": ["filter", "stack"]
+            "tags": [
+                "filter",
+                "stack"
+            ]
         },
         {
             "slug": "metaballs",
@@ -282,7 +474,9 @@
             "title": "Metaballs",
             "description": "Example: Metaballs.",
             "backend": "core",
-            "tags": ["metaballs"]
+            "tags": [
+                "metaballs"
+            ]
         },
         {
             "slug": "noise-vignette",
@@ -290,7 +484,10 @@
             "title": "Noise Vignette",
             "description": "Example: Noise Vignette.",
             "backend": "core",
-            "tags": ["noise", "vignette"]
+            "tags": [
+                "noise",
+                "vignette"
+            ]
         },
         {
             "slug": "palette-cycling",
@@ -298,7 +495,11 @@
             "title": "Palette Cycling",
             "description": "Animate a 1D LUT each frame to recolour a sprite — classic indexed-colour palette-cycling effect (DOS-demo style).",
             "backend": "core",
-            "tags": ["lut", "palette", "color"]
+            "tags": [
+                "lut",
+                "palette",
+                "color"
+            ]
         }
     ],
     "geometry-graphics": [
@@ -308,7 +509,13 @@
             "title": "Graphics Primitives",
             "description": "Example: Graphics Primitives.",
             "backend": "core",
-            "tags": ["graphics", "primitives"]
+            "tags": [
+                "graphics",
+                "primitives"
+            ],
+            "capabilities": [
+                "webgpu"
+            ]
         },
         {
             "slug": "infinite-grid",
@@ -316,7 +523,13 @@
             "title": "Infinite Grid",
             "description": "Example: Infinite Grid.",
             "backend": "core",
-            "tags": ["infinite", "grid"]
+            "tags": [
+                "infinite",
+                "grid"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "mesh-deformed-grid",
@@ -324,7 +537,11 @@
             "title": "Mesh Deformed Grid",
             "description": "Example: Mesh Deformed Grid.",
             "backend": "core",
-            "tags": ["mesh", "deformed", "grid"]
+            "tags": [
+                "mesh",
+                "deformed",
+                "grid"
+            ]
         },
         {
             "slug": "mesh-textured-quad",
@@ -332,7 +549,11 @@
             "title": "Mesh Textured Quad",
             "description": "Example: Mesh Textured Quad.",
             "backend": "core",
-            "tags": ["mesh", "textured", "quad"]
+            "tags": [
+                "mesh",
+                "textured",
+                "quad"
+            ]
         },
         {
             "slug": "mesh-triangle",
@@ -340,7 +561,10 @@
             "title": "Mesh Triangle",
             "description": "Example: Mesh Triangle.",
             "backend": "core",
-            "tags": ["mesh", "triangle"]
+            "tags": [
+                "mesh",
+                "triangle"
+            ]
         }
     ],
     "getting-started": [
@@ -350,7 +574,10 @@
             "title": "Game Loop",
             "description": "Example: Game Loop.",
             "backend": "core",
-            "tags": ["game", "loop"]
+            "tags": [
+                "game",
+                "loop"
+            ]
         },
         {
             "slug": "hello-world",
@@ -358,7 +585,10 @@
             "title": "Hello World",
             "description": "Example: Hello World.",
             "backend": "core",
-            "tags": ["hello", "world"]
+            "tags": [
+                "hello",
+                "world"
+            ]
         },
         {
             "slug": "resize-and-dpr",
@@ -366,7 +596,11 @@
             "title": "Resize And Dpr",
             "description": "Example: Resize And Dpr.",
             "backend": "core",
-            "tags": ["resize", "and", "dpr"]
+            "tags": [
+                "resize",
+                "and",
+                "dpr"
+            ]
         }
     ],
     "input": [
@@ -376,7 +610,14 @@
             "title": "Action Mapping",
             "description": "Example: Action Mapping.",
             "backend": "core",
-            "tags": ["action", "mapping"]
+            "tags": [
+                "action",
+                "mapping"
+            ],
+            "capabilities": [
+                "keyboard",
+                "gamepad"
+            ]
         },
         {
             "slug": "gamepad",
@@ -384,7 +625,12 @@
             "title": "Gamepad",
             "description": "Example: Gamepad.",
             "backend": "core",
-            "tags": ["gamepad"]
+            "tags": [
+                "gamepad"
+            ],
+            "capabilities": [
+                "gamepad"
+            ]
         },
         {
             "slug": "key-rebinding",
@@ -392,7 +638,13 @@
             "title": "Key Rebinding",
             "description": "Example: Key Rebinding.",
             "backend": "core",
-            "tags": ["key", "rebinding"]
+            "tags": [
+                "key",
+                "rebinding"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "keyboard",
@@ -400,7 +652,12 @@
             "title": "Keyboard",
             "description": "Example: Keyboard.",
             "backend": "core",
-            "tags": ["keyboard"]
+            "tags": [
+                "keyboard"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "mouse-and-pointer",
@@ -408,7 +665,14 @@
             "title": "Mouse And Pointer",
             "description": "Example: Mouse And Pointer.",
             "backend": "core",
-            "tags": ["mouse", "and", "pointer"]
+            "tags": [
+                "mouse",
+                "and",
+                "pointer"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "multi-gamepad",
@@ -416,7 +680,13 @@
             "title": "Multi Gamepad",
             "description": "Example: Multi Gamepad.",
             "backend": "core",
-            "tags": ["multi", "gamepad"]
+            "tags": [
+                "multi",
+                "gamepad"
+            ],
+            "capabilities": [
+                "gamepad"
+            ]
         },
         {
             "slug": "multitouch",
@@ -424,7 +694,13 @@
             "title": "Multitouch",
             "description": "Example: Multitouch.",
             "backend": "core",
-            "tags": ["multitouch"]
+            "tags": [
+                "multitouch"
+            ],
+            "capabilities": [
+                "pointer",
+                "touch"
+            ]
         },
         {
             "slug": "pointer-to-world",
@@ -432,7 +708,14 @@
             "title": "Pointer To World",
             "description": "Example: Pointer To World.",
             "backend": "core",
-            "tags": ["pointer", "to", "world"]
+            "tags": [
+                "pointer",
+                "to",
+                "world"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         }
     ],
     "particles": [
@@ -442,7 +725,9 @@
             "title": "Bonfire",
             "description": "Example: Bonfire.",
             "backend": "core",
-            "tags": ["bonfire"]
+            "tags": [
+                "bonfire"
+            ]
         },
         {
             "slug": "cursor-attractor-particles",
@@ -450,7 +735,14 @@
             "title": "Cursor Attractor Particles",
             "description": "Example: Cursor Attractor Particles.",
             "backend": "core",
-            "tags": ["cursor", "attractor", "particles"]
+            "tags": [
+                "cursor",
+                "attractor",
+                "particles"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "custom-wgsl-module",
@@ -458,7 +750,11 @@
             "title": "Custom Wgsl Module",
             "description": "Example: Custom Wgsl Module.",
             "backend": "core",
-            "tags": ["custom", "wgsl", "module"]
+            "tags": [
+                "custom",
+                "wgsl",
+                "module"
+            ]
         },
         {
             "slug": "emitter-basics",
@@ -466,7 +762,10 @@
             "title": "Emitter Basics",
             "description": "Example: Emitter Basics.",
             "backend": "core",
-            "tags": ["emitter", "basics"]
+            "tags": [
+                "emitter",
+                "basics"
+            ]
         },
         {
             "slug": "fireworks",
@@ -474,7 +773,9 @@
             "title": "Fireworks",
             "description": "Example: Fireworks.",
             "backend": "core",
-            "tags": ["fireworks"]
+            "tags": [
+                "fireworks"
+            ]
         },
         {
             "slug": "gpu-particles",
@@ -482,7 +783,10 @@
             "title": "Gpu Particles",
             "description": "Example: Gpu Particles.",
             "backend": "core",
-            "tags": ["gpu", "particles"]
+            "tags": [
+                "gpu",
+                "particles"
+            ]
         }
     ],
     "performance": [
@@ -492,7 +796,13 @@
             "title": "Backend Comparison",
             "description": "Example: Backend Comparison.",
             "backend": "core",
-            "tags": ["backend", "comparison"]
+            "tags": [
+                "backend",
+                "comparison"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "multi-texture-stress",
@@ -500,7 +810,14 @@
             "title": "Multi Texture Stress",
             "description": "Example: Multi Texture Stress.",
             "backend": "core",
-            "tags": ["multi", "texture", "stress"]
+            "tags": [
+                "multi",
+                "texture",
+                "stress"
+            ],
+            "capabilities": [
+                "webgpu"
+            ]
         },
         {
             "slug": "particle-stress",
@@ -508,7 +825,13 @@
             "title": "Particle Stress",
             "description": "Example: Particle Stress.",
             "backend": "core",
-            "tags": ["particle", "stress"]
+            "tags": [
+                "particle",
+                "stress"
+            ],
+            "capabilities": [
+                "webgpu"
+            ]
         },
         {
             "slug": "sprite-stress",
@@ -516,7 +839,13 @@
             "title": "Sprite Stress",
             "description": "Example: Sprite Stress.",
             "backend": "core",
-            "tags": ["sprite", "stress"]
+            "tags": [
+                "sprite",
+                "stress"
+            ],
+            "capabilities": [
+                "webgpu"
+            ]
         }
     ],
     "render-targets": [
@@ -526,7 +855,10 @@
             "title": "Bloom Lite",
             "description": "Example: Bloom Lite.",
             "backend": "core",
-            "tags": ["bloom", "lite"]
+            "tags": [
+                "bloom",
+                "lite"
+            ]
         },
         {
             "slug": "mini-map",
@@ -534,7 +866,10 @@
             "title": "Mini Map",
             "description": "Example: Mini Map.",
             "backend": "core",
-            "tags": ["mini", "map"]
+            "tags": [
+                "mini",
+                "map"
+            ]
         },
         {
             "slug": "post-processing-chain",
@@ -542,7 +877,11 @@
             "title": "Post Processing Chain",
             "description": "Example: Post Processing Chain.",
             "backend": "core",
-            "tags": ["post", "processing", "chain"]
+            "tags": [
+                "post",
+                "processing",
+                "chain"
+            ]
         },
         {
             "slug": "render-to-texture",
@@ -550,7 +889,11 @@
             "title": "Render To Texture",
             "description": "Example: Render To Texture.",
             "backend": "core",
-            "tags": ["render", "to", "texture"]
+            "tags": [
+                "render",
+                "to",
+                "texture"
+            ]
         },
         {
             "slug": "trail-feedback",
@@ -558,7 +901,10 @@
             "title": "Trail Feedback",
             "description": "Example: Trail Feedback.",
             "backend": "core",
-            "tags": ["trail", "feedback"]
+            "tags": [
+                "trail",
+                "feedback"
+            ]
         },
         {
             "slug": "water-mirror",
@@ -566,7 +912,10 @@
             "title": "Water Mirror",
             "description": "Example: Water Mirror.",
             "backend": "core",
-            "tags": ["water", "mirror"]
+            "tags": [
+                "water",
+                "mirror"
+            ]
         }
     ],
     "scene-graph": [
@@ -576,7 +925,9 @@
             "title": "Containers",
             "description": "Example: Containers.",
             "backend": "core",
-            "tags": ["containers"]
+            "tags": [
+                "containers"
+            ]
         },
         {
             "slug": "local-vs-global-transform",
@@ -584,7 +935,12 @@
             "title": "Local Vs Global Transform",
             "description": "Example: Local Vs Global Transform.",
             "backend": "core",
-            "tags": ["local", "vs", "global", "transform"]
+            "tags": [
+                "local",
+                "vs",
+                "global",
+                "transform"
+            ]
         },
         {
             "slug": "masks",
@@ -592,7 +948,9 @@
             "title": "Masks",
             "description": "Example: Masks.",
             "backend": "core",
-            "tags": ["masks"]
+            "tags": [
+                "masks"
+            ]
         },
         {
             "slug": "nested-transforms",
@@ -600,7 +958,10 @@
             "title": "Nested Transforms",
             "description": "Example: Nested Transforms.",
             "backend": "core",
-            "tags": ["nested", "transforms"]
+            "tags": [
+                "nested",
+                "transforms"
+            ]
         },
         {
             "slug": "parallax-starfield",
@@ -608,7 +969,13 @@
             "title": "Parallax Starfield",
             "description": "Example: Parallax Starfield.",
             "backend": "core",
-            "tags": ["parallax", "starfield"]
+            "tags": [
+                "parallax",
+                "starfield"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "pivot-and-anchor",
@@ -616,7 +983,11 @@
             "title": "Pivot And Anchor",
             "description": "Example: Pivot And Anchor.",
             "backend": "core",
-            "tags": ["pivot", "and", "anchor"]
+            "tags": [
+                "pivot",
+                "and",
+                "anchor"
+            ]
         },
         {
             "slug": "z-ordering",
@@ -624,7 +995,13 @@
             "title": "Z Ordering",
             "description": "Example: Z Ordering.",
             "backend": "core",
-            "tags": ["z", "ordering"]
+            "tags": [
+                "z",
+                "ordering"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         }
     ],
     "showcase": [
@@ -634,7 +1011,14 @@
             "title": "Audio Reactive Particles",
             "description": "Example: Audio Reactive Particles.",
             "backend": "core",
-            "tags": ["audio", "reactive", "particles"]
+            "tags": [
+                "audio",
+                "reactive",
+                "particles"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "audio-visualisation",
@@ -642,7 +1026,14 @@
             "title": "Audio Visualisation",
             "description": "Example: Audio Visualisation.",
             "backend": "core",
-            "tags": ["audio", "visualisation"]
+            "tags": [
+                "audio",
+                "visualisation"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "boss-intro-cinematic",
@@ -650,7 +1041,14 @@
             "title": "Boss Intro Cinematic",
             "description": "Example: Boss Intro Cinematic.",
             "backend": "core",
-            "tags": ["boss", "intro", "cinematic"]
+            "tags": [
+                "boss",
+                "intro",
+                "cinematic"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "color-grading",
@@ -658,7 +1056,14 @@
             "title": "Color Grading",
             "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) on a single sprite.",
             "backend": "core",
-            "tags": ["lut", "color", "grading"]
+            "tags": [
+                "lut",
+                "color",
+                "grading"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "damage-flash",
@@ -666,7 +1071,13 @@
             "title": "Damage Flash",
             "description": "Example: Damage Flash.",
             "backend": "core",
-            "tags": ["damage", "flash"]
+            "tags": [
+                "damage",
+                "flash"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "dialog-system",
@@ -674,7 +1085,14 @@
             "title": "Dialog System",
             "description": "Example: Dialog System.",
             "backend": "core",
-            "tags": ["dialog", "system"]
+            "tags": [
+                "dialog",
+                "system"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "gamepad-spaceship",
@@ -682,7 +1100,14 @@
             "title": "Gamepad Spaceship",
             "description": "Example: Gamepad Spaceship.",
             "backend": "core",
-            "tags": ["gamepad", "spaceship"]
+            "tags": [
+                "gamepad",
+                "spaceship"
+            ],
+            "capabilities": [
+                "gamepad",
+                "audio"
+            ]
         },
         {
             "slug": "loading-progress-with-shader",
@@ -690,7 +1115,12 @@
             "title": "Loading Progress With Shader",
             "description": "Example: Loading Progress With Shader.",
             "backend": "core",
-            "tags": ["loading", "progress", "with", "shader"]
+            "tags": [
+                "loading",
+                "progress",
+                "with",
+                "shader"
+            ]
         },
         {
             "slug": "low-band-camera-shake",
@@ -698,7 +1128,15 @@
             "title": "Low Band Camera Shake",
             "description": "Example: Low Band Camera Shake.",
             "backend": "core",
-            "tags": ["low", "band", "camera", "shake"]
+            "tags": [
+                "low",
+                "band",
+                "camera",
+                "shake"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "minimap-with-mask",
@@ -706,7 +1144,11 @@
             "title": "Minimap With Mask",
             "description": "Example: Minimap With Mask.",
             "backend": "core",
-            "tags": ["minimap", "with", "mask"]
+            "tags": [
+                "minimap",
+                "with",
+                "mask"
+            ]
         },
         {
             "slug": "mouse-parallax",
@@ -714,7 +1156,13 @@
             "title": "Mouse Parallax",
             "description": "Example: Mouse Parallax.",
             "backend": "core",
-            "tags": ["mouse", "parallax"]
+            "tags": [
+                "mouse",
+                "parallax"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "pause-blur",
@@ -722,7 +1170,13 @@
             "title": "Pause Blur",
             "description": "Example: Pause Blur.",
             "backend": "core",
-            "tags": ["pause", "blur"]
+            "tags": [
+                "pause",
+                "blur"
+            ],
+            "capabilities": [
+                "keyboard"
+            ]
         },
         {
             "slug": "rectangles-collision",
@@ -730,7 +1184,13 @@
             "title": "Rectangles Collision",
             "description": "Example: Rectangles Collision.",
             "backend": "core",
-            "tags": ["rectangles", "collision"]
+            "tags": [
+                "rectangles",
+                "collision"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "screen-shake-on-explosion",
@@ -738,7 +1198,15 @@
             "title": "Screen Shake On Explosion",
             "description": "Example: Screen Shake On Explosion.",
             "backend": "core",
-            "tags": ["screen", "shake", "on", "explosion"]
+            "tags": [
+                "screen",
+                "shake",
+                "on",
+                "explosion"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "typewriter-text",
@@ -746,7 +1214,13 @@
             "title": "Typewriter Text",
             "description": "Example: Typewriter Text.",
             "backend": "core",
-            "tags": ["typewriter", "text"]
+            "tags": [
+                "typewriter",
+                "text"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "vinyl-record",
@@ -754,7 +1228,13 @@
             "title": "Vinyl Record",
             "description": "Example: Vinyl Record.",
             "backend": "core",
-            "tags": ["vinyl", "record"]
+            "tags": [
+                "vinyl",
+                "record"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         }
     ],
     "spatial-audio": [
@@ -764,7 +1244,15 @@
             "title": "Listener And Source",
             "description": "Example: Listener And Source.",
             "backend": "core",
-            "tags": ["listener", "and", "source"]
+            "tags": [
+                "listener",
+                "and",
+                "source"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         },
         {
             "slug": "moving-source",
@@ -772,7 +1260,13 @@
             "title": "Moving Source",
             "description": "Example: Moving Source.",
             "backend": "core",
-            "tags": ["moving", "source"]
+            "tags": [
+                "moving",
+                "source"
+            ],
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "falloff-curves",
@@ -780,7 +1274,16 @@
             "title": "Falloff Curves",
             "description": "Compare linear, inverse, and exponential distance attenuation models on three sources around a draggable listener.",
             "backend": "core",
-            "tags": ["falloff", "distance", "model", "spatial"]
+            "tags": [
+                "falloff",
+                "distance",
+                "model",
+                "spatial"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ]
         }
     ],
     "sprites-textures": [
@@ -790,7 +1293,12 @@
             "title": "Blendmodes",
             "description": "Example: Blendmodes.",
             "backend": "core",
-            "tags": ["blendmodes"]
+            "tags": [
+                "blendmodes"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "sprite-basics",
@@ -798,7 +1306,10 @@
             "title": "Sprite Basics",
             "description": "Example: Sprite Basics.",
             "backend": "core",
-            "tags": ["sprite", "basics"]
+            "tags": [
+                "sprite",
+                "basics"
+            ]
         },
         {
             "slug": "spritesheet-frames",
@@ -806,7 +1317,10 @@
             "title": "Spritesheet Frames",
             "description": "Example: Spritesheet Frames.",
             "backend": "core",
-            "tags": ["spritesheet", "frames"]
+            "tags": [
+                "spritesheet",
+                "frames"
+            ]
         },
         {
             "slug": "svg-drawable",
@@ -814,7 +1328,10 @@
             "title": "Svg Drawable",
             "description": "Example: Svg Drawable.",
             "backend": "core",
-            "tags": ["svg", "drawable"]
+            "tags": [
+                "svg",
+                "drawable"
+            ]
         },
         {
             "slug": "texture-loader",
@@ -822,7 +1339,10 @@
             "title": "Texture Loader",
             "description": "Example: Texture Loader.",
             "backend": "core",
-            "tags": ["texture", "loader"]
+            "tags": [
+                "texture",
+                "loader"
+            ]
         },
         {
             "slug": "video-drawable",
@@ -830,7 +1350,13 @@
             "title": "Video Drawable",
             "description": "Example: Video Drawable.",
             "backend": "core",
-            "tags": ["video", "drawable"]
+            "tags": [
+                "video",
+                "drawable"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         }
     ],
     "text-fonts": [
@@ -840,7 +1366,10 @@
             "title": "Basic Text",
             "description": "Example: Basic Text.",
             "backend": "core",
-            "tags": ["basic", "text"]
+            "tags": [
+                "basic",
+                "text"
+            ]
         },
         {
             "slug": "multiline-and-wrap",
@@ -848,7 +1377,11 @@
             "title": "Multiline And Wrap",
             "description": "Example: Multiline And Wrap.",
             "backend": "core",
-            "tags": ["multiline", "and", "wrap"]
+            "tags": [
+                "multiline",
+                "and",
+                "wrap"
+            ]
         },
         {
             "slug": "stroke-and-shadow",
@@ -856,7 +1389,11 @@
             "title": "Stroke And Shadow",
             "description": "Example: Stroke And Shadow.",
             "backend": "core",
-            "tags": ["stroke", "and", "shadow"]
+            "tags": [
+                "stroke",
+                "and",
+                "shadow"
+            ]
         },
         {
             "slug": "text-glitch",
@@ -864,7 +1401,10 @@
             "title": "Text Glitch",
             "description": "Example: Text Glitch.",
             "backend": "core",
-            "tags": ["text", "glitch"]
+            "tags": [
+                "text",
+                "glitch"
+            ]
         },
         {
             "slug": "web-fonts",
@@ -872,7 +1412,10 @@
             "title": "Web Fonts",
             "description": "Example: Web Fonts.",
             "backend": "core",
-            "tags": ["web", "fonts"]
+            "tags": [
+                "web",
+                "fonts"
+            ]
         }
     ],
     "tweens-animation": [
@@ -882,7 +1425,10 @@
             "title": "Easing Curves",
             "description": "Example: Easing Curves.",
             "backend": "core",
-            "tags": ["easing", "curves"]
+            "tags": [
+                "easing",
+                "curves"
+            ]
         },
         {
             "slug": "frame-animation",
@@ -890,7 +1436,10 @@
             "title": "Frame Animation",
             "description": "Example: Frame Animation.",
             "backend": "core",
-            "tags": ["frame", "animation"]
+            "tags": [
+                "frame",
+                "animation"
+            ]
         },
         {
             "slug": "interrupt-and-replace",
@@ -898,7 +1447,14 @@
             "title": "Interrupt And Replace",
             "description": "Example: Interrupt And Replace.",
             "backend": "core",
-            "tags": ["interrupt", "and", "replace"]
+            "tags": [
+                "interrupt",
+                "and",
+                "replace"
+            ],
+            "capabilities": [
+                "pointer"
+            ]
         },
         {
             "slug": "tween-basics",
@@ -906,7 +1462,10 @@
             "title": "Tween Basics",
             "description": "Example: Tween Basics.",
             "backend": "core",
-            "tags": ["tween", "basics"]
+            "tags": [
+                "tween",
+                "basics"
+            ]
         },
         {
             "slug": "tween-chains",
@@ -914,7 +1473,10 @@
             "title": "Tween Chains",
             "description": "Example: Tween Chains.",
             "backend": "core",
-            "tags": ["tween", "chains"]
+            "tags": [
+                "tween",
+                "chains"
+            ]
         },
         {
             "slug": "tween-from-array",
@@ -922,7 +1484,11 @@
             "title": "Tween From Array",
             "description": "Example: Tween From Array.",
             "backend": "core",
-            "tags": ["tween", "from", "array"]
+            "tags": [
+                "tween",
+                "from",
+                "array"
+            ]
         },
         {
             "slug": "tween-with-yoyo",
@@ -930,7 +1496,11 @@
             "title": "Tween With Yoyo",
             "description": "Example: Tween With Yoyo.",
             "backend": "core",
-            "tags": ["tween", "with", "yoyo"]
+            "tags": [
+                "tween",
+                "with",
+                "yoyo"
+            ]
         }
     ]
 }

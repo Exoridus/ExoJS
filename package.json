@@ -46,6 +46,7 @@
     "build:watch": "tsx node_modules/rollup/dist/bin/rollup -cw",
     "verify:exports": "tsx ./scripts/verify-exports.ts",
     "verify:package": "npm run build && npm run verify:exports && npm pack --dry-run --ignore-scripts",
+    "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "verify:release": "npm run typecheck && npm run lint:strict && npm run format:check && npm test && npm run verify:package",
     "release": "node ./scripts/release.mjs",
     "prepack": "npm run build",
