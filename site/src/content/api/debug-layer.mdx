@@ -1,0 +1,32 @@
+---
+title: "DebugLayer"
+description: "Abstract base for a single diagnostic overlay layer. Subclasses produce a visual (outlines, text panels, sparklines, etc.) that DebugOverlay composites each frame when visible is `true`. Concrete layers are tree-shakeable via the `@codexo/exojs/debug` subpath and are not loaded unless explicitly imported."
+symbol: "DebugLayer"
+subsystem: "debug"
+importPath: "@codexo/exojs/debug"
+sourcePath: "src/debug/DebugLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugLayer.ts#L20"
+---
+# DebugLayer
+`import { DebugLayer } from '@codexo/exojs/debug'`
+Abstract base for a single diagnostic overlay layer. Subclasses produce a
+visual (outlines, text panels, sparklines, etc.) that
+DebugOverlay composites each frame when visible is `true`.
+
+Concrete layers are tree-shakeable via the `@codexo/exojs/debug` subpath
+and are not loaded unless explicitly imported.
+## Constructors
+
+- `new(_app: Application<>): DebugLayer<>`
+
+## Methods
+
+- `destroy(): void`
+- `render(backend: RenderBackend<>): void`
+- `update(delta: Time<>): void`
+
+## Properties
+
+- `_app: Application<>`
+- `visible: boolean`
+Source: [src/debug/DebugLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugLayer.ts#L20)

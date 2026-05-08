@@ -1,0 +1,21 @@
+---
+title: "AudioListenerTarget"
+description: "Anything AudioListener.target can be set to. The listener reads its world-space position from the target each frame: - SceneNode: uses `getGlobalTransform()` translation - View: uses `view.center` - Plain `{ x, y }` object: read directly - `null`: no automatic tracking — set `position` manually."
+symbol: "AudioListenerTarget"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/AudioListener.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioListener.ts#L15"
+---
+# AudioListenerTarget
+`import { AudioListenerTarget } from '@codexo/exojs'`
+Anything AudioListener.target can be set to. The listener reads
+its world-space position from the target each frame:
+- SceneNode: uses `getGlobalTransform()` translation
+- View: uses `view.center`
+- Plain `\{ x, y \}` object: read directly
+- `null`: no automatic tracking — set `position` manually.
+## Definition
+
+`AudioListenerTarget = SceneNode | View | object | null`
+Source: [src/audio/AudioListener.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioListener.ts#L15)

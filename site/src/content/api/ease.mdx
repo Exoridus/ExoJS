@@ -1,0 +1,58 @@
+---
+title: "Ease"
+description: "Standard Robert Penner easing functions as static methods. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints). Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc. Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope."
+symbol: "Ease"
+subsystem: "animation"
+importPath: "@codexo/exojs"
+sourcePath: "src/animation/Easing.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts#L29"
+---
+# Ease
+`import { Ease } from '@codexo/exojs'`
+Standard Robert Penner easing functions as static methods.
+Each function accepts a normalized time `t` in [0, 1] and returns a value
+that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic
+may exceed that range between the endpoints).
+
+Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc.
+
+Note: only scalar numeric properties are supported in v1. Vector, Color, and
+Matrix interpolation are out of scope.
+## Constructors
+
+- `new(): Ease<>`
+
+## Properties
+
+- `backIn: EasingFunction`
+- `backInOut: EasingFunction`
+- `backOut: EasingFunction`
+- `bounceIn: EasingFunction`
+- `bounceInOut: EasingFunction`
+- `bounceOut: EasingFunction`
+- `circIn: EasingFunction`
+- `circInOut: EasingFunction`
+- `circOut: EasingFunction`
+- `cubicIn: EasingFunction`
+- `cubicInOut: EasingFunction`
+- `cubicOut: EasingFunction`
+- `elasticIn: EasingFunction`
+- `elasticInOut: EasingFunction`
+- `elasticOut: EasingFunction`
+- `expoIn: EasingFunction`
+- `expoInOut: EasingFunction`
+- `expoOut: EasingFunction`
+- `linear: EasingFunction`
+- `quadIn: EasingFunction`
+- `quadInOut: EasingFunction`
+- `quadOut: EasingFunction`
+- `quartIn: EasingFunction`
+- `quartInOut: EasingFunction`
+- `quartOut: EasingFunction`
+- `quintIn: EasingFunction`
+- `quintInOut: EasingFunction`
+- `quintOut: EasingFunction`
+- `sineIn: EasingFunction`
+- `sineInOut: EasingFunction`
+- `sineOut: EasingFunction`
+Source: [src/animation/Easing.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts#L29)

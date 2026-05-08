@@ -1,0 +1,45 @@
+---
+title: "Media"
+description: "Common public interface implemented by every playable audio source — Sound, Music, OscillatorSound. Extracted so that code routing audio through generic helpers (fade managers, audio scheduling) can operate against the abstraction rather than the concrete subclass. Mutator methods are dual-API: each `setX(value)` setter has a paired regular property setter, so both `media.volume = 0.5` and `media.setVolume(0.5)` work — pick whichever style fits the call site."
+symbol: "Media"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/Media.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Media.ts#L14"
+---
+# Media
+`import { Media } from '@codexo/exojs'`
+Common public interface implemented by every playable audio source —
+Sound, Music, OscillatorSound. Extracted so that
+code routing audio through generic helpers (fade managers, audio
+scheduling) can operate against the abstraction rather than the concrete
+subclass.
+
+Mutator methods are dual-API: each `setX(value)` setter has a paired
+regular property setter, so both `media.volume = 0.5` and
+`media.setVolume(0.5)` work — pick whichever style fits the call site.
+## Properties
+
+- `analyserTarget: AudioNode | null`
+- `currentTime: number`
+- `duration: number`
+- `loop: boolean`
+- `muted: boolean`
+- `paused: boolean`
+- `playbackRate: number`
+- `playing: boolean`
+- `progress: number`
+- `volume: number`
+- `applyOptions: unknown`
+- `destroy: unknown`
+- `getTime: unknown`
+- `pause: unknown`
+- `play: unknown`
+- `setLoop: unknown`
+- `setMuted: unknown`
+- `setPlaybackRate: unknown`
+- `setTime: unknown`
+- `setVolume: unknown`
+- `stop: unknown`
+- `toggle: unknown`
+Source: [src/audio/Media.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Media.ts#L14)

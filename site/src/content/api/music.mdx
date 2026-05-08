@@ -1,0 +1,57 @@
+---
+title: "Music"
+description: "Streaming long-form audio backed by an `HTMLAudioElement`. Decoded lazily via the browser's media pipeline, so memory cost scales with decode-buffer size rather than total duration. Routes through the engine's `music` bus by default (overridable via the inherited `bus` setter). Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback. `Music` is the right choice for background tracks, voice lines, or anything else where a single source per track is enough."
+symbol: "Music"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/Music.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Music.ts#L26"
+---
+# Music
+`import { Music } from '@codexo/exojs'`
+Streaming long-form audio backed by an `HTMLAudioElement`. Decoded
+lazily via the browser's media pipeline, so memory cost scales with
+decode-buffer size rather than total duration. Routes through the
+engine's `music` bus by default (overridable via the inherited
+`bus` setter).
+
+Use Sound for short, frequently-triggered clips that benefit
+from pre-decoded `AudioBuffer` storage and pooled overlapping
+playback. `Music` is the right choice for background tracks, voice
+lines, or anything else where a single source per track is enough.
+## Constructors
+
+- `new(audioElement: HTMLAudioElement<>, options?: Partial<PlaybackOptions>): Music<>`
+
+## Methods
+
+- `_connectToBus(): void`
+- `_defaultBus(): AudioBus<>`
+- `_disconnectFromBus(): void`
+- `_getAudioSetup(): object | null`
+- `applyOptions(options: Partial<PlaybackOptions>): this`
+- `destroy(): void`
+- `fadeIn(durationMs: number): this`
+- `fadeOut(durationMs: number, options: object): this`
+- `getTime(): number`
+- `pause(options?: Partial<PlaybackOptions>): this`
+- `play(options?: Partial<PlaybackOptions>): this`
+- `setLoop(loop: boolean): this`
+- `setMuted(muted: boolean): this`
+- `setPlaybackRate(value: number): this`
+- `setTime(currentTime: number): this`
+- `setVolume(value: number): this`
+- `stop(options?: Partial<PlaybackOptions>): this`
+- `toggle(options?: Partial<PlaybackOptions>): this`
+
+## Properties
+
+- `_bus: AudioBus<> | null`
+- `_duration: number`
+- `_loop: boolean`
+- `_muted: boolean`
+- `_playbackRate: number`
+- `_volume: number`
+- `onStart: Signal<[]>`
+- `onStop: Signal<[]>`
+Source: [src/audio/Music.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Music.ts#L26)

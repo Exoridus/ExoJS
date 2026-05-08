@@ -1,0 +1,42 @@
+---
+title: "InteractionManager"
+description: "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent quadtree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`. Constructed automatically by Application; you do not instantiate this class yourself."
+symbol: "InteractionManager"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/InteractionManager.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionManager.ts#L68"
+---
+# InteractionManager
+`import { InteractionManager } from '@codexo/exojs'`
+Routes pointer events from the InputManager to interactive
+scene-graph nodes via DOM-style event bubbling. Maintains a persistent
+quadtree spatial index of interactive RenderNodes for hit-testing
+and updates it incrementally — nodes notify the manager via the
+`_notify*` hooks when they enter/leave the scene, change interactivity,
+or move (causing bounds to dirty).
+
+Dispatches InteractionEvents of every type in
+InteractionEventType: `pointerdown` / `pointerup` /
+`pointermove` / `pointerover` / `pointerout` / `pointertap` /
+`dragstart` / `drag` / `dragend`. Drag events are derived from
+threshold-based pointer movement after a `pointerdown`.
+
+Constructed automatically by Application; you do not instantiate
+this class yourself.
+## Constructors
+
+- `new(app: Application<>): InteractionManager<>`
+
+## Methods
+
+- `_getDebugQuadtree(): Quadtree<object> | null`
+- `_notifyBoundsInvalidated(node: RenderNode<>): void`
+- `_notifyInteractiveChanged(node: RenderNode<>, becameInteractive: boolean): void`
+- `_notifyNodeAdded(node: RenderNode<>): void`
+- `_notifyNodeRemoved(node: RenderNode<>): void`
+- `destroy(): void`
+- `getCapturedNodes(): readonly RenderNode<>[]`
+- `getHoveredNode(pointerId?: number): RenderNode<> | null`
+- `update(): void`
+Source: [src/input/InteractionManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionManager.ts#L68)

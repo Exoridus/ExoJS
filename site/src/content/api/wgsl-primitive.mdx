@@ -1,0 +1,26 @@
+---
+title: "WgslPrimitive"
+description: "WGSL primitive types accepted in WgslUniformField declarations. The codegen emits matching WGSL field declarations; the writeUniforms implementation must produce bytes in the layout WGSL expects (see https://www.w3.org/TR/WGSL/#alignment-and-size). Common pitfalls: - `vec2<f32>` aligns to 8 bytes; pad with `f32` or use `vec4<f32>`. - `vec3<f32>` aligns to 16 bytes (so does `vec4<f32>`); avoid `vec3` for tight packing. For now the supported subset covers what the built-in modules need. Add more types here as new modules require them."
+symbol: "WgslPrimitive"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/WgslContribution.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/WgslContribution.ts#L14"
+---
+# WgslPrimitive
+`import { WgslPrimitive } from '@codexo/exojs'`
+WGSL primitive types accepted in WgslUniformField declarations.
+The codegen emits matching WGSL field declarations; the writeUniforms
+implementation must produce bytes in the layout WGSL expects (see
+https://www.w3.org/TR/WGSL/#alignment-and-size).
+
+Common pitfalls:
+- `vec2\<f32>` aligns to 8 bytes; pad with `f32` or use `vec4\<f32>`.
+- `vec3\<f32>` aligns to 16 bytes (so does `vec4\<f32>`); avoid `vec3` for tight packing.
+
+For now the supported subset covers what the built-in modules need. Add
+more types here as new modules require them.
+## Definition
+
+`WgslPrimitive = "f32" | "i32" | "u32" | "vec2<f32>" | "vec4<f32>"`
+Source: [src/particles/modules/WgslContribution.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/WgslContribution.ts#L14)

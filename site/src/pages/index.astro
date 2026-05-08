@@ -1,13 +1,46 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import { ExampleBrowser } from '../components/ExampleBrowser';
+import DocsLayout from '../layouts/DocsLayout.astro';
 ---
 
-<Layout title="ExoJS Examples">
-    <!-- Skip-link target — light-DOM wrapper that's focusable so Skip-to-main-content
-         actually lands on something keyboard-traversable. Focus then tabs into the
-         shadow tree of <example-browser> as normal. -->
-    <div id="main-content" tabindex="-1">
-        <ExampleBrowser client:only="lit" />
-    </div>
-</Layout>
+<DocsLayout title="ExoJS" description="ExoJS docs, playground, and API reference">
+    <h1>ExoJS</h1>
+    <p>TypeScript-first browser 2D runtime for games and interactive apps.</p>
+
+    <section class="hero-links">
+        <a href={`${import.meta.env.BASE_URL}guide/`}>Read the Guide</a>
+        <a href={`${import.meta.env.BASE_URL}playground/`}>Open Playground</a>
+        <a href={`${import.meta.env.BASE_URL}api/`}>Browse API</a>
+    </section>
+
+    <section>
+        <h2>Featured Examples</h2>
+        <ul>
+            <li><a href={`${import.meta.env.BASE_URL}guide/showcase/#audio-reactive-particles`}>Showcase: Audio Reactive Particles</a></li>
+            <li><a href={`${import.meta.env.BASE_URL}guide/filters/#chromatic-aberration`}>Filters: Chromatic Aberration</a></li>
+            <li><a href={`${import.meta.env.BASE_URL}guide/particles/#bonfire`}>Particles: Bonfire</a></li>
+        </ul>
+    </section>
+</DocsLayout>
+
+<style>
+    h1 {
+        margin-top: 0;
+        font-size: clamp(2rem, 5vw, 3rem);
+    }
+
+    .hero-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        margin: 1rem 0 1.2rem;
+    }
+
+    .hero-links a {
+        text-decoration: none;
+        border: 1px solid #0f172a;
+        border-radius: 999px;
+        padding: 0.45rem 0.9rem;
+        color: #0f172a;
+        font-weight: 600;
+    }
+</style>

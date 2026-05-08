@@ -1,0 +1,54 @@
+---
+title: "WebGl2Backend"
+description: "WebGL 2.0 implementation of RenderBackend. Manages the GL context, texture and framebuffer caches keyed by user-side Texture/RenderTexture identity, the active VAO, shader program, blend mode, and scissor stack. Dispatches to per-drawable renderers (WebGl2SpriteRenderer, WebGl2MeshRenderer, WebGl2ParticleRenderer) registered in the RendererRegistry. Emits WebGl2Backend.onContextLost / WebGl2Backend.onContextRestored Signals when the browser loses or regains the GL context. The browser recreates the context automatically; renderers reconnect their GPU-side state as needed on the next draw."
+symbol: "WebGl2Backend"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/webgl2/WebGl2Backend.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L90"
+---
+# WebGl2Backend
+`import { WebGl2Backend } from '@codexo/exojs'`
+WebGL 2.0 implementation of RenderBackend. Manages the GL
+context, texture and framebuffer caches keyed by user-side
+Texture/RenderTexture identity, the active VAO, shader
+program, blend mode, and scissor stack. Dispatches to per-drawable
+renderers (WebGl2SpriteRenderer, WebGl2MeshRenderer,
+WebGl2ParticleRenderer) registered in the RendererRegistry.
+
+Emits WebGl2Backend.onContextLost / WebGl2Backend.onContextRestored
+Signals when the browser loses or regains the GL context. The browser
+recreates the context automatically; renderers reconnect their
+GPU-side state as needed on the next draw.
+## Properties
+
+- `backendType: WebGl2`
+- `onContextLost: Signal<[]>`
+- `onContextRestored: Signal<[]>`
+- `rendererRegistry: RendererRegistry<WebGl2Backend<>>`
+- `clearColor: unknown`
+- `context: unknown`
+- `renderTarget: unknown`
+- `stats: unknown`
+- `view: unknown`
+- `acquireRenderTexture: unknown`
+- `bindShader: unknown`
+- `bindTexture: unknown`
+- `bindVertexArrayObject: unknown`
+- `clear: unknown`
+- `composeWithAlphaMask: unknown`
+- `destroy: unknown`
+- `draw: unknown`
+- `execute: unknown`
+- `flush: unknown`
+- `initialize: unknown`
+- `popScissorRect: unknown`
+- `pushScissorRect: unknown`
+- `releaseRenderTexture: unknown`
+- `resetStats: unknown`
+- `resize: unknown`
+- `setBlendMode: unknown`
+- `setClearColor: unknown`
+- `setRenderTarget: unknown`
+- `setView: unknown`
+Source: [src/rendering/webgl2/WebGl2Backend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2Backend.ts#L90)

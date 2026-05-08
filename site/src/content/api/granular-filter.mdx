@@ -1,0 +1,39 @@
+---
+title: "GranularFilter"
+description: "Granular synthesis filter — slices input into small Hann-windowed grains and replays them with randomized parameters. Use cases: - Ambient texture: long grain (200ms+), low density (10-30/s), high spread, pitch range 0.5-1.5x. Creates evolving pad-like sounds. - Glitch: short grain (10-20ms), high density (100+/s), very high spread, pitch range 0.7-1.3x. Stuttering, lo-fi effects. - Time-stretch (low pitch with overlap): grain ~50ms, density 50/s, spread 0, pitch 1.0. Pseudo-stretches the input by buffering. - Pitch cloud: medium grain, medium density, pitchMin 0.5, pitchMax 2.0 gives a \"shimmer\" effect of overlapping pitches."
+symbol: "GranularFilter"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/filters/GranularFilter.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/GranularFilter.ts#L120"
+---
+# GranularFilter
+`import { GranularFilter } from '@codexo/exojs'`
+Granular synthesis filter — slices input into small Hann-windowed grains
+and replays them with randomized parameters. Use cases:
+
+  - Ambient texture: long grain (200ms+), low density (10-30/s), high
+    spread, pitch range 0.5-1.5x. Creates evolving pad-like sounds.
+  - Glitch: short grain (10-20ms), high density (100+/s), very high
+    spread, pitch range 0.7-1.3x. Stuttering, lo-fi effects.
+  - Time-stretch (low pitch with overlap): grain ~50ms, density 50/s,
+    spread 0, pitch 1.0. Pseudo-stretches the input by buffering.
+  - Pitch cloud: medium grain, medium density, pitchMin 0.5, pitchMax 2.0
+    gives a "shimmer" effect of overlapping pitches.
+## Constructors
+
+- `new(options: GranularFilterOptions): GranularFilter<>`
+
+## Methods
+
+- `_onWorkletReady(): void`
+- `_setAudioParam(name: string, value: number): void`
+- `destroy(): void`
+
+## Properties
+
+- `_inputGain: GainNode | null`
+- `_outputGain: GainNode | null`
+- `_ready: Promise<void> | null`
+- `_workletNode: AudioWorkletNode | null`
+Source: [src/audio/filters/GranularFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/GranularFilter.ts#L120)

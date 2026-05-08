@@ -1,0 +1,104 @@
+---
+title: "Video"
+description: "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream via `requestVideoFrameCallback` (falling back to `currentTime` polling on browsers that lack it). Audio is routed through the Web Audio API gain node and can be directed to any AudioBus."
+symbol: "Video"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/video/Video.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L37"
+---
+# Video
+`import { Video } from '@codexo/exojs'`
+Renders an `HTMLVideoElement` as a live texture on a Sprite.
+
+`Video` wraps a video element, manages playback (play/pause/stop/seek,
+volume, loop, playback rate), and keeps the underlying Texture
+in sync with the decoded video frame stream via
+`requestVideoFrameCallback` (falling back to `currentTime` polling on
+browsers that lack it). Audio is routed through the Web Audio API gain
+node and can be directed to any AudioBus.
+## Constructors
+
+- `new(videoElement: HTMLVideoElement<>, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>): Video<>`
+
+## Methods
+
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `addFilter(filter: Filter<>): this`
+- `applyOptions(options: Partial<PlaybackOptions>): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `getBounds(): Rectangle<>`
+- `getGlobalTransform(): Matrix<>`
+- `getLocalBounds(): Rectangle<>`
+- `getNormals(): Vector<>[]`
+- `getTime(): number`
+- `getTransform(): Matrix<>`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View<>): boolean`
+- `move(x: number, y: number): this`
+- `pause(options?: Partial<PlaybackOptions>): this`
+- `play(options?: Partial<PlaybackOptions>): this`
+- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `removeFilter(filter: Filter<>): this`
+- `render(backend: RenderBackend<>): this`
+- `renderVisualContent(backend: RenderBackend<>, renderContent: object, blendMode: BlendModes): void`
+- `resetTextureFrame(): this`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setBlendMode(blendMode: BlendModes): this`
+- `setCacheAsBitmap(cacheAsBitmap: boolean): this`
+- `setChildOrder(order: number): this`
+- `setCullable(cullable: boolean): this`
+- `setFilters(filters: readonly Filter<>[]): this`
+- `setLoop(loop: boolean): this`
+- `setMuted(muted: boolean): this`
+- `setOrigin(x: number, y: number): this`
+- `setPlaybackRate(value: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setTexture(texture: RenderTexture<> | Texture<> | null): this`
+- `setTextureFrame(frame: Rectangle<>, resetSize: boolean): this`
+- `setTime(time: number): this`
+- `setTint(color: Color<>): this`
+- `setVolume(value: number): this`
+- `stop(options?: Partial<PlaybackOptions>): this`
+- `toggle(options?: Partial<PlaybackOptions>): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTexture(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `_bounds: Bounds<>`
+- `_cos: number`
+- `_origin: ObservableVector<>`
+- `_position: ObservableVector<>`
+- `_rotation: number`
+- `_scale: ObservableVector<>`
+- `_sin: number`
+- `_transform: Matrix<>`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `onDrag: Signal<[InteractionEvent<>]>`
+- `onDragEnd: Signal<[InteractionEvent<>]>`
+- `onDragStart: Signal<[InteractionEvent<>]>`
+- `onPointerDown: Signal<[InteractionEvent<>]>`
+- `onPointerMove: Signal<[InteractionEvent<>]>`
+- `onPointerOut: Signal<[InteractionEvent<>]>`
+- `onPointerOver: Signal<[InteractionEvent<>]>`
+- `onPointerTap: Signal<[InteractionEvent<>]>`
+- `onPointerUp: Signal<[InteractionEvent<>]>`
+- `onStart: Signal<[]>`
+- `onStop: Signal<[]>`
+Source: [src/rendering/video/Video.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/video/Video.ts#L37)

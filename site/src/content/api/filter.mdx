@@ -1,0 +1,29 @@
+---
+title: "Filter"
+description: "Abstract base class for post-process filters applied to a drawable's render output. Filters are rendered into a temporary RenderTexture (the `output`) that is composited back onto the scene after all filters in the chain have been applied. Subclasses implement apply to run their shader pass. Stock implementations: BlurFilter, ColorFilter. User-supplied GLSL/WGSL shaders: WebGl2ShaderFilter, WebGpuShaderFilter."
+symbol: "Filter"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/filters/Filter.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/Filter.ts#L15"
+---
+# Filter
+`import { Filter } from '@codexo/exojs'`
+Abstract base class for post-process filters applied to a drawable's
+render output.
+
+Filters are rendered into a temporary RenderTexture (the `output`)
+that is composited back onto the scene after all filters in the chain have
+been applied. Subclasses implement apply to run their shader pass.
+Stock implementations: BlurFilter, ColorFilter.
+User-supplied GLSL/WGSL shaders: WebGl2ShaderFilter,
+WebGpuShaderFilter.
+## Constructors
+
+- `new(): Filter<>`
+
+## Methods
+
+- `apply(backend: RenderBackend<>, input: RenderTexture<>, output: RenderTexture<>): void`
+- `destroy(): void`
+Source: [src/rendering/filters/Filter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/Filter.ts#L15)

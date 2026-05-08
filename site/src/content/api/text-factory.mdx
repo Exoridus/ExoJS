@@ -1,0 +1,31 @@
+---
+title: "TextFactory"
+description: "AssetFactory implementation that loads plain-text files (TXT, CSV, GLSL shaders, HTML fragments, and any other UTF-8 text) and exposes them as JavaScript strings."
+symbol: "TextFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/TextFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextFactory.ts#L8"
+---
+# TextFactory
+`import { TextFactory } from '@codexo/exojs'`
+AssetFactory implementation that loads plain-text files (TXT, CSV,
+GLSL shaders, HTML fragments, and any other UTF-8 text) and exposes them as
+JavaScript strings.
+## Constructors
+
+- `new(): TextFactory<>`
+
+## Methods
+
+- `create(source: string): Promise<string>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<string>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "text"`
+Source: [src/resources/factories/TextFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextFactory.ts#L8)

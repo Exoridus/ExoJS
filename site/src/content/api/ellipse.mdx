@@ -1,0 +1,44 @@
+---
+title: "Ellipse"
+description: "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements ShapeLike for use in the intersection pipeline. `collidesWith` returns a CollisionResponse for ellipse-vs-rectangle (axis-aligned), ellipse-vs-circle, and ellipse-vs-SceneNode (which collides against the node's AABB). Other targets — ellipse-vs-ellipse, ellipse-vs-polygon, and ellipse-vs-line — return `null`; use Ellipse.intersectsWith for boolean tests against those."
+symbol: "Ellipse"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/Ellipse.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts#L33"
+---
+# Ellipse
+`import { Ellipse } from '@codexo/exojs'`
+Mutable axis-aligned ellipse shape defined by a centre position and
+separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements
+ShapeLike for use in the intersection pipeline.
+
+`collidesWith` returns a CollisionResponse for ellipse-vs-rectangle
+(axis-aligned), ellipse-vs-circle, and ellipse-vs-SceneNode (which
+collides against the node's AABB). Other targets — ellipse-vs-ellipse,
+ellipse-vs-polygon, and ellipse-vs-line — return `null`; use
+Ellipse.intersectsWith for boolean tests against those.
+## Constructors
+
+- `new(x: number, y: number, halfWidth: number, halfHeight: number): Ellipse<>`
+
+## Methods
+
+- `clone(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `copy(ellipse: Ellipse<>): this`
+- `destroy(): void`
+- `equals(__namedParameters: Partial<Ellipse>): boolean`
+- `getBounds(): Rectangle<>`
+- `getNormals(): Vector<>[]`
+- `intersectsWith(target: Collidable): boolean`
+- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `set(x: number, y: number, radiusX: number, radiusY: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRadius(radiusX: number, radiusY: number): this`
+
+## Properties
+
+- `collisionType: CollisionType`
+Source: [src/math/Ellipse.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts#L33)

@@ -1,0 +1,25 @@
+---
+title: "CacheStrategy"
+description: "Strategy interface that decides how assets are fetched and cached. Implementations own the full pipeline: cache check (if applicable) → network fetch (if needed) → factory.process → factory.create → cache write (if applicable). The returned value is the fully constructed resource (post-AssetFactory.create), not the intermediate source. ExoJS ships CacheFirstStrategy (default) and NetworkOnlyStrategy; implement this interface to add custom policies such as network-first, stale-while-revalidate, or cache-only / offline-first."
+symbol: "CacheStrategy"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/CacheStrategy.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts#L36"
+---
+# CacheStrategy
+`import { CacheStrategy } from '@codexo/exojs'`
+Strategy interface that decides how assets are fetched and cached.
+
+Implementations own the full pipeline: cache check (if applicable) →
+network fetch (if needed) → factory.process → factory.create → cache
+write (if applicable). The returned value is the fully constructed
+resource (post-AssetFactory.create), not the intermediate source.
+
+ExoJS ships CacheFirstStrategy (default) and NetworkOnlyStrategy;
+implement this interface to add custom policies such as network-first,
+stale-while-revalidate, or cache-only / offline-first.
+## Properties
+
+- `resolve: unknown`
+Source: [src/resources/CacheStrategy.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheStrategy.ts#L36)

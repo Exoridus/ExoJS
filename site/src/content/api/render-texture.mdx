@@ -1,0 +1,51 @@
+---
+title: "RenderTexture"
+description: "An off-screen render target that can also be sampled as a texture. Combines RenderTarget (framebuffer attachment) with the sampler parameters of a Texture (scale mode, wrap mode, mip generation). A `textureVersion` counter is incremented on every mutation so backends can detect when to re-create the underlying GPU texture object. Mipmap generation is disabled by default because render targets are typically updated every frame and mip generation is expensive."
+symbol: "RenderTexture"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/texture/RenderTexture.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/RenderTexture.ts#L17"
+---
+# RenderTexture
+`import { RenderTexture } from '@codexo/exojs'`
+An off-screen render target that can also be sampled as a texture.
+
+Combines RenderTarget (framebuffer attachment) with the sampler
+parameters of a Texture (scale mode, wrap mode, mip generation).
+A `textureVersion` counter is incremented on every mutation so backends
+can detect when to re-create the underlying GPU texture object.
+
+Mipmap generation is disabled by default because render targets are typically
+updated every frame and mip generation is expensive.
+## Constructors
+
+- `new(width: number, height: number, options?: Partial<SamplerOptions>): RenderTexture<>`
+
+## Methods
+
+- `_touch(): void`
+- `addDestroyListener(listener: object): this`
+- `destroy(): void`
+- `getViewport(view: View<>): Rectangle<>`
+- `mapCoordsToPixel(point: Vector<>, view: View<>): Vector<>`
+- `mapPixelToCoords(point: Vector<>, view: View<>): Vector<>`
+- `removeDestroyListener(listener: object): this`
+- `resize(width: number, height: number): this`
+- `setPremultiplyAlpha(premultiplyAlpha: boolean): this`
+- `setScaleMode(scaleMode: ScaleModes): this`
+- `setSize(width: number, height: number): this`
+- `setSource(source: DataView<ArrayBufferLike> | null): this`
+- `setView(view: View<> | null): this`
+- `setWrapMode(wrapMode: WrapModes): this`
+- `updateSource(): this`
+- `updateViewport(): this`
+
+## Properties
+
+- `_defaultView: View<>`
+- `_size: Size<>`
+- `_view: View<>`
+- `_viewport: Rectangle<>`
+- `defaultSamplerOptions: SamplerOptions`
+Source: [src/rendering/texture/RenderTexture.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/RenderTexture.ts#L17)

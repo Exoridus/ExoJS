@@ -1,0 +1,26 @@
+---
+title: "AssetFactory"
+description: "Contract that every asset factory must satisfy. A factory is responsible for two distinct steps: converting a raw HTTP Response into a serialisable intermediate form (`process`), and then turning that intermediate form into the final engine object (`create`). Separating the two steps allows caching layers to persist the processed data and skip the network on subsequent loads."
+symbol: "AssetFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/AssetFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetFactory.ts#L11"
+---
+# AssetFactory
+`import { AssetFactory } from '@codexo/exojs'`
+Contract that every asset factory must satisfy.
+
+A factory is responsible for two distinct steps: converting a raw HTTP
+Response
+into a serialisable intermediate form (`process`), and then turning that
+intermediate form into the final engine object (`create`). Separating the
+two steps allows caching layers to persist the processed data and skip the
+network on subsequent loads.
+## Properties
+
+- `storageName: string`
+- `create: unknown`
+- `destroy: unknown`
+- `process: unknown`
+Source: [src/resources/AssetFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetFactory.ts#L11)

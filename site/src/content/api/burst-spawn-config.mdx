@@ -1,0 +1,26 @@
+---
+title: "BurstSpawnConfig"
+description: "Per-property spawn configuration for BurstSpawn. Same fields as RateSpawnConfig except no rate — the schedule drives counts."
+symbol: "BurstSpawnConfig"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/BurstSpawn.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/BurstSpawn.ts#L21"
+---
+# BurstSpawnConfig
+`import { BurstSpawnConfig } from '@codexo/exojs'`
+Per-property spawn configuration for BurstSpawn. Same fields as
+RateSpawnConfig except no rate — the schedule drives counts.
+## Properties
+
+- `lifetime?: Distribution<number>`
+- `loop?: boolean`
+- `position?: Distribution<Vector<>>`
+- `rotation?: Distribution<number>`
+- `rotationSpeed?: Distribution<number>`
+- `scale?: Distribution<Vector<>>`
+- `schedule: readonly BurstSchedule[]`
+- `textureIndex?: Distribution<number>`
+- `tint?: Distribution<Color<>>`
+- `velocity?: Distribution<Vector<>>`
+Source: [src/particles/modules/BurstSpawn.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/BurstSpawn.ts#L21)

@@ -1,0 +1,44 @@
+---
+title: "RenderBackend"
+description: "Common interface implemented by both rendering backends (WebGl2Backend, WebGpuBackend). Owns the canvas root render target, exposes the active View, accepts Drawable submissions, manages an offscreen render-texture pool, and exposes the scissor-stack and alpha-mask compositing primitives used by RenderNode's `mask` machinery. Application code rarely calls this directly — high-level code submits drawables via the scene graph and reads `app.backend.stats` for per-frame counters. Custom render passes (subclasses of RenderPass) interact with the interface directly."
+symbol: "RenderBackend"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/RenderBackend.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderBackend.ts#L27"
+---
+# RenderBackend
+`import { RenderBackend } from '@codexo/exojs'`
+Common interface implemented by both rendering backends
+(WebGl2Backend, WebGpuBackend). Owns the canvas root
+render target, exposes the active View, accepts Drawable
+submissions, manages an offscreen render-texture pool, and exposes the
+scissor-stack and alpha-mask compositing primitives used by
+RenderNode's `mask` machinery.
+
+Application code rarely calls this directly — high-level code submits
+drawables via the scene graph and reads `app.backend.stats` for
+per-frame counters. Custom render passes (subclasses of
+RenderPass) interact with the interface directly.
+## Properties
+
+- `backendType: RenderBackendType`
+- `renderTarget: RenderTarget<>`
+- `stats: RenderStats`
+- `view: View<>`
+- `acquireRenderTexture: unknown`
+- `clear: unknown`
+- `composeWithAlphaMask: unknown`
+- `destroy: unknown`
+- `draw: unknown`
+- `execute: unknown`
+- `flush: unknown`
+- `initialize: unknown`
+- `popScissorRect: unknown`
+- `pushScissorRect: unknown`
+- `releaseRenderTexture: unknown`
+- `resetStats: unknown`
+- `resize: unknown`
+- `setRenderTarget: unknown`
+- `setView: unknown`
+Source: [src/rendering/RenderBackend.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderBackend.ts#L27)

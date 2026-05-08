@@ -1,0 +1,27 @@
+---
+title: "GamepadDescriptor"
+description: "Parsed metadata extracted from a browser `Gamepad.id` string. `vendorId` and `productId` are four-hex-digit strings (e.g. `\"045e\"`, `\"028e\"`). `productKey` is the colon-joined pair (`\"045e:028e\"`), used as a compact lookup key. `name` is the human-readable portion of the id with the vendor/product tokens removed, or `null` when the id contained only identifiers."
+symbol: "GamepadDescriptor"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/GamepadDefinitions.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts#L40"
+---
+# GamepadDescriptor
+`import { GamepadDescriptor } from '@codexo/exojs'`
+Parsed metadata extracted from a browser `Gamepad.id` string.
+
+`vendorId` and `productId` are four-hex-digit strings (e.g. `"045e"`, `"028e"`).
+`productKey` is the colon-joined pair (`"045e:028e"`), used as a compact lookup key.
+`name` is the human-readable portion of the id with the vendor/product tokens removed,
+or `null` when the id contained only identifiers.
+## Properties
+
+- `id: string`
+- `index: number`
+- `label: string`
+- `name: string | null`
+- `productId: string | null`
+- `productKey: string | null`
+- `vendorId: string | null`
+Source: [src/input/GamepadDefinitions.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts#L40)

@@ -1,0 +1,35 @@
+---
+title: "VttFactory"
+description: "AssetFactory implementation that parses WebVTT (`.vtt`) subtitle and caption files and produces an array of VTTCue instances. The parser handles CRLF and CR line endings, skips the `WEBVTT` header and any metadata blocks, and applies optional cue settings (`align`, `line`, `position`, `size`, `vertical`) on the timestamp line directly to the resulting VTTCue."
+symbol: "VttFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/VttFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VttFactory.ts#L115"
+---
+# VttFactory
+`import { VttFactory } from '@codexo/exojs'`
+AssetFactory implementation that parses WebVTT (`.vtt`) subtitle and
+caption files and produces an array of VTTCue instances.
+
+The parser handles CRLF and CR line endings, skips the `WEBVTT` header and
+any metadata blocks, and applies optional cue settings (`align`, `line`,
+`position`, `size`, `vertical`) on the timestamp line directly to the
+resulting VTTCue.
+## Constructors
+
+- `new(): VttFactory<>`
+
+## Methods
+
+- `create(source: string): Promise<VTTCue[]>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<string>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "vtt"`
+Source: [src/resources/factories/VttFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VttFactory.ts#L115)

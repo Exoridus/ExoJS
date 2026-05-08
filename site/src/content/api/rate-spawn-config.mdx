@@ -1,0 +1,27 @@
+---
+title: "RateSpawnConfig"
+description: "Per-property spawn configuration. Every entry is a Distribution sampled once per spawned particle. Omitting an entry leaves the slot's field at its zero/default value (zero position/velocity/rotation, unit scale, opaque white, lifetime 1 s)."
+symbol: "RateSpawnConfig"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/RateSpawn.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/RateSpawn.ts#L14"
+---
+# RateSpawnConfig
+`import { RateSpawnConfig } from '@codexo/exojs'`
+Per-property spawn configuration. Every entry is a Distribution
+sampled once per spawned particle. Omitting an entry leaves the slot's
+field at its zero/default value (zero position/velocity/rotation, unit
+scale, opaque white, lifetime 1 s).
+## Properties
+
+- `lifetime?: Distribution<number>`
+- `position?: Distribution<Vector<>>`
+- `rate: Distribution<number>`
+- `rotation?: Distribution<number>`
+- `rotationSpeed?: Distribution<number>`
+- `scale?: Distribution<Vector<>>`
+- `textureIndex?: Distribution<number>`
+- `tint?: Distribution<Color<>>`
+- `velocity?: Distribution<Vector<>>`
+Source: [src/particles/modules/RateSpawn.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/RateSpawn.ts#L14)

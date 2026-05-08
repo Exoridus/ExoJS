@@ -1,0 +1,40 @@
+---
+title: "Spritesheet"
+description: "Slices a single Texture into named frames and optional named animation sequences. Each frame is stored as both a Rectangle (the pixel region) and a pre-configured Sprite ready for direct rendering. Animations are ordered lists of frame names that AnimatedSprite.fromSpritesheet consumes to create playback clips."
+symbol: "Spritesheet"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/sprite/Spritesheet.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/Spritesheet.ts#L34"
+---
+# Spritesheet
+`import { Spritesheet } from '@codexo/exojs'`
+Slices a single Texture into named frames and optional named
+animation sequences.
+
+Each frame is stored as both a Rectangle (the pixel region) and a
+pre-configured Sprite ready for direct rendering. Animations are
+ordered lists of frame names that AnimatedSprite.fromSpritesheet
+consumes to create playback clips.
+## Constructors
+
+- `new(texture: Texture<>, data: SpritesheetData): Spritesheet<>`
+
+## Methods
+
+- `addFrame(name: string, data: SpritesheetFrame): void`
+- `clear(): this`
+- `defineAnimation(name: string, frameNames: readonly string[]): this`
+- `destroy(): void`
+- `getAnimationFrameNames(name: string): readonly string[]`
+- `getFrame(name: string): Rectangle<>`
+- `getFrameSprite(name: string): Sprite<>`
+- `parse(data: SpritesheetData, keepFrames: boolean): void`
+
+## Properties
+
+- `animations: Map<string, readonly string[]>`
+- `frames: Map<string, Rectangle<>>`
+- `sprites: Map<string, Sprite<>>`
+- `texture: Texture<>`
+Source: [src/rendering/sprite/Spritesheet.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/Spritesheet.ts#L34)

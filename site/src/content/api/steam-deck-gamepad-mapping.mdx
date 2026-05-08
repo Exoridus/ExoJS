@@ -1,0 +1,37 @@
+---
+title: "SteamDeckGamepadMapping"
+description: "Mapping for the Valve Steam Deck (and the new Valve Controller via vendor fallback) when its raw HID gamepad is exposed directly to the browser — i.e. when Steam Input is *not* intercepting the device. With Steam Input intercepting, the device appears as `28de:11ff` \"Steam Virtual Gamepad\" with a standard W3C layout instead, and is routed to GenericDualAnalogGamepadMapping. The raw layout is non-standard: face buttons live at indices 3-6 (not the W3C-standard 0-3), the D-pad lives at indices 16-19, paddles at 20-23, and triggers report as analog axes 8/9 rather than buttons 6/7. Indices are derived from the Linux SDL_GameControllerDB entry for `Valve Steam Deck`."
+symbol: "SteamDeckGamepadMapping"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/SteamDeckGamepadMapping.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamDeckGamepadMapping.ts#L18"
+---
+# SteamDeckGamepadMapping
+`import { SteamDeckGamepadMapping } from '@codexo/exojs'`
+Mapping for the Valve Steam Deck (and the new Valve Controller via vendor
+fallback) when its raw HID gamepad is exposed directly to the browser —
+i.e. when Steam Input is *not* intercepting the device. With Steam Input
+intercepting, the device appears as `28de:11ff` "Steam Virtual Gamepad"
+with a standard W3C layout instead, and is routed to
+GenericDualAnalogGamepadMapping.
+
+The raw layout is non-standard: face buttons live at indices 3-6 (not the
+W3C-standard 0-3), the D-pad lives at indices 16-19, paddles at 20-23, and
+triggers report as analog axes 8/9 rather than buttons 6/7. Indices are
+derived from the Linux SDL_GameControllerDB entry for `Valve Steam Deck`.
+## Constructors
+
+- `new(): SteamDeckGamepadMapping<>`
+
+## Methods
+
+- `destroy(): void`
+- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean`
+
+## Properties
+
+- `axes: readonly GamepadAxis<>[]`
+- `buttons: readonly GamepadButton<>[]`
+- `family: GamepadMappingFamily`
+Source: [src/input/SteamDeckGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamDeckGamepadMapping.ts#L18)

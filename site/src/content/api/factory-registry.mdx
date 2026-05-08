@@ -1,0 +1,31 @@
+---
+title: "FactoryRegistry"
+description: "Maps AssetConstructor tokens to their corresponding AssetFactory instances. Resolution is prototype-chain aware: if no factory is registered for the exact constructor, the registry walks up the prototype chain and returns the first ancestor match. This means registering a factory for a base class automatically handles all subclasses. Used by Loader; consumers interact through `loader.register()`."
+symbol: "FactoryRegistry"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/FactoryRegistry.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/FactoryRegistry.ts#L21"
+---
+# FactoryRegistry
+`import { FactoryRegistry } from '@codexo/exojs'`
+Maps AssetConstructor tokens to their corresponding
+AssetFactory instances.
+
+Resolution is prototype-chain aware: if no factory is registered for the
+exact constructor, the registry walks up the prototype chain and returns the
+first ancestor match. This means registering a factory for a base class
+automatically handles all subclasses.
+
+ Used by Loader; consumers interact through `loader.register()`.
+## Constructors
+
+- `new(): FactoryRegistry<>`
+
+## Methods
+
+- `destroy(): void`
+- `has(type: AssetConstructor<>): boolean`
+- `register(type: AssetConstructor<T>, factory: AssetFactory<T>): void`
+- `resolve(type: AssetConstructor<T>): AssetFactory<T>`
+Source: [src/resources/FactoryRegistry.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/FactoryRegistry.ts#L21)

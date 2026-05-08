@@ -1,0 +1,39 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../components/DocsSidebar.astro';
+import { CHAPTERS } from '../../lib/chapters';
+
+const guideEntries = await getCollection('guide');
+const bySlug = new Map<string, CollectionEntry<'guide'>>(guideEntries.map((entry: CollectionEntry<'guide'>) => [entry.data.chapter, entry]));
+const chapterLinks = CHAPTERS.map(chapter => ({
+    ...chapter,
+    href: `${import.meta.env.BASE_URL}guide/${chapter.slug}/`,
+    description: bySlug.get(chapter.slug)?.data.description ?? '',
+}));
+
+const sidebarGroups = [
+    {
+        title: 'Guide Chapters',
+        items: CHAPTERS.map(chapter => ({
+            href: `${import.meta.env.BASE_URL}guide/${chapter.slug}/`,
+            label: `${chapter.order}. ${chapter.title}`,
+        })),
+    },
+];
+---
+
+<DocsLayout title="ExoJS Guide" description="ExoJS guide chapters">
+    <DocsSidebar slot="sidebar" groups={sidebarGroups} />
+
+    <h1>Guide</h1>
+    <p>Browse all 19 chapters. Each chapter currently includes intro stubs and per-example preview blocks.</p>
+    <ul>
+        {chapterLinks.map(chapter => (
+            <li>
+                <a href={chapter.href}>{chapter.order}. {chapter.title}</a> - {chapter.description}
+            </li>
+        ))}
+    </ul>
+</DocsLayout>

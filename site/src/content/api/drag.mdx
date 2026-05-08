@@ -1,0 +1,35 @@
+---
+title: "Drag"
+description: "Exponential velocity damping. Each frame multiplies every live particle's velocity by `(1 - drag * dt)`, simulating linear air resistance. `drag = 0` is no damping; `drag = 1` halves velocity in ~1 second; higher values slow particles faster. Negative values accelerate (don't do that unless you mean it). GPU-eligible."
+symbol: "Drag"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/Drag.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/Drag.ts#L16"
+---
+# Drag
+`import { Drag } from '@codexo/exojs'`
+Exponential velocity damping. Each frame multiplies every live particle's
+velocity by `(1 - drag * dt)`, simulating linear air resistance.
+
+`drag = 0` is no damping; `drag = 1` halves velocity in ~1 second; higher
+values slow particles faster. Negative values accelerate (don't do that
+unless you mean it).
+
+GPU-eligible.
+## Constructors
+
+- `new(drag: number): Drag<>`
+
+## Methods
+
+- `apply(system: ParticleSystem<>, dt: number): void`
+- `destroy(): void`
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
+- `wgsl(): WgslContribution`
+- `writeUniforms(view: DataView<>, offset: number): void`
+
+## Properties
+
+- `drag: number`
+Source: [src/particles/modules/Drag.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/Drag.ts#L16)

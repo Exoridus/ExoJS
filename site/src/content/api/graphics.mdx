@@ -1,0 +1,113 @@
+---
+title: "Graphics"
+description: "Immediate-mode 2D shape API backed by Mesh children. Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a new Mesh child colored with the current `fillColor` or `lineColor`. The active `lineWidth` controls stroke thickness for path and outline draws. Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor point and flush a Mesh on each segment. Call clear to remove all child meshes and reset pen state. Because each shape is a separate Mesh, `Graphics` inherits full filter, blend, tint, and mask support from Container."
+symbol: "Graphics"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/primitives/Graphics.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L23"
+---
+# Graphics
+`import { Graphics } from '@codexo/exojs'`
+Immediate-mode 2D shape API backed by Mesh children.
+
+Each draw call (e.g. `drawCircle`, `drawRectangle`, `drawLine`) appends a
+new Mesh child colored with the current `fillColor` or `lineColor`.
+The active `lineWidth` controls stroke thickness for path and outline draws.
+Path commands (`moveTo`, `lineTo`, `quadraticCurveTo`, etc.) track a cursor
+point and flush a Mesh on each segment.
+
+Call clear to remove all child meshes and reset pen state. Because
+each shape is a separate Mesh, `Graphics` inherits full filter, blend,
+tint, and mask support from Container.
+## Constructors
+
+- `new(): Graphics<>`
+
+## Methods
+
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `addChild(child: RenderNode<>): this`
+- `addChildAt(child: RenderNode<>, index: number): this`
+- `addFilter(filter: Filter<>): this`
+- `arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this`
+- `bezierCurveTo(cpX1: number, cpY1: number, cpX2: number, cpY2: number, toX: number, toY: number): this`
+- `clear(): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise: boolean): this`
+- `drawCircle(centerX: number, centerY: number, radius: number): this`
+- `drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this`
+- `drawLine(startX: number, startY: number, endX: number, endY: number): this`
+- `drawPath(path: number[]): this`
+- `drawPolygon(path: number[]): this`
+- `drawRectangle(x: number, y: number, width: number, height: number): this`
+- `drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number, rotation: number): this`
+- `getBounds(): Rectangle<>`
+- `getChildAt(index: number): Mesh<>`
+- `getChildIndex(child: RenderNode<>): number`
+- `getGlobalTransform(): Matrix<>`
+- `getLocalBounds(): Rectangle<>`
+- `getNormals(): Vector<>[]`
+- `getTransform(): Matrix<>`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View<>): boolean`
+- `lineTo(toX: number, toY: number): this`
+- `markSortDirty(): this`
+- `move(x: number, y: number): this`
+- `moveTo(x: number, y: number): this`
+- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `quadraticCurveTo(cpX: number, cpY: number, toX: number, toY: number): this`
+- `removeChild(child: RenderNode<>): this`
+- `removeChildAt(index: number): this`
+- `removeChildren(begin: number, end: number): this`
+- `removeFilter(filter: Filter<>): this`
+- `render(backend: RenderBackend<>): this`
+- `renderVisualContent(backend: RenderBackend<>, renderContent: object, blendMode: BlendModes): void`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setCacheAsBitmap(cacheAsBitmap: boolean): this`
+- `setChildIndex(child: RenderNode<>, index: number): this`
+- `setChildOrder(order: number): this`
+- `setCullable(cullable: boolean): this`
+- `setFilters(filters: readonly Filter<>[]): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `sortChildren(): this`
+- `swapChildren(firstChild: RenderNode<>, secondChild: RenderNode<>): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `_bounds: Bounds<>`
+- `_cos: number`
+- `_origin: ObservableVector<>`
+- `_position: ObservableVector<>`
+- `_rotation: number`
+- `_scale: ObservableVector<>`
+- `_sin: number`
+- `_transform: Matrix<>`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `onDrag: Signal<[InteractionEvent<>]>`
+- `onDragEnd: Signal<[InteractionEvent<>]>`
+- `onDragStart: Signal<[InteractionEvent<>]>`
+- `onPointerDown: Signal<[InteractionEvent<>]>`
+- `onPointerMove: Signal<[InteractionEvent<>]>`
+- `onPointerOut: Signal<[InteractionEvent<>]>`
+- `onPointerOver: Signal<[InteractionEvent<>]>`
+- `onPointerTap: Signal<[InteractionEvent<>]>`
+- `onPointerUp: Signal<[InteractionEvent<>]>`
+Source: [src/rendering/primitives/Graphics.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/Graphics.ts#L23)

@@ -1,0 +1,46 @@
+---
+title: "SceneManager"
+description: "Stack-based scene controller owned by Application. Maintains an ordered stack of Scene instances, each tagged with its participation policy (SceneStackMode + SceneInputMode). Scenes higher on the stack overlay scenes lower; the policy of each scene determines whether scenes below continue to update / render and whether input events propagate down past it. Use SceneManager.setScene to replace the entire stack with one scene, SceneManager.pushScene to overlay a new scene on top, and SceneManager.popScene to remove the topmost. All three accept an optional fade transition. Input from the InputManager is automatically routed through the stack top-to-bottom; each scene's Scene.handleInput return value plus the scene's input policy decide whether the next scene below receives the event."
+symbol: "SceneManager"
+subsystem: "core"
+importPath: "@codexo/exojs"
+sourcePath: "src/core/SceneManager.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L103"
+---
+# SceneManager
+`import { SceneManager } from '@codexo/exojs'`
+Stack-based scene controller owned by Application. Maintains an
+ordered stack of Scene instances, each tagged with its
+participation policy (SceneStackMode + SceneInputMode).
+Scenes higher on the stack overlay scenes lower; the policy of each
+scene determines whether scenes below continue to update / render and
+whether input events propagate down past it.
+
+Use SceneManager.setScene to replace the entire stack with one
+scene, SceneManager.pushScene to overlay a new scene on top, and
+SceneManager.popScene to remove the topmost. All three accept an
+optional fade transition.
+
+Input from the InputManager is automatically routed through the
+stack top-to-bottom; each scene's Scene.handleInput return value
+plus the scene's input policy decide whether the next scene below
+receives the event.
+## Constructors
+
+- `new(app: Application<>): SceneManager<>`
+
+## Methods
+
+- `destroy(): void`
+- `popScene(options: PopSceneOptions): Promise<SceneManager<>>`
+- `pushScene(scene: Scene<>, options: PushSceneOptions): Promise<SceneManager<>>`
+- `setScene(scene: Scene<> | null, options: SetSceneOptions): Promise<SceneManager<>>`
+- `update(delta: Time<>): this`
+
+## Properties
+
+- `onChangeScene: Signal<[Scene<> | null]>`
+- `onStartScene: Signal<[Scene<>]>`
+- `onStopScene: Signal<[Scene<>]>`
+- `onUpdateScene: Signal<[Scene<>]>`
+Source: [src/core/SceneManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts#L103)

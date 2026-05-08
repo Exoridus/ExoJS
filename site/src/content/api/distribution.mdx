@@ -1,0 +1,28 @@
+---
+title: "Distribution"
+description: "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value — used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing. Implementations come in two flavours: - **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call)."
+symbol: "Distribution"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/distributions/Distribution.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/Distribution.ts#L31"
+---
+# Distribution
+`import { Distribution } from '@codexo/exojs'`
+Value distribution sampled at particle spawn time. Each `sample()` call
+may return a different value — used to randomize spawn properties
+(lifetime, position, velocity, scale, tint, ...) without per-particle
+subclassing.
+
+Implementations come in two flavours:
+
+- **Stateless / scalar** (e.g. Constant, Range) just
+  return a `T` directly.
+- **Mutable-target** (Vector / Color distributions) accept an optional
+  `out` parameter and write into it in place. Pass your own scratch
+  instance to avoid per-spawn heap allocations; omit it to use the
+  distribution's internal scratch (only valid until the next call).
+## Properties
+
+- `sample: unknown`
+Source: [src/particles/distributions/Distribution.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/Distribution.ts#L31)

@@ -1,0 +1,25 @@
+---
+title: "Renderer"
+description: "Contract for a type-specific GPU renderer. One renderer instance exists per drawable type (e.g. `SpriteRenderer`, `MeshRenderer`). Renderers are registered with RendererRegistry and resolved at draw time. They manage their own GPU resources and expose a `flush` method to submit batched draw calls."
+symbol: "Renderer"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/Renderer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Renderer.ts#L16"
+---
+# Renderer
+`import { Renderer } from '@codexo/exojs'`
+Contract for a type-specific GPU renderer.
+
+One renderer instance exists per drawable type (e.g. `SpriteRenderer`,
+`MeshRenderer`). Renderers are registered with RendererRegistry and
+resolved at draw time. They manage their own GPU resources and expose a
+`flush` method to submit batched draw calls.
+## Properties
+
+- `backendType: RenderBackendType`
+- `connect: unknown`
+- `disconnect: unknown`
+- `flush: unknown`
+- `render: unknown`
+Source: [src/rendering/Renderer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Renderer.ts#L16)

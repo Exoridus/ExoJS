@@ -1,8 +1,8 @@
-name: Pages
+name: Deploy Pages
 
 on:
   push:
-    branches: [main]
+    branches: [docs]
   workflow_dispatch:
 
 permissions:
@@ -30,8 +30,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
 
-      - name: Install library dependencies
+      - name: Install root dependencies
         run: npm ci --ignore-scripts --no-audit --fund=false
 
       - name: Build library
@@ -39,7 +42,11 @@ jobs:
 
       - name: Install site dependencies
         working-directory: site
-        run: npm install --no-audit --fund=false
+        run: npm ci --ignore-scripts --no-audit --fund=false
+
+      - name: Build API reference
+        working-directory: site
+        run: npm run build:api
 
       - name: Build site
         working-directory: site

@@ -1,0 +1,35 @@
+---
+title: "AbstractAssetFactory"
+description: "Shared base class for all built-in AssetFactory implementations. Manages a pool of object URLs created during asset loading so that they can be revoked in bulk when the factory is destroyed, preventing memory leaks. Concrete subclasses must implement process and create; they may call createObjectUrl instead of `URL.createObjectURL` directly so that the URL is automatically tracked and cleaned up."
+symbol: "AbstractAssetFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/AbstractAssetFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AbstractAssetFactory.ts#L12"
+---
+# AbstractAssetFactory
+`import { AbstractAssetFactory } from '@codexo/exojs'`
+Shared base class for all built-in AssetFactory implementations.
+
+Manages a pool of object URLs created during asset loading so that they can
+be revoked in bulk when the factory is destroyed, preventing memory leaks.
+Concrete subclasses must implement process and create; they
+may call createObjectUrl instead of `URL.createObjectURL` directly
+so that the URL is automatically tracked and cleaned up.
+## Constructors
+
+- `new(): AbstractAssetFactory<T>`
+
+## Methods
+
+- `create(source: unknown, options?: unknown): Promise<T>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<unknown>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: string`
+Source: [src/resources/AbstractAssetFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/AbstractAssetFactory.ts#L12)

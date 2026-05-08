@@ -1,0 +1,45 @@
+---
+title: "IndexedDbDatabase"
+description: "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set. Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution."
+symbol: "IndexedDbDatabase"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/IndexedDbDatabase.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts#L21"
+---
+# IndexedDbDatabase
+`import { IndexedDbDatabase } from '@codexo/exojs'`
+Database implementation backed by the browser's IndexedDB API.
+
+Each object store is created with a `keyPath` of `"name"`, so records are
+stored as `\{ name, data \}` objects. By default the database is initialised
+with stores for every built-in asset type (font, image, sound, etc.); pass
+a custom `storeNames` list to restrict or extend the set.
+
+Schema migrations are handled in two modes:
+- **Default** — the constructor-supplied `storeNames` list is diff'd
+  against the existing stores and objects stores added/deleted accordingly.
+- **Explicit** — a `migrations` map keyed by target version runs the
+  corresponding callback for each version between `oldVersion` and
+  `newVersion`, allowing precise schema evolution.
+## Constructors
+
+- `new(name: string, version: number, storeNames: readonly string[], migrations?: Record<number, object>): IndexedDbDatabase<>`
+
+## Methods
+
+- `clearStorage(type: string): Promise<boolean>`
+- `connect(): Promise<boolean>`
+- `delete(type: string, name: string): Promise<boolean>`
+- `deleteStorage(): Promise<boolean>`
+- `destroy(): void`
+- `disconnect(): Promise<boolean>`
+- `getObjectStore(type: string, transactionMode: IDBTransactionMode): Promise<IDBObjectStore>`
+- `load(type: string, name: string): Promise<T | null>`
+- `save(type: string, name: string, data: unknown): Promise<void>`
+
+## Properties
+
+- `name: string`
+- `version: number`
+Source: [src/resources/IndexedDbDatabase.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts#L21)

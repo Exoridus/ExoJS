@@ -1,0 +1,24 @@
+---
+title: "DelayFilter"
+description: "Echo/delay effect using a Web Audio `DelayNode` with a feedback loop and dry/wet mix. The feedback path feeds the delayed signal back into itself, producing repeating echoes that decay naturally. Setting `feedback` near its maximum of 0.95 produces a long, prominent tail; lower values create a single slap-back echo."
+symbol: "DelayFilter"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/filters/DelayFilter.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DelayFilter.ts#L27"
+---
+# DelayFilter
+`import { DelayFilter } from '@codexo/exojs'`
+Echo/delay effect using a Web Audio `DelayNode` with a feedback loop and
+dry/wet mix. The feedback path feeds the delayed signal back into itself,
+producing repeating echoes that decay naturally. Setting `feedback` near
+its maximum of 0.95 produces a long, prominent tail; lower values create
+a single slap-back echo.
+## Constructors
+
+- `new(options: DelayFilterOptions): DelayFilter<>`
+
+## Methods
+
+- `destroy(): void`
+Source: [src/audio/filters/DelayFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/DelayFilter.ts#L27)

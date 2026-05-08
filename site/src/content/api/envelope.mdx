@@ -1,0 +1,40 @@
+---
+title: "Envelope"
+description: "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`: attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`) Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed)."
+symbol: "Envelope"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/Envelope.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts#L26"
+---
+# Envelope
+`import { Envelope } from '@codexo/exojs'`
+ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain
+curve on a target `AudioParam`:
+
+  attack:  0 → 1.0 (peak) over attackMs
+  decay:   1.0 → sustainLevel over decayMs
+  sustain: held at sustainLevel
+  release: current → 0 over releaseMs (triggered by `release()`)
+
+Use `trigger()` to start the attack/decay/sustain phase, and `release()`
+to start the release phase. Multiple envelopes can target the same
+AudioParam; the latest schedule wins (cancel via
+`gain.cancelScheduledValues` if needed).
+## Constructors
+
+- `new(options: EnvelopeOptions): Envelope<>`
+
+## Methods
+
+- `destroy(): void`
+- `release(gainParam: AudioParam, atTime: number): void`
+- `trigger(gainParam: AudioParam, atTime: number): void`
+
+## Properties
+
+- `attackMs: number`
+- `decayMs: number`
+- `releaseMs: number`
+- `sustainLevel: number`
+Source: [src/audio/Envelope.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts#L26)

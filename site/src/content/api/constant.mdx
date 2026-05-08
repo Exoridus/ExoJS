@@ -1,0 +1,31 @@
+---
+title: "Constant"
+description: "Distribution that always returns the same value. Implements both Distribution and LifetimeFunction so it can stand in wherever a randomized or time-parameterised value is expected. For mutable types (Vector, Color, ...) the constant value is copied into `out` if provided, otherwise the constructor's value is returned directly. Mutating that returned reference mutates the distribution's source."
+symbol: "Constant"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/distributions/Constant.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/Constant.ts#L12"
+---
+# Constant
+`import { Constant } from '@codexo/exojs'`
+Distribution that always returns the same value. Implements both
+Distribution and LifetimeFunction so it can stand in
+wherever a randomized or time-parameterised value is expected.
+
+For mutable types (Vector, Color, ...) the constant value is copied into
+`out` if provided, otherwise the constructor's value is returned directly.
+Mutating that returned reference mutates the distribution's source.
+## Constructors
+
+- `new(value: T): Constant<T>`
+
+## Methods
+
+- `evaluate(_t: number, out?: T): T`
+- `sample(out?: T): T`
+
+## Properties
+
+- `value: T`
+Source: [src/particles/distributions/Constant.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/Constant.ts#L12)

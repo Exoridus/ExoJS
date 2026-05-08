@@ -1,0 +1,31 @@
+---
+title: "PerformanceLayer"
+description: "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, draw-call count, and scene-node count, alongside a 120-sample frame-time sparkline. Enable via DebugOverlay or by pressing F1 while the canvas has focus."
+symbol: "PerformanceLayer"
+subsystem: "debug"
+importPath: "@codexo/exojs/debug"
+sourcePath: "src/debug/PerformanceLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/PerformanceLayer.ts#L62"
+---
+# PerformanceLayer
+`import { PerformanceLayer } from '@codexo/exojs/debug'`
+Debug layer that renders a compact screen-space HUD (top-left) showing
+rolling-average FPS, per-frame time in milliseconds, draw-call count, and
+scene-node count, alongside a 120-sample frame-time sparkline.
+
+Enable via DebugOverlay or by pressing F1 while the canvas has focus.
+## Constructors
+
+- `new(app: Application<>): PerformanceLayer<>`
+
+## Methods
+
+- `destroy(): void`
+- `render(backend: RenderBackend<>): void`
+- `update(delta: Time<>): void`
+
+## Properties
+
+- `_app: Application<>`
+- `visible: boolean`
+Source: [src/debug/PerformanceLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/PerformanceLayer.ts#L62)

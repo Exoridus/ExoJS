@@ -65,7 +65,7 @@ export class ExampleBrowser extends LitElement {
         this._desktopMediaQuery.addEventListener('change', this._breakpointChangeHandler);
 
         configureUrls({
-            baseUrl: new URL('.', document.baseURI).toString(),
+            baseUrl: new URL('../', document.baseURI).toString(),
             iframeUrl: 'preview.html',
             assetsDir: 'assets',
             examplesDir: 'examples',

@@ -1,0 +1,46 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../components/DocsSidebar.astro';
+
+const subsystemOrder = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'] as const;
+const apiEntries = await getCollection('api');
+type ApiEntry = CollectionEntry<'api'>;
+
+const grouped: Array<{ subsystem: (typeof subsystemOrder)[number]; entries: Array<ApiEntry> }> = subsystemOrder.map(subsystem => ({
+    subsystem,
+    entries: apiEntries
+        .filter((entry: ApiEntry) => entry.data.subsystem === subsystem)
+        .sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title)),
+}));
+
+const sidebarGroups = grouped.map(group => ({
+    title: group.subsystem,
+        items: group.entries.map(entry => ({
+            href: `${import.meta.env.BASE_URL}api/${entry.id}/`,
+            label: entry.data.title,
+        })),
+}));
+---
+
+<DocsLayout title="ExoJS API" description="Auto-generated API reference for ExoJS">
+    <DocsSidebar slot="sidebar" groups={sidebarGroups} />
+
+    <h1>API Reference</h1>
+    <p>Symbols are grouped by subsystem. Items under <code>debug</code> are imported from <code>@codexo/exojs/debug</code>.</p>
+
+    {grouped.map(group => (
+        <section>
+            <h2>{group.subsystem}</h2>
+            <ul>
+                {group.entries.map(entry => (
+                    <li>
+                        <a href={`${import.meta.env.BASE_URL}api/${entry.id}/`}>{entry.data.title}</a>
+                        {entry.data.description ? ` - ${entry.data.description}` : ''}
+                    </li>
+                ))}
+            </ul>
+        </section>
+    ))}
+</DocsLayout>

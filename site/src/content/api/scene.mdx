@@ -1,0 +1,53 @@
+---
+title: "Scene"
+description: "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(loader: Loader): void { ... } override update(delta: Time): void { ... } override draw(backend: RenderBackend): void { ... } } app.start(new GameScene()); For one-off scenes, an anonymous subclass works just as well: app.start(new class extends Scene { override update(delta) { ... } override draw(backend) { ... } });"
+symbol: "Scene"
+subsystem: "core"
+importPath: "@codexo/exojs"
+sourcePath: "src/core/Scene.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts#L112"
+---
+# Scene
+`import { Scene } from '@codexo/exojs'`
+A scene's lifecycle host. Subclass to define scene behavior:
+
+  class GameScene extends Scene \{
+      override init(loader: Loader): void \{ ... \}
+      override update(delta: Time): void \{ ... \}
+      override draw(backend: RenderBackend): void \{ ... \}
+  \}
+
+  app.start(new GameScene());
+
+For one-off scenes, an anonymous subclass works just as well:
+
+  app.start(new class extends Scene \{
+      override update(delta) \{ ... \}
+      override draw(backend) \{ ... \}
+  \});
+## Constructors
+
+- `new(): Scene<>`
+
+## Methods
+
+- `addChild(child: RenderNode<>): this`
+- `destroy(): void`
+- `draw(_backend: RenderBackend<>): void`
+- `getParticipationPolicy(): SceneParticipationPolicy`
+- `handleInput(_event: SceneInputEvent): boolean | void`
+- `init(_loader: Loader<>): void | Promise<void>`
+- `load(_loader: Loader<>): void | Promise<void>`
+- `removeChild(child: RenderNode<>): this`
+- `setParticipationPolicy(policy: SceneParticipationPolicy): this`
+- `unload(_loader: Loader<>): void | Promise<void>`
+- `update(_delta: Time<>): void`
+
+## Properties
+
+- `_app: Application<> | null`
+- `_inputMode: SceneInputMode`
+- `_inputs: SceneInputs<> | null`
+- `_root: Container<>`
+- `_stackMode: SceneStackMode`
+Source: [src/core/Scene.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts#L112)

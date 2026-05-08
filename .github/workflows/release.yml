@@ -11,7 +11,7 @@ on:
         required: true
 
 permissions:
-  contents: read
+  contents: write
   # Required so npm-cli can mint an OIDC-token from GitHub at publish
   # time. The token both (a) authenticates against npm via the package's
   # configured Trusted Publisher (no static NPM_TOKEN secret), and
@@ -103,6 +103,22 @@ jobs:
       - name: Site catalog smoke
         working-directory: site
         run: npm run test:smoke:catalog
+
+      - name: Assemble release bundle
+        run: |
+          BUNDLE_DIR="exojs-${TARGET_TAG}"
+          rm -rf "${BUNDLE_DIR}" "${BUNDLE_DIR}.zip"
+          mkdir -p "${BUNDLE_DIR}/site"
+          cp -R dist "${BUNDLE_DIR}/dist"
+          cp -R examples "${BUNDLE_DIR}/examples"
+          cp -R site/dist/. "${BUNDLE_DIR}/site/"
+          zip -r "${BUNDLE_DIR}.zip" "${BUNDLE_DIR}"
+
+      - name: Attach release bundle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TARGET_TAG }}
+          files: exojs-${{ env.TARGET_TAG }}.zip
 
       - name: Publish to npm
         run: npm publish --provenance --access public

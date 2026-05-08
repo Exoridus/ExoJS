@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import lit from '@astrojs/lit';
+import mdx from '@astrojs/mdx';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -7,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-    integrations: [lit()],
+    integrations: [lit(), mdx()],
     output: 'static',
     base: '/ExoJS/',
     build: {

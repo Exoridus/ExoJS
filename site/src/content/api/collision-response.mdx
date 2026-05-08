@@ -1,0 +1,25 @@
+---
+title: "CollisionResponse"
+description: "Result of a successful Collidable.collidesWith call. Contains the two participating shapes, the penetration depth, containment flags, and the minimum-translation vectors (normal + vector) needed to separate them."
+symbol: "CollisionResponse"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/Collision.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts#L57"
+---
+# CollisionResponse
+`import { CollisionResponse } from '@codexo/exojs'`
+Result of a successful Collidable.collidesWith call. Contains
+the two participating shapes, the penetration depth, containment flags,
+and the minimum-translation vectors (normal + vector) needed to separate
+them.
+## Properties
+
+- `overlap: number`
+- `projectionN: Vector<>`
+- `projectionV: Vector<>`
+- `shapeA: Collidable`
+- `shapeAinB: boolean`
+- `shapeB: Collidable`
+- `shapeBinA: boolean`
+Source: [src/math/Collision.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts#L57)

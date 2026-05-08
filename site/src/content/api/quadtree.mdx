@@ -1,0 +1,37 @@
+---
+title: "Quadtree"
+description: "Generic recursive spatial index used by the engine's `InteractionManager` to accelerate per-frame hit-testing of scene nodes. Items are inserted with their axis-aligned bounding box; the tree automatically subdivides into four quadrants (NW/NE/SW/SE) when a node accumulates more than `maxItems` entries and the current depth is below `maxDepth`. Items that span multiple quadrants are kept at the current node rather than duplicated. The tree is persistent: `insert` and `remove` modify the tree in place without full rebuilds. Call `clear()` for bulk reset, or `destroy()` to release all memory including child rectangles."
+symbol: "Quadtree"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/Quadtree.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Quadtree.ts#L30"
+---
+# Quadtree
+`import { Quadtree } from '@codexo/exojs'`
+Generic recursive spatial index used by the engine's `InteractionManager`
+to accelerate per-frame hit-testing of scene nodes.
+
+Items are inserted with their axis-aligned bounding box; the tree
+automatically subdivides into four quadrants (NW/NE/SW/SE) when a node
+accumulates more than `maxItems` entries and the current depth is below
+`maxDepth`. Items that span multiple quadrants are kept at the current node
+rather than duplicated.
+
+The tree is persistent: `insert` and `remove` modify the tree in place
+without full rebuilds. Call `clear()` for bulk reset, or `destroy()` to
+release all memory including child rectangles.
+## Constructors
+
+- `new(bounds: Rectangle<>, maxItems: number, maxDepth: number, depth: number): Quadtree<T>`
+
+## Methods
+
+- `_walkBounds(callback: object): void`
+- `clear(): void`
+- `destroy(): void`
+- `insert(item: QuadtreeItem<T>): void`
+- `queryPoint(x: number, y: number, results: QuadtreeItem<T>[]): QuadtreeItem<T>[]`
+- `queryRect(rect: Rectangle<>, results: QuadtreeItem<T>[]): QuadtreeItem<T>[]`
+- `remove(item: QuadtreeItem<T>): boolean`
+Source: [src/math/Quadtree.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Quadtree.ts#L30)

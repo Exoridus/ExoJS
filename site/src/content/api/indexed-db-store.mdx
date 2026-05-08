@@ -1,0 +1,28 @@
+---
+title: "IndexedDbStore"
+description: "CacheStore implementation that persists processed asset data in an IndexedDB database via IndexedDbDatabase. Pass an instance to LoaderOptions.cache to enable cross-session asset caching with no additional configuration beyond a database name."
+symbol: "IndexedDbStore"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/IndexedDbStore.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts#L31"
+---
+# IndexedDbStore
+`import { IndexedDbStore } from '@codexo/exojs'`
+CacheStore implementation that persists processed asset data in an
+IndexedDB database via IndexedDbDatabase.
+
+Pass an instance to LoaderOptions.cache to enable cross-session
+asset caching with no additional configuration beyond a database name.
+## Constructors
+
+- `new(nameOrOptions: string | IndexedDbStoreOptions): IndexedDbStore<>`
+
+## Methods
+
+- `clear(storageName: string): Promise<boolean>`
+- `delete(storageName: string, key: string): Promise<boolean>`
+- `destroy(): void`
+- `load(storageName: string, key: string): Promise<unknown>`
+- `save(storageName: string, key: string, data: unknown): Promise<void>`
+Source: [src/resources/IndexedDbStore.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts#L31)

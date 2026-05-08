@@ -1,0 +1,40 @@
+---
+title: "InputBinding"
+description: "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputManager, Gamepad, or scene-bound proxy). Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly. Lifecycle: a binding lives until unbind is called, the owner disposes it, or — for scene-bound bindings — the scene unloads."
+symbol: "InputBinding"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/InputBinding.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts#L48"
+---
+# InputBinding
+`import { InputBinding } from '@codexo/exojs'`
+One subscription to one or more input channels. Tracks active state, fires
+the onStart / onActive / onStop / onTrigger
+Signals each frame, and registers itself with whichever owner created it
+(typically an InputManager, Gamepad, or scene-bound
+proxy).
+
+Construct via the owner's `onStart` / `onActive` / `onStop` /
+`onTrigger` factory methods rather than `new InputBinding(...)` directly.
+
+Lifecycle: a binding lives until unbind is called, the owner
+disposes it, or — for scene-bound bindings — the scene unloads.
+## Constructors
+
+- `new(channels: readonly number[], options: InputBindingOptions, detacher: InternalChannelDetacher | null): InputBinding<>`
+
+## Methods
+
+- `unbind(): void`
+- `update(channels: Float32Array<>): void`
+
+## Properties
+
+- `channels: readonly number[]`
+- `onActive: Signal<[number]>`
+- `onStart: Signal<[number]>`
+- `onStop: Signal<[number]>`
+- `onTrigger: Signal<[number]>`
+- `defaultTriggerThreshold: number`
+Source: [src/input/InputBinding.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts#L48)

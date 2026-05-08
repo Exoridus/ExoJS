@@ -1,0 +1,28 @@
+---
+title: "Segment"
+description: "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike — it is a lightweight value type used in path and swept-collision utilities. `Segment.temp` is a shared scratch instance."
+symbol: "Segment"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/Segment.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Segment.ts#L13"
+---
+# Segment
+`import { Segment } from '@codexo/exojs'`
+Mutable line segment defined by start and end Vectors. Unlike
+Line this type does not implement ShapeLike — it is a
+lightweight value type used in path and swept-collision utilities.
+
+`Segment.temp` is a shared scratch instance.
+## Constructors
+
+- `new(startX: number, startY: number, endX: number, endY: number): Segment<>`
+
+## Methods
+
+- `clone(): this`
+- `copy(segment: Segment<>): this`
+- `destroy(): void`
+- `equals(__namedParameters: Partial<Segment>): boolean`
+- `set(startX: number, startY: number, endX: number, endY: number): this`
+Source: [src/math/Segment.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Segment.ts#L13)

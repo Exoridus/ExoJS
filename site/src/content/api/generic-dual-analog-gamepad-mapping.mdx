@@ -1,0 +1,37 @@
+---
+title: "GenericDualAnalogGamepadMapping"
+description: "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary). Each signed stick axis is exposed three ways for ergonomic binding: - Two direction-split, non-negative channels (e.g. `LeftStickLeft` / `LeftStickRight`) for \"buttons-style\" subscriptions. - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1 consumption — useful for movement or aiming. Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout and override only GamepadMapping.family."
+symbol: "GenericDualAnalogGamepadMapping"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/GenericDualAnalogGamepadMapping.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/GenericDualAnalogGamepadMapping.ts#L18"
+---
+# GenericDualAnalogGamepadMapping
+`import { GenericDualAnalogGamepadMapping } from '@codexo/exojs'`
+Baseline mapping for dual-analog controllers that follow the standard
+W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary).
+
+Each signed stick axis is exposed three ways for ergonomic binding:
+ - Two direction-split, non-negative channels (e.g. `LeftStickLeft` /
+   `LeftStickRight`) for "buttons-style" subscriptions.
+ - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1
+   consumption — useful for movement or aiming.
+
+Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit
+this layout and override only GamepadMapping.family.
+## Constructors
+
+- `new(): GenericDualAnalogGamepadMapping<>`
+
+## Methods
+
+- `destroy(): void`
+- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean`
+
+## Properties
+
+- `axes: readonly GamepadAxis<>[]`
+- `buttons: readonly GamepadButton<>[]`
+- `family: GamepadMappingFamily`
+Source: [src/input/GenericDualAnalogGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GenericDualAnalogGamepadMapping.ts#L18)

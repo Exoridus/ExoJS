@@ -1,0 +1,43 @@
+---
+title: "Polygon"
+description: "Mutable convex polygon defined by a world-space offset `(x, y)` and an array of local-space vertex Vectors. Implements ShapeLike with full SAT collision response. Edge vectors are recomputed whenever `setPoints` is called; normals are cached lazily and invalidated on any positional or point mutation. `Polygon.temp` is a shared scratch instance."
+symbol: "Polygon"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/Polygon.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Polygon.ts#L33"
+---
+# Polygon
+`import { Polygon } from '@codexo/exojs'`
+Mutable convex polygon defined by a world-space offset `(x, y)` and an
+array of local-space vertex Vectors. Implements ShapeLike
+with full SAT collision response.
+
+Edge vectors are recomputed whenever `setPoints` is called; normals are
+cached lazily and invalidated on any positional or point mutation.
+
+`Polygon.temp` is a shared scratch instance.
+## Constructors
+
+- `new(points: Vector<>[], x: number, y: number): Polygon<>`
+
+## Methods
+
+- `clone(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `copy(polygon: Polygon<>): this`
+- `destroy(): void`
+- `equals(__namedParameters: Partial<Polygon>): boolean`
+- `getBounds(): Rectangle<>`
+- `getNormals(): Vector<>[]`
+- `intersectsWith(target: Collidable): boolean`
+- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `set(x: number, y: number, points: Vector<>[]): this`
+- `setPoints(newPoints: Vector<>[]): this`
+- `setPosition(x: number, y: number): this`
+
+## Properties
+
+- `collisionType: CollisionType`
+Source: [src/math/Polygon.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Polygon.ts#L33)

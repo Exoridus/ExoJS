@@ -1,0 +1,105 @@
+---
+title: "AnimatedSprite"
+description: "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation. Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip; call update each frame with the elapsed delta (seconds or a `Time` object) to advance playback. The `onFrame` signal fires on every frame advance and `onComplete` fires when a non-looping clip reaches its last frame. Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations."
+symbol: "AnimatedSprite"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/sprite/AnimatedSprite.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/AnimatedSprite.ts#L44"
+---
+# AnimatedSprite
+`import { AnimatedSprite } from '@codexo/exojs'`
+A Sprite that advances through a sequence of texture-frame
+Rectangles over time to produce frame-based animation.
+
+Multiple named clips can be registered via defineClip or the
+constructor. Call play to start a clip; call update each
+frame with the elapsed delta (seconds or a `Time` object) to advance
+playback. The `onFrame` signal fires on every frame advance and
+`onComplete` fires when a non-looping clip reaches its last frame.
+
+Use AnimatedSprite.fromSpritesheet to create an instance directly
+from a Spritesheet's named animations.
+## Constructors
+
+- `new(texture: RenderTexture<> | Texture<> | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>): AnimatedSprite<>`
+
+## Methods
+
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `addFilter(filter: Filter<>): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `defineClip(name: string, clip: AnimatedSpriteClipDefinition): this`
+- `destroy(): void`
+- `getBounds(): Rectangle<>`
+- `getGlobalTransform(): Matrix<>`
+- `getLocalBounds(): Rectangle<>`
+- `getNormals(): Vector<>[]`
+- `getTransform(): Matrix<>`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View<>): boolean`
+- `move(x: number, y: number): this`
+- `pause(): this`
+- `play(name: string, options: AnimatedSpritePlayOptions): this`
+- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `removeClip(name: string): this`
+- `removeFilter(filter: Filter<>): this`
+- `render(backend: RenderBackend<>): this`
+- `renderVisualContent(backend: RenderBackend<>, renderContent: object, blendMode: BlendModes): void`
+- `resetTextureFrame(): this`
+- `resume(): this`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setBlendMode(blendMode: BlendModes): this`
+- `setCacheAsBitmap(cacheAsBitmap: boolean): this`
+- `setChildOrder(order: number): this`
+- `setClips(clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>): this`
+- `setCullable(cullable: boolean): this`
+- `setFilters(filters: readonly Filter<>[]): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `setTexture(texture: RenderTexture<> | Texture<> | null): this`
+- `setTextureFrame(frame: Rectangle<>, resetSize: boolean): this`
+- `setTint(color: Color<>): this`
+- `stop(): this`
+- `update(delta: number | Time<>): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTexture(): this`
+- `updateTransform(): this`
+- `fromSpritesheet(spritesheet: Spritesheet<>): AnimatedSprite<>`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `_bounds: Bounds<>`
+- `_cos: number`
+- `_origin: ObservableVector<>`
+- `_position: ObservableVector<>`
+- `_rotation: number`
+- `_scale: ObservableVector<>`
+- `_sin: number`
+- `_transform: Matrix<>`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `onComplete: Signal<[clip]>`
+- `onDrag: Signal<[InteractionEvent<>]>`
+- `onDragEnd: Signal<[InteractionEvent<>]>`
+- `onDragStart: Signal<[InteractionEvent<>]>`
+- `onFrame: Signal<[clip, frame]>`
+- `onPointerDown: Signal<[InteractionEvent<>]>`
+- `onPointerMove: Signal<[InteractionEvent<>]>`
+- `onPointerOut: Signal<[InteractionEvent<>]>`
+- `onPointerOver: Signal<[InteractionEvent<>]>`
+- `onPointerTap: Signal<[InteractionEvent<>]>`
+- `onPointerUp: Signal<[InteractionEvent<>]>`
+Source: [src/rendering/sprite/AnimatedSprite.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/AnimatedSprite.ts#L44)

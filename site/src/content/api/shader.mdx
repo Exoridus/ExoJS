@@ -1,0 +1,37 @@
+---
+title: "Shader"
+description: "Backend-agnostic shader program descriptor. Holds raw GLSL source strings and, after connect is called, a live ShaderProgram with populated attributes and uniforms maps. Call bind before draw calls and sync after updating uniform values. Both maps are cleared on disconnect and destroy."
+symbol: "Shader"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/shader/Shader.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/Shader.ts#L30"
+---
+# Shader
+`import { Shader } from '@codexo/exojs'`
+Backend-agnostic shader program descriptor.
+
+Holds raw GLSL source strings and, after connect is called, a live
+ShaderProgram with populated attributes and uniforms maps.
+Call bind before draw calls and sync after updating uniform values.
+Both maps are cleared on disconnect and destroy.
+## Constructors
+
+- `new(vertexSource: string, fragmentSource: string): Shader<>`
+
+## Methods
+
+- `bind(): this`
+- `connect(program: ShaderProgram): this`
+- `destroy(): void`
+- `disconnect(): this`
+- `getAttribute(name: string): ShaderAttribute<>`
+- `getUniform(name: string): ShaderUniform<>`
+- `sync(): this`
+- `unbind(): this`
+
+## Properties
+
+- `attributes: Map<string, ShaderAttribute<>>`
+- `uniforms: Map<string, ShaderUniform<>>`
+Source: [src/rendering/shader/Shader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/Shader.ts#L30)

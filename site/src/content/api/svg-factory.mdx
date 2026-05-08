@@ -1,0 +1,35 @@
+---
+title: "SvgFactory"
+description: "AssetFactory implementation that loads SVG markup and produces a rasterised HTMLImageElement. The SVG source text is wrapped in an `image/svg+xml` blob and decoded by the browser's image pipeline, which means the result is a bitmap snapshot at the element's intrinsic size rather than a live, interactive SVG DOM. Use this when you need an SVG as a static sprite or texture source."
+symbol: "SvgFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/SvgFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SvgFactory.ts#L12"
+---
+# SvgFactory
+`import { SvgFactory } from '@codexo/exojs'`
+AssetFactory implementation that loads SVG markup and produces a
+rasterised HTMLImageElement.
+
+The SVG source text is wrapped in an `image/svg+xml` blob and decoded by the
+browser's image pipeline, which means the result is a bitmap snapshot at the
+element's intrinsic size rather than a live, interactive SVG DOM. Use this
+when you need an SVG as a static sprite or texture source.
+## Constructors
+
+- `new(): SvgFactory<>`
+
+## Methods
+
+- `create(source: string): Promise<HTMLImageElement<>>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<string>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "svg"`
+Source: [src/resources/factories/SvgFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SvgFactory.ts#L12)

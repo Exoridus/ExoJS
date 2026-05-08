@@ -1,0 +1,31 @@
+---
+title: "GamepadPromptLayouts"
+description: "Static utility that drives in-game controller-prompt UI. Provides the canonical set of prompt controls, their normalised [x, y] positions on a generic controller silhouette, device-family label strings (e.g. \"A\" for Xbox, \"Cross\" for PlayStation, \"B\" for Switch), and the mapping from prompt control names to GamepadButton channel values."
+symbol: "GamepadPromptLayouts"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/GamepadPromptLayouts.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadPromptLayouts.ts#L153"
+---
+# GamepadPromptLayouts
+`import { GamepadPromptLayouts } from '@codexo/exojs'`
+Static utility that drives in-game controller-prompt UI.
+
+Provides the canonical set of prompt controls, their normalised [x, y] positions
+on a generic controller silhouette, device-family label strings (e.g. "A" for
+Xbox, "Cross" for PlayStation, "B" for Switch), and the mapping from prompt
+control names to GamepadButton channel values.
+## Constructors
+
+- `new(): GamepadPromptLayouts<>`
+
+## Methods
+
+- `getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadButtonChannel>`
+- `getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string>`
+- `getControlPosition(control: GamepadPromptControl): readonly [number, number]`
+
+## Properties
+
+- `controls: GamepadPromptControl[]`
+Source: [src/input/GamepadPromptLayouts.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadPromptLayouts.ts#L153)

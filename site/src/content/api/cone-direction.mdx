@@ -1,0 +1,35 @@
+---
+title: "ConeDirection"
+description: "Random unit vector inside a cone, scaled by a speed magnitude. The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`. Use for emission cones, explosions, fountain spread — anywhere the direction has a preferred axis with bounded variance."
+symbol: "ConeDirection"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/distributions/ConeDirection.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/ConeDirection.ts#L22"
+---
+# ConeDirection
+`import { ConeDirection } from '@codexo/exojs'`
+Random unit vector inside a cone, scaled by a speed magnitude.
+
+The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for
+screen-down coordinates) and spans `±halfAngle` radians around it. Speed
+is sampled uniformly in `[minSpeed, maxSpeed]`.
+
+Use for emission cones, explosions, fountain spread — anywhere the
+direction has a preferred axis with bounded variance.
+## Constructors
+
+- `new(directionAngle: number, halfAngle: number, minSpeed: number, maxSpeed: number): ConeDirection<>`
+
+## Methods
+
+- `sample(out: Vector<>): Vector<>`
+- `omni(minSpeed: number, maxSpeed: number): ConeDirection<>`
+
+## Properties
+
+- `directionAngle: number`
+- `halfAngle: number`
+- `maxSpeed: number`
+- `minSpeed: number`
+Source: [src/particles/distributions/ConeDirection.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/ConeDirection.ts#L22)

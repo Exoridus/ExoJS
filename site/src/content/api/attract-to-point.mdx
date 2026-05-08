@@ -1,0 +1,42 @@
+---
+title: "AttractToPoint"
+description: "Pulls every live particle toward a fixed point in the system's local coordinate space. Acceleration magnitude is `strength` (units / s²), applied along the direction `(point − particle)`. The optional `falloff` radius softens the pull near the center — particles within `falloff` units lerp the strength linearly to zero, preventing the singularity at `r = 0` from yielding infinite acceleration. Use cases: orbit anchors, pin emitters to a moving target, simulate a \"black hole\" pickup. For repulsion, use RepelFromPoint; for tangential motion, layer with OrbitalForce. GPU-eligible."
+symbol: "AttractToPoint"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/AttractToPoint.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/AttractToPoint.ts#L20"
+---
+# AttractToPoint
+`import { AttractToPoint } from '@codexo/exojs'`
+Pulls every live particle toward a fixed point in the system's local
+coordinate space. Acceleration magnitude is `strength` (units / s²),
+applied along the direction `(point − particle)`. The optional `falloff`
+radius softens the pull near the center — particles within `falloff`
+units lerp the strength linearly to zero, preventing the singularity at
+`r = 0` from yielding infinite acceleration.
+
+Use cases: orbit anchors, pin emitters to a moving target, simulate a
+"black hole" pickup. For repulsion, use RepelFromPoint; for
+tangential motion, layer with OrbitalForce.
+
+GPU-eligible.
+## Constructors
+
+- `new(x: number, y: number, strength: number, falloff: number): AttractToPoint<>`
+
+## Methods
+
+- `apply(system: ParticleSystem<>, dt: number): void`
+- `destroy(): void`
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
+- `wgsl(): WgslContribution`
+- `writeUniforms(view: DataView<>, offset: number): void`
+
+## Properties
+
+- `falloff: number`
+- `strength: number`
+- `x: number`
+- `y: number`
+Source: [src/particles/modules/AttractToPoint.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/AttractToPoint.ts#L20)

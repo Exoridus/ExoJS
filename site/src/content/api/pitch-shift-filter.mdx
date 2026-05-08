@@ -1,0 +1,42 @@
+---
+title: "PitchShiftFilter"
+description: "Real-time pitch shifter via granular synthesis (WorkletFilter). Quality: good for ±1 octave (pitch 0.5x-2.0x). Beyond that, audible artifacts (graininess, phase issues). For high-quality pitch shift, a phase-vocoder approach is required and not available in V1. Latency: ~half-grain-size = ~10ms at default 1024-sample grains (at 48kHz sample rate). Not suitable for live monitoring; fine for games / playback. Use cases: - Sound variation: random ±200 cent pitch on each footstep / bullet - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs - Detune layering: stack 0.99x and 1.01x for thick chorused sound"
+symbol: "PitchShiftFilter"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/filters/PitchShiftFilter.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/PitchShiftFilter.ts#L103"
+---
+# PitchShiftFilter
+`import { PitchShiftFilter } from '@codexo/exojs'`
+Real-time pitch shifter via granular synthesis (WorkletFilter).
+
+Quality: good for ±1 octave (pitch 0.5x-2.0x). Beyond that, audible
+artifacts (graininess, phase issues). For high-quality pitch shift,
+a phase-vocoder approach is required and not available in V1.
+
+Latency: ~half-grain-size = ~10ms at default 1024-sample grains
+(at 48kHz sample rate). Not suitable for live monitoring; fine for
+games / playback.
+
+Use cases:
+  - Sound variation: random ±200 cent pitch on each footstep / bullet
+  - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs
+  - Detune layering: stack 0.99x and 1.01x for thick chorused sound
+## Constructors
+
+- `new(options: PitchShiftFilterOptions): PitchShiftFilter<>`
+
+## Methods
+
+- `_onWorkletReady(): void`
+- `_setAudioParam(name: string, value: number): void`
+- `destroy(): void`
+
+## Properties
+
+- `_inputGain: GainNode | null`
+- `_outputGain: GainNode | null`
+- `_ready: Promise<void> | null`
+- `_workletNode: AudioWorkletNode | null`
+Source: [src/audio/filters/PitchShiftFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/PitchShiftFilter.ts#L103)

@@ -1,0 +1,40 @@
+---
+title: "AbstractWebGl2Renderer"
+description: "Base class for WebGL2 renderers. Manages the connect/disconnect lifecycle and provides a safe `getBackend()` accessor that throws if the renderer is not connected. Subclasses must implement: - onConnect(backend): set up GL resources - onDisconnect(): tear down GL resources - render(drawable): batch or immediately draw the given drawable - flush(): submit any batched draw calls to the GPU"
+symbol: "AbstractWebGl2Renderer"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/webgl2/AbstractWebGl2Renderer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/AbstractWebGl2Renderer.ts#L18"
+---
+# AbstractWebGl2Renderer
+`import { AbstractWebGl2Renderer } from '@codexo/exojs'`
+Base class for WebGL2 renderers.
+
+Manages the connect/disconnect lifecycle and provides a safe
+`getBackend()` accessor that throws if the renderer is not connected.
+
+Subclasses must implement:
+- onConnect(backend): set up GL resources
+- onDisconnect(): tear down GL resources
+- render(drawable): batch or immediately draw the given drawable
+- flush(): submit any batched draw calls to the GPU
+## Constructors
+
+- `new(): AbstractWebGl2Renderer<Target>`
+
+## Methods
+
+- `connect(backend: WebGl2Backend<>): void`
+- `disconnect(): void`
+- `flush(): void`
+- `getBackend(): WebGl2Backend<>`
+- `getBackendOrNull(): WebGl2Backend<> | null`
+- `onConnect(backend: WebGl2Backend<>): void`
+- `onDisconnect(): void`
+- `render(drawable: Target): void`
+
+## Properties
+
+- `backendType: WebGl2`
+Source: [src/rendering/webgl2/AbstractWebGl2Renderer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/AbstractWebGl2Renderer.ts#L18)

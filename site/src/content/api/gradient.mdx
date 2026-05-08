@@ -1,0 +1,30 @@
+---
+title: "Gradient"
+description: "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised. Two output paths: - evaluate — writes into a `Color` instance (own scratch by default). - evaluateRgba — returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer."
+symbol: "Gradient"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/distributions/Gradient.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/Gradient.ts#L33"
+---
+# Gradient
+`import { Gradient } from '@codexo/exojs'`
+Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`.
+Keyframes are stored sorted by `t`; sampling outside the range returns
+the nearest endpoint color. Like Curve, the last accessed segment
+is cached so monotonically advancing `t` is O(1) amortised.
+
+Two output paths:
+- evaluate — writes into a `Color` instance (own scratch by default).
+- evaluateRgba — returns the packed `0xAABBGGRR` u32 directly,
+  skipping the Color object. Use this in tight per-particle inner loops
+  that write into a `Uint32Array` instance buffer.
+## Constructors
+
+- `new(keys: readonly GradientKey[]): Gradient<>`
+
+## Methods
+
+- `evaluate(t: number, out: Color<>): Color<>`
+- `evaluateRgba(t: number): number`
+Source: [src/particles/distributions/Gradient.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/Gradient.ts#L33)

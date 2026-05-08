@@ -1,0 +1,33 @@
+---
+title: "ShaderAttribute"
+description: "Metadata for a single vertex attribute declared in a GLSL vertex shader. Populated by the backend during Shader.connect using the values returned by `gl.getActiveAttrib`. The `size` field is derived from `type` via the backend's primitive-byte-size mapping and is used to stride vertex buffer layouts."
+symbol: "ShaderAttribute"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/shader/ShaderAttribute.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderAttribute.ts#L11"
+---
+# ShaderAttribute
+`import { ShaderAttribute } from '@codexo/exojs'`
+Metadata for a single vertex attribute declared in a GLSL vertex shader.
+
+Populated by the backend during Shader.connect using the values
+returned by `gl.getActiveAttrib`. The `size` field is derived from `type`
+via the backend's primitive-byte-size mapping and is used to stride vertex
+buffer layouts.
+## Constructors
+
+- `new(index: number, name: string, type: number): ShaderAttribute<>`
+
+## Methods
+
+- `destroy(): void`
+
+## Properties
+
+- `index: number`
+- `location: number`
+- `name: string`
+- `size: number`
+- `type: number`
+Source: [src/rendering/shader/ShaderAttribute.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderAttribute.ts#L11)

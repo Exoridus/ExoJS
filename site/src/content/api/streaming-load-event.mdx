@@ -1,0 +1,19 @@
+---
+title: "StreamingLoadEvent"
+description: "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplaythrough'` is the safest default."
+symbol: "StreamingLoadEvent"
+subsystem: "core"
+importPath: "@codexo/exojs"
+sourcePath: "src/core/types.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts#L75"
+---
+# StreamingLoadEvent
+`import { StreamingLoadEvent } from '@codexo/exojs'`
+`HTMLMediaElement` ready-state events the streaming asset factories
+(MusicFactory, VideoFactory) accept as the load-completion
+signal. Pick the earliest event that meets your latency requirement;
+`'canplaythrough'` is the safest default.
+## Definition
+
+`StreamingLoadEvent = "loadedmetadata" | "loadeddata" | "canplay" | "canplaythrough"`
+Source: [src/core/types.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts#L75)

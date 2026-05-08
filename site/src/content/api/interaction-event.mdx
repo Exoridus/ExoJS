@@ -1,0 +1,33 @@
+---
+title: "InteractionEvent"
+description: "DOM-Event-shaped envelope dispatched by InteractionManager to interactive scene nodes. Bubbles up the parent chain — `target` stays pinned to the hit-deepest node while `currentTarget` advances to each ancestor that receives the event. Handlers may call InteractionEvent.stopPropagation to halt the bubble."
+symbol: "InteractionEvent"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/InteractionEvent.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionEvent.ts#L19"
+---
+# InteractionEvent
+`import { InteractionEvent } from '@codexo/exojs'`
+DOM-Event-shaped envelope dispatched by InteractionManager to
+interactive scene nodes. Bubbles up the parent chain — `target` stays
+pinned to the hit-deepest node while `currentTarget` advances to each
+ancestor that receives the event. Handlers may call
+InteractionEvent.stopPropagation to halt the bubble.
+## Constructors
+
+- `new(type: InteractionEventType, target: RenderNode<>, pointer: Pointer<>, worldX: number, worldY: number): InteractionEvent<>`
+
+## Methods
+
+- `stopPropagation(): void`
+
+## Properties
+
+- `currentTarget: RenderNode<>`
+- `pointer: Pointer<>`
+- `target: RenderNode<>`
+- `type: InteractionEventType`
+- `worldX: number`
+- `worldY: number`
+Source: [src/input/InteractionEvent.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionEvent.ts#L19)

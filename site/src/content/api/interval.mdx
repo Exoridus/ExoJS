@@ -1,0 +1,37 @@
+---
+title: "Interval"
+description: "A closed scalar interval `[min, max]` used by the SAT collision solver to represent the projection of a shape onto a separating axis. `Interval.temp` provides a shared scratch instance for hot paths. `Interval.zero` is a read-only `[0, 0]` sentinel."
+symbol: "Interval"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/Interval.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Interval.ts#L12"
+---
+# Interval
+`import { Interval } from '@codexo/exojs'`
+A closed scalar interval `[min, max]` used by the SAT collision solver to
+represent the projection of a shape onto a separating axis.
+
+`Interval.temp` provides a shared scratch instance for hot paths.
+`Interval.zero` is a read-only `[0, 0]` sentinel.
+## Constructors
+
+- `new(min: number, max: number): Interval<>`
+
+## Methods
+
+- `clone(): this`
+- `containsInterval(interval: Interval<>): boolean`
+- `copy(interval: Interval<>): this`
+- `destroy(): void`
+- `getOverlap(interval: Interval<>): number`
+- `includes(value: number): boolean`
+- `overlaps(interval: Interval<>): boolean`
+- `set(min: number, max: number): this`
+
+## Properties
+
+- `max: number`
+- `min: number`
+- `zero: Interval<>`
+Source: [src/math/Interval.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Interval.ts#L12)

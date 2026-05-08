@@ -13,7 +13,8 @@
         "vendor:sync": "npm run vendor:sync:exo && npm run vendor:sync:monaco",
         "assets:sync:input-prompts": "tsx scripts/sync-kenney-input-prompts.ts",
         "dev": "npm run vendor:sync && npm run examples:sync && astro dev",
-        "build": "npm run vendor:sync && npm run examples:sync && astro build",
+        "build:api": "tsx scripts/build-api.ts",
+        "build": "npm run vendor:sync && npm run examples:sync && npm run build:api && astro build",
         "preview": "astro preview",
         "test:dist": "npm run build && node --test tests/dist-open.smoke.test.mjs",
         "test:smoke:bundle": "node --test tests/phase1-bundle.smoke.test.mjs",
@@ -33,9 +34,12 @@
         "typescript": "^6.0.3"
     },
     "dependencies": {
+        "@astrojs/mdx": "^5.0.4",
+        "@codexo/exojs": "file:..",
         "@fontsource/inter": "^5.2.8",
         "@fontsource/jetbrains-mono": "^5.2.8",
-        "@codexo/exojs": "file:..",
-        "monaco-editor": "0.55.1"
+        "monaco-editor": "0.55.1",
+        "typedoc": "^0.28.19",
+        "typedoc-plugin-markdown": "^4.11.0"
     }
 }

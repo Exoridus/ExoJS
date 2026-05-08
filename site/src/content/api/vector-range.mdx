@@ -1,0 +1,29 @@
+---
+title: "VectorRange"
+description: "Uniform random vector with each axis sampled independently in its own `[min, max]` range. Each `sample()` writes into the provided `out` Vector (or an internal scratch instance when `out` is omitted)."
+symbol: "VectorRange"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/distributions/VectorRange.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/VectorRange.ts#L14"
+---
+# VectorRange
+`import { VectorRange } from '@codexo/exojs'`
+Uniform random vector with each axis sampled independently in its own
+`[min, max]` range. Each `sample()` writes into the provided `out` Vector
+(or an internal scratch instance when `out` is omitted).
+## Constructors
+
+- `new(minX: number, maxX: number, minY: number, maxY: number): VectorRange<>`
+
+## Methods
+
+- `sample(out: Vector<>): Vector<>`
+
+## Properties
+
+- `maxX: number`
+- `maxY: number`
+- `minX: number`
+- `minY: number`
+Source: [src/particles/distributions/VectorRange.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/VectorRange.ts#L14)

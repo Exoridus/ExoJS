@@ -1,0 +1,30 @@
+---
+title: "MeshOptions"
+description: "Construction-time options for a Mesh. Vertices are required and must be a flat sequence of (x, y) pairs in local space. UVs and per-vertex colors are optional but, when present, must match the vertex count (UVs as (u, v) pairs, colors as one packed-RGBA8 u32 per vertex). Indices are optional — if absent, the vertex stream is drawn as a flat triangle list (3*N vertices = N triangles). A texture is optional; a textured mesh samples it at the supplied UVs while an untextured mesh paints solid vertex colors only. Validation is enforced at construction; any mismatch throws."
+symbol: "MeshOptions"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/mesh/Mesh.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts#L18"
+---
+# MeshOptions
+`import { MeshOptions } from '@codexo/exojs'`
+Construction-time options for a Mesh.
+
+Vertices are required and must be a flat sequence of (x, y) pairs in
+local space. UVs and per-vertex colors are optional but, when present,
+must match the vertex count (UVs as (u, v) pairs, colors as one
+packed-RGBA8 u32 per vertex). Indices are optional — if absent, the
+vertex stream is drawn as a flat triangle list (3*N vertices = N
+triangles). A texture is optional; a textured mesh samples it at the
+supplied UVs while an untextured mesh paints solid vertex colors only.
+
+Validation is enforced at construction; any mismatch throws.
+## Properties
+
+- `colors?: Uint32Array<ArrayBufferLike>`
+- `indices?: Uint16Array<ArrayBufferLike>`
+- `texture?: RenderTexture<> | Texture<> | null`
+- `uvs?: Float32Array<ArrayBufferLike>`
+- `vertices: Float32Array<>`
+Source: [src/rendering/mesh/Mesh.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts#L18)

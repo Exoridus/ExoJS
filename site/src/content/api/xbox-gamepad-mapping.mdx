@@ -1,0 +1,32 @@
+---
+title: "XboxGamepadMapping"
+description: "Mapping for Microsoft Xbox controllers (Xbox One, Xbox Series X/S, and compatible third-party XInput devices) connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout, which mirrors the W3C standard gamepad layout that XInput controllers follow natively. The Share button (Xbox Series) maps to the Share channel."
+symbol: "XboxGamepadMapping"
+subsystem: "input"
+importPath: "@codexo/exojs"
+sourcePath: "src/input/XboxGamepadMapping.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/XboxGamepadMapping.ts#L12"
+---
+# XboxGamepadMapping
+`import { XboxGamepadMapping } from '@codexo/exojs'`
+Mapping for Microsoft Xbox controllers (Xbox One, Xbox Series X/S, and
+compatible third-party XInput devices) connected via USB or Bluetooth.
+
+Inherits the full GenericDualAnalogGamepadMapping layout, which
+mirrors the W3C standard gamepad layout that XInput controllers follow
+natively. The Share button (Xbox Series) maps to the Share channel.
+## Constructors
+
+- `new(): XboxGamepadMapping<>`
+
+## Methods
+
+- `destroy(): void`
+- `hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean`
+
+## Properties
+
+- `axes: readonly GamepadAxis<>[]`
+- `buttons: readonly GamepadButton<>[]`
+- `family: Xbox`
+Source: [src/input/XboxGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/XboxGamepadMapping.ts#L12)

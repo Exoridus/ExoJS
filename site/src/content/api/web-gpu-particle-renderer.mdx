@@ -1,0 +1,42 @@
+---
+title: "WebGpuParticleRenderer"
+description: "Base class for WebGPU renderers. Manages the connect/disconnect lifecycle and provides a safe `getBackend()` accessor that throws if the renderer is not connected. Subclasses must implement: - onConnect(backend): set up GPU resources (shader modules, pipelines, buffers) - onDisconnect(): tear down GPU resources - render(drawable): collect draw call data for the given drawable - flush(): encode and submit command buffers for all collected draw calls"
+symbol: "WebGpuParticleRenderer"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/webgpu/WebGpuParticleRenderer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuParticleRenderer.ts#L93"
+---
+# WebGpuParticleRenderer
+`import { WebGpuParticleRenderer } from '@codexo/exojs'`
+Base class for WebGPU renderers.
+
+Manages the connect/disconnect lifecycle and provides a safe
+`getBackend()` accessor that throws if the renderer is not connected.
+
+Subclasses must implement:
+- onConnect(backend): set up GPU resources (shader modules, pipelines, buffers)
+- onDisconnect(): tear down GPU resources
+- render(drawable): collect draw call data for the given drawable
+- flush(): encode and submit command buffers for all collected draw calls
+## Constructors
+
+- `new(): WebGpuParticleRenderer<>`
+
+## Methods
+
+- `connect(backend: WebGpuBackend<>): void`
+- `destroy(): void`
+- `disconnect(): void`
+- `flush(): void`
+- `getBackend(): WebGpuBackend<>`
+- `getBackendOrNull(): WebGpuBackend<> | null`
+- `onConnect(backend: WebGpuBackend<>): void`
+- `onDisconnect(): void`
+- `render(system: ParticleSystem<>): void`
+
+## Properties
+
+- `_backend: WebGpuBackend<> | null`
+- `backendType: WebGpu`
+Source: [src/rendering/webgpu/WebGpuParticleRenderer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgpu/WebGpuParticleRenderer.ts#L93)

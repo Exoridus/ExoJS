@@ -1,0 +1,37 @@
+---
+title: "MusicFactory"
+description: "AssetFactory implementation that loads streaming audio assets (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces a Music instance backed by an `<audio>` element. Unlike SoundFactory, music assets are decoded lazily via the browser's streaming audio pipeline rather than being fully decoded into an AudioBuffer up-front, making them appropriate for long-form background tracks. The underlying `<audio>` elements are paused and detached when MusicFactory.destroy is called."
+symbol: "MusicFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/MusicFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/MusicFactory.ts#L34"
+---
+# MusicFactory
+`import { MusicFactory } from '@codexo/exojs'`
+AssetFactory implementation that loads streaming audio assets
+(MP3, OGG, WAV, AAC, and other browser-supported formats) and produces a
+Music instance backed by an `\<audio>` element.
+
+Unlike SoundFactory, music assets are decoded lazily via the browser's
+streaming audio pipeline rather than being fully decoded into an
+AudioBuffer up-front, making them appropriate for long-form
+background tracks. The underlying `\<audio>` elements are paused and detached
+when MusicFactory.destroy is called.
+## Constructors
+
+- `new(): MusicFactory<>`
+
+## Methods
+
+- `create(source: ArrayBuffer, options: MusicFactoryOptions): Promise<Music<>>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<ArrayBuffer>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "music"`
+Source: [src/resources/factories/MusicFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/MusicFactory.ts#L34)

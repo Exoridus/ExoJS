@@ -1,0 +1,18 @@
+---
+title: "BackendConfig"
+description: "Discriminated union of backend selection options. `'auto'` picks WebGPU when available, falling back to WebGL2 if adapter acquisition fails; the explicit values pin the choice and skip the fallback path."
+symbol: "BackendConfig"
+subsystem: "core"
+importPath: "@codexo/exojs"
+sourcePath: "src/core/Application.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L67"
+---
+# BackendConfig
+`import { BackendConfig } from '@codexo/exojs'`
+Discriminated union of backend selection options. `'auto'` picks WebGPU
+when available, falling back to WebGL2 if adapter acquisition fails;
+the explicit values pin the choice and skip the fallback path.
+## Definition
+
+`BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig`
+Source: [src/core/Application.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts#L67)

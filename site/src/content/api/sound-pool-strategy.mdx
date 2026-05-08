@@ -1,0 +1,23 @@
+---
+title: "SoundPoolStrategy"
+description: "Eviction strategy used when the pool is full and a new play is requested. At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut` in V1. The enum is forward-compatible with a future global voice manager that culls across multiple Sound instances."
+symbol: "SoundPoolStrategy"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/Sound.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L17"
+---
+# SoundPoolStrategy
+`import { SoundPoolStrategy } from '@codexo/exojs'`
+Eviction strategy used when the pool is full and a new play is requested.
+
+At the per-Sound level all pooled instances share the same priority, so
+`LowestPriority` degenerates to `FirstInFirstOut` in V1. The enum is
+forward-compatible with a future global voice manager that culls across
+multiple Sound instances.
+## Members
+
+- `FirstInFirstOut`
+- `LeastRecentlyUsed`
+- `LowestPriority`
+Source: [src/audio/Sound.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L17)

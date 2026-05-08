@@ -1,0 +1,34 @@
+---
+title: "WasmFactory"
+description: "AssetFactory implementation that loads WebAssembly binary (`.wasm`) files and produces a compiled WebAssembly.Module. The module is compiled but not instantiated — callers receive a reusable `WebAssembly.Module` that can be instantiated multiple times with different import objects via `new WebAssembly.Instance(module, imports)`."
+symbol: "WasmFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/WasmFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/WasmFactory.ts#L11"
+---
+# WasmFactory
+`import { WasmFactory } from '@codexo/exojs'`
+AssetFactory implementation that loads WebAssembly binary (`.wasm`)
+files and produces a compiled WebAssembly.Module.
+
+The module is compiled but not instantiated — callers receive a reusable
+`WebAssembly.Module` that can be instantiated multiple times with different
+import objects via `new WebAssembly.Instance(module, imports)`.
+## Constructors
+
+- `new(): WasmFactory<>`
+
+## Methods
+
+- `create(source: ArrayBuffer): Promise<Module>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<ArrayBuffer>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "wasm"`
+Source: [src/resources/factories/WasmFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/WasmFactory.ts#L11)

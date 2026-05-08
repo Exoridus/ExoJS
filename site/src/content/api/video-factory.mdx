@@ -1,0 +1,37 @@
+---
+title: "VideoFactory"
+description: "AssetFactory implementation that loads video files (MP4, WebM, OGG, and other browser-supported container formats) and produces a Video instance suitable for use as a dynamic texture source in the rendering pipeline. Video data is buffered via a `<video>` element rather than decoded up-front. The `'stalled'` event is intentionally not treated as an error because it fires transiently during normal buffering on slow connections. All `<video>` elements are paused and detached when VideoFactory.destroy is called."
+symbol: "VideoFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/VideoFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts#L37"
+---
+# VideoFactory
+`import { VideoFactory } from '@codexo/exojs'`
+AssetFactory implementation that loads video files (MP4, WebM, OGG,
+and other browser-supported container formats) and produces a Video
+instance suitable for use as a dynamic texture source in the rendering
+pipeline.
+
+Video data is buffered via a `\<video>` element rather than decoded up-front.
+The `'stalled'` event is intentionally not treated as an error because it
+fires transiently during normal buffering on slow connections. All `\<video>`
+elements are paused and detached when VideoFactory.destroy is called.
+## Constructors
+
+- `new(): VideoFactory<>`
+
+## Methods
+
+- `create(source: ArrayBuffer, options: VideoFactoryOptions): Promise<Video<>>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<ArrayBuffer>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "video"`
+Source: [src/resources/factories/VideoFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts#L37)

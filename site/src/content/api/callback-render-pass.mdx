@@ -1,0 +1,22 @@
+---
+title: "CallbackRenderPass"
+description: "A RenderPass that delegates its execution to a user-supplied callback. Use this as a lightweight alternative to a full renderer class when custom draw logic needs to participate in the render graph without a dedicated type."
+symbol: "CallbackRenderPass"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/CallbackRenderPass.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts#L16"
+---
+# CallbackRenderPass
+`import { CallbackRenderPass } from '@codexo/exojs'`
+A RenderPass that delegates its execution to a user-supplied callback.
+Use this as a lightweight alternative to a full renderer class when custom
+draw logic needs to participate in the render graph without a dedicated type.
+## Constructors
+
+- `new(callback: object): CallbackRenderPass<>`
+
+## Methods
+
+- `execute(backend: RenderBackend<>): void`
+Source: [src/rendering/CallbackRenderPass.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/CallbackRenderPass.ts#L16)

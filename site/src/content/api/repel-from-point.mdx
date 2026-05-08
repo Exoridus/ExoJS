@@ -1,0 +1,39 @@
+---
+title: "RepelFromPoint"
+description: "Pushes every live particle away from a fixed point in the system's local coordinate space. Acceleration magnitude is `strength` (units / s²) along the direction `(particle − point)`. The optional `radius` controls the influence range — particles farther than `radius` are unaffected. Setting `radius = 0` (default) means infinite range with no falloff. Use cases: shockwaves, explosion blast, mouse-cursor repel field. GPU-eligible."
+symbol: "RepelFromPoint"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/RepelFromPoint.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/RepelFromPoint.ts#L17"
+---
+# RepelFromPoint
+`import { RepelFromPoint } from '@codexo/exojs'`
+Pushes every live particle away from a fixed point in the system's local
+coordinate space. Acceleration magnitude is `strength` (units / s²)
+along the direction `(particle − point)`. The optional `radius` controls
+the influence range — particles farther than `radius` are unaffected.
+Setting `radius = 0` (default) means infinite range with no falloff.
+
+Use cases: shockwaves, explosion blast, mouse-cursor repel field.
+
+GPU-eligible.
+## Constructors
+
+- `new(x: number, y: number, strength: number, radius: number): RepelFromPoint<>`
+
+## Methods
+
+- `apply(system: ParticleSystem<>, dt: number): void`
+- `destroy(): void`
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
+- `wgsl(): WgslContribution`
+- `writeUniforms(view: DataView<>, offset: number): void`
+
+## Properties
+
+- `radius: number`
+- `strength: number`
+- `x: number`
+- `y: number`
+Source: [src/particles/modules/RepelFromPoint.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/RepelFromPoint.ts#L17)

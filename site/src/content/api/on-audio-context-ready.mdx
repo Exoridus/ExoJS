@@ -1,0 +1,19 @@
+---
+title: "onAudioContextReady"
+description: "Signal that dispatches once the global `AudioContext` enters the `running` state. Handles browser autoplay-policy by listening for user-interaction events (`mousedown`, `touchstart`, `touchend`) and resuming a suspended context automatically."
+symbol: "onAudioContextReady"
+subsystem: "audio"
+importPath: "@codexo/exojs"
+sourcePath: "src/audio/audio-context.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/audio-context.ts#L156"
+---
+# onAudioContextReady
+`import { onAudioContextReady } from '@codexo/exojs'`
+Signal that dispatches once the global `AudioContext` enters the `running`
+state. Handles browser autoplay-policy by listening for user-interaction
+events (`mousedown`, `touchstart`, `touchend`) and resuming a suspended
+context automatically.
+## Type
+
+`onAudioContextReady: AudioContextReadySignal<>`
+Source: [src/audio/audio-context.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/audio-context.ts#L156)

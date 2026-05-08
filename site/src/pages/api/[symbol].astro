@@ -1,0 +1,40 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../components/DocsSidebar.astro';
+
+const subsystemOrder = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'] as const;
+type ApiEntry = CollectionEntry<'api'>;
+
+export async function getStaticPaths() {
+    const apiEntries = await getCollection('api');
+    return apiEntries.map((entry: ApiEntry) => ({ params: { symbol: entry.id } }));
+}
+
+const symbol = (Astro.params as Record<string, string | undefined>).symbol ?? '';
+const apiEntries = await getCollection('api');
+const entry = apiEntries.find((item: ApiEntry) => item.id === symbol);
+if (!entry) {
+    throw new Error(`Unknown API symbol: ${symbol}`);
+}
+const { Content } = await render(entry);
+
+const sidebarGroups = subsystemOrder.map(subsystem => {
+    const entries = apiEntries
+        .filter((item: ApiEntry) => item.data.subsystem === subsystem)
+        .sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title));
+    return {
+        title: subsystem,
+        items: entries.map((item: ApiEntry) => ({
+            href: `${import.meta.env.BASE_URL}api/${item.id}/`,
+            label: item.data.title,
+        })),
+    };
+});
+---
+
+<DocsLayout title={`${entry.data.title} | ExoJS API`} description={entry.data.description}>
+    <DocsSidebar slot="sidebar" groups={sidebarGroups} />
+    <Content />
+</DocsLayout>

@@ -1,0 +1,25 @@
+---
+title: "SweptHit"
+description: "Result of a swept-collision query. The moving shape's reference point is at `(x, y)` at impact, having travelled fraction `t` ∈ [0..1] of the requested move (where 0 = no movement, 1 = full move). The `(normalX, normalY)` vector is the contact normal pointing AWAY from the target (suitable for sliding response: project the remaining velocity onto the perpendicular)."
+symbol: "SweptHit"
+subsystem: "math"
+importPath: "@codexo/exojs"
+sourcePath: "src/math/swept-collision.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/swept-collision.ts#L12"
+---
+# SweptHit
+`import { SweptHit } from '@codexo/exojs'`
+Result of a swept-collision query. The moving shape's reference point
+is at `(x, y)` at impact, having travelled fraction `t` ∈ [0..1] of
+the requested move (where 0 = no movement, 1 = full move). The
+`(normalX, normalY)` vector is the contact normal pointing AWAY from
+the target (suitable for sliding response: project the remaining
+velocity onto the perpendicular).
+## Properties
+
+- `normalX: number`
+- `normalY: number`
+- `t: number`
+- `x: number`
+- `y: number`
+Source: [src/math/swept-collision.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/swept-collision.ts#L12)

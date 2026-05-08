@@ -1,0 +1,43 @@
+---
+title: "VelocityOverLifetime"
+description: "Multiplies every live particle's velocity by a curve sampled at the particle's current `elapsed / lifetime` ratio. The same scalar is applied to both axes — the direction is preserved, only the magnitude scales. Common patterns: - **Snappy spawn, slow drift:** `[0,1]→[1,0.1]` — fast initial motion that decays over lifetime. - **Late acceleration:** `[0,0.2]→[1,1]` — particles ease in. - **Pulse:** sine-shaped curve for breathing-style motion. Note: the curve **replaces** velocity each frame relative to the previous frame's velocity, so the effect is multiplicative. Pair with `ApplyForce` if you want a constant external acceleration on top. GPU-eligible: uploads the curve as a 256-tap 1D R32F texture; sampled once per particle per frame."
+symbol: "VelocityOverLifetime"
+subsystem: "particles"
+importPath: "@codexo/exojs"
+sourcePath: "src/particles/modules/VelocityOverLifetime.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/VelocityOverLifetime.ts#L29"
+---
+# VelocityOverLifetime
+`import { VelocityOverLifetime } from '@codexo/exojs'`
+Multiplies every live particle's velocity by a curve sampled at the
+particle's current `elapsed / lifetime` ratio. The same scalar is applied
+to both axes — the direction is preserved, only the magnitude scales.
+
+Common patterns:
+- **Snappy spawn, slow drift:** `[0,1]→[1,0.1]` — fast initial motion
+  that decays over lifetime.
+- **Late acceleration:** `[0,0.2]→[1,1]` — particles ease in.
+- **Pulse:** sine-shaped curve for breathing-style motion.
+
+Note: the curve **replaces** velocity each frame relative to the previous
+frame's velocity, so the effect is multiplicative. Pair with `ApplyForce`
+if you want a constant external acceleration on top.
+
+GPU-eligible: uploads the curve as a 256-tap 1D R32F texture; sampled
+once per particle per frame.
+## Constructors
+
+- `new(curve: Curve<>): VelocityOverLifetime<>`
+
+## Methods
+
+- `apply(system: ParticleSystem<>, _dt: number): void`
+- `destroy(): void`
+- `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
+- `wgsl(): WgslContribution`
+- `writeUniforms(view: DataView<>, byteOffset: number, dt: number): void`
+
+## Properties
+
+- `curve: Curve<>`
+Source: [src/particles/modules/VelocityOverLifetime.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/VelocityOverLifetime.ts#L29)

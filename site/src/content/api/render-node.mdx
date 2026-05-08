@@ -1,0 +1,93 @@
+---
+title: "RenderNode"
+description: "SceneNode that can produce visual output. Adds the rendering pipeline features on top of the structural transform/bounds carried by SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an optional `mask` (via MaskSource), bitmap caching (`cacheAsBitmap`), and the interaction surface (`interactive`, `draggable`, all the pointer Signals). `RenderNode.render(backend)` is the per-frame visual entry point each subclass implements. The base provides `renderVisualContent()` — a helper that wraps the subclass's draw work with cache / mask / filter / tint orchestration so subclasses focus on their own geometry. Subclasses of note: Container (children), Sprite (textured quad), Mesh (custom geometry), Graphics (immediate-mode shapes), Text (glyph-atlas text), Video (video texture), ParticleSystem (particles)."
+symbol: "RenderNode"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/RenderNode.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L78"
+---
+# RenderNode
+`import { RenderNode } from '@codexo/exojs'`
+SceneNode that can produce visual output. Adds the rendering
+pipeline features on top of the structural transform/bounds carried by
+SceneNode: `tint`, `alpha`, `blendMode`, post-process `filters`, an
+optional `mask` (via MaskSource), bitmap caching
+(`cacheAsBitmap`), and the interaction surface
+(`interactive`, `draggable`, all the pointer Signals).
+
+`RenderNode.render(backend)` is the per-frame visual entry point each
+subclass implements. The base provides `renderVisualContent()` — a
+helper that wraps the subclass's draw work with cache / mask / filter /
+tint orchestration so subclasses focus on their own geometry.
+
+Subclasses of note: Container (children), Sprite (textured
+quad), Mesh (custom geometry), Graphics (immediate-mode
+shapes), Text (glyph-atlas text), Video (video texture),
+ParticleSystem (particles).
+## Constructors
+
+- `new(): RenderNode<>`
+
+## Methods
+
+- `_invalidateBoundsCascade(): void`
+- `_invalidateChildrenTransform(): void`
+- `_invalidateSubtreeTransform(): void`
+- `addFilter(filter: Filter<>): this`
+- `clearFilters(): this`
+- `collidesWith(target: Collidable): CollisionResponse | null`
+- `contains(x: number, y: number): boolean`
+- `destroy(): void`
+- `getBounds(): Rectangle<>`
+- `getGlobalTransform(): Matrix<>`
+- `getLocalBounds(): Rectangle<>`
+- `getNormals(): Vector<>[]`
+- `getTransform(): Matrix<>`
+- `intersectsWith(target: Collidable): boolean`
+- `invalidateCache(): this`
+- `inView(view: View<>): boolean`
+- `move(x: number, y: number): this`
+- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `removeFilter(filter: Filter<>): this`
+- `render(backend: RenderBackend<>): this`
+- `renderVisualContent(backend: RenderBackend<>, renderContent: object, blendMode: BlendModes): void`
+- `rotate(degrees: number): this`
+- `setAnchor(x: number, y: number): this`
+- `setCacheAsBitmap(cacheAsBitmap: boolean): this`
+- `setChildOrder(order: number): this`
+- `setCullable(cullable: boolean): this`
+- `setFilters(filters: readonly Filter<>[]): this`
+- `setOrigin(x: number, y: number): this`
+- `setPosition(x: number, y: number): this`
+- `setRotation(degrees: number): this`
+- `setScale(x: number, y: number): this`
+- `updateBounds(): this`
+- `updateParentTransform(): this`
+- `updateTransform(): this`
+- `setInternalSpriteFactory(factory: object | null): void`
+
+## Properties
+
+- `_bounds: Bounds<>`
+- `_cos: number`
+- `_origin: ObservableVector<>`
+- `_position: ObservableVector<>`
+- `_rotation: number`
+- `_scale: ObservableVector<>`
+- `_sin: number`
+- `_transform: Matrix<>`
+- `collisionType: CollisionType`
+- `cursor: string | null`
+- `draggable: boolean`
+- `flags: Flags<SceneNodeTransformFlags>`
+- `onDrag: Signal<[InteractionEvent<>]>`
+- `onDragEnd: Signal<[InteractionEvent<>]>`
+- `onDragStart: Signal<[InteractionEvent<>]>`
+- `onPointerDown: Signal<[InteractionEvent<>]>`
+- `onPointerMove: Signal<[InteractionEvent<>]>`
+- `onPointerOut: Signal<[InteractionEvent<>]>`
+- `onPointerOver: Signal<[InteractionEvent<>]>`
+- `onPointerTap: Signal<[InteractionEvent<>]>`
+- `onPointerUp: Signal<[InteractionEvent<>]>`
+Source: [src/rendering/RenderNode.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts#L78)

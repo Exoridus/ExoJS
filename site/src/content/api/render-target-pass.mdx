@@ -1,0 +1,24 @@
+---
+title: "RenderTargetPass"
+description: "A RenderPass that redirects rendering into an off-screen RenderTarget. Saves the current render target and view before executing the callback, then restores them afterwards — even if the callback throws. This makes it safe to nest passes or use in try/finally chains without manual cleanup."
+symbol: "RenderTargetPass"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/RenderTargetPass.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderTargetPass.ts#L25"
+---
+# RenderTargetPass
+`import { RenderTargetPass } from '@codexo/exojs'`
+A RenderPass that redirects rendering into an off-screen RenderTarget.
+
+Saves the current render target and view before executing the callback, then
+restores them afterwards — even if the callback throws. This makes it safe to
+nest passes or use in try/finally chains without manual cleanup.
+## Constructors
+
+- `new(callback: object, options: RenderTargetPassOptions): RenderTargetPass<>`
+
+## Methods
+
+- `execute(backend: RenderBackend<>): void`
+Source: [src/rendering/RenderTargetPass.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderTargetPass.ts#L25)

@@ -1,0 +1,33 @@
+---
+title: "BinaryFactory"
+description: "AssetFactory implementation that loads arbitrary binary files and exposes them as raw ArrayBuffer instances. Use this for any binary format that does not have a dedicated factory (e.g. custom data files, packed archives, or proprietary formats)."
+symbol: "BinaryFactory"
+subsystem: "resources"
+importPath: "@codexo/exojs"
+sourcePath: "src/resources/factories/BinaryFactory.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BinaryFactory.ts#L10"
+---
+# BinaryFactory
+`import { BinaryFactory } from '@codexo/exojs'`
+AssetFactory implementation that loads arbitrary binary files and
+exposes them as raw ArrayBuffer instances.
+
+Use this for any binary format that does not have a dedicated factory (e.g.
+custom data files, packed archives, or proprietary formats).
+## Constructors
+
+- `new(): BinaryFactory<>`
+
+## Methods
+
+- `create(source: ArrayBuffer): Promise<ArrayBuffer>`
+- `createObjectUrl(blob: Blob): string`
+- `destroy(): void`
+- `process(response: Response): Promise<ArrayBuffer>`
+- `revokeObjectUrl(objectUrl: string): void`
+
+## Properties
+
+- `_objectUrls: string[]`
+- `storageName: "binary"`
+Source: [src/resources/factories/BinaryFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BinaryFactory.ts#L10)

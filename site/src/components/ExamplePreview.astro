@@ -1,0 +1,68 @@
+---
+import { Code } from 'astro/components';
+import { getExamplesForChapter } from '../lib/examples-catalog';
+import { getExampleSource } from '../lib/example-sources';
+
+interface Props {
+    chapter: string;
+    slug: string;
+}
+
+const { chapter, slug } = Astro.props;
+const example = getExamplesForChapter(chapter).find(entry => entry.slug === slug);
+const sourceCode = getExampleSource(chapter, slug);
+const exampleTitle = example?.title ?? slug;
+---
+
+<section class="example-preview">
+    <header class="example-preview__header">
+        <h3>{exampleTitle}</h3>
+        <a href={`${import.meta.env.BASE_URL}playground/?example=${chapter}/${slug}`}>Open in Playground</a>
+    </header>
+    <div class="example-preview__live">
+        <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode}></guide-example-preview>
+    </div>
+    <div class="example-preview__code">
+        <Code code={sourceCode} lang="js" />
+    </div>
+</section>
+
+<script>
+    import './GuideExamplePreview';
+</script>
+
+<style>
+    .example-preview {
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 14px;
+        padding: 1rem;
+        margin: 1.2rem 0 1.6rem;
+        background: #0f172a;
+    }
+
+    .example-preview__header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+
+    .example-preview__header h3 {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .example-preview__header a {
+        font-size: 0.9rem;
+        text-decoration: none;
+    }
+
+    .example-preview__live {
+        margin-bottom: 0.8rem;
+    }
+    :global(.example-preview pre) {
+        margin: 0;
+    }
+</style>

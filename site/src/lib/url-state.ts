@@ -23,6 +23,15 @@ export interface WriteUrlOptions {
 // Expected shape:  #/<version>/<example-path-without-js>
 // On any malformed or missing hash, both fields are null.
 export function readUrlState(): UrlState {
+    const url = new URL(window.location.href);
+    const queryVersion = url.searchParams.get('version');
+    const queryExample = url.searchParams.get('example');
+    if (queryVersion || queryExample) {
+        const version = queryVersion && queryVersion.length > 0 ? queryVersion : null;
+        const example = queryExample && queryExample.length > 0 ? (queryExample.endsWith('.js') ? queryExample : `${queryExample}.js`) : null;
+        return { version, example };
+    }
+
     const hash = window.location.hash; // '#/0.4.0/rendering/display-text'
     if (!hash || hash === '#') return { version: null, example: null };
 

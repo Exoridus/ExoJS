@@ -1,0 +1,57 @@
+---
+title: "WebGl2ShaderFilter"
+description: "A high-level Filter subclass that renders the input texture through a user-provided GLSL fragment shader on the **WebGL2** backend. For the WebGPU backend use WebGpuShaderFilter. ## Usage ```ts const filter = new WebGl2ShaderFilter({ fragmentSource: ` #version 300 es precision mediump float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ``` ## Auto-bound uniforms The backend automatically sets `uTexture` (slot 0) and `uResolution` before each draw. User uniforms start at texture slot 1."
+symbol: "WebGl2ShaderFilter"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+sourcePath: "src/rendering/filters/WebGl2ShaderFilter.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts#L145"
+---
+# WebGl2ShaderFilter
+`import { WebGl2ShaderFilter } from '@codexo/exojs'`
+A high-level Filter subclass that renders the input texture
+through a user-provided GLSL fragment shader on the **WebGL2** backend.
+
+For the WebGPU backend use WebGpuShaderFilter.
+
+## Usage
+
+```ts
+const filter = new WebGl2ShaderFilter(\{
+  fragmentSource: `
+    #version 300 es
+    precision mediump float;
+    uniform sampler2D uTexture;
+    uniform vec2 uResolution;
+    uniform float uTime;
+    in vec2 vUv;
+    out vec4 fragColor;
+    void main() \{
+      fragColor = texture(uTexture, vUv);
+    \}
+  `,
+  uniforms: \{ uTime: 0.0 \},
+\});
+
+// Update uniforms each frame:
+filter.uniforms.uTime = performance.now() / 1000;
+sprite.filters = [filter];
+```
+
+## Auto-bound uniforms
+
+The backend automatically sets `uTexture` (slot 0) and `uResolution`
+before each draw. User uniforms start at texture slot 1.
+## Constructors
+
+- `new(options: WebGl2ShaderFilterOptions): WebGl2ShaderFilter<>`
+
+## Methods
+
+- `apply(backend: RenderBackend<>, input: RenderTexture<>, output: RenderTexture<>): void`
+- `destroy(): void`
+
+## Properties
+
+- `uniforms: Record<string, ShaderFilterUniformValue>`
+Source: [src/rendering/filters/WebGl2ShaderFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts#L145)
