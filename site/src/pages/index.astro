@@ -8,10 +8,9 @@ const baseUrl = import.meta.env.BASE_URL;
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>ExoJS</title>
-        <script is:inline>
+        <script is:inline define:vars={{ baseUrl }}>
             (() => {
-                const base = `${baseUrl}`;
-                const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+                const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
                 const stored = localStorage.getItem('exo-language');
                 const browser = navigator.languages?.[0] ?? navigator.language ?? 'en';
                 const browserLocale = browser.toLowerCase().startsWith('de') ? 'de' : 'en';
