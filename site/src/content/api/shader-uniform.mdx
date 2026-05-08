@@ -2,13 +2,18 @@
 title: "ShaderUniform"
 description: "Metadata and current value for a single GLSL uniform variable. Populated by the backend during Shader.connect. The `dirty` flag is set to `true` on construction and on every setValue call; the backend clears it via markClean after uploading the value to the GPU. Array-type uniform names have their index suffix stripped (e.g. `uColors[0]` becomes `uColors`)."
 symbol: "ShaderUniform"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/shader/ShaderUniform.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderUniform.ts#L12"
 ---
-# ShaderUniform
+## Import
+
 `import { ShaderUniform } from '@codexo/exojs'`
+
 Metadata and current value for a single GLSL uniform variable.
 
 Populated by the backend during Shader.connect. The `dirty` flag is
@@ -16,9 +21,10 @@ set to `true` on construction and on every setValue call; the backend
 clears it via markClean after uploading the value to the GPU.
 Array-type uniform names have their index suffix stripped (e.g. `uColors[0]`
 becomes `uColors`).
+
 ## Constructors
 
-- `new(index: number, type: number, size: number, name: string, data: TypedArray): ShaderUniform<>`
+- `new(index: number, type: number, size: number, name: string, data: TypedArray): ShaderUniform`
 
 ## Methods
 
@@ -32,4 +38,7 @@ becomes `uColors`).
 - `name: string`
 - `size: number`
 - `type: number`
-Source: [src/rendering/shader/ShaderUniform.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderUniform.ts#L12)
+
+## Source
+
+[src/rendering/shader/ShaderUniform.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/ShaderUniform.ts#L12)

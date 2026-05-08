@@ -2,22 +2,26 @@
 title: "WebGl2VertexArrayObject"
 description: ""
 symbol: "WebGl2VertexArrayObject"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 11
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/webgl2/WebGl2VertexArrayObject.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2VertexArrayObject.ts#L45"
 ---
-# WebGl2VertexArrayObject
+## Import
+
 `import { WebGl2VertexArrayObject } from '@codexo/exojs'`
-No summary available.
+
 ## Constructors
 
-- `new(drawMode: RenderingPrimitives): WebGl2VertexArrayObject<>`
+- `new(drawMode: RenderingPrimitives): WebGl2VertexArrayObject`
 
 ## Methods
 
-- `addAttribute(buffer: WebGl2RenderBuffer<>, attribute: ShaderAttribute<>, type: number, normalized: boolean, stride: number, start: number, integer: boolean, divisor: number): this`
-- `addIndex(buffer: WebGl2RenderBuffer<>): this`
+- `addAttribute(buffer: WebGl2RenderBuffer, attribute: ShaderAttribute, type: number, normalized: boolean, stride: number, start: number, integer: boolean, divisor: number): this`
+- `addIndex(buffer: WebGl2RenderBuffer): this`
 - `bind(): this`
 - `clear(): this`
 - `connect(runtime: WebGl2VertexArrayObjectRuntime): this`
@@ -26,4 +30,7 @@ No summary available.
 - `draw(size: number, start: number, type: RenderingPrimitives): this`
 - `drawInstanced(count: number, start: number, instanceCount: number, type: RenderingPrimitives): this`
 - `unbind(): this`
-Source: [src/rendering/webgl2/WebGl2VertexArrayObject.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2VertexArrayObject.ts#L45)
+
+## Source
+
+[src/rendering/webgl2/WebGl2VertexArrayObject.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2VertexArrayObject.ts#L45)

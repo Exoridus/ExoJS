@@ -2,23 +2,32 @@
 title: "LowpassFilter"
 description: "Low-pass filter backed by a `BiquadFilterNode` in `lowpass` mode. Attenuates frequencies above the cutoff and passes everything below it. Useful for muffling audio (e.g., sound heard through a wall), taming harsh high-frequency content, or creating underwater/telephone effects. The `resonance` (Q) parameter controls the sharpness of the roll-off peak."
 symbol: "LowpassFilter"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 2
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/audio/filters/LowpassFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/LowpassFilter.ts#L17"
 ---
-# LowpassFilter
+## Import
+
 `import { LowpassFilter } from '@codexo/exojs'`
+
 Low-pass filter backed by a `BiquadFilterNode` in `lowpass` mode.
 Attenuates frequencies above the cutoff and passes everything below it.
 Useful for muffling audio (e.g., sound heard through a wall), taming
 harsh high-frequency content, or creating underwater/telephone effects.
 The `resonance` (Q) parameter controls the sharpness of the roll-off peak.
+
 ## Constructors
 
-- `new(options: LowpassFilterOptions): LowpassFilter<>`
+- `new(options: LowpassFilterOptions): LowpassFilter`
 
 ## Methods
 
 - `destroy(): void`
-Source: [src/audio/filters/LowpassFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/LowpassFilter.ts#L17)
+
+## Source
+
+[src/audio/filters/LowpassFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/LowpassFilter.ts#L17)

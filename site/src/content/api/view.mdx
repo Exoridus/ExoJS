@@ -2,13 +2,18 @@
 title: "View"
 description: "2D camera that defines what region of the world is visible on screen. Maintains a center position, a visible area size, a rotation, and an optional zoom level. Provides lazy-evaluated world-to-clip and clip-to-world transform matrices, a follow-target system for tracking scene nodes, and a procedural screen-shake effect. Call update once per frame to advance follow and shake animations."
 symbol: "View"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 24
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/View.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L57"
 ---
-# View
+## Import
+
 `import { View } from '@codexo/exojs'`
+
 2D camera that defines what region of the world is visible on screen.
 
 Maintains a center position, a visible area size, a rotation, and an optional
@@ -16,9 +21,10 @@ zoom level. Provides lazy-evaluated world-to-clip and clip-to-world transform
 matrices, a follow-target system for tracking scene nodes, and a procedural
 screen-shake effect. Call update once per frame to advance follow and
 shake animations.
+
 ## Constructors
 
-- `new(centerX: number, centerY: number, width: number, height: number): View<>`
+- `new(centerX: number, centerY: number, width: number, height: number): View`
 
 ## Methods
 
@@ -26,14 +32,14 @@ shake animations.
 - `clearFollow(): this`
 - `destroy(): void`
 - `follow(target: ViewFollowTarget, options: ViewFollowOptions): this`
-- `getBounds(): Rectangle<>`
-- `getInverseTransform(): Matrix<>`
-- `getTransform(): Matrix<>`
+- `getBounds(): Rectangle`
+- `getInverseTransform(): Matrix`
+- `getTransform(): Matrix`
 - `move(x: number, y: number): this`
 - `reset(centerX: number, centerY: number, width: number, height: number): this`
 - `resize(width: number, height: number): this`
 - `rotate(degrees: number): this`
-- `setBounds(bounds: Rectangle<> | null): this`
+- `setBounds(bounds: Rectangle | null): this`
 - `setCenter(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setZoom(zoom: number): this`
@@ -45,4 +51,7 @@ shake animations.
 - `zoom(factor: number): this`
 - `zoomIn(amount: number): this`
 - `zoomOut(amount: number): this`
-Source: [src/rendering/View.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L57)
+
+## Source
+
+[src/rendering/View.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts#L57)

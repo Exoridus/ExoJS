@@ -2,28 +2,37 @@
 title: "PointerStackLayer"
 description: "Debug layer that shows a screen-space panel (top-right corner) listing all RenderNodes under the current pointer position, sorted by zIndex descending. Screen-space."
 symbol: "PointerStackLayer"
+kind: "class"
 subsystem: "debug"
 importPath: "@codexo/exojs/debug"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/debug/PointerStackLayer.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/PointerStackLayer.ts#L36"
 ---
-# PointerStackLayer
+## Import
+
 `import { PointerStackLayer } from '@codexo/exojs/debug'`
+
 Debug layer that shows a screen-space panel (top-right corner) listing all
 RenderNodes under the current pointer position, sorted by zIndex descending.
 Screen-space.
+
 ## Constructors
 
-- `new(app: Application<>): PointerStackLayer<>`
+- `new(app: Application): PointerStackLayer`
 
 ## Methods
 
 - `destroy(): void`
-- `render(backend: RenderBackend<>): void`
-- `update(_delta: Time<>): void`
+- `render(backend: RenderBackend): void`
+- `update(_delta: Time): void`
 
 ## Properties
 
-- `_app: Application<>`
+- `_app: Application`
 - `visible: boolean`
-Source: [src/debug/PointerStackLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/PointerStackLayer.ts#L36)
+
+## Source
+
+[src/debug/PointerStackLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/PointerStackLayer.ts#L36)

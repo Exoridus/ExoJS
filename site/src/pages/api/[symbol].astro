@@ -7,6 +7,13 @@ import DocsSidebar from '../../components/DocsSidebar.astro';
 const subsystemOrder = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'] as const;
 type ApiEntry = CollectionEntry<'api'>;
 
+const toAnchor = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+
 export async function getStaticPaths() {
     const apiEntries = await getCollection('api');
     return apiEntries.map((entry: ApiEntry) => ({ params: { symbol: entry.id } }));
@@ -36,5 +43,161 @@ const sidebarGroups = subsystemOrder.map(subsystem => {
 
 <DocsLayout title={`${entry.data.title} | ExoJS API`} description={entry.data.description}>
     <DocsSidebar slot="sidebar" groups={sidebarGroups} />
-    <Content />
+
+    <section class="api-symbol">
+        <article class="api-symbol__body">
+            <header class="api-symbol__header">
+                <p class:list={['api-symbol__kind', `kind-${entry.data.kind}`]}>{entry.data.kind}</p>
+                <h1>{entry.data.title}</h1>
+                <p>{entry.data.description}</p>
+                <div class="api-symbol__meta">
+                    <span>{entry.data.memberCount} members</span>
+                    <span>{entry.data.subsystem}</span>
+                </div>
+            </header>
+            <div class="api-symbol__content">
+                <Content />
+            </div>
+        </article>
+
+        {entry.data.sections.length > 0 && (
+            <aside class="api-symbol__local">
+                <h2>On this page</h2>
+                <ul>
+                    {entry.data.sections.map((section: string) => (
+                        <li>
+                            <a href={`#${toAnchor(section)}`}>{section}</a>
+                        </li>
+                    ))}
+                </ul>
+            </aside>
+        )}
+    </section>
 </DocsLayout>
+
+<style>
+    .api-symbol {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 1rem;
+    }
+
+    .api-symbol__header {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-panel);
+        padding: 1rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .api-symbol__kind {
+        margin: 0 0 0.45rem;
+        font-size: 0.74rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .kind-class {
+        color: var(--accent);
+    }
+
+    .kind-enum {
+        color: oklch(74% 0.13 62);
+    }
+
+    .api-symbol__header h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+    }
+
+    .api-symbol__header p {
+        margin: 0.55rem 0 0;
+        color: var(--fg-muted);
+        max-width: 74ch;
+    }
+
+    .api-symbol__meta {
+        margin-top: 0.72rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .api-symbol__meta span {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        padding: 0.2rem 0.54rem;
+        font-size: 0.78rem;
+        color: var(--fg-faint);
+    }
+
+    .api-symbol__content :global(h2) {
+        margin-top: 1.2rem;
+        border-bottom: 1px solid var(--line-soft);
+        padding-bottom: 0.42rem;
+    }
+
+    .api-symbol__content :global(code) {
+        background: color-mix(in oklab, var(--bg-code), transparent 12%);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-1);
+        padding: 0.08rem 0.3rem;
+        font-size: 0.9em;
+    }
+
+    .api-symbol__content :global(ul) {
+        padding-left: 1rem;
+    }
+
+    .api-symbol__local {
+        position: sticky;
+        top: 76px;
+        align-self: start;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        padding: 0.82rem;
+        background: var(--bg-panel);
+    }
+
+    .api-symbol__local h2 {
+        margin: 0;
+        font-size: 0.82rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .api-symbol__local ul {
+        list-style: none;
+        margin: 0.62rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .api-symbol__local a {
+        display: block;
+        text-decoration: none;
+        color: var(--fg-muted);
+        border-radius: var(--r-2);
+        padding: 0.28rem 0.42rem;
+    }
+
+    .api-symbol__local a:hover,
+    .api-symbol__local a:focus-visible {
+        background: var(--accent-soft);
+        color: var(--fg);
+        outline: none;
+    }
+
+    @media (max-width: 1100px) {
+        .api-symbol {
+            grid-template-columns: 1fr;
+        }
+
+        .api-symbol__local {
+            position: static;
+        }
+    }
+</style>

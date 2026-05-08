@@ -2,13 +2,18 @@
 title: "Random"
 description: "Seedable pseudo-random number generator based on the Mersenne Twister (MT19937) algorithm. Produces 32-bit unsigned integers with period 2^19937−1, normalised to the `[min, max)` range requested by each next call. The generator is deterministic: calling `setSeed(s)` followed by the same sequence of `next()` calls always produces the same output. Use `reset()` to replay from the current seed without changing it."
 symbol: "Random"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 5
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/math/Random.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Random.ts#L12"
 ---
-# Random
+## Import
+
 `import { Random } from '@codexo/exojs'`
+
 Seedable pseudo-random number generator based on the Mersenne Twister
 (MT19937) algorithm. Produces 32-bit unsigned integers with period 2^19937−1,
 normalised to the `[min, max)` range requested by each next call.
@@ -16,9 +21,10 @@ normalised to the `[min, max)` range requested by each next call.
 The generator is deterministic: calling `setSeed(s)` followed by the same
 sequence of `next()` calls always produces the same output. Use `reset()`
 to replay from the current seed without changing it.
+
 ## Constructors
 
-- `new(seed: number): Random<>`
+- `new(seed: number): Random`
 
 ## Methods
 
@@ -26,4 +32,7 @@ to replay from the current seed without changing it.
 - `next(min: number, max: number): number`
 - `reset(): this`
 - `setSeed(seed: number): this`
-Source: [src/math/Random.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Random.ts#L12)
+
+## Source
+
+[src/math/Random.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Random.ts#L12)

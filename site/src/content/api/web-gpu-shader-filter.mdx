@@ -2,13 +2,18 @@
 title: "WebGpuShaderFilter"
 description: "A high-level Filter subclass that renders the input texture through a user-provided WGSL fragment shader on the **WebGPU** backend. For the WebGL2 backend use WebGl2ShaderFilter. ## Usage ```ts const filter = new WebGpuShaderFilter({ fragmentSource: ` @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @fragment fn main(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ``` ## Auto-bound uniforms (group 0) - `@binding(0)` — `var<uniform> uResolution: vec2<f32>` (output dimensions) - `@binding(1)` — `var uTexture: texture_2d<f32>` (filter input) - `@binding(2)` — `var uSampler: sampler` ## User uniforms (group 1) All non-texture user uniforms are packed into a single uniform buffer at `@binding(0)`. Each member occupies a 16-byte aligned slot (conservative alignment). Declare your WGSL struct to match this layout. Texture/RenderTexture uniforms are bound as separate entries starting at `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order."
 symbol: "WebGpuShaderFilter"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 4
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/filters/WebGpuShaderFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGpuShaderFilter.ts#L185"
 ---
-# WebGpuShaderFilter
+## Import
+
 `import { WebGpuShaderFilter } from '@codexo/exojs'`
+
 A high-level Filter subclass that renders the input texture through
 a user-provided WGSL fragment shader on the **WebGPU** backend.
 
@@ -50,16 +55,20 @@ alignment). Declare your WGSL struct to match this layout.
 
 Texture/RenderTexture uniforms are bound as separate entries starting at
 `@binding(1)` (texture) and `@binding(N+1)` (sampler), in declaration order.
+
 ## Constructors
 
-- `new(options: WebGpuShaderFilterOptions): WebGpuShaderFilter<>`
+- `new(options: WebGpuShaderFilterOptions): WebGpuShaderFilter`
 
 ## Methods
 
-- `apply(backend: RenderBackend<>, input: RenderTexture<>, output: RenderTexture<>): void`
+- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void`
 - `destroy(): void`
 
 ## Properties
 
 - `uniforms: Record<string, ShaderFilterUniformValue>`
-Source: [src/rendering/filters/WebGpuShaderFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGpuShaderFilter.ts#L185)
+
+## Source
+
+[src/rendering/filters/WebGpuShaderFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGpuShaderFilter.ts#L185)

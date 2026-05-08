@@ -2,13 +2,18 @@
 title: "OrbitalForce"
 description: "Applies a tangential acceleration around a center point — perpendicular to the radial vector `(particle − center)`. Combined with an attract / repel module that controls the radial distance, this produces orbital, spiral, or vortex motion. `angularSpeed` is the target angular velocity in radians/second. The effective tangential acceleration scales with `radius * angularSpeed`, so distant particles get pushed harder (matching uniform circular motion). Positive values orbit counter-clockwise, negative clockwise. Use cases: galactic spirals, smoke vortices around an attractor, wind eddies. Layer with AttractToPoint for stable orbits. GPU-eligible."
 symbol: "OrbitalForce"
+kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs"
+memberCount: 9
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/particles/modules/OrbitalForce.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/OrbitalForce.ts#L22"
 ---
-# OrbitalForce
+## Import
+
 `import { OrbitalForce } from '@codexo/exojs'`
+
 Applies a tangential acceleration around a center point — perpendicular
 to the radial vector `(particle − center)`. Combined with an attract /
 repel module that controls the radial distance, this produces orbital,
@@ -23,21 +28,25 @@ Use cases: galactic spirals, smoke vortices around an attractor, wind
 eddies. Layer with AttractToPoint for stable orbits.
 
 GPU-eligible.
+
 ## Constructors
 
-- `new(x: number, y: number, angularSpeed: number): OrbitalForce<>`
+- `new(x: number, y: number, angularSpeed: number): OrbitalForce`
 
 ## Methods
 
-- `apply(system: ParticleSystem<>, dt: number): void`
+- `apply(system: ParticleSystem, dt: number): void`
 - `destroy(): void`
 - `uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void`
 - `wgsl(): WgslContribution`
-- `writeUniforms(view: DataView<>, offset: number): void`
+- `writeUniforms(view: DataView, offset: number): void`
 
 ## Properties
 
 - `angularSpeed: number`
 - `x: number`
 - `y: number`
-Source: [src/particles/modules/OrbitalForce.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/OrbitalForce.ts#L22)
+
+## Source
+
+[src/particles/modules/OrbitalForce.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/modules/OrbitalForce.ts#L22)

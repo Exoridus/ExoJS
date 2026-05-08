@@ -2,13 +2,18 @@
 title: "AudioBus"
 description: "Hierarchical mixer node in the engine's audio routing graph. Each bus owns three Web Audio nodes (input gain, optional filter chain, stereo pan, output gain) and routes its output into its parent's input — the root bus connects to the destination. The three engine-built-in busses are constructed by AudioManager: `master` (root), `music` (child of master), `sound` (child of master). User code creates additional busses via `new AudioBus(name, { parent })` and registers them via AudioManager.registerBus. Volume is in 0..2 (1 = unity), pan is -1..1, mute is a boolean override. AudioBus.fadeIn / AudioBus.fadeOut produce smooth ramps over the output gain. Filter changes via AudioBus.addFilter / AudioBus.removeFilter rebuild the chain in place. Setup is deferred until the global `AudioContext` is unlocked (browser autoplay policy); operations that need live nodes are no-ops until that happens."
 symbol: "AudioBus"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 10
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/AudioBus.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioBus.ts#L42"
 ---
-# AudioBus
+## Import
+
 `import { AudioBus } from '@codexo/exojs'`
+
 Hierarchical mixer node in the engine's audio routing graph. Each bus
 owns three Web Audio nodes (input gain, optional filter chain, stereo
 pan, output gain) and routes its output into its parent's input — the
@@ -27,22 +32,26 @@ AudioBus.removeFilter rebuild the chain in place.
 Setup is deferred until the global `AudioContext` is unlocked
 (browser autoplay policy); operations that need live nodes are no-ops
 until that happens.
+
 ## Constructors
 
-- `new(name: string, options: AudioBusOptions): AudioBus<>`
+- `new(name: string, options: AudioBusOptions): AudioBus`
 
 ## Methods
 
 - `_getInputNode(): GainNode | null`
 - `_getOutputNode(): GainNode | null`
-- `addFilter(filter: AudioFilter<>): this`
+- `addFilter(filter: AudioFilter): this`
 - `destroy(): void`
 - `fadeIn(durationMs: number): this`
 - `fadeOut(durationMs: number, options: object): this`
 - `onceSetup(callback: object): void`
-- `removeFilter(filter: AudioFilter<>): this`
+- `removeFilter(filter: AudioFilter): this`
 
 ## Properties
 
 - `name: string`
-Source: [src/audio/AudioBus.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioBus.ts#L42)
+
+## Source
+
+[src/audio/AudioBus.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioBus.ts#L42)

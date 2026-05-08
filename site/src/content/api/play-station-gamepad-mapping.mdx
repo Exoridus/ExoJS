@@ -2,22 +2,28 @@
 title: "PlayStationGamepadMapping"
 description: "Mapping for Sony PlayStation controllers, covering DualShock 4 and DualSense (PS4 / PS5) when connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout. PlayStation-specific controls (touchpad click, Share/Create, Capture) are surfaced through the Touchpad, Share, and Capture channels respectively."
 symbol: "PlayStationGamepadMapping"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/PlayStationGamepadMapping.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/PlayStationGamepadMapping.ts#L12"
 ---
-# PlayStationGamepadMapping
+## Import
+
 `import { PlayStationGamepadMapping } from '@codexo/exojs'`
+
 Mapping for Sony PlayStation controllers, covering DualShock 4 and
 DualSense (PS4 / PS5) when connected via USB or Bluetooth.
 
 Inherits the full GenericDualAnalogGamepadMapping layout.
 PlayStation-specific controls (touchpad click, Share/Create, Capture) are
 surfaced through the Touchpad, Share, and Capture channels respectively.
+
 ## Constructors
 
-- `new(): PlayStationGamepadMapping<>`
+- `new(): PlayStationGamepadMapping`
 
 ## Methods
 
@@ -26,7 +32,10 @@ surfaced through the Touchpad, Share, and Capture channels respectively.
 
 ## Properties
 
-- `axes: readonly GamepadAxis<>[]`
-- `buttons: readonly GamepadButton<>[]`
+- `axes: readonly GamepadAxis[]`
+- `buttons: readonly GamepadButton[]`
 - `family: PlayStation`
-Source: [src/input/PlayStationGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/PlayStationGamepadMapping.ts#L12)
+
+## Source
+
+[src/input/PlayStationGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/PlayStationGamepadMapping.ts#L12)

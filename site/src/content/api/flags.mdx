@@ -2,17 +2,23 @@
 title: "Flags"
 description: "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer."
 symbol: "Flags"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 7
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/math/Flags.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts#L17"
 ---
-# Flags
+## Import
+
 `import { Flags } from '@codexo/exojs'`
+
 Type-safe bitfield utility for managing sets of numeric enum flags.
 
 `T` should be a numeric const-enum or a type whose values are `number`.
 Internally stores the combined flags as a single 32-bit integer.
+
 ## Constructors
 
 - `new(flags: number[]): Flags<T>`
@@ -25,4 +31,7 @@ Internally stores the combined flags as a single 32-bit integer.
 - `pop(flag: V): boolean`
 - `push(flags: V[]): this`
 - `remove(flags: V[]): this`
-Source: [src/math/Flags.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts#L17)
+
+## Source
+
+[src/math/Flags.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts#L17)

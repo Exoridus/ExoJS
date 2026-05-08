@@ -2,24 +2,33 @@
 title: "ColorFilter"
 description: "A Filter that multiplies the input texture by a solid Color. Useful for tinting, fade-to-black/white, flash effects, and colour-grading passes. The `color` property can be mutated at runtime without recreating the filter."
 symbol: "ColorFilter"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 3
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/filters/ColorFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorFilter.ts#L17"
 ---
-# ColorFilter
+## Import
+
 `import { ColorFilter } from '@codexo/exojs'`
+
 A Filter that multiplies the input texture by a solid Color.
 
 Useful for tinting, fade-to-black/white, flash effects, and
 colour-grading passes. The `color` property can be mutated at runtime
 without recreating the filter.
+
 ## Constructors
 
-- `new(color: Color<>): ColorFilter<>`
+- `new(color: Color): ColorFilter`
 
 ## Methods
 
-- `apply(backend: RenderBackend<>, input: RenderTexture<>, output: RenderTexture<>): void`
+- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void`
 - `destroy(): void`
-Source: [src/rendering/filters/ColorFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorFilter.ts#L17)
+
+## Source
+
+[src/rendering/filters/ColorFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ColorFilter.ts#L17)

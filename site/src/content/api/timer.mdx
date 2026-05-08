@@ -2,20 +2,26 @@
 title: "Timer"
 description: "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once `elapsedTime >= limit`) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame."
 symbol: "Timer"
+kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/core/Timer.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Timer.ts#L11"
 ---
-# Timer
+## Import
+
 `import { Timer } from '@codexo/exojs'`
+
 Clock variant with a fixed limit. Inherits start/stop/reset/restart
 semantics; adds Timer.expired (true once `elapsedTime >= limit`)
 and remaining-time accessors. Useful for cooldowns, delays, and any timed
 gating logic where you want to ask "is the duration up?" each frame.
+
 ## Constructors
 
-- `new(limit: Time<>, autoStart: boolean): Timer<>`
+- `new(limit: Time, autoStart: boolean): Timer`
 
 ## Methods
 
@@ -24,4 +30,7 @@ gating logic where you want to ask "is the duration up?" each frame.
 - `restart(): this`
 - `start(): this`
 - `stop(): this`
-Source: [src/core/Timer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Timer.ts#L11)
+
+## Source
+
+[src/core/Timer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Timer.ts#L11)

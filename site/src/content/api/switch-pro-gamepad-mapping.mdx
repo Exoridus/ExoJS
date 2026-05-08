@@ -2,13 +2,18 @@
 title: "SwitchProGamepadMapping"
 description: "Mapping for the Nintendo Switch Pro Controller connected via USB or Bluetooth. Inherits the full GenericDualAnalogGamepadMapping layout. The Capture button is surfaced through the Capture channel; Home maps to Guide. Note that on some browsers the controller is only recognised after being paired through Steam or a dedicated driver."
 symbol: "SwitchProGamepadMapping"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/SwitchProGamepadMapping.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/SwitchProGamepadMapping.ts#L13"
 ---
-# SwitchProGamepadMapping
+## Import
+
 `import { SwitchProGamepadMapping } from '@codexo/exojs'`
+
 Mapping for the Nintendo Switch Pro Controller connected via USB or
 Bluetooth.
 
@@ -16,9 +21,10 @@ Inherits the full GenericDualAnalogGamepadMapping layout. The
 Capture button is surfaced through the Capture channel; Home maps to Guide.
 Note that on some browsers the controller is only recognised after being
 paired through Steam or a dedicated driver.
+
 ## Constructors
 
-- `new(): SwitchProGamepadMapping<>`
+- `new(): SwitchProGamepadMapping`
 
 ## Methods
 
@@ -27,7 +33,10 @@ paired through Steam or a dedicated driver.
 
 ## Properties
 
-- `axes: readonly GamepadAxis<>[]`
-- `buttons: readonly GamepadButton<>[]`
+- `axes: readonly GamepadAxis[]`
+- `buttons: readonly GamepadButton[]`
 - `family: SwitchPro`
-Source: [src/input/SwitchProGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/SwitchProGamepadMapping.ts#L13)
+
+## Source
+
+[src/input/SwitchProGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/SwitchProGamepadMapping.ts#L13)

@@ -2,21 +2,27 @@
 title: "ArcadeStickGamepadMapping"
 description: "Mapping for generic arcade-stick controllers. Covers the standard 8-button + shoulder/trigger layout common to most fightsticks. No analog sticks are present; the axes array is empty. D-pad inputs are exposed as discrete buttons (indices 12–15)."
 symbol: "ArcadeStickGamepadMapping"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/ArcadeStickGamepadMapping.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/ArcadeStickGamepadMapping.ts#L11"
 ---
-# ArcadeStickGamepadMapping
+## Import
+
 `import { ArcadeStickGamepadMapping } from '@codexo/exojs'`
+
 Mapping for generic arcade-stick controllers.
 
 Covers the standard 8-button + shoulder/trigger layout common to most
 fightsticks. No analog sticks are present; the axes array is empty.
 D-pad inputs are exposed as discrete buttons (indices 12–15).
+
 ## Constructors
 
-- `new(): ArcadeStickGamepadMapping<>`
+- `new(): ArcadeStickGamepadMapping`
 
 ## Methods
 
@@ -25,7 +31,10 @@ D-pad inputs are exposed as discrete buttons (indices 12–15).
 
 ## Properties
 
-- `axes: readonly GamepadAxis<>[]`
-- `buttons: readonly GamepadButton<>[]`
+- `axes: readonly GamepadAxis[]`
+- `buttons: readonly GamepadButton[]`
 - `family: ArcadeStick`
-Source: [src/input/ArcadeStickGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/ArcadeStickGamepadMapping.ts#L11)
+
+## Source
+
+[src/input/ArcadeStickGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/ArcadeStickGamepadMapping.ts#L11)

@@ -2,13 +2,18 @@
 title: "Ease"
 description: "Standard Robert Penner easing functions as static methods. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints). Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc. Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope."
 symbol: "Ease"
+kind: "class"
 subsystem: "animation"
 importPath: "@codexo/exojs"
+memberCount: 32
+sections: ["Import", "Constructors", "Properties", "Source"]
 sourcePath: "src/animation/Easing.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts#L29"
 ---
-# Ease
+## Import
+
 `import { Ease } from '@codexo/exojs'`
+
 Standard Robert Penner easing functions as static methods.
 Each function accepts a normalized time `t` in [0, 1] and returns a value
 that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic
@@ -18,9 +23,10 @@ Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc.
 
 Note: only scalar numeric properties are supported in v1. Vector, Color, and
 Matrix interpolation are out of scope.
+
 ## Constructors
 
-- `new(): Ease<>`
+- `new(): Ease`
 
 ## Properties
 
@@ -55,4 +61,7 @@ Matrix interpolation are out of scope.
 - `sineIn: EasingFunction`
 - `sineInOut: EasingFunction`
 - `sineOut: EasingFunction`
-Source: [src/animation/Easing.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts#L29)
+
+## Source
+
+[src/animation/Easing.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts#L29)

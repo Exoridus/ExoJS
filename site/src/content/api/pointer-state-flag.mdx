@@ -2,17 +2,23 @@
 title: "PointerStateFlag"
 description: "Bit flags accumulated on a Pointer between frames so consumers can detect transient events (entered the canvas, was released, was cancelled) even if the pointer's `currentState` has already moved on. Cleared each frame by the InteractionManager."
 symbol: "PointerStateFlag"
+kind: "enum"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 7
+sections: ["Import", "Members", "Source"]
 sourcePath: "src/input/Pointer.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L30"
 ---
-# PointerStateFlag
+## Import
+
 `import { PointerStateFlag } from '@codexo/exojs'`
+
 Bit flags accumulated on a Pointer between frames so consumers can
 detect transient events (entered the canvas, was released, was cancelled)
 even if the pointer's `currentState` has already moved on. Cleared each
 frame by the InteractionManager.
+
 ## Members
 
 - `Cancel`
@@ -22,4 +28,7 @@ frame by the InteractionManager.
 - `None`
 - `Over`
 - `Up`
-Source: [src/input/Pointer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L30)
+
+## Source
+
+[src/input/Pointer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts#L30)

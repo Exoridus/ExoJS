@@ -2,13 +2,18 @@
 title: "TweenManager"
 description: "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. Created tweens are tracked automatically; manually constructed tweens can be opted in via TweenManager.add. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically."
 symbol: "TweenManager"
+kind: "class"
 subsystem: "animation"
 importPath: "@codexo/exojs"
+memberCount: 7
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/animation/TweenManager.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L13"
 ---
-# TweenManager
+## Import
+
 `import { TweenManager } from '@codexo/exojs'`
+
 Owns and advances a collection of Tween instances, driving them
 once per frame from Application.update. Created tweens are tracked
 automatically; manually constructed tweens can be opted in via
@@ -17,16 +22,20 @@ TweenManager.add.
 Update iteration uses a snapshot so callbacks may freely add or remove
 tweens during the same frame without corrupting the loop. Completed and
 stopped tweens are evicted automatically.
+
 ## Constructors
 
-- `new(): TweenManager<>`
+- `new(): TweenManager`
 
 ## Methods
 
-- `add(tween: Tween<>): this`
+- `add(tween: Tween): this`
 - `clear(): this`
 - `create(target: T): Tween<T>`
 - `destroy(): void`
-- `remove(tween: Tween<>): this`
+- `remove(tween: Tween): this`
 - `update(deltaSeconds: number): this`
-Source: [src/animation/TweenManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L13)
+
+## Source
+
+[src/animation/TweenManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts#L13)

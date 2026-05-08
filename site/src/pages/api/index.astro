@@ -5,42 +5,251 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../components/DocsSidebar.astro';
 
 const subsystemOrder = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'] as const;
-const apiEntries = await getCollection('api');
+const subsystemDescriptions: Record<(typeof subsystemOrder)[number], string> = {
+    animation: 'Tweens, timing helpers, and scene motion systems.',
+    audio: 'Playback, analysis, spatialization, and effect chains.',
+    core: 'Application lifecycle, scenes, and runtime coordination.',
+    debug: 'Debug overlays, hit-testing views, and profiling layers.',
+    input: 'Keyboard, pointer, touch, and gamepad abstractions.',
+    math: 'Vectors, bounds, collision, geometry, and utility math.',
+    particles: 'Emitters, modules, distributions, and GPU-backed systems.',
+    rendering: 'Drawables, renderer backends, views, and filters.',
+    resources: 'Loader, manifest, asset factories, and caching.',
+};
 type ApiEntry = CollectionEntry<'api'>;
 
+const apiEntries = (await getCollection('api')).sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title));
 const grouped: Array<{ subsystem: (typeof subsystemOrder)[number]; entries: Array<ApiEntry> }> = subsystemOrder.map(subsystem => ({
     subsystem,
     entries: apiEntries
         .filter((entry: ApiEntry) => entry.data.subsystem === subsystem)
         .sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title)),
 }));
+const totalSymbols = apiEntries.length;
 
 const sidebarGroups = grouped.map(group => ({
     title: group.subsystem,
-        items: group.entries.map(entry => ({
-            href: `${import.meta.env.BASE_URL}api/${entry.id}/`,
-            label: entry.data.title,
-        })),
+    items: group.entries.map(entry => ({
+        href: `${import.meta.env.BASE_URL}api/${entry.id}/`,
+        label: entry.data.title,
+    })),
 }));
 ---
 
-<DocsLayout title="ExoJS API" description="Auto-generated API reference for ExoJS">
+<DocsLayout title="ExoJS API" description="Public API reference grouped by subsystem.">
     <DocsSidebar slot="sidebar" groups={sidebarGroups} />
 
-    <h1>API Reference</h1>
-    <p>Symbols are grouped by subsystem. Items under <code>debug</code> are imported from <code>@codexo/exojs/debug</code>.</p>
+    <section class="api-hero">
+        <h1>API reference</h1>
+        <p>Use the subsystem cards to navigate the public surface. Filter when you already know part of a symbol name.</p>
+        <div class="api-stats">
+            <span>{totalSymbols} public symbols</span>
+            <span>9 subsystems</span>
+        </div>
+    </section>
 
-    {grouped.map(group => (
-        <section>
-            <h2>{group.subsystem}</h2>
-            <ul>
-                {group.entries.map(entry => (
-                    <li>
-                        <a href={`${import.meta.env.BASE_URL}api/${entry.id}/`}>{entry.data.title}</a>
-                        {entry.data.description ? ` - ${entry.data.description}` : ''}
-                    </li>
-                ))}
-            </ul>
-        </section>
-    ))}
+    <label class="api-filter">
+        <span>Filter symbols</span>
+        <input id="api-filter-input" type="search" placeholder="Example: Application, Tween, Sprite..." data-api-filter autocomplete="off" />
+    </label>
+
+    <section class="api-grid">
+        {
+            grouped.map(group => (
+                <article class="api-card" data-api-subsystem={group.subsystem}>
+                    <header>
+                        <h2>{group.subsystem}</h2>
+                        <p>{subsystemDescriptions[group.subsystem]}</p>
+                        <div class="api-card__meta">
+                            <span>{group.entries.length} symbols</span>
+                        </div>
+                    </header>
+
+                    <ul class="api-card__top-list">
+                        {group.entries.slice(0, 6).map(entry => (
+                            <li data-api-item data-api-name={entry.data.title.toLowerCase()} data-api-system={entry.data.subsystem}>
+                                <a href={`${import.meta.env.BASE_URL}api/${entry.id}/`}>{entry.data.title}</a>
+                            </li>
+                        ))}
+                    </ul>
+
+                    {group.entries.length > 6 && (
+                        <details class="api-card__all">
+                            <summary>Show all</summary>
+                            <ul>
+                                {group.entries.slice(6).map(entry => (
+                                    <li data-api-item data-api-name={entry.data.title.toLowerCase()} data-api-system={entry.data.subsystem}>
+                                        <a href={`${import.meta.env.BASE_URL}api/${entry.id}/`}>{entry.data.title}</a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+                </article>
+            ))
+        }
+    </section>
+
+    <script is:inline>
+        (() => {
+            const input = document.querySelector('[data-api-filter]');
+            if (!(input instanceof HTMLInputElement)) return;
+
+            const cards = [...document.querySelectorAll('[data-api-subsystem]')];
+            const items = [...document.querySelectorAll('[data-api-item]')];
+
+            const applyFilter = () => {
+                const raw = input.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                for (const item of items) {
+                    if (!(item instanceof HTMLElement)) continue;
+                    const name = item.dataset.apiName ?? '';
+                    const subsystem = item.dataset.apiSystem ?? '';
+                    const matches = raw.length === 0 || name.includes(raw) || subsystem.includes(raw);
+                    item.hidden = !matches;
+                    if (matches) visibleCount += 1;
+                }
+
+                for (const card of cards) {
+                    if (!(card instanceof HTMLElement)) continue;
+                    const hasVisibleItem = [...card.querySelectorAll('[data-api-item]')].some(node => node instanceof HTMLElement && !node.hidden);
+                    card.hidden = !hasVisibleItem && raw.length > 0;
+                }
+
+                input.setAttribute('aria-label', `${visibleCount} matching symbols`);
+            };
+
+            input.addEventListener('input', applyFilter);
+        })();
+    </script>
 </DocsLayout>
+
+<style>
+    .api-hero {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: var(--bg-panel);
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .api-hero h1 {
+        margin: 0;
+        font-size: clamp(1.7rem, 3.6vw, 2.4rem);
+    }
+
+    .api-hero p {
+        margin: 0.6rem 0 0;
+        color: var(--fg-muted);
+        max-width: 72ch;
+    }
+
+    .api-stats {
+        margin-top: 0.8rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .api-stats span {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        padding: 0.22rem 0.6rem;
+        font-size: 0.8rem;
+        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
+    }
+
+    .api-filter {
+        display: grid;
+        gap: 0.42rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .api-filter span {
+        font-size: 0.82rem;
+        color: var(--fg-faint);
+    }
+
+    .api-filter input {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-input);
+        color: var(--fg);
+        padding: 0.56rem 0.72rem;
+    }
+
+    .api-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .api-card {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
+        padding: 0.9rem;
+    }
+
+    .api-card h2 {
+        margin: 0;
+        text-transform: capitalize;
+        font-size: 1.05rem;
+    }
+
+    .api-card p {
+        margin: 0.42rem 0 0;
+        color: var(--fg-muted);
+        font-size: 0.9rem;
+    }
+
+    .api-card__meta {
+        margin-top: 0.52rem;
+    }
+
+    .api-card__meta span {
+        display: inline-block;
+        font-size: 0.78rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        padding: 0.18rem 0.5rem;
+        color: var(--fg-faint);
+    }
+
+    .api-card__top-list,
+    .api-card__all ul {
+        margin: 0.7rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .api-card a {
+        display: block;
+        border-radius: var(--r-2);
+        border: 1px solid transparent;
+        padding: 0.35rem 0.45rem;
+        text-decoration: none;
+    }
+
+    .api-card a:hover,
+    .api-card a:focus-visible {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+        outline: none;
+    }
+
+    .api-card__all {
+        margin-top: 0.62rem;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 0.56rem;
+    }
+
+    .api-card__all summary {
+        cursor: pointer;
+        font-size: 0.82rem;
+        color: var(--fg-faint);
+    }
+</style>

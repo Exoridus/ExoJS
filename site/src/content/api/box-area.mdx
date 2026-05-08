@@ -2,23 +2,29 @@
 title: "BoxArea"
 description: "Random point inside an axis-aligned box. With `mode: 'edge'` the result lies on the perimeter (uniform along all four edges combined); with `mode: 'volume'` (default) it's uniformly distributed across the area."
 symbol: "BoxArea"
+kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs"
+memberCount: 7
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/particles/distributions/BoxArea.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/BoxArea.ts#L10"
 ---
-# BoxArea
+## Import
+
 `import { BoxArea } from '@codexo/exojs'`
+
 Random point inside an axis-aligned box. With `mode: 'edge'` the result
 lies on the perimeter (uniform along all four edges combined); with
 `mode: 'volume'` (default) it's uniformly distributed across the area.
+
 ## Constructors
 
-- `new(minX: number, maxX: number, minY: number, maxY: number, mode: "volume" | "edge"): BoxArea<>`
+- `new(minX: number, maxX: number, minY: number, maxY: number, mode: "volume" | "edge"): BoxArea`
 
 ## Methods
 
-- `sample(out: Vector<>): Vector<>`
+- `sample(out: Vector): Vector`
 
 ## Properties
 
@@ -27,4 +33,7 @@ lies on the perimeter (uniform along all four edges combined); with
 - `minX: number`
 - `minY: number`
 - `mode: "volume" | "edge"`
-Source: [src/particles/distributions/BoxArea.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/BoxArea.ts#L10)
+
+## Source
+
+[src/particles/distributions/BoxArea.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/BoxArea.ts#L10)

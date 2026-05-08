@@ -2,13 +2,18 @@
 title: "Clock"
 description: "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared — copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag."
 symbol: "Clock"
+kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/core/Clock.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Clock.ts#L15"
 ---
-# Clock
+## Import
+
 `import { Clock } from '@codexo/exojs'`
+
 High-precision wall-clock that accumulates elapsed time while running.
 Reads from performance.now via `getPreciseTime`. Use
 Clock.start, Clock.stop, Clock.reset, and
@@ -17,9 +22,10 @@ Clock.elapsedTime (the Time instance is shared — copy it
 if you need to keep a snapshot).
 
 Use Timer for a clock with a fixed limit and `expired` flag.
+
 ## Constructors
 
-- `new(startTime: Time<>, autoStart: boolean): Clock<>`
+- `new(startTime: Time, autoStart: boolean): Clock`
 
 ## Methods
 
@@ -28,4 +34,7 @@ Use Timer for a clock with a fixed limit and `expired` flag.
 - `restart(): this`
 - `start(): this`
 - `stop(): this`
-Source: [src/core/Clock.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Clock.ts#L15)
+
+## Source
+
+[src/core/Clock.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Clock.ts#L15)

@@ -2,58 +2,64 @@
 title: "Drawable"
 description: "Base class for every renderable scene object. Extends RenderNode with a per-object tint colour and blend mode, and implements the default view-frustum culling logic in render. Concrete drawable types (sprites, meshes, text, etc.) extend this class and are paired with a matching Renderer via RendererRegistry."
 symbol: "Drawable"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 59
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/Drawable.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L15"
 ---
-# Drawable
+## Import
+
 `import { Drawable } from '@codexo/exojs'`
+
 Base class for every renderable scene object.
 
 Extends RenderNode with a per-object tint colour and blend mode,
 and implements the default view-frustum culling logic in render.
 Concrete drawable types (sprites, meshes, text, etc.) extend this class
 and are paired with a matching Renderer via RendererRegistry.
+
 ## Constructors
 
-- `new(): Drawable<>`
+- `new(): Drawable`
 
 ## Methods
 
 - `_invalidateBoundsCascade(): void`
 - `_invalidateChildrenTransform(): void`
 - `_invalidateSubtreeTransform(): void`
-- `addFilter(filter: Filter<>): this`
+- `addFilter(filter: Filter): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
-- `getBounds(): Rectangle<>`
-- `getGlobalTransform(): Matrix<>`
-- `getLocalBounds(): Rectangle<>`
-- `getNormals(): Vector<>[]`
-- `getTransform(): Matrix<>`
+- `getBounds(): Rectangle`
+- `getGlobalTransform(): Matrix`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
 - `intersectsWith(target: Collidable): boolean`
 - `invalidateCache(): this`
-- `inView(view: View<>): boolean`
+- `inView(view: View): boolean`
 - `move(x: number, y: number): this`
-- `project(axis: Vector<>, result: Interval<>): Interval<>`
-- `removeFilter(filter: Filter<>): this`
-- `render(backend: RenderBackend<>): this`
-- `renderVisualContent(backend: RenderBackend<>, renderContent: object, blendMode: BlendModes): void`
+- `project(axis: Vector, result: Interval): Interval`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
 - `setCacheAsBitmap(cacheAsBitmap: boolean): this`
 - `setChildOrder(order: number): this`
 - `setCullable(cullable: boolean): this`
-- `setFilters(filters: readonly Filter<>[]): this`
+- `setFilters(filters: readonly Filter[]): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
-- `setTint(color: Color<>): this`
+- `setTint(color: Color): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
 - `updateTransform(): this`
@@ -61,25 +67,31 @@ and are paired with a matching Renderer via RendererRegistry.
 
 ## Properties
 
-- `_bounds: Bounds<>`
+- `_bounds: Bounds`
 - `_cos: number`
-- `_origin: ObservableVector<>`
-- `_position: ObservableVector<>`
+- `_origin: ObservableVector`
+- `_position: ObservableVector`
 - `_rotation: number`
-- `_scale: ObservableVector<>`
+- `_scale: ObservableVector`
 - `_sin: number`
-- `_transform: Matrix<>`
+- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
-- `onDrag: Signal<[InteractionEvent<>]>`
-- `onDragEnd: Signal<[InteractionEvent<>]>`
-- `onDragStart: Signal<[InteractionEvent<>]>`
-- `onPointerDown: Signal<[InteractionEvent<>]>`
-- `onPointerMove: Signal<[InteractionEvent<>]>`
-- `onPointerOut: Signal<[InteractionEvent<>]>`
-- `onPointerOver: Signal<[InteractionEvent<>]>`
-- `onPointerTap: Signal<[InteractionEvent<>]>`
-- `onPointerUp: Signal<[InteractionEvent<>]>`
-Source: [src/rendering/Drawable.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L15)
+
+## Events
+
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[src/rendering/Drawable.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Drawable.ts#L15)

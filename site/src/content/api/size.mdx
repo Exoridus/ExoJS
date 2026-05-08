@@ -2,13 +2,18 @@
 title: "Size"
 description: "Mutable 2D size (width × height) value type. All arithmetic methods mutate in place and return `this` for chaining. When `height` is omitted from `set`, `add`, `subtract`, `scale`, or `divide` it defaults to the same value as `width` (uniform operation). `Size.temp` provides a shared scratch instance. `Size.zero` is a read-only sentinel."
 symbol: "Size"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 13
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/math/Size.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Size.ts#L14"
 ---
-# Size
+## Import
+
 `import { Size } from '@codexo/exojs'`
+
 Mutable 2D size (width × height) value type. All arithmetic methods mutate
 in place and return `this` for chaining. When `height` is omitted from
 `set`, `add`, `subtract`, `scale`, or `divide` it defaults to the same
@@ -16,9 +21,10 @@ value as `width` (uniform operation).
 
 `Size.temp` provides a shared scratch instance. `Size.zero` is a read-only
 sentinel.
+
 ## Constructors
 
-- `new(width: number, height: number): Size<>`
+- `new(width: number, height: number): Size`
 
 ## Methods
 
@@ -36,5 +42,8 @@ sentinel.
 
 - `_height: number`
 - `_width: number`
-- `zero: Size<>`
-Source: [src/math/Size.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Size.ts#L14)
+- `zero: Size`
+
+## Source
+
+[src/math/Size.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Size.ts#L14)

@@ -2,13 +2,18 @@
 title: "Capabilities"
 description: "Frozen snapshot of host-environment feature support: which renderer backends are available, which input modalities are present, audio / fullscreen / vibration / OffscreenCanvas / Worker support, max touch points, and the resolved devicePixelRatio. Construction is private — the only public entry is Capabilities.ready, a lazy-cached `Promise<Capabilities>` that fires the (mostly) async probes on first access. The resolved instance is frozen and never mutates. Application.capabilities returns the same instance once `app.start()` has resolved."
 symbol: "Capabilities"
+kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
+memberCount: 16
+sections: ["Import", "Properties", "Source"]
 sourcePath: "src/core/capabilities.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts#L48"
 ---
-# Capabilities
+## Import
+
 `import { Capabilities } from '@codexo/exojs'`
+
 Frozen snapshot of host-environment feature support: which renderer
 backends are available, which input modalities are present, audio /
 fullscreen / vibration / OffscreenCanvas / Worker support, max touch
@@ -19,6 +24,7 @@ Capabilities.ready, a lazy-cached `Promise\<Capabilities>` that
 fires the (mostly) async probes on first access. The resolved instance
 is frozen and never mutates. Application.capabilities returns
 the same instance once `app.start()` has resolved.
+
 ## Properties
 
 - `audio: boolean`
@@ -37,4 +43,7 @@ the same instance once `app.start()` has resolved.
 - `webgpuArchitecture: string | null`
 - `webgpuVendor: string | null`
 - `webWorkers: boolean`
-Source: [src/core/capabilities.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts#L48)
+
+## Source
+
+[src/core/capabilities.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts#L48)

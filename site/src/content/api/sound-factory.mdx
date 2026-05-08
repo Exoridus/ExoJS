@@ -2,13 +2,18 @@
 title: "SoundFactory"
 description: "AssetFactory implementation that loads short audio assets (MP3, OGG, WAV, AAC, and other Web Audio API-supported formats), fully decodes them into an AudioBuffer, and produces a Sound instance ready for low-latency playback. For long-form background music use MusicFactory instead, which streams audio without up-front decoding. Supports audio sprite sheets via the `sprites` option."
 symbol: "SoundFactory"
+kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/resources/factories/SoundFactory.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts#L33"
 ---
-# SoundFactory
+## Import
+
 `import { SoundFactory } from '@codexo/exojs'`
+
 AssetFactory implementation that loads short audio assets
 (MP3, OGG, WAV, AAC, and other Web Audio API-supported formats), fully
 decodes them into an AudioBuffer, and produces a Sound
@@ -17,13 +22,14 @@ instance ready for low-latency playback.
 For long-form background music use MusicFactory instead, which
 streams audio without up-front decoding. Supports audio sprite sheets via
 the `sprites` option.
+
 ## Constructors
 
-- `new(): SoundFactory<>`
+- `new(): SoundFactory`
 
 ## Methods
 
-- `create(source: ArrayBuffer, options: SoundFactoryOptions): Promise<Sound<>>`
+- `create(source: ArrayBuffer, options: SoundFactoryOptions): Promise<Sound>`
 - `createObjectUrl(blob: Blob): string`
 - `destroy(): void`
 - `process(response: Response): Promise<ArrayBuffer>`
@@ -33,4 +39,7 @@ the `sprites` option.
 
 - `_objectUrls: string[]`
 - `storageName: "sound"`
-Source: [src/resources/factories/SoundFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts#L33)
+
+## Source
+
+[src/resources/factories/SoundFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/SoundFactory.ts#L33)

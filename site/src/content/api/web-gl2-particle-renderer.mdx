@@ -2,13 +2,18 @@
 title: "WebGl2ParticleRenderer"
 description: "Base class for WebGL2 renderers. Manages the connect/disconnect lifecycle and provides a safe `getBackend()` accessor that throws if the renderer is not connected. Subclasses must implement: - onConnect(backend): set up GL resources - onDisconnect(): tear down GL resources - render(drawable): batch or immediately draw the given drawable - flush(): submit any batched draw calls to the GPU"
 symbol: "WebGl2ParticleRenderer"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 11
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/webgl2/WebGl2ParticleRenderer.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2ParticleRenderer.ts#L52"
 ---
-# WebGl2ParticleRenderer
+## Import
+
 `import { WebGl2ParticleRenderer } from '@codexo/exojs'`
+
 Base class for WebGL2 renderers.
 
 Manages the connect/disconnect lifecycle and provides a safe
@@ -19,23 +24,27 @@ Subclasses must implement:
 - onDisconnect(): tear down GL resources
 - render(drawable): batch or immediately draw the given drawable
 - flush(): submit any batched draw calls to the GPU
+
 ## Constructors
 
-- `new(batchSize: number): WebGl2ParticleRenderer<>`
+- `new(batchSize: number): WebGl2ParticleRenderer`
 
 ## Methods
 
-- `connect(backend: WebGl2Backend<>): void`
+- `connect(backend: WebGl2Backend): void`
 - `destroy(): void`
 - `disconnect(): void`
 - `flush(): void`
-- `getBackend(): WebGl2Backend<>`
-- `getBackendOrNull(): WebGl2Backend<> | null`
-- `onConnect(backend: WebGl2Backend<>): void`
+- `getBackend(): WebGl2Backend`
+- `getBackendOrNull(): WebGl2Backend | null`
+- `onConnect(backend: WebGl2Backend): void`
 - `onDisconnect(): void`
-- `render(system: ParticleSystem<>): this`
+- `render(system: ParticleSystem): this`
 
 ## Properties
 
 - `backendType: WebGl2`
-Source: [src/rendering/webgl2/WebGl2ParticleRenderer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2ParticleRenderer.ts#L52)
+
+## Source
+
+[src/rendering/webgl2/WebGl2ParticleRenderer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/webgl2/WebGl2ParticleRenderer.ts#L52)

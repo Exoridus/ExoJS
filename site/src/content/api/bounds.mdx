@@ -2,13 +2,18 @@
 title: "Bounds"
 description: "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing. The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle — copy the result if you need to retain it across further accumulation."
 symbol: "Bounds"
+kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/core/Bounds.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts#L15"
 ---
-# Bounds
+## Import
+
 `import { Bounds } from '@codexo/exojs'`
+
 Mutable axis-aligned bounding box accumulator. Starts as the empty bounds
 (`-Infinity..Infinity` reversed) and grows monotonically as points or
 rectangles are merged in via Bounds.addCoords and
@@ -18,15 +23,19 @@ subtree's combined extent for culling and hit-testing.
 The Bounds.getRect accessor lazily folds the current min/max into
 a shared Rectangle — copy the result if you need to retain it
 across further accumulation.
+
 ## Constructors
 
-- `new(): Bounds<>`
+- `new(): Bounds`
 
 ## Methods
 
 - `addCoords(x: number, y: number): this`
-- `addRect(rectangle: Rectangle<>, transform?: Matrix<>): this`
+- `addRect(rectangle: Rectangle, transform?: Matrix): this`
 - `destroy(): void`
-- `getRect(): Rectangle<>`
+- `getRect(): Rectangle`
 - `reset(): this`
-Source: [src/core/Bounds.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts#L15)
+
+## Source
+
+[src/core/Bounds.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts#L15)

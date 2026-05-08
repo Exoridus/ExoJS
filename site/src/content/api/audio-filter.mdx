@@ -2,22 +2,31 @@
 title: "AudioFilter"
 description: "Abstract base for all audio processing filters in ExoJS. Each filter exposes stable inputNode and outputNode AudioNodes that the audio bus connects into the Web Audio graph. Async filters (e.g., worklet-based) expose a ready promise that resolves once the filter is fully initialized."
 symbol: "AudioFilter"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 2
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/audio/AudioFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioFilter.ts#L7"
 ---
-# AudioFilter
+## Import
+
 `import { AudioFilter } from '@codexo/exojs'`
+
 Abstract base for all audio processing filters in ExoJS. Each filter exposes
 stable inputNode and outputNode AudioNodes that the audio bus
 connects into the Web Audio graph. Async filters (e.g., worklet-based) expose
 a ready promise that resolves once the filter is fully initialized.
+
 ## Constructors
 
-- `new(): AudioFilter<>`
+- `new(): AudioFilter`
 
 ## Methods
 
 - `destroy(): void`
-Source: [src/audio/AudioFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioFilter.ts#L7)
+
+## Source
+
+[src/audio/AudioFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioFilter.ts#L7)

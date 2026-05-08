@@ -2,13 +2,18 @@
 title: "GamepadMapping"
 description: "Abstract translation layer between the browser's raw Gamepad API indices and ExoJS-canonical channel buffers. Each concrete subclass encodes one device family's button/axis layout as ordered arrays of GamepadButton / GamepadAxis instances. The engine selects the appropriate mapping when a gamepad connects and uses it to route raw values to the correct input channels every frame."
 symbol: "GamepadMapping"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/GamepadMapping.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts#L32"
 ---
-# GamepadMapping
+## Import
+
 `import { GamepadMapping } from '@codexo/exojs'`
+
 Abstract translation layer between the browser's raw Gamepad API
 indices and ExoJS-canonical channel buffers.
 
@@ -16,9 +21,10 @@ Each concrete subclass encodes one device family's button/axis layout as
 ordered arrays of GamepadButton / GamepadAxis instances.
 The engine selects the appropriate mapping when a gamepad connects and
 uses it to route raw values to the correct input channels every frame.
+
 ## Constructors
 
-- `new(buttons: readonly GamepadButton<>[], axes: readonly GamepadAxis<>[]): GamepadMapping<>`
+- `new(buttons: readonly GamepadButton[], axes: readonly GamepadAxis[]): GamepadMapping`
 
 ## Methods
 
@@ -27,7 +33,10 @@ uses it to route raw values to the correct input channels every frame.
 
 ## Properties
 
-- `axes: readonly GamepadAxis<>[]`
-- `buttons: readonly GamepadButton<>[]`
+- `axes: readonly GamepadAxis[]`
+- `buttons: readonly GamepadButton[]`
 - `family: GamepadMappingFamily`
-Source: [src/input/GamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts#L32)
+
+## Source
+
+[src/input/GamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts#L32)

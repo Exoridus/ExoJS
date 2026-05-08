@@ -11,16 +11,14 @@ const outputDir = path.resolve(siteRoot, 'src', 'content', 'api');
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
 type Subsystem = 'animation' | 'audio' | 'core' | 'debug' | 'input' | 'math' | 'particles' | 'rendering' | 'resources';
+type ApiKind = 'class' | 'enum';
 
 const SUBSYSTEMS: ReadonlyArray<Subsystem> = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'];
 
-const isDocumentableKind = (kind: ReflectionKind): boolean =>
-    (kind & ReflectionKind.Class) > 0 ||
-    (kind & ReflectionKind.Interface) > 0 ||
-    (kind & ReflectionKind.Enum) > 0 ||
-    (kind & ReflectionKind.Function) > 0 ||
-    (kind & ReflectionKind.TypeAlias) > 0 ||
-    (kind & ReflectionKind.Variable) > 0;
+const isClass = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Class) > 0;
+const isEnum = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Enum) > 0;
+const isDocumentableKind = (kind: ReflectionKind): boolean => isClass(kind) || isEnum(kind);
+const toApiKind = (kind: ReflectionKind): ApiKind => (isClass(kind) ? 'class' : 'enum');
 
 const slugify = (input: string): string =>
     input
@@ -52,6 +50,8 @@ const renderComment = (comment: any): string => {
 };
 
 const toFrontmatterString = (value: string): string => `"${value.replaceAll(/\s+/g, ' ').trim().replaceAll('"', '\\"')}"`;
+const toFrontmatterArray = (values: ReadonlyArray<string>): string =>
+    `[${values.map(value => `"${value.replaceAll('"', '\\"')}"`).join(', ')}]`;
 const escapeMdxText = (value: string): string => value.replaceAll('\\', '\\\\').replaceAll('{', '\\{').replaceAll('}', '\\}').replaceAll('<', '\\<');
 
 const renderType = (type: any): string => {
@@ -60,7 +60,7 @@ const renderType = (type: any): string => {
         case 'intrinsic':
             return type.name;
         case 'reference':
-            return `${type.name}${type.typeArguments ? `<${type.typeArguments.map(renderType).join(', ')}>` : ''}`;
+            return `${type.name}${type.typeArguments?.length ? `<${type.typeArguments.map(renderType).join(', ')}>` : ''}`;
         case 'union':
             return type.types?.map(renderType).join(' | ') ?? 'unknown';
         case 'intersection':
@@ -94,17 +94,21 @@ const renderSignature = (name: string, signature: any): string => {
     return `${name}(${params}): ${returns}`;
 };
 
-const renderClassMembers = (reflection: any): string => {
+const renderClassMembers = (reflection: any): { body: string; sections: string[]; memberCount: number } => {
     const children = reflection.children ?? [];
     const constructors = children.filter((child: any) => (child.kind & ReflectionKind.Constructor) > 0);
     const methods = children.filter((child: any) => (child.kind & ReflectionKind.Method) > 0);
     const properties = children.filter((child: any) => (child.kind & ReflectionKind.Property) > 0);
+    const events = properties.filter((property: any) => property.name.startsWith('on') && renderType(property.type).startsWith('Signal<'));
+    const plainProperties = properties.filter((property: any) => !events.includes(property));
 
     const blocks: Array<string> = [];
+    const sections: Array<string> = [];
 
     if (constructors.length > 0) {
         const lines = constructors.flatMap((ctor: any) => (ctor.signatures ?? []).map((signature: any) => `- \`${renderSignature('new', signature)}\``));
         blocks.push(`## Constructors\n\n${lines.join('\n')}`);
+        sections.push('Constructors');
     }
 
     if (methods.length > 0) {
@@ -112,45 +116,43 @@ const renderClassMembers = (reflection: any): string => {
             (method.signatures ?? []).map((signature: any) => `- \`${renderSignature(method.name, signature)}\``)
         );
         blocks.push(`## Methods\n\n${lines.join('\n')}`);
+        sections.push('Methods');
     }
 
-    if (properties.length > 0) {
-        const lines = properties.map((property: any) => `- \`${property.name}: ${renderType(property.type)}\``);
+    if (plainProperties.length > 0) {
+        const lines = plainProperties.map((property: any) => `- \`${property.name}: ${renderType(property.type)}\``);
         blocks.push(`## Properties\n\n${lines.join('\n')}`);
+        sections.push('Properties');
     }
 
-    return blocks.join('\n\n');
+    if (events.length > 0) {
+        const lines = events.map((event: any) => `- \`${event.name}: ${renderType(event.type)}\``);
+        blocks.push(`## Events\n\n${lines.join('\n')}`);
+        sections.push('Events');
+    }
+
+    return {
+        body: blocks.join('\n\n'),
+        sections,
+        memberCount: constructors.length + methods.length + plainProperties.length + events.length,
+    };
 };
 
-const renderReflectionBody = (reflection: any): string => {
-    if ((reflection.kind & ReflectionKind.Function) > 0) {
-        const signatures = (reflection.signatures ?? []).map((signature: any) => `- \`${renderSignature(reflection.name, signature)}\``).join('\n');
-        return signatures ? `## Signatures\n\n${signatures}` : '';
-    }
-
-    if ((reflection.kind & ReflectionKind.TypeAlias) > 0) {
-        return `## Definition\n\n\`${reflection.name} = ${renderType(reflection.type)}\``;
-    }
-
-    if ((reflection.kind & ReflectionKind.Variable) > 0) {
-        return `## Type\n\n\`${reflection.name}: ${renderType(reflection.type)}\``;
-    }
-
-    if ((reflection.kind & ReflectionKind.Interface) > 0) {
-        const properties = (reflection.children ?? []).map((property: any) => `- \`${property.name}${property.flags?.isOptional ? '?' : ''}: ${renderType(property.type)}\``);
-        return properties.length > 0 ? `## Properties\n\n${properties.join('\n')}` : '';
-    }
-
-    if ((reflection.kind & ReflectionKind.Enum) > 0) {
+const renderReflectionBody = (reflection: any): { body: string; sections: string[]; memberCount: number } => {
+    if (isEnum(reflection.kind)) {
         const members = (reflection.children ?? []).map((member: any) => `- \`${member.name}\``);
-        return members.length > 0 ? `## Members\n\n${members.join('\n')}` : '';
+        return {
+            body: members.length > 0 ? `## Members\n\n${members.join('\n')}` : '',
+            sections: members.length > 0 ? ['Members'] : [],
+            memberCount: members.length,
+        };
     }
 
-    if ((reflection.kind & ReflectionKind.Class) > 0) {
+    if (isClass(reflection.kind)) {
         return renderClassMembers(reflection);
     }
 
-    return '';
+    return { body: '', sections: [], memberCount: 0 };
 };
 
 const entryPointTitle = (reflection: any): string => {
@@ -189,7 +191,8 @@ const build = async (): Promise<void> => {
             const subsystem = guessSubsystem(sourcePath ?? '');
             const importPath = entryPointTitle(reflection);
             const description = renderComment(reflection.comment);
-            const body = renderReflectionBody(reflection);
+            const { body, sections, memberCount } = renderReflectionBody(reflection);
+            const kind = toApiKind(reflection.kind);
 
             const baseSlug = slugify(reflection.name);
             let slug = baseSlug;
@@ -202,29 +205,35 @@ const build = async (): Promise<void> => {
 
             const sourceRelative = sourcePath ? sourcePath.replace(/^.*\/src\//, 'src/') : undefined;
             const sourceUrl = sourceRelative && source?.line ? `https://github.com/Exoridus/ExoJS/blob/main/${sourceRelative}#L${source.line}` : undefined;
+            const safeDescriptionBody = description ? escapeMdxText(description) : '';
+            const allSections = ['Import', ...sections, ...(sourceUrl ? ['Source'] : [])];
+            const bodyBlocks: Array<string> = [`## Import\n\n\`import { ${reflection.name} } from '${importPath}'\``];
+            if (safeDescriptionBody.length > 0) {
+                bodyBlocks.push(safeDescriptionBody);
+            }
+            if (body.length > 0) {
+                bodyBlocks.push(body);
+            }
+            if (sourceUrl && sourceRelative) {
+                bodyBlocks.push(`## Source\n\n[${sourceRelative}](${sourceUrl})`);
+            }
+            const composedBody = bodyBlocks.join('\n\n');
 
-            const safeDescriptionBody = description ? escapeMdxText(description) : 'No summary available.';
             const mdx = [
                 '---',
                 `title: ${toFrontmatterString(reflection.name)}`,
                 `description: ${toFrontmatterString(description)}`,
                 `symbol: ${toFrontmatterString(reflection.name)}`,
+                `kind: ${toFrontmatterString(kind)}`,
                 `subsystem: ${toFrontmatterString(subsystem)}`,
                 `importPath: ${toFrontmatterString(importPath)}`,
+                `memberCount: ${memberCount}`,
+                `sections: ${toFrontmatterArray(allSections)}`,
                 sourceRelative ? `sourcePath: ${toFrontmatterString(sourceRelative)}` : '',
                 sourceUrl ? `sourceUrl: ${toFrontmatterString(sourceUrl)}` : '',
                 '---',
                 '',
-                `# ${reflection.name}`,
-                '',
-                `\`import { ${reflection.name} } from '${importPath}'\``,
-                '',
-                safeDescriptionBody,
-                '',
-                body,
-                '',
-                sourceUrl ? `Source: [${sourceRelative}](${sourceUrl})` : '',
-                '',
+                composedBody,
             ]
                 .filter(Boolean)
                 .join('\n');

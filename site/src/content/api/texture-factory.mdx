@@ -2,13 +2,18 @@
 title: "TextureFactory"
 description: "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.) can be configured via `samplerOptions`."
 symbol: "TextureFactory"
+kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/resources/factories/TextureFactory.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts#L26"
 ---
-# TextureFactory
+## Import
+
 `import { TextureFactory } from '@codexo/exojs'`
+
 AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and
 other browser-supported raster image formats and produces a GPU-ready
 Texture instance.
@@ -16,13 +21,14 @@ Texture instance.
 MIME type detection is performed automatically from the buffer's magic bytes;
 pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.)
 can be configured via `samplerOptions`.
+
 ## Constructors
 
-- `new(): TextureFactory<>`
+- `new(): TextureFactory`
 
 ## Methods
 
-- `create(source: ArrayBuffer, options: TextureFactoryOptions): Promise<Texture<>>`
+- `create(source: ArrayBuffer, options: TextureFactoryOptions): Promise<Texture>`
 - `createObjectUrl(blob: Blob): string`
 - `destroy(): void`
 - `process(response: Response): Promise<ArrayBuffer>`
@@ -32,4 +38,7 @@ can be configured via `samplerOptions`.
 
 - `_objectUrls: string[]`
 - `storageName: "texture"`
-Source: [src/resources/factories/TextureFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts#L26)
+
+## Source
+
+[src/resources/factories/TextureFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts#L26)

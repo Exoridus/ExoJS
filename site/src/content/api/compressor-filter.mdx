@@ -2,22 +2,31 @@
 title: "CompressorFilter"
 description: "Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`. Reduces the volume of loud signals above a threshold, evening out the perceived loudness of a mix. All parameter changes are applied with a short smoothing ramp so they are artifact-free during playback."
 symbol: "CompressorFilter"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 2
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/audio/filters/CompressorFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/CompressorFilter.ts#L19"
 ---
-# CompressorFilter
+## Import
+
 `import { CompressorFilter } from '@codexo/exojs'`
+
 Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`.
 Reduces the volume of loud signals above a threshold, evening out the
 perceived loudness of a mix. All parameter changes are applied with a short
 smoothing ramp so they are artifact-free during playback.
+
 ## Constructors
 
-- `new(options: CompressorFilterOptions): CompressorFilter<>`
+- `new(options: CompressorFilterOptions): CompressorFilter`
 
 ## Methods
 
 - `destroy(): void`
-Source: [src/audio/filters/CompressorFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/CompressorFilter.ts#L19)
+
+## Source
+
+[src/audio/filters/CompressorFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/CompressorFilter.ts#L19)

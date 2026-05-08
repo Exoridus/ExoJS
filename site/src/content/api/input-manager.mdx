@@ -2,13 +2,18 @@
 title: "InputManager"
 description: "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …). Driven each frame by Application.update; constructed automatically — you do not instantiate this class yourself."
 symbol: "InputManager"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 30
+sections: ["Import", "Constructors", "Methods", "Events", "Source"]
 sourcePath: "src/input/InputManager.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts#L59"
 ---
-# InputManager
+## Import
+
 `import { InputManager } from '@codexo/exojs'`
+
 Owns the unified input pipeline for an Application: keyboard
 events, pointer (mouse/touch/pen) events with multi-touch slot
 management, gamepad polling with mapping detection, mouse-wheel events,
@@ -24,42 +29,46 @@ subscribe to the signal-style notifications
 
 Driven each frame by Application.update; constructed
 automatically — you do not instantiate this class yourself.
+
 ## Constructors
 
-- `new(app: Application<>): InputManager<>`
+- `new(app: Application): InputManager`
 
 ## Methods
 
 - `destroy(): void`
-- `getGamepad(slot: 0 | 1 | 2 | 3): Gamepad<>`
+- `getGamepad(slot: 0 | 1 | 2 | 3): Gamepad`
 - `getPrimaryPointerPosition(): object | null`
-- `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding<>`
-- `onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding<>`
-- `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding<>`
-- `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding<>`
+- `onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
+- `onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
+- `onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
+- `onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding`
 - `update(): this`
 
-## Properties
+## Events
 
-- `onAnyGamepadAxisChange: Signal<[Gamepad<>, GamepadAxis<>, number]>`
-- `onAnyGamepadButtonDown: Signal<[Gamepad<>, GamepadButton<>, number]>`
-- `onAnyGamepadButtonUp: Signal<[Gamepad<>, GamepadButton<>, number]>`
-- `onAnyGamepadReassigned: Signal<[Gamepad<>, fromSlot]>`
+- `onAnyGamepadAxisChange: Signal<[Gamepad, GamepadAxis, number]>`
+- `onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>`
+- `onAnyGamepadButtonUp: Signal<[Gamepad, GamepadButton, number]>`
+- `onAnyGamepadReassigned: Signal<[Gamepad, fromSlot]>`
 - `onCanvasFocusChange: Signal<[focused]>`
-- `onGamepadConnected: Signal<[Gamepad<>]>`
-- `onGamepadDisconnected: Signal<[Gamepad<>]>`
+- `onGamepadConnected: Signal<[Gamepad]>`
+- `onGamepadDisconnected: Signal<[Gamepad]>`
 - `onKeyDown: Signal<[number]>`
 - `onKeyUp: Signal<[number]>`
 - `onLongPress: Signal<[pointer]>`
-- `onMouseWheel: Signal<[Vector<>]>`
+- `onMouseWheel: Signal<[Vector]>`
 - `onPinch: Signal<[scale, center]>`
-- `onPointerCancel: Signal<[Pointer<>]>`
-- `onPointerDown: Signal<[Pointer<>]>`
-- `onPointerEnter: Signal<[Pointer<>]>`
-- `onPointerLeave: Signal<[Pointer<>]>`
-- `onPointerMove: Signal<[Pointer<>]>`
-- `onPointerSwipe: Signal<[Pointer<>]>`
-- `onPointerTap: Signal<[Pointer<>]>`
-- `onPointerUp: Signal<[Pointer<>]>`
+- `onPointerCancel: Signal<[Pointer]>`
+- `onPointerDown: Signal<[Pointer]>`
+- `onPointerEnter: Signal<[Pointer]>`
+- `onPointerLeave: Signal<[Pointer]>`
+- `onPointerMove: Signal<[Pointer]>`
+- `onPointerSwipe: Signal<[Pointer]>`
+- `onPointerTap: Signal<[Pointer]>`
+- `onPointerUp: Signal<[Pointer]>`
 - `onRotate: Signal<[angleDelta, center]>`
-Source: [src/input/InputManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts#L59)
+
+## Source
+
+[src/input/InputManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts#L59)

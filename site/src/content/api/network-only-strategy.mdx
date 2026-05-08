@@ -2,13 +2,18 @@
 title: "NetworkOnlyStrategy"
 description: "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore. Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored. Returns the fully constructed resource — callers do not need to call AssetFactory.create again."
 symbol: "NetworkOnlyStrategy"
+kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
+memberCount: 2
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/resources/NetworkOnlyStrategy.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts#L15"
 ---
-# NetworkOnlyStrategy
+## Import
+
 `import { NetworkOnlyStrategy } from '@codexo/exojs'`
+
 CacheStrategy that always fetches from the network and never reads
 from or writes to any CacheStore.
 
@@ -18,11 +23,15 @@ argument is accepted but intentionally ignored.
 
 Returns the fully constructed resource — callers do not need to call
 AssetFactory.create again.
+
 ## Constructors
 
-- `new(): NetworkOnlyStrategy<>`
+- `new(): NetworkOnlyStrategy`
 
 ## Methods
 
 - `resolve(request: CacheRequest, _stores: readonly CacheStore[]): Promise<unknown>`
-Source: [src/resources/NetworkOnlyStrategy.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts#L15)
+
+## Source
+
+[src/resources/NetworkOnlyStrategy.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts#L15)

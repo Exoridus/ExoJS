@@ -2,27 +2,36 @@
 title: "BoundingBoxesLayer"
 description: "Debug layer that draws a bounding-box outline around every visible RenderNode in the scene. Colours cycle by zIndex (HSL hue). World-space."
 symbol: "BoundingBoxesLayer"
+kind: "class"
 subsystem: "debug"
 importPath: "@codexo/exojs/debug"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/debug/BoundingBoxesLayer.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/BoundingBoxesLayer.ts#L63"
 ---
-# BoundingBoxesLayer
+## Import
+
 `import { BoundingBoxesLayer } from '@codexo/exojs/debug'`
+
 Debug layer that draws a bounding-box outline around every visible
 RenderNode in the scene. Colours cycle by zIndex (HSL hue). World-space.
+
 ## Constructors
 
-- `new(app: Application<>): BoundingBoxesLayer<>`
+- `new(app: Application): BoundingBoxesLayer`
 
 ## Methods
 
 - `destroy(): void`
-- `render(backend: RenderBackend<>): void`
-- `update(_delta: Time<>): void`
+- `render(backend: RenderBackend): void`
+- `update(_delta: Time): void`
 
 ## Properties
 
-- `_app: Application<>`
+- `_app: Application`
 - `visible: boolean`
-Source: [src/debug/BoundingBoxesLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/BoundingBoxesLayer.ts#L63)
+
+## Source
+
+[src/debug/BoundingBoxesLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/BoundingBoxesLayer.ts#L63)

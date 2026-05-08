@@ -2,22 +2,28 @@
 title: "LineSegment"
 description: "Random point on a line segment between `(x0, y0)` and `(x1, y1)`. Uniform parameter distribution: `t = Math.random()` then `lerp(start, end, t)`."
 symbol: "LineSegment"
+kind: "class"
 subsystem: "particles"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/particles/distributions/LineSegment.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/LineSegment.ts#L9"
 ---
-# LineSegment
+## Import
+
 `import { LineSegment } from '@codexo/exojs'`
+
 Random point on a line segment between `(x0, y0)` and `(x1, y1)`. Uniform
 parameter distribution: `t = Math.random()` then `lerp(start, end, t)`.
+
 ## Constructors
 
-- `new(x0: number, y0: number, x1: number, y1: number): LineSegment<>`
+- `new(x0: number, y0: number, x1: number, y1: number): LineSegment`
 
 ## Methods
 
-- `sample(out: Vector<>): Vector<>`
+- `sample(out: Vector): Vector`
 
 ## Properties
 
@@ -25,4 +31,7 @@ parameter distribution: `t = Math.random()` then `lerp(start, end, t)`.
 - `x1: number`
 - `y0: number`
 - `y1: number`
-Source: [src/particles/distributions/LineSegment.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/LineSegment.ts#L9)
+
+## Source
+
+[src/particles/distributions/LineSegment.ts](https://github.com/Exoridus/ExoJS/blob/main/src/particles/distributions/LineSegment.ts#L9)

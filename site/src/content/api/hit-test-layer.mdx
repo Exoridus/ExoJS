@@ -2,13 +2,18 @@
 title: "HitTestLayer"
 description: "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray quadrant outlines when the spatial index is active (i.e. at least one interactive node is present in the scene). World-space."
 symbol: "HitTestLayer"
+kind: "class"
 subsystem: "debug"
 importPath: "@codexo/exojs/debug"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/debug/HitTestLayer.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/HitTestLayer.ts#L26"
 ---
-# HitTestLayer
+## Import
+
 `import { HitTestLayer } from '@codexo/exojs/debug'`
+
 Debug layer that draws outlines around interactive scene nodes.
 - Magenta: interactive but idle.
 - Yellow: currently hovered.
@@ -16,18 +21,22 @@ Debug layer that draws outlines around interactive scene nodes.
 - Faint gray quadrant outlines when the spatial index is active (i.e.
   at least one interactive node is present in the scene).
 World-space.
+
 ## Constructors
 
-- `new(app: Application<>): HitTestLayer<>`
+- `new(app: Application): HitTestLayer`
 
 ## Methods
 
 - `destroy(): void`
-- `render(backend: RenderBackend<>): void`
-- `update(_delta: Time<>): void`
+- `render(backend: RenderBackend): void`
+- `update(_delta: Time): void`
 
 ## Properties
 
-- `_app: Application<>`
+- `_app: Application`
 - `visible: boolean`
-Source: [src/debug/HitTestLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/HitTestLayer.ts#L26)
+
+## Source
+
+[src/debug/HitTestLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/HitTestLayer.ts#L26)

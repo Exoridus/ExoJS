@@ -2,13 +2,18 @@
 title: "GameCubeGamepadMapping"
 description: "Mapping for Nintendo GameCube controllers (typically connected via a USB adapter such as the official Nintendo adapter for Wii U / Switch). Inherits the full GenericDualAnalogGamepadMapping button and axis layout. Note that the GameCube controller has no right-stick click, no D-pad as discrete buttons on all adapters, and uses analog shoulders — the exact channel availability depends on the adapter's HID report."
 symbol: "GameCubeGamepadMapping"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/GameCubeGamepadMapping.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/GameCubeGamepadMapping.ts#L13"
 ---
-# GameCubeGamepadMapping
+## Import
+
 `import { GameCubeGamepadMapping } from '@codexo/exojs'`
+
 Mapping for Nintendo GameCube controllers (typically connected via a
 USB adapter such as the official Nintendo adapter for Wii U / Switch).
 
@@ -16,9 +21,10 @@ Inherits the full GenericDualAnalogGamepadMapping button and axis
 layout. Note that the GameCube controller has no right-stick click, no
 D-pad as discrete buttons on all adapters, and uses analog shoulders —
 the exact channel availability depends on the adapter's HID report.
+
 ## Constructors
 
-- `new(): GameCubeGamepadMapping<>`
+- `new(): GameCubeGamepadMapping`
 
 ## Methods
 
@@ -27,7 +33,10 @@ the exact channel availability depends on the adapter's HID report.
 
 ## Properties
 
-- `axes: readonly GamepadAxis<>[]`
-- `buttons: readonly GamepadButton<>[]`
+- `axes: readonly GamepadAxis[]`
+- `buttons: readonly GamepadButton[]`
 - `family: GameCube`
-Source: [src/input/GameCubeGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GameCubeGamepadMapping.ts#L13)
+
+## Source
+
+[src/input/GameCubeGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GameCubeGamepadMapping.ts#L13)

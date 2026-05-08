@@ -2,23 +2,32 @@
 title: "HighpassFilter"
 description: "High-pass filter backed by a `BiquadFilterNode` in `highpass` mode. Attenuates frequencies below the cutoff and passes everything above it. Useful for removing low-frequency rumble, thinning out bass-heavy audio, or sculpting mix headroom. The `resonance` (Q) parameter controls the sharpness of the roll-off peak at the cutoff frequency."
 symbol: "HighpassFilter"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 2
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/audio/filters/HighpassFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/HighpassFilter.ts#L17"
 ---
-# HighpassFilter
+## Import
+
 `import { HighpassFilter } from '@codexo/exojs'`
+
 High-pass filter backed by a `BiquadFilterNode` in `highpass` mode.
 Attenuates frequencies below the cutoff and passes everything above it.
 Useful for removing low-frequency rumble, thinning out bass-heavy audio,
 or sculpting mix headroom. The `resonance` (Q) parameter controls the
 sharpness of the roll-off peak at the cutoff frequency.
+
 ## Constructors
 
-- `new(options: HighpassFilterOptions): HighpassFilter<>`
+- `new(options: HighpassFilterOptions): HighpassFilter`
 
 ## Methods
 
 - `destroy(): void`
-Source: [src/audio/filters/HighpassFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/HighpassFilter.ts#L17)
+
+## Source
+
+[src/audio/filters/HighpassFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/HighpassFilter.ts#L17)

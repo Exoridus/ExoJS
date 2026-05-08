@@ -2,13 +2,18 @@
 title: "Vector"
 description: "Concrete mutable 2D vector with full AbstractVector arithmetic and ShapeLike collision support (treated as a point collider). `Vector.temp` provides a shared scratch instance for intermediate calculations — never store the reference across frames. `Vector.zero` and `Vector.one` are read-only sentinel constants. The four static factory methods (`add`, `subtract`, `multiply`, `divide`) always allocate a new `Vector`. Instance methods mutate in place and return `this` for chaining."
 symbol: "Vector"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 36
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/math/Vector.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Vector.ts#L36"
 ---
-# Vector
+## Import
+
 `import { Vector } from '@codexo/exojs'`
+
 Concrete mutable 2D vector with full AbstractVector arithmetic and
 ShapeLike collision support (treated as a point collider).
 
@@ -19,9 +24,10 @@ calculations — never store the reference across frames. `Vector.zero` and
 The four static factory methods (`add`, `subtract`, `multiply`, `divide`)
 always allocate a new `Vector`. Instance methods mutate in place and return
 `this` for chaining.
+
 ## Constructors
 
-- `new(x: number, y: number): Vector<>`
+- `new(x: number, y: number): Vector`
 
 ## Methods
 
@@ -29,15 +35,15 @@ always allocate a new `Vector`. Instance methods mutate in place and return
 - `clone(): this`
 - `collidesWith(_target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
-- `copy(vector: Vector<>): this`
+- `copy(vector: Vector): this`
 - `cross(vector: T): number`
 - `destroy(): void`
 - `distanceTo(vector: T): number`
 - `divide(x: number, y: number): this`
 - `dot(x: number, y: number): number`
 - `equals(__namedParameters: Partial<T>): boolean`
-- `getBounds(): Rectangle<>`
-- `getNormals(): Vector<>[]`
+- `getBounds(): Rectangle`
+- `getNormals(): Vector[]`
 - `intersectsWith(target: Collidable): boolean`
 - `invert(): this`
 - `max(): number`
@@ -45,22 +51,25 @@ always allocate a new `Vector`. Instance methods mutate in place and return
 - `multiply(x: number, y: number): this`
 - `normalize(): this`
 - `perp(): this`
-- `project(axis: Vector<>, interval: Interval<>): Interval<>`
+- `project(axis: Vector, interval: Interval): Interval`
 - `rperp(): this`
 - `set(x: number, y: number): this`
 - `subtract(x: number, y: number): this`
-- `transform(matrix: Matrix<>): this`
-- `transformInverse(matrix: Matrix<>): this`
-- `add(v1: Vector<>, v2: Vector<>): Vector<>`
-- `divide(v1: Vector<>, v2: Vector<>): Vector<>`
-- `multiply(v1: Vector<>, v2: Vector<>): Vector<>`
-- `subtract(v1: Vector<>, v2: Vector<>): Vector<>`
+- `transform(matrix: Matrix): this`
+- `transformInverse(matrix: Matrix): this`
+- `add(v1: Vector, v2: Vector): Vector`
+- `divide(v1: Vector, v2: Vector): Vector`
+- `multiply(v1: Vector, v2: Vector): Vector`
+- `subtract(v1: Vector, v2: Vector): Vector`
 
 ## Properties
 
 - `collisionType: CollisionType`
 - `x: number`
 - `y: number`
-- `one: Vector<>`
-- `zero: Vector<>`
-Source: [src/math/Vector.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Vector.ts#L36)
+- `one: Vector`
+- `zero: Vector`
+
+## Source
+
+[src/math/Vector.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Vector.ts#L36)

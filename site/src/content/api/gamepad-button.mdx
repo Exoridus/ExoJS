@@ -2,13 +2,18 @@
 title: "GamepadButton"
 description: "Single mappable button on a physical gamepad. Holds the raw browser `Gamepad.buttons[]` index, the canonical channel the value is written to, and the deadzone/inversion transform applied each frame by transformValue. Used by concrete GamepadMapping subclasses to declare a device's button layout. User code typically constructs these via `new GamepadButton(rawIndex, GamepadButton.South)` only when authoring a custom mapping. The static namespace exports (`GamepadButton.South`, `.East`, ...) carry the canonical channel offsets used to address each button."
 symbol: "GamepadButton"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/GamepadButton.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts#L83"
 ---
-# GamepadButton
+## Import
+
 `import { GamepadButton } from '@codexo/exojs'`
+
 Single mappable button on a physical gamepad. Holds the raw browser
 `Gamepad.buttons[]` index, the canonical channel the value is written to,
 and the deadzone/inversion transform applied each frame by
@@ -21,9 +26,10 @@ custom mapping.
 
 The static namespace exports (`GamepadButton.South`, `.East`, ...) carry
 the canonical channel offsets used to address each button.
+
 ## Constructors
 
-- `new(index: number, channel: GamepadButtonChannel, options: GamepadButtonOptions): GamepadButton<>`
+- `new(index: number, channel: GamepadButtonChannel, options: GamepadButtonOptions): GamepadButton`
 
 ## Methods
 
@@ -35,4 +41,7 @@ the canonical channel offsets used to address each button.
 - `index: number`
 - `invert: boolean`
 - `threshold: number`
-Source: [src/input/GamepadButton.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts#L83)
+
+## Source
+
+[src/input/GamepadButton.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts#L83)

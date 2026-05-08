@@ -2,13 +2,18 @@
 title: "AudioAnalyser"
 description: "Lightweight visualisation analyser backed by a Web Audio AnalyserNode. Accepts any of: AudioBus, Sound, Music, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Migration from 0.7.1: the old constructor was `new AudioAnalyser(media, options)`. The new API is `new AudioAnalyser(options?); analyser.source = media`."
 symbol: "AudioAnalyser"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 9
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/audio/AudioAnalyser.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L31"
 ---
-# AudioAnalyser
+## Import
+
 `import { AudioAnalyser } from '@codexo/exojs'`
+
 Lightweight visualisation analyser backed by a Web Audio AnalyserNode.
 
 Accepts any of: AudioBus, Sound, Music, MediaStream, AudioNode, or null.
@@ -16,9 +21,10 @@ The tap is a parallel branch — it does not affect the source's main routing.
 
 Migration from 0.7.1: the old constructor was `new AudioAnalyser(media, options)`.
 The new API is `new AudioAnalyser(options?); analyser.source = media`.
+
 ## Constructors
 
-- `new(options?: AudioAnalyserOptions): AudioAnalyser<>`
+- `new(options?: AudioAnalyserOptions): AudioAnalyser`
 
 ## Methods
 
@@ -30,4 +36,7 @@ The new API is `new AudioAnalyser(options?); analyser.source = media`.
 - `getSpectrumFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer>`
 - `getWaveform(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer>`
 - `getWaveformFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer>`
-Source: [src/audio/AudioAnalyser.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L31)
+
+## Source
+
+[src/audio/AudioAnalyser.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioAnalyser.ts#L31)

@@ -2,13 +2,18 @@
 title: "VocoderFilter"
 description: "Phase-vocoder-style effect implemented as a WorkletFilter. Analyzes the spectral envelope of a `modulator` AudioBus across a bank of log-spaced bandpass filters and applies that envelope to the carrier signal (the main input). The result is the classic \"robot voice\" or talking-synth effect. Band count, frequency range, and Q are compile-time parameters set at construction; only `wet` and `envelopeSmoothing` are adjustable at runtime."
 symbol: "VocoderFilter"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/VocoderFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/VocoderFilter.ts#L122"
 ---
-# VocoderFilter
+## Import
+
 `import { VocoderFilter } from '@codexo/exojs'`
+
 Phase-vocoder-style effect implemented as a WorkletFilter. Analyzes
 the spectral envelope of a `modulator` AudioBus across a bank of
 log-spaced bandpass filters and applies that envelope to the carrier signal
@@ -16,9 +21,10 @@ log-spaced bandpass filters and applies that envelope to the carrier signal
 effect. Band count, frequency range, and Q are compile-time parameters set
 at construction; only `wet` and `envelopeSmoothing` are adjustable at
 runtime.
+
 ## Constructors
 
-- `new(options: VocoderFilterOptions): VocoderFilter<>`
+- `new(options: VocoderFilterOptions): VocoderFilter`
 
 ## Methods
 
@@ -32,4 +38,7 @@ runtime.
 - `_outputGain: GainNode | null`
 - `_ready: Promise<void> | null`
 - `_workletNode: AudioWorkletNode | null`
-Source: [src/audio/filters/VocoderFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/VocoderFilter.ts#L122)
+
+## Source
+
+[src/audio/filters/VocoderFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/VocoderFilter.ts#L122)

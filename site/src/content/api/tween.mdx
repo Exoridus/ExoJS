@@ -2,13 +2,18 @@
 title: "Tween"
 description: "Animates numeric properties of `target` from their current value to a configured end value over a duration in seconds. Supports easing, delay, repeat (with optional yoyo), chaining, and lifecycle callbacks (Tween.onStart, Tween.onUpdate, Tween.onComplete, Tween.onRepeat). Tweens are typically created via TweenManager.create, which attaches them to the manager so they advance once per frame. Stand-alone usage is supported by calling Tween.update manually with a frame delta. Start values are captured lazily on the first update after Tween.start, so target properties may be mutated between configuration and start without affecting the captured baseline. Only number-typed properties on `target` are interpolated; non-number properties listed in Tween.to emit a console warning and are skipped."
 symbol: "Tween"
+kind: "class"
 subsystem: "animation"
 importPath: "@codexo/exojs"
+memberCount: 17
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/animation/Tween.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L34"
 ---
-# Tween
+## Import
+
 `import { Tween } from '@codexo/exojs'`
+
 Animates numeric properties of `target` from their current value to a
 configured end value over a duration in seconds. Supports easing, delay,
 repeat (with optional yoyo), chaining, and lifecycle callbacks
@@ -25,14 +30,15 @@ affecting the captured baseline.
 
 Only number-typed properties on `target` are interpolated; non-number
 properties listed in Tween.to emit a console warning and are skipped.
+
 ## Constructors
 
 - `new(target: T): Tween<T>`
 
 ## Methods
 
-- `_attachManager(manager: TweenManager<>): void`
-- `chain(next: Tween<>): Tween<>`
+- `_attachManager(manager: TweenManager): void`
+- `chain(next: Tween): Tween`
 - `delay(seconds: number): this`
 - `easing(easingFunction: EasingFunction): this`
 - `onComplete(callback: TweenLifecycleCallback): this`
@@ -47,4 +53,7 @@ properties listed in Tween.to emit a console warning and are skipped.
 - `to(properties: Partial<Record<keyof T, number>>, duration: number): this`
 - `update(deltaSeconds: number): void`
 - `yoyo(enabled: boolean): this`
-Source: [src/animation/Tween.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L34)
+
+## Source
+
+[src/animation/Tween.ts](https://github.com/Exoridus/ExoJS/blob/main/src/animation/Tween.ts#L34)

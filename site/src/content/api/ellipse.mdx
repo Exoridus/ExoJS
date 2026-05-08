@@ -2,13 +2,18 @@
 title: "Ellipse"
 description: "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements ShapeLike for use in the intersection pipeline. `collidesWith` returns a CollisionResponse for ellipse-vs-rectangle (axis-aligned), ellipse-vs-circle, and ellipse-vs-SceneNode (which collides against the node's AABB). Other targets — ellipse-vs-ellipse, ellipse-vs-polygon, and ellipse-vs-line — return `null`; use Ellipse.intersectsWith for boolean tests against those."
 symbol: "Ellipse"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 15
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/math/Ellipse.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts#L33"
 ---
-# Ellipse
+## Import
+
 `import { Ellipse } from '@codexo/exojs'`
+
 Mutable axis-aligned ellipse shape defined by a centre position and
 separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements
 ShapeLike for use in the intersection pipeline.
@@ -18,22 +23,23 @@ ShapeLike for use in the intersection pipeline.
 collides against the node's AABB). Other targets — ellipse-vs-ellipse,
 ellipse-vs-polygon, and ellipse-vs-line — return `null`; use
 Ellipse.intersectsWith for boolean tests against those.
+
 ## Constructors
 
-- `new(x: number, y: number, halfWidth: number, halfHeight: number): Ellipse<>`
+- `new(x: number, y: number, halfWidth: number, halfHeight: number): Ellipse`
 
 ## Methods
 
 - `clone(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
-- `copy(ellipse: Ellipse<>): this`
+- `copy(ellipse: Ellipse): this`
 - `destroy(): void`
 - `equals(__namedParameters: Partial<Ellipse>): boolean`
-- `getBounds(): Rectangle<>`
-- `getNormals(): Vector<>[]`
+- `getBounds(): Rectangle`
+- `getNormals(): Vector[]`
 - `intersectsWith(target: Collidable): boolean`
-- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `project(axis: Vector, result: Interval): Interval`
 - `set(x: number, y: number, radiusX: number, radiusY: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRadius(radiusX: number, radiusY: number): this`
@@ -41,4 +47,7 @@ Ellipse.intersectsWith for boolean tests against those.
 ## Properties
 
 - `collisionType: CollisionType`
-Source: [src/math/Ellipse.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts#L33)
+
+## Source
+
+[src/math/Ellipse.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts#L33)

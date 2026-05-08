@@ -2,13 +2,18 @@
 title: "Signal"
 description: "Lightweight typed event emitter. Each `Signal` represents one named notification channel (e.g. `onResize`, `onFrame`). Listeners are added with Signal.add or Signal.once, removed with Signal.remove, and notified with Signal.dispatch. `Args` is the tuple of arguments passed to listeners — type-checked end to end so a `new Signal<[number, string]>()` enforces both `dispatch(1, 'x')` and the listener signature `(n: number, s: string) => …`. `dispatch` snapshots the bindings list before iterating, so handlers may freely add or remove listeners during the same dispatch without corrupting the loop. Returning `false` from a handler short-circuits the rest of the dispatch (handy for capturing-style flows)."
 symbol: "Signal"
+kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
+memberCount: 9
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/core/Signal.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/Signal.ts#L30"
 ---
-# Signal
+## Import
+
 `import { Signal } from '@codexo/exojs'`
+
 Lightweight typed event emitter. Each `Signal` represents one named
 notification channel (e.g. `onResize`, `onFrame`). Listeners are added with
 Signal.add or Signal.once, removed with
@@ -22,6 +27,7 @@ and the listener signature `(n: number, s: string) => …`.
 freely add or remove listeners during the same dispatch without corrupting
 the loop. Returning `false` from a handler short-circuits the rest of the
 dispatch (handy for capturing-style flows).
+
 ## Constructors
 
 - `new(): Signal<Args>`
@@ -36,4 +42,7 @@ dispatch (handy for capturing-style flows).
 - `has(handler: SignalHandler<Args>, context?: object): boolean`
 - `once(handler: SignalHandler<Args>, context?: object): this`
 - `remove(handler: SignalHandler<Args>, context?: object): this`
-Source: [src/core/Signal.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Signal.ts#L30)
+
+## Source
+
+[src/core/Signal.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/Signal.ts#L30)

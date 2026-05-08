@@ -2,13 +2,18 @@
 title: "Sampler"
 description: "WebGL2 sampler object wrapper that controls texture filtering and wrapping. Creates a `WebGLSampler` on construction and updates its parameters whenever `scaleMode` or `wrapMode` changes. Bind the sampler to a texture unit with bind before issuing draw calls. Note: `premultiplyAlpha`, `generateMipMap`, and `flipY` are pixel-store parameters handled at texture upload time; this class only manages filter and wrap state."
 symbol: "Sampler"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 5
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/texture/Sampler.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts#L30"
 ---
-# Sampler
+## Import
+
 `import { Sampler } from '@codexo/exojs'`
+
 WebGL2 sampler object wrapper that controls texture filtering and wrapping.
 
 Creates a `WebGLSampler` on construction and updates its parameters whenever
@@ -16,9 +21,10 @@ Creates a `WebGLSampler` on construction and updates its parameters whenever
 bind before issuing draw calls. Note: `premultiplyAlpha`, `generateMipMap`,
 and `flipY` are pixel-store parameters handled at texture upload time; this class
 only manages filter and wrap state.
+
 ## Constructors
 
-- `new(gl: WebGL2RenderingContext, options: SamplerOptions): Sampler<>`
+- `new(gl: WebGL2RenderingContext, options: SamplerOptions): Sampler`
 
 ## Methods
 
@@ -26,4 +32,7 @@ only manages filter and wrap state.
 - `destroy(): void`
 - `setScaleMode(scaleMode: ScaleModes): this`
 - `setWrapMode(wrapMode: WrapModes): this`
-Source: [src/rendering/texture/Sampler.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts#L30)
+
+## Source
+
+[src/rendering/texture/Sampler.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts#L30)

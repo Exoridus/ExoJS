@@ -2,13 +2,18 @@
 title: "LutFilter"
 description: "A Filter that maps every pixel of the input through a Look-Up Table texture. Two storage modes: - **1D LUT** (`N×1`, default `N=256`): indexed by the source's red channel only. Used for palette cycling, indexed-colour effects, and luminance-based recoloring. - **3D LUT** (`N²×N` unwrapped cube): indexed by the full source RGB with trilinear interpolation between slices. Used for cinematic colour grading, tone mapping, film stock emulation, accessibility filters (color-blindness simulation), and similar standard colour-pipeline tasks. `N=17` matches DaVinci/OBS export defaults. ## Quick start ```ts // Color-graded look from a 17³ LUT exported by your DCC/grading tool: const lut = LutFilter.fromImage(myLutImage); // 289×17 PNG const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut); sprite.filters = [filter]; // Palette cycling — rotate a 1D palette every frame: const palette = LutFilter.identityLut1D(); const filter = new LutFilter({ mode: '1d' }).setLut(palette); // Replace `palette.source` per frame with a shifted copy. ``` Internally creates a WebGl2ShaderFilter or WebGpuShaderFilter on first apply, depending on the active backend."
 symbol: "LutFilter"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 7
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/filters/LutFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts#L148"
 ---
-# LutFilter
+## Import
+
 `import { LutFilter } from '@codexo/exojs'`
+
 A Filter that maps every pixel of the input through a Look-Up Table texture.
 
 Two storage modes:
@@ -31,16 +36,20 @@ const filter = new LutFilter(\{ mode: '1d' \}).setLut(palette);
 
 Internally creates a WebGl2ShaderFilter or WebGpuShaderFilter on first
 apply, depending on the active backend.
+
 ## Constructors
 
-- `new(options: LutFilterOptions): LutFilter<>`
+- `new(options: LutFilterOptions): LutFilter`
 
 ## Methods
 
-- `apply(backend: RenderBackend<>, input: RenderTexture<>, output: RenderTexture<>): void`
+- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void`
 - `destroy(): void`
-- `setLut(lut: Texture<>): this`
-- `fromImage(image: HTMLImageElement<> | HTMLCanvasElement<>): Texture<>`
-- `identityLut1D(size: number): Texture<>`
-- `identityLut3D(size: number): Texture<>`
-Source: [src/rendering/filters/LutFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts#L148)
+- `setLut(lut: Texture): this`
+- `fromImage(image: HTMLImageElement | HTMLCanvasElement): Texture`
+- `identityLut1D(size: number): Texture`
+- `identityLut3D(size: number): Texture`
+
+## Source
+
+[src/rendering/filters/LutFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts#L148)

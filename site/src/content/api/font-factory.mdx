@@ -2,13 +2,18 @@
 title: "FontFactory"
 description: "AssetFactory implementation that loads web-font binary data (WOFF, WOFF2, TTF, OTF) and produces a parsed FontFace. By default each created font is registered with `document.fonts`, making it globally available to CSS and Canvas without any further steps. Fonts added this way are automatically removed from `document.fonts` when FontFactory.destroy is called."
 symbol: "FontFactory"
+kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/resources/factories/FontFactory.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/FontFactory.ts#L29"
 ---
-# FontFactory
+## Import
+
 `import { FontFactory } from '@codexo/exojs'`
+
 AssetFactory implementation that loads web-font binary data (WOFF,
 WOFF2, TTF, OTF) and produces a parsed FontFace.
 
@@ -16,9 +21,10 @@ By default each created font is registered with `document.fonts`, making it
 globally available to CSS and Canvas without any further steps. Fonts added
 this way are automatically removed from `document.fonts` when
 FontFactory.destroy is called.
+
 ## Constructors
 
-- `new(): FontFactory<>`
+- `new(): FontFactory`
 
 ## Methods
 
@@ -32,4 +38,7 @@ FontFactory.destroy is called.
 
 - `_objectUrls: string[]`
 - `storageName: "font"`
-Source: [src/resources/factories/FontFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/FontFactory.ts#L29)
+
+## Source
+
+[src/resources/factories/FontFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/FontFactory.ts#L29)

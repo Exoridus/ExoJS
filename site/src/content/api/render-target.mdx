@@ -2,13 +2,18 @@
 title: "RenderTarget"
 description: "Renderable destination — either the on-screen canvas (the `root` target owned by the backend) or an offscreen texture (a RenderTexture). Owns a View that controls the camera transform and viewport, and emits a destroy event so backends can release backing GPU resources. Set `view` to swap cameras for this target; call `resize(w, h)` when the underlying canvas / texture dimensions change."
 symbol: "RenderTarget"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 15
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/rendering/RenderTarget.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderTarget.ts#L17"
 ---
-# RenderTarget
+## Import
+
 `import { RenderTarget } from '@codexo/exojs'`
+
 Renderable destination — either the on-screen canvas (the `root`
 target owned by the backend) or an offscreen texture (a
 RenderTexture). Owns a View that controls the
@@ -17,27 +22,31 @@ can release backing GPU resources.
 
 Set `view` to swap cameras for this target; call `resize(w, h)` when
 the underlying canvas / texture dimensions change.
+
 ## Constructors
 
-- `new(width: number, height: number, root: boolean): RenderTarget<>`
+- `new(width: number, height: number, root: boolean): RenderTarget`
 
 ## Methods
 
 - `_touch(): void`
 - `addDestroyListener(listener: object): this`
 - `destroy(): void`
-- `getViewport(view: View<>): Rectangle<>`
-- `mapCoordsToPixel(point: Vector<>, view: View<>): Vector<>`
-- `mapPixelToCoords(point: Vector<>, view: View<>): Vector<>`
+- `getViewport(view: View): Rectangle`
+- `mapCoordsToPixel(point: Vector, view: View): Vector`
+- `mapPixelToCoords(point: Vector, view: View): Vector`
 - `removeDestroyListener(listener: object): this`
 - `resize(width: number, height: number): this`
-- `setView(view: View<> | null): this`
+- `setView(view: View | null): this`
 - `updateViewport(): this`
 
 ## Properties
 
-- `_defaultView: View<>`
-- `_size: Size<>`
-- `_view: View<>`
-- `_viewport: Rectangle<>`
-Source: [src/rendering/RenderTarget.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderTarget.ts#L17)
+- `_defaultView: View`
+- `_size: Size`
+- `_view: View`
+- `_viewport: Rectangle`
+
+## Source
+
+[src/rendering/RenderTarget.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderTarget.ts#L17)

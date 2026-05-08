@@ -2,13 +2,18 @@
 title: "AudioListener"
 description: "Singleton observer position fed to the Web Audio panner nodes used by spatial sounds. Sets the listener orientation once at setup (forward = -Z, up = +Y for 2D scenes) and updates `positionX/Y/Z` (or legacy `setPosition`) every frame from AudioListener.position — which is in turn read from AudioListener.target when one is set. Owned by AudioManager; one instance per engine. `velocity` is a placeholder for future Doppler support (currently not piped to the Web Audio listener)."
 symbol: "AudioListener"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/AudioListener.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioListener.ts#L32"
 ---
-# AudioListener
+## Import
+
 `import { AudioListener } from '@codexo/exojs'`
+
 Singleton observer position fed to the Web Audio panner nodes used by
 spatial sounds. Sets the listener orientation once at setup (forward = -Z,
 up = +Y for 2D scenes) and updates `positionX/Y/Z` (or legacy
@@ -18,9 +23,10 @@ which is in turn read from AudioListener.target when one is set.
 Owned by AudioManager; one instance per engine. `velocity` is a
 placeholder for future Doppler support (currently not piped to the Web
 Audio listener).
+
 ## Constructors
 
-- `new(): AudioListener<>`
+- `new(): AudioListener`
 
 ## Methods
 
@@ -29,7 +35,10 @@ Audio listener).
 
 ## Properties
 
-- `position: Vector<>`
+- `position: Vector`
 - `target: AudioListenerTarget`
-- `velocity: Vector<>`
-Source: [src/audio/AudioListener.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioListener.ts#L32)
+- `velocity: Vector`
+
+## Source
+
+[src/audio/AudioListener.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioListener.ts#L32)

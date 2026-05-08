@@ -2,13 +2,18 @@
 title: "Mesh"
 description: "Arbitrary 2D triangle-mesh primitive. `Mesh` lives alongside Sprite as a public Drawable: it has the same transform (position/rotation/scale/origin), tint, blendMode, filters, masks, and cacheAsBitmap — but the geometry it renders is user-supplied rather than implied by a texture frame. The intended use cases are: - Custom-shape sprites whose silhouette isn't a quad (badges, speech bubbles, region overlays). - Deformable visuals (rope/ribbon, banner, water surface): mutate the vertex array between frames and the GPU re-tessellates nothing — only the transform changes per frame. - Particles or trails with custom geometry per emitter. The mesh data is **immutable after construction** in v1: vertex / index / UV / color arrays are exposed as readonly references. Mutate the underlying typed arrays in-place if you need per-frame updates, but the array lengths and topology cannot change. Texture is the only post-construction mutable property. The vertex stream is a flat `Float32Array` of (x, y) pairs in local space. The mesh's local bounds are computed once at construction from the AABB of those vertices and used by the cull pass. Re-computing after in-place mutation is the caller's responsibility (call `recomputeLocalBounds()`)."
 symbol: "Mesh"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 64
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/rendering/mesh/Mesh.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts#L54"
 ---
-# Mesh
+## Import
+
 `import { Mesh } from '@codexo/exojs'`
+
 Arbitrary 2D triangle-mesh primitive.
 
 `Mesh` lives alongside Sprite as a public Drawable: it has the
@@ -35,46 +40,47 @@ space. The mesh's local bounds are computed once at construction from
 the AABB of those vertices and used by the cull pass. Re-computing
 after in-place mutation is the caller's responsibility (call
 `recomputeLocalBounds()`).
+
 ## Constructors
 
-- `new(options: MeshOptions): Mesh<>`
+- `new(options: MeshOptions): Mesh`
 
 ## Methods
 
 - `_invalidateBoundsCascade(): void`
 - `_invalidateChildrenTransform(): void`
 - `_invalidateSubtreeTransform(): void`
-- `addFilter(filter: Filter<>): this`
+- `addFilter(filter: Filter): this`
 - `clearFilters(): this`
 - `collidesWith(target: Collidable): CollisionResponse | null`
 - `contains(x: number, y: number): boolean`
 - `destroy(): void`
-- `getBounds(): Rectangle<>`
-- `getGlobalTransform(): Matrix<>`
-- `getLocalBounds(): Rectangle<>`
-- `getNormals(): Vector<>[]`
-- `getTransform(): Matrix<>`
+- `getBounds(): Rectangle`
+- `getGlobalTransform(): Matrix`
+- `getLocalBounds(): Rectangle`
+- `getNormals(): Vector[]`
+- `getTransform(): Matrix`
 - `intersectsWith(target: Collidable): boolean`
 - `invalidateCache(): this`
-- `inView(view: View<>): boolean`
+- `inView(view: View): boolean`
 - `move(x: number, y: number): this`
-- `project(axis: Vector<>, result: Interval<>): Interval<>`
+- `project(axis: Vector, result: Interval): Interval`
 - `recomputeLocalBounds(): this`
-- `removeFilter(filter: Filter<>): this`
-- `render(backend: RenderBackend<>): this`
-- `renderVisualContent(backend: RenderBackend<>, renderContent: object, blendMode: BlendModes): void`
+- `removeFilter(filter: Filter): this`
+- `render(backend: RenderBackend): this`
+- `renderVisualContent(backend: RenderBackend, renderContent: object, blendMode: BlendModes): void`
 - `rotate(degrees: number): this`
 - `setAnchor(x: number, y: number): this`
 - `setBlendMode(blendMode: BlendModes): this`
 - `setCacheAsBitmap(cacheAsBitmap: boolean): this`
 - `setChildOrder(order: number): this`
 - `setCullable(cullable: boolean): this`
-- `setFilters(filters: readonly Filter<>[]): this`
+- `setFilters(filters: readonly Filter[]): this`
 - `setOrigin(x: number, y: number): this`
 - `setPosition(x: number, y: number): this`
 - `setRotation(degrees: number): this`
 - `setScale(x: number, y: number): this`
-- `setTint(color: Color<>): this`
+- `setTint(color: Color): this`
 - `updateBounds(): this`
 - `updateParentTransform(): this`
 - `updateTransform(): this`
@@ -82,29 +88,35 @@ after in-place mutation is the caller's responsibility (call
 
 ## Properties
 
-- `_bounds: Bounds<>`
+- `_bounds: Bounds`
 - `_cos: number`
-- `_origin: ObservableVector<>`
-- `_position: ObservableVector<>`
+- `_origin: ObservableVector`
+- `_position: ObservableVector`
 - `_rotation: number`
-- `_scale: ObservableVector<>`
+- `_scale: ObservableVector`
 - `_sin: number`
-- `_transform: Matrix<>`
+- `_transform: Matrix`
 - `collisionType: CollisionType`
 - `colors: Uint32Array<ArrayBufferLike> | null`
 - `cursor: string | null`
 - `draggable: boolean`
 - `flags: Flags<SceneNodeTransformFlags>`
 - `indices: Uint16Array<ArrayBufferLike> | null`
-- `onDrag: Signal<[InteractionEvent<>]>`
-- `onDragEnd: Signal<[InteractionEvent<>]>`
-- `onDragStart: Signal<[InteractionEvent<>]>`
-- `onPointerDown: Signal<[InteractionEvent<>]>`
-- `onPointerMove: Signal<[InteractionEvent<>]>`
-- `onPointerOut: Signal<[InteractionEvent<>]>`
-- `onPointerOver: Signal<[InteractionEvent<>]>`
-- `onPointerTap: Signal<[InteractionEvent<>]>`
-- `onPointerUp: Signal<[InteractionEvent<>]>`
 - `uvs: Float32Array<ArrayBufferLike> | null`
-- `vertices: Float32Array<>`
-Source: [src/rendering/mesh/Mesh.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts#L54)
+- `vertices: Float32Array`
+
+## Events
+
+- `onDrag: Signal<[InteractionEvent]>`
+- `onDragEnd: Signal<[InteractionEvent]>`
+- `onDragStart: Signal<[InteractionEvent]>`
+- `onPointerDown: Signal<[InteractionEvent]>`
+- `onPointerMove: Signal<[InteractionEvent]>`
+- `onPointerOut: Signal<[InteractionEvent]>`
+- `onPointerOver: Signal<[InteractionEvent]>`
+- `onPointerTap: Signal<[InteractionEvent]>`
+- `onPointerUp: Signal<[InteractionEvent]>`
+
+## Source
+
+[src/rendering/mesh/Mesh.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/Mesh.ts#L54)

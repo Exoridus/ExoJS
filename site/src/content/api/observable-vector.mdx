@@ -2,13 +2,18 @@
 title: "ObservableVector"
 description: "A AbstractVector subclass that fires a callback whenever its components change. Used internally by Rectangle and other types to invalidate cached state (e.g. normals) on position mutations. Setting individual components (`x`, `y`) fires the callback only when the value actually changes. Batch mutations via `set()` fire at most one callback per call."
 symbol: "ObservableVector"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 22
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/math/ObservableVector.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L12"
 ---
-# ObservableVector
+## Import
+
 `import { ObservableVector } from '@codexo/exojs'`
+
 A AbstractVector subclass that fires a callback whenever its
 components change. Used internally by Rectangle and other types to
 invalidate cached state (e.g. normals) on position mutations.
@@ -16,15 +21,16 @@ invalidate cached state (e.g. normals) on position mutations.
 Setting individual components (`x`, `y`) fires the callback only when the
 value actually changes. Batch mutations via `set()` fire at most one
 callback per call.
+
 ## Constructors
 
-- `new(callback: object | null, x: number, y: number): ObservableVector<>`
+- `new(callback: object | null, x: number, y: number): ObservableVector`
 
 ## Methods
 
 - `add(x: number, y: number): this`
 - `clone(): this`
-- `copy(vector: AbstractVector<>): this`
+- `copy(vector: AbstractVector): this`
 - `cross(vector: T): number`
 - `destroy(): void`
 - `distanceTo(vector: T): number`
@@ -41,6 +47,9 @@ callback per call.
 - `scale(x: number, y: number): this`
 - `set(x: number, y: number): this`
 - `subtract(x: number, y: number): this`
-- `transform(matrix: Matrix<>): this`
-- `transformInverse(matrix: Matrix<>): this`
-Source: [src/math/ObservableVector.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L12)
+- `transform(matrix: Matrix): this`
+- `transformInverse(matrix: Matrix): this`
+
+## Source
+
+[src/math/ObservableVector.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableVector.ts#L12)

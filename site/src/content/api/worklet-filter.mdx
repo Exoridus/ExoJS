@@ -2,13 +2,18 @@
 title: "WorkletFilter"
 description: "Base class for filters implemented as AudioWorkletProcessors. Subclasses declare the worklet's name, source code, and node options; this class handles the async lifecycle. Stable input/output nodes (GainNodes) are created immediately on setup. While the worklet loads asynchronously, audio passes through directly (effectively bypassing the filter for ~10-50ms during initial load). Once the worklet loads, it's inserted into the chain and audio routes through it. Subclasses can override `_onWorkletReady` to perform additional wiring (e.g., sidechain inputs)."
 symbol: "WorkletFilter"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/filters/WorkletFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/WorkletFilter.ts#L19"
 ---
-# WorkletFilter
+## Import
+
 `import { WorkletFilter } from '@codexo/exojs'`
+
 Base class for filters implemented as AudioWorkletProcessors. Subclasses
 declare the worklet's name, source code, and node options; this class
 handles the async lifecycle.
@@ -21,9 +26,10 @@ through it.
 
 Subclasses can override `_onWorkletReady` to perform additional wiring
 (e.g., sidechain inputs).
+
 ## Constructors
 
-- `new(): WorkletFilter<>`
+- `new(): WorkletFilter`
 
 ## Methods
 
@@ -37,4 +43,7 @@ Subclasses can override `_onWorkletReady` to perform additional wiring
 - `_outputGain: GainNode | null`
 - `_ready: Promise<void> | null`
 - `_workletNode: AudioWorkletNode | null`
-Source: [src/audio/filters/WorkletFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/WorkletFilter.ts#L19)
+
+## Source
+
+[src/audio/filters/WorkletFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/filters/WorkletFilter.ts#L19)

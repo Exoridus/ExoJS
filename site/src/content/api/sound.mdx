@@ -2,13 +2,18 @@
 title: "Sound"
 description: "Pre-decoded short audio clip backed by an `AudioBuffer`. Each Sound.play call grabs a free `AudioBufferSourceNode` from the pool (default size 8) so the same sound can overlap itself; when the pool is full the configured SoundPoolStrategy decides which source to evict. Supports audio-sprite playback via Sound.playSprite — name a sub-region in the AudioSpriteClip options and trigger by name. Routes through any AudioBus; defaults to the engine's `sound` bus. Calling Sound.makeSpatial attaches a panner so the sound follows a SceneNode or world-space target with distance attenuation handled by Web Audio. Use Music for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips."
 symbol: "Sound"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 34
+sections: ["Import", "Constructors", "Methods", "Properties", "Events", "Source"]
 sourcePath: "src/audio/Sound.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L130"
 ---
-# Sound
+## Import
+
 `import { Sound } from '@codexo/exojs'`
+
 Pre-decoded short audio clip backed by an `AudioBuffer`. Each
 Sound.play call grabs a free `AudioBufferSourceNode` from the
 pool (default size 8) so the same sound can overlap itself; when the
@@ -25,14 +30,15 @@ attenuation handled by Web Audio.
 
 Use Music for long-form streaming audio (single source, decoded
 lazily) — `Sound` is best for short, frequently-triggered clips.
+
 ## Constructors
 
-- `new(audioBuffer: AudioBuffer, options: SoundOptions<>): Sound<>`
+- `new(audioBuffer: AudioBuffer, options: SoundOptions): Sound`
 
 ## Methods
 
 - `_connectToBus(): void`
-- `_defaultBus(): AudioBus<>`
+- `_defaultBus(): AudioBus`
 - `_disconnectFromBus(): void`
 - `_getAudioSetup(): object | null`
 - `_tickSpatial(): void`
@@ -44,7 +50,7 @@ lazily) — `Sound` is best for short, frequently-triggered clips.
 - `getTime(): number`
 - `hasSprite(name: string): boolean`
 - `pause(options?: Partial<PlaybackOptions>): this`
-- `play(options?: PlayOptions<>): this`
+- `play(options?: PlayOptions): this`
 - `playSprite(name: string, options: Partial<PlaybackOptions>): this`
 - `removeSprite(name: string): this`
 - `setLoop(loop: boolean): this`
@@ -59,12 +65,18 @@ lazily) — `Sound` is best for short, frequently-triggered clips.
 
 ## Properties
 
-- `_bus: AudioBus<> | null`
+- `_bus: AudioBus | null`
 - `_duration: number`
 - `_loop: boolean`
 - `_muted: boolean`
 - `_playbackRate: number`
 - `_volume: number`
+
+## Events
+
 - `onStart: Signal<[]>`
 - `onStop: Signal<[]>`
-Source: [src/audio/Sound.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L130)
+
+## Source
+
+[src/audio/Sound.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts#L130)

@@ -2,27 +2,33 @@
 title: "ObservableSize"
 description: "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations. Batch mutations via `set()` fire at most one callback per call."
 symbol: "ObservableSize"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 13
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/math/ObservableSize.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableSize.ts#L10"
 ---
-# ObservableSize
+## Import
+
 `import { ObservableSize } from '@codexo/exojs'`
+
 A Size subclass that fires a callback whenever `width` or `height`
 changes. Used internally by layout-aware types to invalidate cached geometry
 on dimension mutations.
 
 Batch mutations via `set()` fire at most one callback per call.
+
 ## Constructors
 
-- `new(callback: object, width: number, height: number): ObservableSize<>`
+- `new(callback: object, width: number, height: number): ObservableSize`
 
 ## Methods
 
 - `add(x: number, y: number): this`
 - `clone(): this`
-- `copy(size: Size<>): this`
+- `copy(size: Size): this`
 - `destroy(): void`
 - `divide(x: number, y: number): this`
 - `equals(__namedParameters: Partial<Size>): boolean`
@@ -34,5 +40,8 @@ Batch mutations via `set()` fire at most one callback per call.
 
 - `_height: number`
 - `_width: number`
-- `zero: Size<>`
-Source: [src/math/ObservableSize.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableSize.ts#L10)
+- `zero: Size`
+
+## Source
+
+[src/math/ObservableSize.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableSize.ts#L10)

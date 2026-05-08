@@ -2,26 +2,32 @@
 title: "ImageFactory"
 description: "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a decoded HTMLImageElement. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` in options to override."
 symbol: "ImageFactory"
+kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
+memberCount: 8
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/resources/factories/ImageFactory.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L22"
 ---
-# ImageFactory
+## Import
+
 `import { ImageFactory } from '@codexo/exojs'`
+
 AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and
 other browser-supported raster image formats and produces a decoded
 HTMLImageElement.
 
 MIME type detection is performed automatically from the buffer's magic bytes;
 pass an explicit `mimeType` in options to override.
+
 ## Constructors
 
-- `new(): ImageFactory<>`
+- `new(): ImageFactory`
 
 ## Methods
 
-- `create(source: ArrayBuffer, options: ImageFactoryOptions): Promise<HTMLImageElement<>>`
+- `create(source: ArrayBuffer, options: ImageFactoryOptions): Promise<HTMLImageElement>`
 - `createObjectUrl(blob: Blob): string`
 - `destroy(): void`
 - `process(response: Response): Promise<ArrayBuffer>`
@@ -31,4 +37,7 @@ pass an explicit `mimeType` in options to override.
 
 - `_objectUrls: string[]`
 - `storageName: "image"`
-Source: [src/resources/factories/ImageFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L22)
+
+## Source
+
+[src/resources/factories/ImageFactory.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/ImageFactory.ts#L22)

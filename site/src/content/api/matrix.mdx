@@ -2,13 +2,18 @@
 title: "Matrix"
 description: "Mutable 3×3 row-major affine transformation matrix used throughout the rendering and physics pipeline. Layout (row, column): ``` | a b x | | c d y | | e f z | ``` `a`/`d` are the X/Y scale + rotation cosines, `b`/`c` are the shear/rotation sines, `x`/`y` are the translation components, and `e`/`f`/`z` are the homogeneous row (typically `0, 0, 1`). All mutating methods return `this` for chaining. `Matrix.temp` is a shared scratch instance. `Matrix.identity` is a read-only identity constant."
 symbol: "Matrix"
+kind: "class"
 subsystem: "math"
 importPath: "@codexo/exojs"
+memberCount: 22
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/math/Matrix.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/math/Matrix.ts#L23"
 ---
-# Matrix
+## Import
+
 `import { Matrix } from '@codexo/exojs'`
+
 Mutable 3×3 row-major affine transformation matrix used throughout the
 rendering and physics pipeline.
 
@@ -24,23 +29,24 @@ homogeneous row (typically `0, 0, 1`).
 
 All mutating methods return `this` for chaining. `Matrix.temp` is a shared
 scratch instance. `Matrix.identity` is a read-only identity constant.
+
 ## Constructors
 
-- `new(a: number, b: number, x: number, c: number, d: number, y: number, e: number, f: number, z: number): Matrix<>`
+- `new(a: number, b: number, x: number, c: number, d: number, y: number, e: number, f: number, z: number): Matrix`
 
 ## Methods
 
 - `clone(): this`
-- `combine(matrix: Matrix<>): this`
-- `copy(matrix: Matrix<>): this`
+- `combine(matrix: Matrix): this`
+- `copy(matrix: Matrix): this`
 - `destroy(): void`
 - `equals(__namedParameters: Partial<Matrix>): boolean`
-- `getInverse(result: Matrix<>): Matrix<>`
-- `rotate(angle: number, centerX: number, centerY: number): Matrix<>`
-- `scale(scaleX: number, scaleY: number, centerX: number, centerY: number): Matrix<>`
+- `getInverse(result: Matrix): Matrix`
+- `rotate(angle: number, centerX: number, centerY: number): Matrix`
+- `scale(scaleX: number, scaleY: number, centerX: number, centerY: number): Matrix`
 - `set(a: number, b: number, x: number, c: number, d: number, y: number, e: number, f: number, z: number): this`
-- `toArray(transpose: boolean): Float32Array<>`
-- `translate(x: number, y: number): Matrix<>`
+- `toArray(transpose: boolean): Float32Array`
+- `translate(x: number, y: number): Matrix`
 
 ## Properties
 
@@ -53,5 +59,8 @@ scratch instance. `Matrix.identity` is a read-only identity constant.
 - `x: number`
 - `y: number`
 - `z: number`
-- `identity: Matrix<>`
-Source: [src/math/Matrix.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Matrix.ts#L23)
+- `identity: Matrix`
+
+## Source
+
+[src/math/Matrix.ts](https://github.com/Exoridus/ExoJS/blob/main/src/math/Matrix.ts#L23)

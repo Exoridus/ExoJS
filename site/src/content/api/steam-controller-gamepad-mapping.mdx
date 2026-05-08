@@ -2,22 +2,28 @@
 title: "SteamControllerGamepadMapping"
 description: "Mapping for the Valve Steam Controller when operating in gamepad-emulation mode (i.e. Steam Input is configured to present it as a standard gamepad). Inherits the full GenericDualAnalogGamepadMapping layout. The right trackpad is surfaced as the right stick; the left trackpad is surfaced as the left stick. Gyro and haptic-only inputs are not represented."
 symbol: "SteamControllerGamepadMapping"
+kind: "class"
 subsystem: "input"
 importPath: "@codexo/exojs"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/input/SteamControllerGamepadMapping.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamControllerGamepadMapping.ts#L12"
 ---
-# SteamControllerGamepadMapping
+## Import
+
 `import { SteamControllerGamepadMapping } from '@codexo/exojs'`
+
 Mapping for the Valve Steam Controller when operating in gamepad-emulation
 mode (i.e. Steam Input is configured to present it as a standard gamepad).
 
 Inherits the full GenericDualAnalogGamepadMapping layout. The
 right trackpad is surfaced as the right stick; the left trackpad is surfaced
 as the left stick. Gyro and haptic-only inputs are not represented.
+
 ## Constructors
 
-- `new(): SteamControllerGamepadMapping<>`
+- `new(): SteamControllerGamepadMapping`
 
 ## Methods
 
@@ -26,7 +32,10 @@ as the left stick. Gyro and haptic-only inputs are not represented.
 
 ## Properties
 
-- `axes: readonly GamepadAxis<>[]`
-- `buttons: readonly GamepadButton<>[]`
+- `axes: readonly GamepadAxis[]`
+- `buttons: readonly GamepadButton[]`
 - `family: SteamController`
-Source: [src/input/SteamControllerGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamControllerGamepadMapping.ts#L12)
+
+## Source
+
+[src/input/SteamControllerGamepadMapping.ts](https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamControllerGamepadMapping.ts#L12)

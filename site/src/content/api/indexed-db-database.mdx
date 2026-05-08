@@ -2,13 +2,18 @@
 title: "IndexedDbDatabase"
 description: "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set. Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution."
 symbol: "IndexedDbDatabase"
+kind: "class"
 subsystem: "resources"
 importPath: "@codexo/exojs"
+memberCount: 12
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/resources/IndexedDbDatabase.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts#L21"
 ---
-# IndexedDbDatabase
+## Import
+
 `import { IndexedDbDatabase } from '@codexo/exojs'`
+
 Database implementation backed by the browser's IndexedDB API.
 
 Each object store is created with a `keyPath` of `"name"`, so records are
@@ -22,9 +27,10 @@ Schema migrations are handled in two modes:
 - **Explicit** — a `migrations` map keyed by target version runs the
   corresponding callback for each version between `oldVersion` and
   `newVersion`, allowing precise schema evolution.
+
 ## Constructors
 
-- `new(name: string, version: number, storeNames: readonly string[], migrations?: Record<number, object>): IndexedDbDatabase<>`
+- `new(name: string, version: number, storeNames: readonly string[], migrations?: Record<number, object>): IndexedDbDatabase`
 
 ## Methods
 
@@ -42,4 +48,7 @@ Schema migrations are handled in two modes:
 
 - `name: string`
 - `version: number`
-Source: [src/resources/IndexedDbDatabase.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts#L21)
+
+## Source
+
+[src/resources/IndexedDbDatabase.ts](https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts#L21)

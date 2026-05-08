@@ -2,25 +2,34 @@
 title: "BlurFilter"
 description: "Box-blur Filter implemented as multiple additive sprite passes. The blur is approximated by rendering the input texture `quality * 2 + 1` times offset symmetrically along each axis by up to ±`radius` pixels and blending them additively. Higher `quality` values add more samples and produce a smoother result at the cost of additional draw calls."
 symbol: "BlurFilter"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 3
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/filters/BlurFilter.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BlurFilter.ts#L24"
 ---
-# BlurFilter
+## Import
+
 `import { BlurFilter } from '@codexo/exojs'`
+
 Box-blur Filter implemented as multiple additive sprite passes.
 
 The blur is approximated by rendering the input texture `quality * 2 + 1`
 times offset symmetrically along each axis by up to ±`radius` pixels and
 blending them additively. Higher `quality` values add more samples and
 produce a smoother result at the cost of additional draw calls.
+
 ## Constructors
 
-- `new(options: BlurFilterOptions): BlurFilter<>`
+- `new(options: BlurFilterOptions): BlurFilter`
 
 ## Methods
 
-- `apply(backend: RenderBackend<>, input: RenderTexture<>, output: RenderTexture<>): void`
+- `apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void`
 - `destroy(): void`
-Source: [src/rendering/filters/BlurFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BlurFilter.ts#L24)
+
+## Source
+
+[src/rendering/filters/BlurFilter.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BlurFilter.ts#L24)

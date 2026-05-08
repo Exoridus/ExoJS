@@ -2,13 +2,18 @@
 title: "AudioManager"
 description: "Module-level singleton that owns the engine-wide audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single shared AudioListener for spatial audio, and a registry of any extra busses the user constructs. Access the singleton via getAudioManager (or `app.audio`). The instance is constructed lazily on first access so client code that does not need audio pays no startup cost. Drives the per-frame `_tick()` on the listener and every spatial sound; propagates visibility-driven mute when AudioManager.muteOnHidden is enabled."
 symbol: "AudioManager"
+kind: "class"
 subsystem: "audio"
 importPath: "@codexo/exojs"
+memberCount: 14
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
 sourcePath: "src/audio/AudioManager.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L19"
 ---
-# AudioManager
+## Import
+
 `import { AudioManager } from '@codexo/exojs'`
+
 Module-level singleton that owns the engine-wide audio mix: three
 pre-configured AudioBus instances (`master` ← `music` + `sound`),
 a single shared AudioListener for spatial audio, and a registry
@@ -21,26 +26,30 @@ not need audio pays no startup cost.
 Drives the per-frame `_tick()` on the listener and every spatial sound;
 propagates visibility-driven mute when AudioManager.muteOnHidden
 is enabled.
+
 ## Constructors
 
-- `new(): AudioManager<>`
+- `new(): AudioManager`
 
 ## Methods
 
 - `_applyVisibility(visible: boolean): void`
-- `_registerSpatialSound(sound: Sound<>): void`
-- `_unregisterSpatialSound(sound: Sound<>): void`
+- `_registerSpatialSound(sound: Sound): void`
+- `_unregisterSpatialSound(sound: Sound): void`
 - `destroy(): void`
-- `getBus(name: string): AudioBus<>`
+- `getBus(name: string): AudioBus`
 - `hasBus(name: string): boolean`
-- `registerBus(bus: AudioBus<>): this`
-- `unregisterBus(bus: AudioBus<>): this`
+- `registerBus(bus: AudioBus): this`
+- `unregisterBus(bus: AudioBus): this`
 - `update(): void`
 
 ## Properties
 
-- `listener: AudioListener<>`
-- `master: AudioBus<>`
-- `music: AudioBus<>`
-- `sound: AudioBus<>`
-Source: [src/audio/AudioManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L19)
+- `listener: AudioListener`
+- `master: AudioBus`
+- `music: AudioBus`
+- `sound: AudioBus`
+
+## Source
+
+[src/audio/AudioManager.ts](https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts#L19)

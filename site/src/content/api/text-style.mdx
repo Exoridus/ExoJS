@@ -2,13 +2,18 @@
 title: "TextStyle"
 description: "Immutable-style value bag that describes how a Text node should render its string. Every property setter marks the style as `dirty` so that the owning Text can detect changes and rebuild its glyph mesh. Glyphs are always rasterized in white; `fillColor` is applied as a `Mesh.tint` multiplier at draw time, so changing it never triggers atlas re-rasterization. The canvas `fill` / `stroke` properties are used only during glyph rasterization itself."
 symbol: "TextStyle"
+kind: "class"
 subsystem: "rendering"
 importPath: "@codexo/exojs"
+memberCount: 4
+sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/rendering/text/TextStyle.ts"
 sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L41"
 ---
-# TextStyle
+## Import
+
 `import { TextStyle } from '@codexo/exojs'`
+
 Immutable-style value bag that describes how a Text node should
 render its string. Every property setter marks the style as `dirty` so
 that the owning Text can detect changes and rebuild its glyph mesh.
@@ -17,13 +22,17 @@ Glyphs are always rasterized in white; `fillColor` is applied as a
 `Mesh.tint` multiplier at draw time, so changing it never triggers
 atlas re-rasterization. The canvas `fill` / `stroke` properties are
 used only during glyph rasterization itself.
+
 ## Constructors
 
-- `new(options: TextStyleOptions): TextStyle<>`
+- `new(options: TextStyleOptions): TextStyle`
 
 ## Methods
 
 - `apply(context: CanvasRenderingContext2D): this`
-- `clone(): TextStyle<>`
-- `copy(style: TextStyle<>): this`
-Source: [src/rendering/text/TextStyle.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L41)
+- `clone(): TextStyle`
+- `copy(style: TextStyle): this`
+
+## Source
+
+[src/rendering/text/TextStyle.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts#L41)
