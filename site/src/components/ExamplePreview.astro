@@ -1,5 +1,4 @@
 ---
-import { Code } from 'astro/components';
 import type { Capability } from '../lib/examples-catalog';
 import { getExamplesForChapter } from '../lib/examples-catalog';
 import { getExampleSource } from '../lib/example-sources';
@@ -29,12 +28,16 @@ const sourceCode = getExampleSource(chapter, slug);
 const exampleTitle = example?.title ?? slug;
 const capabilities = example?.capabilities ?? [];
 const capabilitiesAttr = JSON.stringify(capabilities);
+const sourceHref = `${import.meta.env.BASE_URL}examples/${chapter}/${slug}.js`;
 ---
 
 <section class="example-preview">
     <header class="example-preview__header">
         <h3>{exampleTitle}</h3>
-        <a href={`${import.meta.env.BASE_URL}playground/?example=${chapter}/${slug}`}>Open in Playground</a>
+        <div class="example-preview__actions">
+            <a class="example-preview__action" href={`${import.meta.env.BASE_URL}playground/?example=${chapter}/${slug}`}>Open in Playground</a>
+            <a class="example-preview__action example-preview__action--quiet" href={sourceHref}>View source</a>
+        </div>
     </header>
     {
         capabilities.length > 0 && (
@@ -50,9 +53,6 @@ const capabilitiesAttr = JSON.stringify(capabilities);
     <div class="example-preview__live">
         <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode} capabilities={capabilitiesAttr}></guide-example-preview>
     </div>
-    <div class="example-preview__code">
-        <Code code={sourceCode} lang="js" />
-    </div>
 </section>
 
 <script>
@@ -61,11 +61,11 @@ const capabilitiesAttr = JSON.stringify(capabilities);
 
 <style>
     .example-preview {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 14px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
         padding: 1rem;
-        margin: 1.2rem 0 1.6rem;
-        background: #0f172a;
+        margin: 1rem 0 1.4rem;
+        background: var(--bg-panel);
     }
 
     .example-preview__header {
@@ -80,20 +80,37 @@ const capabilitiesAttr = JSON.stringify(capabilities);
     .example-preview__header h3 {
         margin: 0;
         font-size: 1rem;
+        color: var(--fg);
     }
 
-    .example-preview__header a {
-        font-size: 0.9rem;
+    .example-preview__actions {
+        display: inline-flex;
+        gap: 0.5rem;
+    }
+
+    .example-preview__action {
+        font-size: 0.82rem;
         text-decoration: none;
+        border-radius: var(--r-2);
+        padding: 0.4rem 0.65rem;
+        border: 1px solid var(--accent-line);
+        background: var(--accent-soft);
+        color: var(--fg);
+    }
+
+    .example-preview__action--quiet {
+        border-color: var(--line-soft);
+        background: transparent;
+        color: var(--fg-muted);
     }
 
     .example-preview__live {
-        margin-bottom: 0.8rem;
+        margin-top: 0.35rem;
     }
 
     .example-preview__caps {
         list-style: none;
-        margin: 0 0 0.7rem;
+        margin: 0 0 0.65rem;
         padding: 0;
         display: flex;
         flex-wrap: wrap;
@@ -102,15 +119,11 @@ const capabilitiesAttr = JSON.stringify(capabilities);
 
     .example-preview__cap {
         font-size: 0.72rem;
-        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-family: var(--f-mono);
         padding: 0.18rem 0.55rem;
         border-radius: 999px;
-        background: rgba(56, 189, 248, 0.16);
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        color: #e0f2fe;
-    }
-
-    :global(.example-preview pre) {
-        margin: 0;
+        background: var(--accent-soft);
+        border: 1px solid var(--accent-line);
+        color: var(--fg);
     }
 </style>

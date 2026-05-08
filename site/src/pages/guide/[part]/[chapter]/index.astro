@@ -51,5 +51,22 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 
 <DocsLayout title={`${chapterMeta.title} | ExoJS Guide`} description={chapterMeta.description}>
     <DocsSidebar slot="sidebar" parts={sidebarParts} />
-    <Content />
+    <div class="chapter-content">
+        <Content />
+    </div>
 </DocsLayout>
+
+<style>
+    .chapter-content :global(h1) {
+        margin-top: 0;
+        font-size: clamp(1.5rem, 3vw, 2.2rem);
+    }
+
+    .chapter-content :global(p) {
+        max-width: 74ch;
+    }
+
+    .chapter-content :global(h2) {
+        margin-top: 1.2rem;
+    }
+</style>

@@ -3,6 +3,8 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../components/DocsSidebar.astro';
 import { GUIDE_PARTS } from '../../lib/guide-structure';
 
+const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
+const exampleCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.reduce((inner, chapter) => inner + chapter.examples.length, 0), 0);
 const sidebarParts = GUIDE_PARTS.map(part => ({
     slug: part.slug,
     title: part.title,
@@ -15,11 +17,18 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 }));
 ---
 
-<DocsLayout title="ExoJS Guide" description="ExoJS guide overview">
+<DocsLayout title="ExoJS Guide" description="Structured ExoJS guide from introduction to advanced recipes.">
     <DocsSidebar slot="sidebar" parts={sidebarParts} />
 
-    <h1>Guide Overview</h1>
-    <p>The guide is organized into 8 parts and 38 sub-chapters. Start with Introduction if you're new, then move into Core Concepts before jumping to focused recipes.</p>
+    <section class="overview-hero">
+        <h1>Guide</h1>
+        <p>Start with Introduction if you are new to ExoJS. Jump into Core Concepts when you need the runtime model, and use Recipes when you want production-oriented patterns.</p>
+        <div class="overview-stats">
+            <span>{chapterCount} chapters</span>
+            <span>{exampleCount} example links</span>
+            <span>Estimated read path: 3 to 5 sessions</span>
+        </div>
+    </section>
 
     <section class="parts-grid">
         {GUIDE_PARTS.map(part => (
@@ -35,17 +44,51 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 </DocsLayout>
 
 <style>
+    .overview-hero {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        padding: 1rem;
+        background: var(--bg-panel);
+        margin-bottom: 0.95rem;
+    }
+
+    .overview-hero h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3.6vw, 2.4rem);
+    }
+
+    .overview-hero p {
+        margin: 0.65rem 0 0;
+        color: var(--fg-muted);
+        max-width: 68ch;
+    }
+
+    .overview-stats {
+        margin-top: 0.85rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .overview-stats span {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        padding: 0.25rem 0.6rem;
+        background: color-mix(in oklab, var(--bg-elevated), transparent 10%);
+        font-size: 0.8rem;
+    }
+
     .parts-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 0.85rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
     }
 
     .parts-grid article {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 12px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
         padding: 0.9rem;
-        background: rgba(255, 255, 255, 0.75);
+        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
     }
 
     .parts-grid h2 {
@@ -60,5 +103,6 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 
     .parts-grid p {
         margin: 0.35rem 0;
+        color: var(--fg-muted);
     }
 </style>

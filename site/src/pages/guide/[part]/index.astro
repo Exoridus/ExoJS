@@ -29,8 +29,10 @@ const sidebarParts = GUIDE_PARTS.map(entry => ({
 <DocsLayout title={`${part.title} | ExoJS Guide`} description={part.description}>
     <DocsSidebar slot="sidebar" parts={sidebarParts} />
 
-    <h1>{part.title}</h1>
-    <p>{part.description}</p>
+    <section class="part-hero">
+        <h1>{part.title}</h1>
+        <p>{part.description}</p>
+    </section>
 
     <section class="chapter-list">
         {part.chapters.map(chapter => (
@@ -46,16 +48,35 @@ const sidebarParts = GUIDE_PARTS.map(entry => ({
 </DocsLayout>
 
 <style>
+    .part-hero {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        padding: 1rem;
+        background: var(--bg-panel);
+        margin-bottom: 0.9rem;
+    }
+
+    .part-hero h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+    }
+
+    .part-hero p {
+        margin: 0.65rem 0 0;
+        color: var(--fg-muted);
+        max-width: 70ch;
+    }
+
     .chapter-list {
         display: grid;
-        gap: 0.75rem;
+        gap: 0.7rem;
     }
 
     .chapter-list article {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 12px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
         padding: 0.9rem;
-        background: rgba(255, 255, 255, 0.78);
+        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
     }
 
     .chapter-list h2 {
@@ -69,6 +90,7 @@ const sidebarParts = GUIDE_PARTS.map(entry => ({
     }
 
     .chapter-list p {
-        margin: 0.35rem 0;
+        margin: 0.3rem 0;
+        color: var(--fg-muted);
     }
 </style>

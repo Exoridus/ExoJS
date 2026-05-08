@@ -9,15 +9,17 @@ export class GuideExamplePreview extends LitElement {
     static styles = css`
         :host {
             display: block;
-            border-radius: 12px;
+            border-radius: var(--r-3);
             overflow: hidden;
-            border: 1px solid rgba(148, 163, 184, 0.32);
-            background: #020617;
+            border: 1px solid var(--line-soft);
+            background: var(--bg-code);
+            max-height: 480px;
         }
 
         exo-preview {
             display: block;
-            min-height: 380px;
+            min-height: 320px;
+            max-height: 480px;
         }
     `;
 
