@@ -109,6 +109,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       throw new Error('WebGpuMeshRenderer is not connected to a backend.');
     }
 
+    if (mesh.shader !== null) {
+      throw new Error(
+        'Mesh custom shaders are currently WebGL2-only. WebGPU support is planned for a future release; in the meantime use the WebGL2 backend or omit `shader` from the Mesh options.',
+      );
+    }
+
     const vertexCount = mesh.vertexCount;
 
     if (vertexCount === 0) {

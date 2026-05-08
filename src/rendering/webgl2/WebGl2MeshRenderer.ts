@@ -1,9 +1,9 @@
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 
-import type { Mesh } from '../mesh/Mesh';
+import type { Mesh, MeshShaderConfig, MeshShaderUniformValue } from '../mesh/Mesh';
 import { Shader } from '../shader/Shader';
+import { RenderTexture } from '../texture/RenderTexture';
 import { Texture } from '../texture/Texture';
-import type { View } from '../View';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/mesh.frag';
 import vertexSource from './glsl/mesh.vert';
@@ -21,6 +21,7 @@ const vertexStrideWords = vertexStrideBytes / 4;
 const initialVertexCapacity = 64;
 const initialIndexCapacity = 192;
 const defaultVertexColor = 0xffffffff; // white, full alpha
+const maxCustomTextureSlots = 8;
 
 interface MeshRendererConnection {
   readonly gl: WebGL2RenderingContext;
@@ -30,9 +31,13 @@ interface MeshRendererConnection {
 }
 
 export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
-  private readonly _shader: Shader = new Shader(vertexSource, fragmentSource);
+  private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
+  private readonly _customShaders = new Map<MeshShaderConfig, Shader>();
   private readonly _tintScratch: Float32Array = new Float32Array(4);
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
+  // Pre-built texture-unit indices used for custom-shader sampler bindings;
+  // pre-allocated so the per-frame uniform path stays allocation-free.
+  private readonly _slotScratches: Int32Array[] = Array.from({ length: maxCustomTextureSlots }, (_, i) => new Int32Array([i]));
 
   private _vertexCapacity = initialVertexCapacity;
   private _indexCapacity = initialIndexCapacity;
@@ -43,8 +48,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
   private _connection: MeshRendererConnection | null = null;
   private _currentBlendMode: number | null = null;
-  private _currentView: View | null = null;
-  private _viewId = -1;
 
   public render(mesh: Mesh): void {
     const connection = this._connection;
@@ -67,29 +70,41 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       backend.setBlendMode(blendMode);
     }
 
+    const shader = mesh.shader === null ? this._defaultShader : this._getOrCreateCustomShader(mesh.shader, connection.gl);
     const view = backend.view;
 
-    if (this._currentView !== view || this._viewId !== view.updateId) {
-      this._currentView = view;
-      this._viewId = view.updateId;
-      this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    // Auto-bound uniforms are set unconditionally if the (possibly custom)
+    // shader declares them. Custom shaders that ignore one of these still
+    // see the cycles from has(), but the GL call is skipped.
+    if (shader.uniforms.has('u_projection')) {
+      shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
 
-    this._shader.getUniform('u_translation').setValue(mesh.getGlobalTransform().toArray(false));
+    if (shader.uniforms.has('u_translation')) {
+      shader.getUniform('u_translation').setValue(mesh.getGlobalTransform().toArray(false));
+    }
 
-    const tint = mesh.tint;
-    this._tintScratch[0] = tint.red;
-    this._tintScratch[1] = tint.green;
-    this._tintScratch[2] = tint.blue;
-    this._tintScratch[3] = tint.alpha;
-    this._shader.getUniform('u_tint').setValue(this._tintScratch);
+    if (shader.uniforms.has('u_tint')) {
+      const tint = mesh.tint;
+      this._tintScratch[0] = tint.red;
+      this._tintScratch[1] = tint.green;
+      this._tintScratch[2] = tint.blue;
+      this._tintScratch[3] = tint.alpha;
+      shader.getUniform('u_tint').setValue(this._tintScratch);
+    }
 
-    // The fragment shader always samples u_texture; meshes without an
-    // explicit texture get the engine's 1x1 white default so the shader
-    // path stays branchless.
-    const meshTexture = mesh.texture ?? Texture.white;
-    this._shader.getUniform('u_texture').setValue(this._textureUnitScratch);
-    backend.bindTexture(meshTexture, 0);
+    // The default fragment shader samples u_texture branchlessly; meshes
+    // without an explicit texture get the engine's 1×1 white default. Only
+    // bind+set if the active shader actually consumes u_texture.
+    if (shader.uniforms.has('u_texture')) {
+      const meshTexture = mesh.texture ?? Texture.white;
+      shader.getUniform('u_texture').setValue(this._textureUnitScratch);
+      backend.bindTexture(meshTexture, 0);
+    }
+
+    if (mesh.shader?.uniforms !== undefined) {
+      this._bindCustomUniforms(shader, mesh.shader.uniforms, backend);
+    }
 
     this._ensureVertexCapacity(vertexCount);
 
@@ -127,7 +142,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       }
     }
 
-    this._shader.sync();
+    shader.sync();
     backend.bindVertexArrayObject(connection.vao);
     connection.vertexBuffer.upload(this._float32View.subarray(0, vertexCount * vertexStrideWords));
     connection.indexBuffer.upload(this._indexData.subarray(0, indexCount));
@@ -143,9 +158,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
   public destroy(): void {
     this.disconnect();
-    this._shader.destroy();
+    this._defaultShader.destroy();
+    for (const shader of this._customShaders.values()) {
+      shader.destroy();
+    }
+    this._customShaders.clear();
     this._currentBlendMode = null;
-    this._currentView = null;
   }
 
   protected onConnect(backend: WebGl2Backend): void {
@@ -156,7 +174,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       throw new Error('Could not create vertex array object.');
     }
 
-    this._shader.connect(createWebGl2ShaderProgram(gl));
+    this._defaultShader.connect(createWebGl2ShaderProgram(gl));
 
     const buffers = new Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number }>();
     const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
@@ -169,13 +187,19 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     // Force the shader's first finalize so attribute locations are
     // available immediately (the async-compile path defers extraction
     // to first sync(), but we need attributes here for VAO setup).
-    this._shader.sync();
+    this._defaultShader.sync();
+
+    // Custom shaders compiled before connect() get connected here too.
+    for (const customShader of this._customShaders.values()) {
+      customShader.connect(createWebGl2ShaderProgram(gl));
+      customShader.sync();
+    }
 
     const vao = new WebGl2VertexArrayObject()
       .addIndex(indexBuffer)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
+      .addAttribute(vertexBuffer, this._defaultShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+      .addAttribute(vertexBuffer, this._defaultShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+      .addAttribute(vertexBuffer, this._defaultShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
       .connect(this._createVaoRuntime(gl, vaoHandle));
 
     this._connection = { gl, vao, vertexBuffer, indexBuffer };
@@ -188,15 +212,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       return;
     }
 
-    this._shader.disconnect();
+    this._defaultShader.disconnect();
+    for (const customShader of this._customShaders.values()) {
+      customShader.disconnect();
+    }
     connection.indexBuffer.destroy();
     connection.vertexBuffer.destroy();
     connection.vao.destroy();
 
     this._connection = null;
     this._currentBlendMode = null;
-    this._currentView = null;
-    this._viewId = -1;
   }
 
   private _ensureVertexCapacity(vertexCount: number): void {
@@ -303,5 +328,57 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
         vao.disconnect();
       },
     };
+  }
+
+  private _getOrCreateCustomShader(config: MeshShaderConfig, gl: WebGL2RenderingContext): Shader {
+    const cached = this._customShaders.get(config);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const shader = new Shader(config.vertexSource, config.fragmentSource);
+    shader.connect(createWebGl2ShaderProgram(gl));
+    // Force first finalize so getUniform()/uniforms.has() are usable below.
+    shader.sync();
+
+    this._customShaders.set(config, shader);
+    return shader;
+  }
+
+  private _bindCustomUniforms(shader: Shader, uniforms: Record<string, MeshShaderUniformValue>, backend: WebGl2Backend): void {
+    // Texture uniforms take consecutive slots starting at 1 (slot 0 belongs
+    // to the mesh's own `u_texture` binding).
+    let textureSlot = 1;
+
+    for (const name in uniforms) {
+      if (!shader.uniforms.has(name)) {
+        continue;
+      }
+
+      const value = uniforms[name];
+      const uniform = shader.getUniform(name);
+
+      if (value instanceof Texture || value instanceof RenderTexture) {
+        if (textureSlot >= maxCustomTextureSlots) {
+          throw new Error(`Mesh custom shader requested more than ${maxCustomTextureSlots - 1} texture uniforms.`);
+        }
+        backend.bindTexture(value, textureSlot);
+        uniform.setValue(this._slotScratches[textureSlot]);
+        textureSlot++;
+      } else {
+        uniform.setValue(this._marshalUniformValue(value));
+      }
+    }
+  }
+
+  private _marshalUniformValue(value: Exclude<MeshShaderUniformValue, Texture | RenderTexture>): Float32Array | Int32Array {
+    if (value instanceof Float32Array || value instanceof Int32Array) {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return new Float32Array([value]);
+    }
+    // readonly tuple [a, b], [a, b, c], [a, b, c, d]
+    return new Float32Array(value as readonly number[]);
   }
 }

@@ -3,6 +3,60 @@ import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { Texture } from '@/rendering/texture/Texture';
 
 /**
+ * Uniform value passed to a custom mesh shader. Mirrors the shape used by
+ * {@link MeshShaderConfig.uniforms}; scalars and small vectors auto-marshal
+ * to the appropriate `Float32Array`/`Int32Array` for the GL uniform call.
+ * `Texture`/`RenderTexture` values are bound to texture slots starting at
+ * slot 1 (slot 0 is reserved for the mesh's own `texture`).
+ */
+export type MeshShaderUniformValue =
+  | number
+  | readonly [number, number]
+  | readonly [number, number, number]
+  | readonly [number, number, number, number]
+  | Float32Array
+  | Int32Array
+  | Texture
+  | RenderTexture;
+
+/**
+ * Custom shader pair attached to a {@link Mesh}. When set, the renderer
+ * compiles and binds these sources instead of the default mesh shader.
+ *
+ * The vertex layout is fixed and shared with the default shader, so custom
+ * vertex shaders MUST pin the standard attribute locations:
+ *
+ * ```glsl
+ * layout(location = 0) in vec2 a_position;
+ * layout(location = 1) in vec2 a_texcoord;
+ * layout(location = 2) in vec4 a_color;
+ * ```
+ *
+ * The renderer auto-binds these uniforms when the shader declares them
+ * (declared-but-unused is fine; absent is fine too):
+ *
+ * - `uniform mat3 u_projection` — view's projection.
+ * - `uniform mat3 u_translation` — mesh's global transform.
+ * - `uniform vec4 u_tint` — the mesh's `tint` as RGBA in 0..1.
+ * - `uniform sampler2D u_texture` — bound to texture slot 0.
+ *
+ * Anything in `uniforms` is set after the auto-binds, in declaration order,
+ * with `Texture`/`RenderTexture` entries taking texture slots 1..N. Mutate
+ * `uniforms` between frames to drive animated effects (`uTime`, etc.).
+ *
+ * Currently WebGL2-only. Setting a custom shader on a Mesh rendered through
+ * the WebGPU backend throws at draw time.
+ */
+export interface MeshShaderConfig {
+  /** GLSL ES 3.00 vertex shader source (`#version 300 es`). */
+  readonly vertexSource: string;
+  /** GLSL ES 3.00 fragment shader source. */
+  readonly fragmentSource: string;
+  /** Initial uniform values; mutate between frames for animation. */
+  uniforms?: Record<string, MeshShaderUniformValue>;
+}
+
+/**
  * Construction-time options for a {@link Mesh}.
  *
  * Vertices are required and must be a flat sequence of (x, y) pairs in
@@ -14,6 +68,8 @@ import type { Texture } from '@/rendering/texture/Texture';
  * supplied UVs while an untextured mesh paints solid vertex colors only.
  *
  * Validation is enforced at construction; any mismatch throws.
+ *
+ * For custom shaders, see {@link MeshShaderConfig}.
  */
 export interface MeshOptions {
   readonly vertices: Float32Array;
@@ -21,6 +77,7 @@ export interface MeshOptions {
   readonly uvs?: Float32Array;
   readonly colors?: Uint32Array;
   readonly texture?: Texture | RenderTexture | null;
+  readonly shader?: MeshShaderConfig;
 }
 
 /**
@@ -56,13 +113,14 @@ export class Mesh extends Drawable {
   public readonly indices: Uint16Array | null;
   public readonly uvs: Float32Array | null;
   public readonly colors: Uint32Array | null;
+  public readonly shader: MeshShaderConfig | null;
 
   private _texture: Texture | RenderTexture | null;
 
   public constructor(options: MeshOptions) {
     super();
 
-    const { vertices, indices = null, uvs = null, colors = null, texture = null } = options;
+    const { vertices, indices = null, uvs = null, colors = null, texture = null, shader = null } = options;
 
     if (vertices.length === 0 || vertices.length % 2 !== 0) {
       throw new Error(`Mesh vertices must be a non-empty flat array of (x,y) pairs (got length ${vertices.length}).`);
@@ -100,6 +158,7 @@ export class Mesh extends Drawable {
     this.indices = indices;
     this.uvs = uvs;
     this.colors = colors;
+    this.shader = shader;
     this._texture = texture;
 
     this.recomputeLocalBounds();

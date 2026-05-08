@@ -126,4 +126,22 @@ describe('Mesh', () => {
     mesh.texture = null;
     expect(mesh.texture).toBeNull();
   });
+
+  test('shader is null by default', () => {
+    const mesh = new Mesh({ vertices: validVertices() });
+    expect(mesh.shader).toBeNull();
+  });
+
+  test('shader config is exposed read-only on the instance', () => {
+    const config = {
+      vertexSource: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+      fragmentSource: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
+      uniforms: { uTime: 0 } as Record<string, number>,
+    };
+    const mesh = new Mesh({ vertices: validVertices(), shader: config });
+
+    expect(mesh.shader).toBe(config);
+    expect(mesh.shader?.vertexSource).toContain('#version 300 es');
+    expect(mesh.shader?.uniforms?.uTime).toBe(0);
+  });
 });

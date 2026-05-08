@@ -175,6 +175,8 @@ exports[`root index type-level export inventory all exported symbols with kind a
   "Mesh: class",
   "MeshGeometryData: interface",
   "MeshOptions: interface",
+  "MeshShaderConfig: interface",
+  "MeshShaderUniformValue: type alias",
   "Music: class",
   "MusicFactory: class",
   "Mutable: type alias",
