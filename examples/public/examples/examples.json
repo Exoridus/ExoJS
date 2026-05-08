@@ -757,6 +757,14 @@
             "description": "Example: Moving Source.",
             "backend": "core",
             "tags": ["moving", "source"]
+        },
+        {
+            "slug": "falloff-curves",
+            "path": "spatial-audio/falloff-curves.js",
+            "title": "Falloff Curves",
+            "description": "Compare linear, inverse, and exponential distance attenuation models on three sources around a draggable listener.",
+            "backend": "core",
+            "tags": ["falloff", "distance", "model", "spatial"]
         }
     ],
     "sprites-textures": [

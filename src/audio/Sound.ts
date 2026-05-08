@@ -67,12 +67,33 @@ export interface AudioSpriteClip {
   loop?: boolean;
 }
 
+/**
+ * Distance-attenuation model used by spatial sounds.
+ *
+ * Mirrors Web Audio's `PannerNode.distanceModel`:
+ * - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`,
+ *   clamped to [0, 1]. Reaches silence at `maxDistance`.
+ * - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`.
+ *   Physically realistic; never reaches absolute silence.
+ * - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near
+ *   the listener; useful for very intimate sources.
+ */
+export type DistanceModel = 'linear' | 'inverse' | 'exponential';
+
 /** Construction options for {@link Sound}. */
 export interface SoundOptions extends Partial<PlaybackOptions> {
   poolSize?: number;
   poolStrategy?: SoundPoolStrategy;
   priority?: number;
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
+  /** Distance-attenuation model. Default: `'linear'`. */
+  distanceModel?: DistanceModel;
+  /** Distance below which volume is at full strength. Default: `50`. */
+  refDistance?: number;
+  /** For the `'linear'` model: distance at which volume reaches zero. Default: `1000`. */
+  maxDistance?: number;
+  /** Falloff rate. Higher = steeper attenuation. Default: `1`. */
+  rolloffFactor?: number;
 }
 
 /** Per-call overrides for {@link Sound.play} and {@link Sound.playSprite}. */
@@ -120,6 +141,10 @@ export class Sound extends AbstractMedia {
   private _position: Vector | null = null;
   private _velocity: Vector | null = null;
   private _pannerNode: PannerNode | null = null;
+  private _distanceModel: DistanceModel = 'linear';
+  private _refDistance = 50;
+  private _maxDistance = 1000;
+  private _rolloffFactor = 1;
 
   public get paused(): boolean {
     return this._paused;
@@ -135,6 +160,11 @@ export class Sound extends AbstractMedia {
 
   public get analyserTarget(): GainNode | null {
     return this._audioSetup?.gainNode ?? null;
+  }
+
+  /** The underlying decoded audio data. Useful for sharing a single decoded buffer across multiple `Sound` instances. */
+  public get audioBuffer(): AudioBuffer {
+    return this._audioBuffer;
   }
 
   public get poolSize(): number {
@@ -213,6 +243,54 @@ export class Sound extends AbstractMedia {
     }
   }
 
+  /** Distance-attenuation model. Applied immediately if a panner is already attached. */
+  public get distanceModel(): DistanceModel {
+    return this._distanceModel;
+  }
+
+  public set distanceModel(value: DistanceModel) {
+    this._distanceModel = value;
+    if (this._pannerNode !== null) {
+      this._pannerNode.distanceModel = value;
+    }
+  }
+
+  /** Reference distance — volume is at full strength at and below this distance. */
+  public get refDistance(): number {
+    return this._refDistance;
+  }
+
+  public set refDistance(value: number) {
+    this._refDistance = Math.max(0, value);
+    if (this._pannerNode !== null) {
+      this._pannerNode.refDistance = this._refDistance;
+    }
+  }
+
+  /** Maximum distance for the `'linear'` model — volume reaches zero here. */
+  public get maxDistance(): number {
+    return this._maxDistance;
+  }
+
+  public set maxDistance(value: number) {
+    this._maxDistance = Math.max(0, value);
+    if (this._pannerNode !== null) {
+      this._pannerNode.maxDistance = this._maxDistance;
+    }
+  }
+
+  /** Falloff steepness. Higher values attenuate faster with distance. */
+  public get rolloffFactor(): number {
+    return this._rolloffFactor;
+  }
+
+  public set rolloffFactor(value: number) {
+    this._rolloffFactor = Math.max(0, value);
+    if (this._pannerNode !== null) {
+      this._pannerNode.rolloffFactor = this._rolloffFactor;
+    }
+  }
+
   public constructor(audioBuffer: AudioBuffer, options: SoundOptions = {}) {
     super({
       duration: audioBuffer.duration,
@@ -224,7 +302,7 @@ export class Sound extends AbstractMedia {
 
     this._audioBuffer = audioBuffer;
 
-    const { poolSize, poolStrategy, priority, sprites, ...playbackOptions } = options;
+    const { poolSize, poolStrategy, priority, sprites, distanceModel, refDistance, maxDistance, rolloffFactor, ...playbackOptions } = options;
 
     this._poolSize = Math.max(1, Math.floor(poolSize ?? 8));
 
@@ -234,6 +312,19 @@ export class Sound extends AbstractMedia {
 
     if (priority !== undefined) {
       this._priority = priority;
+    }
+
+    if (distanceModel !== undefined) {
+      this._distanceModel = distanceModel;
+    }
+    if (refDistance !== undefined) {
+      this._refDistance = Math.max(0, refDistance);
+    }
+    if (maxDistance !== undefined) {
+      this._maxDistance = Math.max(0, maxDistance);
+    }
+    if (rolloffFactor !== undefined) {
+      this._rolloffFactor = Math.max(0, rolloffFactor);
     }
 
     if (Object.keys(playbackOptions).length > 0) {
@@ -552,10 +643,10 @@ export class Sound extends AbstractMedia {
     const ctx = this._audioSetup.audioContext;
     const panner = ctx.createPanner();
     panner.panningModel = 'equalpower';
-    panner.distanceModel = 'linear';
-    panner.maxDistance = 1000;
-    panner.refDistance = 50;
-    panner.rolloffFactor = 1;
+    panner.distanceModel = this._distanceModel;
+    panner.refDistance = this._refDistance;
+    panner.maxDistance = this._maxDistance;
+    panner.rolloffFactor = this._rolloffFactor;
     this._pannerNode = panner;
 
     // Re-route: gainNode → pannerNode → bus.inputNode
