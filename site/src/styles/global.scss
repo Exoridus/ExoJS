@@ -45,6 +45,39 @@ kbd {
     font-family: var(--f-mono);
 }
 
+:where(pre.astro-code) {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-3);
+    padding: 0.85rem 0.95rem !important;
+    overflow: auto;
+    background: var(--bg-code) !important;
+}
+
+:where(pre.astro-code, pre.astro-code span) {
+    color: var(--shiki-dark) !important;
+}
+
+html[data-theme='light'] :where(pre.astro-code, pre.astro-code span) {
+    color: var(--shiki-light) !important;
+}
+
+html[data-theme='dark'] :where(pre.astro-code, pre.astro-code span) {
+    color: var(--shiki-dark) !important;
+}
+
+p :where(code),
+li :where(code),
+h1 :where(code),
+h2 :where(code),
+h3 :where(code),
+h4 :where(code) {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-1);
+    padding: 0.1rem 0.33rem;
+    background: color-mix(in oklab, var(--bg-elevated), transparent 12%);
+    font-size: 0.94em;
+}
+
 .skip-link {
     position: fixed;
     top: 8px;

@@ -1,0 +1,30 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import TranslationNotice from '../../components/TranslationNotice.astro';
+---
+
+<DocsLayout title="ExoJS" description="German localization placeholder for ExoJS documentation.">
+    <section class="de-home">
+        <h1>ExoJS</h1>
+        <p>The German homepage is in progress. You can use the English docs and playground right now.</p>
+        <TranslationNotice englishHref={`${import.meta.env.BASE_URL}en/`} />
+    </section>
+</DocsLayout>
+
+<style>
+    .de-home {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .de-home h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+    }
+
+    .de-home p {
+        margin: 0;
+        color: var(--fg-muted);
+        max-width: 64ch;
+    }
+</style>

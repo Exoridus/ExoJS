@@ -1,7 +1,7 @@
 ---
-import DocsLayout from '../../../layouts/DocsLayout.astro';
-import DocsSidebar from '../../../components/DocsSidebar.astro';
-import { GUIDE_PARTS } from '../../../lib/guide-structure';
+import DocsLayout from '../../../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../../../components/DocsSidebar.astro';
+import { GUIDE_PARTS } from '../../../../lib/guide-structure';
 
 export function getStaticPaths() {
     return GUIDE_PARTS.map(part => ({ params: { part: part.slug } }));
@@ -17,11 +17,11 @@ if (!part) {
 const sidebarParts = GUIDE_PARTS.map(entry => ({
     slug: entry.slug,
     title: entry.title,
-    href: `${import.meta.env.BASE_URL}guide/${entry.slug}/`,
+    href: `${import.meta.env.BASE_URL}en/guide/${entry.slug}/`,
     chapters: entry.chapters.map(chapter => ({
         slug: chapter.slug,
         title: chapter.title,
-        href: `${import.meta.env.BASE_URL}guide/${entry.slug}/${chapter.slug}/`,
+        href: `${import.meta.env.BASE_URL}en/guide/${entry.slug}/${chapter.slug}/`,
     })),
 }));
 ---
@@ -38,7 +38,7 @@ const sidebarParts = GUIDE_PARTS.map(entry => ({
         {part.chapters.map(chapter => (
             <article>
                 <h2>
-                    <a href={`${import.meta.env.BASE_URL}guide/${part.slug}/${chapter.slug}/`}>{chapter.title}</a>
+                    <a href={`${import.meta.env.BASE_URL}en/guide/${part.slug}/${chapter.slug}/`}>{chapter.title}</a>
                 </h2>
                 <p>{chapter.description}</p>
                 <p>{chapter.examples.length} examples</p>

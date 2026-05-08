@@ -1,202 +1,27 @@
 ---
-import DocsLayout from '../layouts/DocsLayout.astro';
-
-const featured = [
-    {
-        title: 'Audio Reactive Particles',
-        description: 'Drive particle motion from incoming audio energy and timing cues.',
-        href: `${import.meta.env.BASE_URL}guide/recipes/audio-reactive-scene/#audio-reactive-particles`,
-    },
-    {
-        title: 'Custom Fragment Shader',
-        description: 'Apply a focused post effect and tune uniforms while the scene runs.',
-        href: `${import.meta.env.BASE_URL}guide/effects/filters/#custom-fragment-shader`,
-    },
-    {
-        title: 'Multi View Split Screen',
-        description: 'Render two live camera views from one scene timeline.',
-        href: `${import.meta.env.BASE_URL}guide/core-concepts/coordinates-and-views/#multi-view-split-screen`,
-    },
-    {
-        title: 'Gamepad Spaceship',
-        description: 'Map analog movement and action cues to responsive scene feedback.',
-        href: `${import.meta.env.BASE_URL}guide/recipes/game-feel/#gamepad-spaceship`,
-    },
-];
-
-const heroSnippet = `import { Application, Scene } from '@codexo/exojs';
-
-class MainScene extends Scene {
-  draw(backend) {
-    backend.clear();
-  }
-}
-
-new Application({ width: 1280, height: 720 })
-  .setScene(MainScene)
-  .run();`;
+const baseUrl = import.meta.env.BASE_URL;
 ---
 
-<DocsLayout title="ExoJS" description="TypeScript-first 2D runtime for games and interactive browser apps.">
-    <section class="hero">
-        <div class="hero__copy">
-            <p class="hero__eyebrow">TypeScript-first 2D runtime</p>
-            <h1>Build games and interactive browser apps with ExoJS.</h1>
-            <p class="hero__lead">ExoJS gives you scenes, rendering, input, audio, and tooling in one runtime so your project stays coherent as complexity grows.</p>
-            <div class="hero__cta">
-                <a class="btn btn--primary" href={`${import.meta.env.BASE_URL}guide/`}>Read Guide</a>
-                <a class="btn" href={`${import.meta.env.BASE_URL}playground/`}>Open Playground</a>
-                <a class="btn" href={`${import.meta.env.BASE_URL}api/`}>Browse API</a>
-            </div>
-            <pre class="hero__install"><code>npm install @codexo/exojs</code></pre>
-        </div>
-        <div class="hero__snippet" aria-hidden="true">
-            <pre><code>{heroSnippet}</code></pre>
-        </div>
-    </section>
-
-    <section class="featured">
-        <header>
-            <h2>Featured examples</h2>
-            <p>Use the guide pages for context, then open each example in the playground for iteration.</p>
-        </header>
-        <div class="featured__grid">
-            {featured.map(item => (
-                <article>
-                    <h3><a href={item.href}>{item.title}</a></h3>
-                    <p>{item.description}</p>
-                </article>
-            ))}
-        </div>
-    </section>
-</DocsLayout>
-
-<style>
-    .hero {
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        gap: 1.2rem;
-        align-items: stretch;
-    }
-
-    .hero__copy {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        padding: 1.1rem;
-        background: var(--bg-panel);
-    }
-
-    .hero__eyebrow {
-        margin: 0 0 0.45rem;
-        font-size: 0.76rem;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: var(--fg-faint);
-    }
-
-    .hero h1 {
-        margin: 0;
-        font-size: clamp(2rem, 4.6vw, 3rem);
-        line-height: 1.06;
-    }
-
-    .hero__lead {
-        margin: 0.8rem 0 0;
-        color: var(--fg-muted);
-        max-width: 56ch;
-    }
-
-    .hero__cta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-        margin-top: 1rem;
-    }
-
-    .btn {
-        text-decoration: none;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        padding: 0.5rem 0.85rem;
-        color: var(--fg);
-        background: transparent;
-        font-weight: 600;
-    }
-
-    .btn--primary {
-        border-color: var(--accent-line);
-        background: var(--accent-soft);
-    }
-
-    .hero__install {
-        margin: 1rem 0 0;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        background: var(--bg-code);
-        padding: 0.6rem 0.75rem;
-        overflow: auto;
-    }
-
-    .hero__snippet {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        background: var(--bg-code);
-        overflow: auto;
-        padding: 0.85rem;
-    }
-
-    .hero__snippet pre {
-        margin: 0;
-        font-size: 0.86rem;
-        line-height: 1.55;
-    }
-
-    .featured {
-        margin-top: 1.1rem;
-    }
-
-    .featured header h2 {
-        margin: 0;
-        font-size: 1.45rem;
-    }
-
-    .featured header p {
-        margin: 0.45rem 0 0;
-        color: var(--fg-muted);
-    }
-
-    .featured__grid {
-        margin-top: 0.8rem;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 0.75rem;
-    }
-
-    .featured article {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
-        padding: 0.85rem;
-    }
-
-    .featured h3 {
-        margin: 0;
-        font-size: 0.98rem;
-    }
-
-    .featured h3 a {
-        text-decoration: none;
-    }
-
-    .featured article p {
-        margin: 0.4rem 0 0;
-        color: var(--fg-muted);
-        font-size: 0.9rem;
-    }
-
-    @media (max-width: 960px) {
-        .hero {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>ExoJS</title>
+        <script is:inline>
+            (() => {
+                const base = `${baseUrl}`;
+                const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+                const stored = localStorage.getItem('exo-language');
+                const browser = navigator.languages?.[0] ?? navigator.language ?? 'en';
+                const browserLocale = browser.toLowerCase().startsWith('de') ? 'de' : 'en';
+                const locale = stored === 'de' || stored === 'en' ? stored : browserLocale;
+                window.location.replace(`${normalizedBase}${locale}/`);
+            })();
+        </script>
+        <noscript>
+            <meta http-equiv="refresh" content={`0;url=${baseUrl}en/`} />
+        </noscript>
+    </head>
+    <body></body>
+</html>

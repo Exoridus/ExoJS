@@ -10,12 +10,14 @@ export class ExoHeader extends LitElement {
 
     @property({ type: String, attribute: 'base-url' }) public baseUrl = '/';
     @property({ type: String, attribute: 'current-path' }) public currentPath = '/';
+    @property({ type: String }) public locale: 'en' | 'de' = 'en';
 
     public render(): ReturnType<LitElement['render']> {
-        const homeHref = this.baseUrl;
-        const guideHref = `${this.baseUrl}guide/`;
-        const playgroundHref = `${this.baseUrl}playground/`;
-        const apiHref = `${this.baseUrl}api/`;
+        const locale = this.locale === 'de' ? 'de' : 'en';
+        const homeHref = `${this.baseUrl}${locale}/`;
+        const guideHref = `${this.baseUrl}${locale}/guide/`;
+        const playgroundHref = `${this.baseUrl}${locale}/playground/`;
+        const apiHref = `${this.baseUrl}${locale}/api/`;
 
         return html`
             <header class="header" role="banner">
@@ -34,7 +36,11 @@ export class ExoHeader extends LitElement {
                         <slot name="search"></slot>
                     </div>
                     <exo-theme-toggle></exo-theme-toggle>
-                    <exo-language-picker></exo-language-picker>
+                    <exo-language-picker
+                        base-url=${this.baseUrl}
+                        current-path=${this.currentPath}
+                        locale=${locale}
+                    ></exo-language-picker>
                 </div>
             </header>
         `;

@@ -1,0 +1,51 @@
+---
+import DocsLayout from '../../../../../layouts/DocsLayout.astro';
+import TranslationNotice from '../../../../../components/TranslationNotice.astro';
+import { GUIDE_PARTS, GUIDE_CHAPTER_BY_PATH } from '../../../../../lib/guide-structure';
+
+export function getStaticPaths() {
+    return GUIDE_PARTS.flatMap(part =>
+        part.chapters.map(chapter => ({
+            params: {
+                part: part.slug,
+                chapter: chapter.slug,
+            },
+        })),
+    );
+}
+
+const partSlug = (Astro.params as Record<string, string | undefined>).part ?? '';
+const chapterSlug = (Astro.params as Record<string, string | undefined>).chapter ?? '';
+const chapterPath = `${partSlug}/${chapterSlug}`;
+const chapterMeta = GUIDE_CHAPTER_BY_PATH.get(chapterPath);
+
+if (!chapterMeta) {
+    throw new Error(`Unknown guide chapter: ${chapterPath}`);
+}
+---
+
+<DocsLayout title={`${chapterMeta.title} (DE)`} description="German localization placeholder for this guide chapter.">
+    <section class="de-guide-chapter">
+        <h1>{chapterMeta.title}</h1>
+        <p>This chapter is not translated to German yet.</p>
+        <TranslationNotice englishHref={`${import.meta.env.BASE_URL}en/guide/${partSlug}/${chapterSlug}/`} />
+    </section>
+</DocsLayout>
+
+<style>
+    .de-guide-chapter {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .de-guide-chapter h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+    }
+
+    .de-guide-chapter p {
+        margin: 0;
+        color: var(--fg-muted);
+        max-width: 64ch;
+    }
+</style>

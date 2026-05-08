@@ -1,0 +1,30 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import TranslationNotice from '../../../components/TranslationNotice.astro';
+---
+
+<DocsLayout title="ExoJS API (DE)" description="German localization placeholder for the ExoJS API reference.">
+    <section class="de-api">
+        <h1>API reference</h1>
+        <p>The API reference is currently available in English only.</p>
+        <TranslationNotice englishHref={`${import.meta.env.BASE_URL}en/api/`} />
+    </section>
+</DocsLayout>
+
+<style>
+    .de-api {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .de-api h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.5rem);
+    }
+
+    .de-api p {
+        margin: 0;
+        color: var(--fg-muted);
+        max-width: 64ch;
+    }
+</style>

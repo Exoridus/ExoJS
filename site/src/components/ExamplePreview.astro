@@ -29,13 +29,14 @@ const exampleTitle = example?.title ?? slug;
 const capabilities = example?.capabilities ?? [];
 const capabilitiesAttr = JSON.stringify(capabilities);
 const sourceHref = `${import.meta.env.BASE_URL}examples/${chapter}/${slug}.js`;
+const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
 ---
 
 <section class="example-preview">
     <header class="example-preview__header">
         <h3>{exampleTitle}</h3>
         <div class="example-preview__actions">
-            <a class="example-preview__action" href={`${import.meta.env.BASE_URL}playground/?example=${chapter}/${slug}`}>Open in Playground</a>
+            <a class="example-preview__action" href={`${import.meta.env.BASE_URL}${locale}/playground/?example=${chapter}/${slug}`}>Open in Playground</a>
             <a class="example-preview__action example-preview__action--quiet" href={sourceHref}>View source</a>
         </div>
     </header>

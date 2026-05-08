@@ -11,6 +11,23 @@ export default defineConfig({
     integrations: [lit(), mdx()],
     output: 'static',
     base: '/ExoJS/',
+    i18n: {
+        locales: ['en', 'de'],
+        defaultLocale: 'en',
+        routing: {
+            prefixDefaultLocale: true,
+            redirectToDefaultLocale: false,
+        },
+    },
+    markdown: {
+        syntaxHighlight: 'shiki',
+        shikiConfig: {
+            themes: {
+                light: 'github-light',
+                dark: 'github-dark',
+            },
+        },
+    },
     build: {
         assets: '_astro',
     },

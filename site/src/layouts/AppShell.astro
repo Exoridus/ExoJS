@@ -13,10 +13,11 @@ interface Props {
 
 const { title = 'ExoJS', description = 'ExoJS docs' } = Astro.props;
 const currentPath = Astro.url.pathname;
+const currentLocale = Astro.currentLocale === 'de' ? 'de' : 'en';
 ---
 
 <!doctype html>
-<html lang="en" data-theme="dark" data-accent="lime">
+<html lang={currentLocale} data-theme="dark" data-accent="lime">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,10 +34,12 @@ const currentPath = Astro.url.pathname;
                     const root = document.documentElement;
                     const storedTheme = localStorage.getItem('exo-theme');
                     const storedAccent = localStorage.getItem('exo-accent');
+                    const routeLocale = root.getAttribute('lang') === 'de' ? 'de' : 'en';
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                     const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : prefersDark ? 'dark' : 'light';
                     root.setAttribute('data-theme', theme);
                     root.setAttribute('data-accent', storedAccent || 'lime');
+                    localStorage.setItem('exo-language', routeLocale);
                 } catch {
                     document.documentElement.setAttribute('data-theme', 'dark');
                     document.documentElement.setAttribute('data-accent', 'lime');
@@ -47,7 +50,7 @@ const currentPath = Astro.url.pathname;
     <body>
         <a class="skip-link" href="#main-content">Skip to main content</a>
         <div class="app-shell">
-            <exo-header base-url={import.meta.env.BASE_URL} current-path={currentPath}>
+            <exo-header base-url={import.meta.env.BASE_URL} current-path={currentPath} locale={currentLocale}>
                 <div slot="search" aria-hidden="true"></div>
             </exo-header>
             <main id="main-content" tabindex="-1" class="app-shell__main">

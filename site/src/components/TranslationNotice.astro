@@ -1,0 +1,57 @@
+---
+interface Props {
+    englishHref: string;
+}
+
+const { englishHref } = Astro.props;
+---
+
+<section class="translation-notice" role="status" aria-live="polite">
+    <p class="translation-notice__label">Translation coming soon</p>
+    <p class="translation-notice__copy">
+        German content is not available yet. Use the English page for now.
+    </p>
+    <a class="translation-notice__link" href={englishHref}>Open English page</a>
+</section>
+
+<style>
+    .translation-notice {
+        border: 1px solid var(--line-soft);
+        border-left: 4px solid var(--accent);
+        border-radius: var(--r-4);
+        background: var(--bg-panel);
+        padding: 1rem;
+    }
+
+    .translation-notice__label {
+        margin: 0;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--fg-faint);
+    }
+
+    .translation-notice__copy {
+        margin: 0.5rem 0 0;
+        color: var(--fg-muted);
+    }
+
+    .translation-notice__link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        margin-top: 0.65rem;
+        padding: 0 0.85rem;
+        border: 1px solid var(--accent-line);
+        border-radius: var(--r-3);
+        background: var(--accent-soft);
+        color: var(--fg);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .translation-notice__link:focus-visible {
+        outline: 2px solid var(--accent-line);
+        outline-offset: 2px;
+    }
+</style>

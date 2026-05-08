@@ -1,18 +1,18 @@
 ---
-import DocsLayout from '../../layouts/DocsLayout.astro';
-import DocsSidebar from '../../components/DocsSidebar.astro';
-import { GUIDE_PARTS } from '../../lib/guide-structure';
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../../components/DocsSidebar.astro';
+import { GUIDE_PARTS } from '../../../lib/guide-structure';
 
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const exampleCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.reduce((inner, chapter) => inner + chapter.examples.length, 0), 0);
 const sidebarParts = GUIDE_PARTS.map(part => ({
     slug: part.slug,
     title: part.title,
-    href: `${import.meta.env.BASE_URL}guide/${part.slug}/`,
+    href: `${import.meta.env.BASE_URL}en/guide/${part.slug}/`,
     chapters: part.chapters.map(chapter => ({
         slug: chapter.slug,
         title: chapter.title,
-        href: `${import.meta.env.BASE_URL}guide/${part.slug}/${chapter.slug}/`,
+        href: `${import.meta.env.BASE_URL}en/guide/${part.slug}/${chapter.slug}/`,
     })),
 }));
 ---
@@ -34,7 +34,7 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         {GUIDE_PARTS.map(part => (
             <article>
                 <h2>
-                    <a href={`${import.meta.env.BASE_URL}guide/${part.slug}/`}>{part.title}</a>
+                    <a href={`${import.meta.env.BASE_URL}en/guide/${part.slug}/`}>{part.title}</a>
                 </h2>
                 <p>{part.description}</p>
                 <p>{part.chapters.length} sub-chapters</p>
