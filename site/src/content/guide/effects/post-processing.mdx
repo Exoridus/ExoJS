@@ -1,0 +1,38 @@
+---
+title: '6.3 Post-processing'
+description: 'Build multi-pass render flows for bloom, trails, and mirror effects.'
+part: 6
+chapter: 3
+examples:
+  - render-targets/bloom-lite
+  - render-targets/post-processing-chain
+  - render-targets/trail-feedback
+  - render-targets/water-mirror
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 6.3 Post-processing
+
+When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Post-processing gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+
+## Examples
+
+<a id="bloom-lite"></a>
+<ExamplePreview chapter="render-targets" slug="bloom-lite" />
+Bloom Lite isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="post-processing-chain"></a>
+<ExamplePreview chapter="render-targets" slug="post-processing-chain" />
+Post Processing Chain isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="trail-feedback"></a>
+<ExamplePreview chapter="render-targets" slug="trail-feedback" />
+Trail Feedback isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="water-mirror"></a>
+<ExamplePreview chapter="render-targets" slug="water-mirror" />
+Water Mirror isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+{/* TODO: prose */}
+

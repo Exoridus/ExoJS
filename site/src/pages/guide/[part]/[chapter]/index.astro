@@ -1,0 +1,55 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../../../components/DocsSidebar.astro';
+import { GUIDE_PARTS, GUIDE_CHAPTER_BY_PATH } from '../../../../lib/guide-structure';
+
+export function getStaticPaths() {
+    return GUIDE_PARTS.flatMap(part =>
+        part.chapters.map(chapter => ({
+            params: {
+                part: part.slug,
+                chapter: chapter.slug,
+            },
+        })),
+    );
+}
+
+const partSlug = (Astro.params as Record<string, string | undefined>).part ?? '';
+const chapterSlug = (Astro.params as Record<string, string | undefined>).chapter ?? '';
+const chapterPath = `${partSlug}/${chapterSlug}`;
+const chapterMeta = GUIDE_CHAPTER_BY_PATH.get(chapterPath);
+
+if (!chapterMeta) {
+    throw new Error(`Unknown guide chapter: ${chapterPath}`);
+}
+
+const guideEntries = await getCollection('guide');
+const entryByPath = new Map<string, CollectionEntry<'guide'>>(
+    guideEntries.map((entry: CollectionEntry<'guide'>) => [entry.id.replace(/\.(md|mdx)$/, ''), entry]),
+);
+const entry = entryByPath.get(chapterPath);
+
+if (!entry) {
+    throw new Error(`Missing guide content entry: ${chapterPath}`);
+}
+
+const { Content } = await render(entry);
+
+const sidebarParts = GUIDE_PARTS.map(part => ({
+    slug: part.slug,
+    title: part.title,
+    href: `${import.meta.env.BASE_URL}guide/${part.slug}/`,
+    chapters: part.chapters.map(chapter => ({
+        slug: chapter.slug,
+        title: chapter.title,
+        href: `${import.meta.env.BASE_URL}guide/${part.slug}/${chapter.slug}/`,
+    })),
+}));
+---
+
+<DocsLayout title={`${chapterMeta.title} | ExoJS Guide`} description={chapterMeta.description}>
+    <DocsSidebar slot="sidebar" parts={sidebarParts} />
+    <Content />
+</DocsLayout>

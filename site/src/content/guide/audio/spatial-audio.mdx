@@ -1,0 +1,33 @@
+---
+title: '5.2 Spatial audio'
+description: 'Place listener and sources in space for directional sound behavior.'
+part: 5
+chapter: 2
+examples:
+  - spatial-audio/listener-and-source
+  - spatial-audio/moving-source
+  - spatial-audio/falloff-curves
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 5.2 Spatial audio
+
+When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Spatial audio gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+
+## Examples
+
+<a id="listener-and-source"></a>
+<ExamplePreview chapter="spatial-audio" slug="listener-and-source" />
+Listener And Source isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="moving-source"></a>
+<ExamplePreview chapter="spatial-audio" slug="moving-source" />
+Moving Source isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="falloff-curves"></a>
+<ExamplePreview chapter="spatial-audio" slug="falloff-curves" />
+Falloff Curves isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+{/* TODO: prose */}
+

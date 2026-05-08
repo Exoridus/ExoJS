@@ -1,0 +1,38 @@
+---
+title: '7.2 Debug layer'
+description: 'Inspect scene state and runtime behavior while a scene is running.'
+part: 7
+chapter: 2
+examples:
+  - debug-layer/bounding-boxes
+  - debug-layer/performance-overlay
+  - debug-layer/pointer-and-hittest
+  - debug-layer/signal-bus-inspector
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 7.2 Debug layer
+
+When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Debug layer gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+
+## Examples
+
+<a id="bounding-boxes"></a>
+<ExamplePreview chapter="debug-layer" slug="bounding-boxes" />
+Bounding Boxes isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="performance-overlay"></a>
+<ExamplePreview chapter="debug-layer" slug="performance-overlay" />
+Performance Overlay isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="pointer-and-hittest"></a>
+<ExamplePreview chapter="debug-layer" slug="pointer-and-hittest" />
+Pointer And Hittest isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="signal-bus-inspector"></a>
+<ExamplePreview chapter="debug-layer" slug="signal-bus-inspector" />
+Signal Bus Inspector isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+{/* TODO: prose */}
+

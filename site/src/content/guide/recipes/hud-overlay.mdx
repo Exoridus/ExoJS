@@ -1,0 +1,28 @@
+---
+title: '8.1 HUD overlay'
+description: 'Compose gameplay and UI layers without coupling scene logic.'
+part: 8
+chapter: 1
+examples:
+  - application-scenes/hud-overlay-scene
+  - showcase/minimap-with-mask
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 8.1 HUD overlay
+
+When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. HUD overlay gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+
+## Examples
+
+<a id="hud-overlay-scene"></a>
+<ExamplePreview chapter="application-scenes" slug="hud-overlay-scene" />
+Hud Overlay Scene isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="minimap-with-mask"></a>
+<ExamplePreview chapter="showcase" slug="minimap-with-mask" />
+Minimap With Mask isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+{/* TODO: prose */}
+

@@ -1,0 +1,33 @@
+---
+title: '7.3 Performance'
+description: 'Measure scene limits with focused stress examples.'
+part: 7
+chapter: 3
+examples:
+  - performance/sprite-stress
+  - performance/multi-texture-stress
+  - performance/particle-stress
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 7.3 Performance
+
+When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Performance gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+
+## Examples
+
+<a id="sprite-stress"></a>
+<ExamplePreview chapter="performance" slug="sprite-stress" />
+Sprite Stress isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="multi-texture-stress"></a>
+<ExamplePreview chapter="performance" slug="multi-texture-stress" />
+Multi Texture Stress isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="particle-stress"></a>
+<ExamplePreview chapter="performance" slug="particle-stress" />
+Particle Stress isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+{/* TODO: prose */}
+

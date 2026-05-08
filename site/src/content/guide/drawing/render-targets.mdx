@@ -1,0 +1,28 @@
+---
+title: '3.5 Render targets'
+description: 'Render into intermediate textures and reuse those outputs in scene composition.'
+part: 3
+chapter: 5
+examples:
+  - render-targets/render-to-texture
+  - render-targets/mini-map
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
+# 3.5 Render targets
+
+When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Render targets gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+
+## Examples
+
+<a id="render-to-texture"></a>
+<ExamplePreview chapter="render-targets" slug="render-to-texture" />
+Render To Texture isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+<a id="mini-map"></a>
+<ExamplePreview chapter="render-targets" slug="mini-map" />
+Mini Map isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+{/* TODO: prose */}
+

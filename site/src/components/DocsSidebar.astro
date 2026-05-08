@@ -1,34 +1,63 @@
 ---
-interface SidebarItem {
-    href: string;
-    label: string;
-}
-
 interface SidebarGroup {
     title: string;
-    items: Array<SidebarItem>;
+    items: Array<{
+        href: string;
+        label: string;
+    }>;
 }
 
 interface Props {
-    groups: Array<SidebarGroup>;
+    parts?: Array<{
+        slug: string;
+        title: string;
+        href: string;
+        chapters: Array<{
+            slug: string;
+            title: string;
+            href: string;
+        }>;
+    }>;
+    groups?: Array<SidebarGroup>;
 }
 
-const { groups } = Astro.props;
+const { parts = [], groups = [] } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
 <aside class="docs-sidebar">
-    {groups.map(group => (
-        <section>
-            <h2>{group.title}</h2>
+    {
+        groups.length > 0 &&
+            groups.map(group => (
+                <section>
+                    <h2>{group.title}</h2>
+                    <ul>
+                        {group.items.map(item => (
+                            <li>
+                                <a href={item.href} class={currentPath === item.href ? 'active' : ''}>
+                                    {item.label}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            ))
+    }
+    {parts.map(part => (
+        <details open={currentPath.startsWith(part.href)}>
+            <summary>
+                <a href={part.href} class={currentPath === part.href ? 'active' : ''}>{part.title}</a>
+            </summary>
             <ul>
-                {group.items.map(item => (
+                {part.chapters.map(chapter => (
                     <li>
-                        <a href={item.href} class={currentPath === item.href ? 'active' : ''}>{item.label}</a>
+                        <a href={chapter.href} class={currentPath === chapter.href ? 'active' : ''}>
+                            {chapter.title}
+                        </a>
                     </li>
                 ))}
             </ul>
-        </section>
+        </details>
     ))}
 </aside>
 
@@ -44,6 +73,10 @@ const currentPath = Astro.url.pathname;
         padding: 0.85rem;
     }
 
+    .docs-sidebar details + details {
+        margin-top: 0.9rem;
+    }
+
     .docs-sidebar section + section {
         margin-top: 0.9rem;
     }
@@ -56,9 +89,38 @@ const currentPath = Astro.url.pathname;
         color: #475569;
     }
 
+    .docs-sidebar details {
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 10px;
+        padding: 0.35rem 0.45rem;
+        background: rgba(255, 255, 255, 0.72);
+    }
+
+    .docs-sidebar summary {
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .docs-sidebar summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .docs-sidebar summary a {
+        display: inline-block;
+        width: 100%;
+        border-radius: 8px;
+        padding: 0.3rem 0.45rem;
+        text-decoration: none;
+        font-size: 0.85rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: #0f172a;
+        font-weight: 600;
+    }
+
     .docs-sidebar ul {
         list-style: none;
-        margin: 0;
+        margin: 0.35rem 0 0;
         padding: 0;
         display: grid;
         gap: 0.3rem;
@@ -68,7 +130,7 @@ const currentPath = Astro.url.pathname;
         display: block;
         border-radius: 8px;
         padding: 0.36rem 0.5rem;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #0f172a;
         text-decoration: none;
     }

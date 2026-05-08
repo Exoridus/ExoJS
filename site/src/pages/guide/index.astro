@@ -1,39 +1,64 @@
 ---
-import { getCollection } from 'astro:content';
-import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../components/DocsSidebar.astro';
-import { CHAPTERS } from '../../lib/chapters';
+import { GUIDE_PARTS } from '../../lib/guide-structure';
 
-const guideEntries = await getCollection('guide');
-const bySlug = new Map<string, CollectionEntry<'guide'>>(guideEntries.map((entry: CollectionEntry<'guide'>) => [entry.data.chapter, entry]));
-const chapterLinks = CHAPTERS.map(chapter => ({
-    ...chapter,
-    href: `${import.meta.env.BASE_URL}guide/${chapter.slug}/`,
-    description: bySlug.get(chapter.slug)?.data.description ?? '',
+const sidebarParts = GUIDE_PARTS.map(part => ({
+    slug: part.slug,
+    title: part.title,
+    href: `${import.meta.env.BASE_URL}guide/${part.slug}/`,
+    chapters: part.chapters.map(chapter => ({
+        slug: chapter.slug,
+        title: chapter.title,
+        href: `${import.meta.env.BASE_URL}guide/${part.slug}/${chapter.slug}/`,
+    })),
 }));
-
-const sidebarGroups = [
-    {
-        title: 'Guide Chapters',
-        items: CHAPTERS.map(chapter => ({
-            href: `${import.meta.env.BASE_URL}guide/${chapter.slug}/`,
-            label: `${chapter.order}. ${chapter.title}`,
-        })),
-    },
-];
 ---
 
-<DocsLayout title="ExoJS Guide" description="ExoJS guide chapters">
-    <DocsSidebar slot="sidebar" groups={sidebarGroups} />
+<DocsLayout title="ExoJS Guide" description="ExoJS guide overview">
+    <DocsSidebar slot="sidebar" parts={sidebarParts} />
 
-    <h1>Guide</h1>
-    <p>Browse all 19 chapters. Each chapter currently includes intro stubs and per-example preview blocks.</p>
-    <ul>
-        {chapterLinks.map(chapter => (
-            <li>
-                <a href={chapter.href}>{chapter.order}. {chapter.title}</a> - {chapter.description}
-            </li>
+    <h1>Guide Overview</h1>
+    <p>The guide is organized into 8 parts and 38 sub-chapters. Start with Introduction if you're new, then move into Core Concepts before jumping to focused recipes.</p>
+
+    <section class="parts-grid">
+        {GUIDE_PARTS.map(part => (
+            <article>
+                <h2>
+                    <a href={`${import.meta.env.BASE_URL}guide/${part.slug}/`}>{part.title}</a>
+                </h2>
+                <p>{part.description}</p>
+                <p>{part.chapters.length} sub-chapters</p>
+            </article>
         ))}
-    </ul>
+    </section>
 </DocsLayout>
+
+<style>
+    .parts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 0.85rem;
+    }
+
+    .parts-grid article {
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 12px;
+        padding: 0.9rem;
+        background: rgba(255, 255, 255, 0.75);
+    }
+
+    .parts-grid h2 {
+        margin: 0 0 0.45rem;
+        font-size: 1rem;
+    }
+
+    .parts-grid h2 a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .parts-grid p {
+        margin: 0.35rem 0;
+    }
+</style>
