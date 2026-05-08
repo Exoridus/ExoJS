@@ -17,7 +17,8 @@ const hasSidebar = Astro.slots.has('sidebar');
         <meta name="description" content={description} />
     </head>
     <body>
-        <header class="top-nav">
+        <a class="skip-link" href="#main-content">Skip to main content</a>
+        <header class="top-nav" role="banner">
             <a href={`${import.meta.env.BASE_URL}`}>ExoJS</a>
             <nav>
                 <a href={`${import.meta.env.BASE_URL}guide/`}>Guide</a>
@@ -25,10 +26,12 @@ const hasSidebar = Astro.slots.has('sidebar');
                 <a href={`${import.meta.env.BASE_URL}api/`}>API</a>
             </nav>
         </header>
-        <main class:list={['docs-shell', !hasSidebar && 'docs-shell--full']}>
-            <div class="docs-shell__sidebar"><slot name="sidebar" /></div>
-            <article class="docs-shell__content"><slot /></article>
-        </main>
+        <div id="main-content" tabindex="-1">
+            <main class:list={['docs-shell', !hasSidebar && 'docs-shell--full']}>
+                <div class="docs-shell__sidebar"><slot name="sidebar" /></div>
+                <article class="docs-shell__content"><slot /></article>
+            </main>
+        </div>
     </body>
 </html>
 
@@ -46,6 +49,26 @@ const hasSidebar = Astro.slots.has('sidebar');
             radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.14), transparent 40%),
             radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.14), transparent 45%),
             #f1f5f9;
+    }
+
+    .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        padding: 0.6rem 1rem;
+        background: #0f172a;
+        color: #f1f5f9;
+        text-decoration: none;
+        z-index: 1000;
+        border-radius: 0 0 6px 0;
+    }
+
+    .skip-link:focus {
+        left: 0;
+    }
+
+    #main-content:focus {
+        outline: none;
     }
 
     .top-nav {

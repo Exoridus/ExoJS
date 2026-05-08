@@ -2,9 +2,6 @@ dist
 node_modules
 coverage
 src/vendor
-examples/dist
-examples/node_modules
-examples/public/vendor
 examples/**
 site/**
 *.min.*
