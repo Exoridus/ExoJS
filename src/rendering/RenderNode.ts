@@ -259,14 +259,20 @@ export abstract class RenderNode extends SceneNode {
       return;
     }
 
-    const temporaryTextures: RenderTexture[] = [];
+    // Ping-pong filter chain: at most one pool-owned RT is held at any time
+    // outside the brief `filter.apply()` call (where input + output coexist).
+    // Previously we accumulated every step's RT and released them all in
+    // `finally`, which kept N+1 RTs alive for an N-filter chain. Now we
+    // release the previous step's RT immediately after each `filter.apply()`
+    // and let the pool hand the same memory back for the next step.
     const cacheTexture = needsBitmapCache ? this._ensureCacheTexture(width, height) : null;
+    let pooledTexture: RenderTexture | null = null;
 
     try {
       const sourceTexture = needsBitmapCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(width, height);
 
       if (sourceTexture !== cacheTexture) {
-        temporaryTextures.push(sourceTexture);
+        pooledTexture = sourceTexture;
       }
 
       this._renderContentToTexture(backend, sourceTexture, left, top, width, height, renderContent);
@@ -278,12 +284,20 @@ export abstract class RenderNode extends SceneNode {
           const isLast = index === this._filters.length - 1;
           const output = isLast && needsBitmapCache ? cacheTexture! : backend.acquireRenderTexture(width, height);
 
-          if (output !== cacheTexture) {
-            temporaryTextures.push(output);
+          this._filters[index].apply(backend, finalTexture, output);
+
+          // Release the previous step's RT now that `apply` has consumed it.
+          // The cache texture is owned by the node, never pool-owned.
+          if (pooledTexture !== null) {
+            backend.releaseRenderTexture(pooledTexture);
+            pooledTexture = null;
           }
 
-          this._filters[index].apply(backend, finalTexture, output);
           finalTexture = output;
+
+          if (output !== cacheTexture) {
+            pooledTexture = output;
+          }
         }
       }
 
@@ -301,8 +315,8 @@ export abstract class RenderNode extends SceneNode {
         blendMode,
       );
     } finally {
-      for (const texture of temporaryTextures) {
-        backend.releaseRenderTexture(texture);
+      if (pooledTexture !== null) {
+        backend.releaseRenderTexture(pooledTexture);
       }
     }
   }
