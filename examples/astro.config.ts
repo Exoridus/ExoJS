@@ -24,7 +24,13 @@ export default defineConfig({
                         // by Monaco's own internal dynamic imports.
                         if (id.includes('/node_modules/monaco-editor/')) return 'vendor-monaco';
                         // Lit runtime — shared by all shell components; stable vendor chunk.
-                        if (id.includes('/node_modules/lit/') || id.includes('/node_modules/@lit/') || id.includes('/node_modules/lit-html/') || id.includes('/node_modules/lit-element/')) return 'vendor-lit';
+                        if (
+                            id.includes('/node_modules/lit/') ||
+                            id.includes('/node_modules/@lit/') ||
+                            id.includes('/node_modules/lit-html/') ||
+                            id.includes('/node_modules/lit-element/')
+                        )
+                            return 'vendor-lit';
                     },
                 },
             },

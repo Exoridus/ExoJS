@@ -40,38 +40,38 @@ CommonJS `require()` usage is not part of the supported contract for this pre-1.
 import { Application, Scene, Graphics, Color, type RenderBackend } from '@codexo/exojs';
 
 class HelloScene extends Scene {
-    private readonly box = new Graphics();
+  private readonly box = new Graphics();
 
-    public constructor() {
-        super();
+  public constructor() {
+    super();
 
-        this.box.fillColor = Color.white;
-        this.box.drawRectangle(-32, -32, 64, 64);
-        this.box.setPosition(400, 300);
+    this.box.fillColor = Color.white;
+    this.box.drawRectangle(-32, -32, 64, 64);
+    this.box.setPosition(400, 300);
 
-        this.addChild(this.box);
-    }
+    this.addChild(this.box);
+  }
 
-    public override update(delta: import('@codexo/exojs').Time): void {
-        this.box.rotation += delta.seconds * 45;
-    }
+  public override update(delta: import('@codexo/exojs').Time): void {
+    this.box.rotation += delta.seconds * 45;
+  }
 
-    public override draw(backend: RenderBackend): void {
-        this.root.render(backend);
-    }
+  public override draw(backend: RenderBackend): void {
+    this.root.render(backend);
+  }
 }
 
 const canvas = document.querySelector('canvas');
 
 if (!canvas) {
-    throw new Error('Missing <canvas> element.');
+  throw new Error('Missing <canvas> element.');
 }
 
 const app = new Application({
-    canvas,
-    width: 800,
-    height: 600,
-    clearColor: Color.cornflowerBlue,
+  canvas,
+  width: 800,
+  height: 600,
+  clearColor: Color.cornflowerBlue,
 });
 
 await app.start(new HelloScene());

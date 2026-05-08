@@ -1,0 +1,9 @@
+dist
+node_modules
+coverage
+src/vendor
+examples/dist
+examples/node_modules
+examples/public/vendor
+*.min.*
+package-lock.json

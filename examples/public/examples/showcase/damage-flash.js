@@ -1,0 +1,36 @@
+import { Application, Color, ColorFilter, Scene, Signal, Sprite, Texture } from '@codexo/exojs';
+
+const app = new Application({
+    width: 800,
+    height: 600,
+    clearColor: Color.black,
+    resourcePath: 'assets/',
+});
+
+document.body.append(app.canvas);
+
+app.start(
+    new (class extends Scene {
+        async load(loader) {
+            await loader.load(Texture, { bunny: 'image/bunny.png' });
+        }
+        init(loader) {
+            this._hit = new Signal();
+            this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2.2).setPosition(400, 300);
+            this._filterColor = new Color(255, 255, 255, 1);
+            this._filter = new ColorFilter(this._filterColor);
+            this._sprite.filters = [this._filter];
+            this._hit.add(() => {
+                this._filterColor.set(255, 120, 120, 1);
+                this.app.tweens.create(this._filterColor).to({ r: 255, g: 255, b: 255 }, 0.2).start();
+            });
+            this.app.input.onPointerTap.add(() => {
+                this._hit.dispatch();
+            });
+        }
+        draw(backend) {
+            backend.clear();
+            this._sprite.render(backend);
+        }
+    })()
+);

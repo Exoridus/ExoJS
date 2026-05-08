@@ -1,4 +1,5 @@
 import { Vector } from '@/math/Vector';
+
 import type { Distribution } from './Distribution';
 
 const tau = Math.PI * 2;
@@ -12,21 +13,21 @@ const tau = Math.PI * 2;
  * Use as a spawn-position distribution for circular emitters.
  */
 export class CircleArea implements Distribution<Vector> {
-    private readonly _scratch = new Vector();
+  private readonly _scratch = new Vector();
 
-    public constructor(
-        public centerX: number,
-        public centerY: number,
-        public radius: number,
-        public mode: 'volume' | 'edge' = 'volume',
-    ) {}
+  public constructor(
+    public centerX: number,
+    public centerY: number,
+    public radius: number,
+    public mode: 'volume' | 'edge' = 'volume',
+  ) {}
 
-    public sample(out: Vector = this._scratch): Vector {
-        const angle = Math.random() * tau;
-        const r = this.mode === 'edge' ? this.radius : this.radius * Math.sqrt(Math.random());
+  public sample(out: Vector = this._scratch): Vector {
+    const angle = Math.random() * tau;
+    const r = this.mode === 'edge' ? this.radius : this.radius * Math.sqrt(Math.random());
 
-        out.set(this.centerX + Math.cos(angle) * r, this.centerY + Math.sin(angle) * r);
+    out.set(this.centerX + Math.cos(angle) * r, this.centerY + Math.sin(angle) * r);
 
-        return out;
-    }
+    return out;
+  }
 }

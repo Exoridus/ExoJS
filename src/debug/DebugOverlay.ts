@@ -1,12 +1,13 @@
-import { View } from '@/rendering/View';
-import { Keyboard } from '@/input/types';
-import { PerformanceLayer } from './PerformanceLayer';
-import { BoundingBoxesLayer } from './BoundingBoxesLayer';
-import { HitTestLayer } from './HitTestLayer';
-import { PointerStackLayer } from './PointerStackLayer';
 import type { Application } from '@/core/Application';
 import type { Time } from '@/core/Time';
+import { Keyboard } from '@/input/types';
+import { View } from '@/rendering/View';
+
+import { BoundingBoxesLayer } from './BoundingBoxesLayer';
 import type { DebugLayer } from './DebugLayer';
+import { HitTestLayer } from './HitTestLayer';
+import { PerformanceLayer } from './PerformanceLayer';
+import { PointerStackLayer } from './PointerStackLayer';
 
 /**
  * Typed map of the four built-in diagnostic layers managed by
@@ -14,10 +15,10 @@ import type { DebugLayer } from './DebugLayer';
  * interact with layer-specific state.
  */
 export interface DebugLayers {
-    readonly performance: PerformanceLayer;
-    readonly boundingBoxes: BoundingBoxesLayer;
-    readonly hitTest: HitTestLayer;
-    readonly pointerStack: PointerStackLayer;
+  readonly performance: PerformanceLayer;
+  readonly boundingBoxes: BoundingBoxesLayer;
+  readonly hitTest: HitTestLayer;
+  readonly pointerStack: PointerStackLayer;
 }
 
 /**
@@ -43,102 +44,110 @@ export interface DebugLayers {
  * without changing individual layer visibility flags.
  */
 export class DebugOverlay {
-    /** Master visibility switch. When false, no layers render regardless of their individual flags. */
-    public visible: boolean = true;
+  /** Master visibility switch. When false, no layers render regardless of their individual flags. */
+  public visible = true;
 
-    /** The four built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1–F4 keybindings. */
-    public readonly layers: DebugLayers;
+  /** The four built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1–F4 keybindings. */
+  public readonly layers: DebugLayers;
 
-    private readonly _app: Application;
-    private readonly _view: View;
-    private readonly _onFrameHandler: (delta: Time) => void;
-    private readonly _onKeyDownHandler: (channel: number) => void;
-    private readonly _onResizeHandler: (width: number, height: number) => void;
+  private readonly _app: Application;
+  private readonly _view: View;
+  private readonly _onFrameHandler: (delta: Time) => void;
+  private readonly _onKeyDownHandler: (channel: number) => void;
+  private readonly _onResizeHandler: (width: number, height: number) => void;
 
-    public constructor(app: Application) {
-        this._app = app;
-        this._view = new View(app.canvas.width / 2, app.canvas.height / 2, app.canvas.width, app.canvas.height);
+  public constructor(app: Application) {
+    this._app = app;
+    this._view = new View(app.canvas.width / 2, app.canvas.height / 2, app.canvas.width, app.canvas.height);
 
-        this.layers = {
-            performance:  new PerformanceLayer(app),
-            boundingBoxes: new BoundingBoxesLayer(app),
-            hitTest:       new HitTestLayer(app),
-            pointerStack:  new PointerStackLayer(app),
-        };
+    this.layers = {
+      performance: new PerformanceLayer(app),
+      boundingBoxes: new BoundingBoxesLayer(app),
+      hitTest: new HitTestLayer(app),
+      pointerStack: new PointerStackLayer(app),
+    };
 
-        this._onFrameHandler  = this._onFrame.bind(this);
-        this._onKeyDownHandler = this._onKeyDown.bind(this);
-        this._onResizeHandler  = this._onResize.bind(this);
+    this._onFrameHandler = this._onFrame.bind(this);
+    this._onKeyDownHandler = this._onKeyDown.bind(this);
+    this._onResizeHandler = this._onResize.bind(this);
 
-        app.onFrame.add(this._onFrameHandler);
-        app.input.onKeyDown.add(this._onKeyDownHandler);
-        app.onResize.add(this._onResizeHandler);
+    app.onFrame.add(this._onFrameHandler);
+    app.input.onKeyDown.add(this._onKeyDownHandler);
+    app.onResize.add(this._onResizeHandler);
+  }
+
+  /**
+   * Unsubscribe from all application events, destroy every layer, and
+   * release the overlay's internal {@link View}. Call this when you no
+   * longer need the overlay to avoid memory leaks.
+   */
+  public destroy(): void {
+    this._app.onFrame.remove(this._onFrameHandler);
+    this._app.input.onKeyDown.remove(this._onKeyDownHandler);
+    this._app.onResize.remove(this._onResizeHandler);
+
+    for (const layer of Object.values(this.layers) as DebugLayer[]) {
+      layer.destroy();
     }
 
-    /**
-     * Unsubscribe from all application events, destroy every layer, and
-     * release the overlay's internal {@link View}. Call this when you no
-     * longer need the overlay to avoid memory leaks.
-     */
-    public destroy(): void {
-        this._app.onFrame.remove(this._onFrameHandler);
-        this._app.input.onKeyDown.remove(this._onKeyDownHandler);
-        this._app.onResize.remove(this._onResizeHandler);
+    this._view.destroy();
+  }
 
-        for (const layer of Object.values(this.layers) as Array<DebugLayer>) {
-            layer.destroy();
+  private _onResize(width: number, height: number): void {
+    this._view.resize(width, height);
+    this._view.setCenter(width / 2, height / 2);
+  }
+
+  private _onFrame(delta: Time): void {
+    if (!this.visible) return;
+
+    const layers = Object.values(this.layers) as DebugLayer[];
+    const visibleLayers = layers.filter(l => l.visible);
+
+    if (visibleLayers.length === 0) return;
+
+    const backend = this._app.backend;
+    const sceneView = backend.view; // capture scene's current view
+
+    // --- World-space layers first (render under screen-space text panels) ---
+    const worldLayers = visibleLayers.filter(l => l.viewMode === 'world');
+
+    for (const layer of worldLayers) {
+      layer.update(delta);
+      layer.render(backend);
+    }
+
+    // --- Screen-space layers: swap to overlay's pixel view ---
+    const screenLayers = visibleLayers.filter(l => l.viewMode === 'screen');
+
+    if (screenLayers.length > 0) {
+      backend.setView(this._view);
+
+      try {
+        for (const layer of screenLayers) {
+          layer.update(delta);
+          layer.render(backend);
         }
-
-        this._view.destroy();
+      } finally {
+        backend.setView(sceneView);
+      }
     }
+  }
 
-    private _onResize(width: number, height: number): void {
-        this._view.resize(width, height);
-        this._view.setCenter(width / 2, height / 2);
+  private _onKeyDown(channel: number): void {
+    switch (channel) {
+      case Keyboard.F1:
+        this.layers.performance.visible = !this.layers.performance.visible;
+        break;
+      case Keyboard.F2:
+        this.layers.boundingBoxes.visible = !this.layers.boundingBoxes.visible;
+        break;
+      case Keyboard.F3:
+        this.layers.hitTest.visible = !this.layers.hitTest.visible;
+        break;
+      case Keyboard.F4:
+        this.layers.pointerStack.visible = !this.layers.pointerStack.visible;
+        break;
     }
-
-    private _onFrame(delta: Time): void {
-        if (!this.visible) return;
-
-        const layers = Object.values(this.layers) as Array<DebugLayer>;
-        const visibleLayers = layers.filter(l => l.visible);
-
-        if (visibleLayers.length === 0) return;
-
-        const backend = this._app.backend;
-        const sceneView = backend.view; // capture scene's current view
-
-        // --- World-space layers first (render under screen-space text panels) ---
-        const worldLayers = visibleLayers.filter(l => l.viewMode === 'world');
-
-        for (const layer of worldLayers) {
-            layer.update(delta);
-            layer.render(backend);
-        }
-
-        // --- Screen-space layers: swap to overlay's pixel view ---
-        const screenLayers = visibleLayers.filter(l => l.viewMode === 'screen');
-
-        if (screenLayers.length > 0) {
-            backend.setView(this._view);
-
-            try {
-                for (const layer of screenLayers) {
-                    layer.update(delta);
-                    layer.render(backend);
-                }
-            } finally {
-                backend.setView(sceneView);
-            }
-        }
-    }
-
-    private _onKeyDown(channel: number): void {
-        switch (channel) {
-            case Keyboard.F1: this.layers.performance.visible  = !this.layers.performance.visible;  break;
-            case Keyboard.F2: this.layers.boundingBoxes.visible = !this.layers.boundingBoxes.visible; break;
-            case Keyboard.F3: this.layers.hitTest.visible       = !this.layers.hitTest.visible;       break;
-            case Keyboard.F4: this.layers.pointerStack.visible  = !this.layers.pointerStack.visible;  break;
-        }
-    }
+  }
 }

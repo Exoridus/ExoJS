@@ -1,5 +1,5 @@
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 import type { RenderBackend } from '@/rendering/RenderBackend';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 
 /**
  * Abstract base class for post-process filters applied to a drawable's
@@ -13,24 +13,20 @@ import type { RenderBackend } from '@/rendering/RenderBackend';
  * {@link WebGpuShaderFilter}.
  */
 export abstract class Filter {
-    /**
-     * Execute one filter pass: sample from `input`, write the result to
-     * `output`. Both textures are the same dimensions as the filtered drawable's
-     * bounding box.
-     */
-    public abstract apply(
-        backend: RenderBackend,
-        input: RenderTexture,
-        output: RenderTexture,
-    ): void;
+  /**
+   * Execute one filter pass: sample from `input`, write the result to
+   * `output`. Both textures are the same dimensions as the filtered drawable's
+   * bounding box.
+   */
+  public abstract apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void;
 
-    /**
-     * Release any GPU-side resources held by this filter (uniform buffers,
-     * pipelines, intermediate textures). Default is a no-op for stateless
-     * filters; subclasses with state ({@link BlurFilter}, {@link ColorFilter})
-     * override.
-     */
-    public destroy(): void {
-        // no-op — subclasses with GPU state override
-    }
+  /**
+   * Release any GPU-side resources held by this filter (uniform buffers,
+   * pipelines, intermediate textures). Default is a no-op for stateless
+   * filters; subclasses with state ({@link BlurFilter}, {@link ColorFilter})
+   * override.
+   */
+  public destroy(): void {
+    // no-op — subclasses with GPU state override
+  }
 }

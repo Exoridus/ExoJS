@@ -16,10 +16,10 @@
  */
 
 describe('root index export surface snapshot', () => {
-    test('sorted runtime export names match committed snapshot', () => {
-        const exo = require('../../src/index') as Record<string, unknown>;
-        const sortedKeys = Object.keys(exo).sort();
+  test('sorted runtime export names match committed snapshot', () => {
+    const exo = require('../../src/index') as Record<string, unknown>;
+    const sortedKeys = Object.keys(exo).sort();
 
-        expect(sortedKeys).toMatchSnapshot();
-    });
+    expect(sortedKeys).toMatchSnapshot();
+  });
 });

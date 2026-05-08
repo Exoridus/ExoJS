@@ -1,40 +1,40 @@
 {
-  "name": "@codexo/exojs-examples",
-  "private": true,
-  "description": "Browser-runnable examples site for ExoJS (sibling app; not published to npm).",
-  "version": "0.0.0",
-  "type": "module",
-  "license": "MIT",
-  "author": "Dieter Giesler",
-  "scripts": {
-    "vendor:sync:exo": "tsx scripts/sync-exo-vendor.ts",
-    "vendor:sync:monaco": "tsx scripts/sync-monaco-vendor.ts",
-    "vendor:sync": "npm run vendor:sync:exo && npm run vendor:sync:monaco",
-    "assets:sync:input-prompts": "tsx scripts/sync-kenney-input-prompts.ts",
-    "dev": "npm run vendor:sync && astro dev",
-    "build": "npm run vendor:sync && astro build",
-    "preview": "astro preview",
-    "test:dist": "npm run build && node --test tests/dist-open.smoke.test.mjs",
-    "test:smoke:bundle": "node --test tests/phase1-bundle.smoke.test.mjs",
-    "test:smoke:catalog": "node --test --test-name-pattern=\"backend policy|catalog entries exist\" tests/dist-open.smoke.test.mjs",
-    "test:smoke": "npm run test:smoke:bundle && npm run test:smoke:catalog",
-    "check-ts": "astro check && tsc --noEmit --pretty"
-  },
-  "devDependencies": {
-    "@astrojs/check": "^0.9.9",
-    "@astrojs/lit": "^4.3.0",
-    "@types/node": "^25.6.0",
-    "astro": "^6.3.0",
-    "lit": "^3.3.2",
-    "playwright": "^1.59.1",
-    "sass": "^1.99.0",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
-  },
-  "dependencies": {
-    "@fontsource/inter": "^5.2.8",
-    "@fontsource/jetbrains-mono": "^5.2.8",
-    "@codexo/exojs": "file:..",
-    "monaco-editor": "0.55.1"
-  }
+    "name": "@codexo/exojs-examples",
+    "private": true,
+    "description": "Browser-runnable examples site for ExoJS (sibling app; not published to npm).",
+    "version": "0.0.0",
+    "type": "module",
+    "license": "MIT",
+    "author": "Dieter Giesler",
+    "scripts": {
+        "vendor:sync:exo": "tsx scripts/sync-exo-vendor.ts",
+        "vendor:sync:monaco": "tsx scripts/sync-monaco-vendor.ts",
+        "vendor:sync": "npm run vendor:sync:exo && npm run vendor:sync:monaco",
+        "assets:sync:input-prompts": "tsx scripts/sync-kenney-input-prompts.ts",
+        "dev": "npm run vendor:sync && astro dev",
+        "build": "npm run vendor:sync && astro build",
+        "preview": "astro preview",
+        "test:dist": "npm run build && node --test tests/dist-open.smoke.test.mjs",
+        "test:smoke:bundle": "node --test tests/phase1-bundle.smoke.test.mjs",
+        "test:smoke:catalog": "node --test --test-name-pattern=\"backend policy|catalog entries exist\" tests/dist-open.smoke.test.mjs",
+        "test:smoke": "npm run test:smoke:bundle && npm run test:smoke:catalog",
+        "check-ts": "astro check && tsc --noEmit --pretty"
+    },
+    "devDependencies": {
+        "@astrojs/check": "^0.9.9",
+        "@astrojs/lit": "^4.3.0",
+        "@types/node": "^25.6.0",
+        "astro": "^6.3.0",
+        "lit": "^3.3.2",
+        "playwright": "^1.59.1",
+        "sass": "^1.99.0",
+        "tsx": "^4.21.0",
+        "typescript": "^6.0.3"
+    },
+    "dependencies": {
+        "@fontsource/inter": "^5.2.8",
+        "@fontsource/jetbrains-mono": "^5.2.8",
+        "@codexo/exojs": "file:..",
+        "monaco-editor": "0.55.1"
+    }
 }

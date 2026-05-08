@@ -1,14 +1,14 @@
-import { clamp } from '@/math/utils';
-import type { PlaybackOptions } from '@/core/types';
 import { AbstractMedia } from '@/audio/AbstractMedia';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
-import { getAudioManager } from '@/audio/AudioManager';
 import type { AudioBus } from '@/audio/AudioBus';
+import { getAudioManager } from '@/audio/AudioManager';
+import type { PlaybackOptions } from '@/core/types';
+import { clamp } from '@/math/utils';
 
 interface MusicAudioSetup {
-    readonly audioContext: AudioContext;
-    readonly gainNode: GainNode;
-    readonly sourceNode: MediaElementAudioSourceNode;
+  readonly audioContext: AudioContext;
+  readonly gainNode: GainNode;
+  readonly sourceNode: MediaElementAudioSourceNode;
 }
 
 /**
@@ -24,178 +24,178 @@ interface MusicAudioSetup {
  * lines, or anything else where a single source per track is enough.
  */
 export class Music extends AbstractMedia {
-    private readonly _audioElement: HTMLMediaElement;
-    private _audioSetup: MusicAudioSetup | null = null;
+  private readonly _audioElement: HTMLMediaElement;
+  private _audioSetup: MusicAudioSetup | null = null;
 
-    public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
-        super(audioElement);
+  public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
+    super(audioElement);
 
-        this._audioElement = audioElement;
+    this._audioElement = audioElement;
 
-        if (options) {
-            this.applyOptions(options);
-        }
-
-        if (isAudioContextReady()) {
-            this.setupWithAudioContext(getAudioContext());
-        } else {
-            onAudioContextReady.once(this.setupWithAudioContext, this);
-        }
+    if (options) {
+      this.applyOptions(options);
     }
 
-    public setVolume(value: number): this {
-        const volume = clamp(value, 0, 2);
+    if (isAudioContextReady()) {
+      this.setupWithAudioContext(getAudioContext());
+    } else {
+      onAudioContextReady.once(this.setupWithAudioContext, this);
+    }
+  }
 
-        if (this._volume === volume) {
-            return this;
-        }
+  public setVolume(value: number): this {
+    const volume = clamp(value, 0, 2);
 
-        this._volume = volume;
-
-        if (this._audioSetup) {
-            const { gainNode, audioContext } = this._audioSetup;
-            gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 0.01);
-        }
-
-        return this;
+    if (this._volume === volume) {
+      return this;
     }
 
-    public setLoop(loop: boolean): this {
-        if (this._loop !== loop) {
-            this._loop = loop;
-            this._audioElement.loop = loop;
-        }
+    this._volume = volume;
 
-        return this;
+    if (this._audioSetup) {
+      const { gainNode, audioContext } = this._audioSetup;
+      gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 0.01);
     }
 
-    public setPlaybackRate(value: number): this {
-        const playbackRate = clamp(value, 0.1, 20);
+    return this;
+  }
 
-        if (this._playbackRate !== playbackRate) {
-            this._playbackRate = playbackRate;
-            this._audioElement.playbackRate = playbackRate;
-        }
-
-        return this;
+  public setLoop(loop: boolean): this {
+    if (this._loop !== loop) {
+      this._loop = loop;
+      this._audioElement.loop = loop;
     }
 
-    public getTime(): number {
-        return this._audioElement.currentTime;
+    return this;
+  }
+
+  public setPlaybackRate(value: number): this {
+    const playbackRate = clamp(value, 0.1, 20);
+
+    if (this._playbackRate !== playbackRate) {
+      this._playbackRate = playbackRate;
+      this._audioElement.playbackRate = playbackRate;
     }
 
-    public setTime(currentTime: number): this {
-        this._audioElement.currentTime = Math.max(0, currentTime);
+    return this;
+  }
 
-        return this;
+  public getTime(): number {
+    return this._audioElement.currentTime;
+  }
+
+  public setTime(currentTime: number): this {
+    this._audioElement.currentTime = Math.max(0, currentTime);
+
+    return this;
+  }
+
+  public setMuted(muted: boolean): this {
+    if (this._muted !== muted) {
+      this._muted = muted;
+
+      if (this._audioSetup) {
+        const { gainNode, audioContext } = this._audioSetup;
+        gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 0.01);
+      }
     }
 
-    public setMuted(muted: boolean): this {
-        if (this._muted !== muted) {
-            this._muted = muted;
+    return this;
+  }
 
-            if (this._audioSetup) {
-                const { gainNode, audioContext } = this._audioSetup;
-                gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 0.01);
-            }
-        }
+  public get paused(): boolean {
+    return this._audioElement.paused;
+  }
 
-        return this;
+  public set paused(paused: boolean) {
+    if (paused) {
+      this.pause();
+    } else {
+      this.play();
+    }
+  }
+
+  public get analyserTarget(): AudioNode | null {
+    return this._audioSetup?.gainNode ?? null;
+  }
+
+  public play(options?: Partial<PlaybackOptions>): this {
+    if (options) {
+      this.applyOptions(options);
     }
 
-    public get paused(): boolean {
-        return this._audioElement.paused;
+    if (this.paused) {
+      this._audioElement.play();
+      this.onStart.dispatch();
     }
 
-    public set paused(paused: boolean) {
-        if (paused) {
-            this.pause();
-        } else {
-            this.play();
-        }
+    return this;
+  }
+
+  public pause(options?: Partial<PlaybackOptions>): this {
+    if (options) {
+      this.applyOptions(options);
     }
 
-    public get analyserTarget(): AudioNode | null {
-        return this._audioSetup?.gainNode ?? null;
+    if (this.playing) {
+      this._audioElement.pause();
+      this.onStop.dispatch();
     }
 
-    public play(options?: Partial<PlaybackOptions>): this {
-        if (options) {
-            this.applyOptions(options);
-        }
+    return this;
+  }
 
-        if (this.paused) {
-            this._audioElement.play();
-            this.onStart.dispatch();
-        }
+  protected override _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null {
+    return this._audioSetup;
+  }
 
-        return this;
+  protected override _defaultBus(): AudioBus {
+    return getAudioManager().music;
+  }
+
+  protected override _disconnectFromBus(): void {
+    if (this._audioSetup) {
+      this._audioSetup.gainNode.disconnect();
+    }
+  }
+
+  protected override _connectToBus(): void {
+    if (this._audioSetup) {
+      const inputNode = this.bus._getInputNode();
+      if (inputNode) {
+        this._audioSetup.gainNode.connect(inputNode);
+      } else {
+        this._audioSetup.gainNode.connect(this._audioSetup.audioContext.destination);
+      }
+    }
+  }
+
+  public override destroy(): void {
+    super.destroy();
+
+    onAudioContextReady.clearByContext(this);
+
+    if (this._audioSetup) {
+      this._audioSetup.sourceNode.disconnect();
+      this._audioSetup.gainNode.disconnect();
+      this._audioSetup = null;
+    }
+  }
+
+  private setupWithAudioContext(audioContext: AudioContext): void {
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
+
+    const inputNode = this.bus._getInputNode();
+    if (inputNode) {
+      gainNode.connect(inputNode);
+    } else {
+      gainNode.connect(audioContext.destination);
     }
 
-    public pause(options?: Partial<PlaybackOptions>): this {
-        if (options) {
-            this.applyOptions(options);
-        }
+    const sourceNode = audioContext.createMediaElementSource(this._audioElement);
+    sourceNode.connect(gainNode);
 
-        if (this.playing) {
-            this._audioElement.pause();
-            this.onStop.dispatch();
-        }
-
-        return this;
-    }
-
-    protected override _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null {
-        return this._audioSetup;
-    }
-
-    protected override _defaultBus(): AudioBus {
-        return getAudioManager().music;
-    }
-
-    protected override _disconnectFromBus(): void {
-        if (this._audioSetup) {
-            this._audioSetup.gainNode.disconnect();
-        }
-    }
-
-    protected override _connectToBus(): void {
-        if (this._audioSetup) {
-            const inputNode = this.bus._getInputNode();
-            if (inputNode) {
-                this._audioSetup.gainNode.connect(inputNode);
-            } else {
-                this._audioSetup.gainNode.connect(this._audioSetup.audioContext.destination);
-            }
-        }
-    }
-
-    public override destroy(): void {
-        super.destroy();
-
-        onAudioContextReady.clearByContext(this);
-
-        if (this._audioSetup) {
-            this._audioSetup.sourceNode.disconnect();
-            this._audioSetup.gainNode.disconnect();
-            this._audioSetup = null;
-        }
-    }
-
-    private setupWithAudioContext(audioContext: AudioContext): void {
-        const gainNode = audioContext.createGain();
-        gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
-
-        const inputNode = this.bus._getInputNode();
-        if (inputNode) {
-            gainNode.connect(inputNode);
-        } else {
-            gainNode.connect(audioContext.destination);
-        }
-
-        const sourceNode = audioContext.createMediaElementSource(this._audioElement);
-        sourceNode.connect(gainNode);
-
-        this._audioSetup = { audioContext, gainNode, sourceNode };
-    }
+    this._audioSetup = { audioContext, gainNode, sourceNode };
+  }
 }

@@ -1,5 +1,5 @@
-import type { CacheRequest, CacheStrategy } from './CacheStrategy';
 import type { CacheStore } from './CacheStore';
+import type { CacheRequest, CacheStrategy } from './CacheStrategy';
 
 /**
  * {@link CacheStrategy} that always fetches from the network and never reads
@@ -13,17 +13,16 @@ import type { CacheStore } from './CacheStore';
  * {@link AssetFactory.create} again.
  */
 export class NetworkOnlyStrategy implements CacheStrategy {
+  public async resolve(request: CacheRequest, _stores: readonly CacheStore[]): Promise<unknown> {
+    const { url, requestOptions, factory, options } = request;
+    const response = await fetch(url, requestOptions);
 
-    public async resolve(request: CacheRequest, _stores: ReadonlyArray<CacheStore>): Promise<unknown> {
-        const { url, requestOptions, factory, options } = request;
-        const response = await fetch(url, requestOptions);
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch "${url}" (${response.status} ${response.statusText}).`);
-        }
-
-        const source = await factory.process(response);
-
-        return factory.create(source, options);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch "${url}" (${response.status} ${response.statusText}).`);
     }
+
+    const source = await factory.process(response);
+
+    return factory.create(source, options);
+  }
 }

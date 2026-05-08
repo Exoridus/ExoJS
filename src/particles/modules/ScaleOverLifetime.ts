@@ -1,8 +1,9 @@
 /// <reference types="@webgpu/types" />
 
-import { UpdateModule } from './UpdateModule';
-import type { ParticleSystem } from '@/particles/ParticleSystem';
 import type { Curve } from '@/particles/distributions/Curve';
+import type { ParticleSystem } from '@/particles/ParticleSystem';
+
+import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
 const lookupSize = 256;
@@ -21,58 +22,58 @@ const lookupSize = 256;
  * the inner loop.
  */
 export class ScaleOverLifetime extends UpdateModule {
-    public curve: Curve;
+  public curve: Curve;
 
-    public constructor(curve: Curve) {
-        super();
-        this.curve = curve;
+  public constructor(curve: Curve) {
+    super();
+    this.curve = curve;
+  }
+
+  public override apply(system: ParticleSystem, _dt: number): void {
+    const { scaleX, scaleY, elapsed, lifetime, liveCount } = system;
+    const curve = this.curve;
+
+    for (let i = 0; i < liveCount; i++) {
+      const t = elapsed[i] / lifetime[i];
+      const s = curve.evaluate(t);
+
+      scaleX[i] = s;
+      scaleY[i] = s;
     }
+  }
 
-    public override apply(system: ParticleSystem, _dt: number): void {
-        const { scaleX, scaleY, elapsed, lifetime, liveCount } = system;
-        const curve = this.curve;
-
-        for (let i = 0; i < liveCount; i++) {
-            const t = elapsed[i] / lifetime[i];
-            const s = curve.evaluate(t);
-
-            scaleX[i] = s;
-            scaleY[i] = s;
-        }
-    }
-
-    public override wgsl(): WgslContribution {
-        return {
-            key: 'ScaleOverLifetime',
-            textures: [{ name: 'curve', format: 'r32float' }],
-            body: `
+  public override wgsl(): WgslContribution {
+    return {
+      key: 'ScaleOverLifetime',
+      textures: [{ name: 'curve', format: 'r32float' }],
+      body: `
                 let scaleT = clamp(timing[idx].x / max(timing[idx].y, 0.000001), 0.0, 1.0);
                 let scaleSample = textureSampleLevel(u_ScaleOverLifetime_curve, u_ScaleOverLifetime_curve_sampler, scaleT, 0.0).r;
                 scales[idx] = vec2<f32>(scaleSample, scaleSample);
             `,
-        };
+    };
+  }
+
+  public override uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void {
+    const texture = textures.get('curve');
+
+    if (texture === undefined) {
+      return;
     }
 
-    public override uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void {
-        const texture = textures.get('curve');
+    const data = new Float32Array(lookupSize);
 
-        if (texture === undefined) {
-            return;
-        }
-
-        const data = new Float32Array(lookupSize);
-
-        for (let i = 0; i < lookupSize; i++) {
-            data[i] = this.curve.evaluate(i / (lookupSize - 1));
-        }
-
-        device.queue.writeTexture(
-            { texture },
-            data.buffer as ArrayBuffer,
-            { offset: 0, bytesPerRow: lookupSize * 4, rowsPerImage: 1 },
-            { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
-        );
+    for (let i = 0; i < lookupSize; i++) {
+      data[i] = this.curve.evaluate(i / (lookupSize - 1));
     }
+
+    device.queue.writeTexture(
+      { texture },
+      data.buffer,
+      { offset: 0, bytesPerRow: lookupSize * 4, rowsPerImage: 1 },
+      { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
+    );
+  }
 }
 
 /** Texture width for the curve lookup table. Exposed for ParticleGpuState. */

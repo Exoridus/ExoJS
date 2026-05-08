@@ -15,16 +15,16 @@ export type WgslPrimitive = 'f32' | 'i32' | 'u32' | 'vec2<f32>' | 'vec4<f32>';
 
 /** A named uniform field within a module's struct. Order matters — defines memory layout. */
 export interface WgslUniformField {
-    name: string;
-    type: WgslPrimitive;
+  name: string;
+  type: WgslPrimitive;
 }
 
 /** A 1D texture binding (used by Curve / Gradient lookups). */
 export interface WgslTextureBinding {
-    /** Field name within the module — referenced in WGSL as `u_${moduleKey}_${name}`. */
-    name: string;
-    /** WGSL texture format. `r32float` for Curve, `rgba8unorm` for Gradient. */
-    format: 'r32float' | 'rgba8unorm';
+  /** Field name within the module — referenced in WGSL as `u_${moduleKey}_${name}`. */
+  name: string;
+  /** WGSL texture format. `r32float` for Curve, `rgba8unorm` for Gradient. */
+  format: 'r32float' | 'rgba8unorm';
 }
 
 /**
@@ -54,20 +54,20 @@ export interface WgslTextureBinding {
  * surfaces only at pipeline-creation time.
  */
 export interface WgslContribution {
-    /** Unique key per module *class* (e.g. `'ApplyForce'`). Two ApplyForce instances on one system aren't supported — combine into one. */
-    key: string;
-    uniforms?: ReadonlyArray<WgslUniformField>;
-    textures?: ReadonlyArray<WgslTextureBinding>;
-    /**
-     * Optional WGSL declarations (functions, constants) emitted at module
-     * scope before `main()`. Use this for noise/hash helpers or any
-     * supporting function the {@link body} calls. Multiple modules can
-     * declare preludes; they're concatenated in registration order. Naming
-     * collisions across modules are the author's problem — prefix helpers
-     * with the module key (e.g. `myModule_hash`) to avoid clashes.
-     */
-    prelude?: string;
-    body: string;
+  /** Unique key per module *class* (e.g. `'ApplyForce'`). Two ApplyForce instances on one system aren't supported — combine into one. */
+  key: string;
+  uniforms?: readonly WgslUniformField[];
+  textures?: readonly WgslTextureBinding[];
+  /**
+   * Optional WGSL declarations (functions, constants) emitted at module
+   * scope before `main()`. Use this for noise/hash helpers or any
+   * supporting function the {@link body} calls. Multiple modules can
+   * declare preludes; they're concatenated in registration order. Naming
+   * collisions across modules are the author's problem — prefix helpers
+   * with the module key (e.g. `myModule_hash`) to avoid clashes.
+   */
+  prelude?: string;
+  body: string;
 }
 
 /**
@@ -77,29 +77,31 @@ export interface WgslContribution {
  *
  * Used by the codegen to size the system's combined uniform buffer.
  */
-export const wgslUniformByteSize = (fields: ReadonlyArray<WgslUniformField>): number => {
-    let offset = 0;
-    let maxAlign = 4;
+export const wgslUniformByteSize = (fields: readonly WgslUniformField[]): number => {
+  let offset = 0;
+  let maxAlign = 4;
 
-    for (const field of fields) {
-        const { size, align } = wgslFieldLayout(field.type);
+  for (const field of fields) {
+    const { size, align } = wgslFieldLayout(field.type);
 
-        offset = Math.ceil(offset / align) * align;
-        offset += size;
-        maxAlign = Math.max(maxAlign, align);
-    }
+    offset = Math.ceil(offset / align) * align;
+    offset += size;
+    maxAlign = Math.max(maxAlign, align);
+  }
 
-    return Math.ceil(offset / maxAlign) * maxAlign;
+  return Math.ceil(offset / maxAlign) * maxAlign;
 };
 
 /** Per-WGSL-primitive size and alignment in bytes. */
 export const wgslFieldLayout = (type: WgslPrimitive): { size: number; align: number } => {
-    switch (type) {
-        case 'f32': case 'i32': case 'u32':
-            return { size: 4, align: 4 };
-        case 'vec2<f32>':
-            return { size: 8, align: 8 };
-        case 'vec4<f32>':
-            return { size: 16, align: 16 };
-    }
+  switch (type) {
+    case 'f32':
+    case 'i32':
+    case 'u32':
+      return { size: 4, align: 4 };
+    case 'vec2<f32>':
+      return { size: 8, align: 8 };
+    case 'vec4<f32>':
+      return { size: 16, align: 16 };
+  }
 };

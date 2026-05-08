@@ -1,4 +1,5 @@
 import { Vector } from '@/math/Vector';
+
 import type { Distribution } from './Distribution';
 
 /**
@@ -11,21 +12,18 @@ import type { Distribution } from './Distribution';
  * knockback.sample(particle.velocity);  // writes into existing instance, no alloc
  */
 export class VectorRange implements Distribution<Vector> {
-    private readonly _scratch = new Vector();
+  private readonly _scratch = new Vector();
 
-    public constructor(
-        public minX: number,
-        public maxX: number,
-        public minY: number,
-        public maxY: number,
-    ) {}
+  public constructor(
+    public minX: number,
+    public maxX: number,
+    public minY: number,
+    public maxY: number,
+  ) {}
 
-    public sample(out: Vector = this._scratch): Vector {
-        out.set(
-            this.minX + Math.random() * (this.maxX - this.minX),
-            this.minY + Math.random() * (this.maxY - this.minY),
-        );
+  public sample(out: Vector = this._scratch): Vector {
+    out.set(this.minX + Math.random() * (this.maxX - this.minX), this.minY + Math.random() * (this.maxY - this.minY));
 
-        return out;
-    }
+    return out;
+  }
 }

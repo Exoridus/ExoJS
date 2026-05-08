@@ -1,10 +1,10 @@
 import type { AbstractMedia } from './AbstractMedia';
 
 export interface CrossFadeOptions {
-    /** Stop the `from` media after fade completes. Default true. */
-    stopAfterFade?: boolean;
-    /** Auto-play `to` if currently paused. Default true. */
-    autoPlayTarget?: boolean;
+  /** Stop the `from` media after fade completes. Default true. */
+  stopAfterFade?: boolean;
+  /** Auto-play `to` if currently paused. Default true. */
+  autoPlayTarget?: boolean;
 }
 
 /**
@@ -18,23 +18,18 @@ export interface CrossFadeOptions {
  * the fade completes). Use `await crossFade(...)` for sequential music
  * transitions, or fire-and-forget for non-blocking transitions.
  */
-export async function crossFade(
-    from: AbstractMedia,
-    to: AbstractMedia,
-    durationMs: number,
-    options: CrossFadeOptions = {},
-): Promise<void> {
-    const stopAfterFade = options.stopAfterFade ?? true;
-    const autoPlayTarget = options.autoPlayTarget ?? true;
+export async function crossFade(from: AbstractMedia, to: AbstractMedia, durationMs: number, options: CrossFadeOptions = {}): Promise<void> {
+  const stopAfterFade = options.stopAfterFade ?? true;
+  const autoPlayTarget = options.autoPlayTarget ?? true;
 
-    if (autoPlayTarget && to.paused) {
-        to.play();
-    }
+  if (autoPlayTarget && to.paused) {
+    to.play();
+  }
 
-    from.fadeOut(durationMs, { stopAfter: stopAfterFade });
-    to.fadeIn(durationMs);
+  from.fadeOut(durationMs, { stopAfter: stopAfterFade });
+  to.fadeIn(durationMs);
 
-    return new Promise<void>((resolve) => {
-        setTimeout(resolve, Math.max(0, durationMs));
-    });
+  return new Promise<void>(resolve => {
+    setTimeout(resolve, Math.max(0, durationMs));
+  });
 }

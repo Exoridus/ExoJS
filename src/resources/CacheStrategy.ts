@@ -9,16 +9,16 @@ import type { CacheStore } from './CacheStore';
  * remain stateless.
  */
 export interface CacheRequest {
-    /** The {@link AssetFactory.storageName} used as the cache namespace. */
-    readonly storageName: string;
-    /** The per-asset lookup key (typically the alias). */
-    readonly key: string;
-    /** The fully resolved URL to fetch from the network if the cache misses. */
-    readonly url: string;
-    readonly requestOptions: RequestInit;
-    readonly factory: AssetFactory;
-    /** Factory-specific options forwarded to {@link AssetFactory.create}. */
-    readonly options?: unknown;
+  /** The {@link AssetFactory.storageName} used as the cache namespace. */
+  readonly storageName: string;
+  /** The per-asset lookup key (typically the alias). */
+  readonly key: string;
+  /** The fully resolved URL to fetch from the network if the cache misses. */
+  readonly url: string;
+  readonly requestOptions: RequestInit;
+  readonly factory: AssetFactory;
+  /** Factory-specific options forwarded to {@link AssetFactory.create}. */
+  readonly options?: unknown;
 }
 
 /**
@@ -34,9 +34,9 @@ export interface CacheRequest {
  * stale-while-revalidate, or cache-only / offline-first.
  */
 export interface CacheStrategy {
-    /**
-     * Resolves a single asset according to the strategy's caching policy and
-     * returns the fully constructed resource.
-     */
-    resolve(request: CacheRequest, stores: ReadonlyArray<CacheStore>): Promise<unknown>;
+  /**
+   * Resolves a single asset according to the strategy's caching policy and
+   * returns the fully constructed resource.
+   */
+  resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown>;
 }

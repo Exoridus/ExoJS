@@ -7,11 +7,11 @@ export type { EasingFunction } from './Easing';
  * {@link Tween.stop}). `Paused` is reachable from `Active` only.
  */
 export enum TweenState {
-    Idle = 'idle',
-    Active = 'active',
-    Paused = 'paused',
-    Complete = 'complete',
-    Stopped = 'stopped',
+  Idle = 'idle',
+  Active = 'active',
+  Paused = 'paused',
+  Complete = 'complete',
+  Stopped = 'stopped',
 }
 
 /**

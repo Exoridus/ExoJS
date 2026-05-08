@@ -22,7 +22,7 @@ export type ValueOf<T> = T[keyof T];
 
 /** Strips `readonly` modifiers from every property of `T`. */
 export type Mutable<T> = {
-    -readonly[P in keyof T]: T[P]
+  -readonly [P in keyof T]: T[P];
 };
 
 /**
@@ -34,11 +34,11 @@ export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElem
 
 /** Common playback configuration for both {@link Sound} and {@link Music}. */
 export interface PlaybackOptions {
-    volume: number;
-    playbackRate: number;
-    loop: boolean;
-    muted: boolean;
-    time: number;
+  volume: number;
+  playbackRate: number;
+  loop: boolean;
+  muted: boolean;
+  time: number;
 }
 
 /**
@@ -48,8 +48,8 @@ export interface PlaybackOptions {
  * other ExoJS value classes.
  */
 export interface Cloneable {
-    clone(): this;
-    copy(source: this): this;
+  clone(): this;
+  copy(source: this): this;
 }
 
 /**
@@ -58,12 +58,12 @@ export interface Cloneable {
  * resources are held (no-op `destroy()`) so consumers can call uniformly.
  */
 export interface Destroyable {
-    destroy(): void;
+  destroy(): void;
 }
 
 /** Anything that can produce an axis-aligned bounding {@link Rectangle}. */
 export interface HasBoundingBox {
-    getBounds(): Rectangle;
+  getBounds(): Rectangle;
 }
 
 /**

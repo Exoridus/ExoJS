@@ -5,7 +5,7 @@ import type { PointLike } from '@/math/PointLike';
  * offset `(x, y)` and an array of local-space {@link PointLike} vertices.
  */
 export interface PolygonLike {
-    x: number;
-    y: number;
-    points: Array<PointLike>;
+  x: number;
+  y: number;
+  points: PointLike[];
 }

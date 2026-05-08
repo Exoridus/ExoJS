@@ -1,10 +1,11 @@
 /// <reference types="@webgpu/types" />
 
-import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
-import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
 import { Texture } from '@/rendering/texture/Texture';
 import type { BlendModes } from '@/rendering/types';
+import { AbstractWebGpuRenderer } from '@/rendering/webgpu/AbstractWebGpuRenderer';
+import type { WebGpuBackend } from '@/rendering/webgpu/WebGpuBackend';
+
 import { getWebGpuBlendState } from './WebGpuBlendState';
 
 const particleShaderSource = `
@@ -80,510 +81,546 @@ const instanceStrideBytes = 40;
 const indicesPerParticle = 6;
 const uniformByteLength = 176;
 const initialParticleCapacity = 1;
-const staticVertexData = new Float32Array([
-    0, 0,
-    1, 0,
-    1, 1,
-    0, 1,
-]);
-const staticIndexData = new Uint16Array([
-    0, 1, 2,
-    0, 2, 3,
-]);
+const staticVertexData = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
+const staticIndexData = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 interface WebGpuParticleDrawCall {
-    system: ParticleSystem;
-    texture: Texture;
-    blendMode: BlendModes;
+  system: ParticleSystem;
+  texture: Texture;
+  blendMode: BlendModes;
 }
 
 export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSystem> {
-    private readonly _drawCalls: Array<WebGpuParticleDrawCall> = [];
-    private _drawCallCount = 0;
-    private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
+  private readonly _drawCalls: WebGpuParticleDrawCall[] = [];
+  private _drawCallCount = 0;
+  private readonly _uniformData = new Float32Array(uniformByteLength / Float32Array.BYTES_PER_ELEMENT);
 
-    private _device: GPUDevice | null = null;
-    private _shaderModule: GPUShaderModule | null = null;
-    private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
-    private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
-    private _pipelineLayout: GPUPipelineLayout | null = null;
-    private _uniformBuffer: GPUBuffer | null = null;
-    private _uniformBindGroup: GPUBindGroup | null = null;
-    private _staticVertexBuffer: GPUBuffer | null = null;
-    private _instanceBuffer: GPUBuffer | null = null;
-    private _indexBuffer: GPUBuffer | null = null;
-    private _instanceBufferByteLength = 0;
-    private _instanceData: ArrayBuffer = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
-    private _float32View = new Float32Array(this._instanceData);
-    private _uint32View = new Uint32Array(this._instanceData);
-    private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
+  private _device: GPUDevice | null = null;
+  private _shaderModule: GPUShaderModule | null = null;
+  private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _pipelineLayout: GPUPipelineLayout | null = null;
+  private _uniformBuffer: GPUBuffer | null = null;
+  private _uniformBindGroup: GPUBindGroup | null = null;
+  private _staticVertexBuffer: GPUBuffer | null = null;
+  private _instanceBuffer: GPUBuffer | null = null;
+  private _indexBuffer: GPUBuffer | null = null;
+  private _instanceBufferByteLength = 0;
+  private _instanceData: ArrayBuffer = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
+  private _float32View = new Float32Array(this._instanceData);
+  private _uint32View = new Uint32Array(this._instanceData);
+  private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-    public render(system: ParticleSystem): void {
-        const backend = this._backend;
-        const texture = system.texture;
+  public render(system: ParticleSystem): void {
+    const backend = this._backend;
+    const texture = system.texture;
 
-        if (
-            backend === null
-            || !(texture instanceof Texture)
-            || texture.source === null
-            || texture.width === 0
-            || texture.height === 0
-            || system.liveCount === 0
-        ) {
-            return;
-        }
-
-        backend.setBlendMode(system.blendMode);
-        const drawCallIndex = this._drawCallCount++;
-        const drawCall = this._drawCalls[drawCallIndex];
-
-        if (drawCall) {
-            drawCall.system = system;
-            drawCall.texture = texture;
-            drawCall.blendMode = system.blendMode;
-        } else {
-            this._drawCalls.push({
-                system,
-                texture,
-                blendMode: system.blendMode,
-            });
-        }
+    if (backend === null || !(texture instanceof Texture) || texture.source === null || texture.width === 0 || texture.height === 0 || system.liveCount === 0) {
+      return;
     }
 
-    public flush(): void {
-        const backend = this._backend;
-        const device = this._device;
-        const uniformBuffer = this._uniformBuffer;
-        const uniformBindGroup = this._uniformBindGroup;
-        const staticVertexBuffer = this._staticVertexBuffer;
-        const indexBuffer = this._indexBuffer;
+    backend.setBlendMode(system.blendMode);
+    const drawCallIndex = this._drawCallCount++;
+    const drawCall = this._drawCalls[drawCallIndex];
 
-        if (!backend || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
-            return;
-        }
+    if (drawCall) {
+      drawCall.system = system;
+      drawCall.texture = texture;
+      drawCall.blendMode = system.blendMode;
+    } else {
+      this._drawCalls.push({
+        system,
+        texture,
+        blendMode: system.blendMode,
+      });
+    }
+  }
 
-        if (this._drawCallCount === 0 && !backend.clearRequested) {
-            return;
-        }
+  public flush(): void {
+    const backend = this._backend;
+    const device = this._device;
+    const uniformBuffer = this._uniformBuffer;
+    const uniformBindGroup = this._uniformBindGroup;
+    const staticVertexBuffer = this._staticVertexBuffer;
+    const indexBuffer = this._indexBuffer;
 
-        const scissor = backend.getScissorRect();
-        const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
-
-        // If no drawcalls will actually render (none queued, or the scissor
-        // clips everything), but a clear is pending, open a single empty
-        // pass so createColorAttachment consumes the clear state.
-        if (this._drawCallCount === 0 || maskClipsAll) {
-            if (backend.clearRequested) {
-                const encoder = device.createCommandEncoder();
-                const pass = encoder.beginRenderPass({
-                    colorAttachments: [backend.createColorAttachment()],
-                });
-                backend.stats.renderPasses++;
-                pass.end();
-                backend.submit(encoder.finish());
-            }
-            this._drawCallCount = 0;
-            return;
-        }
-
-        // One command encoder / pass per drawcall. Each particle system's
-        // queue.writeBuffer calls target offset 0 of the instance and uniform
-        // buffers — a single pass with multiple systems would see all
-        // writeBuffers serialize before submit, leaving only the last
-        // system's data in those buffers and making every earlier draw read
-        // the wrong data. Also: _ensureCapacity may destroy and recreate the
-        // instance buffer on growth; keeping one drawcall per pass means
-        // that destroy happens strictly between submits, so no pass holds a
-        // reference to a buffer that has since been destroyed.
-        for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
-            const drawCall = this._drawCalls[drawCallIndex];
-            const system = drawCall.system;
-            const particleCount = system.liveCount;
-
-            if (particleCount === 0) {
-                continue;
-            }
-
-            const pipeline = this._getPipeline(drawCall.blendMode, backend.renderTargetFormat);
-            const textureBinding = backend.getTextureBinding(drawCall.texture);
-            const textureBindGroup = device.createBindGroup({
-                layout: this._textureBindGroupLayout!,
-                entries: [{
-                    binding: 0,
-                    resource: textureBinding.view,
-                }, {
-                    binding: 1,
-                    resource: textureBinding.sampler,
-                }],
-            });
-
-            this._writeUniformData(backend, system, drawCall.texture);
-
-            // GPU mode: the system's compute pipeline already wrote the
-            // interleaved instance data into its own buffer. Bind it
-            // directly — no CPU pack, no writeBuffer for instance data.
-            // CPU mode: pack from CPU SoA into our owned instance buffer.
-            let drawInstanceCount = particleCount;
-            const instanceBuffer = ((): GPUBuffer => {
-                if (system.gpuMode && system.gpuState !== null) {
-                    return system.gpuState.instanceBuffer;
-                }
-
-                this._ensureCapacity(particleCount);
-                drawInstanceCount = this._writeInstanceData(system);
-                device.queue.writeBuffer(this._instanceBuffer!, 0, this._instanceData, 0, drawInstanceCount * instanceStrideBytes);
-
-                return this._instanceBuffer!;
-            })();
-
-            device.queue.writeBuffer(
-                uniformBuffer,
-                0,
-                this._uniformData.buffer as ArrayBuffer,
-                this._uniformData.byteOffset,
-                this._uniformData.byteLength
-            );
-
-            const encoder = device.createCommandEncoder();
-            const pass = encoder.beginRenderPass({
-                colorAttachments: [backend.createColorAttachment()],
-            });
-            backend.stats.renderPasses++;
-
-            if (scissor !== null) {
-                pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
-            }
-
-            pass.setBindGroup(0, uniformBindGroup);
-            pass.setPipeline(pipeline);
-            pass.setBindGroup(1, textureBindGroup);
-            pass.setVertexBuffer(0, staticVertexBuffer);
-            pass.setVertexBuffer(1, instanceBuffer);
-            pass.setIndexBuffer(indexBuffer, 'uint16');
-            pass.drawIndexed(indicesPerParticle, drawInstanceCount, 0, 0, 0);
-            backend.stats.batches++;
-            backend.stats.drawCalls++;
-
-            pass.end();
-            backend.submit(encoder.finish());
-        }
-
-        this._drawCallCount = 0;
+    if (!backend || !device || !uniformBuffer || !uniformBindGroup || !staticVertexBuffer || !this._instanceBuffer || !indexBuffer) {
+      return;
     }
 
-    public destroy(): void {
-        this.disconnect();
+    if (this._drawCallCount === 0 && !backend.clearRequested) {
+      return;
     }
 
-    protected onConnect(backend: WebGpuBackend): void {
-        this._backend = backend as WebGpuBackend;
-        this._device = this._backend.device;
-        this._shaderModule = this._device.createShaderModule({ code: particleShaderSource });
-        this._uniformBindGroupLayout = this._device.createBindGroupLayout({
-            entries: [{
-                binding: 0,
-                visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                buffer: {
-                    type: 'uniform',
-                },
-            }],
+    const scissor = backend.getScissorRect();
+    const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
+
+    // If no drawcalls will actually render (none queued, or the scissor
+    // clips everything), but a clear is pending, open a single empty
+    // pass so createColorAttachment consumes the clear state.
+    if (this._drawCallCount === 0 || maskClipsAll) {
+      if (backend.clearRequested) {
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+          colorAttachments: [backend.createColorAttachment()],
         });
-        this._textureBindGroupLayout = this._device.createBindGroupLayout({
-            entries: [{
-                binding: 0,
-                visibility: GPUShaderStage.FRAGMENT,
-                texture: {
-                    sampleType: 'float',
-                },
-            }, {
-                binding: 1,
-                visibility: GPUShaderStage.FRAGMENT,
-                sampler: {
-                    type: 'filtering',
-                },
-            }],
-        });
-        this._pipelineLayout = this._device.createPipelineLayout({
-            bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
-        });
-        this._uniformBuffer = this._device.createBuffer({
-            size: uniformByteLength,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        });
-        this._uniformBindGroup = this._device.createBindGroup({
-            layout: this._uniformBindGroupLayout,
-            entries: [{
-                binding: 0,
-                resource: {
-                    buffer: this._uniformBuffer,
-                },
-            }],
-        });
-        this._staticVertexBuffer = this._device.createBuffer({
-            size: staticVertexData.byteLength,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        });
-        this._device.queue.writeBuffer(this._staticVertexBuffer, 0, staticVertexData.buffer, staticVertexData.byteOffset, staticVertexData.byteLength);
-        this._indexBuffer = this._device.createBuffer({
-            size: staticIndexData.byteLength,
-            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-        });
-        this._device.queue.writeBuffer(this._indexBuffer, 0, staticIndexData.buffer, staticIndexData.byteOffset, staticIndexData.byteLength);
-        this._ensureCapacity(initialParticleCapacity);
+        backend.stats.renderPasses++;
+        pass.end();
+        backend.submit(encoder.finish());
+      }
+      this._drawCallCount = 0;
+      return;
     }
 
-    protected onDisconnect(): void {
-        this.flush();
+    // One command encoder / pass per drawcall. Each particle system's
+    // queue.writeBuffer calls target offset 0 of the instance and uniform
+    // buffers — a single pass with multiple systems would see all
+    // writeBuffers serialize before submit, leaving only the last
+    // system's data in those buffers and making every earlier draw read
+    // the wrong data. Also: _ensureCapacity may destroy and recreate the
+    // instance buffer on growth; keeping one drawcall per pass means
+    // that destroy happens strictly between submits, so no pass holds a
+    // reference to a buffer that has since been destroyed.
+    for (let drawCallIndex = 0; drawCallIndex < this._drawCallCount; drawCallIndex++) {
+      const drawCall = this._drawCalls[drawCallIndex];
+      const system = drawCall.system;
+      const particleCount = system.liveCount;
 
-        this._staticVertexBuffer?.destroy();
-        this._instanceBuffer?.destroy();
-        this._indexBuffer?.destroy();
-        this._uniformBuffer?.destroy();
+      if (particleCount === 0) {
+        continue;
+      }
 
-        this._pipelines.clear();
-        this._indexBuffer = null;
-        this._staticVertexBuffer = null;
-        this._instanceBuffer = null;
-        this._uniformBindGroup = null;
-        this._uniformBuffer = null;
-        this._pipelineLayout = null;
-        this._textureBindGroupLayout = null;
-        this._uniformBindGroupLayout = null;
-        this._shaderModule = null;
-        this._device = null;
-        this._backend = null;
-        this._instanceBufferByteLength = 0;
-        this._instanceData = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
-        this._float32View = new Float32Array(this._instanceData);
-        this._uint32View = new Uint32Array(this._instanceData);
-        this._drawCallCount = 0;
+      const pipeline = this._getPipeline(drawCall.blendMode, backend.renderTargetFormat);
+      const textureBinding = backend.getTextureBinding(drawCall.texture);
+      const textureBindGroup = device.createBindGroup({
+        layout: this._textureBindGroupLayout!,
+        entries: [
+          {
+            binding: 0,
+            resource: textureBinding.view,
+          },
+          {
+            binding: 1,
+            resource: textureBinding.sampler,
+          },
+        ],
+      });
+
+      this._writeUniformData(backend, system, drawCall.texture);
+
+      // GPU mode: the system's compute pipeline already wrote the
+      // interleaved instance data into its own buffer. Bind it
+      // directly — no CPU pack, no writeBuffer for instance data.
+      // CPU mode: pack from CPU SoA into our owned instance buffer.
+      let drawInstanceCount = particleCount;
+      const instanceBuffer = ((): GPUBuffer => {
+        if (system.gpuMode && system.gpuState !== null) {
+          return system.gpuState.instanceBuffer;
+        }
+
+        this._ensureCapacity(particleCount);
+        drawInstanceCount = this._writeInstanceData(system);
+        device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, drawInstanceCount * instanceStrideBytes);
+
+        return this._instanceBuffer;
+      })();
+
+      device.queue.writeBuffer(uniformBuffer, 0, this._uniformData.buffer, this._uniformData.byteOffset, this._uniformData.byteLength);
+
+      const encoder = device.createCommandEncoder();
+      const pass = encoder.beginRenderPass({
+        colorAttachments: [backend.createColorAttachment()],
+      });
+      backend.stats.renderPasses++;
+
+      if (scissor !== null) {
+        pass.setScissorRect(scissor.x, scissor.y, scissor.width, scissor.height);
+      }
+
+      pass.setBindGroup(0, uniformBindGroup);
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(1, textureBindGroup);
+      pass.setVertexBuffer(0, staticVertexBuffer);
+      pass.setVertexBuffer(1, instanceBuffer);
+      pass.setIndexBuffer(indexBuffer, 'uint16');
+      pass.drawIndexed(indicesPerParticle, drawInstanceCount, 0, 0, 0);
+      backend.stats.batches++;
+      backend.stats.drawCalls++;
+
+      pass.end();
+      backend.submit(encoder.finish());
     }
 
-    private _ensureCapacity(particleCount: number): void {
-        const requiredInstanceBytes = particleCount * instanceStrideBytes;
+    this._drawCallCount = 0;
+  }
 
-        if (requiredInstanceBytes > this._instanceData.byteLength) {
-            let byteLength = this._instanceData.byteLength;
+  public destroy(): void {
+    this.disconnect();
+  }
 
-            while (byteLength < requiredInstanceBytes) {
-                byteLength *= 2;
-            }
+  protected onConnect(backend: WebGpuBackend): void {
+    this._backend = backend;
+    this._device = this._backend.device;
+    this._shaderModule = this._device.createShaderModule({ code: particleShaderSource });
+    this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {
+            type: 'uniform',
+          },
+        },
+      ],
+    });
+    this._textureBindGroupLayout = this._device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {
+            sampleType: 'float',
+          },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {
+            type: 'filtering',
+          },
+        },
+      ],
+    });
+    this._pipelineLayout = this._device.createPipelineLayout({
+      bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
+    });
+    this._uniformBuffer = this._device.createBuffer({
+      size: uniformByteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    this._uniformBindGroup = this._device.createBindGroup({
+      layout: this._uniformBindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this._uniformBuffer,
+          },
+        },
+      ],
+    });
+    this._staticVertexBuffer = this._device.createBuffer({
+      size: staticVertexData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this._device.queue.writeBuffer(this._staticVertexBuffer, 0, staticVertexData.buffer, staticVertexData.byteOffset, staticVertexData.byteLength);
+    this._indexBuffer = this._device.createBuffer({
+      size: staticIndexData.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    this._device.queue.writeBuffer(this._indexBuffer, 0, staticIndexData.buffer, staticIndexData.byteOffset, staticIndexData.byteLength);
+    this._ensureCapacity(initialParticleCapacity);
+  }
 
-            this._instanceData = new ArrayBuffer(byteLength);
-            this._float32View = new Float32Array(this._instanceData);
-            this._uint32View = new Uint32Array(this._instanceData);
-        }
+  protected onDisconnect(): void {
+    this.flush();
 
-        if (requiredInstanceBytes > this._instanceBufferByteLength) {
-            let byteLength = this._instanceBufferByteLength || instanceStrideBytes;
+    this._staticVertexBuffer?.destroy();
+    this._instanceBuffer?.destroy();
+    this._indexBuffer?.destroy();
+    this._uniformBuffer?.destroy();
 
-            while (byteLength < requiredInstanceBytes) {
-                byteLength *= 2;
-            }
+    this._pipelines.clear();
+    this._indexBuffer = null;
+    this._staticVertexBuffer = null;
+    this._instanceBuffer = null;
+    this._uniformBindGroup = null;
+    this._uniformBuffer = null;
+    this._pipelineLayout = null;
+    this._textureBindGroupLayout = null;
+    this._uniformBindGroupLayout = null;
+    this._shaderModule = null;
+    this._device = null;
+    this._backend = null;
+    this._instanceBufferByteLength = 0;
+    this._instanceData = new ArrayBuffer(instanceStrideBytes * initialParticleCapacity);
+    this._float32View = new Float32Array(this._instanceData);
+    this._uint32View = new Uint32Array(this._instanceData);
+    this._drawCallCount = 0;
+  }
 
-            this._instanceBuffer?.destroy();
-            this._instanceBuffer = this._device!.createBuffer({
-                size: byteLength,
-                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            });
-            this._instanceBufferByteLength = byteLength;
-        }
+  private _ensureCapacity(particleCount: number): void {
+    const requiredInstanceBytes = particleCount * instanceStrideBytes;
+
+    if (requiredInstanceBytes > this._instanceData.byteLength) {
+      let byteLength = this._instanceData.byteLength;
+
+      while (byteLength < requiredInstanceBytes) {
+        byteLength *= 2;
+      }
+
+      this._instanceData = new ArrayBuffer(byteLength);
+      this._float32View = new Float32Array(this._instanceData);
+      this._uint32View = new Uint32Array(this._instanceData);
     }
 
-    private _writeUniformData(backend: WebGpuBackend, system: ParticleSystem, texture: Texture): void {
-        const projection = backend.view.getTransform().toArray(false);
-        const transform = system.getGlobalTransform().toArray(false);
-        const shouldPremultiplySample = backend.shouldPremultiplyTextureSample(texture);
-        const vertices = system.vertices;
-        const texCoords = system.texCoords;
-        const quadMinX = vertices[0];
-        const quadMinY = vertices[1];
-        const quadSizeX = vertices[2] - vertices[0];
-        const quadSizeY = vertices[3] - vertices[1];
-        const uvMinX = (texCoords[0] & 0xFFFF) / 0xFFFF;
-        const uvMinY = ((texCoords[0] >>> 16) & 0xFFFF) / 0xFFFF;
-        const uvMaxX = (texCoords[2] & 0xFFFF) / 0xFFFF;
-        const uvMaxY = ((texCoords[2] >>> 16) & 0xFFFF) / 0xFFFF;
+    if (requiredInstanceBytes > this._instanceBufferByteLength) {
+      let byteLength = this._instanceBufferByteLength || instanceStrideBytes;
 
-        this._uniformData.set([
-            projection[0], projection[1], 0, 0,
-            projection[3], projection[4], 0, 0,
-            0, 0, 1, 0,
-            projection[6], projection[7], 0, projection[8],
+      while (byteLength < requiredInstanceBytes) {
+        byteLength *= 2;
+      }
 
-            transform[0], transform[1], 0, 0,
-            transform[3], transform[4], 0, 0,
-            0, 0, 1, 0,
-            transform[6], transform[7], 0, transform[8],
+      this._instanceBuffer?.destroy();
+      this._instanceBuffer = this._device!.createBuffer({
+        size: byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      this._instanceBufferByteLength = byteLength;
+    }
+  }
 
-            shouldPremultiplySample ? 1 : 0, 0, 0, 0,
+  private _writeUniformData(backend: WebGpuBackend, system: ParticleSystem, texture: Texture): void {
+    const projection = backend.view.getTransform().toArray(false);
+    const transform = system.getGlobalTransform().toArray(false);
+    const shouldPremultiplySample = backend.shouldPremultiplyTextureSample(texture);
+    const vertices = system.vertices;
+    const texCoords = system.texCoords;
+    const quadMinX = vertices[0];
+    const quadMinY = vertices[1];
+    const quadSizeX = vertices[2] - vertices[0];
+    const quadSizeY = vertices[3] - vertices[1];
+    const uvMinX = (texCoords[0] & 0xffff) / 0xffff;
+    const uvMinY = ((texCoords[0] >>> 16) & 0xffff) / 0xffff;
+    const uvMaxX = (texCoords[2] & 0xffff) / 0xffff;
+    const uvMaxY = ((texCoords[2] >>> 16) & 0xffff) / 0xffff;
 
-            quadMinX, quadMinY, quadSizeX, quadSizeY,
-            uvMinX, uvMinY, uvMaxX, uvMaxY,
-        ]);
+    this._uniformData.set([
+      projection[0],
+      projection[1],
+      0,
+      0,
+      projection[3],
+      projection[4],
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      projection[6],
+      projection[7],
+      0,
+      projection[8],
+
+      transform[0],
+      transform[1],
+      0,
+      0,
+      transform[3],
+      transform[4],
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      transform[6],
+      transform[7],
+      0,
+      transform[8],
+
+      shouldPremultiplySample ? 1 : 0,
+      0,
+      0,
+      0,
+
+      quadMinX,
+      quadMinY,
+      quadSizeX,
+      quadSizeY,
+      uvMinX,
+      uvMinY,
+      uvMaxX,
+      uvMaxY,
+    ]);
+  }
+
+  private _writeInstanceData(system: ParticleSystem): number {
+    const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive, liveCount } = system;
+    const f32 = this._float32View;
+    const u32 = this._uint32View;
+
+    const { uvMins, uvMaxs } = this._computeFrameUvs(system);
+    const frameCount = uvMins.length / 2;
+
+    let writeIndex = 0;
+
+    for (let particleIndex = 0; particleIndex < liveCount; particleIndex++) {
+      // Skip dead slots — present in GPU-mode systems where the live
+      // range can carry holes filled in on next spawn.
+      if (alive[particleIndex] === 0) {
+        continue;
+      }
+
+      const targetIndex = writeIndex * instanceWords;
+      const frame = textureIndex[particleIndex] < frameCount ? textureIndex[particleIndex] : 0;
+      const uvBase = frame * 2;
+
+      f32[targetIndex + 0] = posX[particleIndex];
+      f32[targetIndex + 1] = posY[particleIndex];
+      f32[targetIndex + 2] = scaleX[particleIndex];
+      f32[targetIndex + 3] = scaleY[particleIndex];
+      f32[targetIndex + 4] = rotations[particleIndex];
+      u32[targetIndex + 5] = color[particleIndex];
+      f32[targetIndex + 6] = uvMins[uvBase + 0];
+      f32[targetIndex + 7] = uvMins[uvBase + 1];
+      f32[targetIndex + 8] = uvMaxs[uvBase + 0];
+      f32[targetIndex + 9] = uvMaxs[uvBase + 1];
+
+      writeIndex++;
     }
 
-    private _writeInstanceData(system: ParticleSystem): number {
-        const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive, liveCount } = system;
-        const f32 = this._float32View;
-        const u32 = this._uint32View;
+    return writeIndex;
+  }
 
-        const { uvMins, uvMaxs } = this._computeFrameUvs(system);
-        const frameCount = uvMins.length / 2;
+  /**
+   * Same atlas/UV-resolution as the WebGL2 path. Returns the per-frame
+   * (uvMin, uvMax) pairs derived from `system.frames` (or fallback to
+   * `system.textureFrame` when no atlas is declared), already flipY-
+   * adjusted for the current texture.
+   */
+  private _uvMinsScratch = new Float32Array(2);
+  private _uvMaxsScratch = new Float32Array(2);
+  private _computeFrameUvs(system: ParticleSystem): { uvMins: Float32Array; uvMaxs: Float32Array } {
+    const frames = system.frames;
+    const tex = system.texture;
+    const texW = tex.width;
+    const texH = tex.height;
+    const flipY = tex.flipY;
 
-        let writeIndex = 0;
+    const count = frames.length === 0 ? 1 : frames.length;
 
-        for (let particleIndex = 0; particleIndex < liveCount; particleIndex++) {
-            // Skip dead slots — present in GPU-mode systems where the live
-            // range can carry holes filled in on next spawn.
-            if (alive[particleIndex] === 0) {
-                continue;
-            }
-
-            const targetIndex = writeIndex * instanceWords;
-            const frame = textureIndex[particleIndex] < frameCount ? textureIndex[particleIndex] : 0;
-            const uvBase = frame * 2;
-
-            f32[targetIndex + 0] = posX[particleIndex];
-            f32[targetIndex + 1] = posY[particleIndex];
-            f32[targetIndex + 2] = scaleX[particleIndex];
-            f32[targetIndex + 3] = scaleY[particleIndex];
-            f32[targetIndex + 4] = rotations[particleIndex];
-            u32[targetIndex + 5] = color[particleIndex];
-            f32[targetIndex + 6] = uvMins[uvBase + 0];
-            f32[targetIndex + 7] = uvMins[uvBase + 1];
-            f32[targetIndex + 8] = uvMaxs[uvBase + 0];
-            f32[targetIndex + 9] = uvMaxs[uvBase + 1];
-
-            writeIndex++;
-        }
-
-        return writeIndex;
+    if (this._uvMinsScratch.length < count * 2) {
+      this._uvMinsScratch = new Float32Array(count * 2);
+      this._uvMaxsScratch = new Float32Array(count * 2);
     }
 
-    /**
-     * Same atlas/UV-resolution as the WebGL2 path. Returns the per-frame
-     * (uvMin, uvMax) pairs derived from `system.frames` (or fallback to
-     * `system.textureFrame` when no atlas is declared), already flipY-
-     * adjusted for the current texture.
-     */
-    private _uvMinsScratch = new Float32Array(2);
-    private _uvMaxsScratch = new Float32Array(2);
-    private _computeFrameUvs(system: ParticleSystem): { uvMins: Float32Array; uvMaxs: Float32Array } {
-        const frames = system.frames;
-        const tex = system.texture;
-        const texW = tex.width;
-        const texH = tex.height;
-        const flipY = tex.flipY;
+    const mins = this._uvMinsScratch;
+    const maxs = this._uvMaxsScratch;
 
-        const count = frames.length === 0 ? 1 : frames.length;
+    if (frames.length === 0) {
+      const f = system.textureFrame;
+      const minU = f.left / texW;
+      const maxU = f.right / texW;
+      const topV = f.top / texH;
+      const bottomV = f.bottom / texH;
 
-        if (this._uvMinsScratch.length < count * 2) {
-            this._uvMinsScratch = new Float32Array(count * 2);
-            this._uvMaxsScratch = new Float32Array(count * 2);
-        }
+      mins[0] = minU;
+      mins[1] = flipY ? bottomV : topV;
+      maxs[0] = maxU;
+      maxs[1] = flipY ? topV : bottomV;
 
-        const mins = this._uvMinsScratch;
-        const maxs = this._uvMaxsScratch;
-
-        if (frames.length === 0) {
-            const f = system.textureFrame;
-            const minU = f.left / texW;
-            const maxU = f.right / texW;
-            const topV = f.top / texH;
-            const bottomV = f.bottom / texH;
-
-            mins[0] = minU;
-            mins[1] = flipY ? bottomV : topV;
-            maxs[0] = maxU;
-            maxs[1] = flipY ? topV : bottomV;
-
-            return { uvMins: mins, uvMaxs: maxs };
-        }
-
-        for (let i = 0; i < frames.length; i++) {
-            const f = frames[i];
-            const o = i * 2;
-            const minU = f.left / texW;
-            const maxU = f.right / texW;
-            const topV = f.top / texH;
-            const bottomV = f.bottom / texH;
-
-            mins[o + 0] = minU;
-            mins[o + 1] = flipY ? bottomV : topV;
-            maxs[o + 0] = maxU;
-            maxs[o + 1] = flipY ? topV : bottomV;
-        }
-
-        return { uvMins: mins, uvMaxs: maxs };
+      return { uvMins: mins, uvMaxs: maxs };
     }
 
-    private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
-        const pipelineKey = `${blendMode}:${format}`;
-        const existingPipeline = this._pipelines.get(pipelineKey);
+    for (let i = 0; i < frames.length; i++) {
+      const f = frames[i];
+      const o = i * 2;
+      const minU = f.left / texW;
+      const maxU = f.right / texW;
+      const topV = f.top / texH;
+      const bottomV = f.bottom / texH;
 
-        if (existingPipeline) {
-            return existingPipeline;
-        }
-
-        const pipeline = this._device!.createRenderPipeline({
-            layout: this._pipelineLayout!,
-            vertex: {
-                module: this._shaderModule!,
-                entryPoint: 'vertexMain',
-                buffers: [{
-                    arrayStride: staticVertexStrideBytes,
-                    attributes: [{
-                        shaderLocation: 0,
-                        offset: 0,
-                        format: 'float32x2',
-                    }],
-                }, {
-                    arrayStride: instanceStrideBytes,
-                    stepMode: 'instance',
-                    attributes: [{
-                        shaderLocation: 1,
-                        offset: 0,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 2,
-                        offset: 8,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 3,
-                        offset: 16,
-                        format: 'float32',
-                    }, {
-                        shaderLocation: 4,
-                        offset: 20,
-                        format: 'unorm8x4',
-                    }, {
-                        shaderLocation: 5,
-                        offset: 24,
-                        format: 'float32x2',
-                    }, {
-                        shaderLocation: 6,
-                        offset: 32,
-                        format: 'float32x2',
-                    }],
-                }],
-            },
-            fragment: {
-                module: this._shaderModule!,
-                entryPoint: 'fragmentMain',
-                targets: [{
-                    format,
-                    blend: getWebGpuBlendState(blendMode),
-                    writeMask: GPUColorWrite.ALL,
-                }],
-            },
-            primitive: {
-                topology: 'triangle-list',
-            },
-        });
-
-        this._pipelines.set(pipelineKey, pipeline);
-
-        return pipeline;
+      mins[o + 0] = minU;
+      mins[o + 1] = flipY ? bottomV : topV;
+      maxs[o + 0] = maxU;
+      maxs[o + 1] = flipY ? topV : bottomV;
     }
+
+    return { uvMins: mins, uvMaxs: maxs };
+  }
+
+  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat): GPURenderPipeline {
+    const pipelineKey = `${blendMode}:${format}`;
+    const existingPipeline = this._pipelines.get(pipelineKey);
+
+    if (existingPipeline) {
+      return existingPipeline;
+    }
+
+    const pipeline = this._device!.createRenderPipeline({
+      layout: this._pipelineLayout!,
+      vertex: {
+        module: this._shaderModule!,
+        entryPoint: 'vertexMain',
+        buffers: [
+          {
+            arrayStride: staticVertexStrideBytes,
+            attributes: [
+              {
+                shaderLocation: 0,
+                offset: 0,
+                format: 'float32x2',
+              },
+            ],
+          },
+          {
+            arrayStride: instanceStrideBytes,
+            stepMode: 'instance',
+            attributes: [
+              {
+                shaderLocation: 1,
+                offset: 0,
+                format: 'float32x2',
+              },
+              {
+                shaderLocation: 2,
+                offset: 8,
+                format: 'float32x2',
+              },
+              {
+                shaderLocation: 3,
+                offset: 16,
+                format: 'float32',
+              },
+              {
+                shaderLocation: 4,
+                offset: 20,
+                format: 'unorm8x4',
+              },
+              {
+                shaderLocation: 5,
+                offset: 24,
+                format: 'float32x2',
+              },
+              {
+                shaderLocation: 6,
+                offset: 32,
+                format: 'float32x2',
+              },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: this._shaderModule!,
+        entryPoint: 'fragmentMain',
+        targets: [
+          {
+            format,
+            blend: getWebGpuBlendState(blendMode),
+            writeMask: GPUColorWrite.ALL,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+
+    this._pipelines.set(pipelineKey, pipeline);
+
+    return pipeline;
+  }
 }

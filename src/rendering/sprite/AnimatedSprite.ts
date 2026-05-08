@@ -1,28 +1,29 @@
 import { Signal } from '@/core/Signal';
 import type { Time } from '@/core/Time';
 import type { Rectangle } from '@/math/Rectangle';
+import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { Texture } from '@/rendering/texture/Texture';
+
 import { Sprite } from './Sprite';
 import type { Spritesheet } from './Spritesheet';
-import type { Texture } from '@/rendering/texture/Texture';
-import type { RenderTexture } from '@/rendering/texture/RenderTexture';
 
 /** Definition for a single animation clip registered on an {@link AnimatedSprite}. */
 export interface AnimatedSpriteClipDefinition {
-    readonly frames: ReadonlyArray<Rectangle>;
-    readonly fps?: number;
-    readonly loop?: boolean;
+  readonly frames: readonly Rectangle[];
+  readonly fps?: number;
+  readonly loop?: boolean;
 }
 
 /** Per-call options passed to {@link AnimatedSprite.play}. */
 export interface AnimatedSpritePlayOptions {
-    loop?: boolean;
-    restart?: boolean;
+  loop?: boolean;
+  restart?: boolean;
 }
 
 interface NormalizedAnimatedSpriteClip {
-    readonly frames: ReadonlyArray<Rectangle>;
-    readonly frameDurationMs: number;
-    readonly loop: boolean;
+  readonly frames: readonly Rectangle[];
+  readonly frameDurationMs: number;
+  readonly loop: boolean;
 }
 
 const defaultClipFps = 12;
@@ -41,254 +42,253 @@ const defaultClipFps = 12;
  * from a {@link Spritesheet}'s named animations.
  */
 export class AnimatedSprite extends Sprite {
+  private readonly _clips = new Map<string, NormalizedAnimatedSpriteClip>();
+  private _currentClipName: string | null = null;
+  private _currentFrameIndex = 0;
+  private _playing = false;
+  private _loopOverride: boolean | null = null;
+  private _elapsedFrameTimeMs = 0;
 
-    private readonly _clips = new Map<string, NormalizedAnimatedSpriteClip>();
-    private _currentClipName: string | null = null;
-    private _currentFrameIndex = 0;
-    private _playing = false;
-    private _loopOverride: boolean | null = null;
-    private _elapsedFrameTimeMs = 0;
+  public readonly onComplete = new Signal<[clip: string]>();
+  public readonly onFrame = new Signal<[clip: string, frame: number]>();
 
-    public readonly onComplete = new Signal<[clip: string]>();
-    public readonly onFrame = new Signal<[clip: string, frame: number]>();
+  public constructor(texture: Texture | RenderTexture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>) {
+    super(texture);
 
-    public constructor(texture: Texture | RenderTexture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>) {
-        super(texture);
+    if (clips) {
+      this.setClips(clips);
+    }
+  }
 
-        if (clips) {
-            this.setClips(clips);
-        }
+  public get currentClip(): string | null {
+    return this._currentClipName;
+  }
+
+  public get currentFrame(): number {
+    return this._currentFrameIndex;
+  }
+
+  public get playing(): boolean {
+    return this._playing;
+  }
+
+  /**
+   * Whether the current clip loops. Returns the per-call loop override if set,
+   * otherwise the clip's own `loop` flag.
+   */
+  public get loop(): boolean {
+    if (this._loopOverride !== null) {
+      return this._loopOverride;
     }
 
-    public get currentClip(): string | null {
-        return this._currentClipName;
+    if (!this._currentClipName) {
+      return false;
     }
 
-    public get currentFrame(): number {
-        return this._currentFrameIndex;
+    return this._clips.get(this._currentClipName)?.loop ?? false;
+  }
+
+  public set loop(loop: boolean) {
+    this._loopOverride = loop;
+  }
+
+  /** Replace all registered clips with the provided map. Clears any previously registered clips first. */
+  public setClips(clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>): this {
+    this._clips.clear();
+
+    for (const [name, clip] of Object.entries(clips)) {
+      this.defineClip(name, clip);
     }
 
-    public get playing(): boolean {
-        return this._playing;
+    return this;
+  }
+
+  /** Register a named clip. Frame rectangles are cloned so the caller may mutate the originals. */
+  public defineClip(name: string, clip: AnimatedSpriteClipDefinition): this {
+    if (name.trim().length === 0) {
+      throw new Error('AnimatedSprite clip names must be non-empty strings.');
     }
 
-    /**
-     * Whether the current clip loops. Returns the per-call loop override if set,
-     * otherwise the clip's own `loop` flag.
-     */
-    public get loop(): boolean {
-        if (this._loopOverride !== null) {
-            return this._loopOverride;
-        }
-
-        if (!this._currentClipName) {
-            return false;
-        }
-
-        return this._clips.get(this._currentClipName)?.loop ?? false;
+    if (!Array.isArray(clip.frames) || clip.frames.length === 0) {
+      throw new Error(`AnimatedSprite clip "${name}" must define at least one frame.`);
     }
 
-    public set loop(loop: boolean) {
-        this._loopOverride = loop;
+    const fps = clip.fps ?? defaultClipFps;
+
+    if (!Number.isFinite(fps) || fps <= 0) {
+      throw new Error(`AnimatedSprite clip "${name}" has an invalid fps value (${fps}).`);
     }
 
-    /** Replace all registered clips with the provided map. Clears any previously registered clips first. */
-    public setClips(clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>): this {
-        this._clips.clear();
+    this._clips.set(name, {
+      frames: clip.frames.map(frame => frame.clone()),
+      frameDurationMs: 1000 / fps,
+      loop: clip.loop ?? true,
+    });
 
-        for (const [name, clip] of Object.entries(clips)) {
-            this.defineClip(name, clip);
-        }
+    return this;
+  }
 
-        return this;
+  /** Remove a registered clip by name. Stops playback first if the clip is currently active. */
+  public removeClip(name: string): this {
+    if (this._currentClipName === name) {
+      this.stop();
     }
 
-    /** Register a named clip. Frame rectangles are cloned so the caller may mutate the originals. */
-    public defineClip(name: string, clip: AnimatedSpriteClipDefinition): this {
-        if (name.trim().length === 0) {
-            throw new Error('AnimatedSprite clip names must be non-empty strings.');
-        }
+    this._clips.delete(name);
 
-        if (!Array.isArray(clip.frames) || clip.frames.length === 0) {
-            throw new Error(`AnimatedSprite clip "${name}" must define at least one frame.`);
-        }
+    return this;
+  }
 
-        const fps = clip.fps ?? defaultClipFps;
+  /**
+   * Start playing the named clip. By default restarts from frame 0; pass
+   * `{ restart: false }` to resume from the current frame if the same clip
+   * is already active. Optionally overrides the clip's loop setting.
+   */
+  public play(name: string, options: AnimatedSpritePlayOptions = {}): this {
+    const clip = this._clips.get(name);
 
-        if (!Number.isFinite(fps) || fps <= 0) {
-            throw new Error(`AnimatedSprite clip "${name}" has an invalid fps value (${fps}).`);
-        }
-
-        this._clips.set(name, {
-            frames: clip.frames.map(frame => frame.clone()),
-            frameDurationMs: 1000 / fps,
-            loop: clip.loop ?? true,
-        });
-
-        return this;
+    if (!clip) {
+      throw new Error(`AnimatedSprite clip "${name}" is not defined.`);
     }
 
-    /** Remove a registered clip by name. Stops playback first if the clip is currently active. */
-    public removeClip(name: string): this {
-        if (this._currentClipName === name) {
-            this.stop();
-        }
+    const isSameClip = this._currentClipName === name;
+    const shouldRestart = options.restart ?? true;
 
-        this._clips.delete(name);
-
-        return this;
+    if (!isSameClip || shouldRestart) {
+      this._currentClipName = name;
+      this._currentFrameIndex = 0;
+      this._elapsedFrameTimeMs = 0;
+      this._applyFrame(clip.frames[0]);
+      this.onFrame.dispatch(name, 0);
     }
 
-    /**
-     * Start playing the named clip. By default restarts from frame 0; pass
-     * `{ restart: false }` to resume from the current frame if the same clip
-     * is already active. Optionally overrides the clip's loop setting.
-     */
-    public play(name: string, options: AnimatedSpritePlayOptions = {}): this {
-        const clip = this._clips.get(name);
+    this._loopOverride = options.loop ?? this._loopOverride;
+    this._playing = true;
 
-        if (!clip) {
-            throw new Error(`AnimatedSprite clip "${name}" is not defined.`);
-        }
+    return this;
+  }
 
-        const isSameClip = this._currentClipName === name;
-        const shouldRestart = options.restart ?? true;
+  /** Stop playback and rewind the active clip to frame 0. */
+  public stop(): this {
+    this._playing = false;
+    this._elapsedFrameTimeMs = 0;
 
-        if (!isSameClip || shouldRestart) {
-            this._currentClipName = name;
-            this._currentFrameIndex = 0;
-            this._elapsedFrameTimeMs = 0;
-            this._applyFrame(clip.frames[0]);
-            this.onFrame.dispatch(name, 0);
-        }
-
-        this._loopOverride = options.loop ?? this._loopOverride;
-        this._playing = true;
-
-        return this;
+    if (!this._currentClipName) {
+      return this;
     }
 
-    /** Stop playback and rewind the active clip to frame 0. */
-    public stop(): this {
+    const clip = this._clips.get(this._currentClipName);
+
+    if (clip && clip.frames.length > 0) {
+      this._currentFrameIndex = 0;
+      this._applyFrame(clip.frames[0]);
+      this.onFrame.dispatch(this._currentClipName, 0);
+    }
+
+    return this;
+  }
+
+  public pause(): this {
+    this._playing = false;
+
+    return this;
+  }
+
+  public resume(): this {
+    if (this._currentClipName !== null) {
+      this._playing = true;
+    }
+
+    return this;
+  }
+
+  /**
+   * Advance playback by `delta` milliseconds (or a `Time` object). Call once
+   * per frame from the game loop. Dispatches `onFrame` for each frame
+   * boundary crossed and `onComplete` when a non-looping clip ends.
+   */
+  public update(delta: Time | number): this {
+    if (!this._playing || this._currentClipName === null) {
+      return this;
+    }
+
+    const clip = this._clips.get(this._currentClipName);
+
+    if (!clip || clip.frames.length <= 1) {
+      return this;
+    }
+
+    const deltaMs = typeof delta === 'number' ? delta : delta.milliseconds;
+
+    if (deltaMs <= 0) {
+      return this;
+    }
+
+    this._elapsedFrameTimeMs += deltaMs;
+
+    while (this._elapsedFrameTimeMs >= clip.frameDurationMs) {
+      this._elapsedFrameTimeMs -= clip.frameDurationMs;
+
+      const nextFrame = this._currentFrameIndex + 1;
+
+      if (nextFrame >= clip.frames.length) {
+        if (this.loop) {
+          this._currentFrameIndex = 0;
+          this._applyFrame(clip.frames[0]);
+          this.onFrame.dispatch(this._currentClipName, 0);
+          continue;
+        }
+
+        this._currentFrameIndex = clip.frames.length - 1;
+        this._applyFrame(clip.frames[this._currentFrameIndex]);
         this._playing = false;
-        this._elapsedFrameTimeMs = 0;
+        this.onComplete.dispatch(this._currentClipName);
 
-        if (!this._currentClipName) {
-            return this;
-        }
+        break;
+      }
 
-        const clip = this._clips.get(this._currentClipName);
-
-        if (clip && clip.frames.length > 0) {
-            this._currentFrameIndex = 0;
-            this._applyFrame(clip.frames[0]);
-            this.onFrame.dispatch(this._currentClipName, 0);
-        }
-
-        return this;
+      this._currentFrameIndex = nextFrame;
+      this._applyFrame(clip.frames[this._currentFrameIndex]);
+      this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
     }
 
-    public pause(): this {
-        this._playing = false;
+    return this;
+  }
 
-        return this;
+  public override destroy(): void {
+    super.destroy();
+
+    this.onComplete.destroy();
+    this.onFrame.destroy();
+
+    for (const clip of this._clips.values()) {
+      for (const frame of clip.frames) {
+        frame.destroy();
+      }
     }
 
-    public resume(): this {
-        if (this._currentClipName !== null) {
-            this._playing = true;
-        }
+    this._clips.clear();
+  }
 
-        return this;
+  /**
+   * Construct an {@link AnimatedSprite} from the named animations defined on
+   * a {@link Spritesheet}. Each animation becomes a looping clip whose frames
+   * are the spritesheet frame rectangles in declaration order.
+   */
+  public static fromSpritesheet(spritesheet: Spritesheet): AnimatedSprite {
+    const clips: Record<string, AnimatedSpriteClipDefinition> = {};
+
+    for (const [clipName, frameNames] of spritesheet.animations) {
+      clips[clipName] = {
+        frames: frameNames.map(frameName => spritesheet.getFrame(frameName)),
+        loop: true,
+      };
     }
 
-    /**
-     * Advance playback by `delta` milliseconds (or a `Time` object). Call once
-     * per frame from the game loop. Dispatches `onFrame` for each frame
-     * boundary crossed and `onComplete` when a non-looping clip ends.
-     */
-    public update(delta: Time | number): this {
-        if (!this._playing || this._currentClipName === null) {
-            return this;
-        }
+    return new AnimatedSprite(spritesheet.texture, clips);
+  }
 
-        const clip = this._clips.get(this._currentClipName);
-
-        if (!clip || clip.frames.length <= 1) {
-            return this;
-        }
-
-        const deltaMs = typeof delta === 'number' ? delta : delta.milliseconds;
-
-        if (deltaMs <= 0) {
-            return this;
-        }
-
-        this._elapsedFrameTimeMs += deltaMs;
-
-        while (this._elapsedFrameTimeMs >= clip.frameDurationMs) {
-            this._elapsedFrameTimeMs -= clip.frameDurationMs;
-
-            const nextFrame = this._currentFrameIndex + 1;
-
-            if (nextFrame >= clip.frames.length) {
-                if (this.loop) {
-                    this._currentFrameIndex = 0;
-                    this._applyFrame(clip.frames[0]);
-                    this.onFrame.dispatch(this._currentClipName, 0);
-                    continue;
-                }
-
-                this._currentFrameIndex = clip.frames.length - 1;
-                this._applyFrame(clip.frames[this._currentFrameIndex]);
-                this._playing = false;
-                this.onComplete.dispatch(this._currentClipName);
-
-                break;
-            }
-
-            this._currentFrameIndex = nextFrame;
-            this._applyFrame(clip.frames[this._currentFrameIndex]);
-            this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
-        }
-
-        return this;
-    }
-
-    public override destroy(): void {
-        super.destroy();
-
-        this.onComplete.destroy();
-        this.onFrame.destroy();
-
-        for (const clip of this._clips.values()) {
-            for (const frame of clip.frames) {
-                frame.destroy();
-            }
-        }
-
-        this._clips.clear();
-    }
-
-    /**
-     * Construct an {@link AnimatedSprite} from the named animations defined on
-     * a {@link Spritesheet}. Each animation becomes a looping clip whose frames
-     * are the spritesheet frame rectangles in declaration order.
-     */
-    public static fromSpritesheet(spritesheet: Spritesheet): AnimatedSprite {
-        const clips: Record<string, AnimatedSpriteClipDefinition> = {};
-
-        for (const [clipName, frameNames] of spritesheet.animations) {
-            clips[clipName] = {
-                frames: frameNames.map(frameName => spritesheet.getFrame(frameName)),
-                loop: true,
-            };
-        }
-
-        return new AnimatedSprite(spritesheet.texture, clips);
-    }
-
-    private _applyFrame(frame: Rectangle): void {
-        this.setTextureFrame(frame, false);
-    }
+  private _applyFrame(frame: Rectangle): void {
+    this.setTextureFrame(frame, false);
+  }
 }

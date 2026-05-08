@@ -16,9 +16,7 @@ const syncMonacoVendor = (): void => {
             return;
         }
 
-        throw new Error(
-            `[vendor:sync] Missing monaco-editor source at ${sourceDir} and no existing vendor files at ${targetDir}.`
-        );
+        throw new Error(`[vendor:sync] Missing monaco-editor source at ${sourceDir} and no existing vendor files at ${targetDir}.`);
     }
 
     fs.rmSync(targetDir, { recursive: true, force: true });

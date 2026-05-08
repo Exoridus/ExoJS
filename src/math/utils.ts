@@ -15,9 +15,9 @@ export const degreesPerRadian = 180 / Math.PI;
  * circle centre is closest to.
  */
 export const enum VoronoiRegion {
-    left = -1,
-    middle = 0,
-    right = 1,
+  left = -1,
+  middle = 0,
+  right = 1,
 }
 
 /**
@@ -25,9 +25,9 @@ export const enum VoronoiRegion {
  * are wrapped into the positive range.
  */
 export const trimRotation = (degrees: number): number => {
-    const rotation = degrees % 360;
+  const rotation = degrees % 360;
 
-    return rotation < 0 ? rotation + 360 : rotation;
+  return rotation < 0 ? rotation + 360 : rotation;
 };
 
 /** Convert `degree` to radians. */
@@ -43,32 +43,26 @@ export const clamp = (value: number, min: number, max: number): number => Math.m
  * Return the sign of `value` as `-1`, `0`, or `1`. Unlike `Math.sign`,
  * returns `0` only for strict zero (not `-0`).
  */
-export const sign = (value: number): number => (value && (value < 0 ? -1 : 1));
+export const sign = (value: number): number => value && (value < 0 ? -1 : 1);
 
 /** Linear interpolation between `startValue` and `endValue` at normalized `ratio` ∈ [0, 1]. */
-export const lerp = (startValue: number, endValue: number, ratio: number): number => (
-    ((1 - ratio) * startValue) + (ratio * endValue)
-);
+export const lerp = (startValue: number, endValue: number, ratio: number): number => (1 - ratio) * startValue + ratio * endValue;
 
 /** Return `true` when `value` is a non-zero power of two. */
-export const isPowerOfTwo = (value: number): boolean => (
-    (value !== 0) && ((value & (value - 1)) === 0)
-);
+export const isPowerOfTwo = (value: number): boolean => value !== 0 && (value & (value - 1)) === 0;
 
 /**
  * Return `true` when `value` lies within `[min, max]` (inclusive, regardless
  * of whether `min < max`).
  */
-export const inRange = (value: number, min: number, max: number): boolean => (
-    value >= Math.min(min, max) && value <= Math.max(min, max)
-);
+export const inRange = (value: number, min: number, max: number): boolean => value >= Math.min(min, max) && value <= Math.max(min, max);
 
 /** Euclidean distance between `(x1, y1)` and `(x2, y2)`. */
 export const getDistance = (x1: number, y1: number, x2: number, y2: number): number => {
-    const offsetX = x1 - x2;
-    const offsetY = y1 - y2;
+  const offsetX = x1 - x2;
+  const offsetY = y1 - y2;
 
-    return Math.sqrt((offsetX * offsetX) + (offsetY * offsetY));
+  return Math.sqrt(offsetX * offsetX + offsetY * offsetY);
 };
 
 /**
@@ -77,36 +71,33 @@ export const getDistance = (x1: number, y1: number, x2: number, y2: number): num
  * is always pushed first. Returns `path` for chaining.
  */
 export const bezierCurveTo = (
-    fromX: number,
-    fromY: number,
-    cpX1: number,
-    cpY1: number,
-    cpX2: number,
-    cpY2: number,
-    toX: number,
-    toY: number,
-    path: Array<number> = [],
-    len = 20
-): Array<number> => {
-    path.push(fromX, fromY);
+  fromX: number,
+  fromY: number,
+  cpX1: number,
+  cpY1: number,
+  cpX2: number,
+  cpY2: number,
+  toX: number,
+  toY: number,
+  path: number[] = [],
+  len = 20,
+): number[] => {
+  path.push(fromX, fromY);
 
-    for (let i = 1; i <= len; i++) {
-        const j = i / len;
+  for (let i = 1; i <= len; i++) {
+    const j = i / len;
 
-        const dt1 = (1 - j);
-        const dt2 = dt1 * dt1;
-        const dt3 = dt2 * dt1;
+    const dt1 = 1 - j;
+    const dt2 = dt1 * dt1;
+    const dt3 = dt2 * dt1;
 
-        const t2 = j * j;
-        const t3 = t2 * j;
+    const t2 = j * j;
+    const t3 = t2 * j;
 
-        path.push(
-            (dt3 * fromX) + (3 * dt2 * j * cpX1) + (3 * dt1 * t2 * cpX2) + (t3 * toX),
-            (dt3 * fromY) + (3 * dt2 * j * cpY1) + (3 * dt1 * t2 * cpY2) + (t3 * toY)
-        );
-    }
+    path.push(dt3 * fromX + 3 * dt2 * j * cpX1 + 3 * dt1 * t2 * cpX2 + t3 * toX, dt3 * fromY + 3 * dt2 * j * cpY1 + 3 * dt1 * t2 * cpY2 + t3 * toY);
+  }
 
-    return path;
+  return path;
 };
 
 /**
@@ -114,26 +105,14 @@ export const bezierCurveTo = (
  * (including `t = 0` and `t = 1`) and append the resulting `(x, y)` pairs to
  * `path`. Returns `path` for chaining.
  */
-export const quadraticCurveTo = (
-    fromX: number,
-    fromY: number,
-    cpX: number,
-    cpY: number,
-    toX: number,
-    toY: number,
-    path: Array<number> = [],
-    len = 20
-): Array<number> => {
-    for (let i = 0; i <= len; i++) {
-        const ratio = i / len;
+export const quadraticCurveTo = (fromX: number, fromY: number, cpX: number, cpY: number, toX: number, toY: number, path: number[] = [], len = 20): number[] => {
+  for (let i = 0; i <= len; i++) {
+    const ratio = i / len;
 
-        path.push(
-            lerp(lerp(fromX, cpX, ratio), lerp(cpX, toX, ratio), ratio),
-            lerp(lerp(fromY, cpY, ratio), lerp(cpY, toY, ratio), ratio)
-        );
-    }
+    path.push(lerp(lerp(fromX, cpX, ratio), lerp(cpX, toX, ratio), ratio), lerp(lerp(fromY, cpY, ratio), lerp(cpY, toY, ratio), ratio));
+  }
 
-    return path;
+  return path;
 };
 
 /**
@@ -142,13 +121,13 @@ export const quadraticCurveTo = (
  * past the line end, and `middle` when it projects onto the segment.
  */
 export const getVoronoiRegion = (line: Vector, point: Vector): VoronoiRegion => {
-    const product = point.dot(line.x, line.y);
+  const product = point.dot(line.x, line.y);
 
-    if (product < 0) {
-        return VoronoiRegion.left;
-    } else if (product > line.lengthSq) {
-        return VoronoiRegion.right;
-    } else {
-        return VoronoiRegion.middle;
-    }
+  if (product < 0) {
+    return VoronoiRegion.left;
+  } else if (product > line.lengthSq) {
+    return VoronoiRegion.right;
+  } else {
+    return VoronoiRegion.middle;
+  }
 };

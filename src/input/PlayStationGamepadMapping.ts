@@ -1,5 +1,5 @@
-import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { GamepadMappingFamily } from './GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 
 /**
  * Mapping for Sony PlayStation controllers, covering DualShock 4 and
@@ -10,5 +10,5 @@ import { GamepadMappingFamily } from './GamepadMapping';
  * surfaced through the Touchpad, Share, and Capture channels respectively.
  */
 export class PlayStationGamepadMapping extends GenericDualAnalogGamepadMapping {
-    public override readonly family = GamepadMappingFamily.PlayStation;
+  public override readonly family = GamepadMappingFamily.PlayStation;
 }

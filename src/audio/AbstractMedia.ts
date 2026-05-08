@@ -1,11 +1,11 @@
+import type { AudioBus } from '@/audio/AudioBus';
 import type { Media } from '@/audio/Media';
 import { Signal } from '@/core/Signal';
 import type { PlaybackOptions } from '@/core/types';
-import type { AudioBus } from '@/audio/AudioBus';
 
 /** Initial state passed to the {@link AbstractMedia} constructor by subclasses. */
 export interface AbstractMediaInitialState extends Omit<PlaybackOptions, 'time'> {
-    duration: number;
+  duration: number;
 }
 
 /**
@@ -19,234 +19,233 @@ export interface AbstractMediaInitialState extends Omit<PlaybackOptions, 'time'>
  * `AudioBufferSourceNode` (Sound) or `MediaElementAudioSourceNode` (Music).
  */
 export abstract class AbstractMedia implements Media {
+  public readonly onStart = new Signal();
+  public readonly onStop = new Signal();
 
-    public readonly onStart = new Signal();
-    public readonly onStop = new Signal();
+  protected readonly _duration: number;
+  protected _volume: number;
+  protected _playbackRate: number;
+  protected _loop: boolean;
+  protected _muted: boolean;
+  protected _bus: AudioBus | null = null;
 
-    protected readonly _duration: number;
-    protected _volume: number;
-    protected _playbackRate: number;
-    protected _loop: boolean;
-    protected _muted: boolean;
-    protected _bus: AudioBus | null = null;
+  public abstract get paused(): boolean;
+  public abstract set paused(paused: boolean);
+  public abstract get analyserTarget(): AudioNode | null;
 
-    public abstract get paused(): boolean;
-    public abstract set paused(paused: boolean);
-    public abstract get analyserTarget(): AudioNode | null;
+  public get bus(): AudioBus {
+    return this._bus ?? this._defaultBus();
+  }
 
-    public get bus(): AudioBus {
-        return this._bus ?? this._defaultBus();
+  public set bus(bus: AudioBus) {
+    if (this._bus === bus) return;
+    this._disconnectFromBus();
+    this._bus = bus;
+    this._connectToBus();
+  }
+
+  /** Returns the default bus for this media type. Subclasses override. */
+  protected abstract _defaultBus(): AudioBus;
+
+  protected abstract _disconnectFromBus(): void;
+  protected abstract _connectToBus(): void;
+
+  public get duration(): number {
+    return this._duration;
+  }
+
+  public get volume(): number {
+    return this._volume;
+  }
+
+  public set volume(volume: number) {
+    this.setVolume(volume);
+  }
+
+  public get loop(): boolean {
+    return this._loop;
+  }
+
+  public set loop(loop: boolean) {
+    this.setLoop(loop);
+  }
+
+  public get playbackRate(): number {
+    return this._playbackRate;
+  }
+
+  public set playbackRate(playbackRate: number) {
+    this.setPlaybackRate(playbackRate);
+  }
+
+  public get currentTime(): number {
+    return this.getTime();
+  }
+
+  public set currentTime(currentTime: number) {
+    this.setTime(currentTime);
+  }
+
+  public get muted(): boolean {
+    return this._muted;
+  }
+
+  public set muted(muted: boolean) {
+    this.setMuted(muted);
+  }
+
+  public get progress(): number {
+    const elapsed = this.currentTime;
+    const duration = this.duration;
+
+    return (elapsed % duration) / duration;
+  }
+
+  public get playing(): boolean {
+    return !this.paused;
+  }
+
+  public set playing(playing: boolean) {
+    if (playing) {
+      this.play();
+    } else {
+      this.pause();
+    }
+  }
+
+  protected constructor(initialState: AbstractMediaInitialState) {
+    const { duration, volume, playbackRate, loop, muted } = initialState;
+
+    this._duration = duration;
+    this._volume = volume;
+    this._playbackRate = playbackRate;
+    this._loop = loop;
+    this._muted = muted;
+  }
+
+  public abstract play(options?: Partial<PlaybackOptions>): this;
+  public abstract pause(options?: Partial<PlaybackOptions>): this;
+  public abstract setVolume(volume: number): this;
+  public abstract setLoop(loop: boolean): this;
+  public abstract setPlaybackRate(playbackRate: number): this;
+  public abstract getTime(): number;
+  public abstract setTime(time: number): this;
+  public abstract setMuted(muted: boolean): this;
+
+  protected abstract _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null;
+
+  private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
+
+  private _clearScheduledStop(): void {
+    if (this._scheduledStopId !== null) {
+      clearTimeout(this._scheduledStopId);
+      this._scheduledStopId = null;
+    }
+  }
+
+  public fadeIn(durationMs: number): this {
+    this._clearScheduledStop();
+
+    if (durationMs <= 0) {
+      if (this.paused) this.play();
+
+      return this;
     }
 
-    public set bus(bus: AudioBus) {
-        if (this._bus === bus) return;
-        this._disconnectFromBus();
-        this._bus = bus;
-        this._connectToBus();
+    const setup = this._getAudioSetup();
+
+    if (!setup) return this;
+
+    if (this.paused) this.play();
+
+    const ctx = setup.audioContext;
+    const target = this.muted ? 0 : this._volume;
+    const node = setup.gainNode;
+
+    node.gain.cancelScheduledValues(ctx.currentTime);
+    node.gain.setValueAtTime(0, ctx.currentTime);
+    node.gain.linearRampToValueAtTime(target, ctx.currentTime + durationMs / 1000);
+
+    return this;
+  }
+
+  public fadeOut(durationMs: number, options: { stopAfter?: boolean } = {}): this {
+    const stopAfter = options.stopAfter ?? true;
+
+    if (durationMs <= 0) {
+      if (stopAfter) this.pause();
+
+      return this;
     }
 
-    /** Returns the default bus for this media type. Subclasses override. */
-    protected abstract _defaultBus(): AudioBus;
+    const setup = this._getAudioSetup();
 
-    protected abstract _disconnectFromBus(): void;
-    protected abstract _connectToBus(): void;
+    if (!setup) {
+      if (stopAfter) this.pause();
 
-    public get duration(): number {
-        return this._duration;
+      return this;
     }
 
-    public get volume(): number {
-        return this._volume;
+    const ctx = setup.audioContext;
+    const node = setup.gainNode;
+
+    node.gain.cancelScheduledValues(ctx.currentTime);
+    node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
+    node.gain.linearRampToValueAtTime(0, ctx.currentTime + durationMs / 1000);
+
+    if (stopAfter) {
+      this._clearScheduledStop();
+      this._scheduledStopId = setTimeout(() => {
+        this._scheduledStopId = null;
+        this.pause();
+      }, durationMs);
     }
 
-    public set volume(volume: number) {
-        this.setVolume(volume);
+    return this;
+  }
+
+  public stop(options?: Partial<PlaybackOptions>): this {
+    this.pause(options);
+    this.currentTime = 0;
+
+    return this;
+  }
+
+  public toggle(options?: Partial<PlaybackOptions>): this {
+    return this.paused ? this.play(options) : this.pause(options);
+  }
+
+  public applyOptions(options: Partial<PlaybackOptions> = {}): this {
+    const { volume, loop, playbackRate, time, muted } = options;
+
+    if (volume !== undefined) {
+      this.volume = volume;
     }
 
-    public get loop(): boolean {
-        return this._loop;
+    if (loop !== undefined) {
+      this.loop = loop;
     }
 
-    public set loop(loop: boolean) {
-        this.setLoop(loop);
+    if (playbackRate !== undefined) {
+      this.playbackRate = playbackRate;
     }
 
-    public get playbackRate(): number {
-        return this._playbackRate;
+    if (time !== undefined) {
+      this.currentTime = time;
     }
 
-    public set playbackRate(playbackRate: number) {
-        this.setPlaybackRate(playbackRate);
+    if (muted !== undefined) {
+      this.muted = muted;
     }
 
-    public get currentTime(): number {
-        return this.getTime();
-    }
+    return this;
+  }
 
-    public set currentTime(currentTime: number) {
-        this.setTime(currentTime)
-    }
+  public destroy(): void {
+    this._clearScheduledStop();
+    this.stop();
 
-    public get muted(): boolean {
-        return this._muted;
-    }
-
-    public set muted(muted: boolean) {
-        this.setMuted(muted);
-    }
-
-    public get progress(): number {
-        const elapsed = this.currentTime;
-        const duration = this.duration;
-
-        return ((elapsed % duration) / duration);
-    }
-
-    public get playing(): boolean {
-        return !this.paused;
-    }
-
-    public set playing(playing: boolean) {
-        if (playing) {
-            this.play();
-        } else {
-            this.pause();
-        }
-    }
-
-    protected constructor(initialState: AbstractMediaInitialState) {
-        const { duration, volume, playbackRate, loop, muted } = initialState;
-
-        this._duration = duration;
-        this._volume = volume;
-        this._playbackRate = playbackRate;
-        this._loop = loop;
-        this._muted = muted;
-    }
-
-    public abstract play(options?: Partial<PlaybackOptions>): this;
-    public abstract pause(options?: Partial<PlaybackOptions>): this;
-    public abstract setVolume(volume: number): this;
-    public abstract setLoop(loop: boolean): this;
-    public abstract setPlaybackRate(playbackRate: number): this;
-    public abstract getTime(): number;
-    public abstract setTime(time: number): this;
-    public abstract setMuted(muted: boolean): this;
-
-    protected abstract _getAudioSetup(): { audioContext: AudioContext; gainNode: GainNode } | null;
-
-    private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
-
-    private _clearScheduledStop(): void {
-        if (this._scheduledStopId !== null) {
-            clearTimeout(this._scheduledStopId);
-            this._scheduledStopId = null;
-        }
-    }
-
-    public fadeIn(durationMs: number): this {
-        this._clearScheduledStop();
-
-        if (durationMs <= 0) {
-            if (this.paused) this.play();
-
-            return this;
-        }
-
-        const setup = this._getAudioSetup();
-
-        if (!setup) return this;
-
-        if (this.paused) this.play();
-
-        const ctx = setup.audioContext;
-        const target = this.muted ? 0 : this._volume;
-        const node = setup.gainNode;
-
-        node.gain.cancelScheduledValues(ctx.currentTime);
-        node.gain.setValueAtTime(0, ctx.currentTime);
-        node.gain.linearRampToValueAtTime(target, ctx.currentTime + durationMs / 1000);
-
-        return this;
-    }
-
-    public fadeOut(durationMs: number, options: { stopAfter?: boolean } = {}): this {
-        const stopAfter = options.stopAfter ?? true;
-
-        if (durationMs <= 0) {
-            if (stopAfter) this.pause();
-
-            return this;
-        }
-
-        const setup = this._getAudioSetup();
-
-        if (!setup) {
-            if (stopAfter) this.pause();
-
-            return this;
-        }
-
-        const ctx = setup.audioContext;
-        const node = setup.gainNode;
-
-        node.gain.cancelScheduledValues(ctx.currentTime);
-        node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-        node.gain.linearRampToValueAtTime(0, ctx.currentTime + durationMs / 1000);
-
-        if (stopAfter) {
-            this._clearScheduledStop();
-            this._scheduledStopId = setTimeout(() => {
-                this._scheduledStopId = null;
-                this.pause();
-            }, durationMs);
-        }
-
-        return this;
-    }
-
-    public stop(options?: Partial<PlaybackOptions>): this {
-        this.pause(options);
-        this.currentTime = 0;
-
-        return this;
-    }
-
-    public toggle(options?: Partial<PlaybackOptions>): this {
-        return this.paused ? this.play(options) : this.pause(options);
-    }
-
-    public applyOptions(options: Partial<PlaybackOptions> = {}): this {
-        const { volume, loop, playbackRate, time, muted } = options;
-
-        if (volume !== undefined) {
-            this.volume = volume;
-        }
-
-        if (loop !== undefined) {
-            this.loop = loop;
-        }
-
-        if (playbackRate !== undefined) {
-            this.playbackRate = playbackRate;
-        }
-
-        if (time !== undefined) {
-            this.currentTime = time;
-        }
-
-        if (muted !== undefined) {
-            this.muted = muted;
-        }
-
-        return this;
-    }
-
-    public destroy(): void {
-        this._clearScheduledStop();
-        this.stop();
-
-        this.onStart.destroy();
-        this.onStop.destroy();
-    }
+    this.onStart.destroy();
+    this.onStop.destroy();
+  }
 }

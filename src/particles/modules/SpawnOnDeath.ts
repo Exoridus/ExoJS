@@ -1,5 +1,6 @@
-import { DeathModule } from './DeathModule';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
+
+import { DeathModule } from './DeathModule';
 import type { SpawnModule } from './SpawnModule';
 
 /**
@@ -16,39 +17,39 @@ import type { SpawnModule } from './SpawnModule';
  * configure the child's velocity distribution to match.
  */
 export class SpawnOnDeath extends DeathModule {
-    public targetSystem: ParticleSystem;
-    public spawner: SpawnModule;
+  public targetSystem: ParticleSystem;
+  public spawner: SpawnModule;
 
-    /** Number of times to invoke the spawner per dying particle. Default 1. */
-    public count: number;
+  /** Number of times to invoke the spawner per dying particle. Default 1. */
+  public count: number;
 
-    public constructor(targetSystem: ParticleSystem, spawner: SpawnModule, count: number = 1) {
-        super();
-        this.targetSystem = targetSystem;
-        this.spawner = spawner;
-        this.count = count;
+  public constructor(targetSystem: ParticleSystem, spawner: SpawnModule, count = 1) {
+    super();
+    this.targetSystem = targetSystem;
+    this.spawner = spawner;
+    this.count = count;
+  }
+
+  public override onDeath(parent: ParticleSystem, slot: number): void {
+    const target = this.targetSystem;
+    const x = parent.posX[slot];
+    const y = parent.posY[slot];
+
+    // Snapshot the target's pre-spawn count so we can apply the
+    // position to whichever slots the spawner adds.
+    const before = target.liveCount;
+
+    for (let n = 0; n < this.count; n++) {
+      this.spawner.apply(target, 0);
     }
 
-    public override onDeath(parent: ParticleSystem, slot: number): void {
-        const target = this.targetSystem;
-        const x = parent.posX[slot];
-        const y = parent.posY[slot];
+    const added = target.liveCount - before;
 
-        // Snapshot the target's pre-spawn count so we can apply the
-        // position to whichever slots the spawner adds.
-        const before = target.liveCount;
+    for (let i = 0; i < added; i++) {
+      const dst = before + i;
 
-        for (let n = 0; n < this.count; n++) {
-            this.spawner.apply(target, 0);
-        }
-
-        const added = target.liveCount - before;
-
-        for (let i = 0; i < added; i++) {
-            const dst = before + i;
-
-            target.posX[dst] += x;
-            target.posY[dst] += y;
-        }
+      target.posX[dst] += x;
+      target.posY[dst] += y;
     }
+  }
 }

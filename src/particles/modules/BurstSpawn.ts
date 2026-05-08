@@ -1,16 +1,17 @@
-import { Vector } from '@/math/Vector';
 import { Color } from '@/core/Color';
-import { SpawnModule } from './SpawnModule';
-import type { ParticleSystem } from '@/particles/ParticleSystem';
+import { Vector } from '@/math/Vector';
 import type { Distribution } from '@/particles/distributions/Distribution';
+import type { ParticleSystem } from '@/particles/ParticleSystem';
+
+import { SpawnModule } from './SpawnModule';
 
 /**
  * Burst trigger schedule. The module fires at `time` seconds (since
  * registration), spawning `count` particles in one frame.
  */
 export interface BurstSchedule {
-    time: number;
-    count: number;
+  time: number;
+  count: number;
 }
 
 /**
@@ -18,17 +19,17 @@ export interface BurstSchedule {
  * {@link RateSpawnConfig} except no rate — the schedule drives counts.
  */
 export interface BurstSpawnConfig {
-    schedule: ReadonlyArray<BurstSchedule>;
-    /** Whether to repeat the schedule from t=0 once exhausted. Default `false`. */
-    loop?: boolean;
-    lifetime?: Distribution<number>;
-    position?: Distribution<Vector>;
-    velocity?: Distribution<Vector>;
-    scale?: Distribution<Vector>;
-    rotation?: Distribution<number>;
-    rotationSpeed?: Distribution<number>;
-    tint?: Distribution<Color>;
-    textureIndex?: Distribution<number>;
+  schedule: readonly BurstSchedule[];
+  /** Whether to repeat the schedule from t=0 once exhausted. Default `false`. */
+  loop?: boolean;
+  lifetime?: Distribution<number>;
+  position?: Distribution<Vector>;
+  velocity?: Distribution<Vector>;
+  scale?: Distribution<Vector>;
+  rotation?: Distribution<number>;
+  rotationSpeed?: Distribution<number>;
+  tint?: Distribution<Color>;
+  textureIndex?: Distribution<number>;
 }
 
 /**
@@ -43,92 +44,92 @@ export interface BurstSpawnConfig {
  * });
  */
 export class BurstSpawn extends SpawnModule {
-    public config: BurstSpawnConfig;
+  public config: BurstSpawnConfig;
 
-    private _elapsed = 0;
-    private _nextIndex = 0;
-    private readonly _vec = new Vector();
-    private readonly _color = new Color();
+  private _elapsed = 0;
+  private _nextIndex = 0;
+  private readonly _vec = new Vector();
+  private readonly _color = new Color();
 
-    public constructor(config: BurstSpawnConfig) {
-        super();
-        this.config = config;
+  public constructor(config: BurstSpawnConfig) {
+    super();
+    this.config = config;
+  }
+
+  public override apply(system: ParticleSystem, dt: number): void {
+    const cfg = this.config;
+    const schedule = cfg.schedule;
+
+    if (schedule.length === 0) {
+      return;
     }
 
-    public override apply(system: ParticleSystem, dt: number): void {
-        const cfg = this.config;
-        const schedule = cfg.schedule;
+    this._elapsed += dt;
 
-        if (schedule.length === 0) {
-            return;
-        }
-
-        this._elapsed += dt;
-
-        while (this._nextIndex < schedule.length && this._elapsed >= schedule[this._nextIndex].time) {
-            this._spawnBurst(system, schedule[this._nextIndex].count);
-            this._nextIndex++;
-        }
-
-        if (cfg.loop && this._nextIndex >= schedule.length) {
-            this._elapsed = 0;
-            this._nextIndex = 0;
-        }
+    while (this._nextIndex < schedule.length && this._elapsed >= schedule[this._nextIndex].time) {
+      this._spawnBurst(system, schedule[this._nextIndex].count);
+      this._nextIndex++;
     }
 
-    /** Restart the schedule from t=0. */
-    public reset(): this {
-        this._elapsed = 0;
-        this._nextIndex = 0;
-
-        return this;
+    if (cfg.loop && this._nextIndex >= schedule.length) {
+      this._elapsed = 0;
+      this._nextIndex = 0;
     }
+  }
 
-    private _spawnBurst(system: ParticleSystem, count: number): void {
-        const cfg = this.config;
-        const v = this._vec;
-        const c = this._color;
+  /** Restart the schedule from t=0. */
+  public reset(): this {
+    this._elapsed = 0;
+    this._nextIndex = 0;
 
-        for (let i = 0; i < count; i++) {
-            const slot = system.spawn();
+    return this;
+  }
 
-            if (slot < 0) {
-                return;
-            }
+  private _spawnBurst(system: ParticleSystem, count: number): void {
+    const cfg = this.config;
+    const v = this._vec;
+    const c = this._color;
 
-            system.lifetime[slot] = cfg.lifetime ? cfg.lifetime.sample() : 1;
+    for (let i = 0; i < count; i++) {
+      const slot = system.spawn();
 
-            if (cfg.position) {
-                cfg.position.sample(v);
-                system.posX[slot] = v.x;
-                system.posY[slot] = v.y;
-            } else {
-                system.posX[slot] = 0;
-                system.posY[slot] = 0;
-            }
+      if (slot < 0) {
+        return;
+      }
 
-            if (cfg.velocity) {
-                cfg.velocity.sample(v);
-                system.velX[slot] = v.x;
-                system.velY[slot] = v.y;
-            } else {
-                system.velX[slot] = 0;
-                system.velY[slot] = 0;
-            }
+      system.lifetime[slot] = cfg.lifetime ? cfg.lifetime.sample() : 1;
 
-            if (cfg.scale) {
-                cfg.scale.sample(v);
-                system.scaleX[slot] = v.x;
-                system.scaleY[slot] = v.y;
-            } else {
-                system.scaleX[slot] = 1;
-                system.scaleY[slot] = 1;
-            }
+      if (cfg.position) {
+        cfg.position.sample(v);
+        system.posX[slot] = v.x;
+        system.posY[slot] = v.y;
+      } else {
+        system.posX[slot] = 0;
+        system.posY[slot] = 0;
+      }
 
-            system.rotations[slot] = cfg.rotation ? cfg.rotation.sample() : 0;
-            system.rotationSpeeds[slot] = cfg.rotationSpeed ? cfg.rotationSpeed.sample() : 0;
-            system.color[slot] = cfg.tint ? cfg.tint.sample(c).toRgba() : 0xffffffff;
-            system.textureIndex[slot] = cfg.textureIndex ? (cfg.textureIndex.sample() | 0) : 0;
-        }
+      if (cfg.velocity) {
+        cfg.velocity.sample(v);
+        system.velX[slot] = v.x;
+        system.velY[slot] = v.y;
+      } else {
+        system.velX[slot] = 0;
+        system.velY[slot] = 0;
+      }
+
+      if (cfg.scale) {
+        cfg.scale.sample(v);
+        system.scaleX[slot] = v.x;
+        system.scaleY[slot] = v.y;
+      } else {
+        system.scaleX[slot] = 1;
+        system.scaleY[slot] = 1;
+      }
+
+      system.rotations[slot] = cfg.rotation ? cfg.rotation.sample() : 0;
+      system.rotationSpeeds[slot] = cfg.rotationSpeed ? cfg.rotationSpeed.sample() : 0;
+      system.color[slot] = cfg.tint ? cfg.tint.sample(c).toRgba() : 0xffffffff;
+      system.textureIndex[slot] = cfg.textureIndex ? cfg.textureIndex.sample() | 0 : 0;
     }
+  }
 }

@@ -1,5 +1,5 @@
-import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { GamepadMappingFamily } from './GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 
 /**
  * Mapping for Microsoft Xbox controllers (Xbox One, Xbox Series X/S, and
@@ -10,5 +10,5 @@ import { GamepadMappingFamily } from './GamepadMapping';
  * natively. The Share button (Xbox Series) maps to the Share channel.
  */
 export class XboxGamepadMapping extends GenericDualAnalogGamepadMapping {
-    public override readonly family = GamepadMappingFamily.Xbox;
+  public override readonly family = GamepadMappingFamily.Xbox;
 }

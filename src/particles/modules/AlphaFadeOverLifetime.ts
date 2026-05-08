@@ -1,8 +1,9 @@
 /// <reference types="@webgpu/types" />
 
-import { UpdateModule } from './UpdateModule';
-import type { ParticleSystem } from '@/particles/ParticleSystem';
 import type { Curve } from '@/particles/distributions/Curve';
+import type { ParticleSystem } from '@/particles/ParticleSystem';
+
+import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
 const lookupSize = 256;
@@ -21,57 +22,57 @@ const lookupSize = 256;
  * existing color word with a single mask + shift.
  */
 export class AlphaFadeOverLifetime extends UpdateModule {
-    public curve: Curve;
+  public curve: Curve;
 
-    public constructor(curve: Curve) {
-        super();
-        this.curve = curve;
+  public constructor(curve: Curve) {
+    super();
+    this.curve = curve;
+  }
+
+  public override apply(system: ParticleSystem, _dt: number): void {
+    const { color, elapsed, lifetime, liveCount } = system;
+    const curve = this.curve;
+
+    for (let i = 0; i < liveCount; i++) {
+      const t = elapsed[i] / lifetime[i];
+      const a = curve.evaluate(t);
+      const alphaByte = (Math.max(0, Math.min(1, a)) * 255) & 255;
+
+      color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
     }
+  }
 
-    public override apply(system: ParticleSystem, _dt: number): void {
-        const { color, elapsed, lifetime, liveCount } = system;
-        const curve = this.curve;
-
-        for (let i = 0; i < liveCount; i++) {
-            const t = elapsed[i] / lifetime[i];
-            const a = curve.evaluate(t);
-            const alphaByte = (Math.max(0, Math.min(1, a)) * 255) & 255;
-
-            color[i] = (color[i] & 0x00ffffff) | (alphaByte << 24);
-        }
-    }
-
-    public override wgsl(): WgslContribution {
-        return {
-            key: 'AlphaFadeOverLifetime',
-            textures: [{ name: 'curve', format: 'r32float' }],
-            body: `
+  public override wgsl(): WgslContribution {
+    return {
+      key: 'AlphaFadeOverLifetime',
+      textures: [{ name: 'curve', format: 'r32float' }],
+      body: `
                 let alphaT = clamp(timing[idx].x / max(timing[idx].y, 0.000001), 0.0, 1.0);
                 let alphaSample = textureSampleLevel(u_AlphaFadeOverLifetime_curve, u_AlphaFadeOverLifetime_curve_sampler, alphaT, 0.0).r;
                 let alphaByte = u32(clamp(alphaSample, 0.0, 1.0) * 255.0) & 255u;
                 color[idx] = (color[idx] & 0x00ffffffu) | (alphaByte << 24u);
             `,
-        };
+    };
+  }
+
+  public override uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void {
+    const texture = textures.get('curve');
+
+    if (texture === undefined) {
+      return;
     }
 
-    public override uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void {
-        const texture = textures.get('curve');
+    const data = new Float32Array(lookupSize);
 
-        if (texture === undefined) {
-            return;
-        }
-
-        const data = new Float32Array(lookupSize);
-
-        for (let i = 0; i < lookupSize; i++) {
-            data[i] = this.curve.evaluate(i / (lookupSize - 1));
-        }
-
-        device.queue.writeTexture(
-            { texture },
-            data.buffer as ArrayBuffer,
-            { offset: 0, bytesPerRow: lookupSize * 4, rowsPerImage: 1 },
-            { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
-        );
+    for (let i = 0; i < lookupSize; i++) {
+      data[i] = this.curve.evaluate(i / (lookupSize - 1));
     }
+
+    device.queue.writeTexture(
+      { texture },
+      data.buffer,
+      { offset: 0, bytesPerRow: lookupSize * 4, rowsPerImage: 1 },
+      { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
+    );
+  }
 }

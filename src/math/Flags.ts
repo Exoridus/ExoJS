@@ -15,71 +15,70 @@ import type { TypedEnum } from '@/core/types';
  * ```
  */
 export class Flags<T extends TypedEnum<T, number>> {
+  private _value = 0;
 
-    private _value = 0;
+  /** Current combined bitmask of all active flags. */
+  public get value(): number {
+    return this._value;
+  }
 
-    /** Current combined bitmask of all active flags. */
-    public get value(): number {
-        return this._value;
+  public constructor(...flags: number[]) {
+    if (flags.length) {
+      this.push(...flags);
+    }
+  }
+
+  /**
+   * Set one or more flags (bitwise OR). Mutates in place and returns `this`
+   * for chaining.
+   */
+  public push<V extends number = T[keyof T]>(...flags: V[]): this {
+    for (const flag of flags) {
+      this._value |= flag;
     }
 
-    public constructor(...flags: Array<number>) {
-        if (flags.length) {
-            this.push(...flags);
-        }
+    return this;
+  }
+
+  /**
+   * Remove `flag` and return `true` if it was active before removal, `false`
+   * otherwise. Useful for one-shot consumption of a flag.
+   */
+  public pop<V extends number = T[keyof T]>(flag: V): boolean {
+    const active = this.has(flag);
+
+    this.remove(flag);
+
+    return active;
+  }
+
+  /**
+   * Clear one or more flags (bitwise AND NOT). Mutates in place and returns
+   * `this` for chaining.
+   */
+  public remove<V extends number = T[keyof T]>(...flags: V[]): this {
+    for (const flag of flags) {
+      this._value &= ~flag;
     }
 
-    /**
-     * Set one or more flags (bitwise OR). Mutates in place and returns `this`
-     * for chaining.
-     */
-    public push<V extends number = T[keyof T]>(...flags: Array<V>): this {
-        for (const flag of flags) {
-            this._value |= flag;
-        }
+    return this;
+  }
 
-        return this;
-    }
+  /**
+   * Return `true` when **any** of the supplied flags are currently set
+   * (bitwise OR test).
+   */
+  public has<V extends number = T[keyof T]>(...flags: V[]): boolean {
+    return flags.some(flag => (this._value & flag) !== 0);
+  }
 
-    /**
-     * Remove `flag` and return `true` if it was active before removal, `false`
-     * otherwise. Useful for one-shot consumption of a flag.
-     */
-    public pop<V extends number = T[keyof T]>(flag: V): boolean {
-        const active = this.has(flag);
+  public clear(): this {
+    this._value = 0;
 
-        this.remove(flag);
+    return this;
+  }
 
-        return active;
-    }
-
-    /**
-     * Clear one or more flags (bitwise AND NOT). Mutates in place and returns
-     * `this` for chaining.
-     */
-    public remove<V extends number = T[keyof T]>(...flags: Array<V>): this {
-        for (const flag of flags) {
-            this._value &= ~flag;
-        }
-
-        return this;
-    }
-
-    /**
-     * Return `true` when **any** of the supplied flags are currently set
-     * (bitwise OR test).
-     */
-    public has<V extends number = T[keyof T]>(...flags: Array<V>): boolean {
-        return flags.some(flag => (this._value & flag) !== 0);
-    }
-
-    public clear(): this {
-        this._value = 0;
-
-        return this;
-    }
-
-    public destroy(): void {
-        this.clear();
-    }
+  public destroy(): void {
+    this.clear();
+  }
 }

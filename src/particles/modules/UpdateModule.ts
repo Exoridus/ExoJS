@@ -1,4 +1,5 @@
 import type { ParticleSystem } from '@/particles/ParticleSystem';
+
 import type { WgslContribution } from './WgslContribution';
 
 /**
@@ -61,40 +62,40 @@ import type { WgslContribution } from './WgslContribution';
  * in registration order; later modules see the effects of earlier ones.
  */
 export abstract class UpdateModule {
-    public abstract apply(system: ParticleSystem, dt: number): void;
+  public abstract apply(system: ParticleSystem, dt: number): void;
 
-    /**
-     * Override to declare a GPU contribution. Returning a {@link WgslContribution}
-     * makes this module GPU-eligible; omitting (or returning undefined)
-     * forces CPU mode for any system that uses this module.
-     */
-    public wgsl?(): WgslContribution;
+  /**
+   * Override to declare a GPU contribution. Returning a {@link WgslContribution}
+   * makes this module GPU-eligible; omitting (or returning undefined)
+   * forces CPU mode for any system that uses this module.
+   */
+  public wgsl?(): WgslContribution;
 
-    /**
-     * Write this module's current uniform values into the shared uniform
-     * buffer at `byteOffset`. Layout must match the field declarations
-     * returned by {@link wgsl} (in the same order).
-     *
-     * Receives the current frame `dt` (seconds). Modules tracking
-     * accumulated time (e.g. noise/turbulence) should advance their
-     * internal counter here to stay in sync when running in GPU mode
-     * (where {@link apply} is not called).
-     *
-     * Required when {@link wgsl} declares uniforms. Called every frame by
-     * the system before dispatching compute.
-     */
-    public writeUniforms?(view: DataView, byteOffset: number, dt: number): void;
+  /**
+   * Write this module's current uniform values into the shared uniform
+   * buffer at `byteOffset`. Layout must match the field declarations
+   * returned by {@link wgsl} (in the same order).
+   *
+   * Receives the current frame `dt` (seconds). Modules tracking
+   * accumulated time (e.g. noise/turbulence) should advance their
+   * internal counter here to stay in sync when running in GPU mode
+   * (where {@link apply} is not called).
+   *
+   * Required when {@link wgsl} declares uniforms. Called every frame by
+   * the system before dispatching compute.
+   */
+  public writeUniforms?(view: DataView, byteOffset: number, dt: number): void;
 
-    /**
-     * Upload texture data (Curve/Gradient lookup tables) to the GPU at
-     * compile time. Receives the GPUDevice and a map of texture bindings
-     * keyed by the `name` in {@link WgslContribution.textures}. Called once
-     * after pipeline creation.
-     *
-     * Required when {@link wgsl} declares textures.
-     */
-    public uploadTextures?(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void;
+  /**
+   * Upload texture data (Curve/Gradient lookup tables) to the GPU at
+   * compile time. Receives the GPUDevice and a map of texture bindings
+   * keyed by the `name` in {@link WgslContribution.textures}. Called once
+   * after pipeline creation.
+   *
+   * Required when {@link wgsl} declares textures.
+   */
+  public uploadTextures?(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void;
 
-    /** Optional cleanup hook called from `ParticleSystem.destroy`. */
-    public destroy(): void {}
+  /** Optional cleanup hook called from `ParticleSystem.destroy`. */
+  public destroy(): void {}
 }

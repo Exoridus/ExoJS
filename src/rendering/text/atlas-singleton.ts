@@ -8,9 +8,9 @@ let _defaultAtlas: DynamicGlyphAtlas | null = null;
  * (same char + family + size + weight + style) are rasterized only once.
  */
 export function getDefaultGlyphAtlas(): DynamicGlyphAtlas {
-    if (_defaultAtlas === null) {
-        _defaultAtlas = new DynamicGlyphAtlas();
-    }
+  if (_defaultAtlas === null) {
+    _defaultAtlas = new DynamicGlyphAtlas();
+  }
 
-    return _defaultAtlas;
+  return _defaultAtlas;
 }

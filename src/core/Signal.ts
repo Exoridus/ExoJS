@@ -5,11 +5,11 @@ import { removeArrayItems } from '@/core/utils';
  * stops further dispatch to remaining listeners for the current invocation
  * (subsequent dispatches are unaffected).
  */
-type SignalHandler<Args extends Array<unknown>> = (...params: Args) => void | boolean;
+type SignalHandler<Args extends unknown[]> = (...params: Args) => void | boolean;
 
-interface SignalBinding<Args extends Array<unknown>> {
-    handler: SignalHandler<Args>;
-    context?: object;
+interface SignalBinding<Args extends unknown[]> {
+  handler: SignalHandler<Args>;
+  context?: object;
 }
 
 /**
@@ -27,105 +27,104 @@ interface SignalBinding<Args extends Array<unknown>> {
  * the loop. Returning `false` from a handler short-circuits the rest of the
  * dispatch (handy for capturing-style flows).
  */
-export class Signal<Args extends Array<unknown> = []> {
+export class Signal<Args extends unknown[] = []> {
+  private readonly _bindings = new Array<SignalBinding<Args>>();
 
-    private readonly _bindings = new Array<SignalBinding<Args>>();
+  public get bindings(): ReadonlyArray<SignalBinding<Args>> {
+    return this._bindings;
+  }
 
-    public get bindings(): ReadonlyArray<SignalBinding<Args>> {
-        return this._bindings;
+  /** `true` when `handler` is registered with the same `context`. */
+  public has(handler: SignalHandler<Args>, context?: object): boolean {
+    return this._bindings.some(binding => binding.handler === handler && binding.context === context);
+  }
+
+  /**
+   * Register a listener. Idempotent — adding the same `(handler, context)`
+   * pair twice is a no-op. `context` becomes `this` inside the handler.
+   */
+  public add(handler: SignalHandler<Args>, context?: object): this {
+    if (!this.has(handler, context)) {
+      this._bindings.push({ handler, context });
     }
 
-    /** `true` when `handler` is registered with the same `context`. */
-    public has(handler: SignalHandler<Args>, context?: object): boolean {
-        return this._bindings.some((binding) => (binding.handler === handler && binding.context === context));
+    return this;
+  }
+
+  /**
+   * Register a listener that auto-removes itself after the first dispatch.
+   * Wraps `handler` in a self-removing closure; calling
+   * {@link Signal.remove} with the original `handler` reference does NOT
+   * remove the wrapper — use {@link Signal.clear} or
+   * {@link Signal.clearByContext} to undo a `once` registration.
+   */
+  public once(handler: SignalHandler<Args>, context?: object): this {
+    const once = (...params: Args): void => {
+      this.remove(once, context);
+      handler.call(context, ...params);
+    };
+
+    this.add(once, context);
+
+    return this;
+  }
+
+  /** Remove a previously registered `(handler, context)` pair. No-op if absent. */
+  public remove(handler: SignalHandler<Args>, context?: object): this {
+    const index = this._bindings.findIndex(binding => binding.handler === handler && binding.context === context);
+
+    if (index !== -1) {
+      removeArrayItems(this._bindings, index, 1);
     }
 
-    /**
-     * Register a listener. Idempotent — adding the same `(handler, context)`
-     * pair twice is a no-op. `context` becomes `this` inside the handler.
-     */
-    public add(handler: SignalHandler<Args>, context?: object): this {
-        if (!this.has(handler, context)) {
-            this._bindings.push({ handler, context });
+    return this;
+  }
+
+  /**
+   * Remove every listener bound to `context`. Useful when an object is
+   * being torn down and needs to detach all its subscriptions in one call.
+   */
+  public clearByContext(context?: object): this {
+    const bindings = this._bindings.filter(binding => binding.context === context);
+
+    for (const binding of bindings) {
+      removeArrayItems(this._bindings, this._bindings.indexOf(binding), 1);
+    }
+
+    return this;
+  }
+
+  /** Remove every listener. */
+  public clear(): this {
+    this._bindings.length = 0;
+
+    return this;
+  }
+
+  /**
+   * Notify every registered listener in registration order. Returning `false`
+   * from a handler stops dispatch to the remaining listeners for this call.
+   * Listeners may safely add/remove bindings during dispatch — the iteration
+   * uses a pre-snapshot of the bindings array.
+   */
+  public dispatch(...params: Args): this {
+    if (this._bindings.length) {
+      // Snapshot bindings because handlers may mutate the array mid-dispatch
+      // (notably `once()` wrappers that remove themselves), which would otherwise
+      // cause the iterator to skip the binding shifted into the vacated slot.
+      const bindings = [...this._bindings];
+
+      for (const binding of bindings) {
+        if (binding.handler.call(binding.context, ...params) === false) {
+          break;
         }
-
-        return this;
+      }
     }
 
-    /**
-     * Register a listener that auto-removes itself after the first dispatch.
-     * Wraps `handler` in a self-removing closure; calling
-     * {@link Signal.remove} with the original `handler` reference does NOT
-     * remove the wrapper — use {@link Signal.clear} or
-     * {@link Signal.clearByContext} to undo a `once` registration.
-     */
-    public once(handler: SignalHandler<Args>, context?: object): this {
-        const once = (...params: Args): void => {
-            this.remove(once, context);
-            handler.call(context, ...params);
-        };
+    return this;
+  }
 
-        this.add(once, context);
-
-        return this;
-    }
-
-    /** Remove a previously registered `(handler, context)` pair. No-op if absent. */
-    public remove(handler: SignalHandler<Args>, context?: object): this {
-        const index = this._bindings.findIndex((binding) => (binding.handler === handler && binding.context === context));
-
-        if (index !== -1) {
-            removeArrayItems(this._bindings, index, 1);
-        }
-
-        return this;
-    }
-
-    /**
-     * Remove every listener bound to `context`. Useful when an object is
-     * being torn down and needs to detach all its subscriptions in one call.
-     */
-    public clearByContext(context?: object): this {
-        const bindings = this._bindings.filter(binding => binding.context === context);
-
-        for (const binding of bindings) {
-            removeArrayItems(this._bindings, this._bindings.indexOf(binding), 1);
-        }
-
-        return this;
-    }
-
-    /** Remove every listener. */
-    public clear(): this {
-        this._bindings.length = 0;
-
-        return this;
-    }
-
-    /**
-     * Notify every registered listener in registration order. Returning `false`
-     * from a handler stops dispatch to the remaining listeners for this call.
-     * Listeners may safely add/remove bindings during dispatch — the iteration
-     * uses a pre-snapshot of the bindings array.
-     */
-    public dispatch(...params: Args): this {
-        if (this._bindings.length) {
-            // Snapshot bindings because handlers may mutate the array mid-dispatch
-            // (notably `once()` wrappers that remove themselves), which would otherwise
-            // cause the iterator to skip the binding shifted into the vacated slot.
-            const bindings = this._bindings.slice();
-
-            for (const binding of bindings) {
-                if (binding.handler.call(binding.context, ...params) === false) {
-                    break;
-                }
-            }
-        }
-
-        return this;
-    }
-
-    public destroy(): void {
-        this.clear();
-    }
+  public destroy(): void {
+    this.clear();
+  }
 }

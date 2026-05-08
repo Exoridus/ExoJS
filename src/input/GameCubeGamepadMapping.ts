@@ -1,5 +1,5 @@
-import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { GamepadMappingFamily } from './GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 
 /**
  * Mapping for Nintendo GameCube controllers (typically connected via a
@@ -11,5 +11,5 @@ import { GamepadMappingFamily } from './GamepadMapping';
  * the exact channel availability depends on the adapter's HID report.
  */
 export class GameCubeGamepadMapping extends GenericDualAnalogGamepadMapping {
-    public override readonly family = GamepadMappingFamily.GameCube;
+  public override readonly family = GamepadMappingFamily.GameCube;
 }

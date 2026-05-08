@@ -24,13 +24,13 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const sh = (cmd) => execSync(cmd, { stdio: 'inherit' });
-const out = (cmd) => execSync(cmd, { encoding: 'utf8' }).trim();
-const fail = (msg) => {
-    process.stderr.write(`\n  ✗ ${msg}\n\n`);
-    process.exit(1);
+const sh = cmd => execSync(cmd, { stdio: 'inherit' });
+const out = cmd => execSync(cmd, { encoding: 'utf8' }).trim();
+const fail = msg => {
+  process.stderr.write(`\n  ✗ ${msg}\n\n`);
+  process.exit(1);
 };
-const step = (msg) => process.stdout.write(`\n→ ${msg}\n`);
+const step = msg => process.stdout.write(`\n→ ${msg}\n`);
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const tag = `v${pkg.version}`;
@@ -41,14 +41,14 @@ step(`Preparing release ${tag}`);
 const dirty = out('git status --porcelain');
 
 if (dirty) {
-    fail(`Working tree is dirty:\n${dirty}\n  Commit or stash changes first.`);
+  fail(`Working tree is dirty:\n${dirty}\n  Commit or stash changes first.`);
 }
 
 // 2. On main.
 const branch = out('git rev-parse --abbrev-ref HEAD');
 
 if (branch !== 'main') {
-    fail(`Not on main (current: ${branch}). Releases must originate from main.`);
+  fail(`Not on main (current: ${branch}). Releases must originate from main.`);
 }
 
 // 3. Up to date with origin/main.
@@ -59,40 +59,40 @@ const local = out('git rev-parse HEAD');
 const remote = out('git rev-parse origin/main');
 
 if (local !== remote) {
-    const base = out('git merge-base HEAD origin/main');
+  const base = out('git merge-base HEAD origin/main');
 
-    if (base !== remote) {
-        fail('main is not up to date with origin/main. Pull or rebase first.');
-    }
+  if (base !== remote) {
+    fail('main is not up to date with origin/main. Pull or rebase first.');
+  }
 }
 
 // 4. Tag does not already exist (locally OR on origin).
 let localTagExists = false;
 
 try {
-    out(`git rev-parse ${tag}`);
-    localTagExists = true;
+  out(`git rev-parse ${tag}`);
+  localTagExists = true;
 } catch {
-    // tag does not exist locally — expected
+  // tag does not exist locally — expected
 }
 
 if (localTagExists) {
-    fail(`Tag ${tag} already exists locally. Bump the version in package.json first, or run "git tag -d ${tag}" to remove it.`);
+  fail(`Tag ${tag} already exists locally. Bump the version in package.json first, or run "git tag -d ${tag}" to remove it.`);
 }
 
 const remoteTag = out(`git ls-remote --tags origin ${tag}`);
 
 if (remoteTag) {
-    fail(`Tag ${tag} already exists on origin. Bump the version in package.json first.`);
+  fail(`Tag ${tag} already exists on origin. Bump the version in package.json first.`);
 }
 
 // 5. Run verify:release (full CI-equivalent suite).
 step(`Running verify:release (this mirrors CI's verify job)`);
 
 try {
-    sh('npm run verify:release');
+  sh('npm run verify:release');
 } catch {
-    fail('verify:release failed. Fix the issues above and re-run.');
+  fail('verify:release failed. Fix the issues above and re-run.');
 }
 
 // 6. Create annotated tag at HEAD.

@@ -2,7 +2,8 @@
 <html>
     <head>
         <style>
-            body, html {
+            body,
+            html {
                 margin: 0;
                 height: 100%;
                 overflow: hidden;
@@ -44,8 +45,8 @@
                 var importMap = {
                     imports: {
                         '@codexo/exojs': exoEntry,
-                        '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache
-                    }
+                        '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
+                    },
                 };
                 var script = document.createElement('script');
 
@@ -54,8 +55,8 @@
                 document.currentScript.after(script);
             })();
         </script>
-        <link rel="icon" type="image/svg+xml" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.ico">
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <link rel="shortcut icon" href="favicon.ico" />
     </head>
     <body></body>
 </html>

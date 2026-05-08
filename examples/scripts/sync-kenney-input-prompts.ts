@@ -130,9 +130,7 @@ const ensureExists = (filePath: string): void => {
 
 const run = (): void => {
     if (!fs.existsSync(sourceRoot)) {
-        throw new Error(
-            `Input prompts source folder not found: ${sourceRoot}. Set KENNEY_INPUT_PROMPTS_DIR to override.`
-        );
+        throw new Error(`Input prompts source folder not found: ${sourceRoot}. Set KENNEY_INPUT_PROMPTS_DIR to override.`);
     }
 
     fs.mkdirSync(targetImageDir, { recursive: true });
@@ -167,9 +165,7 @@ const run = (): void => {
         fs.writeFileSync(targetJsonPath, `${JSON.stringify(atlasJson, null, 2)}\n`, 'utf8');
 
         const frameCount = Object.keys(atlas.frames).length;
-        console.log(
-            `[input-prompts] ${profile.key}: ${frameCount} frames -> ${path.relative(projectRoot, targetJsonPath)}`
-        );
+        console.log(`[input-prompts] ${profile.key}: ${frameCount} frames -> ${path.relative(projectRoot, targetJsonPath)}`);
     }
 };
 

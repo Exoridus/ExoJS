@@ -9,27 +9,27 @@
  * network on subsequent loads.
  */
 export interface AssetFactory<T = unknown> {
-    /**
-     * Identifier used as the object-store / storage-namespace key when this
-     * factory's assets are persisted to a {@link CacheStore}.
-     */
-    readonly storageName: string;
+  /**
+   * Identifier used as the object-store / storage-namespace key when this
+   * factory's assets are persisted to a {@link CacheStore}.
+   */
+  readonly storageName: string;
 
-    /**
-     * Converts a raw HTTP response into a serialisable intermediate value
-     * suitable for cache storage and later passed to {@link create}.
-     */
-    process(response: Response): Promise<unknown>;
+  /**
+   * Converts a raw HTTP response into a serialisable intermediate value
+   * suitable for cache storage and later passed to {@link create}.
+   */
+  process(response: Response): Promise<unknown>;
 
-    /**
-     * Constructs the final engine asset from the intermediate value produced
-     * by {@link process} (or retrieved from cache).
-     */
-    create(source: unknown, options?: unknown): Promise<T>;
+  /**
+   * Constructs the final engine asset from the intermediate value produced
+   * by {@link process} (or retrieved from cache).
+   */
+  create(source: unknown, options?: unknown): Promise<T>;
 
-    /**
-     * Releases all resources held by this factory, including any object URLs
-     * created during asset loading.
-     */
-    destroy(): void;
+  /**
+   * Releases all resources held by this factory, including any object URLs
+   * created during asset loading.
+   */
+  destroy(): void;
 }

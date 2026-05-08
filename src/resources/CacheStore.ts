@@ -8,27 +8,27 @@
  * built-in implementation backed by the browser's IndexedDB API.
  */
 export interface CacheStore {
-    /**
-     * Loads a previously saved value, or `null` if the entry does not exist.
-     */
-    load(storageName: string, key: string): Promise<unknown | null>;
+  /**
+   * Loads a previously saved value, or `null` if the entry does not exist.
+   */
+  load(storageName: string, key: string): Promise<unknown | null>;
 
-    /**
-     * Persists `data` under the given namespace and key.
-     * Implementations must tolerate failures silently when storage is full.
-     */
-    save(storageName: string, key: string, data: unknown): Promise<void>;
+  /**
+   * Persists `data` under the given namespace and key.
+   * Implementations must tolerate failures silently when storage is full.
+   */
+  save(storageName: string, key: string, data: unknown): Promise<void>;
 
-    /**
-     * Removes a single entry. Returns `true` if the entry existed and was removed.
-     */
-    delete(storageName: string, key: string): Promise<boolean>;
+  /**
+   * Removes a single entry. Returns `true` if the entry existed and was removed.
+   */
+  delete(storageName: string, key: string): Promise<boolean>;
 
-    /**
-     * Removes all entries within `storageName`. Returns `true` on success.
-     */
-    clear(storageName: string): Promise<boolean>;
+  /**
+   * Removes all entries within `storageName`. Returns `true` on success.
+   */
+  clear(storageName: string): Promise<boolean>;
 
-    /** Synchronously releases any open handles held by the store. */
-    destroy(): void;
+  /** Synchronously releases any open handles held by the store. */
+  destroy(): void;
 }

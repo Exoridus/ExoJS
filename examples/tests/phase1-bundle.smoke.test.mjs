@@ -21,10 +21,7 @@ const distDir = path.join(projectRoot, 'dist');
 const astroDir = path.join(distDir, '_astro');
 
 function readBrowserBundles() {
-    assert.ok(
-        fs.existsSync(astroDir),
-        `dist/_astro missing — run \`npm run build\` first.`
-    );
+    assert.ok(fs.existsSync(astroDir), `dist/_astro missing — run \`npm run build\` first.`);
 
     // Read every app chunk (ExampleBrowser shell + dynamically-imported
     // EditorCode chunk). Skip the Monaco vendor blob and the Monaco workers —
@@ -37,14 +34,9 @@ function readBrowserBundles() {
         .filter(name => !/^vendor-monaco/.test(name))
         .filter(name => !/\.worker-.*\.js$/.test(name));
 
-    assert.ok(
-        jsFiles.length > 0,
-        'No app JS bundles found in dist/_astro/.'
-    );
+    assert.ok(jsFiles.length > 0, 'No app JS bundles found in dist/_astro/.');
 
-    return jsFiles
-        .map(name => fs.readFileSync(path.join(astroDir, name), 'utf8'))
-        .join('\n');
+    return jsFiles.map(name => fs.readFileSync(path.join(astroDir, name), 'utf8')).join('\n');
 }
 
 test('phase 1 custom element tags are present in the built bundle', () => {
@@ -72,11 +64,7 @@ test('phase 1 custom element tags are present in the built bundle', () => {
     ];
 
     const missing = expectedTags.filter(tag => !bundle.includes(tag));
-    assert.deepEqual(
-        missing,
-        [],
-        `Phase 1 components missing from bundle: ${missing.join(', ')}`
-    );
+    assert.deepEqual(missing, [], `Phase 1 components missing from bundle: ${missing.join(', ')}`);
 });
 
 test('phase 1 typed events are wired in the built bundle', () => {
@@ -102,11 +90,7 @@ test('phase 1 typed events are wired in the built bundle', () => {
     ];
 
     const missing = expectedEvents.filter(event => !bundle.includes(event));
-    assert.deepEqual(
-        missing,
-        [],
-        `Phase 1 event names missing from bundle: ${missing.join(', ')}`
-    );
+    assert.deepEqual(missing, [], `Phase 1 event names missing from bundle: ${missing.join(', ')}`);
 });
 
 test('phase 1 hooks ship as bundle text — toast, jump, refresh, persistence', () => {
@@ -123,31 +107,16 @@ test('phase 1 hooks ship as bundle text — toast, jump, refresh, persistence', 
     ];
 
     const missing = expectedSymbols.filter(symbol => !bundle.includes(symbol));
-    assert.deepEqual(
-        missing,
-        [],
-        `Phase 1 hooks missing from bundle: ${missing.join(', ')}`
-    );
+    assert.deepEqual(missing, [], `Phase 1 hooks missing from bundle: ${missing.join(', ')}`);
 });
 
 test('phase 1 a11y hooks ship: skip-link target, banner role, dialog wiring', () => {
     const indexHtmlPath = path.join(distDir, 'index.html');
-    assert.ok(
-        fs.existsSync(indexHtmlPath),
-        'dist/index.html missing — run `npm run build` first.'
-    );
+    assert.ok(fs.existsSync(indexHtmlPath), 'dist/index.html missing — run `npm run build` first.');
     const html = fs.readFileSync(indexHtmlPath, 'utf8');
 
-    assert.match(
-        html,
-        /<a[^>]*class="skip-link"[^>]*href="#main-content"/,
-        'Skip-to-main-content link is not present in the rendered HTML.'
-    );
-    assert.match(
-        html,
-        /id="main-content"[^>]*tabindex="-1"/,
-        'Skip-link target div with id="main-content" tabindex="-1" is missing.'
-    );
+    assert.match(html, /<a[^>]*class="skip-link"[^>]*href="#main-content"/, 'Skip-to-main-content link is not present in the rendered HTML.');
+    assert.match(html, /id="main-content"[^>]*tabindex="-1"/, 'Skip-link target div with id="main-content" tabindex="-1" is missing.');
 
     const bundle = readBrowserBundles();
 
@@ -155,12 +124,6 @@ test('phase 1 a11y hooks ship: skip-link target, banner role, dialog wiring', ()
         bundle.includes('role="banner"') || bundle.includes("role='banner'") || bundle.includes('role:"banner"'),
         'AppHeader landmark role="banner" is not present in the bundle.'
     );
-    assert.ok(
-        bundle.includes('aria-modal'),
-        'About drawer aria-modal hookup is not present in the bundle.'
-    );
-    assert.ok(
-        bundle.includes('aria-haspopup'),
-        'VersionPill aria-haspopup hookup is not present in the bundle.'
-    );
+    assert.ok(bundle.includes('aria-modal'), 'About drawer aria-modal hookup is not present in the bundle.');
+    assert.ok(bundle.includes('aria-haspopup'), 'VersionPill aria-haspopup hookup is not present in the bundle.');
 });

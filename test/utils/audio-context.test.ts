@@ -1,111 +1,111 @@
 describe('utils/audio-context', () => {
-    const originalAudioContext = globalThis.AudioContext;
-    const originalOfflineAudioContext = globalThis.OfflineAudioContext;
+  const originalAudioContext = globalThis.AudioContext;
+  const originalOfflineAudioContext = globalThis.OfflineAudioContext;
 
-    afterEach(() => {
-        Object.defineProperty(globalThis, 'AudioContext', {
-            configurable: true,
-            value: originalAudioContext,
-        });
-
-        Object.defineProperty(globalThis, 'OfflineAudioContext', {
-            configurable: true,
-            value: originalOfflineAudioContext,
-        });
-
-        jest.restoreAllMocks();
-        jest.resetModules();
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'AudioContext', {
+      configurable: true,
+      value: originalAudioContext,
     });
 
-    it('does not create audio contexts or register interaction listeners on import', () => {
-        let audioContextCreations = 0;
-        let offlineAudioContextCreations = 0;
-
-        class TestAudioContext {
-            public state: AudioContextState = 'suspended';
-            public currentTime = 0;
-            public sampleRate = 44100;
-            public destination = {};
-
-            public constructor() {
-                audioContextCreations++;
-            }
-
-            public resume(): Promise<void> {
-                this.state = 'running';
-
-                return Promise.resolve();
-            }
-        }
-
-        class TestOfflineAudioContext {
-            public constructor() {
-                offlineAudioContextCreations++;
-            }
-        }
-
-        Object.defineProperty(globalThis, 'AudioContext', {
-            configurable: true,
-            value: TestAudioContext,
-        });
-
-        Object.defineProperty(globalThis, 'OfflineAudioContext', {
-            configurable: true,
-            value: TestOfflineAudioContext,
-        });
-
-        const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
-
-        jest.isolateModules(() => {
-            require('@/audio/audio-context');
-        });
-
-        expect(audioContextCreations).toBe(0);
-        expect(offlineAudioContextCreations).toBe(0);
-        expect(addEventListenerSpy).not.toHaveBeenCalled();
+    Object.defineProperty(globalThis, 'OfflineAudioContext', {
+      configurable: true,
+      value: originalOfflineAudioContext,
     });
 
-    it('creates the audio context lazily when a ready subscriber is added', () => {
-        let audioContextCreations = 0;
+    jest.restoreAllMocks();
+    jest.resetModules();
+  });
 
-        class TestAudioContext {
-            public state: AudioContextState = 'suspended';
-            public currentTime = 0;
-            public sampleRate = 44100;
-            public destination = {};
+  it('does not create audio contexts or register interaction listeners on import', () => {
+    let audioContextCreations = 0;
+    let offlineAudioContextCreations = 0;
 
-            public constructor() {
-                audioContextCreations++;
-            }
+    class TestAudioContext {
+      public state: AudioContextState = 'suspended';
+      public currentTime = 0;
+      public sampleRate = 44100;
+      public destination = {};
 
-            public resume(): Promise<void> {
-                this.state = 'running';
+      public constructor() {
+        audioContextCreations++;
+      }
 
-                return Promise.resolve();
-            }
-        }
+      public resume(): Promise<void> {
+        this.state = 'running';
 
-        class TestOfflineAudioContext {}
+        return Promise.resolve();
+      }
+    }
 
-        Object.defineProperty(globalThis, 'AudioContext', {
-            configurable: true,
-            value: TestAudioContext,
-        });
+    class TestOfflineAudioContext {
+      public constructor() {
+        offlineAudioContextCreations++;
+      }
+    }
 
-        Object.defineProperty(globalThis, 'OfflineAudioContext', {
-            configurable: true,
-            value: TestOfflineAudioContext,
-        });
-
-        const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
-
-        jest.isolateModules(() => {
-            const { onAudioContextReady } = require('@/audio/audio-context');
-
-            onAudioContextReady.once(() => undefined);
-        });
-
-        expect(audioContextCreations).toBe(1);
-        expect(addEventListenerSpy).toHaveBeenCalled();
+    Object.defineProperty(globalThis, 'AudioContext', {
+      configurable: true,
+      value: TestAudioContext,
     });
+
+    Object.defineProperty(globalThis, 'OfflineAudioContext', {
+      configurable: true,
+      value: TestOfflineAudioContext,
+    });
+
+    const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
+
+    jest.isolateModules(() => {
+      require('@/audio/audio-context');
+    });
+
+    expect(audioContextCreations).toBe(0);
+    expect(offlineAudioContextCreations).toBe(0);
+    expect(addEventListenerSpy).not.toHaveBeenCalled();
+  });
+
+  it('creates the audio context lazily when a ready subscriber is added', () => {
+    let audioContextCreations = 0;
+
+    class TestAudioContext {
+      public state: AudioContextState = 'suspended';
+      public currentTime = 0;
+      public sampleRate = 44100;
+      public destination = {};
+
+      public constructor() {
+        audioContextCreations++;
+      }
+
+      public resume(): Promise<void> {
+        this.state = 'running';
+
+        return Promise.resolve();
+      }
+    }
+
+    class TestOfflineAudioContext {}
+
+    Object.defineProperty(globalThis, 'AudioContext', {
+      configurable: true,
+      value: TestAudioContext,
+    });
+
+    Object.defineProperty(globalThis, 'OfflineAudioContext', {
+      configurable: true,
+      value: TestOfflineAudioContext,
+    });
+
+    const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
+
+    jest.isolateModules(() => {
+      const { onAudioContextReady } = require('@/audio/audio-context');
+
+      onAudioContextReady.once(() => undefined);
+    });
+
+    expect(audioContextCreations).toBe(1);
+    expect(addEventListenerSpy).toHaveBeenCalled();
+  });
 });

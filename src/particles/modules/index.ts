@@ -1,25 +1,22 @@
-export { SpawnModule } from './SpawnModule';
-export { UpdateModule } from './UpdateModule';
-export { DeathModule } from './DeathModule';
-export type { WgslContribution, WgslPrimitive, WgslUniformField, WgslTextureBinding } from './WgslContribution';
-export { wgslUniformByteSize, wgslFieldLayout } from './WgslContribution';
-
-export { RateSpawn } from './RateSpawn';
-export type { RateSpawnConfig } from './RateSpawn';
-export { BurstSpawn } from './BurstSpawn';
-export type { BurstSpawnConfig, BurstSchedule } from './BurstSpawn';
-
+export { AlphaFadeOverLifetime } from './AlphaFadeOverLifetime';
 export { ApplyForce } from './ApplyForce';
-export { Drag } from './Drag';
+export { AttractToPoint } from './AttractToPoint';
+export type { BurstSchedule, BurstSpawnConfig } from './BurstSpawn';
+export { BurstSpawn } from './BurstSpawn';
 export { ColorOverLifetime } from './ColorOverLifetime';
 export { ColorOverSpeed } from './ColorOverSpeed';
-export { ScaleOverLifetime } from './ScaleOverLifetime';
-export { RotateOverLifetime } from './RotateOverLifetime';
-export { AlphaFadeOverLifetime } from './AlphaFadeOverLifetime';
-export { VelocityOverLifetime } from './VelocityOverLifetime';
-export { AttractToPoint } from './AttractToPoint';
-export { RepelFromPoint } from './RepelFromPoint';
+export { DeathModule } from './DeathModule';
+export { Drag } from './Drag';
 export { OrbitalForce } from './OrbitalForce';
-export { Turbulence } from './Turbulence';
-
+export type { RateSpawnConfig } from './RateSpawn';
+export { RateSpawn } from './RateSpawn';
+export { RepelFromPoint } from './RepelFromPoint';
+export { RotateOverLifetime } from './RotateOverLifetime';
+export { ScaleOverLifetime } from './ScaleOverLifetime';
+export { SpawnModule } from './SpawnModule';
 export { SpawnOnDeath } from './SpawnOnDeath';
+export { Turbulence } from './Turbulence';
+export { UpdateModule } from './UpdateModule';
+export { VelocityOverLifetime } from './VelocityOverLifetime';
+export type { WgslContribution, WgslPrimitive, WgslTextureBinding, WgslUniformField } from './WgslContribution';
+export { wgslFieldLayout, wgslUniformByteSize } from './WgslContribution';

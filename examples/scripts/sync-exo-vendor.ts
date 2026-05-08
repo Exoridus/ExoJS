@@ -11,18 +11,15 @@ const legacyPackageRoot = path.resolve(projectRoot, 'node_modules', 'exojs');
 const packageRoot = process.env.EXOJS_PACKAGE_PATH
     ? path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH)
     : fs.existsSync(scopedPackageRoot)
-        ? scopedPackageRoot
-        : legacyPackageRoot;
+      ? scopedPackageRoot
+      : legacyPackageRoot;
 const sourceDistDir = path.resolve(packageRoot, 'dist');
 
 const flatTargetDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs');
 
 // Required artifacts — abort on missing. If a required file is unavailable,
 // the iframe runtime can't load the library, so failing loud is correct.
-const requiredArtifacts = [
-    'exo.esm.js',
-    'exo.esm.js.map',
-];
+const requiredArtifacts = ['exo.esm.js', 'exo.esm.js.map'];
 
 // Names of flat-level files this script writes (not source-derived). The
 // `exo.d.ts` is generated from whatever declaration source the library
@@ -31,12 +28,7 @@ const requiredArtifacts = [
 // that Monaco walks at runtime. `monaco-registry.json` provides a virtual
 // package.json and subpath shim entries for proper node_modules resolution
 // in Monaco's TypeScript worker.
-const generatedTypingsFiles = [
-    'exo.d.ts',
-    'module-shims.d.ts',
-    'esm-typings.json',
-    'monaco-registry.json',
-];
+const generatedTypingsFiles = ['exo.d.ts', 'module-shims.d.ts', 'esm-typings.json', 'monaco-registry.json'];
 
 // Top-level entries this script owns under `public/vendor/exojs/`. The
 // `esm/` directory is included so subsequent syncs can clean it up before
@@ -92,9 +84,7 @@ const buildMonacoRegistry = (version: string): MonacoRegistry => {
     for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
         if (subpathKey === '.' || subpathKey === './package.json') continue;
 
-        const typesPath = typeof conditions === 'object' && conditions !== null
-            ? conditions['types']
-            : undefined;
+        const typesPath = typeof conditions === 'object' && conditions !== null ? conditions['types'] : undefined;
 
         if (typeof typesPath !== 'string' || !typesPath.startsWith('./dist/esm/')) continue;
 
@@ -149,33 +139,17 @@ const patchExoDeclarations = (declarationsPath: string): void => {
 
     const original = fs.readFileSync(declarationsPath, 'utf8');
     const patched = original
-        .replace(
-            '        init?: (resources: ResourceContainer) => void;',
-            '        init?: (loader: Loader) => Promise<void> | void;'
-        )
-        .replace(
-            '        unload?: () => Promise<void> | void;',
-            '        unload?: (loader: Loader) => Promise<void> | void;'
-        )
-        .replace(
-            '        init(resources: ResourceContainer): void;',
-            '        init(loader: Loader): Promise<void> | void;'
-        )
-        .replace(
-            '        unload(): Promise<void> | void;',
-            '        unload(loader: Loader): Promise<void> | void;'
-        );
+        .replace('        init?: (resources: ResourceContainer) => void;', '        init?: (loader: Loader) => Promise<void> | void;')
+        .replace('        unload?: () => Promise<void> | void;', '        unload?: (loader: Loader) => Promise<void> | void;')
+        .replace('        init(resources: ResourceContainer): void;', '        init(loader: Loader): Promise<void> | void;')
+        .replace('        unload(): Promise<void> | void;', '        unload(loader: Loader): Promise<void> | void;');
 
     if (patched !== original) {
         fs.writeFileSync(declarationsPath, patched, 'utf8');
     }
 };
 
-const copyArtifact = (
-    fileName: string,
-    targetDir: string,
-    options: { required: boolean }
-): boolean => {
+const copyArtifact = (fileName: string, targetDir: string, options: { required: boolean }): boolean => {
     const sourcePath = path.resolve(sourceDistDir, fileName);
     const targetPath = path.resolve(targetDir, fileName);
 
@@ -269,10 +243,10 @@ const syncTypings = (): void => {
                 '//',
                 '// The library does not ship a single bundled exo.d.ts at the dist root,',
                 '// so this stub re-exports from the per-module declaration tree under',
-                '// ./esm. Monaco resolves the relative path against this file\'s virtual',
+                "// ./esm. Monaco resolves the relative path against this file's virtual",
                 '// path (file:///node_modules/@codexo/exojs/dist/exo.d.ts) and lands in the tree',
                 '// shipped to ./esm by the same sync run.',
-                'export * from \'./esm/index\';',
+                "export * from './esm/index';",
                 '',
             ].join('\n'),
             'utf8'
@@ -284,9 +258,7 @@ const syncTypings = (): void => {
         return;
     }
 
-    console.warn(
-        `[vendor:sync] No declaration source found at ${sourceFlatDts} or ${sourceEsmDir}. Monaco will run without ExoJS-aware IntelliSense.`
-    );
+    console.warn(`[vendor:sync] No declaration source found at ${sourceFlatDts} or ${sourceEsmDir}. Monaco will run without ExoJS-aware IntelliSense.`);
 };
 
 const syncVendor = (): void => {
@@ -313,22 +285,12 @@ const syncVendor = (): void => {
 
     syncTypings();
 
-    fs.writeFileSync(
-        path.resolve(flatTargetDir, 'module-shims.d.ts'),
-        moduleShims,
-        'utf8'
-    );
+    fs.writeFileSync(path.resolve(flatTargetDir, 'module-shims.d.ts'), moduleShims, 'utf8');
 
     const registry = buildMonacoRegistry(versionId);
-    fs.writeFileSync(
-        path.resolve(flatTargetDir, 'monaco-registry.json'),
-        JSON.stringify(registry, null, 2) + '\n',
-        'utf8'
-    );
+    fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
 
-    console.log(
-        `[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`
-    );
+    console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 };
 
 syncVendor();

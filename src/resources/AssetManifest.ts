@@ -8,10 +8,10 @@ import type { Loadable } from './Loader';
  * the URL or relative path used to fetch it.
  */
 export interface AssetEntry<T extends Loadable = Loadable> {
-    readonly type: T;
-    readonly alias: string;
-    readonly path: string;
-    readonly options?: unknown;
+  readonly type: T;
+  readonly alias: string;
+  readonly path: string;
+  readonly options?: unknown;
 }
 
 /**
@@ -22,7 +22,7 @@ export interface AssetEntry<T extends Loadable = Loadable> {
  * construct a validated, type-safe manifest at authoring time.
  */
 export interface AssetManifest {
-    readonly bundles: Readonly<Record<string, ReadonlyArray<AssetEntry>>>;
+  readonly bundles: Readonly<Record<string, readonly AssetEntry[]>>;
 }
 
 /**
@@ -32,8 +32,8 @@ export interface AssetManifest {
  * background queue, and supply `onProgress` for per-bundle progress updates.
  */
 export interface LoadBundleOptions {
-    background?: boolean;
-    onProgress?: (loaded: number, total: number) => void;
+  background?: boolean;
+  onProgress?: (loaded: number, total: number) => void;
 }
 
 /**
@@ -44,28 +44,27 @@ export interface LoadBundleOptions {
  * distinguish individual per-asset failures from a wholesale network outage.
  */
 export class BundleLoadError extends Error {
+  public readonly bundle: string;
+  public readonly failures: Array<{
+    type: Loadable;
+    alias: string;
+    error: Error;
+  }>;
 
-    public readonly bundle: string;
-    public readonly failures: Array<{
-        type: Loadable;
-        alias: string;
-        error: Error;
-    }>;
+  public constructor(
+    bundle: string,
+    failures: Array<{
+      type: Loadable;
+      alias: string;
+      error: Error;
+    }>,
+  ) {
+    super(`Failed to load bundle "${bundle}" (${failures.length} failure${failures.length === 1 ? '' : 's'}).`);
 
-    public constructor(
-        bundle: string,
-        failures: Array<{
-            type: Loadable;
-            alias: string;
-            error: Error;
-        }>,
-    ) {
-        super(`Failed to load bundle "${bundle}" (${failures.length} failure${failures.length === 1 ? '' : 's'}).`);
-
-        this.name = 'BundleLoadError';
-        this.bundle = bundle;
-        this.failures = failures;
-    }
+    this.name = 'BundleLoadError';
+    this.bundle = bundle;
+    this.failures = failures;
+  }
 }
 
 /**
@@ -87,75 +86,73 @@ export class BundleLoadError extends Error {
  * ```
  */
 export function defineAssetManifest<const M extends AssetManifest>(manifest: M): M {
-    validateAssetManifest(manifest);
+  validateAssetManifest(manifest);
 
-    return manifest;
+  return manifest;
 }
 
 function validateAssetManifest(manifest: AssetManifest): void {
-    if (!isObjectRecord(manifest)) {
-        throw new Error('Invalid asset manifest: manifest must be an object.');
+  if (!isObjectRecord(manifest)) {
+    throw new Error('Invalid asset manifest: manifest must be an object.');
+  }
+
+  if (!isObjectRecord(manifest.bundles)) {
+    throw new Error('Invalid asset manifest: manifest.bundles must be an object.');
+  }
+
+  for (const [bundleName, rawEntries] of Object.entries(manifest.bundles)) {
+    if (bundleName.trim().length === 0) {
+      throw new Error('Invalid asset manifest: bundle names must be non-empty strings.');
     }
 
-    if (!isObjectRecord(manifest.bundles)) {
-        throw new Error('Invalid asset manifest: manifest.bundles must be an object.');
+    if (!Array.isArray(rawEntries)) {
+      throw new Error(`Invalid asset manifest: bundle "${bundleName}" must be an array of entries.`);
     }
 
-    for (const [bundleName, rawEntries] of Object.entries(manifest.bundles)) {
-        if (bundleName.trim().length === 0) {
-            throw new Error('Invalid asset manifest: bundle names must be non-empty strings.');
-        }
+    const seenAliasesByType = new Map<Loadable, Set<string>>();
 
-        if (!Array.isArray(rawEntries)) {
-            throw new Error(`Invalid asset manifest: bundle "${bundleName}" must be an array of entries.`);
-        }
+    for (const [index, rawEntry] of rawEntries.entries()) {
+      const location = `bundle "${bundleName}" entry[${index}]`;
 
-        const seenAliasesByType = new Map<Loadable, Set<string>>();
+      if (!isObjectRecord(rawEntry)) {
+        throw new Error(`Invalid asset manifest: ${location} must be an object.`);
+      }
 
-        rawEntries.forEach((rawEntry, index) => {
-            const location = `bundle "${bundleName}" entry[${index}]`;
+      if (typeof rawEntry.type !== 'function') {
+        throw new Error(`Invalid asset manifest: ${location} has an invalid "type" token.`);
+      }
 
-            if (!isObjectRecord(rawEntry)) {
-                throw new Error(`Invalid asset manifest: ${location} must be an object.`);
-            }
+      assertNonEmptyString(rawEntry.alias, `${location} has an invalid "alias".`);
+      assertNonEmptyString(rawEntry.path, `${location} has an invalid "path".`);
 
-            if (typeof rawEntry.type !== 'function') {
-                throw new Error(`Invalid asset manifest: ${location} has an invalid "type" token.`);
-            }
+      const type = rawEntry.type as Loadable;
+      const alias = rawEntry.alias;
 
-            assertNonEmptyString(rawEntry.alias, `${location} has an invalid "alias".`);
-            assertNonEmptyString(rawEntry.path, `${location} has an invalid "path".`);
+      if (!seenAliasesByType.has(type)) {
+        seenAliasesByType.set(type, new Set());
+      }
 
-            const type = rawEntry.type as Loadable;
-            const alias = rawEntry.alias as string;
+      const aliases = seenAliasesByType.get(type)!;
 
-            if (!seenAliasesByType.has(type)) {
-                seenAliasesByType.set(type, new Set());
-            }
+      if (aliases.has(alias)) {
+        throw new Error(`Invalid asset manifest: duplicate (${describeType(type)}, "${alias}") in bundle "${bundleName}".`);
+      }
 
-            const aliases = seenAliasesByType.get(type)!;
-
-            if (aliases.has(alias)) {
-                throw new Error(
-                    `Invalid asset manifest: duplicate (${describeType(type)}, "${alias}") in bundle "${bundleName}".`,
-                );
-            }
-
-            aliases.add(alias);
-        });
+      aliases.add(alias);
     }
+  }
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null;
 }
 
 function assertNonEmptyString(value: unknown, message: string): asserts value is string {
-    if (typeof value !== 'string' || value.trim().length === 0) {
-        throw new Error(`Invalid asset manifest: ${message}`);
-    }
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`Invalid asset manifest: ${message}`);
+  }
 }
 
 function describeType(type: Loadable): string {
-    return type.name.length > 0 ? type.name : '(anonymous type)';
+  return type.name.length > 0 ? type.name : '(anonymous type)';
 }

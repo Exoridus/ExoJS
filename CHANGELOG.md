@@ -33,19 +33,19 @@ automatic and per-system; user code is unchanged across both paths.
 `Uint32Array` / `Uint16Array` channels addressed by slot index:
 
 ```ts
-system.posX[slot]
-system.posY[slot]
-system.velX[slot]
-system.velY[slot]
-system.scaleX[slot]
-system.scaleY[slot]
-system.rotations[slot]
-system.rotationSpeeds[slot]
-system.color[slot]            // packed 0xAABBGGRR
-system.elapsed[slot]
-system.lifetime[slot]
-system.textureIndex[slot]
-system.liveCount              // [0, liveCount) is the live range
+system.posX[slot];
+system.posY[slot];
+system.velX[slot];
+system.velY[slot];
+system.scaleX[slot];
+system.scaleY[slot];
+system.rotations[slot];
+system.rotationSpeeds[slot];
+system.color[slot]; // packed 0xAABBGGRR
+system.elapsed[slot];
+system.lifetime[slot];
+system.textureIndex[slot];
+system.liveCount; // [0, liveCount) is the live range
 ```
 
 Capacity is fixed at construction (default 4096) — no reallocations.
@@ -57,17 +57,17 @@ instead of the previous O(n²) splice loop with scattered expirations).
 
 Spawn-time random sampling and lifetime-parameterised evaluation:
 
-| Type | Use |
-|---|---|
-| `Constant<T>` | Always-same value |
-| `Range` | Uniform random number in `[min, max]` |
-| `VectorRange` | Per-axis random vector |
-| `ConeDirection` | Random unit vector in a cone × speed range |
-| `CircleArea` | Random point in/on a circle |
-| `BoxArea` | Random point in/on an AABB |
-| `LineSegment` | Random point on a segment |
-| `Curve` | Piecewise-linear keyframe scalar by lifetime ratio |
-| `Gradient` | Piecewise-linear keyframe color, with `evaluateRgba()` for direct u32 packing |
+| Type            | Use                                                                           |
+| --------------- | ----------------------------------------------------------------------------- |
+| `Constant<T>`   | Always-same value                                                             |
+| `Range`         | Uniform random number in `[min, max]`                                         |
+| `VectorRange`   | Per-axis random vector                                                        |
+| `ConeDirection` | Random unit vector in a cone × speed range                                    |
+| `CircleArea`    | Random point in/on a circle                                                   |
+| `BoxArea`       | Random point in/on an AABB                                                    |
+| `LineSegment`   | Random point on a segment                                                     |
+| `Curve`         | Piecewise-linear keyframe scalar by lifetime ratio                            |
+| `Gradient`      | Piecewise-linear keyframe color, with `evaluateRgba()` for direct u32 packing |
 
 `Curve` and `Gradient` cache the last segment so monotonically
 advancing `t` (the typical case for per-particle lifetime sampling)
@@ -79,9 +79,15 @@ Three module bases. Each registered on a system via the corresponding
 `addX` method; each runs in its declared phase per-frame.
 
 ```ts
-abstract class SpawnModule  { apply(system, dt: number): void; }
-abstract class UpdateModule { apply(system, dt: number): void; }
-abstract class DeathModule  { onDeath(system, slot: number): void; }
+abstract class SpawnModule {
+  apply(system, dt: number): void;
+}
+abstract class UpdateModule {
+  apply(system, dt: number): void;
+}
+abstract class DeathModule {
+  onDeath(system, slot: number): void;
+}
 ```
 
 **Built-in spawn modules:**
@@ -121,7 +127,7 @@ for one `ParticleSystem`. At construction time it:
 
 1. Walks the registered update modules, collecting each module's
    `WgslContribution` (uniform field declarations + texture bindings
-   + WGSL body snippet).
+   - WGSL body snippet).
 2. Generates a composite WGSL compute shader: SoA storage bindings +
    sim/module uniform structs + module texture bindings + a `main`
    function containing integration → all module bodies in registration
@@ -151,8 +157,8 @@ Opt-in is a single constructor option — no imperative toggle:
 
 ```ts
 const system = new ParticleSystem(texture, {
-    capacity: 8192,
-    backend: app.backend,    // CPU-routed on WebGL2, GPU-routed on WebGPU
+  capacity: 8192,
+  backend: app.backend, // CPU-routed on WebGL2, GPU-routed on WebGPU
 });
 ```
 
@@ -165,25 +171,25 @@ modules after that throws.
 
 The following symbols are deleted. Migration recipes follow the table.
 
-| Removed | Replacement |
-|---|---|
-| `Particle` (class) | SoA arrays on `ParticleSystem` (`system.posX[slot]`, etc.) |
-| `ParticleProperties` (interface) | None — slot-indexed arrays replace the per-particle object |
-| `ParticleEmitter` (interface) | `SpawnModule` (abstract class) |
-| `ParticleOptions` | Per-property `Distribution<T>` in the spawn module's config |
-| `UniversalEmitter` | `RateSpawn` |
-| `ParticleAffector` (interface) | `UpdateModule` (abstract class) |
-| `ColorAffector` | `ColorOverLifetime` + `Gradient` |
-| `ForceAffector` | `ApplyForce` |
-| `ScaleAffector` | `ScaleOverLifetime` + `Curve` |
-| `TorqueAffector` | `RotateOverLifetime` |
-| `system.requestParticle()` | `system.spawn(): number` (slot index, or `-1` at capacity) |
-| `system.emitParticle(p)` | (gone — `spawn()` already commits the slot to the live range) |
-| `system.updateParticle(p, dt)` | (gone — internal to `update()`) |
-| `system.addEmitter(e)` | `system.addSpawnModule(m)` |
-| `system.addAffector(a)` | `system.addUpdateModule(m)` |
-| `system.particles` (`Array<Particle>`) | `system.posX` / `system.posY` / ... `system.liveCount` |
-| `system.graveyard` | (gone — no graveyard; slots are recycled in place) |
+| Removed                                | Replacement                                                   |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `Particle` (class)                     | SoA arrays on `ParticleSystem` (`system.posX[slot]`, etc.)    |
+| `ParticleProperties` (interface)       | None — slot-indexed arrays replace the per-particle object    |
+| `ParticleEmitter` (interface)          | `SpawnModule` (abstract class)                                |
+| `ParticleOptions`                      | Per-property `Distribution<T>` in the spawn module's config   |
+| `UniversalEmitter`                     | `RateSpawn`                                                   |
+| `ParticleAffector` (interface)         | `UpdateModule` (abstract class)                               |
+| `ColorAffector`                        | `ColorOverLifetime` + `Gradient`                              |
+| `ForceAffector`                        | `ApplyForce`                                                  |
+| `ScaleAffector`                        | `ScaleOverLifetime` + `Curve`                                 |
+| `TorqueAffector`                       | `RotateOverLifetime`                                          |
+| `system.requestParticle()`             | `system.spawn(): number` (slot index, or `-1` at capacity)    |
+| `system.emitParticle(p)`               | (gone — `spawn()` already commits the slot to the live range) |
+| `system.updateParticle(p, dt)`         | (gone — internal to `update()`)                               |
+| `system.addEmitter(e)`                 | `system.addSpawnModule(m)`                                    |
+| `system.addAffector(a)`                | `system.addUpdateModule(m)`                                   |
+| `system.particles` (`Array<Particle>`) | `system.posX` / `system.posY` / ... `system.liveCount`        |
+| `system.graveyard`                     | (gone — no graveyard; slots are recycled in place)            |
 
 ### Migration
 
@@ -203,16 +209,22 @@ options.velocity.set(/* ... */);
 
 // After — bonfire
 const system = new ParticleSystem(texture);
-system.addSpawnModule(new RateSpawn({
+system.addSpawnModule(
+  new RateSpawn({
     rate: new Constant(50),
     lifetime: new Range(5, 10),
     position: new VectorRange(-50, 50, -10, 10),
     velocity: new ConeDirection(-Math.PI / 2, Math.PI / 36, 60, 80),
-}));
-system.addUpdateModule(new ColorOverLifetime(new Gradient([
-    { t: 0, color: new Color(194, 64, 30, 1) },
-    { t: 1, color: new Color(0, 0, 0, 0) },
-])));
+  }),
+);
+system.addUpdateModule(
+  new ColorOverLifetime(
+    new Gradient([
+      { t: 0, color: new Color(194, 64, 30, 1) },
+      { t: 1, color: new Color(0, 0, 0, 0) },
+    ]),
+  ),
+);
 // no per-frame mutation needed.
 ```
 
@@ -228,23 +240,23 @@ system.addUpdateModule(new ApplyForce(0, 980));
 ```ts
 // Before — custom affector
 class AlphaFade {
-    apply(particle, delta) {
-        particle.tint.a = particle.remainingRatio;
-        return this;
-    }
-    destroy() {}
+  apply(particle, delta) {
+    particle.tint.a = particle.remainingRatio;
+    return this;
+  }
+  destroy() {}
 }
 
 // After
 class AlphaFadeOverLifetime extends UpdateModule {
-    apply(system) {
-        const { color, elapsed, lifetime, liveCount } = system;
-        for (let i = 0; i < liveCount; i++) {
-            const remaining = 1 - elapsed[i] / lifetime[i];
-            const a = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
-            color[i] = (color[i] & 0x00ffffff) | (a << 24);
-        }
+  apply(system) {
+    const { color, elapsed, lifetime, liveCount } = system;
+    for (let i = 0; i < liveCount; i++) {
+      const remaining = 1 - elapsed[i] / lifetime[i];
+      const a = (Math.max(0, Math.min(1, remaining)) * 255) & 255;
+      color[i] = (color[i] & 0x00ffffff) | (a << 24);
     }
+  }
 }
 ```
 
@@ -279,12 +291,12 @@ new ParticleSystem(texture);
 new ParticleSystem(texture, 4096);
 
 // 0.8.0:
-new ParticleSystem();                                  // untextured (1×1 white), CPU/GPU auto-routed
-new ParticleSystem(spark);                             // simple textured particles
-new ParticleSystem(spark, { capacity: 8192 });         // explicit capacity
-new ParticleSystem(atlas, [r0, r1, r2]);               // multi-frame atlas
+new ParticleSystem(); // untextured (1×1 white), CPU/GPU auto-routed
+new ParticleSystem(spark); // simple textured particles
+new ParticleSystem(spark, { capacity: 8192 }); // explicit capacity
+new ParticleSystem(atlas, [r0, r1, r2]); // multi-frame atlas
 new ParticleSystem(atlas, frames, { capacity: 8192 }); // atlas + capacity
-new ParticleSystem(sheet);                             // spritesheet shorthand
+new ParticleSystem(sheet); // spritesheet shorthand
 new ParticleSystem(sheet, { capacity: 4096 });
 ```
 
@@ -300,9 +312,9 @@ constructor(spritesheet: Spritesheet, options?: ParticleSystemOptions);
 Compile-time errors for illegal combinations:
 
 ```ts
-new ParticleSystem(spark, sheet);                  // ✗ no overload matches
-new ParticleSystem(sheet, frames);                 // ✗ frames only valid with Texture
-new ParticleSystem({ frames });                    // ✗ frames isn't an option
+new ParticleSystem(spark, sheet); // ✗ no overload matches
+new ParticleSystem(sheet, frames); // ✗ frames only valid with Texture
+new ParticleSystem({ frames }); // ✗ frames isn't an option
 ```
 
 **No `backend` option** — the renderer auto-discovers the active backend
@@ -326,19 +338,21 @@ frame chooser:
 
 ```ts
 const system = new ParticleSystem({
-    texture: explosionAtlas,
-    frames: [
-        new Rectangle(0,   0, 32, 32),  // index 0 — flame core
-        new Rectangle(32,  0, 32, 32),  // index 1 — smoke ring
-        new Rectangle(64,  0, 32, 32),  // index 2 — ember
-    ],
+  texture: explosionAtlas,
+  frames: [
+    new Rectangle(0, 0, 32, 32), // index 0 — flame core
+    new Rectangle(32, 0, 32, 32), // index 1 — smoke ring
+    new Rectangle(64, 0, 32, 32), // index 2 — ember
+  ],
 });
 
-system.addSpawnModule(new BurstSpawn({
+system.addSpawnModule(
+  new BurstSpawn({
     schedule: [{ time: 0, count: 60 }],
     velocity: ConeDirection.omni(120, 280),
-    textureIndex: new Range(0, 2),       // each spawn picks a random frame
-}));
+    textureIndex: new Range(0, 2), // each spawn picks a random frame
+  }),
+);
 ```
 
 `Spritesheet` integration via `spritesheet: sheet` extracts texture +
@@ -373,6 +387,7 @@ update). `spawn()` always returns the next sequential slot.
 
 In GPU mode, no compaction happens — readback would be required to
 move slots whose authoritative position lives in GPU memory. Instead:
+
 - Each particle has an `alive: Uint8Array` flag (1 = alive, 0 = dead).
 - `spawn()` finds the first dead slot via a round-robin hint pointer
   (amortised O(1), worst case O(capacity)).
@@ -422,7 +437,7 @@ signed stick channels, and Joy-Con-honest mappings.
 ```ts
 // Per inputManager (manual unbind):
 app.input.onTrigger(GamepadButton.South, () => player.jump());
-app.input.onActive(GamepadAxis.LeftStickX, (v) => player.x += v * 5);
+app.input.onActive(GamepadAxis.LeftStickX, v => (player.x += v * 5));
 app.input.onStart([Keyboard.Space, GamepadButton.South], () => fire());
 
 // Per gamepad (slot-aware, listener survives disconnect/reconnect):
@@ -466,8 +481,8 @@ default `'sticky'` (each pad keeps its slot through disconnects).
 disconnect (good for hot-seat couch coop where "the first N pads are
 the N players" is the desired semantic).
 
-In compact mode, the disconnect signal fires on the slot that *ended
-up* empty after the shift (not the slot the disconnected hardware
+In compact mode, the disconnect signal fires on the slot that _ended
+up_ empty after the shift (not the slot the disconnected hardware
 originally occupied), keeping `pad.connected === false` consistent with
 the fired event. Slots that received a different physical pad through
 the shift dispatch a separate signal:
@@ -481,6 +496,7 @@ player when slots renumber.
 ### Added — Generic signals
 
 Per-pad:
+
 - `pad.onConnect: Signal<[]>`
 - `pad.onDisconnect: Signal<[]>`
 - `pad.onButtonDown: Signal<[GamepadButton, number]>`
@@ -488,6 +504,7 @@ Per-pad:
 - `pad.onAxisChange: Signal<[GamepadAxis, number]>`
 
 Aggregate across all pads:
+
 - `inputManager.onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>`
 - `inputManager.onAnyGamepadButtonUp: Signal<[Gamepad, GamepadButton, number]>`
 - `inputManager.onAnyGamepadAxisChange: Signal<[Gamepad, GamepadAxis, number]>`
@@ -496,7 +513,7 @@ Aggregate across all pads:
 
 ```ts
 if (pad.canVibrate) {
-    await pad.vibrate({ duration: 200, weakMagnitude: 0.5, strongMagnitude: 1.0 });
+  await pad.vibrate({ duration: 200, weakMagnitude: 0.5, strongMagnitude: 1.0 });
 }
 pad.stopVibration();
 ```
@@ -517,18 +534,18 @@ remain available for buttons-style 0..1 input.
 
 ```ts
 // Stick-style — one binding per axis, signed value:
-this.inputs.onActive(GamepadAxis.LeftStickX, (x) => player.x += x * 5);
+this.inputs.onActive(GamepadAxis.LeftStickX, x => (player.x += x * 5));
 
 // Buttons-style — separate bindings per direction, 0..1 each:
-this.inputs.onActive(GamepadAxis.LeftStickLeft,  (v) => player.x -= v * 5);
-this.inputs.onActive(GamepadAxis.LeftStickRight, (v) => player.x += v * 5);
+this.inputs.onActive(GamepadAxis.LeftStickLeft, v => (player.x -= v * 5));
+this.inputs.onActive(GamepadAxis.LeftStickRight, v => (player.x += v * 5));
 ```
 
 ### Added — `pad.hasChannel(channel)` capability check
 
 ```ts
 if (pad.hasChannel(GamepadAxis.RightStickX)) {
-    pad.onActive(GamepadAxis.RightStickX, (v) => crosshair.x += v * 8);
+  pad.onActive(GamepadAxis.RightStickX, v => (crosshair.x += v * 8));
 }
 ```
 
@@ -545,19 +562,19 @@ Internally tracks each binding and calls `.unbind()` in `Scene.destroy`.
 ### Added — Steam Deck / Steam Virtual Gamepad / Valve fallback
 
 New `SteamDeckGamepadMapping` covers the raw HID layout reported by the
-Steam Deck (and likely future Valve hardware) when Steam Input is *not*
+Steam Deck (and likely future Valve hardware) when Steam Input is _not_
 intercepting the device. Indices follow the SDL_GameControllerDB Linux
 entry: face buttons at 3-6, D-pad at 16-19, paddles at 20-23, triggers
 as analog axes 8/9.
 
 Routing rules added to `builtInGamepadDefinitions`:
 
-| Browser ID | Mapping |
-|---|---|
-| `28de:1102`, `28de:1142` | `SteamControllerGamepadMapping` (existing, original Steam Controller raw) |
-| `28de:11ff` (Steam Virtual Gamepad — any controller via Steam Input) | `GenericDualAnalogGamepadMapping` (W3C standard Xbox emulation) |
-| `28de:1205` | `SteamDeckGamepadMapping` (raw Steam Deck) |
-| Vendor `28de` (anything else from Valve, e.g. future Steam Controller 2 raw) | `SteamDeckGamepadMapping` (best-effort fallback) |
+| Browser ID                                                                   | Mapping                                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `28de:1102`, `28de:1142`                                                     | `SteamControllerGamepadMapping` (existing, original Steam Controller raw) |
+| `28de:11ff` (Steam Virtual Gamepad — any controller via Steam Input)         | `GenericDualAnalogGamepadMapping` (W3C standard Xbox emulation)           |
+| `28de:1205`                                                                  | `SteamDeckGamepadMapping` (raw Steam Deck)                                |
+| Vendor `28de` (anything else from Valve, e.g. future Steam Controller 2 raw) | `SteamDeckGamepadMapping` (best-effort fallback)                          |
 
 Enum: `GamepadMappingFamily.SteamDeck` added.
 
@@ -610,7 +627,7 @@ app.input.getGamepad(0);
 ### Fixed — Compact-mode disconnect ordering
 
 In `'compact'` slot strategy, `onDisconnect` previously fired on the
-slot the disconnected hardware originally occupied — *before* the
+slot the disconnected hardware originally occupied — _before_ the
 compaction shift moved a different physical pad into that slot. User
 code observing the event would see `pad.connected === true` because
 the slot had been silently re-bound by the shift. Now compaction is
@@ -622,13 +639,13 @@ ended up empty (the trailing slot). Sticky behaviour is unchanged.
 The unified `GamepadChannel` enum is split into two disjoint enums for
 nominal type safety:
 
-| Old | New (user-facing) | New (internal type) |
-|---|---|---|
-| `GamepadChannel.ButtonSouth` | `GamepadButton.South` | `GamepadButtonChannel.South` |
-| `GamepadChannel.ButtonEast` | `GamepadButton.East` | `GamepadButtonChannel.East` |
-| `GamepadChannel.LeftShoulder` | `GamepadButton.LeftShoulder` | `GamepadButtonChannel.LeftShoulder` |
-| `GamepadChannel.LeftStickLeft` | `GamepadAxis.LeftStickLeft` | `GamepadAxisChannel.LeftStickLeft` |
-| ... | ... | ... |
+| Old                            | New (user-facing)            | New (internal type)                 |
+| ------------------------------ | ---------------------------- | ----------------------------------- |
+| `GamepadChannel.ButtonSouth`   | `GamepadButton.South`        | `GamepadButtonChannel.South`        |
+| `GamepadChannel.ButtonEast`    | `GamepadButton.East`         | `GamepadButtonChannel.East`         |
+| `GamepadChannel.LeftShoulder`  | `GamepadButton.LeftShoulder` | `GamepadButtonChannel.LeftShoulder` |
+| `GamepadChannel.LeftStickLeft` | `GamepadAxis.LeftStickLeft`  | `GamepadAxisChannel.LeftStickLeft`  |
+| ...                            | ...                          | ...                                 |
 
 User code references the namespace mirrors (`GamepadButton.X`,
 `GamepadAxis.Y`) — same `Pointer.X` / `Keyboard.Space` convention. Type
@@ -670,11 +687,11 @@ instead of firing every frame.
 
 ```ts
 // Before:
-new Gamepad(index, channels, mapping)
-new Gamepad(browserGamepad, channels, definition)
+new Gamepad(index, channels, mapping);
+new Gamepad(browserGamepad, channels, definition);
 
 // After (engine-internal — InputManager handles slot allocation):
-new Gamepad(slot, channels)
+new Gamepad(slot, channels);
 // followed by pad._bind(browserGamepad, definition) on connect
 ```
 
@@ -696,7 +713,7 @@ import { GamepadButton, Keyboard } from '@codexo/exojs';
 
 // Manual lifecycle
 const binding = app.input.onTrigger(GamepadButton.South, () => player.jump());
-binding.unbind();   // when done
+binding.unbind(); // when done
 
 // Auto-disposed on scene unload
 this.inputs.onTrigger(GamepadButton.South, () => player.jump());
@@ -707,37 +724,31 @@ this.app.input.gamepads[0].onTrigger(GamepadButton.South, () => player.jump());
 
 ```ts
 // Stick movement — before:
-const moveLeft  = new Input(GamepadChannel.LeftStickLeft);
+const moveLeft = new Input(GamepadChannel.LeftStickLeft);
 const moveRight = new Input(GamepadChannel.LeftStickRight);
 app.input.add(moveLeft);
 app.input.add(moveRight);
 // per frame: const x = moveRight.value - moveLeft.value;
 
 // After (signed aggregate channel):
-this.inputs.onActive(GamepadAxis.LeftStickX, (x) => player.x += x * 5);
+this.inputs.onActive(GamepadAxis.LeftStickX, x => (player.x += x * 5));
 ```
 
 ```ts
 // Custom mapping — before:
 import { GamepadMapping, GamepadChannel } from '@codexo/exojs';
 const buttons = GamepadMapping.createControls([
-    [0, GamepadChannel.ButtonSouth],
-    [1, GamepadChannel.ButtonEast],
+  [0, GamepadChannel.ButtonSouth],
+  [1, GamepadChannel.ButtonEast],
 ]);
 
 // After:
 import { GamepadButton, GamepadMapping, GamepadMappingFamily } from '@codexo/exojs';
 class MyMapping extends GamepadMapping {
-    public readonly family = GamepadMappingFamily.GenericDualAnalog;
-    public constructor() {
-        super(
-            [
-                new GamepadButton(0, GamepadButton.South),
-                new GamepadButton(1, GamepadButton.East),
-            ],
-            [],
-        );
-    }
+  public readonly family = GamepadMappingFamily.GenericDualAnalog;
+  public constructor() {
+    super([new GamepadButton(0, GamepadButton.South), new GamepadButton(1, GamepadButton.East)], []);
+  }
 }
 ```
 
@@ -863,7 +874,7 @@ indexing is now automatic and persistent).
   audio, collision, scene-graph, interaction. Each domain has its own
   script (`npm run perf:bench:rendering`, `:audio`, `:collision`,
   `:scene-graph`, `:interaction`) plus `:all` aggregator. Output: JSON
-  + Markdown to `test/perf/results/`.
+  - Markdown to `test/perf/results/`.
 - **Baseline snapshot** committed as `test/perf/results/baseline.md` —
   reference numbers at 0.7.10 for future regression detection.
 - **Auto-profiler** (`npm run perf:profile`, `:gc` variant with
@@ -903,6 +914,7 @@ also makes the `useSpatialIndex` opt-in flag unnecessary and **the
 flag has been removed entirely**.
 
 **How it works now:**
+
 - A persistent quadtree is created lazily when the first interactive
   node enters the scene.
 - `Container.addChild` / `removeChild` walk subtrees and add/remove
@@ -943,7 +955,7 @@ actually-moved nodes.
 
 ```ts
 // Before:
-app.interaction.useSpatialIndex = true;   // flag opt-in
+app.interaction.useSpatialIndex = true; // flag opt-in
 
 // After:
 // Nothing — index is automatic. Just have at least one interactive
@@ -1046,7 +1058,7 @@ Fixes a GLSL compile-error in the 0.7.8 shader auto-upgrade path.
 ### Fixed
 
 - **`upgradeFragmentShaderToGl300()` now always prepends `precision highp
-  float;`** before the `out vec4 fragColor;` declaration. Previously, if
+float;`** before the `out vec4 fragColor;` declaration. Previously, if
   the user's source already contained a precision declaration anywhere
   (e.g., `precision lowp float;` mid-source), the upgrader skipped its
   own injection — but the user's declaration came AFTER the
@@ -1057,7 +1069,7 @@ Fixes a GLSL compile-error in the 0.7.8 shader auto-upgrade path.
 
   Multiple precision declarations are legal in GLSL ES 3.00 with
   last-precision-wins semantics. The fix always injects `precision highp
-  float;` at line 2 (before `out vec4 fragColor;`); the user's own
+float;` at line 2 (before `out vec4 fragColor;`); the user's own
   precision declaration further down still applies to their code via
   the standard last-precision-wins rule. No semantic change for
   user-provided shader logic; previously-broken shaders with custom
@@ -1256,7 +1268,7 @@ app.backend.setCursor('pointer');
 const cursor = app.backend.cursor;
 
 // After:
-app.setCursor('pointer');           // or
+app.setCursor('pointer'); // or
 app.cursor = 'pointer';
 const cursor = app.cursor;
 ```
@@ -1264,14 +1276,14 @@ const cursor = app.cursor;
 ```ts
 // New: react to backend loss
 app.onBackendLost.add(() => {
-    showReloadDialog();
+  showReloadDialog();
 });
 
 // Or backend-specific:
 if (app.backend.backendType === RenderBackendType.WebGpu) {
-    (app.backend as WebGpuBackend).onDeviceLost.add((info) => {
-        console.error('GPU device lost:', info.message, info.reason);
-    });
+  (app.backend as WebGpuBackend).onDeviceLost.add(info => {
+    console.error('GPU device lost:', info.message, info.reason);
+  });
 }
 ```
 
@@ -1380,9 +1392,9 @@ etc.).
   separate `WebGpuShaderFilter`.
 - **Backend guard messages updated**:
   - `WebGl2ShaderFilter` on WebGPU: `'WebGl2ShaderFilter requires the
-    WebGL2 backend. Use WebGpuShaderFilter on WebGPU.'`
+WebGL2 backend. Use WebGpuShaderFilter on WebGPU.'`
   - `WebGpuShaderFilter` on WebGL2: `'WebGpuShaderFilter requires the
-    WebGPU backend. Use WebGl2ShaderFilter on WebGL2.'`
+WebGPU backend. Use WebGl2ShaderFilter on WebGL2.'`
 
 `ShaderFilterUniformValue` (the polymorphic uniform value type) is
 **unchanged** and shared between both backends — same value shapes
@@ -1443,7 +1455,7 @@ LUT color grading, chromatic aberration, etc.
   via property assignment; flushed before each apply():
   ```ts
   filter.uniforms.uTime = performance.now() / 1000;
-  filter.uniforms.uColor = [1, 0.5, 0, 1];      // vec4
+  filter.uniforms.uColor = [1, 0.5, 0, 1]; // vec4
   ```
 - **Polymorphic uniform values**: scalar `number`, tuple `[a, b]` /
   `[a, b, c]` / `[a, b, c, d]`, `Float32Array` / `Int32Array`, or
@@ -1458,8 +1470,8 @@ LUT color grading, chromatic aberration, etc.
 
 - **WebGL2-only in V1.** Constructor accepts `wgsl` source, but `apply()`
   on the WebGPU backend throws `'ShaderFilter does not yet support the
-  WebGPU backend. WGSL support is planned for a future release. Use the
-  WebGL2 backend for now.'` Document this limitation; reasoning: WebGPU
+WebGPU backend. WGSL support is planned for a future release. Use the
+WebGL2 backend for now.'` Document this limitation; reasoning: WebGPU
   requires a separate WGSL pipeline implementation that's substantial
   on its own. Coming when there's concrete user demand.
 - `fragmentSource` is required at construction. Constructor throws if
@@ -1476,7 +1488,7 @@ LUT color grading, chromatic aberration, etc.
 import { ShaderFilter } from '@codexo/exojs';
 
 const filter = new ShaderFilter({
-    fragmentSource: `#version 300 es
+  fragmentSource: `#version 300 es
         precision highp float;
         in vec2 vUv;
         uniform sampler2D uTexture;
@@ -1489,15 +1501,15 @@ const filter = new ShaderFilter({
             outColor = texture(uTexture, uv);
         }
     `,
-    uniforms: {
-        uTime: 0,
-    },
+  uniforms: {
+    uTime: 0,
+  },
 });
 
 sprite.filters = [filter];
 
-app.onFrame.add((delta) => {
-    filter.uniforms.uTime = performance.now() / 1000;
+app.onFrame.add(delta => {
+  filter.uniforms.uTime = performance.now() / 1000;
 });
 ```
 
@@ -1583,10 +1595,10 @@ const spectrum = analyser.getSpectrum();
 const waveform = analyser.getWaveform();
 
 // Now also possible:
-analyser.source = mediaStream;     // Mic input
+analyser.source = mediaStream; // Mic input
 analyser.source = app.audio.master; // Whole mix
-analyser.getBandEnergy(20, 200);   // Bass energy 0..1
-analyser.getLowMidHigh();          // {low, mid, high}
+analyser.getBandEnergy(20, 200); // Bass energy 0..1
+analyser.getLowMidHigh(); // {low, mid, high}
 ```
 
 ```ts
@@ -1596,12 +1608,12 @@ detector.source = music;
 await detector.ready;
 
 detector.onBeat.add(({ audioTime, tempo, isDownbeat, energy }) => {
-    sprite.scale.set(1.5);
-    new Tween().target(sprite.scale).to({x: 1, y: 1}).duration(200).start();
+  sprite.scale.set(1.5);
+  new Tween().target(sprite.scale).to({ x: 1, y: 1 }).duration(200).start();
 });
 
 detector.onDownbeat.add(() => {
-    boss.attack();  // syncs exactly to "the 1" of each bar
+  boss.attack(); // syncs exactly to "the 1" of each bar
 });
 ```
 
@@ -1770,22 +1782,22 @@ breaking change.
 
 ```ts
 // Before:
-sound.play();              // singleton — second call replaces first
-sound.playPooled();        // multi-instance — concurrent plays
+sound.play(); // singleton — second call replaces first
+sound.playPooled(); // multi-instance — concurrent plays
 
 // After:
-sound.play();              // multi-instance — concurrent plays (default!)
+sound.play(); // multi-instance — concurrent plays (default!)
 sound.play({ replace: true }); // singleton — equivalent of old play()
 ```
 
 ```ts
 // Before — direct destination routing was implicit:
 const sound = new Sound(buffer);
-sound.play();   // → audioContext.destination
+sound.play(); // → audioContext.destination
 
 // After — routes through the soundBus by default:
 const sound = new Sound(buffer);
-sound.play();   // → app.audio.sound → app.audio.master → destination
+sound.play(); // → app.audio.sound → app.audio.master → destination
 
 // Override to a custom bus:
 const dialogueBus = new AudioBus('dialogue', { parent: app.audio.master });
@@ -1796,8 +1808,8 @@ sound.bus = dialogueBus;
 ```ts
 // Spatial audio:
 const explosion = new Sound(buffer);
-explosion.position = { x: 200, y: 100 };  // becomes spatial
-app.audio.listener.target = playerSprite;  // ears follow player
+explosion.position = { x: 200, y: 100 }; // becomes spatial
+app.audio.listener.target = playerSprite; // ears follow player
 
 explosion.play();
 // → routes through equalpower panner with distance falloff
@@ -1834,7 +1846,7 @@ infrastructure. Pure additive — no behavior changes for existing code.
   **world-space position** via `getGlobalTransform()`, so following a
   Sprite nested under a translated/rotated Container works correctly.
   New exported type `ViewFollowTarget = SceneNode | { x: number; y:
-  number } | null`.
+number } | null`.
 - **Audio fade helpers on `AbstractMedia`** — both `Sound` and `Music`
   inherit:
   - `fadeIn(durationMs): this` — ramps gain from 0 to current volume.
@@ -1901,7 +1913,7 @@ detection. Pure performance change — no public API surface changes.
   components. Recomputes only when the sprite's transform or local
   bounds change. Previously had a `// todo cache this` comment.
 - **`Sprite.getNormals()`** returns a stable `[Vector, Vector,
-  Vector, Vector]` array. The four `Vector` instances are reused
+Vector, Vector]` array. The four `Vector` instances are reused
   across calls; previously each call allocated four new `Vector`s.
   Recomputes only when vertices change. Reduces GC pressure in
   collision-detection hot paths.
@@ -1983,7 +1995,7 @@ per-frame application hook.
 
 - **`Application.debug` removed** — was added in 0.6.15. Apps that
   used `app.debug.show()` must migrate to `import { DebugOverlay }
-  from '@codexo/exojs/debug'` and instantiate manually. **Breaking
+from '@codexo/exojs/debug'` and instantiate manually. **Breaking
   change**, but the affected window is one day (0.6.15 → 0.6.17).
 
 ### Notes
@@ -2080,7 +2092,7 @@ zero cost when not shown.
 
 Reshapes the interaction system around a per-frame tick and adds an
 opt-in drag-and-drop helper. The public per-node signal API from 0.6.13
-is unchanged; only event *cadence* and a new `draggable` flag.
+is unchanged; only event _cadence_ and a new `draggable` flag.
 
 ### Added
 
@@ -2216,12 +2228,13 @@ existing surface changes shape.
   properties on any target object:
 
   ```ts
-  app.tweens.create(sprite)
-      .to({ x: 100, alpha: 0.5 }, 1.0)        // 1 second
-      .easing(Ease.cubicOut)
-      .delay(0.2)
-      .onComplete(() => console.log('done'))
-      .start();
+  app.tweens
+    .create(sprite)
+    .to({ x: 100, alpha: 0.5 }, 1.0) // 1 second
+    .easing(Ease.cubicOut)
+    .delay(0.2)
+    .onComplete(() => console.log('done'))
+    .start();
   ```
 
   Lifecycle: `Idle → Active → Complete | Stopped` (with
@@ -2233,6 +2246,7 @@ existing surface changes shape.
   interpolation), `onUpdate` (per frame), `onRepeat` (cycle
   boundaries), `onComplete` (final cycle ends naturally).
   `stop()` does NOT fire `onComplete`.
+
 - **`TweenManager` class.** Owns active tweens and ticks them
   from `Application.update()`. Use `app.tweens.create(target)` to
   spawn-and-register a tween in one call; `app.tweens.add(tween)`
@@ -2328,7 +2342,7 @@ one atlas — memory-efficient at scale, single drawcall per Text.
 
 - **`DynamicGlyphAtlas`** — public class. Constructor takes
   `width = 1024, height = 1024`. Has `getGlyph(char, family, size,
-  weight, style) → GlyphInfo` (cached or rasterizes), `clear()` to
+weight, style) → GlyphInfo` (cached or rasterizes), `clear()` to
   reset, and `texture` for binding to a Mesh. Internal shelf
   bin-packing; throws on atlas-full (LRU eviction is V2).
 - **`layoutText(text, style, atlas)`** — pure function. Returns
@@ -2340,7 +2354,7 @@ one atlas — memory-efficient at scale, single drawcall per Text.
   their own atlas / layout pipelines.
 - **TextStyle gets `fillColor: Color`** (defaults to white, used
   via mesh.tint after glyph rasterization), **`fontStyle: 'normal'
-  | 'italic'`**, and **`lineHeight: number`** (multiplied by
+| 'italic'`**, and **`lineHeight: number`** (multiplied by
   fontSize for line spacing, defaults to 1.2). `align` field is
   now strongly typed as `TextAlignment`.
 
@@ -2370,8 +2384,8 @@ one atlas — memory-efficient at scale, single drawcall per Text.
   `document.createElement('canvas')` (works in jsdom / older
   browsers).
 - First-render of a never-seen glyph costs one canvas2d round-trip
-  + texture re-upload. Cached glyphs are zero-cost on subsequent
-  renders.
+  - texture re-upload. Cached glyphs are zero-cost on subsequent
+    renders.
 - Per-character animation, MSDF rendering, word-wrap, BiDi, and
   text outlines / drop-shadows are all V2.
 
@@ -2540,7 +2554,7 @@ one unified rendering path for everything triangle-shaped.
   (`buildLine`, `buildPath`, `buildCircle`, `buildEllipse`,
   `buildRectangle`, `buildPolygon`, `buildStar`) now return a
   `MeshGeometryData` plain object — `{ vertices: Float32Array,
-  indices: Uint16Array, points: Array<number> }` — directly suitable
+indices: Uint16Array, points: Array<number> }` — directly suitable
   for `new Mesh({ ... })`.
 - **`WebGl2PrimitiveRenderer` and `WebGpuPrimitiveRenderer` removed.**
   Their work moved entirely into the existing `*MeshRenderer`s. Both
@@ -2569,18 +2583,14 @@ one unified rendering path for everything triangle-shaped.
 // Before (0.6.4)
 import { DrawableShape, Geometry, RenderingPrimitives, Color } from '@codexo/exojs';
 
-const shape = new DrawableShape(
-    new Geometry({ vertices: [0, 0, 100, 0, 50, 100], indices: [0, 1, 2] }),
-    Color.red,
-    RenderingPrimitives.Triangles,
-);
+const shape = new DrawableShape(new Geometry({ vertices: [0, 0, 100, 0, 50, 100], indices: [0, 1, 2] }), Color.red, RenderingPrimitives.Triangles);
 
 // After (0.6.5)
 import { Mesh, Color } from '@codexo/exojs';
 
 const mesh = new Mesh({
-    vertices: new Float32Array([0, 0, 100, 0, 50, 100]),
-    indices: new Uint16Array([0, 1, 2]),
+  vertices: new Float32Array([0, 0, 100, 0, 50, 100]),
+  indices: new Uint16Array([0, 1, 2]),
 });
 mesh.tint = Color.red;
 ```
@@ -2656,13 +2666,13 @@ match the rest of ExoJS.
 ```ts
 // Before (0.6.3)
 import { capabilities, isSupported } from '@codexo/exojs';
-if (capabilities.webgpu) startWebGpu();             // false positives possible
+if (capabilities.webgpu) startWebGpu(); // false positives possible
 if (isSupported('touch')) showTouchUi();
 
 // After (0.6.4)
 import { Capabilities } from '@codexo/exojs';
 const caps = await Capabilities.ready;
-if (caps.webgpuAdapter) startWebGpu();              // strict adapter check
+if (caps.webgpuAdapter) startWebGpu(); // strict adapter check
 if (caps.touch) showTouchUi();
 
 // Or via Application after start:
@@ -2782,12 +2792,12 @@ and breaks freely between minors.
 - **`Scene` is class-only; the plain-object definition constructor is
   gone.** `new Scene({ update() { ... } })` no longer works. Subclass
   to define a scene — `class GameScene extends Scene { override
-  update(...) { ... } }` for named scenes, `new class extends Scene
-  { ... }` for one-offs. The `SceneData` interface and
+update(...) { ... } }` for named scenes, `new class extends Scene
+{ ... }` for one-offs. The `SceneData` interface and
   `SceneInstance<T>` type alias are removed (they only existed to
   type the spread-into-`this` constructor). Internal Scene fields
   move from ECMAScript `#`-private to TS `protected _app/_root/
-  _stackMode/_inputMode` — subclasses can now reach internal state
+_stackMode/_inputMode` — subclasses can now reach internal state
   directly when they need to.
 - **npm package shape simplified.** Dropped: `dist/exo.global.js` /
   `dist/exo.global.min.js` (legacy IIFE for `<script>` use) and
@@ -2848,33 +2858,49 @@ and breaks freely between minors.
 ```ts
 // Before (0.5.x)
 class GameScene extends Scene {
-    override draw(runtime: SceneRenderRuntime): void {
-        this.root.render(runtime);
-    }
+  override draw(runtime: SceneRenderRuntime): void {
+    this.root.render(runtime);
+  }
 }
 
 const triangleRenderer = new CustomRenderer(app.renderManager);
 
-if (app.renderManager instanceof WebGpuRenderManager) { /* ... */ }
+if (app.renderManager instanceof WebGpuRenderManager) {
+  /* ... */
+}
 
 // Plain-object scene
-app.start(new Scene({ update() { /* ... */ } }));
+app.start(
+  new Scene({
+    update() {
+      /* ... */
+    },
+  }),
+);
 ```
 
 ```ts
 // After (0.6.0)
 class GameScene extends Scene {
-    override draw(backend: RenderBackend): void {
-        this.root.render(backend);
-    }
+  override draw(backend: RenderBackend): void {
+    this.root.render(backend);
+  }
 }
 
 const triangleRenderer = new CustomRenderer(app.backend);
 
-if (app.backend instanceof WebGpuBackend) { /* ... */ }
+if (app.backend instanceof WebGpuBackend) {
+  /* ... */
+}
 
 // Anonymous-subclass scene (or named subclass)
-app.start(new class extends Scene { override update() { /* ... */ } });
+app.start(
+  new (class extends Scene {
+    override update() {
+      /* ... */
+    }
+  })(),
+);
 ```
 
 ## [0.5.1] - 2026-04-28
@@ -2968,6 +2994,7 @@ Three focused breaking changes targeted at the first pre-1.0 minor: a hierarchy-
   - `null` — no mask.
 
   Setting `node.mask = node` (self-mask) throws at runtime.
+
 - **`SceneRenderRuntime` mask primitives renamed** to match the new vocabulary:
   - `pushMask(maskBounds)` / `popMask()` → `pushScissorRect(bounds)` / `popScissorRect()` (lower-level scissor primitive used internally by the `Rectangle` mask path).
   - New `composeWithAlphaMask(content, mask, x, y, width, height, blendMode)` — used internally by the Texture/RenderTexture/RenderNode mask paths.
@@ -2985,19 +3012,19 @@ Three focused breaking changes targeted at the first pre-1.0 minor: a hierarchy-
 
 ### Migration
 
-| Before (0.4.x) | After |
-|---|---|
-| `import { Transformable } from '@codexo/exojs'`; `class X extends Transformable` | `import { SceneNode } from '@codexo/exojs'`; `class X extends SceneNode` |
-| `import { TransformableFlags } from '@codexo/exojs'` | Internal flag enum is no longer public; use SceneNode's high-level transform accessors instead. |
-| `node.mask = anyShapeNode` *(silently clipped to bounding rect)* | `node.mask = anyShapeNode` *(now a real shape mask via alpha compositing — except bare SceneNode which is rejected at compile time)* |
-| Want fast axis-aligned clipping? | `node.mask = new Rectangle(x, y, w, h)` |
-| Want to clip with a texture's alpha channel? | `node.mask = texture` or `node.mask = renderTexture` |
-| Want a transformed/positioned alpha mask? | `node.mask = new Sprite(texture)` (Sprite's transform/position/scale apply to the mask source) |
-| `runtime.pushMask(rect)` / `runtime.popMask()` | `runtime.pushScissorRect(rect)` / `runtime.popScissorRect()` (renamed; behavior unchanged) |
-| `class Group extends SceneNode { override render() {...} }` | `class Group extends RenderNode { override render() {...} }` |
-| `class CustomContainer extends Container { override addChild(child: SceneNode) {...} }` | `class CustomContainer extends Container { override addChild(child: RenderNode) {...} }` |
-| `Scene.create({ update() {...} })` | `new Scene({ update() {...} })` (drop-in replacement; same `this` typing via `ThisType<Scene & T>`) |
-| `Scene.create({})` | `new Scene()` |
+| Before (0.4.x)                                                                          | After                                                                                                                                |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `import { Transformable } from '@codexo/exojs'`; `class X extends Transformable`        | `import { SceneNode } from '@codexo/exojs'`; `class X extends SceneNode`                                                             |
+| `import { TransformableFlags } from '@codexo/exojs'`                                    | Internal flag enum is no longer public; use SceneNode's high-level transform accessors instead.                                      |
+| `node.mask = anyShapeNode` _(silently clipped to bounding rect)_                        | `node.mask = anyShapeNode` _(now a real shape mask via alpha compositing — except bare SceneNode which is rejected at compile time)_ |
+| Want fast axis-aligned clipping?                                                        | `node.mask = new Rectangle(x, y, w, h)`                                                                                              |
+| Want to clip with a texture's alpha channel?                                            | `node.mask = texture` or `node.mask = renderTexture`                                                                                 |
+| Want a transformed/positioned alpha mask?                                               | `node.mask = new Sprite(texture)` (Sprite's transform/position/scale apply to the mask source)                                       |
+| `runtime.pushMask(rect)` / `runtime.popMask()`                                          | `runtime.pushScissorRect(rect)` / `runtime.popScissorRect()` (renamed; behavior unchanged)                                           |
+| `class Group extends SceneNode { override render() {...} }`                             | `class Group extends RenderNode { override render() {...} }`                                                                         |
+| `class CustomContainer extends Container { override addChild(child: SceneNode) {...} }` | `class CustomContainer extends Container { override addChild(child: RenderNode) {...} }`                                             |
+| `Scene.create({ update() {...} })`                                                      | `new Scene({ update() {...} })` (drop-in replacement; same `this` typing via `ThisType<Scene & T>`)                                  |
+| `Scene.create({})`                                                                      | `new Scene()`                                                                                                                        |
 
 No deprecated aliases are provided. The migration is mechanical and the project is pre-1.0 with explicit "may break between minors" policy.
 

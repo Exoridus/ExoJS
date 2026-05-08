@@ -1,7 +1,6 @@
+import type { GamepadButtonChannel } from './GamepadButton';
 import { GamepadButton } from './GamepadButton';
 import { GamepadMappingFamily } from './GamepadMapping';
-
-import type { GamepadButtonChannel } from './GamepadButton';
 
 /**
  * Named controls that can appear in an in-game prompt or button-hint UI.
@@ -13,134 +12,134 @@ import type { GamepadButtonChannel } from './GamepadButton';
  * artwork file names.
  */
 export type GamepadPromptControl =
-    | 'DPad'
-    | 'DPadUp'
-    | 'DPadDown'
-    | 'DPadLeft'
-    | 'DPadRight'
-    | 'ButtonNorth'
-    | 'ButtonWest'
-    | 'ButtonEast'
-    | 'ButtonSouth'
-    | 'LeftShoulder'
-    | 'RightShoulder'
-    | 'LeftTrigger'
-    | 'RightTrigger'
-    | 'Select'
-    | 'Start'
-    | 'LeftStick'
-    | 'RightStick';
+  | 'DPad'
+  | 'DPadUp'
+  | 'DPadDown'
+  | 'DPadLeft'
+  | 'DPadRight'
+  | 'ButtonNorth'
+  | 'ButtonWest'
+  | 'ButtonEast'
+  | 'ButtonSouth'
+  | 'LeftShoulder'
+  | 'RightShoulder'
+  | 'LeftTrigger'
+  | 'RightTrigger'
+  | 'Select'
+  | 'Start'
+  | 'LeftStick'
+  | 'RightStick';
 
 const basePositions = new Map<GamepadPromptControl, readonly [number, number]>([
-    ['DPad', [0.22, 0.58]],
-    ['DPadUp', [0.22, 0.50]],
-    ['DPadDown', [0.22, 0.66]],
-    ['DPadLeft', [0.14, 0.58]],
-    ['DPadRight', [0.30, 0.58]],
-    ['ButtonNorth', [0.78, 0.50]],
-    ['ButtonWest', [0.70, 0.58]],
-    ['ButtonEast', [0.86, 0.58]],
-    ['ButtonSouth', [0.78, 0.66]],
-    ['LeftShoulder', [0.28, 0.28]],
-    ['RightShoulder', [0.72, 0.28]],
-    ['LeftTrigger', [0.20, 0.16]],
-    ['RightTrigger', [0.80, 0.16]],
-    ['Select', [0.46, 0.50]],
-    ['Start', [0.54, 0.50]],
-    ['LeftStick', [0.38, 0.66]],
-    ['RightStick', [0.62, 0.66]],
+  ['DPad', [0.22, 0.58]],
+  ['DPadUp', [0.22, 0.5]],
+  ['DPadDown', [0.22, 0.66]],
+  ['DPadLeft', [0.14, 0.58]],
+  ['DPadRight', [0.3, 0.58]],
+  ['ButtonNorth', [0.78, 0.5]],
+  ['ButtonWest', [0.7, 0.58]],
+  ['ButtonEast', [0.86, 0.58]],
+  ['ButtonSouth', [0.78, 0.66]],
+  ['LeftShoulder', [0.28, 0.28]],
+  ['RightShoulder', [0.72, 0.28]],
+  ['LeftTrigger', [0.2, 0.16]],
+  ['RightTrigger', [0.8, 0.16]],
+  ['Select', [0.46, 0.5]],
+  ['Start', [0.54, 0.5]],
+  ['LeftStick', [0.38, 0.66]],
+  ['RightStick', [0.62, 0.66]],
 ]);
 
 const channelMap = new Map<GamepadPromptControl, GamepadButtonChannel>([
-    ['ButtonNorth', GamepadButton.North],
-    ['ButtonWest', GamepadButton.West],
-    ['ButtonEast', GamepadButton.East],
-    ['ButtonSouth', GamepadButton.South],
-    ['LeftShoulder', GamepadButton.LeftShoulder],
-    ['RightShoulder', GamepadButton.RightShoulder],
-    ['LeftTrigger', GamepadButton.LeftTrigger],
-    ['RightTrigger', GamepadButton.RightTrigger],
-    ['Select', GamepadButton.Select],
-    ['Start', GamepadButton.Start],
-    ['LeftStick', GamepadButton.LeftStick],
-    ['RightStick', GamepadButton.RightStick],
-    ['DPadUp', GamepadButton.DPadUp],
-    ['DPadDown', GamepadButton.DPadDown],
-    ['DPadLeft', GamepadButton.DPadLeft],
-    ['DPadRight', GamepadButton.DPadRight],
+  ['ButtonNorth', GamepadButton.North],
+  ['ButtonWest', GamepadButton.West],
+  ['ButtonEast', GamepadButton.East],
+  ['ButtonSouth', GamepadButton.South],
+  ['LeftShoulder', GamepadButton.LeftShoulder],
+  ['RightShoulder', GamepadButton.RightShoulder],
+  ['LeftTrigger', GamepadButton.LeftTrigger],
+  ['RightTrigger', GamepadButton.RightTrigger],
+  ['Select', GamepadButton.Select],
+  ['Start', GamepadButton.Start],
+  ['LeftStick', GamepadButton.LeftStick],
+  ['RightStick', GamepadButton.RightStick],
+  ['DPadUp', GamepadButton.DPadUp],
+  ['DPadDown', GamepadButton.DPadDown],
+  ['DPadLeft', GamepadButton.DPadLeft],
+  ['DPadRight', GamepadButton.DPadRight],
 ]);
 
 const genericLabels = new Map<GamepadPromptControl, string>([
-    ['ButtonNorth', 'North'],
-    ['ButtonWest', 'West'],
-    ['ButtonEast', 'East'],
-    ['ButtonSouth', 'South'],
-    ['LeftShoulder', 'L1'],
-    ['RightShoulder', 'R1'],
-    ['LeftTrigger', 'L2'],
-    ['RightTrigger', 'R2'],
-    ['Select', 'Select'],
-    ['Start', 'Start'],
-    ['LeftStick', 'L3'],
-    ['RightStick', 'R3'],
+  ['ButtonNorth', 'North'],
+  ['ButtonWest', 'West'],
+  ['ButtonEast', 'East'],
+  ['ButtonSouth', 'South'],
+  ['LeftShoulder', 'L1'],
+  ['RightShoulder', 'R1'],
+  ['LeftTrigger', 'L2'],
+  ['RightTrigger', 'R2'],
+  ['Select', 'Select'],
+  ['Start', 'Start'],
+  ['LeftStick', 'L3'],
+  ['RightStick', 'R3'],
 ]);
 
 const xboxLabels = new Map<GamepadPromptControl, string>([
-    ['ButtonNorth', 'Y'],
-    ['ButtonWest', 'X'],
-    ['ButtonEast', 'B'],
-    ['ButtonSouth', 'A'],
-    ['LeftShoulder', 'LB'],
-    ['RightShoulder', 'RB'],
-    ['LeftTrigger', 'LT'],
-    ['RightTrigger', 'RT'],
-    ['Select', 'View'],
-    ['Start', 'Menu'],
-    ['LeftStick', 'L3'],
-    ['RightStick', 'R3'],
+  ['ButtonNorth', 'Y'],
+  ['ButtonWest', 'X'],
+  ['ButtonEast', 'B'],
+  ['ButtonSouth', 'A'],
+  ['LeftShoulder', 'LB'],
+  ['RightShoulder', 'RB'],
+  ['LeftTrigger', 'LT'],
+  ['RightTrigger', 'RT'],
+  ['Select', 'View'],
+  ['Start', 'Menu'],
+  ['LeftStick', 'L3'],
+  ['RightStick', 'R3'],
 ]);
 
 const playStationLabels = new Map<GamepadPromptControl, string>([
-    ['ButtonNorth', 'Triangle'],
-    ['ButtonWest', 'Square'],
-    ['ButtonEast', 'Circle'],
-    ['ButtonSouth', 'Cross'],
-    ['LeftShoulder', 'L1'],
-    ['RightShoulder', 'R1'],
-    ['LeftTrigger', 'L2'],
-    ['RightTrigger', 'R2'],
-    ['Select', 'Create'],
-    ['Start', 'Options'],
-    ['LeftStick', 'L3'],
-    ['RightStick', 'R3'],
+  ['ButtonNorth', 'Triangle'],
+  ['ButtonWest', 'Square'],
+  ['ButtonEast', 'Circle'],
+  ['ButtonSouth', 'Cross'],
+  ['LeftShoulder', 'L1'],
+  ['RightShoulder', 'R1'],
+  ['LeftTrigger', 'L2'],
+  ['RightTrigger', 'R2'],
+  ['Select', 'Create'],
+  ['Start', 'Options'],
+  ['LeftStick', 'L3'],
+  ['RightStick', 'R3'],
 ]);
 
 const switchLabels = new Map<GamepadPromptControl, string>([
-    ['ButtonNorth', 'X'],
-    ['ButtonWest', 'Y'],
-    ['ButtonEast', 'A'],
-    ['ButtonSouth', 'B'],
-    ['LeftShoulder', 'L'],
-    ['RightShoulder', 'R'],
-    ['LeftTrigger', 'ZL'],
-    ['RightTrigger', 'ZR'],
-    ['Select', 'Minus'],
-    ['Start', 'Plus'],
-    ['LeftStick', 'L3'],
-    ['RightStick', 'R3'],
+  ['ButtonNorth', 'X'],
+  ['ButtonWest', 'Y'],
+  ['ButtonEast', 'A'],
+  ['ButtonSouth', 'B'],
+  ['LeftShoulder', 'L'],
+  ['RightShoulder', 'R'],
+  ['LeftTrigger', 'ZL'],
+  ['RightTrigger', 'ZR'],
+  ['Select', 'Minus'],
+  ['Start', 'Plus'],
+  ['LeftStick', 'L3'],
+  ['RightStick', 'R3'],
 ]);
 
 const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPromptControl, string>>([
-    [GamepadMappingFamily.GenericDualAnalog, genericLabels],
-    [GamepadMappingFamily.Xbox, xboxLabels],
-    [GamepadMappingFamily.PlayStation, playStationLabels],
-    [GamepadMappingFamily.SwitchPro, switchLabels],
-    [GamepadMappingFamily.JoyConLeft, switchLabels],
-    [GamepadMappingFamily.JoyConRight, switchLabels],
-    [GamepadMappingFamily.GameCube, genericLabels],
-    [GamepadMappingFamily.SteamController, genericLabels],
-    [GamepadMappingFamily.SteamDeck, genericLabels],
-    [GamepadMappingFamily.ArcadeStick, genericLabels],
+  [GamepadMappingFamily.GenericDualAnalog, genericLabels],
+  [GamepadMappingFamily.Xbox, xboxLabels],
+  [GamepadMappingFamily.PlayStation, playStationLabels],
+  [GamepadMappingFamily.SwitchPro, switchLabels],
+  [GamepadMappingFamily.JoyConLeft, switchLabels],
+  [GamepadMappingFamily.JoyConRight, switchLabels],
+  [GamepadMappingFamily.GameCube, genericLabels],
+  [GamepadMappingFamily.SteamController, genericLabels],
+  [GamepadMappingFamily.SteamDeck, genericLabels],
+  [GamepadMappingFamily.ArcadeStick, genericLabels],
 ]);
 
 /**
@@ -152,51 +151,51 @@ const promptLabelsByFamily = new Map<GamepadMappingFamily, ReadonlyMap<GamepadPr
  * control names to {@link GamepadButton} channel values.
  */
 export class GamepadPromptLayouts {
-    /** Complete ordered list of every {@link GamepadPromptControl} token. */
-    public static readonly controls: Array<GamepadPromptControl> = [
-        'DPad',
-        'DPadUp',
-        'DPadDown',
-        'DPadLeft',
-        'DPadRight',
-        'ButtonNorth',
-        'ButtonWest',
-        'ButtonEast',
-        'ButtonSouth',
-        'LeftShoulder',
-        'RightShoulder',
-        'LeftTrigger',
-        'RightTrigger',
-        'Select',
-        'Start',
-        'LeftStick',
-        'RightStick',
-    ];
+  /** Complete ordered list of every {@link GamepadPromptControl} token. */
+  public static readonly controls: GamepadPromptControl[] = [
+    'DPad',
+    'DPadUp',
+    'DPadDown',
+    'DPadLeft',
+    'DPadRight',
+    'ButtonNorth',
+    'ButtonWest',
+    'ButtonEast',
+    'ButtonSouth',
+    'LeftShoulder',
+    'RightShoulder',
+    'LeftTrigger',
+    'RightTrigger',
+    'Select',
+    'Start',
+    'LeftStick',
+    'RightStick',
+  ];
 
-    /**
-     * Returns the normalised [x, y] position of `control` on a generic controller
-     * silhouette, where (0, 0) is the top-left and (1, 1) the bottom-right.
-     * Falls back to [0.5, 0.5] (centre) when the control has no registered position.
-     */
-    public static getControlPosition(control: GamepadPromptControl): readonly [number, number] {
-        return basePositions.get(control) ?? [0.5, 0.5];
-    }
+  /**
+   * Returns the normalised [x, y] position of `control` on a generic controller
+   * silhouette, where (0, 0) is the top-left and (1, 1) the bottom-right.
+   * Falls back to [0.5, 0.5] (centre) when the control has no registered position.
+   */
+  public static getControlPosition(control: GamepadPromptControl): readonly [number, number] {
+    return basePositions.get(control) ?? [0.5, 0.5];
+  }
 
-    /**
-     * Returns the label map for the given device family, e.g. `{ ButtonSouth → "A" }`
-     * for Xbox or `{ ButtonSouth → "Cross" }` for PlayStation.
-     * Falls back to generic labels when `family` has no registered label set.
-     */
-    public static getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string> {
-        return promptLabelsByFamily.get(family) ?? genericLabels;
-    }
+  /**
+   * Returns the label map for the given device family, e.g. `{ ButtonSouth → "A" }`
+   * for Xbox or `{ ButtonSouth → "Cross" }` for PlayStation.
+   * Falls back to generic labels when `family` has no registered label set.
+   */
+  public static getControlLabels(family: GamepadMappingFamily): ReadonlyMap<GamepadPromptControl, string> {
+    return promptLabelsByFamily.get(family) ?? genericLabels;
+  }
 
-    /**
-     * Returns the static mapping from each {@link GamepadPromptControl} to its
-     * corresponding {@link GamepadButton} channel. The composite `'DPad'`
-     * control has no channel entry and is absent from the returned map.
-     */
-    public static getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadButtonChannel> {
-        return channelMap;
-    }
+  /**
+   * Returns the static mapping from each {@link GamepadPromptControl} to its
+   * corresponding {@link GamepadButton} channel. The composite `'DPad'`
+   * control has no channel entry and is absent from the returned map.
+   */
+  public static getControlChannelMap(): ReadonlyMap<GamepadPromptControl, GamepadButtonChannel> {
+    return channelMap;
+  }
 }

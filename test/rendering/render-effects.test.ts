@@ -1,393 +1,405 @@
 import { Color } from '@/core/Color';
+import { Rectangle } from '@/math/Rectangle';
 import { CallbackRenderPass } from '@/rendering/CallbackRenderPass';
 import { Container } from '@/rendering/Container';
 import { Drawable } from '@/rendering/Drawable';
-import { Rectangle } from '@/math/Rectangle';
+import { BlurFilter } from '@/rendering/filters/BlurFilter';
+import { ColorFilter } from '@/rendering/filters/ColorFilter';
+import { Filter } from '@/rendering/filters/Filter';
+import type { RenderBackend } from '@/rendering/RenderBackend';
 import { RenderBackendType } from '@/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '@/rendering/RenderStats';
-import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { RenderTarget } from '@/rendering/RenderTarget';
-import type { RenderBackend } from '@/rendering/RenderBackend';
+import { RenderTargetPass } from '@/rendering/RenderTargetPass';
 import { Sprite } from '@/rendering/sprite/Sprite';
 import { RenderTexture } from '@/rendering/texture/RenderTexture';
 import { Texture } from '@/rendering/texture/Texture';
 import { View } from '@/rendering/View';
-import { Filter } from '@/rendering/filters/Filter';
-import { BlurFilter } from '@/rendering/filters/BlurFilter';
-import { ColorFilter } from '@/rendering/filters/ColorFilter';
 
 class TestDrawable extends Drawable {}
 
 class RecordingFilter extends Filter {
+  private readonly _id: string;
+  private readonly _events: string[];
+  public readonly calls = jest.fn();
 
-    private readonly _id: string;
-    private readonly _events: Array<string>;
-    public readonly calls = jest.fn();
+  public constructor(id: string, events: string[]) {
+    super();
 
-    public constructor(id: string, events: Array<string>) {
-        super();
+    this._id = id;
+    this._events = events;
+  }
 
-        this._id = id;
-        this._events = events;
-    }
-
-    public apply(_runtime: RenderBackend, _input: RenderTexture, _output: RenderTexture): void {
-        this._events.push(this._id);
-        this.calls();
-    }
+  public apply(_runtime: RenderBackend, _input: RenderTexture, _output: RenderTexture): void {
+    this._events.push(this._id);
+    this.calls();
+  }
 }
 
 const createTexture = (width = 16, height = 16): Texture => {
-    const canvas = document.createElement('canvas');
+  const canvas = document.createElement('canvas');
 
-    canvas.width = width;
-    canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
 
-    return new Texture(canvas);
+  return new Texture(canvas);
 };
 
 const createRuntime = () => {
-    const root = new RenderTarget(320, 200, true);
-    let currentTarget: RenderTarget = root;
-    const stats = createRenderStats();
-    const released: Array<RenderTexture> = [];
-    const clipEvents: Array<string> = [];
-    const clipBoundsCalls: Array<Rectangle> = [];
-    const draw = jest.fn(function(this: RenderBackend) {
-        return this;
-    });
-    const clear = jest.fn(function(this: RenderBackend) {
-        return this;
-    });
-    const runtime: RenderBackend = {
-        backendType: RenderBackendType.WebGl2,
-        stats,
-        get renderTarget() {
-            return currentTarget;
-        },
-        get view() {
-            return this.renderTarget.view;
-        },
-        async initialize() {
-            return this;
-        },
-        clear,
-        resize(width: number, height: number) {
-            root.resize(width, height);
+  const root = new RenderTarget(320, 200, true);
+  let currentTarget: RenderTarget = root;
+  const stats = createRenderStats();
+  const released: RenderTexture[] = [];
+  const clipEvents: string[] = [];
+  const clipBoundsCalls: Rectangle[] = [];
+  const draw = jest.fn(function (this: RenderBackend) {
+    return this;
+  });
+  const clear = jest.fn(function (this: RenderBackend) {
+    return this;
+  });
+  const runtime: RenderBackend = {
+    backendType: RenderBackendType.WebGl2,
+    stats,
+    get renderTarget() {
+      return currentTarget;
+    },
+    get view() {
+      return this.renderTarget.view;
+    },
+    async initialize() {
+      return this;
+    },
+    clear,
+    resize(width: number, height: number) {
+      root.resize(width, height);
 
-            return this;
-        },
-        setView(view) {
-            currentTarget.setView(view);
+      return this;
+    },
+    setView(view) {
+      currentTarget.setView(view);
 
-            return this;
-        },
-        setRenderTarget(target) {
-            currentTarget = target ?? root;
+      return this;
+    },
+    setRenderTarget(target) {
+      currentTarget = target ?? root;
 
-            return this;
-        },
-        pushScissorRect(bounds) {
-            clipEvents.push('push');
-            clipBoundsCalls.push(bounds);
+      return this;
+    },
+    pushScissorRect(bounds) {
+      clipEvents.push('push');
+      clipBoundsCalls.push(bounds);
 
-            return this;
-        },
-        popScissorRect() {
-            clipEvents.push('pop');
+      return this;
+    },
+    popScissorRect() {
+      clipEvents.push('pop');
 
-            return this;
-        },
-        composeWithAlphaMask() {
-            clipEvents.push('compose');
+      return this;
+    },
+    composeWithAlphaMask() {
+      clipEvents.push('compose');
 
-            return this;
-        },
-        acquireRenderTexture(width: number, height: number) {
-            return new RenderTexture(width, height);
-        },
-        releaseRenderTexture(texture: RenderTexture) {
-            released.push(texture);
+      return this;
+    },
+    acquireRenderTexture(width: number, height: number) {
+      return new RenderTexture(width, height);
+    },
+    releaseRenderTexture(texture: RenderTexture) {
+      released.push(texture);
 
-            return this;
-        },
-        draw,
-        resetStats() {
-            resetRenderStats(stats);
+      return this;
+    },
+    draw,
+    resetStats() {
+      resetRenderStats(stats);
 
-            return this;
-        },
-        execute(pass) {
-            pass.execute(this);
+      return this;
+    },
+    execute(pass) {
+      pass.execute(this);
 
-            return this;
-        },
-        flush() {
-            return this;
-        },
-        destroy() {
-            root.destroy();
+      return this;
+    },
+    flush() {
+      return this;
+    },
+    destroy() {
+      root.destroy();
 
-            for (const texture of released) {
-                texture.destroy();
-            }
-        },
-    };
+      for (const texture of released) {
+        texture.destroy();
+      }
+    },
+  };
 
-    return {
-        runtime,
-        draw,
-        clear,
-        released,
-        clipEvents,
-        clipBoundsCalls,
-        root,
-    };
+  return {
+    runtime,
+    draw,
+    clear,
+    released,
+    clipEvents,
+    clipBoundsCalls,
+    root,
+  };
 };
 
 describe('render effects', () => {
-    test('applies a single filter', () => {
-        const { runtime } = createRuntime();
-        const events: Array<string> = [];
-        const texture = createTexture();
-        const drawable = new Sprite(texture);
-        const filter = new RecordingFilter('one', events);
+  test('applies a single filter', () => {
+    const { runtime } = createRuntime();
+    const events: string[] = [];
+    const texture = createTexture();
+    const drawable = new Sprite(texture);
+    const filter = new RecordingFilter('one', events);
 
-        drawable.addFilter(filter);
-        drawable.render(runtime);
+    drawable.addFilter(filter);
+    drawable.render(runtime);
 
-        expect(events).toEqual(['one']);
-        expect(filter.calls).toHaveBeenCalledTimes(1);
+    expect(events).toEqual(['one']);
+    expect(filter.calls).toHaveBeenCalledTimes(1);
 
-        texture.destroy();
-    });
+    texture.destroy();
+  });
 
-    test('built-in ColorFilter runs a composition pass', () => {
-        const { runtime, draw } = createRuntime();
-        const input = new RenderTexture(16, 16);
-        const output = new RenderTexture(16, 16);
-        const filter = new ColorFilter(new Color(255, 64, 64, 0.5));
+  test('built-in ColorFilter runs a composition pass', () => {
+    const { runtime, draw } = createRuntime();
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(16, 16);
+    const filter = new ColorFilter(new Color(255, 64, 64, 0.5));
 
-        filter.apply(runtime, input, output);
+    filter.apply(runtime, input, output);
 
-        expect(draw).toHaveBeenCalledTimes(1);
+    expect(draw).toHaveBeenCalledTimes(1);
 
-        filter.destroy();
-        input.destroy();
-        output.destroy();
-    });
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+  });
 
-    test('built-in BlurFilter performs multi-sample composition', () => {
-        const { runtime, draw } = createRuntime();
-        const input = new RenderTexture(16, 16);
-        const output = new RenderTexture(16, 16);
-        const filter = new BlurFilter({ radius: 2, quality: 1 });
+  test('built-in BlurFilter performs multi-sample composition', () => {
+    const { runtime, draw } = createRuntime();
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(16, 16);
+    const filter = new BlurFilter({ radius: 2, quality: 1 });
 
-        filter.apply(runtime, input, output);
+    filter.apply(runtime, input, output);
 
-        expect(draw.mock.calls.length).toBeGreaterThan(1);
+    expect(draw.mock.calls.length).toBeGreaterThan(1);
 
-        filter.destroy();
-        input.destroy();
-        output.destroy();
-    });
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+  });
 
-    test('applies chained filters in declaration order', () => {
-        const { runtime } = createRuntime();
-        const events: Array<string> = [];
-        const texture = createTexture();
-        const drawable = new Sprite(texture);
-        const first = new RecordingFilter('first', events);
-        const second = new RecordingFilter('second', events);
+  test('applies chained filters in declaration order', () => {
+    const { runtime } = createRuntime();
+    const events: string[] = [];
+    const texture = createTexture();
+    const drawable = new Sprite(texture);
+    const first = new RecordingFilter('first', events);
+    const second = new RecordingFilter('second', events);
 
-        drawable.addFilter(first).addFilter(second);
-        drawable.render(runtime);
+    drawable.addFilter(first).addFilter(second);
+    drawable.render(runtime);
 
-        expect(events).toEqual(['first', 'second']);
+    expect(events).toEqual(['first', 'second']);
 
-        texture.destroy();
-    });
+    texture.destroy();
+  });
 
-    test('propagates filter failures and still releases temporary render textures', () => {
-        const { runtime, released } = createRuntime();
-        const texture = createTexture();
-        const drawable = new Sprite(texture);
-        const failingFilter = new class extends Filter {
-            public override apply(): void {
-                throw new Error('filter setup failed');
-            }
-        };
+  test('propagates filter failures and still releases temporary render textures', () => {
+    const { runtime, released } = createRuntime();
+    const texture = createTexture();
+    const drawable = new Sprite(texture);
+    const failingFilter = new (class extends Filter {
+      public override apply(): void {
+        throw new Error('filter setup failed');
+      }
+    })();
 
-        drawable.addFilter(failingFilter);
+    drawable.addFilter(failingFilter);
 
-        expect(() => drawable.render(runtime)).toThrow('filter setup failed');
-        expect(released.length).toBeGreaterThan(0);
+    expect(() => drawable.render(runtime)).toThrow('filter setup failed');
+    expect(released.length).toBeGreaterThan(0);
 
-        texture.destroy();
-    });
+    texture.destroy();
+  });
 
-    test('adding and removing filters does not corrupt render flow', () => {
-        const { runtime, draw } = createRuntime();
-        const texture = createTexture();
-        const drawable = new Sprite(texture);
-        const filter = new RecordingFilter('filter', []);
+  test('adding and removing filters does not corrupt render flow', () => {
+    const { runtime, draw } = createRuntime();
+    const texture = createTexture();
+    const drawable = new Sprite(texture);
+    const filter = new RecordingFilter('filter', []);
 
-        drawable.addFilter(filter);
-        drawable.render(runtime);
-        drawable.removeFilter(filter);
-        drawable.render(runtime);
+    drawable.addFilter(filter);
+    drawable.render(runtime);
+    drawable.removeFilter(filter);
+    drawable.render(runtime);
 
-        expect(filter.calls).toHaveBeenCalledTimes(1);
-        expect(draw).toHaveBeenCalledTimes(3);
+    expect(filter.calls).toHaveBeenCalledTimes(1);
+    expect(draw).toHaveBeenCalledTimes(3);
 
-        texture.destroy();
-    });
+    texture.destroy();
+  });
 
-    test('routes clipBounds push/pop around clipped renders', () => {
-        const { runtime, clipEvents, clipBoundsCalls } = createRuntime();
-        const drawable = new TestDrawable();
-        const bounds = new Rectangle(5, 8, 32, 24);
+  test('routes clipBounds push/pop around clipped renders', () => {
+    const { runtime, clipEvents, clipBoundsCalls } = createRuntime();
+    const drawable = new TestDrawable();
+    const bounds = new Rectangle(5, 8, 32, 24);
 
-        drawable.mask =bounds;
-        drawable.render(runtime);
+    drawable.mask = bounds;
+    drawable.render(runtime);
 
-        expect(clipEvents).toEqual(['push', 'pop']);
-        expect(clipBoundsCalls).toHaveLength(1);
-        expect(clipBoundsCalls[0]).toBe(bounds);
-    });
+    expect(clipEvents).toEqual(['push', 'pop']);
+    expect(clipBoundsCalls).toHaveLength(1);
+    expect(clipBoundsCalls[0]).toBe(bounds);
+  });
 
-    test('nested clipBounds produce balanced push/pop ordering', () => {
-        const { runtime, clipEvents } = createRuntime();
-        const container = new Container();
-        const child = new TestDrawable();
+  test('nested clipBounds produce balanced push/pop ordering', () => {
+    const { runtime, clipEvents } = createRuntime();
+    const container = new Container();
+    const child = new TestDrawable();
 
-        container.mask =new Rectangle(0, 0, 100, 100);
-        child.mask =new Rectangle(10, 10, 40, 40);
-        container.addChild(child);
-        container.render(runtime);
+    container.mask = new Rectangle(0, 0, 100, 100);
+    child.mask = new Rectangle(10, 10, 40, 40);
+    container.addChild(child);
+    container.render(runtime);
 
-        expect(clipEvents).toEqual(['push', 'push', 'pop', 'pop']);
-    });
+    expect(clipEvents).toEqual(['push', 'push', 'pop', 'pop']);
+  });
 
-    test('null clipBounds skips push/pop entirely', () => {
-        const { runtime, clipEvents } = createRuntime();
-        const drawable = new TestDrawable();
+  test('null clipBounds skips push/pop entirely', () => {
+    const { runtime, clipEvents } = createRuntime();
+    const drawable = new TestDrawable();
 
-        drawable.mask =null;
-        drawable.render(runtime);
+    drawable.mask = null;
+    drawable.render(runtime);
 
-        expect(clipEvents).toEqual([]);
-    });
+    expect(clipEvents).toEqual([]);
+  });
 
-    test('clipBounds = node.getBounds() is a snapshot, not a live binding', () => {
-        const { runtime, clipBoundsCalls } = createRuntime();
-        const drawable = new TestDrawable();
-        const source = new Sprite(createTexture(40, 30));
+  test('clipBounds = node.getBounds() is a snapshot, not a live binding', () => {
+    const { runtime, clipBoundsCalls } = createRuntime();
+    const drawable = new TestDrawable();
+    const source = new Sprite(createTexture(40, 30));
 
-        source.setPosition(20, 30);
+    source.setPosition(20, 30);
 
-        const snapshotRect = source.getBounds().clone();
+    const snapshotRect = source.getBounds().clone();
 
-        drawable.mask =snapshotRect;
+    drawable.mask = snapshotRect;
 
-        // Mutate the source AFTER assigning its bounds snapshot.
-        source.setPosition(500, 500);
+    // Mutate the source AFTER assigning its bounds snapshot.
+    source.setPosition(500, 500);
 
-        drawable.render(runtime);
+    drawable.render(runtime);
 
-        // The captured rectangle still reflects the original position; the
-        // mask was never bound to the source node — clipBounds holds a Rectangle.
-        expect(clipBoundsCalls[0]).toBe(snapshotRect);
-        expect(clipBoundsCalls[0].x).toBe(snapshotRect.x);
-        expect(clipBoundsCalls[0].y).toBe(snapshotRect.y);
+    // The captured rectangle still reflects the original position; the
+    // mask was never bound to the source node — clipBounds holds a Rectangle.
+    expect(clipBoundsCalls[0]).toBe(snapshotRect);
+    expect(clipBoundsCalls[0].x).toBe(snapshotRect.x);
+    expect(clipBoundsCalls[0].y).toBe(snapshotRect.y);
 
-        source.destroy();
-    });
+    source.destroy();
+  });
 
-    test('RenderTargetPass restores render target and view after execution', () => {
-        const { runtime, root, clear } = createRuntime();
-        const target = new RenderTexture(64, 64);
-        const view = new View(32, 32, 64, 64);
-        let executedOnTarget = false;
-        let executedWithView = false;
-        const pass = new RenderTargetPass(() => {
-            executedOnTarget = runtime.renderTarget === target;
-            executedWithView = runtime.view === view;
-        }, {
-            target,
-            view,
-            clearColor: Color.transparentBlack,
-        });
+  test('RenderTargetPass restores render target and view after execution', () => {
+    const { runtime, root, clear } = createRuntime();
+    const target = new RenderTexture(64, 64);
+    const view = new View(32, 32, 64, 64);
+    let executedOnTarget = false;
+    let executedWithView = false;
+    const pass = new RenderTargetPass(
+      () => {
+        executedOnTarget = runtime.renderTarget === target;
+        executedWithView = runtime.view === view;
+      },
+      {
+        target,
+        view,
+        clearColor: Color.transparentBlack,
+      },
+    );
 
-        runtime.execute(pass);
+    runtime.execute(pass);
 
-        expect(executedOnTarget).toBe(true);
-        expect(executedWithView).toBe(true);
-        expect(runtime.renderTarget).toBe(root);
-        expect(runtime.view).toBe(root.view);
-        expect(clear).toHaveBeenCalledTimes(1);
+    expect(executedOnTarget).toBe(true);
+    expect(executedWithView).toBe(true);
+    expect(runtime.renderTarget).toBe(root);
+    expect(runtime.view).toBe(root.view);
+    expect(clear).toHaveBeenCalledTimes(1);
 
-        view.destroy();
-        target.destroy();
-    });
+    view.destroy();
+    target.destroy();
+  });
 
-    test('supports simple multi-pass render-target composition', () => {
-        const { runtime, root } = createRuntime();
-        const firstTarget = new RenderTexture(64, 64);
-        const secondTarget = new RenderTexture(64, 64);
-        const sequence: Array<string> = [];
+  test('supports simple multi-pass render-target composition', () => {
+    const { runtime, root } = createRuntime();
+    const firstTarget = new RenderTexture(64, 64);
+    const secondTarget = new RenderTexture(64, 64);
+    const sequence: string[] = [];
 
-        runtime.execute(new RenderTargetPass(() => {
-            sequence.push(runtime.renderTarget === firstTarget ? 'first' : 'wrong');
-        }, {
-            target: firstTarget,
-            view: firstTarget.view,
-            clearColor: Color.transparentBlack,
-        }));
-        runtime.execute(new RenderTargetPass(() => {
-            sequence.push(runtime.renderTarget === secondTarget ? 'second' : 'wrong');
-        }, {
-            target: secondTarget,
-            view: secondTarget.view,
-            clearColor: Color.transparentBlack,
-        }));
+    runtime.execute(
+      new RenderTargetPass(
+        () => {
+          sequence.push(runtime.renderTarget === firstTarget ? 'first' : 'wrong');
+        },
+        {
+          target: firstTarget,
+          view: firstTarget.view,
+          clearColor: Color.transparentBlack,
+        },
+      ),
+    );
+    runtime.execute(
+      new RenderTargetPass(
+        () => {
+          sequence.push(runtime.renderTarget === secondTarget ? 'second' : 'wrong');
+        },
+        {
+          target: secondTarget,
+          view: secondTarget.view,
+          clearColor: Color.transparentBlack,
+        },
+      ),
+    );
 
-        expect(sequence).toEqual(['first', 'second']);
-        expect(runtime.renderTarget).toBe(root);
+    expect(sequence).toEqual(['first', 'second']);
+    expect(runtime.renderTarget).toBe(root);
 
-        firstTarget.destroy();
-        secondTarget.destroy();
-    });
+    firstTarget.destroy();
+    secondTarget.destroy();
+  });
 
-    test('CallbackRenderPass executes supplied callback', () => {
-        const { runtime } = createRuntime();
-        const callback = jest.fn();
+  test('CallbackRenderPass executes supplied callback', () => {
+    const { runtime } = createRuntime();
+    const callback = jest.fn();
 
-        runtime.execute(new CallbackRenderPass(callback));
+    runtime.execute(new CallbackRenderPass(callback));
 
-        expect(callback).toHaveBeenCalledWith(runtime);
-    });
+    expect(callback).toHaveBeenCalledWith(runtime);
+  });
 
-    test('cache-as-bitmap bypasses subtree redraw until invalidated', () => {
-        const { runtime } = createRuntime();
-        const container = new Container();
-        const texture = createTexture();
-        const child = new Sprite(texture);
-        const childRender = jest.spyOn(child, 'render');
+  test('cache-as-bitmap bypasses subtree redraw until invalidated', () => {
+    const { runtime } = createRuntime();
+    const container = new Container();
+    const texture = createTexture();
+    const child = new Sprite(texture);
+    const childRender = jest.spyOn(child, 'render');
 
-        container.addChild(child);
-        container.cacheAsBitmap = true;
+    container.addChild(child);
+    container.cacheAsBitmap = true;
 
-        container.render(runtime);
-        container.render(runtime);
+    container.render(runtime);
+    container.render(runtime);
 
-        expect(childRender).toHaveBeenCalledTimes(1);
+    expect(childRender).toHaveBeenCalledTimes(1);
 
-        container.invalidateCache();
-        container.render(runtime);
+    container.invalidateCache();
+    container.render(runtime);
 
-        expect(childRender).toHaveBeenCalledTimes(2);
+    expect(childRender).toHaveBeenCalledTimes(2);
 
-        texture.destroy();
-    });
+    texture.destroy();
+  });
 });

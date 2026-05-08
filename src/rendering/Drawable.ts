@@ -1,5 +1,6 @@
 import { Color } from '@/core/Color';
 import { BlendModes } from '@/rendering/types';
+
 import type { RenderBackend } from './RenderBackend';
 import { RenderNode } from './RenderNode';
 
@@ -12,79 +13,82 @@ import { RenderNode } from './RenderNode';
  * and are paired with a matching {@link Renderer} via {@link RendererRegistry}.
  */
 export class Drawable extends RenderNode {
+  private _tint: Color = Color.white.clone();
+  private _blendMode: BlendModes = BlendModes.Normal;
 
-    private _tint: Color = Color.white.clone();
-    private _blendMode: BlendModes = BlendModes.Normal;
+  public get tint(): Color {
+    return this._tint;
+  }
 
-    public get tint(): Color {
-        return this._tint;
+  public set tint(tint: Color) {
+    this.setTint(tint);
+  }
+
+  public get blendMode(): BlendModes {
+    return this._blendMode;
+  }
+
+  public set blendMode(blendMode: BlendModes) {
+    this.setBlendMode(blendMode);
+  }
+
+  /**
+   * Set the tint colour by copying `color` into the internal {@link Color} instance.
+   * Invalidates the render cache so the change is picked up on the next frame.
+   */
+  public setTint(color: Color): this {
+    if (color) {
+      this._tint.copy(color);
+      this.invalidateCache();
     }
 
-    public set tint(tint: Color) {
-        this.setTint(tint);
+    return this;
+  }
+
+  /**
+   * Change the blend mode. No-ops if the value is unchanged.
+   * Invalidates the render cache when the blend mode actually changes.
+   */
+  public setBlendMode(blendMode: BlendModes): this {
+    if (this._blendMode !== blendMode) {
+      this._blendMode = blendMode;
+      this.invalidateCache();
     }
 
-    public get blendMode(): BlendModes {
-        return this._blendMode;
+    return this;
+  }
+
+  /**
+   * Submit this drawable for rendering.
+   * Skips invisible nodes and increments the cull counter for nodes that fall
+   * outside the current view. Visible, in-view nodes are drawn via the backend
+   * using the current blend mode.
+   */
+  public override render(backend: RenderBackend): this {
+    if (!this.visible) {
+      return this;
     }
 
-    public set blendMode(blendMode: BlendModes) {
-        this.setBlendMode(blendMode);
+    if (!this.inView(backend.view)) {
+      backend.stats.culledNodes++;
+
+      return this;
     }
 
-    /**
-     * Set the tint colour by copying `color` into the internal {@link Color} instance.
-     * Invalidates the render cache so the change is picked up on the next frame.
-     */
-    public setTint(color: Color): this {
-        if (color) {
-            this._tint.copy(color);
-            this.invalidateCache();
-        }
+    this.renderVisualContent(
+      backend,
+      () => {
+        backend.draw(this);
+      },
+      this._blendMode,
+    );
 
-        return this;
-    }
+    return this;
+  }
 
-    /**
-     * Change the blend mode. No-ops if the value is unchanged.
-     * Invalidates the render cache when the blend mode actually changes.
-     */
-    public setBlendMode(blendMode: BlendModes): this {
-        if (this._blendMode !== blendMode) {
-            this._blendMode = blendMode;
-            this.invalidateCache();
-        }
+  public override destroy(): void {
+    super.destroy();
 
-        return this;
-    }
-
-    /**
-     * Submit this drawable for rendering.
-     * Skips invisible nodes and increments the cull counter for nodes that fall
-     * outside the current view. Visible, in-view nodes are drawn via the backend
-     * using the current blend mode.
-     */
-    public override render(backend: RenderBackend): this {
-        if (!this.visible) {
-            return this;
-        }
-
-        if (!this.inView(backend.view)) {
-            backend.stats.culledNodes++;
-
-            return this;
-        }
-
-        this.renderVisualContent(backend, () => {
-            backend.draw(this);
-        }, this._blendMode);
-
-        return this;
-    }
-
-    public override destroy(): void {
-        super.destroy();
-
-        this._tint.destroy();
-    }
+    this._tint.destroy();
+  }
 }

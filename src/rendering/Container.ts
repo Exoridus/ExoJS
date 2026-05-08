@@ -1,7 +1,8 @@
 import { removeArrayItems } from '@/core/utils';
+import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
+
 import type { RenderBackend } from './RenderBackend';
 import { RenderNode } from './RenderNode';
-import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
 
 /**
  * Scene-graph node that owns child {@link RenderNode}s. Renders its
@@ -22,306 +23,304 @@ import { _getCurrentInteractionManager } from '@/input/interaction-hooks';
  * etc. — the base `Container` is a non-drawing grouping node.
  */
 export class Container extends RenderNode {
+  private readonly _children: RenderNode[] = [];
+  private _sortableChildren = false;
+  private _sortDirty = false;
+  private _nextChildOrder = 0;
 
-    private readonly _children: Array<RenderNode> = [];
-    private _sortableChildren = false;
-    private _sortDirty = false;
-    private _nextChildOrder = 0;
+  public get children(): RenderNode[] {
+    return this._children;
+  }
 
-    public get children(): Array<RenderNode> {
-        return this._children;
+  /**
+   * When `true`, children are re-sorted by `zIndex` (ascending; ties
+   * broken by add-order) before each render. Disabled by default to
+   * avoid the per-frame sort cost; enable on the few containers where
+   * z-ordering matters.
+   */
+  public get sortableChildren(): boolean {
+    return this._sortableChildren;
+  }
+
+  public set sortableChildren(sortableChildren: boolean) {
+    if (this._sortableChildren !== sortableChildren) {
+      this._sortableChildren = sortableChildren;
+      this._sortDirty = sortableChildren;
+    }
+  }
+
+  public get width(): number {
+    return Math.abs(this.scale.x) * this.bounds.width;
+  }
+
+  public set width(value: number) {
+    this.scale.x = value / this.bounds.width;
+  }
+
+  public get height(): number {
+    return Math.abs(this.scale.y) * this.bounds.height;
+  }
+
+  public set height(value: number) {
+    this.scale.y = value / this.bounds.height;
+  }
+
+  public get left(): number {
+    return this.x - this.width * this.origin.x;
+  }
+
+  public get top(): number {
+    return this.y - this.height * this.origin.y;
+  }
+
+  public get right(): number {
+    return this.x + this.width - this.origin.x;
+  }
+
+  public get bottom(): number {
+    return this.y + this.height - this.origin.y;
+  }
+
+  /**
+   * Append one or more children to the end of the child list. Each child
+   * is detached from its previous parent (if any) before being added.
+   */
+  public addChild(...children: RenderNode[]): this {
+    for (const child of children) {
+      this.addChildAt(child, this._children.length);
     }
 
-    /**
-     * When `true`, children are re-sorted by `zIndex` (ascending; ties
-     * broken by add-order) before each render. Disabled by default to
-     * avoid the per-frame sort cost; enable on the few containers where
-     * z-ordering matters.
-     */
-    public get sortableChildren(): boolean {
-        return this._sortableChildren;
+    return this;
+  }
+
+  /**
+   * Insert `child` at `index` in the child list. The child is detached
+   * from any previous parent first. Throws if `index` is out of bounds.
+   * Self-as-child is a no-op.
+   */
+  public addChildAt(child: RenderNode, index: number): this {
+    if (index < 0 || index > this._children.length) {
+      throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
     }
 
-    public set sortableChildren(sortableChildren: boolean) {
-        if (this._sortableChildren !== sortableChildren) {
-            this._sortableChildren = sortableChildren;
-            this._sortDirty = sortableChildren;
-        }
+    if (child === this) {
+      return this;
     }
 
-    public get width(): number {
-        return Math.abs(this.scale.x) * this.bounds.width;
+    if (child.parentNode) {
+      child.parentNode.removeChild(child);
     }
 
-    public set width(value: number) {
-        this.scale.x = value / this.bounds.width;
+    child.parentNode = this;
+    child.setChildOrder(this._nextChildOrder++);
+
+    this._children.splice(index, 0, child);
+    this.markSortDirty();
+    this.invalidateCache();
+
+    child._invalidateSubtreeTransform();
+    this._invalidateBoundsCascade();
+
+    _getCurrentInteractionManager()?._notifyNodeAdded(child);
+
+    return this;
+  }
+
+  public swapChildren(firstChild: RenderNode, secondChild: RenderNode): this {
+    if (firstChild !== secondChild) {
+      const firstIndex = this.getChildIndex(firstChild);
+      const secondIndex = this.getChildIndex(secondChild);
+
+      this._children[firstIndex] = secondChild;
+      this._children[secondIndex] = firstChild;
+      this.markSortDirty();
+      this.invalidateCache();
     }
 
-    public get height(): number {
-        return Math.abs(this.scale.y) * this.bounds.height;
+    return this;
+  }
+
+  public getChildIndex(child: RenderNode): number {
+    const index = this._children.indexOf(child);
+
+    if (index === -1) {
+      throw new Error('Drawable is not a child of the container.');
     }
 
-    public set height(value: number) {
-        this.scale.y = value / this.bounds.height;
+    return index;
+  }
+
+  public setChildIndex(child: RenderNode, index: number): this {
+    if (index < 0 || index >= this._children.length) {
+      throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
     }
 
-    public get left(): number {
-        return this.x - (this.width * this.origin.x);
+    removeArrayItems(this._children, this.getChildIndex(child), 1);
+
+    this._children.splice(index, 0, child);
+    this.markSortDirty();
+    this.invalidateCache();
+
+    return this;
+  }
+
+  public getChildAt(index: number): RenderNode {
+    if (index < 0 || index >= this._children.length) {
+      throw new Error(`getChildAt: Index (${index}) does not exist.`);
     }
 
-    public get top(): number {
-        return this.y - (this.height * this.origin.y);
+    return this._children[index];
+  }
+
+  /** Remove `child` from this container. No-op if not present. */
+  public removeChild(child: RenderNode): this {
+    const index = this._children.indexOf(child);
+
+    if (index !== -1) {
+      this.removeChildAt(index);
     }
 
-    public get right(): number {
-        return (this.x + this.width - this.origin.x);
+    return this;
+  }
+
+  public removeChildAt(index: number): this {
+    const child = this._children[index];
+
+    removeArrayItems(this._children, index, 1);
+
+    if (child?.parentNode === this) {
+      // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
+      this._invalidateBoundsCascade();
+      child.parentNode = null;
+      child._invalidateSubtreeTransform();
+      _getCurrentInteractionManager()?._notifyNodeRemoved(child);
     }
 
-    public get bottom(): number {
-        return (this.y + this.height - this.origin.y);
+    this.markSortDirty();
+    this.invalidateCache();
+
+    return this;
+  }
+
+  /**
+   * Remove children in the half-open range `[begin, end)`. Defaults to
+   * the entire child list. Throws if the range is invalid.
+   */
+  public removeChildren(begin = 0, end: number = this._children.length): this {
+    const range = end - begin;
+
+    if (range < 0 || range > end) {
+      throw new Error('Values are outside the acceptable range.');
     }
 
-    /**
-     * Append one or more children to the end of the child list. Each child
-     * is detached from its previous parent (if any) before being added.
-     */
-    public addChild(...children: Array<RenderNode>): this {
-        for (const child of children) {
-            this.addChildAt(child, this._children.length);
-        }
-
-        return this;
+    // Cascade bounds before clearing any parent references.
+    if (range > 0) {
+      this._invalidateBoundsCascade();
     }
 
-    /**
-     * Insert `child` at `index` in the child list. The child is detached
-     * from any previous parent first. Throws if `index` is out of bounds.
-     * Self-as-child is a no-op.
-     */
-    public addChildAt(child: RenderNode, index: number): this {
-        if (index < 0 || index > this._children.length) {
-            throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
-        }
+    for (let i = begin; i < end; i++) {
+      const child = this._children[i];
 
-        if (child === this) {
-            return this;
-        }
-
-        if (child.parentNode) {
-            child.parentNode.removeChild(child);
-        }
-
-        child.parentNode = this;
-        child.setChildOrder(this._nextChildOrder++);
-
-        this._children.splice(index, 0, child);
-        this.markSortDirty();
-        this.invalidateCache();
-
+      if (child?.parentNode === this) {
+        child.parentNode = null;
         child._invalidateSubtreeTransform();
-        this._invalidateBoundsCascade();
-
-        _getCurrentInteractionManager()?._notifyNodeAdded(child);
-
-        return this;
+        _getCurrentInteractionManager()?._notifyNodeRemoved(child);
+      }
     }
 
-    public swapChildren(firstChild: RenderNode, secondChild: RenderNode): this {
-        if (firstChild !== secondChild) {
-            const firstIndex = this.getChildIndex(firstChild);
-            const secondIndex = this.getChildIndex(secondChild);
+    removeArrayItems(this._children, begin, range);
+    this.markSortDirty();
+    this.invalidateCache();
 
-            this._children[firstIndex] = secondChild;
-            this._children[secondIndex] = firstChild;
-            this.markSortDirty();
-            this.invalidateCache();
-        }
+    return this;
+  }
 
-        return this;
+  public override render(backend: RenderBackend): this {
+    if (!this.visible || this._children.length === 0) {
+      return this;
     }
 
-    public getChildIndex(child: RenderNode): number {
-        const index = this._children.indexOf(child);
+    if (!this.inView(backend.view)) {
+      backend.stats.culledNodes++;
 
-        if (index === -1) {
-            throw new Error('Drawable is not a child of the container.');
-        }
-
-        return index;
+      return this;
     }
 
-    public setChildIndex(child: RenderNode, index: number): this {
-        if (index < 0 || index >= this._children.length) {
-            throw new Error(`The index ${index} is out of bounds ${this._children.length}`);
-        }
+    this.renderVisualContent(backend, () => {
+      this._sortChildrenIfNeeded();
 
-        removeArrayItems(this._children, this.getChildIndex(child), 1);
+      for (const child of this._children) {
+        child.render(backend);
+      }
+    });
 
-        this._children.splice(index, 0, child);
-        this.markSortDirty();
-        this.invalidateCache();
+    return this;
+  }
 
-        return this;
+  public override contains(x: number, y: number): boolean {
+    return this._children.some(child => child.contains(x, y));
+  }
+
+  protected override _invalidateChildrenTransform(): void {
+    for (const child of this._children) {
+      child._invalidateSubtreeTransform();
+    }
+  }
+
+  public override updateBounds(): this {
+    this._bounds.reset().addRect(this.getLocalBounds(), this.getGlobalTransform());
+
+    for (const child of this._children) {
+      if (child.visible) {
+        this._bounds.addRect(child.getBounds());
+      }
     }
 
-    public getChildAt(index: number): RenderNode {
-        if (index < 0 || index >= this._children.length) {
-            throw new Error(`getChildAt: Index (${index}) does not exist.`);
-        }
+    return this;
+  }
 
-        return this._children[index];
+  public override destroy(): void {
+    this.removeChildren();
+
+    super.destroy();
+  }
+
+  /**
+   * Flag the child list as needing a re-sort before next render. Called
+   * automatically by `addChild*`, `removeChild*`, `swapChildren`, and
+   * `setChildIndex`; expose for callers that mutate `zIndex` directly.
+   */
+  public markSortDirty(): this {
+    if (this._sortableChildren) {
+      this._sortDirty = true;
     }
 
-    /** Remove `child` from this container. No-op if not present. */
-    public removeChild(child: RenderNode): this {
-        const index = this._children.indexOf(child);
+    return this;
+  }
 
-        if (index !== -1) {
-            this.removeChildAt(index);
-        }
+  public sortChildren(): this {
+    if (!this._sortableChildren || !this._sortDirty || this._children.length <= 1) {
+      this._sortDirty = false;
 
-        return this;
+      return this;
     }
 
-    public removeChildAt(index: number): this {
-        const child = this._children[index];
+    this._children.sort((left, right) => {
+      if (left.zIndex === right.zIndex) {
+        return left.childOrder - right.childOrder;
+      }
 
-        removeArrayItems(this._children, index, 1);
+      return left.zIndex - right.zIndex;
+    });
+    this._sortDirty = false;
+    this.invalidateCache();
 
-        if (child && child.parentNode === this) {
-            // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
-            this._invalidateBoundsCascade();
-            child.parentNode = null;
-            child._invalidateSubtreeTransform();
-            _getCurrentInteractionManager()?._notifyNodeRemoved(child);
-        }
+    return this;
+  }
 
-        this.markSortDirty();
-        this.invalidateCache();
-
-        return this;
+  private _sortChildrenIfNeeded(): void {
+    if (this._sortableChildren && this._sortDirty) {
+      this.sortChildren();
     }
-
-    /**
-     * Remove children in the half-open range `[begin, end)`. Defaults to
-     * the entire child list. Throws if the range is invalid.
-     */
-    public removeChildren(begin = 0, end: number = this._children.length): this {
-        const range = (end - begin);
-
-        if (range < 0 || range > end) {
-            throw new Error('Values are outside the acceptable range.');
-        }
-
-        // Cascade bounds before clearing any parent references.
-        if (range > 0) {
-            this._invalidateBoundsCascade();
-        }
-
-        for (let i = begin; i < end; i++) {
-            const child = this._children[i];
-
-            if (child && child.parentNode === this) {
-                child.parentNode = null;
-                child._invalidateSubtreeTransform();
-                _getCurrentInteractionManager()?._notifyNodeRemoved(child);
-            }
-        }
-
-        removeArrayItems(this._children, begin, range);
-        this.markSortDirty();
-        this.invalidateCache();
-
-        return this;
-    }
-
-    public override render(backend: RenderBackend): this {
-        if (!this.visible || this._children.length === 0) {
-            return this;
-        }
-
-        if (!this.inView(backend.view)) {
-            backend.stats.culledNodes++;
-
-            return this;
-        }
-
-        this.renderVisualContent(backend, () => {
-            this._sortChildrenIfNeeded();
-
-            for (const child of this._children) {
-                child.render(backend);
-            }
-        });
-
-        return this;
-    }
-
-    public override contains(x: number, y: number): boolean {
-        return this._children.some((child) => child.contains(x, y));
-    }
-
-    protected override _invalidateChildrenTransform(): void {
-        for (const child of this._children) {
-            child._invalidateSubtreeTransform();
-        }
-    }
-
-    public override updateBounds(): this {
-        this._bounds.reset()
-            .addRect(this.getLocalBounds(), this.getGlobalTransform());
-
-        for (const child of this._children) {
-            if (child.visible) {
-                this._bounds.addRect(child.getBounds());
-            }
-        }
-
-        return this;
-    }
-
-    public override destroy(): void {
-        this.removeChildren();
-
-        super.destroy();
-    }
-
-    /**
-     * Flag the child list as needing a re-sort before next render. Called
-     * automatically by `addChild*`, `removeChild*`, `swapChildren`, and
-     * `setChildIndex`; expose for callers that mutate `zIndex` directly.
-     */
-    public markSortDirty(): this {
-        if (this._sortableChildren) {
-            this._sortDirty = true;
-        }
-
-        return this;
-    }
-
-    public sortChildren(): this {
-        if (!this._sortableChildren || !this._sortDirty || this._children.length <= 1) {
-            this._sortDirty = false;
-
-            return this;
-        }
-
-        this._children.sort((left, right) => {
-            if (left.zIndex === right.zIndex) {
-                return left.childOrder - right.childOrder;
-            }
-
-            return left.zIndex - right.zIndex;
-        });
-        this._sortDirty = false;
-        this.invalidateCache();
-
-        return this;
-    }
-
-    private _sortChildrenIfNeeded(): void {
-        if (this._sortableChildren && this._sortDirty) {
-            this.sortChildren();
-        }
-    }
+  }
 }

@@ -29,7 +29,7 @@
  * }
  */
 export interface Distribution<T> {
-    sample(out?: T): T;
+  sample(out?: T): T;
 }
 
 /**
@@ -42,5 +42,5 @@ export interface Distribution<T> {
  * via `out` for hot loops, omit for one-off calls.
  */
 export interface LifetimeFunction<T> {
-    evaluate(t: number, out?: T): T;
+  evaluate(t: number, out?: T): T;
 }

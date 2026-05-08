@@ -25,7 +25,7 @@ import type { ParticleSystem } from '@/particles/ParticleSystem';
  * registered on one system and execute in registration order.
  */
 export abstract class SpawnModule {
-    public abstract apply(system: ParticleSystem, dt: number): void;
-    /** Optional cleanup hook called from `ParticleSystem.destroy`. */
-    public destroy(): void {}
+  public abstract apply(system: ParticleSystem, dt: number): void;
+  /** Optional cleanup hook called from `ParticleSystem.destroy`. */
+  public destroy(): void {}
 }

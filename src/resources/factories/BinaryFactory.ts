@@ -8,20 +8,19 @@ import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
  * custom data files, packed archives, or proprietary formats).
  */
 export class BinaryFactory extends AbstractAssetFactory<ArrayBuffer> {
+  public readonly storageName = 'binary';
 
-    public readonly storageName = 'binary';
+  /**
+   * Reads the full response body as an {@link ArrayBuffer}.
+   */
+  public async process(response: Response): Promise<ArrayBuffer> {
+    return response.arrayBuffer();
+  }
 
-    /**
-     * Reads the full response body as an {@link ArrayBuffer}.
-     */
-    public async process(response: Response): Promise<ArrayBuffer> {
-        return response.arrayBuffer();
-    }
-
-    /**
-     * Returns the raw buffer unchanged — no further transformation is applied.
-     */
-    public async create(source: ArrayBuffer): Promise<ArrayBuffer> {
-        return source;
-    }
+  /**
+   * Returns the raw buffer unchanged — no further transformation is applied.
+   */
+  public async create(source: ArrayBuffer): Promise<ArrayBuffer> {
+    return source;
+  }
 }

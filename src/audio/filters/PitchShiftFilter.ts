@@ -32,11 +32,11 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
 
     _readGrain(readPos) {
         const grainSize = this._grainSize;
-        const idx = Math.floor(readPos);
-        const phase = idx % grainSize;  // position within the grain envelope
+        const sampleIndex = Math.floor(readPos);
+        const phase = sampleIndex % grainSize;  // position within the grain envelope
         const win = this._hannWindow[phase];
-        const bufIdx = ((this._writePos - this._bufferLength + idx) % this._bufferLength + this._bufferLength) % this._bufferLength;
-        return this._buffer[bufIdx] * win;
+        const bufferIndex = ((this._writePos - this._bufferLength + sampleIndex) % this._bufferLength + this._bufferLength) % this._bufferLength;
+        return this._buffer[bufferIndex] * win;
     }
 
     process(inputs, outputs, parameters) {
@@ -73,15 +73,15 @@ registerProcessor('exojs-pitch-shift', PitchShiftProcessor);
 `;
 
 export interface PitchShiftFilterOptions {
-    /** Pitch ratio. 1.0 = no change, 0.5 = octave down, 2.0 = octave up. Default 1.0. */
-    pitch?: number;
-    /** Dry/wet mix, 0..1. Default 1.0 (full wet). */
-    wet?: number;
-    /**
-     * Internal grain size in samples. Default 1024 (~21ms at 48kHz).
-     * Larger = more delay but cleaner pitch shifting.
-     */
-    grainSize?: number;
+  /** Pitch ratio. 1.0 = no change, 0.5 = octave down, 2.0 = octave up. Default 1.0. */
+  pitch?: number;
+  /** Dry/wet mix, 0..1. Default 1.0 (full wet). */
+  wet?: number;
+  /**
+   * Internal grain size in samples. Default 1024 (~21ms at 48kHz).
+   * Larger = more delay but cleaner pitch shifting.
+   */
+  grainSize?: number;
 }
 
 /**
@@ -101,49 +101,53 @@ export interface PitchShiftFilterOptions {
  *   - Detune layering: stack 0.99x and 1.01x for thick chorused sound
  */
 export class PitchShiftFilter extends WorkletFilter {
-    private _pitch: number;
-    private _wet: number;
-    private readonly _grainSize: number;
+  private _pitch: number;
+  private _wet: number;
+  private readonly _grainSize: number;
 
-    public constructor(options: PitchShiftFilterOptions = {}) {
-        super();
-        this._pitch     = Math.max(0.25, Math.min(4.0, options.pitch ?? 1.0));
-        this._wet       = Math.max(0, Math.min(1.0, options.wet ?? 1.0));
-        this._grainSize = options.grainSize ?? 1024;
-    }
+  public constructor(options: PitchShiftFilterOptions = {}) {
+    super();
+    this._pitch = Math.max(0.25, Math.min(4, options.pitch ?? 1));
+    this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
+    this._grainSize = options.grainSize ?? 1024;
+  }
 
-    protected get _workletName(): string {
-        return 'exojs-pitch-shift';
-    }
+  protected get _workletName(): string {
+    return 'exojs-pitch-shift';
+  }
 
-    protected get _workletSource(): string {
-        return pitchShiftWorkletSource;
-    }
+  protected get _workletSource(): string {
+    return pitchShiftWorkletSource;
+  }
 
-    protected override get _workletOptions(): AudioWorkletNodeOptions {
-        return {
-            numberOfInputs: 1,
-            numberOfOutputs: 1,
-            processorOptions: { grainSize: this._grainSize },
-        };
-    }
+  protected override get _workletOptions(): AudioWorkletNodeOptions {
+    return {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      processorOptions: { grainSize: this._grainSize },
+    };
+  }
 
-    protected override _onWorkletReady(): void {
-        this._setAudioParam('pitch', this._pitch);
-        this._setAudioParam('wet', this._wet);
-    }
+  protected override _onWorkletReady(): void {
+    this._setAudioParam('pitch', this._pitch);
+    this._setAudioParam('wet', this._wet);
+  }
 
-    /** Pitch ratio relative to the original. 1.0 = no change, 0.5 = one octave down, 2.0 = one octave up. Range 0.25..4.0, default 1.0. */
-    public get pitch(): number { return this._pitch; }
-    public set pitch(value: number) {
-        this._pitch = Math.max(0.25, Math.min(4.0, value));
-        this._setAudioParam('pitch', this._pitch);
-    }
+  /** Pitch ratio relative to the original. 1.0 = no change, 0.5 = one octave down, 2.0 = one octave up. Range 0.25..4.0, default 1.0. */
+  public get pitch(): number {
+    return this._pitch;
+  }
+  public set pitch(value: number) {
+    this._pitch = Math.max(0.25, Math.min(4, value));
+    this._setAudioParam('pitch', this._pitch);
+  }
 
-    /** Wet (pitch-shifted) mix level, 0..1. Default 1.0 (full wet). */
-    public get wet(): number { return this._wet; }
-    public set wet(value: number) {
-        this._wet = Math.max(0, Math.min(1.0, value));
-        this._setAudioParam('wet', this._wet);
-    }
+  /** Wet (pitch-shifted) mix level, 0..1. Default 1.0 (full wet). */
+  public get wet(): number {
+    return this._wet;
+  }
+  public set wet(value: number) {
+    this._wet = Math.max(0, Math.min(1, value));
+    this._setAudioParam('wet', this._wet);
+  }
 }

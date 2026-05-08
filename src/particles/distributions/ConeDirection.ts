@@ -1,4 +1,5 @@
 import { Vector } from '@/math/Vector';
+
 import type { Distribution } from './Distribution';
 
 const tau = Math.PI * 2;
@@ -19,26 +20,26 @@ const tau = Math.PI * 2;
  * up.sample(particle.velocity);
  */
 export class ConeDirection implements Distribution<Vector> {
-    private readonly _scratch = new Vector();
+  private readonly _scratch = new Vector();
 
-    public constructor(
-        public directionAngle: number,
-        public halfAngle: number,
-        public minSpeed: number,
-        public maxSpeed: number,
-    ) {}
+  public constructor(
+    public directionAngle: number,
+    public halfAngle: number,
+    public minSpeed: number,
+    public maxSpeed: number,
+  ) {}
 
-    public sample(out: Vector = this._scratch): Vector {
-        const angle = this.directionAngle + (Math.random() * 2 - 1) * this.halfAngle;
-        const speed = this.minSpeed + Math.random() * (this.maxSpeed - this.minSpeed);
+  public sample(out: Vector = this._scratch): Vector {
+    const angle = this.directionAngle + (Math.random() * 2 - 1) * this.halfAngle;
+    const speed = this.minSpeed + Math.random() * (this.maxSpeed - this.minSpeed);
 
-        out.set(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    out.set(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
-        return out;
-    }
+    return out;
+  }
 
-    /** Convenience: omnidirectional emission (full circle, 0..2π). */
-    public static omni(minSpeed: number, maxSpeed: number): ConeDirection {
-        return new ConeDirection(0, tau / 2, minSpeed, maxSpeed);
-    }
+  /** Convenience: omnidirectional emission (full circle, 0..2π). */
+  public static omni(minSpeed: number, maxSpeed: number): ConeDirection {
+    return new ConeDirection(0, tau / 2, minSpeed, maxSpeed);
+  }
 }

@@ -1,17 +1,17 @@
-@use "../styles/variables" as *;
+@use '../styles/variables' as *;
 
 :host {
-  display: block;
-  width: calc(var(--canvas-w, #{$preview-width}) * var(--preview-zoom, 1));
-  height: calc(var(--canvas-h, #{$preview-height}) * var(--preview-zoom, 1));
-  position: relative;
-  background: #0b0d12;
+    display: block;
+    width: calc(var(--canvas-w, #{$preview-width}) * var(--preview-zoom, 1));
+    height: calc(var(--canvas-h, #{$preview-height}) * var(--preview-zoom, 1));
+    position: relative;
+    background: #0b0d12;
 }
 
 .preview {
-  width: var(--canvas-w, 100%);
-  height: var(--canvas-h, 100%);
-  border: 0;
-  zoom: var(--preview-zoom, 1);
-  background: #0b0d12;
+    width: var(--canvas-w, 100%);
+    height: var(--canvas-h, 100%);
+    border: 0;
+    zoom: var(--preview-zoom, 1);
+    background: #0b0d12;
 }

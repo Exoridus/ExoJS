@@ -2,8 +2,8 @@ import type { LifetimeFunction } from './Distribution';
 
 /** A keyframe in a {@link Curve}: value `v` at lifetime ratio `t` in `[0, 1]`. */
 export interface CurveKey {
-    t: number;
-    v: number;
+  t: number;
+  v: number;
 }
 
 const compareT = (a: CurveKey, b: CurveKey): number => a.t - b.t;
@@ -27,41 +27,41 @@ const compareT = (a: CurveKey, b: CurveKey): number => a.t - b.t;
  * scale.x = scale.y = sizeCurve.evaluate(particle.elapsedRatio);
  */
 export class Curve implements LifetimeFunction<number> {
-    private readonly _keys: Array<CurveKey>;
-    private _lastSegment = 0;
+  private readonly _keys: CurveKey[];
+  private _lastSegment = 0;
 
-    public constructor(keys: ReadonlyArray<CurveKey>) {
-        if (keys.length === 0) {
-            throw new Error('Curve requires at least one keyframe.');
-        }
-
-        this._keys = [...keys].sort(compareT);
+  public constructor(keys: readonly CurveKey[]) {
+    if (keys.length === 0) {
+      throw new Error('Curve requires at least one keyframe.');
     }
 
-    public evaluate(t: number): number {
-        const keys = this._keys;
-        const last = keys.length - 1;
+    this._keys = [...keys].sort(compareT);
+  }
 
-        if (t <= keys[0].t) return keys[0].v;
-        if (t >= keys[last].t) return keys[last].v;
+  public evaluate(t: number): number {
+    const keys = this._keys;
+    const last = keys.length - 1;
 
-        // Cache-friendly forward search: most callers sweep t monotonically.
-        let segment = this._lastSegment;
+    if (t <= keys[0].t) return keys[0].v;
+    if (t >= keys[last].t) return keys[last].v;
 
-        if (t < keys[segment].t) {
-            segment = 0;
-        }
+    // Cache-friendly forward search: most callers sweep t monotonically.
+    let segment = this._lastSegment;
 
-        while (segment < last && t > keys[segment + 1].t) {
-            segment++;
-        }
-
-        this._lastSegment = segment;
-
-        const a = keys[segment];
-        const b = keys[segment + 1];
-        const ratio = (t - a.t) / (b.t - a.t);
-
-        return a.v + (b.v - a.v) * ratio;
+    if (t < keys[segment].t) {
+      segment = 0;
     }
+
+    while (segment < last && t > keys[segment + 1].t) {
+      segment++;
+    }
+
+    this._lastSegment = segment;
+
+    const a = keys[segment];
+    const b = keys[segment + 1];
+    const ratio = (t - a.t) / (b.t - a.t);
+
+    return a.v + (b.v - a.v) * ratio;
+  }
 }

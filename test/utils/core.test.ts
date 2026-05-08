@@ -1,43 +1,43 @@
 describe('utils/core', () => {
-    afterEach(() => {
-        jest.restoreAllMocks();
-        jest.resetModules();
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+  });
+
+  it('does not touch the DOM while importing the module', () => {
+    const createElementSpy = jest.spyOn(document, 'createElement');
+    const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
+
+    jest.isolateModules(() => {
+      require('@/core/utils');
     });
 
-    it('does not touch the DOM while importing the module', () => {
-        const createElementSpy = jest.spyOn(document, 'createElement');
-        const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
+    expect(createElementSpy).not.toHaveBeenCalled();
+    expect(addEventListenerSpy).not.toHaveBeenCalled();
+  });
 
-        jest.isolateModules(() => {
-            require('@/core/utils');
-        });
+  it('creates the audio element lazily when codec support is checked', () => {
+    const createElementSpy = jest.spyOn(document, 'createElement');
 
-        expect(createElementSpy).not.toHaveBeenCalled();
-        expect(addEventListenerSpy).not.toHaveBeenCalled();
+    jest.isolateModules(() => {
+      const { supportsCodec } = require('@/core/utils');
+
+      supportsCodec('@/audio/mpeg');
     });
 
-    it('creates the audio element lazily when codec support is checked', () => {
-        const createElementSpy = jest.spyOn(document, 'createElement');
+    expect(createElementSpy).toHaveBeenCalledWith('audio');
+  });
 
-        jest.isolateModules(() => {
-            const { supportsCodec } = require('@/core/utils');
+  it('probes passive event support lazily', () => {
+    const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
 
-            supportsCodec('@/audio/mpeg');
-        });
+    jest.isolateModules(() => {
+      const { supportsEventOptions } = require('@/core/utils');
 
-        expect(createElementSpy).toHaveBeenCalledWith('audio');
+      expect(addEventListenerSpy).not.toHaveBeenCalled();
+      expect(supportsEventOptions()).toBe(true);
     });
 
-    it('probes passive event support lazily', () => {
-        const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
-
-        jest.isolateModules(() => {
-            const { supportsEventOptions } = require('@/core/utils');
-
-            expect(addEventListenerSpy).not.toHaveBeenCalled();
-            expect(supportsEventOptions()).toBe(true);
-        });
-
-        expect(addEventListenerSpy).toHaveBeenCalled();
-    });
+    expect(addEventListenerSpy).toHaveBeenCalled();
+  });
 });

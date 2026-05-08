@@ -1,6 +1,6 @@
 import { Drawable } from '@/rendering/Drawable';
-import type { Texture } from '@/rendering/texture/Texture';
 import type { RenderTexture } from '@/rendering/texture/RenderTexture';
+import type { Texture } from '@/rendering/texture/Texture';
 
 /**
  * Construction-time options for a {@link Mesh}.
@@ -16,11 +16,11 @@ import type { RenderTexture } from '@/rendering/texture/RenderTexture';
  * Validation is enforced at construction; any mismatch throws.
  */
 export interface MeshOptions {
-    readonly vertices: Float32Array;
-    readonly indices?: Uint16Array;
-    readonly uvs?: Float32Array;
-    readonly colors?: Uint32Array;
-    readonly texture?: Texture | RenderTexture | null;
+  readonly vertices: Float32Array;
+  readonly indices?: Uint16Array;
+  readonly uvs?: Float32Array;
+  readonly colors?: Uint32Array;
+  readonly texture?: Texture | RenderTexture | null;
 }
 
 /**
@@ -52,102 +52,101 @@ export interface MeshOptions {
  * `recomputeLocalBounds()`).
  */
 export class Mesh extends Drawable {
+  public readonly vertices: Float32Array;
+  public readonly indices: Uint16Array | null;
+  public readonly uvs: Float32Array | null;
+  public readonly colors: Uint32Array | null;
 
-    public readonly vertices: Float32Array;
-    public readonly indices: Uint16Array | null;
-    public readonly uvs: Float32Array | null;
-    public readonly colors: Uint32Array | null;
+  private _texture: Texture | RenderTexture | null;
 
-    private _texture: Texture | RenderTexture | null;
+  public constructor(options: MeshOptions) {
+    super();
 
-    public constructor(options: MeshOptions) {
-        super();
+    const { vertices, indices = null, uvs = null, colors = null, texture = null } = options;
 
-        const { vertices, indices = null, uvs = null, colors = null, texture = null } = options;
-
-        if (vertices.length === 0 || vertices.length % 2 !== 0) {
-            throw new Error(`Mesh vertices must be a non-empty flat array of (x,y) pairs (got length ${vertices.length}).`);
-        }
-
-        const vertexCount = vertices.length / 2;
-
-        if (vertexCount < 3) {
-            throw new Error(`Mesh requires at least 3 vertices (got ${vertexCount}).`);
-        }
-
-        if (uvs !== null && uvs.length !== vertices.length) {
-            throw new Error(`Mesh uvs length ${uvs.length} must equal vertices length ${vertices.length}.`);
-        }
-
-        if (colors !== null && colors.length !== vertexCount) {
-            throw new Error(`Mesh colors length ${colors.length} must equal vertex count ${vertexCount}.`);
-        }
-
-        if (indices !== null) {
-            if (indices.length === 0 || indices.length % 3 !== 0) {
-                throw new Error(`Mesh indices must be a non-empty multiple of 3 (got length ${indices.length}).`);
-            }
-
-            for (let i = 0; i < indices.length; i++) {
-                if (indices[i] >= vertexCount) {
-                    throw new Error(`Mesh index ${indices[i]} at position ${i} is out of range for vertex count ${vertexCount}.`);
-                }
-            }
-        } else if (vertexCount % 3 !== 0) {
-            throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
-        }
-
-        this.vertices = vertices;
-        this.indices = indices;
-        this.uvs = uvs;
-        this.colors = colors;
-        this._texture = texture;
-
-        this.recomputeLocalBounds();
+    if (vertices.length === 0 || vertices.length % 2 !== 0) {
+      throw new Error(`Mesh vertices must be a non-empty flat array of (x,y) pairs (got length ${vertices.length}).`);
     }
 
-    /** Number of (x, y) vertex pairs in the mesh (i.e. `vertices.length / 2`). */
-    public get vertexCount(): number {
-        return this.vertices.length / 2;
+    const vertexCount = vertices.length / 2;
+
+    if (vertexCount < 3) {
+      throw new Error(`Mesh requires at least 3 vertices (got ${vertexCount}).`);
     }
 
-    /** Number of indices to draw: `indices.length` for indexed meshes, `vertexCount` otherwise. */
-    public get indexCount(): number {
-        return this.indices?.length ?? this.vertexCount;
+    if (uvs !== null && uvs.length !== vertices.length) {
+      throw new Error(`Mesh uvs length ${uvs.length} must equal vertices length ${vertices.length}.`);
     }
 
-    public get texture(): Texture | RenderTexture | null {
-        return this._texture;
+    if (colors !== null && colors.length !== vertexCount) {
+      throw new Error(`Mesh colors length ${colors.length} must equal vertex count ${vertexCount}.`);
     }
 
-    public set texture(texture: Texture | RenderTexture | null) {
-        this._texture = texture;
-        this.invalidateCache();
-    }
+    if (indices !== null) {
+      if (indices.length === 0 || indices.length % 3 !== 0) {
+        throw new Error(`Mesh indices must be a non-empty multiple of 3 (got length ${indices.length}).`);
+      }
 
-    /**
-     * Recompute the local AABB from the current vertex array. Call after
-     * mutating `vertices` in place to keep culling correct; otherwise the
-     * bounds the cull pass sees will be the AABB at construction time.
-     */
-    public recomputeLocalBounds(): this {
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        for (let i = 0; i < this.vertices.length; i += 2) {
-            const x = this.vertices[i];
-            const y = this.vertices[i + 1];
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+      for (let i = 0; i < indices.length; i++) {
+        if (indices[i] >= vertexCount) {
+          throw new Error(`Mesh index ${indices[i]} at position ${i} is out of range for vertex count ${vertexCount}.`);
         }
-
-        this.localBounds.set(minX, minY, maxX - minX, maxY - minY);
-        this._invalidateBoundsCascade();
-
-        return this;
+      }
+    } else if (vertexCount % 3 !== 0) {
+      throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
     }
+
+    this.vertices = vertices;
+    this.indices = indices;
+    this.uvs = uvs;
+    this.colors = colors;
+    this._texture = texture;
+
+    this.recomputeLocalBounds();
+  }
+
+  /** Number of (x, y) vertex pairs in the mesh (i.e. `vertices.length / 2`). */
+  public get vertexCount(): number {
+    return this.vertices.length / 2;
+  }
+
+  /** Number of indices to draw: `indices.length` for indexed meshes, `vertexCount` otherwise. */
+  public get indexCount(): number {
+    return this.indices?.length ?? this.vertexCount;
+  }
+
+  public get texture(): Texture | RenderTexture | null {
+    return this._texture;
+  }
+
+  public set texture(texture: Texture | RenderTexture | null) {
+    this._texture = texture;
+    this.invalidateCache();
+  }
+
+  /**
+   * Recompute the local AABB from the current vertex array. Call after
+   * mutating `vertices` in place to keep culling correct; otherwise the
+   * bounds the cull pass sees will be the AABB at construction time.
+   */
+  public recomputeLocalBounds(): this {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (let i = 0; i < this.vertices.length; i += 2) {
+      const x = this.vertices[i];
+      const y = this.vertices[i + 1];
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+
+    this.localBounds.set(minX, minY, maxX - minX, maxY - minY);
+    this._invalidateBoundsCascade();
+
+    return this;
+  }
 }

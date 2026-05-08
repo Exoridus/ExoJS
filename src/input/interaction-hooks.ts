@@ -15,10 +15,10 @@
 import type { RenderNode } from '@/rendering/RenderNode';
 
 export interface InteractionManagerHooks {
-    _notifyNodeAdded(node: RenderNode): void;
-    _notifyNodeRemoved(node: RenderNode): void;
-    _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void;
-    _notifyBoundsInvalidated(node: RenderNode): void;
+  _notifyNodeAdded(node: RenderNode): void;
+  _notifyNodeRemoved(node: RenderNode): void;
+  _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void;
+  _notifyBoundsInvalidated(node: RenderNode): void;
 }
 
 let _currentManager: InteractionManagerHooks | null = null;
@@ -30,7 +30,7 @@ let _currentManager: InteractionManagerHooks | null = null;
  * @internal
  */
 export function _getCurrentInteractionManager(): InteractionManagerHooks | null {
-    return _currentManager;
+  return _currentManager;
 }
 
 /**
@@ -40,5 +40,5 @@ export function _getCurrentInteractionManager(): InteractionManagerHooks | null 
  * @internal
  */
 export function _setCurrentInteractionManager(manager: InteractionManagerHooks | null): void {
-    _currentManager = manager;
+  _currentManager = manager;
 }

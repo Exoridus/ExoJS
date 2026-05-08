@@ -1,5 +1,5 @@
-import type { Collidable } from '@/math/Collision';
 import type { Cloneable, Destroyable, HasBoundingBox } from '@/core/types';
+import type { Collidable } from '@/math/Collision';
 
 /**
  * Full shape contract: a {@link Collidable} that can also be cloned, destroyed,
@@ -7,6 +7,4 @@ import type { Cloneable, Destroyable, HasBoundingBox } from '@/core/types';
  * ({@link Circle}, {@link Rectangle}, {@link Polygon}, {@link Ellipse},
  * {@link Line}, {@link Vector}) implement this interface.
  */
-export interface ShapeLike extends Collidable, Cloneable, Destroyable, HasBoundingBox {
-
-}
+export interface ShapeLike extends Collidable, Cloneable, Destroyable, HasBoundingBox {}

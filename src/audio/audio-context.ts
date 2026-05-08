@@ -1,7 +1,7 @@
 import { Signal } from '@/core/Signal';
 
 interface AudioContextEventTarget {
-    addEventListener?: (type: string, listener: () => void) => void;
+  addEventListener?: (type: string, listener: () => void) => void;
 }
 
 const interactionEvents = ['mousedown', 'touchstart', 'touchend'] as const;
@@ -19,99 +19,99 @@ const canUseDocument = (): boolean => typeof document !== 'undefined';
 const getExistingAudioContext = (): AudioContext | null => internalAudioContext;
 
 const getOrCreateAudioContext = (): AudioContext => {
-    if (!supportsAudioContext()) {
-        throw new Error('This environment does not support AudioContext.');
-    }
+  if (!supportsAudioContext()) {
+    throw new Error('This environment does not support AudioContext.');
+  }
 
-    if (internalAudioContext === null) {
-        internalAudioContext = new AudioContext();
-    }
+  if (internalAudioContext === null) {
+    internalAudioContext = new AudioContext();
+  }
 
-    return internalAudioContext;
+  return internalAudioContext;
 };
 
 const getOrCreateOfflineAudioContext = (): OfflineAudioContext => {
-    if (!supportsOfflineAudioContext()) {
-        throw new Error('This environment does not support OfflineAudioContext.');
-    }
+  if (!supportsOfflineAudioContext()) {
+    throw new Error('This environment does not support OfflineAudioContext.');
+  }
 
-    if (internalOfflineAudioContext === null) {
-        const audioContext = getOrCreateAudioContext();
+  if (internalOfflineAudioContext === null) {
+    const audioContext = getOrCreateAudioContext();
 
-        internalOfflineAudioContext = new OfflineAudioContext(1, 2, audioContext.sampleRate);
-    }
+    internalOfflineAudioContext = new OfflineAudioContext(1, 2, audioContext.sampleRate);
+  }
 
-    return internalOfflineAudioContext;
+  return internalOfflineAudioContext;
 };
 
 const removeInteractionListeners = (): void => {
-    if (!interactionListenersAdded || !canUseDocument()) {
-        return;
-    }
+  if (!interactionListenersAdded || !canUseDocument()) {
+    return;
+  }
 
-    for (const eventName of interactionEvents) {
-        document.removeEventListener(eventName, onUserInteraction, false);
-    }
+  for (const eventName of interactionEvents) {
+    document.removeEventListener(eventName, onUserInteraction, false);
+  }
 
-    interactionListenersAdded = false;
+  interactionListenersAdded = false;
 };
 
 const dispatchReadyIfRunning = (): void => {
-    const audioContext = getExistingAudioContext();
+  const audioContext = getExistingAudioContext();
 
-    if (!audioContext || audioContext.state !== 'running' || readyDispatched) {
-        return;
-    }
+  if (audioContext?.state !== 'running' || readyDispatched) {
+    return;
+  }
 
-    readyDispatched = true;
-    removeInteractionListeners();
-    onAudioContextReady.dispatch(audioContext);
+  readyDispatched = true;
+  removeInteractionListeners();
+  onAudioContextReady.dispatch(audioContext);
 };
 
 const onAudioContextStateChange = (): void => {
-    dispatchReadyIfRunning();
+  dispatchReadyIfRunning();
 };
 
 const addInteractionListeners = (): void => {
-    if (interactionListenersAdded || !canUseDocument()) {
-        return;
-    }
+  if (interactionListenersAdded || !canUseDocument()) {
+    return;
+  }
 
-    for (const eventName of interactionEvents) {
-        document.addEventListener(eventName, onUserInteraction, false);
-    }
+  for (const eventName of interactionEvents) {
+    document.addEventListener(eventName, onUserInteraction, false);
+  }
 
-    interactionListenersAdded = true;
+  interactionListenersAdded = true;
 };
 
 const ensureAudioContextReadyMonitoring = (): void => {
-    const audioContext = getOrCreateAudioContext();
-    const audioContextEventTarget = audioContext as unknown as AudioContextEventTarget;
+  const audioContext = getOrCreateAudioContext();
+  const audioContextEventTarget = audioContext as unknown as AudioContextEventTarget;
 
-    if (!stateChangeListenerAdded && typeof audioContextEventTarget.addEventListener === 'function') {
-        audioContextEventTarget.addEventListener('statechange', onAudioContextStateChange);
-        stateChangeListenerAdded = true;
-    }
+  if (!stateChangeListenerAdded && typeof audioContextEventTarget.addEventListener === 'function') {
+    audioContextEventTarget.addEventListener('statechange', onAudioContextStateChange);
+    stateChangeListenerAdded = true;
+  }
 
-    dispatchReadyIfRunning();
+  dispatchReadyIfRunning();
 
-    if (!readyDispatched) {
-        addInteractionListeners();
-    }
+  if (!readyDispatched) {
+    addInteractionListeners();
+  }
 };
 
 const onUserInteraction = (): void => {
-    const audioContext = getOrCreateAudioContext();
+  const audioContext = getOrCreateAudioContext();
 
-    if (audioContext.state === 'running') {
-        dispatchReadyIfRunning();
+  if (audioContext.state === 'running') {
+    dispatchReadyIfRunning();
 
-        return;
-    }
+    return;
+  }
 
-    void audioContext.resume().then(() => {
-        dispatchReadyIfRunning();
-    });
+  void audioContext.resume().then(() => {
+    dispatchReadyIfRunning();
+  });
 };
 
 /**
@@ -123,21 +123,21 @@ const onUserInteraction = (): void => {
  * @internal
  */
 class AudioContextReadySignal extends Signal<[AudioContext]> {
-    /** Subscribe and immediately start interaction monitoring. */
-    public override add(handler: (audioContext: AudioContext) => void | boolean, context?: object): this {
-        super.add(handler, context);
-        ensureAudioContextReadyMonitoring();
+  /** Subscribe and immediately start interaction monitoring. */
+  public override add(handler: (audioContext: AudioContext) => void | boolean, context?: object): this {
+    super.add(handler, context);
+    ensureAudioContextReadyMonitoring();
 
-        return this;
-    }
+    return this;
+  }
 
-    /** Subscribe once and immediately start interaction monitoring. */
-    public override once(handler: (audioContext: AudioContext) => void | boolean, context?: object): this {
-        super.once(handler, context);
-        ensureAudioContextReadyMonitoring();
+  /** Subscribe once and immediately start interaction monitoring. */
+  public override once(handler: (audioContext: AudioContext) => void | boolean, context?: object): this {
+    super.once(handler, context);
+    ensureAudioContextReadyMonitoring();
 
-        return this;
-    }
+    return this;
+  }
 }
 
 /**
@@ -162,11 +162,11 @@ export const onAudioContextReady = new AudioContextReadySignal();
  * current environment.
  */
 export const getAudioContext = (): AudioContext => {
-    const audioContext = getOrCreateAudioContext();
+  const audioContext = getOrCreateAudioContext();
 
-    ensureAudioContextReadyMonitoring();
+  ensureAudioContextReadyMonitoring();
 
-    return audioContext;
+  return audioContext;
 };
 
 /**
@@ -175,9 +175,9 @@ export const getAudioContext = (): AudioContext => {
  * `false` if no context exists yet.
  */
 export const isAudioContextReady = (): boolean => {
-    const audioContext = getExistingAudioContext();
+  const audioContext = getExistingAudioContext();
 
-    return audioContext !== null && audioContext.state === 'running';
+  return audioContext !== null && audioContext.state === 'running';
 };
 
 /**

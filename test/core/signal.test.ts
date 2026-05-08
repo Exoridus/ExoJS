@@ -1,40 +1,55 @@
 import { Signal } from '@/core/Signal';
 
 describe('Signal', () => {
-    it('dispatches to every binding even when handlers mutate _bindings mid-iteration', () => {
-        const signal = new Signal();
-        const calls: Array<string> = [];
+  it('dispatches to every binding even when handlers mutate _bindings mid-iteration', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
 
-        signal.once(() => { calls.push('a'); });
-        signal.once(() => { calls.push('b'); });
-        signal.once(() => { calls.push('c'); });
-
-        signal.dispatch();
-
-        expect(calls).toEqual(['a', 'b', 'c']);
-        expect(signal.bindings).toHaveLength(0);
+    signal.once(() => {
+      calls.push('a');
+    });
+    signal.once(() => {
+      calls.push('b');
+    });
+    signal.once(() => {
+      calls.push('c');
     });
 
-    it('stops dispatching when a handler returns false', () => {
-        const signal = new Signal();
-        const calls: Array<string> = [];
+    signal.dispatch();
 
-        signal.add(() => { calls.push('a'); });
-        signal.add(() => { calls.push('b'); return false; });
-        signal.add(() => { calls.push('c'); });
+    expect(calls).toEqual(['a', 'b', 'c']);
+    expect(signal.bindings).toHaveLength(0);
+  });
 
-        signal.dispatch();
+  it('stops dispatching when a handler returns false', () => {
+    const signal = new Signal();
+    const calls: string[] = [];
 
-        expect(calls).toEqual(['a', 'b']);
+    signal.add(() => {
+      calls.push('a');
+    });
+    signal.add(() => {
+      calls.push('b');
+      return false;
+    });
+    signal.add(() => {
+      calls.push('c');
     });
 
-    it('forwards arguments to handlers', () => {
-        const signal = new Signal<[number, string]>();
-        const received: Array<[number, string]> = [];
+    signal.dispatch();
 
-        signal.add((value, label) => { received.push([value, label]); });
-        signal.dispatch(42, 'hello');
+    expect(calls).toEqual(['a', 'b']);
+  });
 
-        expect(received).toEqual([[42, 'hello']]);
+  it('forwards arguments to handlers', () => {
+    const signal = new Signal<[number, string]>();
+    const received: [number, string][] = [];
+
+    signal.add((value, label) => {
+      received.push([value, label]);
     });
+    signal.dispatch(42, 'hello');
+
+    expect(received).toEqual([[42, 'hello']]);
+  });
 });

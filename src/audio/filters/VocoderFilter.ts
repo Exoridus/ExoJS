@@ -1,5 +1,5 @@
-import { WorkletFilter } from './WorkletFilter';
 import type { AudioBus } from '../AudioBus';
+import { WorkletFilter } from './WorkletFilter';
 
 const vocoderWorkletSource = `
 const sampleRate = globalThis.sampleRate;
@@ -15,15 +15,15 @@ class VocoderProcessor extends AudioWorkletProcessor {
     constructor(options) {
         super();
         const opts = options.processorOptions ?? {};
-        const numBands = opts.numBands ?? 16;
+        const bandCount = opts.numBands ?? 16;
         const minHz = opts.minHz ?? 80;
         const maxHz = opts.maxHz ?? 8000;
         const Q = opts.bandQ ?? 4;
 
         // Log-spaced band centers + biquad coefficients
         this._bands = [];
-        for (let i = 0; i < numBands; i++) {
-            const ratio = numBands === 1 ? 0 : i / (numBands - 1);
+        for (let i = 0; i < bandCount; i++) {
+            const ratio = bandCount === 1 ? 0 : i / (bandCount - 1);
             const centerHz = minHz * Math.pow(maxHz / minHz, ratio);
             const omega = 2 * Math.PI * centerHz / sampleRate;
             const cos = Math.cos(omega);
@@ -45,7 +45,7 @@ class VocoderProcessor extends AudioWorkletProcessor {
         this._modulatorStates = this._bands.map(() => ({ x1: 0, x2: 0, y1: 0, y2: 0 }));
 
         // Per-band envelope follower
-        this._envelopes = new Float32Array(numBands);
+        this._envelopes = new Float32Array(bandCount);
     }
 
     _processBiquad(state, coef, x) {
@@ -63,14 +63,14 @@ class VocoderProcessor extends AudioWorkletProcessor {
 
         const wet = parameters.wet[0];
         const envSmoothing = parameters.envelopeSmoothing[0];
-        const numBands = this._bands.length;
+        const bandCount = this._bands.length;
 
         for (let i = 0; i < carrier.length; i++) {
             const carrierSample = carrier[i];
             const modulatorSample = modulator?.[i] ?? 0;
 
             let bandSum = 0;
-            for (let b = 0; b < numBands; b++) {
+            for (let b = 0; b < bandCount; b++) {
                 const coef = this._bands[b];
 
                 // Modulator band → envelope follower
@@ -92,22 +92,22 @@ registerProcessor('exojs-vocoder', VocoderProcessor);
 `;
 
 export interface VocoderFilterOptions {
-    /** Modulator AudioBus — its output drives the spectral envelope.
-     *  Typically routed from a microphone or voice sample. */
-    modulator: AudioBus;
-    /** Number of frequency bands. More bands = better resolution, more CPU. Default 16. */
-    numBands?: number;
-    /** Lowest band center frequency in Hz. Default 80. */
-    minHz?: number;
-    /** Highest band center frequency in Hz. Default 8000. */
-    maxHz?: number;
-    /** Bandpass Q factor. Higher = narrower bands. Default 4. */
-    bandQ?: number;
-    /** Dry/wet mix, 0..1. Default 1.0. */
-    wet?: number;
-    /** Envelope follower smoothing factor (one-pole coefficient).
-     *  Smaller = smoother / slower. Default 0.005. */
-    envelopeSmoothing?: number;
+  /** Modulator AudioBus — its output drives the spectral envelope.
+   *  Typically routed from a microphone or voice sample. */
+  modulator: AudioBus;
+  /** Number of frequency bands. More bands = better resolution, more CPU. Default 16. */
+  numBands?: number;
+  /** Lowest band center frequency in Hz. Default 80. */
+  minHz?: number;
+  /** Highest band center frequency in Hz. Default 8000. */
+  maxHz?: number;
+  /** Bandpass Q factor. Higher = narrower bands. Default 4. */
+  bandQ?: number;
+  /** Dry/wet mix, 0..1. Default 1.0. */
+  wet?: number;
+  /** Envelope follower smoothing factor (one-pole coefficient).
+   *  Smaller = smoother / slower. Default 0.005. */
+  envelopeSmoothing?: number;
 }
 
 /**
@@ -120,78 +120,86 @@ export interface VocoderFilterOptions {
  * runtime.
  */
 export class VocoderFilter extends WorkletFilter {
-    // Declared nullable because super() may trigger _onWorkletReady before the
-    // subclass constructor body runs (if construction is aborted by a throw).
-    private readonly _modulator: AudioBus | null = null;
-    private readonly _numBands: number;
-    private readonly _minHz: number;
-    private readonly _maxHz: number;
-    private readonly _bandQ: number;
-    private _wet: number;
-    private _envelopeSmoothing: number;
+  // Declared nullable because super() may trigger _onWorkletReady before the
+  // subclass constructor body runs (if construction is aborted by a throw).
+  private readonly _modulator: AudioBus | null = null;
+  private readonly _numBands: number;
+  private readonly _minHz: number;
+  private readonly _maxHz: number;
+  private readonly _bandQ: number;
+  private _wet: number;
+  private _envelopeSmoothing: number;
 
-    public constructor(options: VocoderFilterOptions) {
-        super();
-        if (!options.modulator) {
-            throw new Error('VocoderFilter requires a modulator AudioBus.');
+  public constructor(options: VocoderFilterOptions) {
+    super();
+    if (!options.modulator) {
+      throw new Error('VocoderFilter requires a modulator AudioBus.');
+    }
+    this._modulator = options.modulator;
+    this._numBands = options.numBands ?? 16;
+    this._minHz = options.minHz ?? 80;
+    this._maxHz = options.maxHz ?? 8000;
+    this._bandQ = options.bandQ ?? 4;
+    this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
+    this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, options.envelopeSmoothing ?? 0.005));
+  }
+
+  protected get _workletName(): string {
+    return 'exojs-vocoder';
+  }
+  protected get _workletSource(): string {
+    return vocoderWorkletSource;
+  }
+  protected override get _workletOptions(): AudioWorkletNodeOptions {
+    return {
+      numberOfInputs: 2,
+      numberOfOutputs: 1,
+      processorOptions: {
+        numBands: this._numBands,
+        minHz: this._minHz,
+        maxHz: this._maxHz,
+        bandQ: this._bandQ,
+      },
+    };
+  }
+
+  protected override _onWorkletReady(_audioContext: AudioContext): void {
+    // Guard against partially-constructed instances (constructor threw after super()).
+    if (!this._modulator) return;
+
+    this._setAudioParam('wet', this._wet);
+    this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
+
+    // Wire modulator bus output to input 1 of the worklet
+    const modulator = this._modulator;
+    const modOutput = modulator._getOutputNode();
+    if (modOutput && this._workletNode) {
+      modOutput.connect(this._workletNode, 0, 1);
+    } else {
+      modulator.onceSetup(() => {
+        const node = modulator._getOutputNode();
+        if (node && this._workletNode) {
+          node.connect(this._workletNode, 0, 1);
         }
-        this._modulator = options.modulator;
-        this._numBands = options.numBands ?? 16;
-        this._minHz = options.minHz ?? 80;
-        this._maxHz = options.maxHz ?? 8000;
-        this._bandQ = options.bandQ ?? 4;
-        this._wet = Math.max(0, Math.min(1, options.wet ?? 1.0));
-        this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, options.envelopeSmoothing ?? 0.005));
+      });
     }
+  }
 
-    protected get _workletName(): string { return 'exojs-vocoder'; }
-    protected get _workletSource(): string { return vocoderWorkletSource; }
-    protected override get _workletOptions(): AudioWorkletNodeOptions {
-        return {
-            numberOfInputs: 2,
-            numberOfOutputs: 1,
-            processorOptions: {
-                numBands: this._numBands,
-                minHz: this._minHz,
-                maxHz: this._maxHz,
-                bandQ: this._bandQ,
-            },
-        };
-    }
+  /** Wet (vocoded) mix level, 0..1. Default 1.0. */
+  public get wet(): number {
+    return this._wet;
+  }
+  public set wet(value: number) {
+    this._wet = Math.max(0, Math.min(1, value));
+    this._setAudioParam('wet', this._wet);
+  }
 
-    protected override _onWorkletReady(audioContext: AudioContext): void {
-        // Guard against partially-constructed instances (constructor threw after super()).
-        if (!this._modulator) return;
-
-        this._setAudioParam('wet', this._wet);
-        this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
-
-        // Wire modulator bus output to input 1 of the worklet
-        const modulator = this._modulator;
-        const modOutput = modulator._getOutputNode();
-        if (modOutput && this._workletNode) {
-            modOutput.connect(this._workletNode, 0, 1);
-        } else {
-            modulator.onceSetup(() => {
-                const node = modulator._getOutputNode();
-                if (node && this._workletNode) {
-                    node.connect(this._workletNode, 0, 1);
-                }
-            });
-        }
-    }
-
-    /** Wet (vocoded) mix level, 0..1. Default 1.0. */
-    public get wet(): number { return this._wet; }
-    public set wet(value: number) {
-        this._wet = Math.max(0, Math.min(1, value));
-        this._setAudioParam('wet', this._wet);
-    }
-
-    /** One-pole envelope follower coefficient. Smaller values produce slower, smoother envelope tracking. Range 0.0001..0.1, default 0.005. */
-    public get envelopeSmoothing(): number { return this._envelopeSmoothing; }
-    public set envelopeSmoothing(value: number) {
-        this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, value));
-        this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
-    }
+  /** One-pole envelope follower coefficient. Smaller values produce slower, smoother envelope tracking. Range 0.0001..0.1, default 0.005. */
+  public get envelopeSmoothing(): number {
+    return this._envelopeSmoothing;
+  }
+  public set envelopeSmoothing(value: number) {
+    this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, value));
+    this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
+  }
 }

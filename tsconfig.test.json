@@ -8,5 +8,6 @@
     "isolatedModules": false,
     "ignoreDeprecations": "6.0",
     "types": ["jest", "node", "jsdom", "@webgpu/types", "css-font-loading-module"]
-  }
+  },
+  "include": ["src/**/*", "test/**/*"]
 }

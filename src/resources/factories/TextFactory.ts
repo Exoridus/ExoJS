@@ -6,20 +6,19 @@ import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
  * JavaScript strings.
  */
 export class TextFactory extends AbstractAssetFactory<string> {
+  public readonly storageName = 'text';
 
-    public readonly storageName = 'text';
+  /**
+   * Reads the response body as a UTF-8 decoded string.
+   */
+  public async process(response: Response): Promise<string> {
+    return response.text();
+  }
 
-    /**
-     * Reads the response body as a UTF-8 decoded string.
-     */
-    public async process(response: Response): Promise<string> {
-        return await response.text();
-    }
-
-    /**
-     * Returns the decoded string unchanged.
-     */
-    public async create(source: string): Promise<string> {
-        return source;
-    }
+  /**
+   * Returns the decoded string unchanged.
+   */
+  public async create(source: string): Promise<string> {
+    return source;
+  }
 }

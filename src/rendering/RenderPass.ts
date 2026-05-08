@@ -8,6 +8,6 @@ import type { RenderBackend } from './RenderBackend';
  * {@link RenderTarget}. Passes are executed in order each frame by the backend.
  */
 export interface RenderPass {
-    /** Execute this pass, issuing draw calls through `backend`. */
-    execute(backend: RenderBackend): void;
+  /** Execute this pass, issuing draw calls through `backend`. */
+  execute(backend: RenderBackend): void;
 }

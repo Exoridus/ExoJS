@@ -1,0 +1,51 @@
+import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+
+const app = new Application({
+    width: 800,
+    height: 600,
+    clearColor: Color.black,
+    resourcePath: 'assets/',
+});
+
+document.body.append(app.canvas);
+
+const glsl = `#version 300 es
+precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;
+void main(){ vec2 o=vec2(uOffset,0.0); float r=texture(uTexture,vUv+o).r; float g=texture(uTexture,vUv).g; float b=texture(uTexture,vUv-o).b; float a=texture(uTexture,vUv).a; fragColor=vec4(r,g,b,a);} `;
+const wgsl = `
+@group(0) @binding(1) var uTexture:texture_2d<f32>;
+@group(0) @binding(2) var uSampler:sampler;
+struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
+@group(1) @binding(0) var<uniform> uniforms:Uniforms;
+@fragment fn main(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
+    let o=vec2<f32>(uniforms.uOffset,0.0);
+    let r=textureSample(uTexture,uSampler,vUv+o).r;
+    let g=textureSample(uTexture,uSampler,vUv).g;
+    let b=textureSample(uTexture,uSampler,vUv-o).b;
+    let a=textureSample(uTexture,uSampler,vUv).a;
+    return vec4<f32>(r,g,b,a);
+}`;
+
+app.start(
+    new (class extends Scene {
+        async load(loader) {
+            await loader.load(Texture, { bunny: 'image/bunny.png' });
+        }
+        init(loader) {
+            this._filter =
+                app.backend.backendType === RenderBackendType.WebGpu
+                    ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
+                    : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
+            this._sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(2).setPosition(400, 300);
+            this._sprite.filters = [this._filter];
+            this.app.input.onPointerMove.add(pointer => {
+                const t = Math.max(0, Math.min(1, pointer.x / app.canvas.width));
+                this._filter.uniforms.uOffset = (t - 0.5) * 0.03;
+            });
+        }
+        draw(backend) {
+            backend.clear();
+            this._sprite.render(backend);
+        }
+    })()
+);

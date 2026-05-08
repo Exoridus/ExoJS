@@ -1,5 +1,5 @@
-import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { GamepadMappingFamily } from './GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 
 /**
  * Mapping for the Nintendo Switch Pro Controller connected via USB or
@@ -11,5 +11,5 @@ import { GamepadMappingFamily } from './GamepadMapping';
  * paired through Steam or a dedicated driver.
  */
 export class SwitchProGamepadMapping extends GenericDualAnalogGamepadMapping {
-    public override readonly family = GamepadMappingFamily.SwitchPro;
+  public override readonly family = GamepadMappingFamily.SwitchPro;
 }

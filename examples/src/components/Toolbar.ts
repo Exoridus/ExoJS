@@ -4,20 +4,20 @@ import componentStyles from './Toolbar.scss?inline';
 
 @customElement('exo-toolbar')
 export class ExoToolbar extends LitElement {
-  static styles = unsafeCSS(componentStyles);
+    static styles = unsafeCSS(componentStyles);
 
-  @property({ type: String }) public override title = '';
+    @property({ type: String }) public override title = '';
 
-  public render(): ReturnType<LitElement['render']> {
-    return html`
-      <div class="title">${this.title}</div>
-      <slot></slot>
-    `;
-  }
+    public render(): ReturnType<LitElement['render']> {
+        return html`
+            <div class="title">${this.title}</div>
+            <slot></slot>
+        `;
+    }
 }
 
 declare global {
-  interface HTMLElementTagNameMap {
-    'exo-toolbar': ExoToolbar;
-  }
+    interface HTMLElementTagNameMap {
+        'exo-toolbar': ExoToolbar;
+    }
 }

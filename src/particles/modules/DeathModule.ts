@@ -19,7 +19,7 @@ import type { ParticleSystem } from '@/particles/ParticleSystem';
  * ```
  */
 export abstract class DeathModule {
-    public abstract onDeath(system: ParticleSystem, slot: number): void;
-    /** Optional cleanup hook called from `ParticleSystem.destroy`. */
-    public destroy(): void {}
+  public abstract onDeath(system: ParticleSystem, slot: number): void;
+  /** Optional cleanup hook called from `ParticleSystem.destroy`. */
+  public destroy(): void {}
 }

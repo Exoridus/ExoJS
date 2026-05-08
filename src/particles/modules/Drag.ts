@@ -1,5 +1,6 @@
-import { UpdateModule } from './UpdateModule';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
+
+import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
 /**
@@ -13,37 +14,35 @@ import type { WgslContribution } from './WgslContribution';
  * GPU-eligible.
  */
 export class Drag extends UpdateModule {
-    public drag: number;
+  public drag: number;
 
-    public constructor(drag: number) {
-        super();
-        this.drag = drag;
+  public constructor(drag: number) {
+    super();
+    this.drag = drag;
+  }
+
+  public override apply(system: ParticleSystem, dt: number): void {
+    const { velX, velY, liveCount } = system;
+    const factor = 1 - this.drag * dt;
+
+    for (let i = 0; i < liveCount; i++) {
+      velX[i] *= factor;
+      velY[i] *= factor;
     }
+  }
 
-    public override apply(system: ParticleSystem, dt: number): void {
-        const { velX, velY, liveCount } = system;
-        const factor = 1 - this.drag * dt;
-
-        for (let i = 0; i < liveCount; i++) {
-            velX[i] *= factor;
-            velY[i] *= factor;
-        }
-    }
-
-    public override wgsl(): WgslContribution {
-        return {
-            key: 'Drag',
-            uniforms: [
-                { name: 'drag', type: 'f32' },
-            ],
-            body: `
+  public override wgsl(): WgslContribution {
+    return {
+      key: 'Drag',
+      uniforms: [{ name: 'drag', type: 'f32' }],
+      body: `
                 let dragFactor = 1.0 - modules.u_Drag.drag * dt;
                 velocities[idx] = velocities[idx] * dragFactor;
             `,
-        };
-    }
+    };
+  }
 
-    public override writeUniforms(view: DataView, offset: number): void {
-        view.setFloat32(offset + 0, this.drag, true);
-    }
+  public override writeUniforms(view: DataView, offset: number): void {
+    view.setFloat32(offset + 0, this.drag, true);
+  }
 }

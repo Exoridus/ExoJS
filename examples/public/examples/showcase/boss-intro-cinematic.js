@@ -1,0 +1,65 @@
+import { Application, Color, Graphics, Music, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+
+const app = new Application({
+    width: 800,
+    height: 600,
+    clearColor: Color.black,
+    resourcePath: 'assets/',
+});
+
+document.body.append(app.canvas);
+
+const title = 'VOID EMPEROR';
+
+app.start(
+    new (class extends Scene {
+        async load(loader) {
+            await loader.load(Texture, { boss: 'image/bunny.png' });
+            await loader.load(Music, { track: 'audio/example.ogg' });
+        }
+        init(loader) {
+            this._view = new View(220, 300, 800, 600);
+            this._bg = new Graphics();
+            this._bars = new Graphics();
+            this._barSize = { v: 0 };
+            this._title = new Text('', { fill: 'white', fontSize: 56 });
+            this._title.setPosition(150, 120);
+            this._titleState = { count: 0 };
+            this._boss = new Sprite(loader.get(Texture, 'boss'))
+                .setAnchor(0.5)
+                .setScale(0.4)
+                .setPosition(560, 320)
+                .setTint(new Color(255, 130, 130));
+            this._music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
+
+            this.app.tweens.create(this._barSize).to({ v: 70 }, 0.6).start();
+            this.app.tweens.create(this._view.center).to({ x: 520, y: 300 }, 2.0).start();
+            this.app.tweens.create(this._boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
+            this.app.tweens
+                .create(this._titleState)
+                .to({ count: title.length }, 1.0)
+                .delay(1.6)
+                .onUpdate(() => {
+                    this._title.setText(title.slice(0, this._titleState.count | 0));
+                })
+                .start();
+            this.app.tweens.create(this._music).to({ volume: 0.85 }, 2.0).start();
+        }
+        draw(backend) {
+            backend.clear(new Color(16, 16, 24));
+            this._bg.clear();
+            this._bg.fillColor = new Color(36, 42, 70);
+            this._bg.drawRectangle(-200, 0, 1600, 600);
+            backend.setView(this._view);
+            this._bg.render(backend);
+            this._boss.render(backend);
+            backend.setView(null);
+            this._title.render(backend);
+            this._bars.clear();
+            this._bars.fillColor = Color.black;
+            this._bars.drawRectangle(0, 0, 800, this._barSize.v);
+            this._bars.drawRectangle(0, 600 - this._barSize.v, 800, this._barSize.v);
+            this._bars.render(backend);
+        }
+    })()
+);

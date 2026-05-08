@@ -7,80 +7,80 @@
 // ---------------------------------------------------------------------------
 
 interface OnFrameTestHarness {
-    readonly Application: typeof import('@/core/Application').Application;
-    readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
-    readonly sceneManager: { update: jest.Mock; setScene: jest.Mock; destroy: jest.Mock; };
-    readonly backend: {
-        flush: jest.Mock;
-        resetStats: jest.Mock;
-        stats: { frameTimeMs: number; };
-        view: object;
-        setView: jest.Mock;
-    };
+  readonly Application: typeof import('@/core/Application').Application;
+  readonly ApplicationStatus: typeof import('@/core/Application').ApplicationStatus;
+  readonly sceneManager: { update: jest.Mock; setScene: jest.Mock; destroy: jest.Mock };
+  readonly backend: {
+    flush: jest.Mock;
+    resetStats: jest.Mock;
+    stats: { frameTimeMs: number };
+    view: object;
+    setView: jest.Mock;
+  };
 }
 
 const loadOnFrameHarness = (): OnFrameTestHarness => {
-    const backend = {
-        initialize: jest.fn().mockResolvedValue(undefined),
-        flush: jest.fn(),
-        resize: jest.fn(),
-        destroy: jest.fn(),
-        resetStats: jest.fn().mockReturnThis(),
-        stats: { frameTimeMs: 0 },
-        renderTarget: { setView: jest.fn() },
-        view: {},
-        setView: jest.fn().mockReturnThis(),
-        onContextLost: { add: jest.fn(), destroy: jest.fn() },
-        onContextRestored: { add: jest.fn(), destroy: jest.fn() },
-        onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
-        onDeviceRestored: { add: jest.fn(), destroy: jest.fn() },
-    };
-    const sceneManager = {
-        update: jest.fn(),
-        setScene: jest.fn().mockResolvedValue(undefined),
-        destroy: jest.fn(),
-    };
-    // Plain object that satisfies the onKeyDown Signal shape needed by DebugOverlay
-    // (Application itself doesn't use onKeyDown in its constructor, so a minimal stub suffices).
-    const onKeyDown = { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn(), bindings: [] };
+  const backend = {
+    initialize: jest.fn().mockResolvedValue(undefined),
+    flush: jest.fn(),
+    resize: jest.fn(),
+    destroy: jest.fn(),
+    resetStats: jest.fn().mockReturnThis(),
+    stats: { frameTimeMs: 0 },
+    renderTarget: { setView: jest.fn() },
+    view: {},
+    setView: jest.fn().mockReturnThis(),
+    onContextLost: { add: jest.fn(), destroy: jest.fn() },
+    onContextRestored: { add: jest.fn(), destroy: jest.fn() },
+    onDeviceLost: { add: jest.fn(), destroy: jest.fn() },
+    onDeviceRestored: { add: jest.fn(), destroy: jest.fn() },
+  };
+  const sceneManager = {
+    update: jest.fn(),
+    setScene: jest.fn().mockResolvedValue(undefined),
+    destroy: jest.fn(),
+  };
+  // Plain object that satisfies the onKeyDown Signal shape needed by DebugOverlay
+  // (Application itself doesn't use onKeyDown in its constructor, so a minimal stub suffices).
+  const onKeyDown = { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn(), bindings: [] };
 
-    let Application!: typeof import('@/core/Application').Application;
-    let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
+  let Application!: typeof import('@/core/Application').Application;
+  let ApplicationStatus!: typeof import('@/core/Application').ApplicationStatus;
 
-    jest.resetModules();
+  jest.resetModules();
 
-    jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
-        WebGl2Backend: jest.fn(() => backend),
-    }));
-    jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
-        WebGpuBackend: jest.fn(() => backend),
-    }));
-    jest.doMock('@/resources/Loader', () => ({
-        Loader: jest.fn(() => ({ destroy: jest.fn() })),
-    }));
-    const onCanvasFocusChange = { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn() };
-    jest.doMock('@/input/InputManager', () => ({
-        InputManager: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn(), onKeyDown, onCanvasFocusChange })),
-    }));
-    jest.doMock('@/input/InteractionManager', () => ({
-        InteractionManager: jest.fn(() => ({
-            update: jest.fn(),
-            destroy: jest.fn(),
-            getHoveredNode: jest.fn().mockReturnValue(null),
-        })),
-    }));
-    jest.doMock('@/core/SceneManager', () => ({
-        SceneManager: jest.fn(() => sceneManager),
-    }));
+  jest.doMock('@/rendering/webgl2/WebGl2Backend', () => ({
+    WebGl2Backend: jest.fn(() => backend),
+  }));
+  jest.doMock('@/rendering/webgpu/WebGpuBackend', () => ({
+    WebGpuBackend: jest.fn(() => backend),
+  }));
+  jest.doMock('@/resources/Loader', () => ({
+    Loader: jest.fn(() => ({ destroy: jest.fn() })),
+  }));
+  const onCanvasFocusChange = { add: jest.fn(), remove: jest.fn(), dispatch: jest.fn(), destroy: jest.fn() };
+  jest.doMock('@/input/InputManager', () => ({
+    InputManager: jest.fn(() => ({ update: jest.fn(), destroy: jest.fn(), onKeyDown, onCanvasFocusChange })),
+  }));
+  jest.doMock('@/input/InteractionManager', () => ({
+    InteractionManager: jest.fn(() => ({
+      update: jest.fn(),
+      destroy: jest.fn(),
+      getHoveredNode: jest.fn().mockReturnValue(null),
+    })),
+  }));
+  jest.doMock('@/core/SceneManager', () => ({
+    SceneManager: jest.fn(() => sceneManager),
+  }));
 
-    jest.isolateModules(() => {
-        const mod = require('@/core/Application') as typeof import('@/core/Application');
+  jest.isolateModules(() => {
+    const mod = require('@/core/Application') as typeof import('@/core/Application');
 
-        Application = mod.Application;
-        ApplicationStatus = mod.ApplicationStatus;
-    });
+    Application = mod.Application;
+    ApplicationStatus = mod.ApplicationStatus;
+  });
 
-    return { Application, ApplicationStatus, sceneManager, backend };
+  return { Application, ApplicationStatus, sceneManager, backend };
 };
 
 // ---------------------------------------------------------------------------
@@ -88,83 +88,89 @@ const loadOnFrameHarness = (): OnFrameTestHarness => {
 // ---------------------------------------------------------------------------
 
 describe('Application.onFrame', () => {
-    afterEach(() => {
-        jest.restoreAllMocks();
-        jest.resetModules();
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+  });
+
+  test('app.onFrame exists and has Signal-shaped API (add / remove / dispatch / bindings)', () => {
+    const { Application } = loadOnFrameHarness();
+    const app = new Application({ canvas: document.createElement('canvas') });
+
+    expect(app.onFrame).toBeDefined();
+    expect(typeof app.onFrame.add).toBe('function');
+    expect(typeof app.onFrame.remove).toBe('function');
+    expect(typeof app.onFrame.dispatch).toBe('function');
+    expect(Array.isArray(app.onFrame.bindings)).toBe(true);
+
+    app.destroy();
+  });
+
+  test('app.update() dispatches onFrame after sceneManager.update and before backend.flush', () => {
+    const { Application, ApplicationStatus } = loadOnFrameHarness();
+    const app = Object.create(Application.prototype) as import('@/core/Application').Application;
+    const rawApp = app as unknown as Record<string, unknown>;
+
+    const callOrder: string[] = [];
+    const sceneManager = {
+      update: jest.fn(() => {
+        callOrder.push('sceneManager.update');
+      }),
+    };
+
+    // Use the real Signal class loaded via isolateModules from the harness.
+    // Since we already called loadOnFrameHarness which called resetModules, we
+    // need a fresh require here to get a compatible Signal.
+    let Signal!: typeof import('@/core/Signal').Signal;
+
+    jest.isolateModules(() => {
+      Signal = (require('@/core/Signal') as typeof import('@/core/Signal')).Signal;
     });
 
-    test('app.onFrame exists and has Signal-shaped API (add / remove / dispatch / bindings)', () => {
-        const { Application } = loadOnFrameHarness();
-        const app = new Application({ canvas: document.createElement('canvas') });
+    const onFrame = new Signal<[import('@/core/Time').Time]>();
 
-        expect(app.onFrame).toBeDefined();
-        expect(typeof app.onFrame.add).toBe('function');
-        expect(typeof app.onFrame.remove).toBe('function');
-        expect(typeof app.onFrame.dispatch).toBe('function');
-        expect(Array.isArray(app.onFrame.bindings)).toBe(true);
-
-        app.destroy();
+    onFrame.add(() => {
+      callOrder.push('onFrame.dispatch');
     });
 
-    test('app.update() dispatches onFrame after sceneManager.update and before backend.flush', () => {
-        const { Application, ApplicationStatus } = loadOnFrameHarness();
-        const app = Object.create(Application.prototype) as import('@/core/Application').Application;
-        const rawApp = app as unknown as Record<string, unknown>;
+    const backend = {
+      flush: jest.fn(() => {
+        callOrder.push('backend.flush');
+      }),
+      resetStats: jest.fn().mockReturnThis(),
+      stats: { frameTimeMs: 0 },
+      view: { update: jest.fn() },
+    };
 
-        const callOrder: Array<string> = [];
-        const sceneManager = {
-            update: jest.fn(() => { callOrder.push('sceneManager.update'); }),
-        };
+    rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['input'] = { update: jest.fn() };
+    rawApp['interaction'] = { update: jest.fn() };
+    rawApp['tweens'] = { update: jest.fn() };
+    rawApp['sceneManager'] = sceneManager;
+    rawApp['_backend'] = backend;
+    rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: jest.fn() };
+    rawApp['_updateHandler'] = jest.fn();
+    rawApp['_frameCount'] = 0;
+    rawApp['onFrame'] = onFrame;
 
-        // Use the real Signal class loaded via isolateModules from the harness.
-        // Since we already called loadOnFrameHarness which called resetModules, we
-        // need a fresh require here to get a compatible Signal.
-        let Signal!: typeof import('@/core/Signal').Signal;
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
-        jest.isolateModules(() => {
-            Signal = (require('@/core/Signal') as typeof import('@/core/Signal')).Signal;
-        });
+    app.update();
 
-        const onFrame = new Signal<[import('@/core/Time').Time]>();
+    expect(callOrder).toEqual(['sceneManager.update', 'onFrame.dispatch', 'backend.flush']);
+  });
 
-        onFrame.add(() => { callOrder.push('onFrame.dispatch'); });
+  test('app.destroy() destroys the onFrame signal (bindings cleared)', () => {
+    const { Application } = loadOnFrameHarness();
+    const app = new Application({ canvas: document.createElement('canvas') });
 
-        const backend = {
-            flush: jest.fn(() => { callOrder.push('backend.flush'); }),
-            resetStats: jest.fn().mockReturnThis(),
-            stats: { frameTimeMs: 0 },
-            view: { update: jest.fn() },
-        };
+    const handler = jest.fn();
 
-        rawApp['_status'] = ApplicationStatus.Running;
-        rawApp['input'] = { update: jest.fn() };
-        rawApp['interaction'] = { update: jest.fn() };
-        rawApp['tweens'] = { update: jest.fn() };
-        rawApp['sceneManager'] = sceneManager;
-        rawApp['_backend'] = backend;
-        rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: jest.fn() };
-        rawApp['_updateHandler'] = jest.fn();
-        rawApp['_frameCount'] = 0;
-        rawApp['onFrame'] = onFrame;
+    app.onFrame.add(handler);
+    expect(app.onFrame.bindings.length).toBeGreaterThan(0);
 
-        jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    app.destroy();
 
-        app.update();
-
-        expect(callOrder).toEqual(['sceneManager.update', 'onFrame.dispatch', 'backend.flush']);
-    });
-
-    test('app.destroy() destroys the onFrame signal (bindings cleared)', () => {
-        const { Application } = loadOnFrameHarness();
-        const app = new Application({ canvas: document.createElement('canvas') });
-
-        const handler = jest.fn();
-
-        app.onFrame.add(handler);
-        expect(app.onFrame.bindings.length).toBeGreaterThan(0);
-
-        app.destroy();
-
-        expect(app.onFrame.bindings.length).toBe(0);
-    });
+    expect(app.onFrame.bindings.length).toBe(0);
+  });
 });

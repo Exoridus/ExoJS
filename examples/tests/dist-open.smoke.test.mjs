@@ -14,14 +14,14 @@ const defaultMountPath = '/nested/exo/';
 const examplesCatalogPath = path.join(projectRoot, 'public', 'examples', 'examples.json');
 const examplesCatalog = JSON.parse(fs.readFileSync(examplesCatalogPath, 'utf8'));
 const allExampleRoutes = Object.entries(examplesCatalog).flatMap(([section, examples]) =>
-    examples.map((example) => ({
+    examples.map(example => ({
         ...example,
         section,
         routeHash: `#${example.path}`,
     }))
 );
 
-const getContentType = (filePath) => {
+const getContentType = filePath => {
     const ext = path.extname(filePath).toLowerCase();
 
     switch (ext) {
@@ -48,7 +48,7 @@ const getContentType = (filePath) => {
     }
 };
 
-const createStaticServer = (mountPath) => {
+const createStaticServer = mountPath => {
     const normalizedMountPath = mountPath.endsWith('/') ? mountPath : `${mountPath}/`;
     const bareMountPath = normalizedMountPath.slice(0, -1);
 
@@ -73,7 +73,7 @@ const createStaticServer = (mountPath) => {
         // Redirect bare mount path (no trailing slash) to canonical form so the browser's
         // base URL is correct and all relative fetches resolve under the mount path.
         if (requestUrl === bareMountPath) {
-            res.writeHead(301, { 'Location': normalizedMountPath });
+            res.writeHead(301, { Location: normalizedMountPath });
             res.end();
             return;
         }
@@ -107,24 +107,20 @@ const createStaticServer = (mountPath) => {
 };
 
 const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => {
-    const {
-        expectCanvas = true,
-        fallbackText = '',
-        afterLoad = null,
-        entryPath = 'index.html',
-    } = options;
+    const { expectCanvas = true, fallbackText = '', afterLoad = null, entryPath = 'index.html' } = options;
 
     assert.ok(fs.existsSync(path.join(distDir, 'index.html')), 'dist/index.html missing. Run `npm run build` first.');
 
     const server = createStaticServer(mountPath);
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 
     const address = server.address();
     assert.ok(address && typeof address === 'object', 'Failed to create local test server.');
     const trimmedMountPath = mountPath.endsWith('/') ? mountPath.slice(0, -1) : mountPath;
-    const baseUrl = entryPath === ''
-        ? `http://127.0.0.1:${address.port}${trimmedMountPath}${routeHash}`
-        : `http://127.0.0.1:${address.port}${mountPath}${entryPath}${routeHash}`;
+    const baseUrl =
+        entryPath === ''
+            ? `http://127.0.0.1:${address.port}${trimmedMountPath}${routeHash}`
+            : `http://127.0.0.1:${address.port}${mountPath}${entryPath}${routeHash}`;
 
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
@@ -135,18 +131,17 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
     const legacyBundleRequests = [];
     const localHttpErrors = [];
 
-    page.on('pageerror', (error) => {
+    page.on('pageerror', error => {
         pageErrors.push(String(error));
     });
 
-    page.on('console', (message) => {
+    page.on('console', message => {
         if (message.type() === 'error') {
             consoleErrors.push(message.text());
         }
-
     });
 
-    page.on('requestfinished', (request) => {
+    page.on('requestfinished', request => {
         if (request.url().includes('/vendor/exojs/exo.esm.js')) {
             exoModuleRequests.push(request.url());
         }
@@ -156,7 +151,7 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
         }
     });
 
-    page.on('response', (response) => {
+    page.on('response', response => {
         const requestUrl = response.url();
         const requestStatus = response.status();
 
@@ -170,12 +165,15 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
 
     try {
         await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 45000 });
-        await page.waitForFunction(() => {
-            const appRoot = document.querySelector('example-browser')?.shadowRoot;
-            const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-            const previewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
-            return !!previewRoot?.querySelector('iframe');
-        }, { timeout: 30000 });
+        await page.waitForFunction(
+            () => {
+                const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                const previewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
+                return !!previewRoot?.querySelector('iframe');
+            },
+            { timeout: 30000 }
+        );
 
         const iframeElementHandle = await page.evaluateHandle(() => {
             const appRoot = document.querySelector('example-browser')?.shadowRoot;
@@ -204,9 +202,7 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
                 // tried to run; this counts as a valid graceful-failure state.
                 const previewBlanked = iframeDocument?.body?.hasAttribute('data-preview-blanked') ?? false;
 
-                return expectCanvas
-                    ? hasCanvas
-                    : hasCanvas || bodyText.includes(fallbackText) || unavailableMessage.trim().length > 0 || previewBlanked;
+                return expectCanvas ? hasCanvas : hasCanvas || bodyText.includes(fallbackText) || unavailableMessage.trim().length > 0 || previewBlanked;
             },
             { expectCanvas, fallbackText },
             { timeout: 45000 }
@@ -217,16 +213,19 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
             canvasCount: document.querySelectorAll('canvas').length,
             bodyText: document.body?.innerText || '',
         }));
-        await page.waitForFunction(() => {
-            const appRoot = document.querySelector('example-browser')?.shadowRoot;
-            const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-            const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
-            const editorCodeRoot = editorCodeElement;
-            const editorView = editorCodeElement?.editorView;
-            const editorElement = editorCodeRoot?.querySelector('.monaco-editor');
+        await page.waitForFunction(
+            () => {
+                const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
+                const editorCodeRoot = editorCodeElement;
+                const editorView = editorCodeElement?.editorView;
+                const editorElement = editorCodeRoot?.querySelector('.monaco-editor');
 
-            return !!editorCodeRoot && !!editorView && !!editorElement;
-        }, { timeout: 45000 });
+                return !!editorCodeRoot && !!editorView && !!editorElement;
+            },
+            { timeout: 45000 }
+        );
 
         const editorState = await page.evaluate(() => {
             const appRoot = document.querySelector('example-browser')?.shadowRoot;
@@ -253,11 +252,11 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
                 editorHasBaseClass,
                 fixedOverflowWidgets: !!editorOptions?.fixedOverflowWidgets,
                 glyphMargin: !!editorOptions?.glyphMargin,
-                inputAreaHidden: !inputArea || (
-                    inputAreaStyle?.position === 'absolute' &&
-                    inputAreaStyle?.opacity === '0' &&
-                    (inputAreaStyle?.width === '0px' || inputAreaStyle?.width === '1px')
-                ),
+                inputAreaHidden:
+                    !inputArea ||
+                    (inputAreaStyle?.position === 'absolute' &&
+                        inputAreaStyle?.opacity === '0' &&
+                        (inputAreaStyle?.width === '0px' || inputAreaStyle?.width === '1px')),
                 lineDecorationsWidth: editorOptions?.lineDecorationsWidth ?? null,
                 lineNumbersMinChars: editorOptions?.lineNumbersMinChars ?? null,
                 globalMonacoStylesLoaded: !!globalMonacoStylesheet && !!globalMonacoStylesheet.sheet,
@@ -285,16 +284,13 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
 
             assert.ok(
                 frameState.canvasCount > 0 ||
-                frameState.bodyText.includes(fallbackText) ||
-                shellSupportState.unavailableMessage.length > 0 ||
-                shellSupportState.previewBlanked,
+                    frameState.bodyText.includes(fallbackText) ||
+                    shellSupportState.unavailableMessage.length > 0 ||
+                    shellSupportState.previewBlanked,
                 `Example preview neither rendered a canvas nor exposed shell fallback state for: ${fallbackText}`
             );
         }
-        assert.ok(
-            exoModuleRequests.length > 0,
-            'No request to local vendor/exojs/exo.esm.js was observed.'
-        );
+        assert.ok(exoModuleRequests.length > 0, 'No request to local vendor/exojs/exo.esm.js was observed.');
         assert.equal(editorState.hasEditorCodeRoot, true, 'Code editor root was not rendered.');
         assert.equal(editorState.editorHasBaseClass, true, 'Code editor did not initialize with Monaco classes.');
         assert.equal(editorState.monacoStylesLoaded, true, 'Monaco stylesheet was not loaded before editor use.');
@@ -343,7 +339,7 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
         });
 
         await page.waitForFunction(
-            (previousUrl) => {
+            previousUrl => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
                 const editorPreviewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
@@ -384,20 +380,16 @@ const runSmokeForMountPath = async (mountPath, routeHash = '', options = {}) => 
         const meaningfulPageErrors = pageErrors.filter(e => !e.includes('Canceled: Canceled'));
         assert.deepEqual(meaningfulPageErrors, [], `Runtime errors were thrown: ${meaningfulPageErrors.join(' | ')}`);
         assert.deepEqual(consoleErrors, [], `Console errors were emitted: ${consoleErrors.join(' | ')}`);
-        assert.deepEqual(
-            legacyBundleRequests,
-            [],
-            `Legacy bundle requests were emitted: ${legacyBundleRequests.join(' | ')}`
-        );
+        assert.deepEqual(legacyBundleRequests, [], `Legacy bundle requests were emitted: ${legacyBundleRequests.join(' | ')}`);
         assert.deepEqual(localHttpErrors, [], `Local HTTP errors were emitted: ${localHttpErrors.join(' | ')}`);
     } finally {
         await page.close();
         await browser.close();
-        await new Promise((resolve) => server.close(resolve));
+        await new Promise(resolve => server.close(resolve));
     }
 };
 
-const assertMonacoExoPackageSupport = async (page) => {
+const assertMonacoExoPackageSupport = async page => {
     const diagnostics = await page.evaluate(async () => {
         const appRoot = document.querySelector('example-browser')?.shadowRoot;
         const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
@@ -429,7 +421,7 @@ const assertMonacoExoPackageSupport = async (page) => {
 
         editorView.setValue(supportSource);
 
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await new Promise(resolve => setTimeout(resolve, 1200));
 
         const resource = model.uri;
         const markers = monaco.editor.getModelMarkers({ resource });
@@ -440,44 +432,26 @@ const assertMonacoExoPackageSupport = async (page) => {
         const webGl2BackendOffset = fullText.indexOf('WebGl2Backend') + 2;
         const webGpuBackendOffset = fullText.indexOf('WebGpuBackend') + 2;
         const applicationQuickInfo = await worker.getQuickInfoAtPosition(resource.toString(), applicationOffset);
-        const webGl2BackendQuickInfo = await worker.getQuickInfoAtPosition(
-            resource.toString(),
-            webGl2BackendOffset
-        );
-        const webGpuBackendQuickInfo = await worker.getQuickInfoAtPosition(
-            resource.toString(),
-            webGpuBackendOffset
-        );
+        const webGl2BackendQuickInfo = await worker.getQuickInfoAtPosition(resource.toString(), webGl2BackendOffset);
+        const webGpuBackendQuickInfo = await worker.getQuickInfoAtPosition(resource.toString(), webGpuBackendOffset);
 
         return {
-            markers: markers.map((marker) => ({
+            markers: markers.map(marker => ({
                 code: marker.code,
                 message: marker.message,
                 startLineNumber: marker.startLineNumber,
                 startColumn: marker.startColumn,
             })),
-            exoHasApplication: !!applicationQuickInfo?.displayParts?.some((part) => part.text.includes('Application')),
-            webGl2HasBackend: !!webGl2BackendQuickInfo?.displayParts?.some(
-                (part) => part.text.includes('WebGl2Backend')
-            ),
-            webGpuHasBackend: !!webGpuBackendQuickInfo?.displayParts?.some(
-                (part) => part.text.includes('WebGpuBackend')
-            ),
+            exoHasApplication: !!applicationQuickInfo?.displayParts?.some(part => part.text.includes('Application')),
+            webGl2HasBackend: !!webGl2BackendQuickInfo?.displayParts?.some(part => part.text.includes('WebGl2Backend')),
+            webGpuHasBackend: !!webGpuBackendQuickInfo?.displayParts?.some(part => part.text.includes('WebGpuBackend')),
         };
     });
 
     assert.deepEqual(diagnostics.markers, [], `Monaco emitted ExoJS diagnostics: ${JSON.stringify(diagnostics.markers)}`);
     assert.equal(diagnostics.exoHasApplication, true, 'Monaco completions did not expose @codexo/exojs.Application.');
-    assert.equal(
-        diagnostics.webGl2HasBackend,
-        true,
-        'Monaco symbol info did not expose @codexo/exojs.WebGl2Backend.'
-    );
-    assert.equal(
-        diagnostics.webGpuHasBackend,
-        true,
-        'Monaco symbol info did not expose @codexo/exojs.WebGpuBackend.'
-    );
+    assert.equal(diagnostics.webGl2HasBackend, true, 'Monaco symbol info did not expose @codexo/exojs.WebGl2Backend.');
+    assert.equal(diagnostics.webGpuHasBackend, true, 'Monaco symbol info did not expose @codexo/exojs.WebGpuBackend.');
 };
 
 const assertExampleDiagnosticsAreSane = async (page, disallowedMarkerFragments) => {
@@ -498,9 +472,9 @@ const assertExampleDiagnosticsAreSane = async (page, disallowedMarkerFragments) 
             throw new Error('Monaco model is not available.');
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await new Promise(resolve => setTimeout(resolve, 1200));
 
-        return monaco.editor.getModelMarkers({ resource: model.uri }).map((marker) => ({
+        return monaco.editor.getModelMarkers({ resource: model.uri }).map(marker => ({
             code: String(marker.code || ''),
             message: marker.message,
             severity: marker.severity,
@@ -509,15 +483,9 @@ const assertExampleDiagnosticsAreSane = async (page, disallowedMarkerFragments) 
         }));
     });
 
-    const matchedMarkers = markers.filter((marker) =>
-        disallowedMarkerFragments.some((fragment) => marker.message.includes(fragment))
-    );
+    const matchedMarkers = markers.filter(marker => disallowedMarkerFragments.some(fragment => marker.message.includes(fragment)));
 
-    assert.deepEqual(
-        matchedMarkers,
-        [],
-        `Monaco emitted stale diagnostics for the active example: ${JSON.stringify(matchedMarkers)}`
-    );
+    assert.deepEqual(matchedMarkers, [], `Monaco emitted stale diagnostics for the active example: ${JSON.stringify(matchedMarkers)}`);
 };
 
 test('dist app opens in nested path and initializes Exo preview without runtime errors', async () => {
@@ -646,11 +614,11 @@ test('Monaco does not emit stale diagnostics for valid example scene patterns', 
         fallbackText: 'does not support WebGL',
         afterLoad: async ({ page }) => {
             await assertExampleDiagnosticsAreSane(page, [
-                'Type \'(loader: Loader) => void\' is not assignable to type \'(loader: Loader) => Promise<void>\'',
-                'Argument of type \'"music"\' is not assignable to parameter of type \'ResourceTypes\'',
-                'Property \'_music\' does not exist on type \'SceneData\'',
-                'Property \'app\' does not exist on type \'SceneData\'',
-                'Property \'clear\' does not exist on type \'RenderBackend\'',
+                "Type '(loader: Loader) => void' is not assignable to type '(loader: Loader) => Promise<void>'",
+                "Argument of type '\"music\"' is not assignable to parameter of type 'ResourceTypes'",
+                "Property '_music' does not exist on type 'SceneData'",
+                "Property 'app' does not exist on type 'SceneData'",
+                "Property 'clear' does not exist on type 'RenderBackend'",
             ]);
         },
     });
@@ -679,9 +647,9 @@ test('Monaco renders hover and suggest widgets at usable widths', async () => {
                 editor.setPosition({ lineNumber: 1, column: 22 });
                 editor.focus();
 
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 500));
                 await editor.getAction('editor.action.showHover').run();
-                await new Promise((resolve) => setTimeout(resolve, 400));
+                await new Promise(resolve => setTimeout(resolve, 400));
                 const hover = editorCodeRoot?.querySelector('.monaco-hover');
                 const hoverState = {
                     hoverExists: !!hover,
@@ -690,7 +658,7 @@ test('Monaco renders hover and suggest widgets at usable widths', async () => {
                 };
 
                 await editor.getAction('editor.action.triggerSuggest').run();
-                await new Promise((resolve) => setTimeout(resolve, 400));
+                await new Promise(resolve => setTimeout(resolve, 400));
 
                 const suggest = editorCodeRoot?.querySelector('.suggest-widget');
 
@@ -709,7 +677,7 @@ test('Monaco renders hover and suggest widgets at usable widths', async () => {
 });
 
 test('editor shows metadata, reports preview errors, and reset restores the original example code', async () => {
-    const route = allExampleRoutes.find((example) => example.path === 'rendering/sprite.js');
+    const route = allExampleRoutes.find(example => example.path === 'rendering/sprite.js');
     assert.ok(route, 'rendering/sprite.js route metadata not found.');
 
     await runSmokeForMountPath(defaultMountPath, route.routeHash, {
@@ -723,14 +691,10 @@ test('editor shows metadata, reports preview errors, and reset restores the orig
                 const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
                 const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
                 const editorView = editorCodeElement?.editorView;
-                const toolbarTitle = editorCodeElement
-                    ?.querySelector('exo-toolbar')
-                    ?.shadowRoot
-                    ?.querySelector('.title')
-                    ?.textContent
-                    ?.trim() || '';
-                const activeNavigationLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || [])
-                    .find((element) => element.shadowRoot?.querySelector('a[data-active]'));
+                const toolbarTitle = editorCodeElement?.querySelector('exo-toolbar')?.shadowRoot?.querySelector('.title')?.textContent?.trim() || '';
+                const activeNavigationLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || []).find(element =>
+                    element.shadowRoot?.querySelector('a[data-active]')
+                );
                 const activeNavigationAnchor = activeNavigationLink?.shadowRoot?.querySelector('a');
 
                 return {
@@ -739,7 +703,7 @@ test('editor shows metadata, reports preview errors, and reset restores the orig
                     activeLinkTitle: activeNavigationAnchor?.querySelector('.title')?.textContent?.trim() || '',
                     activeLinkTooltip: activeNavigationAnchor?.getAttribute('title') || '',
                     availableTags: Array.from(navigationRoot?.querySelectorAll('#tag-filter-options option') || [])
-                        .map((option) => option.getAttribute('value') || '')
+                        .map(option => option.getAttribute('value') || '')
                         .filter(Boolean),
                     source: editorView?.getValue?.() || '',
                     sourcePrefix: (editorView?.getValue?.() || '').slice(0, 80),
@@ -781,15 +745,18 @@ test('editor shows metadata, reports preview errors, and reset restores the orig
                 refreshButton.click();
             });
 
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const errorPanel = editorRoot?.querySelector('details.error-panel');
+            await page.waitForFunction(
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const errorPanel = editorRoot?.querySelector('details.error-panel');
 
-                return (errorPanel?.textContent || '').includes('Intentional preview failure');
-            }, { timeout: 45000 });
+                    return (errorPanel?.textContent || '').includes('Intentional preview failure');
+                },
+                { timeout: 45000 }
+            );
 
-            page.once('dialog', async (dialog) => {
+            page.once('dialog', async dialog => {
                 await dialog.accept();
             });
 
@@ -807,12 +774,15 @@ test('editor shows metadata, reports preview errors, and reset restores the orig
             });
 
             // Lit updates the dropdown asynchronously; wait for it before querying the reset button.
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const editorCodeRoot = editorRoot?.querySelector('exo-code-editor');
-                return !!editorCodeRoot?.querySelector('.menu-item[data-variant="danger"]');
-            }, { timeout: 5000 });
+            await page.waitForFunction(
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const editorCodeRoot = editorRoot?.querySelector('exo-code-editor');
+                    return !!editorCodeRoot?.querySelector('.menu-item[data-variant="danger"]');
+                },
+                { timeout: 5000 }
+            );
 
             await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
@@ -827,22 +797,26 @@ test('editor shows metadata, reports preview errors, and reset restores the orig
                 resetButton.click();
             });
 
-            await page.waitForFunction((originalSource) => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
-                const editorView = editorCodeElement?.editorView;
-                const errorPanel = editorRoot?.querySelector('details.error-panel');
-                const currentSource = editorView?.getValue?.() || '';
+            await page.waitForFunction(
+                originalSource => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
+                    const editorView = editorCodeElement?.editorView;
+                    const errorPanel = editorRoot?.querySelector('details.error-panel');
+                    const currentSource = editorView?.getValue?.() || '';
 
-                return currentSource.startsWith(originalSource) && !errorPanel;
-            }, initialState.sourcePrefix, { timeout: 45000 });
+                    return currentSource.startsWith(originalSource) && !errorPanel;
+                },
+                initialState.sourcePrefix,
+                { timeout: 45000 }
+            );
         },
     });
 });
 
 test('applying a sidebar tag filter narrows the catalog while keeping the active entry', async () => {
-    const route = allExampleRoutes.find((example) => example.path === 'rendering/sprite.js');
+    const route = allExampleRoutes.find(example => example.path === 'rendering/sprite.js');
     assert.ok(route, 'rendering/sprite.js route metadata not found.');
 
     await runSmokeForMountPath(defaultMountPath, route.routeHash, {
@@ -852,7 +826,7 @@ test('applying a sidebar tag filter narrows the catalog while keeping the active
             const selectedTag = route.tags[0];
             assert.ok(selectedTag, 'Route metadata did not include a tag to filter by.');
 
-            await page.evaluate((tag) => {
+            await page.evaluate(tag => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
                 const filterInput = navigationRoot?.querySelector('#tag-filter');
@@ -866,22 +840,27 @@ test('applying a sidebar tag filter narrows the catalog while keeping the active
                 filterInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
             }, selectedTag);
 
-            await page.waitForFunction((expectedTag) => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
-                const filterInput = navigationRoot?.querySelector('#tag-filter');
-                return filterInput?.value === expectedTag;
-            }, selectedTag, { timeout: 45000 });
+            await page.waitForFunction(
+                expectedTag => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
+                    const filterInput = navigationRoot?.querySelector('#tag-filter');
+                    return filterInput?.value === expectedTag;
+                },
+                selectedTag,
+                { timeout: 45000 }
+            );
 
             const filterState = await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
                 const filterInput = navigationRoot?.querySelector('#tag-filter');
                 const visibleTitles = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || [])
-                    .map((element) => element.shadowRoot?.querySelector('.title')?.textContent?.trim() || '')
+                    .map(element => element.shadowRoot?.querySelector('.title')?.textContent?.trim() || '')
                     .filter(Boolean);
-                const activeLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || [])
-                    .find((element) => element.shadowRoot?.querySelector('a[data-active]'));
+                const activeLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || []).find(element =>
+                    element.shadowRoot?.querySelector('a[data-active]')
+                );
 
                 return {
                     filterValue: filterInput?.value || '',
@@ -906,8 +885,9 @@ test('switching examples keeps the Monaco editor populated and usable', async ()
             await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
-                const targetLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || [])
-                    .find((element) => element.getAttribute('path') === 'rendering/display-text.js');
+                const targetLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || []).find(
+                    element => element.getAttribute('path') === 'rendering/display-text.js'
+                );
                 const anchor = targetLink?.shadowRoot?.querySelector('a');
 
                 if (!(anchor instanceof HTMLElement)) {
@@ -917,22 +897,22 @@ test('switching examples keeps the Monaco editor populated and usable', async ()
                 anchor.click();
             });
 
+            await page.waitForFunction(() => new URL(window.location.href).searchParams.get('ex') === 'rendering/display-text.js', { timeout: 45000 });
+
             await page.waitForFunction(
-                () => new URL(window.location.href).searchParams.get('ex') === 'rendering/display-text.js',
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
+                    const editorCodeRoot = editorCodeElement;
+                    const editorView = editorCodeElement?.editorView;
+                    const source = editorView?.getValue?.() || '';
+                    const loadingOverlay = editorCodeRoot?.querySelector('.loading-overlay');
+
+                    return source.includes("new Text('Hello World!'") && !loadingOverlay;
+                },
                 { timeout: 45000 }
             );
-
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
-                const editorCodeRoot = editorCodeElement;
-                const editorView = editorCodeElement?.editorView;
-                const source = editorView?.getValue?.() || '';
-                const loadingOverlay = editorCodeRoot?.querySelector('.loading-overlay');
-
-                return source.includes("new Text('Hello World!'") && !loadingOverlay;
-            }, { timeout: 45000 });
 
             const switchedState = await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
@@ -977,16 +957,19 @@ test('switching examples keeps the Monaco editor populated and usable', async ()
 
             await page.mouse.click(lineBox.x + 80, lineBox.y + 40);
 
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const editorCodeRoot = editorRoot?.querySelector('exo-code-editor');
-                const inputArea = editorCodeRoot?.querySelector('.inputarea');
+            await page.waitForFunction(
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const editorCodeRoot = editorRoot?.querySelector('exo-code-editor');
+                    const inputArea = editorCodeRoot?.querySelector('.inputarea');
 
-                // .inputarea lives inside exo-editor's shadow root (exo-code-editor renders
-                // in light DOM). The shadow root's activeElement is the correct check.
-                return editorRoot?.activeElement === inputArea;
-            }, { timeout: 45000 });
+                    // .inputarea lives inside exo-editor's shadow root (exo-code-editor renders
+                    // in light DOM). The shadow root's activeElement is the correct check.
+                    return editorRoot?.activeElement === inputArea;
+                },
+                { timeout: 45000 }
+            );
         },
     });
 });
@@ -999,12 +982,13 @@ test('unsupported navigation state and collapsible sections stay visible in the 
             const runtimeState = await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
-                const webgpuSection = Array.from(navigationRoot?.querySelectorAll('exo-nav-section') || [])
-                    .find((element) => element.getAttribute('headline') === 'Webgpu');
+                const webgpuSection = Array.from(navigationRoot?.querySelectorAll('exo-nav-section') || []).find(
+                    element => element.getAttribute('headline') === 'Webgpu'
+                );
                 const webgpuToggle = webgpuSection?.shadowRoot?.querySelector('button.toggle');
-                const webgpuUnavailableBadges = Array.from(webgpuSection?.querySelectorAll('exo-nav-link') || [])
-                    .filter((element) => !!element.shadowRoot?.querySelector('.badge'))
-                    .length;
+                const webgpuUnavailableBadges = Array.from(webgpuSection?.querySelectorAll('exo-nav-link') || []).filter(
+                    element => !!element.shadowRoot?.querySelector('.badge')
+                ).length;
                 const beforeExpanded = webgpuToggle?.getAttribute('aria-expanded') || '';
 
                 return { beforeExpanded, webgpuUnavailableBadges };
@@ -1017,8 +1001,9 @@ test('unsupported navigation state and collapsible sections stay visible in the 
             await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
-                const webgpuSection = Array.from(navigationRoot?.querySelectorAll('exo-nav-section') || [])
-                    .find((element) => element.getAttribute('headline') === 'Webgpu');
+                const webgpuSection = Array.from(navigationRoot?.querySelectorAll('exo-nav-section') || []).find(
+                    element => element.getAttribute('headline') === 'Webgpu'
+                );
                 const webgpuToggle = webgpuSection?.shadowRoot?.querySelector('button.toggle');
 
                 if (!(webgpuToggle instanceof HTMLElement)) {
@@ -1028,15 +1013,20 @@ test('unsupported navigation state and collapsible sections stay visible in the 
                 webgpuToggle.click();
             });
 
-            await page.waitForFunction((targetExpanded) => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
-                const webgpuSection = Array.from(navigationRoot?.querySelectorAll('exo-nav-section') || [])
-                    .find((element) => element.getAttribute('headline') === 'Webgpu');
-                const webgpuToggle = webgpuSection?.shadowRoot?.querySelector('button.toggle');
+            await page.waitForFunction(
+                targetExpanded => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
+                    const webgpuSection = Array.from(navigationRoot?.querySelectorAll('exo-nav-section') || []).find(
+                        element => element.getAttribute('headline') === 'Webgpu'
+                    );
+                    const webgpuToggle = webgpuSection?.shadowRoot?.querySelector('button.toggle');
 
-                return webgpuToggle?.getAttribute('aria-expanded') === targetExpanded;
-            }, expectedAfter, { timeout: 45000 });
+                    return webgpuToggle?.getAttribute('aria-expanded') === targetExpanded;
+                },
+                expectedAfter,
+                { timeout: 45000 }
+            );
 
             assert.ok(['true', 'false'].includes(runtimeState.beforeExpanded), 'WebGPU section toggle button was not rendered.');
             assert.ok(runtimeState.webgpuUnavailableBadges >= 0, 'WebGPU unavailable state query did not complete.');
@@ -1049,12 +1039,15 @@ test('view handling keeps the preview iframe focusable for keyboard-driven contr
         expectCanvas: false,
         fallbackText: 'does not support WebGL',
         afterLoad: async ({ page }) => {
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const previewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
-                return !!previewRoot?.querySelector('iframe');
-            }, { timeout: 45000 });
+            await page.waitForFunction(
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const previewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
+                    return !!previewRoot?.querySelector('iframe');
+                },
+                { timeout: 45000 }
+            );
 
             await page.evaluate(() => {
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
@@ -1069,15 +1062,18 @@ test('view handling keeps the preview iframe focusable for keyboard-driven contr
                 iframe.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
             });
 
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const previewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
-                const iframe = previewRoot?.querySelector('iframe');
-                const activeElement = document.activeElement;
+            await page.waitForFunction(
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const previewRoot = editorRoot?.querySelector('exo-preview')?.shadowRoot;
+                    const iframe = previewRoot?.querySelector('iframe');
+                    const activeElement = document.activeElement;
 
-                return iframe === activeElement || iframe?.contentDocument?.body === iframe?.contentDocument?.activeElement;
-            }, { timeout: 45000 });
+                    return iframe === activeElement || iframe?.contentDocument?.body === iframe?.contentDocument?.activeElement;
+                },
+                { timeout: 45000 }
+            );
         },
     });
 });
@@ -1098,8 +1094,9 @@ test('media examples rely on in-example pointer interaction without shell start 
 
                 return {
                     hasCanvas,
-                    hasShellStartButton: Array.from(editorRoot?.querySelectorAll('button') || [])
-                        .some((button) => (button.textContent || '').toLowerCase().includes('start media')),
+                    hasShellStartButton: Array.from(editorRoot?.querySelectorAll('button') || []).some(button =>
+                        (button.textContent || '').toLowerCase().includes('start media')
+                    ),
                     unavailableMessage: editorRoot?.querySelector('.unavailable-message')?.textContent?.trim() || '',
                     previewBlanked: iframeDocument?.body?.hasAttribute('data-preview-blanked') ?? false,
                     frameText,
@@ -1108,9 +1105,7 @@ test('media examples rely on in-example pointer interaction without shell start 
 
             if (!previewState.hasCanvas) {
                 assert.ok(
-                    previewState.frameText.includes('does not support WebGL') ||
-                    previewState.unavailableMessage.length > 0 ||
-                    previewState.previewBlanked,
+                    previewState.frameText.includes('does not support WebGL') || previewState.unavailableMessage.length > 0 || previewState.previewBlanked,
                     'Media preview neither rendered nor exposed the expected shell fallback state.'
                 );
                 return;
@@ -1122,8 +1117,9 @@ test('media examples rely on in-example pointer interaction without shell start 
                 const appRoot = document.querySelector('example-browser')?.shadowRoot;
                 const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
                 const navigationRoot = appRoot?.querySelector('exo-navigation')?.shadowRoot;
-                const targetLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || [])
-                    .find((element) => element.getAttribute('path') === 'extras/audio-visualisation.js');
+                const targetLink = Array.from(navigationRoot?.querySelectorAll('exo-nav-link') || []).find(
+                    element => element.getAttribute('path') === 'extras/audio-visualisation.js'
+                );
                 const anchor = targetLink?.shadowRoot?.querySelector('a');
 
                 if (!(anchor instanceof HTMLElement)) {
@@ -1133,21 +1129,22 @@ test('media examples rely on in-example pointer interaction without shell start 
                 anchor.click();
             });
 
+            await page.waitForFunction(() => new URL(window.location.href).searchParams.get('ex') === 'extras/audio-visualisation.js', { timeout: 45000 });
             await page.waitForFunction(
-                () => new URL(window.location.href).searchParams.get('ex') === 'extras/audio-visualisation.js',
+                () => {
+                    const appRoot = document.querySelector('example-browser')?.shadowRoot;
+                    const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
+                    const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
+                    const editorView = editorCodeElement?.editorView;
+                    const source = editorView?.getValue?.() || '';
+                    const hasShellStartButton = Array.from(editorRoot?.querySelectorAll('button') || []).some(button =>
+                        (button.textContent || '').toLowerCase().includes('start media')
+                    );
+
+                    return source.includes('AudioAnalyser') && !hasShellStartButton;
+                },
                 { timeout: 45000 }
             );
-            await page.waitForFunction(() => {
-                const appRoot = document.querySelector('example-browser')?.shadowRoot;
-                const editorRoot = appRoot?.querySelector('exo-editor')?.shadowRoot;
-                const editorCodeElement = editorRoot?.querySelector('exo-code-editor');
-                const editorView = editorCodeElement?.editorView;
-                const source = editorView?.getValue?.() || '';
-                const hasShellStartButton = Array.from(editorRoot?.querySelectorAll('button') || [])
-                    .some((button) => (button.textContent || '').toLowerCase().includes('start media'));
-
-                return source.includes('AudioAnalyser') && !hasShellStartButton;
-            }, { timeout: 45000 });
         },
     });
 });
@@ -1166,5 +1163,3 @@ for (const route of allExampleRoutes) {
         });
     });
 }
-
-

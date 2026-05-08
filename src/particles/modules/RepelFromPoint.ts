@@ -1,5 +1,6 @@
-import { UpdateModule } from './UpdateModule';
 import type { ParticleSystem } from '@/particles/ParticleSystem';
+
+import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
 /**
@@ -14,50 +15,50 @@ import type { WgslContribution } from './WgslContribution';
  * GPU-eligible.
  */
 export class RepelFromPoint extends UpdateModule {
-    public x: number;
-    public y: number;
-    public strength: number;
-    public radius: number;
+  public x: number;
+  public y: number;
+  public strength: number;
+  public radius: number;
 
-    public constructor(x: number, y: number, strength: number, radius = 0) {
-        super();
-        this.x = x;
-        this.y = y;
-        this.strength = strength;
-        this.radius = radius;
+  public constructor(x: number, y: number, strength: number, radius = 0) {
+    super();
+    this.x = x;
+    this.y = y;
+    this.strength = strength;
+    this.radius = radius;
+  }
+
+  public override apply(system: ParticleSystem, dt: number): void {
+    const { posX, posY, velX, velY, liveCount } = system;
+    const { x, y, strength, radius } = this;
+    const radiusSq = radius * radius;
+
+    for (let i = 0; i < liveCount; i++) {
+      const dx = posX[i] - x;
+      const dy = posY[i] - y;
+      const distSq = dx * dx + dy * dy;
+
+      if (distSq < 1e-10) continue;
+      if (radius > 0 && distSq > radiusSq) continue;
+
+      const dist = Math.sqrt(distSq);
+      const falloff = radius > 0 ? 1 - dist / radius : 1;
+      const a = (strength * falloff * dt) / dist;
+
+      velX[i] += dx * a;
+      velY[i] += dy * a;
     }
+  }
 
-    public override apply(system: ParticleSystem, dt: number): void {
-        const { posX, posY, velX, velY, liveCount } = system;
-        const { x, y, strength, radius } = this;
-        const radiusSq = radius * radius;
-
-        for (let i = 0; i < liveCount; i++) {
-            const dx = posX[i] - x;
-            const dy = posY[i] - y;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < 1e-10) continue;
-            if (radius > 0 && distSq > radiusSq) continue;
-
-            const dist = Math.sqrt(distSq);
-            const falloff = radius > 0 ? 1 - dist / radius : 1;
-            const a = (strength * falloff * dt) / dist;
-
-            velX[i] += dx * a;
-            velY[i] += dy * a;
-        }
-    }
-
-    public override wgsl(): WgslContribution {
-        return {
-            key: 'RepelFromPoint',
-            uniforms: [
-                { name: 'point', type: 'vec2<f32>' },
-                { name: 'strength', type: 'f32' },
-                { name: 'radius', type: 'f32' },
-            ],
-            body: `
+  public override wgsl(): WgslContribution {
+    return {
+      key: 'RepelFromPoint',
+      uniforms: [
+        { name: 'point', type: 'vec2<f32>' },
+        { name: 'strength', type: 'f32' },
+        { name: 'radius', type: 'f32' },
+      ],
+      body: `
                 let repelDelta = positions[idx] - modules.u_RepelFromPoint.point;
                 let repelDistSq = dot(repelDelta, repelDelta);
                 let repelRadius = modules.u_RepelFromPoint.radius;
@@ -69,13 +70,13 @@ export class RepelFromPoint extends UpdateModule {
                     velocities[idx] = velocities[idx] + repelDelta * repelAccel;
                 }
             `,
-        };
-    }
+    };
+  }
 
-    public override writeUniforms(view: DataView, offset: number): void {
-        view.setFloat32(offset + 0, this.x, true);
-        view.setFloat32(offset + 4, this.y, true);
-        view.setFloat32(offset + 8, this.strength, true);
-        view.setFloat32(offset + 12, this.radius, true);
-    }
+  public override writeUniforms(view: DataView, offset: number): void {
+    view.setFloat32(offset + 0, this.x, true);
+    view.setFloat32(offset + 4, this.y, true);
+    view.setFloat32(offset + 8, this.strength, true);
+    view.setFloat32(offset + 12, this.radius, true);
+  }
 }

@@ -1,77 +1,77 @@
-import WebGLDebugUtils from '../../vendor/webgl-debug';
-
-import { BlendModes } from '@/rendering/types';
+import type { Application } from '@/core/Application';
+import { Color } from '@/core/Color';
 import { Signal } from '@/core/Signal';
+import type { Rectangle } from '@/math/Rectangle';
+import { Vector } from '@/math/Vector';
+import { ParticleSystem } from '@/particles/ParticleSystem';
+import { BlendModes } from '@/rendering/types';
+
+import WebGLDebugUtils from '../../vendor/webgl-debug';
+import type { Drawable } from '../Drawable';
+import { Mesh } from '../mesh/Mesh';
+import type { RenderBackend } from '../RenderBackend';
+import { RenderBackendType } from '../RenderBackendType';
+import type { Renderer } from '../Renderer';
+import { RendererRegistry } from '../RendererRegistry';
+import type { RenderPass } from '../RenderPass';
+import type { RenderStats } from '../RenderStats';
+import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
-import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
+import type { Shader } from '../shader/Shader';
+import { Sprite } from '../sprite/Sprite';
+import { RenderTexture } from '../texture/RenderTexture';
+import type { Texture } from '../texture/Texture';
+import type { View } from '../View';
+import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2ParticleRenderer } from './WebGl2ParticleRenderer';
-import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
-import { Sprite } from '../sprite/Sprite';
-import { Mesh } from '../mesh/Mesh';
-import { ParticleSystem } from '@/particles/ParticleSystem';
-import { Color } from '@/core/Color';
-import type { Texture } from '../texture/Texture';
-import { RenderTexture } from '../texture/RenderTexture';
-import { RenderBackendType } from '../RenderBackendType';
-import { RendererRegistry } from '../RendererRegistry';
-import { createRenderStats, resetRenderStats } from '../RenderStats';
-import { Vector } from '@/math/Vector';
-import type { Rectangle } from '@/math/Rectangle';
-import type { RenderPass } from '../RenderPass';
-import type { Drawable } from '../Drawable';
-import type { Renderer } from '../Renderer';
-import type { RenderBackend } from '../RenderBackend';
-import type { Shader } from '../shader/Shader';
+import { WebGl2SpriteRenderer } from './WebGl2SpriteRenderer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
-import type { View } from '../View';
-import type { Application } from '@/core/Application';
-import type { RenderStats } from '../RenderStats';
 
 const throwOnGlError = (err: number, funcName: string): void => {
-    throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
+  throw `${WebGLDebugUtils.glEnumToString(err)} was caused by call to: ${funcName}`;
 };
 
-const logGlCall = (functionName: string, args: Array<unknown>): void => {
-    console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
+const logGlCall = (functionName: string, args: unknown[]): void => {
+  console.log(`gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
 };
 
-const validateNoneOfTheArgsAreUndefined = (functionName: string, args: Array<unknown>): void => {
-    for (const arg of args) {
-        if (arg === undefined) {
-            console.error(`undefined passed to gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
-        }
+const validateNoneOfTheArgsAreUndefined = (functionName: string, args: unknown[]): void => {
+  for (const argument of args) {
+    if (argument === undefined) {
+      console.error(`undefined passed to gl.${functionName}(${WebGLDebugUtils.glFunctionArgsToString(functionName, args)})`);
     }
+  }
 };
 
-const logAndValidate = (functionName: string, args: Array<unknown>): void => {
-    logGlCall(functionName, args);
-    validateNoneOfTheArgsAreUndefined(functionName, args);
+const logAndValidate = (functionName: string, args: unknown[]): void => {
+  logGlCall(functionName, args);
+  validateNoneOfTheArgsAreUndefined(functionName, args);
 };
 
 interface ManagedTextureState {
-    readonly handle: WebGLTexture;
-    version: number;
-    width: number;
-    height: number;
+  readonly handle: WebGLTexture;
+  version: number;
+  width: number;
+  height: number;
 }
 
 interface ManagedRenderTargetState {
-    framebuffer: WebGLFramebuffer | null;
-    version: number;
-    attachedTexture: WebGLTexture | null;
+  framebuffer: WebGLFramebuffer | null;
+  version: number;
+  attachedTexture: WebGLTexture | null;
 }
 
 interface PixelClipBoundsState {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface DestroyListenable {
-    addDestroyListener(listener: () => void): unknown;
-    removeDestroyListener(listener: () => void): unknown;
+  addDestroyListener(listener: () => void): unknown;
+  removeDestroyListener(listener: () => void): unknown;
 }
 
 /**
@@ -88,764 +88,753 @@ interface DestroyListenable {
  * GPU-side state as needed on the next draw.
  */
 export class WebGl2Backend implements RenderBackend {
+  public readonly backendType = RenderBackendType.WebGl2;
+  public readonly rendererRegistry = new RendererRegistry<WebGl2Backend>();
+  public readonly onContextLost = new Signal();
+  public readonly onContextRestored = new Signal();
 
-    public readonly backendType = RenderBackendType.WebGl2;
-    public readonly rendererRegistry = new RendererRegistry<WebGl2Backend>();
-    public readonly onContextLost = new Signal<[]>();
-    public readonly onContextRestored = new Signal<[]>();
+  private readonly _context: WebGL2RenderingContext;
+  private readonly _rootRenderTarget: RenderTarget;
+  private readonly _onContextLostHandler: () => void;
+  private readonly _onContextRestoredHandler: () => void;
+  private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
+  private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
+  private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
+  private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
+  private readonly _temporaryRenderTextures: RenderTexture[] = [];
+  private readonly _clipBoundsStack: Rectangle[] = [];
+  private readonly _clipPixelStack: PixelClipBoundsState[] = [];
+  private readonly _clipPointA: Vector = new Vector();
+  private readonly _clipPointB: Vector = new Vector();
+  private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
+  private _maskCompositorConnected = false;
 
-    private readonly _context: WebGL2RenderingContext;
-    private readonly _rootRenderTarget: RenderTarget;
-    private readonly _onContextLostHandler: () => void;
-    private readonly _onContextRestoredHandler: () => void;
-    private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
-    private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
-    private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
-    private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
-    private readonly _temporaryRenderTextures: Array<RenderTexture> = [];
-    private readonly _clipBoundsStack: Array<Rectangle> = [];
-    private readonly _clipPixelStack: Array<PixelClipBoundsState> = [];
-    private readonly _clipPointA: Vector = new Vector();
-    private readonly _clipPointB: Vector = new Vector();
-    private readonly _maskCompositor: WebGl2MaskCompositor = new WebGl2MaskCompositor();
-    private _maskCompositorConnected = false;
+  private _canvas: HTMLCanvasElement;
+  private _contextLost: boolean;
+  private _renderTarget: RenderTarget;
+  private _renderer: Renderer | null = null;
+  private _shader: Shader | null = null;
+  private _blendMode: BlendModes | null = null;
+  private _texture: Texture | RenderTexture | null = null;
+  private _textureUnit = 0;
+  private _vao: WebGl2VertexArrayObject | null = null;
+  private _clearColor: Color = new Color();
+  private _boundFramebuffer: WebGLFramebuffer | null = null;
+  private readonly _stats: RenderStats = createRenderStats();
 
-    private _canvas: HTMLCanvasElement;
-    private _contextLost: boolean;
-    private _renderTarget: RenderTarget;
-    private _renderer: Renderer | null = null;
-    private _shader: Shader | null = null;
-    private _blendMode: BlendModes | null = null;
-    private _texture: Texture | RenderTexture | null = null;
-    private _textureUnit = 0;
-    private _vao: WebGl2VertexArrayObject | null = null;
-    private _clearColor: Color = new Color();
-    private _boundFramebuffer: WebGLFramebuffer | null = null;
-    private readonly _stats: RenderStats = createRenderStats();
+  public constructor(app: Application) {
+    const { width, height, clearColor, webglAttributes, debug, spriteRendererBatchSize, particleRendererBatchSize } = app.options;
 
-    public constructor(app: Application) {
-        const {
-            width,
-            height,
-            clearColor,
-            webglAttributes,
-            debug,
-            spriteRendererBatchSize,
-            particleRendererBatchSize,
-        } = app.options;
+    this._canvas = app.canvas;
 
-        this._canvas = app.canvas;
+    const gl = this._createContext(webglAttributes);
 
-        const gl = this._createContext(webglAttributes);
-
-        if (!gl) {
-            throw new Error('This browser or hardware does not support WebGL.');
-        }
-
-        this._context = debug ? WebGLDebugUtils.makeDebugContext(gl, throwOnGlError, logAndValidate, gl) as WebGL2RenderingContext : gl;
-        this._contextLost = this._context.isContextLost();
-
-        if (this._contextLost) {
-            this._restoreContext();
-        }
-
-        if (clearColor) {
-            this.clearColor.copy(clearColor);
-        }
-
-        this._rootRenderTarget = new RenderTarget(width, height, true);
-        this._renderTarget = this._rootRenderTarget;
-
-        this._onContextLostHandler = this._onContextLost.bind(this);
-        this._onContextRestoredHandler = this._onContextRestored.bind(this);
-
-        this._setupContext();
-        this._addEvents();
-
-        this.rendererRegistry.registerRenderer(Sprite, new WebGl2SpriteRenderer(spriteRendererBatchSize));
-        this.rendererRegistry.registerRenderer(Mesh, new WebGl2MeshRenderer());
-        this.rendererRegistry.registerRenderer(ParticleSystem, new WebGl2ParticleRenderer(particleRendererBatchSize));
-        this.rendererRegistry.connect(this);
-
-        this._bindRenderTarget(this._renderTarget);
-        this.setBlendMode(BlendModes.Normal);
-
-        this.resize(width, height);
+    if (!gl) {
+      throw new Error('This browser or hardware does not support WebGL.');
     }
 
-    public get context(): WebGL2RenderingContext {
-        return this._context;
+    this._context = debug ? WebGLDebugUtils.makeDebugContext(gl, throwOnGlError, logAndValidate, gl) : gl;
+    this._contextLost = this._context.isContextLost();
+
+    if (this._contextLost) {
+      this._restoreContext();
     }
 
-    public get renderTarget(): RenderTarget {
-        return this._renderTarget;
+    if (clearColor) {
+      this.clearColor.copy(clearColor);
     }
 
-    public get view(): View {
-        return this._renderTarget.view;
+    this._rootRenderTarget = new RenderTarget(width, height, true);
+    this._renderTarget = this._rootRenderTarget;
+
+    this._onContextLostHandler = this._onContextLost.bind(this);
+    this._onContextRestoredHandler = this._onContextRestored.bind(this);
+
+    this._setupContext();
+    this._addEvents();
+
+    this.rendererRegistry.registerRenderer(Sprite, new WebGl2SpriteRenderer(spriteRendererBatchSize));
+    this.rendererRegistry.registerRenderer(Mesh, new WebGl2MeshRenderer());
+    this.rendererRegistry.registerRenderer(ParticleSystem, new WebGl2ParticleRenderer(particleRendererBatchSize));
+    this.rendererRegistry.connect(this);
+
+    this._bindRenderTarget(this._renderTarget);
+    this.setBlendMode(BlendModes.Normal);
+
+    this.resize(width, height);
+  }
+
+  public get context(): WebGL2RenderingContext {
+    return this._context;
+  }
+
+  public get renderTarget(): RenderTarget {
+    return this._renderTarget;
+  }
+
+  public get view(): View {
+    return this._renderTarget.view;
+  }
+
+  public get clearColor(): Color {
+    return this._clearColor;
+  }
+
+  public get stats(): RenderStats {
+    return this._stats;
+  }
+
+  public async initialize(): Promise<this> {
+    return this;
+  }
+
+  public resetStats(): this {
+    resetRenderStats(this._stats);
+
+    return this;
+  }
+
+  public draw(drawable: Drawable): this {
+    const renderer = this.rendererRegistry.resolve(drawable);
+
+    this._setActiveRenderer(renderer);
+    renderer.render(drawable);
+    this._stats.submittedNodes++;
+
+    return this;
+  }
+
+  public execute(pass: RenderPass): this {
+    this._flushActiveRenderer();
+    this._stats.renderPasses++;
+    pass.execute(this);
+
+    return this;
+  }
+
+  public setRenderTarget(target: RenderTarget | null): this {
+    const renderTarget = target || this._rootRenderTarget;
+
+    if (this._renderTarget !== renderTarget) {
+      this._renderTarget = renderTarget;
+      this._stats.renderTargetChanges++;
     }
 
-    public get clearColor(): Color {
-        return this._clearColor;
+    this._bindRenderTarget(renderTarget);
+
+    return this;
+  }
+
+  public pushScissorRect(bounds: Rectangle): this {
+    this._flushActiveRenderer();
+
+    this._clipBoundsStack.push(bounds.clone());
+
+    const nextClip = this._toClipPixels(bounds);
+    const previousClip = this._clipPixelStack.length > 0 ? this._clipPixelStack[this._clipPixelStack.length - 1] : null;
+    const resolvedClip = previousClip ? this._intersectClips(previousClip, nextClip) : nextClip;
+
+    this._clipPixelStack.push(resolvedClip);
+    this._applyClipState();
+
+    return this;
+  }
+
+  public popScissorRect(): this {
+    if (this._clipBoundsStack.length === 0) {
+      return this;
     }
 
-    public get stats(): RenderStats {
-        return this._stats;
+    this._flushActiveRenderer();
+
+    const removedClip = this._clipBoundsStack.pop();
+
+    if (removedClip) {
+      removedClip.destroy();
     }
 
-    public async initialize(): Promise<this> {
-        return this;
+    this._clipPixelStack.pop();
+    this._applyClipState();
+
+    return this;
+  }
+
+  public composeWithAlphaMask(
+    content: Texture | RenderTexture,
+    mask: Texture | RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): this {
+    if (width <= 0 || height <= 0) {
+      return this;
     }
 
-    public resetStats(): this {
-        resetRenderStats(this._stats);
+    // Flush any in-progress drawable batch so the compositor draws on
+    // top of fully-committed render state, not in the middle of a batch.
+    this._flushActiveRenderer();
+    this._setActiveRenderer(null);
 
-        return this;
+    if (!this._maskCompositorConnected) {
+      this._maskCompositor.connect(this);
+      this._maskCompositorConnected = true;
     }
 
-    public draw(drawable: Drawable): this {
-        const renderer = this.rendererRegistry.resolve(drawable);
+    this._maskCompositor.compose(this, content, mask, x, y, width, height, blendMode);
 
-        this._setActiveRenderer(renderer);
-        renderer.render(drawable);
-        this._stats.submittedNodes++;
+    return this;
+  }
 
-        return this;
-    }
+  public acquireRenderTexture(width: number, height: number): RenderTexture {
+    for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
+      const texture = this._temporaryRenderTextures[index];
 
-    public execute(pass: RenderPass): this {
-        this._flushActiveRenderer();
-        this._stats.renderPasses++;
-        pass.execute(this);
-
-        return this;
-    }
-
-    public setRenderTarget(target: RenderTarget | null): this {
-        const renderTarget = target || this._rootRenderTarget;
-
-        if (this._renderTarget !== renderTarget) {
-            this._renderTarget = renderTarget;
-            this._stats.renderTargetChanges++;
-        }
-
-        this._bindRenderTarget(renderTarget);
-
-        return this;
-    }
-
-    public pushScissorRect(bounds: Rectangle): this {
-        this._flushActiveRenderer();
-
-        this._clipBoundsStack.push(bounds.clone());
-
-        const nextClip = this._toClipPixels(bounds);
-        const previousClip = this._clipPixelStack.length > 0
-            ? this._clipPixelStack[this._clipPixelStack.length - 1]
-            : null;
-        const resolvedClip = previousClip ? this._intersectClips(previousClip, nextClip) : nextClip;
-
-        this._clipPixelStack.push(resolvedClip);
-        this._applyClipState();
-
-        return this;
-    }
-
-    public popScissorRect(): this {
-        if (this._clipBoundsStack.length === 0) {
-            return this;
-        }
-
-        this._flushActiveRenderer();
-
-        const removedClip = this._clipBoundsStack.pop();
-
-        if (removedClip) {
-            removedClip.destroy();
-        }
-
-        this._clipPixelStack.pop();
-        this._applyClipState();
-
-        return this;
-    }
-
-    public composeWithAlphaMask(
-        content: Texture | RenderTexture,
-        mask: Texture | RenderTexture,
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        blendMode: BlendModes,
-    ): this {
-        if (width <= 0 || height <= 0) {
-            return this;
-        }
-
-        // Flush any in-progress drawable batch so the compositor draws on
-        // top of fully-committed render state, not in the middle of a batch.
-        this._flushActiveRenderer();
-        this._setActiveRenderer(null);
-
-        if (!this._maskCompositorConnected) {
-            this._maskCompositor.connect(this);
-            this._maskCompositorConnected = true;
-        }
-
-        this._maskCompositor.compose(this, content, mask, x, y, width, height, blendMode);
-
-        return this;
-    }
-
-    public acquireRenderTexture(width: number, height: number): RenderTexture {
-        for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
-            const texture = this._temporaryRenderTextures[index];
-
-            if (texture.width === width && texture.height === height) {
-                this._temporaryRenderTextures.splice(index, 1);
-
-                return texture;
-            }
-        }
-
-        return new RenderTexture(width, height);
-    }
-
-    public releaseRenderTexture(texture: RenderTexture): this {
-        if (this._temporaryRenderTextures.includes(texture)) {
-            return this;
-        }
-
-        texture.setView(null);
-        this._temporaryRenderTextures.push(texture);
-
-        return this;
-    }
-
-    public setView(view: View | null): this {
-        this._flushActiveRenderer();
-        this._renderTarget.setView(view);
-        this._bindRenderTarget(this._renderTarget);
-
-        return this;
-    }
-
-    public bindVertexArrayObject(vao: WebGl2VertexArrayObject | null): this {
-        if (this._vao !== vao) {
-            if (vao) {
-                vao.bind();
-            }
-
-            if (this._vao) {
-                this._vao.unbind();
-            }
-
-            this._vao = vao;
-        }
-
-        return this;
-    }
-
-    public bindShader(shader: Shader | null): this {
-        if (this._shader !== shader) {
-            if (this._shader) {
-                this._shader.unbind();
-                this._shader = null;
-            }
-
-            if (shader) {
-                shader.bind();
-            }
-
-            this._shader = shader;
-        }
-
-        return this;
-    }
-
-    public bindTexture(texture: Texture | RenderTexture | null, unit?: number): this {
-        if (unit !== undefined) {
-            this._setTextureUnit(unit);
-        }
-
-        if (texture === null) {
-            if (this._texture !== null) {
-                this._context.bindTexture(this._context.TEXTURE_2D, null);
-                this._texture = null;
-            }
-
-            return this;
-        }
-
-        const textureState = this._syncTexture(texture);
-
-        this._context.bindTexture(this._context.TEXTURE_2D, textureState.handle);
-        this._texture = texture;
-
-        return this;
-    }
-
-    public setBlendMode(blendMode: BlendModes | null): this {
-        if (blendMode !== this._blendMode) {
-            const gl = this._context;
-
-            this._blendMode = blendMode;
-
-            switch (blendMode) {
-                case BlendModes.Additive:
-                    gl.blendFunc(gl.ONE, gl.ONE);
-                    break;
-                case BlendModes.Subtract:
-                    gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
-                    break;
-                case BlendModes.Multiply:
-                    gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
-                    break;
-                case BlendModes.Screen:
-                    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
-                    break;
-                default:
-                    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-                    break;
-            }
-        }
-
-        return this;
-    }
-
-    private _setTextureUnit(unit: number): void {
-        if (this._textureUnit !== unit) {
-            const gl = this._context;
-
-            this._textureUnit = unit;
-
-            gl.activeTexture(gl.TEXTURE0 + unit);
-        }
-    }
-
-    public setClearColor(color: Color): this {
-        if (!this._clearColor.equals(color)) {
-            const gl = this._context;
-
-            this._clearColor.copy(color);
-
-            gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
-        }
-
-        return this;
-    }
-
-    public clear(color?: Color): this {
-        const gl = this._context;
-
-        if (color) {
-            this.setClearColor(color);
-        }
-
-        this._bindRenderTarget(this._renderTarget);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-
-        return this;
-    }
-
-    public resize(width: number, height: number): this {
-        this._canvas.width = width;
-        this._canvas.height = height;
-
-        this._rootRenderTarget.resize(width, height);
-        this._bindRenderTarget(this._renderTarget);
-
-        return this;
-    }
-
-    public flush(): this {
-        this._flushActiveRenderer();
-
-        return this;
-    }
-
-    public destroy(): void {
-        this._removeEvents();
-        this.onContextLost.destroy();
-        this.onContextRestored.destroy();
-
-        this.setRenderTarget(null);
-        this._setActiveRenderer(null);
-        this.bindVertexArrayObject(null);
-        this.bindShader(null);
-        this.bindTexture(null);
-
-        this.rendererRegistry.destroy();
-        this._clearColor.destroy();
-        this._destroyManagedResources();
-        this._destroyTemporaryRenderTextures();
-
-        for (const clipBounds of this._clipBoundsStack) {
-            clipBounds.destroy();
-        }
-
-        this._clipBoundsStack.length = 0;
-        this._clipPixelStack.length = 0;
-        this._clipPointA.destroy();
-        this._clipPointB.destroy();
-
-        if (this._maskCompositorConnected) {
-            this._maskCompositor.disconnect();
-            this._maskCompositorConnected = false;
-        }
-        this._rootRenderTarget.destroy();
-
-        this._vao = null;
-        this._renderer = null;
-        this._shader = null;
-        this._blendMode = null;
-        this._texture = null;
-        this._boundFramebuffer = null;
-    }
-
-    private _createContext(options: WebGLContextAttributes): WebGL2RenderingContext | null {
-        try {
-            return this._canvas.getContext('webgl2', options) as WebGL2RenderingContext | null;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    private _restoreContext(): void {
-        this._context.getExtension('WEBGL_lose_context')?.restoreContext();
-    }
-
-    private _setupContext(): void {
-        const gl = this._context;
-        const { r, g, b, a } = this._clearColor;
-
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.STENCIL_TEST);
-        gl.disable(gl.CULL_FACE);
-
-        gl.enable(gl.BLEND);
-
-        gl.blendEquation(gl.FUNC_ADD);
-        gl.clearColor(r / 255, g / 255, b / 255, a);
-    }
-
-    private _addEvents(): void {
-        this._canvas.addEventListener('webglcontextlost', this._onContextLostHandler, false);
-        this._canvas.addEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
-    }
-
-    private _removeEvents(): void {
-        this._canvas.removeEventListener('webglcontextlost', this._onContextLostHandler, false);
-        this._canvas.removeEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
-    }
-
-    private _onContextLost(): void {
-        this._contextLost = true;
-        this.onContextLost.dispatch();
-        this._restoreContext();
-    }
-
-    private _onContextRestored(): void {
-        this._contextLost = false;
-        this.onContextRestored.dispatch();
-    }
-
-    private _createFramebuffer(): WebGLFramebuffer {
-        const framebuffer = this._context.createFramebuffer();
-
-        if (framebuffer === null) {
-            throw new Error('Could not create framebuffer.');
-        }
-
-        return framebuffer;
-    }
-
-    private _createTextureHandle(): WebGLTexture {
-        const texture = this._context.createTexture();
-
-        if (texture === null) {
-            throw new Error('Could not create texture.');
-        }
+      if (texture.width === width && texture.height === height) {
+        this._temporaryRenderTextures.splice(index, 1);
 
         return texture;
+      }
     }
 
-    private _destroyManagedResources(): void {
-        for (const renderTarget of Array.from(this._renderTargetStates.keys())) {
-            this._evictRenderTarget(renderTarget, false);
-        }
+    return new RenderTexture(width, height);
+  }
 
-        for (const texture of Array.from(this._textureStates.keys())) {
-            this._evictTexture(texture, false);
-        }
+  public releaseRenderTexture(texture: RenderTexture): this {
+    if (this._temporaryRenderTextures.includes(texture)) {
+      return this;
     }
 
-    private _destroyTemporaryRenderTextures(): void {
-        for (const texture of this._temporaryRenderTextures) {
-            texture.destroy();
-        }
+    texture.setView(null);
+    this._temporaryRenderTextures.push(texture);
 
-        this._temporaryRenderTextures.length = 0;
+    return this;
+  }
+
+  public setView(view: View | null): this {
+    this._flushActiveRenderer();
+    this._renderTarget.setView(view);
+    this._bindRenderTarget(this._renderTarget);
+
+    return this;
+  }
+
+  public bindVertexArrayObject(vao: WebGl2VertexArrayObject | null): this {
+    if (this._vao !== vao) {
+      if (vao) {
+        vao.bind();
+      }
+
+      if (this._vao) {
+        this._vao.unbind();
+      }
+
+      this._vao = vao;
     }
 
-    private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
-        let state = this._renderTargetStates.get(target);
+    return this;
+  }
 
-        if (!state) {
-            this._subscribeToDestroy(target, this._renderTargetDestroyHandlers, () => {
-                this._evictRenderTarget(target, true);
-            });
+  public bindShader(shader: Shader | null): this {
+    if (this._shader !== shader) {
+      if (this._shader) {
+        this._shader.unbind();
+        this._shader = null;
+      }
 
-            state = {
-                framebuffer: target.root ? null : this._createFramebuffer(),
-                version: -1,
-                attachedTexture: null,
-            };
+      if (shader) {
+        shader.bind();
+      }
 
-            this._renderTargetStates.set(target, state);
-        }
-
-        return state;
+      this._shader = shader;
     }
 
-    private _getTextureState(texture: Texture | RenderTexture): ManagedTextureState {
-        let state = this._textureStates.get(texture);
+    return this;
+  }
 
-        if (!state) {
-            this._subscribeToDestroy(texture, this._textureDestroyHandlers, () => {
-                this._evictTexture(texture, true);
-            });
-
-            state = {
-                handle: this._createTextureHandle(),
-                version: -1,
-                width: 0,
-                height: 0,
-            };
-
-            this._textureStates.set(texture, state);
-        }
-
-        return state;
+  public bindTexture(texture: Texture | RenderTexture | null, unit?: number): this {
+    if (unit !== undefined) {
+      this._setTextureUnit(unit);
     }
 
-    private _subscribeToDestroy<T extends DestroyListenable>(descriptor: T, handlers: Map<T, () => void>, handler: () => void): void {
-        if (!handlers.has(descriptor)) {
-            descriptor.addDestroyListener(handler);
-            handlers.set(descriptor, handler);
-        }
+    if (texture === null) {
+      if (this._texture !== null) {
+        this._context.bindTexture(this._context.TEXTURE_2D, null);
+        this._texture = null;
+      }
+
+      return this;
     }
 
-    private _unsubscribeFromDestroy<T extends DestroyListenable>(descriptor: T, handlers: Map<T, () => void>): void {
-        const handler = handlers.get(descriptor);
+    const textureState = this._syncTexture(texture);
 
-        if (handler) {
-            descriptor.removeDestroyListener(handler);
-            handlers.delete(descriptor);
-        }
+    this._context.bindTexture(this._context.TEXTURE_2D, textureState.handle);
+    this._texture = texture;
+
+    return this;
+  }
+
+  public setBlendMode(blendMode: BlendModes | null): this {
+    if (blendMode !== this._blendMode) {
+      const gl = this._context;
+
+      this._blendMode = blendMode;
+
+      switch (blendMode) {
+        case BlendModes.Additive:
+          gl.blendFunc(gl.ONE, gl.ONE);
+          break;
+        case BlendModes.Subtract:
+          gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
+          break;
+        case BlendModes.Multiply:
+          gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
+          break;
+        case BlendModes.Screen:
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
+          break;
+        default:
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+          break;
+      }
     }
 
-    private _evictRenderTarget(target: RenderTarget, rebind: boolean): void {
-        const state = this._renderTargetStates.get(target);
+    return this;
+  }
 
-        this._unsubscribeFromDestroy(target, this._renderTargetDestroyHandlers);
+  private _setTextureUnit(unit: number): void {
+    if (this._textureUnit !== unit) {
+      const gl = this._context;
 
-        if (target instanceof RenderTexture) {
-            this._evictTexture(target, false);
-        }
+      this._textureUnit = unit;
 
-        if (state) {
-            if (this._boundFramebuffer === state.framebuffer) {
-                this._context.bindFramebuffer(this._context.FRAMEBUFFER, null);
-                this._boundFramebuffer = null;
-            }
+      gl.activeTexture(gl.TEXTURE0 + unit);
+    }
+  }
 
-            if (state.framebuffer !== null) {
-                this._context.deleteFramebuffer(state.framebuffer);
-            }
+  public setClearColor(color: Color): this {
+    if (!this._clearColor.equals(color)) {
+      const gl = this._context;
 
-            this._renderTargetStates.delete(target);
-        }
+      this._clearColor.copy(color);
 
-        if (this._renderTarget === target) {
-            this._renderTarget = this._rootRenderTarget;
-
-            if (rebind) {
-                this._bindRenderTarget(this._rootRenderTarget);
-            }
-        }
+      gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
     }
 
-    private _evictTexture(texture: Texture | RenderTexture, rebind: boolean): void {
-        const state = this._textureStates.get(texture);
+    return this;
+  }
 
-        this._unsubscribeFromDestroy(texture, this._textureDestroyHandlers);
+  public clear(color?: Color): this {
+    const gl = this._context;
 
-        if (state) {
-            if (this._texture === texture) {
-                this._context.bindTexture(this._context.TEXTURE_2D, null);
-                this._texture = null;
-            }
-
-            this._context.deleteTexture(state.handle);
-            this._textureStates.delete(texture);
-        }
-
-        if (this._texture === texture) {
-            this._texture = null;
-        }
-
-        if (rebind && this._texture !== null) {
-            this.bindTexture(this._texture);
-        }
+    if (color) {
+      this.setClearColor(color);
     }
 
-    private _bindRenderTarget(target: RenderTarget): void {
-        const state = this._prepareRenderTarget(target);
+    this._bindRenderTarget(this._renderTarget);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-        if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
-            const gl = this._context;
-            const { x, y, width, height } = target.getViewport();
+    return this;
+  }
 
-            gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
-            gl.viewport(x, y, width, height);
+  public resize(width: number, height: number): this {
+    this._canvas.width = width;
+    this._canvas.height = height;
 
-            this._boundFramebuffer = state.framebuffer;
-            state.version = target.version;
-        }
+    this._rootRenderTarget.resize(width, height);
+    this._bindRenderTarget(this._renderTarget);
 
-        if (this._clipPixelStack.length > 0) {
-            this._applyClipState();
-        }
+    return this;
+  }
+
+  public flush(): this {
+    this._flushActiveRenderer();
+
+    return this;
+  }
+
+  public destroy(): void {
+    this._removeEvents();
+    this.onContextLost.destroy();
+    this.onContextRestored.destroy();
+
+    this.setRenderTarget(null);
+    this._setActiveRenderer(null);
+    this.bindVertexArrayObject(null);
+    this.bindShader(null);
+    this.bindTexture(null);
+
+    this.rendererRegistry.destroy();
+    this._clearColor.destroy();
+    this._destroyManagedResources();
+    this._destroyTemporaryRenderTextures();
+
+    for (const clipBounds of this._clipBoundsStack) {
+      clipBounds.destroy();
     }
 
-    private _setActiveRenderer(renderer: Renderer | null): void {
-        if (this._renderer !== renderer) {
-            this._flushActiveRenderer();
-            this._renderer = renderer;
-        }
+    this._clipBoundsStack.length = 0;
+    this._clipPixelStack.length = 0;
+    this._clipPointA.destroy();
+    this._clipPointB.destroy();
+
+    if (this._maskCompositorConnected) {
+      this._maskCompositor.disconnect();
+      this._maskCompositorConnected = false;
+    }
+    this._rootRenderTarget.destroy();
+
+    this._vao = null;
+    this._renderer = null;
+    this._shader = null;
+    this._blendMode = null;
+    this._texture = null;
+    this._boundFramebuffer = null;
+  }
+
+  private _createContext(options: WebGLContextAttributes): WebGL2RenderingContext | null {
+    try {
+      return this._canvas.getContext('webgl2', options);
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  private _restoreContext(): void {
+    this._context.getExtension('WEBGL_lose_context')?.restoreContext();
+  }
+
+  private _setupContext(): void {
+    const gl = this._context;
+    const { r, g, b, a } = this._clearColor;
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.STENCIL_TEST);
+    gl.disable(gl.CULL_FACE);
+
+    gl.enable(gl.BLEND);
+
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.clearColor(r / 255, g / 255, b / 255, a);
+  }
+
+  private _addEvents(): void {
+    this._canvas.addEventListener('webglcontextlost', this._onContextLostHandler, false);
+    this._canvas.addEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
+  }
+
+  private _removeEvents(): void {
+    this._canvas.removeEventListener('webglcontextlost', this._onContextLostHandler, false);
+    this._canvas.removeEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
+  }
+
+  private _onContextLost(): void {
+    this._contextLost = true;
+    this.onContextLost.dispatch();
+    this._restoreContext();
+  }
+
+  private _onContextRestored(): void {
+    this._contextLost = false;
+    this.onContextRestored.dispatch();
+  }
+
+  private _createFramebuffer(): WebGLFramebuffer {
+    const framebuffer = this._context.createFramebuffer();
+
+    if (framebuffer === null) {
+      throw new Error('Could not create framebuffer.');
     }
 
-    private _flushActiveRenderer(): void {
-        if (this._renderer && !this._contextLost) {
-            this._bindRenderTarget(this._renderTarget);
-            this._renderer.flush();
-        }
+    return framebuffer;
+  }
+
+  private _createTextureHandle(): WebGLTexture {
+    const texture = this._context.createTexture();
+
+    if (texture === null) {
+      throw new Error('Could not create texture.');
     }
 
-    private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
-        const state = this._getRenderTargetState(target);
+    return texture;
+  }
 
-        if (target instanceof RenderTexture && state.framebuffer) {
-            const previousFramebuffer = this._boundFramebuffer;
-            const textureState = this._syncTexture(target);
-
-            if (state.attachedTexture !== textureState.handle) {
-                const gl = this._context;
-
-                gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
-                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
-                gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
-
-                state.attachedTexture = textureState.handle;
-            }
-        }
-
-        return state;
+  private _destroyManagedResources(): void {
+    for (const renderTarget of [...this._renderTargetStates.keys()]) {
+      this._evictRenderTarget(renderTarget, false);
     }
 
-    private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
+    for (const texture of [...this._textureStates.keys()]) {
+      this._evictTexture(texture, false);
+    }
+  }
+
+  private _destroyTemporaryRenderTextures(): void {
+    for (const texture of this._temporaryRenderTextures) {
+      texture.destroy();
+    }
+
+    this._temporaryRenderTextures.length = 0;
+  }
+
+  private _getRenderTargetState(target: RenderTarget): ManagedRenderTargetState {
+    let state = this._renderTargetStates.get(target);
+
+    if (!state) {
+      this._subscribeToDestroy(target, this._renderTargetDestroyHandlers, () => {
+        this._evictRenderTarget(target, true);
+      });
+
+      state = {
+        framebuffer: target.root ? null : this._createFramebuffer(),
+        version: -1,
+        attachedTexture: null,
+      };
+
+      this._renderTargetStates.set(target, state);
+    }
+
+    return state;
+  }
+
+  private _getTextureState(texture: Texture | RenderTexture): ManagedTextureState {
+    let state = this._textureStates.get(texture);
+
+    if (!state) {
+      this._subscribeToDestroy(texture, this._textureDestroyHandlers, () => {
+        this._evictTexture(texture, true);
+      });
+
+      state = {
+        handle: this._createTextureHandle(),
+        version: -1,
+        width: 0,
+        height: 0,
+      };
+
+      this._textureStates.set(texture, state);
+    }
+
+    return state;
+  }
+
+  private _subscribeToDestroy<T extends DestroyListenable>(descriptor: T, handlers: Map<T, () => void>, handler: () => void): void {
+    if (!handlers.has(descriptor)) {
+      descriptor.addDestroyListener(handler);
+      handlers.set(descriptor, handler);
+    }
+  }
+
+  private _unsubscribeFromDestroy<T extends DestroyListenable>(descriptor: T, handlers: Map<T, () => void>): void {
+    const handler = handlers.get(descriptor);
+
+    if (handler) {
+      descriptor.removeDestroyListener(handler);
+      handlers.delete(descriptor);
+    }
+  }
+
+  private _evictRenderTarget(target: RenderTarget, rebind: boolean): void {
+    const state = this._renderTargetStates.get(target);
+
+    this._unsubscribeFromDestroy(target, this._renderTargetDestroyHandlers);
+
+    if (target instanceof RenderTexture) {
+      this._evictTexture(target, false);
+    }
+
+    if (state) {
+      if (this._boundFramebuffer === state.framebuffer) {
+        this._context.bindFramebuffer(this._context.FRAMEBUFFER, null);
+        this._boundFramebuffer = null;
+      }
+
+      if (state.framebuffer !== null) {
+        this._context.deleteFramebuffer(state.framebuffer);
+      }
+
+      this._renderTargetStates.delete(target);
+    }
+
+    if (this._renderTarget === target) {
+      this._renderTarget = this._rootRenderTarget;
+
+      if (rebind) {
+        this._bindRenderTarget(this._rootRenderTarget);
+      }
+    }
+  }
+
+  private _evictTexture(texture: Texture | RenderTexture, rebind: boolean): void {
+    const state = this._textureStates.get(texture);
+
+    this._unsubscribeFromDestroy(texture, this._textureDestroyHandlers);
+
+    if (state) {
+      if (this._texture === texture) {
+        this._context.bindTexture(this._context.TEXTURE_2D, null);
+        this._texture = null;
+      }
+
+      this._context.deleteTexture(state.handle);
+      this._textureStates.delete(texture);
+    }
+
+    if (this._texture === texture) {
+      this._texture = null;
+    }
+
+    if (rebind && this._texture !== null) {
+      this.bindTexture(this._texture);
+    }
+  }
+
+  private _bindRenderTarget(target: RenderTarget): void {
+    const state = this._prepareRenderTarget(target);
+
+    if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
+      const gl = this._context;
+      const { x, y, width, height } = target.getViewport();
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+      gl.viewport(x, y, width, height);
+
+      this._boundFramebuffer = state.framebuffer;
+      state.version = target.version;
+    }
+
+    if (this._clipPixelStack.length > 0) {
+      this._applyClipState();
+    }
+  }
+
+  private _setActiveRenderer(renderer: Renderer | null): void {
+    if (this._renderer !== renderer) {
+      this._flushActiveRenderer();
+      this._renderer = renderer;
+    }
+  }
+
+  private _flushActiveRenderer(): void {
+    if (this._renderer && !this._contextLost) {
+      this._bindRenderTarget(this._renderTarget);
+      this._renderer.flush();
+    }
+  }
+
+  private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
+    const state = this._getRenderTargetState(target);
+
+    if (target instanceof RenderTexture && state.framebuffer) {
+      const previousFramebuffer = this._boundFramebuffer;
+      const textureState = this._syncTexture(target);
+
+      if (state.attachedTexture !== textureState.handle) {
         const gl = this._context;
-        const state = this._getTextureState(texture);
-        const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
 
-        gl.bindTexture(gl.TEXTURE_2D, state.handle);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 
-        if (state.version !== version) {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+        state.attachedTexture = textureState.handle;
+      }
+    }
 
-            if (texture instanceof RenderTexture) {
-                if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-                } else {
-                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-                }
-            } else if (texture.source) {
-                if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-                } else {
-                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-                }
-            }
+    return state;
+  }
 
-            if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
-                gl.generateMipmap(gl.TEXTURE_2D);
-            }
+  private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
+    const gl = this._context;
+    const state = this._getTextureState(texture);
+    const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
 
-            state.version = version;
-            state.width = texture.width;
-            state.height = texture.height;
+    gl.bindTexture(gl.TEXTURE_2D, state.handle);
+
+    if (state.version !== version) {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+
+      if (texture instanceof RenderTexture) {
+        if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+        } else {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
         }
-
-        return state;
-    }
-
-    private _toClipPixels(bounds: Rectangle): PixelClipBoundsState {
-        const topLeft = this._renderTarget.mapCoordsToPixel(this._clipPointA.set(bounds.left, bounds.top));
-        const bottomRight = this._renderTarget.mapCoordsToPixel(this._clipPointB.set(bounds.right, bounds.bottom));
-        const minX = Math.min(topLeft.x, bottomRight.x);
-        const maxX = Math.max(topLeft.x, bottomRight.x);
-        const minY = Math.min(topLeft.y, bottomRight.y);
-        const maxY = Math.max(topLeft.y, bottomRight.y);
-        const targetWidth = this._renderTarget.width;
-        const targetHeight = this._renderTarget.height;
-        const x = Math.max(0, Math.min(targetWidth, Math.floor(minX)));
-        const right = Math.max(0, Math.min(targetWidth, Math.ceil(maxX)));
-        const yTop = Math.max(0, Math.min(targetHeight, Math.floor(minY)));
-        const bottom = Math.max(0, Math.min(targetHeight, Math.ceil(maxY)));
-        const width = Math.max(0, right - x);
-        const height = Math.max(0, bottom - yTop);
-        const y = Math.max(0, targetHeight - bottom);
-
-        return {
-            x,
-            y,
-            width,
-            height,
-        };
-    }
-
-    private _intersectClips(first: PixelClipBoundsState, second: PixelClipBoundsState): PixelClipBoundsState {
-        const left = Math.max(first.x, second.x);
-        const bottom = Math.max(first.y, second.y);
-        const right = Math.min(first.x + first.width, second.x + second.width);
-        const top = Math.min(first.y + first.height, second.y + second.height);
-
-        return {
-            x: left,
-            y: bottom,
-            width: Math.max(0, right - left),
-            height: Math.max(0, top - bottom),
-        };
-    }
-
-    private _applyClipState(): void {
-        const gl = this._context;
-
-        if (this._clipPixelStack.length === 0) {
-            gl.disable(gl.SCISSOR_TEST);
-
-            return;
+      } else if (texture.source) {
+        if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+        } else {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
         }
+      }
 
-        const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
+      if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+      }
 
-        gl.enable(gl.SCISSOR_TEST);
-        gl.scissor(clip.x, clip.y, clip.width, clip.height);
+      state.version = version;
+      state.width = texture.width;
+      state.height = texture.height;
     }
+
+    return state;
+  }
+
+  private _toClipPixels(bounds: Rectangle): PixelClipBoundsState {
+    const topLeft = this._renderTarget.mapCoordsToPixel(this._clipPointA.set(bounds.left, bounds.top));
+    const bottomRight = this._renderTarget.mapCoordsToPixel(this._clipPointB.set(bounds.right, bounds.bottom));
+    const minX = Math.min(topLeft.x, bottomRight.x);
+    const maxX = Math.max(topLeft.x, bottomRight.x);
+    const minY = Math.min(topLeft.y, bottomRight.y);
+    const maxY = Math.max(topLeft.y, bottomRight.y);
+    const targetWidth = this._renderTarget.width;
+    const targetHeight = this._renderTarget.height;
+    const x = Math.max(0, Math.min(targetWidth, Math.floor(minX)));
+    const right = Math.max(0, Math.min(targetWidth, Math.ceil(maxX)));
+    const yTop = Math.max(0, Math.min(targetHeight, Math.floor(minY)));
+    const bottom = Math.max(0, Math.min(targetHeight, Math.ceil(maxY)));
+    const width = Math.max(0, right - x);
+    const height = Math.max(0, bottom - yTop);
+    const y = Math.max(0, targetHeight - bottom);
+
+    return {
+      x,
+      y,
+      width,
+      height,
+    };
+  }
+
+  private _intersectClips(first: PixelClipBoundsState, second: PixelClipBoundsState): PixelClipBoundsState {
+    const left = Math.max(first.x, second.x);
+    const bottom = Math.max(first.y, second.y);
+    const right = Math.min(first.x + first.width, second.x + second.width);
+    const top = Math.min(first.y + first.height, second.y + second.height);
+
+    return {
+      x: left,
+      y: bottom,
+      width: Math.max(0, right - left),
+      height: Math.max(0, top - bottom),
+    };
+  }
+
+  private _applyClipState(): void {
+    const gl = this._context;
+
+    if (this._clipPixelStack.length === 0) {
+      gl.disable(gl.SCISSOR_TEST);
+
+      return;
+    }
+
+    const clip = this._clipPixelStack[this._clipPixelStack.length - 1];
+
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(clip.x, clip.y, clip.width, clip.height);
+  }
 }

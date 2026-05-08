@@ -1,5 +1,3 @@
-export * from './types';
-export * from './utils';
 export * from './Application';
 export * from './Bounds';
 export * from './capabilities';
@@ -11,3 +9,5 @@ export * from './SceneNode';
 export * from './Signal';
 export * from './Time';
 export * from './Timer';
+export * from './types';
+export * from './utils';

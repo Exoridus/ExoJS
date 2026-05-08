@@ -17,29 +17,29 @@ import { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
  * inputs that may not exist on every device family.
  */
 export class JoyConRightGamepadMapping extends GamepadMapping {
-    public readonly family = GamepadMappingFamily.JoyConRight;
+  public readonly family = GamepadMappingFamily.JoyConRight;
 
-    public constructor() {
-        super(
-            [
-                new GamepadButton(0, GamepadButton.South),
-                new GamepadButton(1, GamepadButton.East),
-                new GamepadButton(2, GamepadButton.West),
-                new GamepadButton(3, GamepadButton.North),
-                new GamepadButton(4, GamepadButton.LeftShoulder),
-                new GamepadButton(5, GamepadButton.RightShoulder),
-                new GamepadButton(9, GamepadButton.Start),       // Plus
-                new GamepadButton(10, GamepadButton.LeftStick),  // stick click
-                new GamepadButton(16, GamepadButton.Guide),      // Home
-            ],
-            [
-                new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true }),
-                new GamepadAxis(0, GamepadAxis.LeftStickRight),
-                new GamepadAxis(1, GamepadAxis.LeftStickUp,   { invert: true }),
-                new GamepadAxis(1, GamepadAxis.LeftStickDown),
-                new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true }),
-                new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true }),
-            ],
-        );
-    }
+  public constructor() {
+    super(
+      [
+        new GamepadButton(0, GamepadButton.South),
+        new GamepadButton(1, GamepadButton.East),
+        new GamepadButton(2, GamepadButton.West),
+        new GamepadButton(3, GamepadButton.North),
+        new GamepadButton(4, GamepadButton.LeftShoulder),
+        new GamepadButton(5, GamepadButton.RightShoulder),
+        new GamepadButton(9, GamepadButton.Start), // Plus
+        new GamepadButton(10, GamepadButton.LeftStick), // stick click
+        new GamepadButton(16, GamepadButton.Guide), // Home
+      ],
+      [
+        new GamepadAxis(0, GamepadAxis.LeftStickLeft, { invert: true }),
+        new GamepadAxis(0, GamepadAxis.LeftStickRight),
+        new GamepadAxis(1, GamepadAxis.LeftStickUp, { invert: true }),
+        new GamepadAxis(1, GamepadAxis.LeftStickDown),
+        new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true }),
+        new GamepadAxis(1, GamepadAxis.LeftStickY, { bipolar: true }),
+      ],
+    );
+  }
 }

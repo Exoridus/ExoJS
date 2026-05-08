@@ -1,5 +1,6 @@
-import { Time } from './Time';
 import { getPreciseTime } from '@/core/utils';
+
+import { Time } from './Time';
 
 /**
  * High-precision wall-clock that accumulates elapsed time while running.
@@ -12,95 +13,94 @@ import { getPreciseTime } from '@/core/utils';
  * Use {@link Timer} for a clock with a fixed limit and `expired` flag.
  */
 export class Clock {
+  private _startTime: Time;
+  private _elapsedTime: Time = new Time(0);
+  private _running = false;
 
-    private _startTime: Time;
-    private _elapsedTime: Time = new Time(0);
-    private _running = false;
+  public constructor(startTime: Time = Time.zero, autoStart = false) {
+    this._startTime = startTime.clone();
 
-    public constructor(startTime: Time = Time.zero, autoStart = false) {
-        this._startTime = startTime.clone();
+    if (autoStart) {
+      this.start();
+    }
+  }
 
-        if (autoStart) {
-            this.start();
-        }
+  public get running(): boolean {
+    return this._running;
+  }
+
+  /**
+   * Total accumulated time since the last {@link Clock.reset}. While the
+   * clock is running, the value advances on every read by folding in the
+   * delta since the previous read; while stopped, the value is fixed at
+   * the stop point. Returns the same {@link Time} instance — read the
+   * scalar fields if you need an unchanging snapshot.
+   */
+  public get elapsedTime(): Time {
+    if (this._running) {
+      const now = getPreciseTime();
+
+      this._elapsedTime.add(now - this._startTime.milliseconds);
+      this._startTime.milliseconds = now;
     }
 
-    public get running(): boolean {
-        return this._running;
+    return this._elapsedTime;
+  }
+
+  public get elapsedMilliseconds(): number {
+    return this.elapsedTime.milliseconds;
+  }
+
+  public get elapsedSeconds(): number {
+    return this.elapsedTime.seconds;
+  }
+
+  public get elapsedMinutes(): number {
+    return this.elapsedTime.minutes;
+  }
+
+  public get elapsedHours(): number {
+    return this.elapsedTime.hours;
+  }
+
+  /** Begin accumulating time. No-op when already running. */
+  public start(): this {
+    if (!this._running) {
+      this._running = true;
+      this._startTime.milliseconds = getPreciseTime();
     }
 
-    /**
-     * Total accumulated time since the last {@link Clock.reset}. While the
-     * clock is running, the value advances on every read by folding in the
-     * delta since the previous read; while stopped, the value is fixed at
-     * the stop point. Returns the same {@link Time} instance — read the
-     * scalar fields if you need an unchanging snapshot.
-     */
-    public get elapsedTime(): Time {
-        if (this._running) {
-            const now = getPreciseTime();
+    return this;
+  }
 
-            this._elapsedTime.add(now - this._startTime.milliseconds);
-            this._startTime.milliseconds = now;
-        }
-
-        return this._elapsedTime;
+  /** Halt accumulation. Elapsed time stays at the moment of stopping. */
+  public stop(): this {
+    if (this._running) {
+      this._running = false;
+      this._elapsedTime.add(getPreciseTime() - this._startTime.milliseconds);
     }
 
-    public get elapsedMilliseconds(): number {
-        return this.elapsedTime.milliseconds;
-    }
+    return this;
+  }
 
-    public get elapsedSeconds(): number {
-        return this.elapsedTime.seconds;
-    }
+  /** Halt and zero the accumulated time. The clock is left stopped. */
+  public reset(): this {
+    this._running = false;
+    this._elapsedTime.setMilliseconds(0);
 
-    public get elapsedMinutes(): number {
-        return this.elapsedTime.minutes;
-    }
+    return this;
+  }
 
-    public get elapsedHours(): number {
-        return this.elapsedTime.hours;
-    }
+  /** Reset accumulated time to zero, then immediately start. Common per-frame pattern. */
+  public restart(): this {
+    this.reset();
+    this.start();
 
-    /** Begin accumulating time. No-op when already running. */
-    public start(): this {
-        if (!this._running) {
-            this._running = true;
-            this._startTime.milliseconds = getPreciseTime();
-        }
+    return this;
+  }
 
-        return this;
-    }
-
-    /** Halt accumulation. Elapsed time stays at the moment of stopping. */
-    public stop(): this {
-        if (this._running) {
-            this._running = false;
-            this._elapsedTime.add(getPreciseTime() - this._startTime.milliseconds);
-        }
-
-        return this;
-    }
-
-    /** Halt and zero the accumulated time. The clock is left stopped. */
-    public reset(): this {
-        this._running = false;
-        this._elapsedTime.setMilliseconds(0);
-
-        return this;
-    }
-
-    /** Reset accumulated time to zero, then immediately start. Common per-frame pattern. */
-    public restart(): this {
-        this.reset();
-        this.start();
-
-        return this;
-    }
-
-    public destroy(): void {
-        this._startTime.destroy();
-        this._elapsedTime.destroy();
-    }
+  public destroy(): void {
+    this._startTime.destroy();
+    this._elapsedTime.destroy();
+  }
 }

@@ -1,5 +1,5 @@
-import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 import { GamepadMappingFamily } from './GamepadMapping';
+import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
 
 /**
  * Mapping for the Valve Steam Controller when operating in gamepad-emulation
@@ -10,5 +10,5 @@ import { GamepadMappingFamily } from './GamepadMapping';
  * as the left stick. Gyro and haptic-only inputs are not represented.
  */
 export class SteamControllerGamepadMapping extends GenericDualAnalogGamepadMapping {
-    public override readonly family = GamepadMappingFamily.SteamController;
+  public override readonly family = GamepadMappingFamily.SteamController;
 }

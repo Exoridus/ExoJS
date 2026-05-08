@@ -1,361 +1,912 @@
 {
-  "rendering": [
-    {
-      "slug": "sprite",
-      "path": "rendering/sprite.js",
-      "title": "Sprite",
-      "description": "Displays a single texture-backed sprite with basic transforms.",
-      "backend": "core",
-      "tags": [
-        "sprite"
-      ]
-    },
-    {
-      "slug": "spritesheet",
-      "path": "rendering/spritesheet.js",
-      "title": "Spritesheet",
-      "description": "Loads atlas frames from a spritesheet and renders them as sprites.",
-      "backend": "core",
-      "tags": [
-        "atlas",
-        "sprite"
-      ]
-    },
-    {
-      "slug": "container",
-      "path": "rendering/container.js",
-      "title": "Container",
-      "description": "Groups sprites in containers and animates the hierarchy.",
-      "backend": "core",
-      "tags": [
-        "container",
-        "sprite"
-      ]
-    },
-    {
-      "slug": "blendmodes",
-      "path": "rendering/blendmodes.js",
-      "title": "Blendmodes",
-      "description": "Shows built-in blend modes on overlapping sprites.",
-      "backend": "core",
-      "tags": [
-        "blend",
-        "sprite"
-      ]
-    },
-    {
-      "slug": "tinted-sprites",
-      "path": "rendering/tinted-sprites.js",
-      "title": "Tinted Sprites",
-      "description": "Applies tint colors to multiple sprites from one texture.",
-      "backend": "core",
-      "tags": [
-        "tint",
-        "sprite"
-      ]
-    },
-    {
-      "slug": "view-handling",
-      "path": "rendering/view-handling.js",
-      "title": "View Handling",
-      "description": "Moves and zooms the active view over a larger scene.",
-      "backend": "core",
-      "tags": [
-        "camera"
-      ]
-    },
-    {
-      "slug": "render-to-texture",
-      "path": "rendering/render-to-texture.js",
-      "title": "Render To Texture",
-      "description": "Renders a container into a texture and reuses it as a sprite.",
-      "backend": "core",
-      "tags": [
-        "rendertexture",
-        "sprite"
-      ]
-    },
-    {
-      "slug": "display-text",
-      "path": "rendering/display-text.js",
-      "title": "Display Text",
-      "description": "Draws styled text using loaded font assets.",
-      "backend": "core",
-      "tags": [
-        "text"
-      ]
-    },
-    {
-      "slug": "display-video",
-      "path": "rendering/display-video.js",
-      "title": "Display Video",
-      "description": "Displays a video drawable in the scene graph and toggles playback.",
-      "backend": "core",
-      "tags": [
-        "video"
-      ]
-    },
-    {
-      "slug": "display-svg",
-      "path": "rendering/display-svg.js",
-      "title": "Display SVG",
-      "description": "Loads and renders SVG content as a drawable texture.",
-      "backend": "core",
-      "tags": [
-        "svg"
-      ]
-    },
-    {
-      "slug": "mesh-triangle",
-      "path": "rendering/mesh-triangle.js",
-      "title": "Mesh Triangle",
-      "description": "Three-vertex mesh with one solid color per vertex. Demonstrates the untextured Mesh path.",
-      "backend": "core",
-      "tags": [
-        "mesh"
-      ]
-    },
-    {
-      "slug": "mesh-textured-quad",
-      "path": "rendering/mesh-textured-quad.js",
-      "title": "Mesh Textured Quad",
-      "description": "A quad built from the Mesh primitive with explicit vertices, UVs, indices, and a texture.",
-      "backend": "core",
-      "tags": [
-        "mesh"
-      ]
-    },
-    {
-      "slug": "mesh-deformed-grid",
-      "path": "rendering/mesh-deformed-grid.js",
-      "title": "Mesh Deformed Grid",
-      "description": "16x16 mesh whose vertex positions wave each frame to deform the bound texture — a thing Sprite cannot do.",
-      "backend": "core",
-      "tags": [
-        "mesh"
-      ]
-    },
-    {
-      "slug": "masks",
-      "path": "rendering/masks.js",
-      "title": "Masks",
-      "description": "Clips a sprite with an animated Rectangle mask using the unified MaskSource API.",
-      "backend": "core",
-      "tags": [
-        "mask",
-        "sprite"
-      ]
-    }
-  ],
-  "webgpu": [
-    {
-      "slug": "additive-particles",
-      "path": "webgpu/additive-particles.js",
-      "title": "Additive Particles",
-      "description": "Uses built-in additive particle blending on the WebGPU path.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "particles",
-        "blend"
-      ]
-    },
-    {
-      "slug": "multi-texture-sprite-stress",
-      "path": "webgpu/multi-texture-sprite-stress.js",
-      "title": "Multi-Texture Sprite Stress",
-      "description": "Stresses WebGPU sprite batching with many interleaved textures.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "sprite",
-        "stress"
-      ]
-    },
-    {
-      "slug": "particle-stress",
-      "path": "webgpu/particle-stress.js",
-      "title": "Particle Stress",
-      "description": "Exercises dense particle rendering on the built-in WebGPU path.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "particles",
-        "stress"
-      ]
-    },
-    {
-      "slug": "sprite-stress",
-      "path": "webgpu/sprite-stress.js",
-      "title": "Sprite Stress",
-      "description": "Exercises single-texture sprite batching on the built-in WebGPU path.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "sprite",
-        "stress"
-      ]
-    },
-    {
-      "slug": "video-basics",
-      "path": "webgpu/video-basics.js",
-      "title": "Video Basics",
-      "description": "Displays a looping video through the built-in WebGPU drawable path.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "video"
-      ]
-    },
-    {
-      "slug": "rendertexture-basics",
-      "path": "webgpu/rendertexture-basics.js",
-      "title": "RenderTexture Basics",
-      "description": "Renders offscreen into a texture and displays it through a sprite on WebGPU.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "rendertexture"
-      ]
-    },
-    {
-      "slug": "graphics-basics",
-      "path": "webgpu/graphics-basics.js",
-      "title": "Graphics Basics",
-      "description": "Draws built-in Graphics shapes on the official WebGPU path.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "graphics"
-      ]
-    },
-    {
-      "slug": "particle-basics",
-      "path": "webgpu/particle-basics.js",
-      "title": "Particle Basics",
-      "description": "Shows built-in particle emission, motion, scale, and tint on WebGPU.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "particles"
-      ]
-    },
-    {
-      "slug": "sprite-basics",
-      "path": "webgpu/sprite-basics.js",
-      "title": "Sprite Basics",
-      "description": "Renders textured sprites and cropped texture frames on WebGPU.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "sprite"
-      ]
-    },
-    {
-      "slug": "text-basics",
-      "path": "webgpu/text-basics.js",
-      "title": "Text Basics",
-      "description": "Renders built-in text with size, stroke, multiline, and wrap on WebGPU.",
-      "backend": "webgpu",
-      "unsupportedNote": "This WebGPU example requires browser WebGPU support and will not run on unsupported environments.",
-      "tags": [
-        "webgpu",
-        "text"
-      ]
-    },
-    {
-      "slug": "custom-triangle-renderer",
-      "path": "webgpu/custom-triangle-renderer.js",
-      "title": "Custom Triangle Renderer",
-      "description": "Builds a custom WebGPU triangle renderer through the advanced extension path.",
-      "backend": "advanced",
-      "unsupportedNote": "This advanced example requires browser WebGPU support and will not run on unsupported environments.",
-      "notes": [
-        "Advanced backend-specific example."
-      ],
-      "tags": [
-        "webgpu",
-        "advanced"
-      ]
-    }
-  ],
-  "input": [
-    {
-      "slug": "gamepad",
-      "path": "input/gamepad.js",
-      "title": "Gamepad",
-      "description": "Reads controller input and visualizes connected gamepad controls.",
-      "backend": "core",
-      "tags": [
-        "input",
-        "gamepad"
-      ]
-    }
-  ],
-  "collision-detection": [
-    {
-      "slug": "rectangles",
-      "path": "collision-detection/rectangles.js",
-      "title": "Rectangles",
-      "description": "Highlights overlap between rotating rectangle-like sprites.",
-      "backend": "core",
-      "tags": [
-        "collision"
-      ]
-    }
-  ],
-  "particle-system": [
-    {
-      "slug": "bonfire",
-      "path": "particle-system/bonfire.js",
-      "title": "Bonfire",
-      "description": "Builds a layered bonfire effect with the particle system.",
-      "backend": "core",
-      "tags": [
-        "particles"
-      ]
-    },
-    {
-      "slug": "fireworks",
-      "path": "particle-system/fireworks.js",
-      "title": "Fireworks",
-      "description": "Launches fireworks bursts with emitters and particle affectors.",
-      "backend": "core",
-      "tags": [
-        "particles"
-      ]
-    }
-  ],
-  "extras": [
-    {
-      "slug": "audio-visualisation",
-      "path": "extras/audio-visualisation.js",
-      "title": "Audio Visualisation",
-      "description": "Draws waveform and frequency data into a texture-backed canvas.",
-      "backend": "core",
-      "tags": [
-        "audio"
-      ]
-    },
-    {
-      "slug": "benchmark",
-      "path": "extras/benchmark.js",
-      "title": "Benchmark",
-      "description": "Spawns many sprites to stress rendering throughput interactively.",
-      "backend": "core",
-      "tags": [
-        "sprite",
-        "stress"
-      ]
-    }
-  ]
+    "application-scenes": [
+        {
+            "slug": "camera-and-view",
+            "path": "application-scenes/camera-and-view.js",
+            "title": "Camera And View",
+            "description": "Example: Camera And View.",
+            "backend": "core",
+            "tags": ["camera", "and", "view"]
+        },
+        {
+            "slug": "hud-overlay-scene",
+            "path": "application-scenes/hud-overlay-scene.js",
+            "title": "Hud Overlay Scene",
+            "description": "Example: Hud Overlay Scene.",
+            "backend": "core",
+            "tags": ["hud", "overlay", "scene"]
+        },
+        {
+            "slug": "multi-view-split-screen",
+            "path": "application-scenes/multi-view-split-screen.js",
+            "title": "Multi View Split Screen",
+            "description": "Example: Multi View Split Screen.",
+            "backend": "core",
+            "tags": ["multi", "view", "split", "screen"]
+        },
+        {
+            "slug": "multiple-scenes",
+            "path": "application-scenes/multiple-scenes.js",
+            "title": "Multiple Scenes",
+            "description": "Example: Multiple Scenes.",
+            "backend": "core",
+            "tags": ["multiple", "scenes"]
+        },
+        {
+            "slug": "pause-and-resume",
+            "path": "application-scenes/pause-and-resume.js",
+            "title": "Pause And Resume",
+            "description": "Example: Pause And Resume.",
+            "backend": "core",
+            "tags": ["pause", "and", "resume"]
+        },
+        {
+            "slug": "picture-in-picture",
+            "path": "application-scenes/picture-in-picture.js",
+            "title": "Picture In Picture",
+            "description": "Example: Picture In Picture.",
+            "backend": "core",
+            "tags": ["picture", "in", "picture"]
+        },
+        {
+            "slug": "scene-lifecycle",
+            "path": "application-scenes/scene-lifecycle.js",
+            "title": "Scene Lifecycle",
+            "description": "Example: Scene Lifecycle.",
+            "backend": "core",
+            "tags": ["scene", "lifecycle"]
+        },
+        {
+            "slug": "world-vs-screen-coords",
+            "path": "application-scenes/world-vs-screen-coords.js",
+            "title": "World Vs Screen Coords",
+            "description": "Example: World Vs Screen Coords.",
+            "backend": "core",
+            "tags": ["world", "vs", "screen", "coords"]
+        }
+    ],
+    "audio-basics": [
+        {
+            "slug": "audio-buses",
+            "path": "audio-basics/audio-buses.js",
+            "title": "Audio Buses",
+            "description": "Example: Audio Buses.",
+            "backend": "core",
+            "tags": ["audio", "buses"]
+        },
+        {
+            "slug": "crossfade-tracks",
+            "path": "audio-basics/crossfade-tracks.js",
+            "title": "Crossfade Tracks",
+            "description": "Example: Crossfade Tracks.",
+            "backend": "core",
+            "tags": ["crossfade", "tracks"]
+        },
+        {
+            "slug": "music-loop",
+            "path": "audio-basics/music-loop.js",
+            "title": "Music Loop",
+            "description": "Example: Music Loop.",
+            "backend": "core",
+            "tags": ["music", "loop"]
+        },
+        {
+            "slug": "play-sound",
+            "path": "audio-basics/play-sound.js",
+            "title": "Play Sound",
+            "description": "Example: Play Sound.",
+            "backend": "core",
+            "tags": ["play", "sound"]
+        },
+        {
+            "slug": "random-pitch-pool",
+            "path": "audio-basics/random-pitch-pool.js",
+            "title": "Random Pitch Pool",
+            "description": "Example: Random Pitch Pool.",
+            "backend": "core",
+            "tags": ["random", "pitch", "pool"]
+        },
+        {
+            "slug": "sound-pool",
+            "path": "audio-basics/sound-pool.js",
+            "title": "Sound Pool",
+            "description": "Example: Sound Pool.",
+            "backend": "core",
+            "tags": ["sound", "pool"]
+        }
+    ],
+    "audio-fx": [
+        {
+            "slug": "compressor",
+            "path": "audio-fx/compressor.js",
+            "title": "Compressor",
+            "description": "Example: Compressor.",
+            "backend": "core",
+            "tags": ["compressor"]
+        },
+        {
+            "slug": "ducking",
+            "path": "audio-fx/ducking.js",
+            "title": "Ducking",
+            "description": "Example: Ducking.",
+            "backend": "core",
+            "tags": ["ducking"]
+        },
+        {
+            "slug": "reverb-and-delay",
+            "path": "audio-fx/reverb-and-delay.js",
+            "title": "Reverb And Delay",
+            "description": "Example: Reverb And Delay.",
+            "backend": "core",
+            "tags": ["reverb", "and", "delay"]
+        },
+        {
+            "slug": "vocoder",
+            "path": "audio-fx/vocoder.js",
+            "title": "Vocoder",
+            "description": "Example: Vocoder.",
+            "backend": "core",
+            "tags": ["vocoder"]
+        }
+    ],
+    "beat-detection": [
+        {
+            "slug": "beat-sync-pulse",
+            "path": "beat-detection/beat-sync-pulse.js",
+            "title": "Beat Sync Pulse",
+            "description": "Example: Beat Sync Pulse.",
+            "backend": "core",
+            "tags": ["beat", "sync", "pulse"]
+        },
+        {
+            "slug": "frequency-bands",
+            "path": "beat-detection/frequency-bands.js",
+            "title": "Frequency Bands",
+            "description": "Example: Frequency Bands.",
+            "backend": "core",
+            "tags": ["frequency", "bands"]
+        },
+        {
+            "slug": "tempo-tracking",
+            "path": "beat-detection/tempo-tracking.js",
+            "title": "Tempo Tracking",
+            "description": "Example: Tempo Tracking.",
+            "backend": "core",
+            "tags": ["tempo", "tracking"]
+        }
+    ],
+    "custom-renderers": [
+        {
+            "slug": "custom-render-pass",
+            "path": "custom-renderers/custom-render-pass.js",
+            "title": "Custom Render Pass",
+            "description": "Example: Custom Render Pass.",
+            "backend": "advanced",
+            "tags": ["custom", "render", "pass"]
+        },
+        {
+            "slug": "custom-triangle-renderer",
+            "path": "custom-renderers/custom-triangle-renderer.js",
+            "title": "Custom Triangle Renderer",
+            "description": "Example: Custom Triangle Renderer.",
+            "backend": "advanced",
+            "tags": ["custom", "triangle", "renderer"]
+        }
+    ],
+    "debug-layer": [
+        {
+            "slug": "bounding-boxes",
+            "path": "debug-layer/bounding-boxes.js",
+            "title": "Bounding Boxes",
+            "description": "Example: Bounding Boxes.",
+            "backend": "core",
+            "tags": ["bounding", "boxes"]
+        },
+        {
+            "slug": "performance-overlay",
+            "path": "debug-layer/performance-overlay.js",
+            "title": "Performance Overlay",
+            "description": "Example: Performance Overlay.",
+            "backend": "core",
+            "tags": ["performance", "overlay"]
+        },
+        {
+            "slug": "pointer-and-hittest",
+            "path": "debug-layer/pointer-and-hittest.js",
+            "title": "Pointer And Hittest",
+            "description": "Example: Pointer And Hittest.",
+            "backend": "core",
+            "tags": ["pointer", "and", "hittest"]
+        },
+        {
+            "slug": "signal-bus-inspector",
+            "path": "debug-layer/signal-bus-inspector.js",
+            "title": "Signal Bus Inspector",
+            "description": "Example: Signal Bus Inspector.",
+            "backend": "core",
+            "tags": ["signal", "bus", "inspector"]
+        }
+    ],
+    "filters": [
+        {
+            "slug": "blur-filter",
+            "path": "filters/blur-filter.js",
+            "title": "Blur Filter",
+            "description": "Example: Blur Filter.",
+            "backend": "core",
+            "tags": ["blur", "filter"]
+        },
+        {
+            "slug": "chromatic-aberration",
+            "path": "filters/chromatic-aberration.js",
+            "title": "Chromatic Aberration",
+            "description": "Example: Chromatic Aberration.",
+            "backend": "core",
+            "tags": ["chromatic", "aberration"]
+        },
+        {
+            "slug": "color-filter",
+            "path": "filters/color-filter.js",
+            "title": "Color Filter",
+            "description": "Example: Color Filter.",
+            "backend": "core",
+            "tags": ["color", "filter"]
+        },
+        {
+            "slug": "crt-scanlines",
+            "path": "filters/crt-scanlines.js",
+            "title": "Crt Scanlines",
+            "description": "Example: Crt Scanlines.",
+            "backend": "core",
+            "tags": ["crt", "scanlines"]
+        },
+        {
+            "slug": "custom-fragment-shader",
+            "path": "filters/custom-fragment-shader.js",
+            "title": "Custom Fragment Shader",
+            "description": "Example: Custom Fragment Shader.",
+            "backend": "core",
+            "tags": ["custom", "fragment", "shader"]
+        },
+        {
+            "slug": "filter-stack",
+            "path": "filters/filter-stack.js",
+            "title": "Filter Stack",
+            "description": "Example: Filter Stack.",
+            "backend": "core",
+            "tags": ["filter", "stack"]
+        },
+        {
+            "slug": "metaballs",
+            "path": "filters/metaballs.js",
+            "title": "Metaballs",
+            "description": "Example: Metaballs.",
+            "backend": "core",
+            "tags": ["metaballs"]
+        },
+        {
+            "slug": "noise-vignette",
+            "path": "filters/noise-vignette.js",
+            "title": "Noise Vignette",
+            "description": "Example: Noise Vignette.",
+            "backend": "core",
+            "tags": ["noise", "vignette"]
+        }
+    ],
+    "geometry-graphics": [
+        {
+            "slug": "graphics-primitives",
+            "path": "geometry-graphics/graphics-primitives.js",
+            "title": "Graphics Primitives",
+            "description": "Example: Graphics Primitives.",
+            "backend": "core",
+            "tags": ["graphics", "primitives"]
+        },
+        {
+            "slug": "infinite-grid",
+            "path": "geometry-graphics/infinite-grid.js",
+            "title": "Infinite Grid",
+            "description": "Example: Infinite Grid.",
+            "backend": "core",
+            "tags": ["infinite", "grid"]
+        },
+        {
+            "slug": "mesh-deformed-grid",
+            "path": "geometry-graphics/mesh-deformed-grid.js",
+            "title": "Mesh Deformed Grid",
+            "description": "Example: Mesh Deformed Grid.",
+            "backend": "core",
+            "tags": ["mesh", "deformed", "grid"]
+        },
+        {
+            "slug": "mesh-textured-quad",
+            "path": "geometry-graphics/mesh-textured-quad.js",
+            "title": "Mesh Textured Quad",
+            "description": "Example: Mesh Textured Quad.",
+            "backend": "core",
+            "tags": ["mesh", "textured", "quad"]
+        },
+        {
+            "slug": "mesh-triangle",
+            "path": "geometry-graphics/mesh-triangle.js",
+            "title": "Mesh Triangle",
+            "description": "Example: Mesh Triangle.",
+            "backend": "core",
+            "tags": ["mesh", "triangle"]
+        }
+    ],
+    "getting-started": [
+        {
+            "slug": "game-loop",
+            "path": "getting-started/game-loop.js",
+            "title": "Game Loop",
+            "description": "Example: Game Loop.",
+            "backend": "core",
+            "tags": ["game", "loop"]
+        },
+        {
+            "slug": "hello-world",
+            "path": "getting-started/hello-world.js",
+            "title": "Hello World",
+            "description": "Example: Hello World.",
+            "backend": "core",
+            "tags": ["hello", "world"]
+        },
+        {
+            "slug": "resize-and-dpr",
+            "path": "getting-started/resize-and-dpr.js",
+            "title": "Resize And Dpr",
+            "description": "Example: Resize And Dpr.",
+            "backend": "core",
+            "tags": ["resize", "and", "dpr"]
+        }
+    ],
+    "input": [
+        {
+            "slug": "action-mapping",
+            "path": "input/action-mapping.js",
+            "title": "Action Mapping",
+            "description": "Example: Action Mapping.",
+            "backend": "core",
+            "tags": ["action", "mapping"]
+        },
+        {
+            "slug": "gamepad",
+            "path": "input/gamepad.js",
+            "title": "Gamepad",
+            "description": "Example: Gamepad.",
+            "backend": "core",
+            "tags": ["gamepad"]
+        },
+        {
+            "slug": "key-rebinding",
+            "path": "input/key-rebinding.js",
+            "title": "Key Rebinding",
+            "description": "Example: Key Rebinding.",
+            "backend": "core",
+            "tags": ["key", "rebinding"]
+        },
+        {
+            "slug": "keyboard",
+            "path": "input/keyboard.js",
+            "title": "Keyboard",
+            "description": "Example: Keyboard.",
+            "backend": "core",
+            "tags": ["keyboard"]
+        },
+        {
+            "slug": "mouse-and-pointer",
+            "path": "input/mouse-and-pointer.js",
+            "title": "Mouse And Pointer",
+            "description": "Example: Mouse And Pointer.",
+            "backend": "core",
+            "tags": ["mouse", "and", "pointer"]
+        },
+        {
+            "slug": "multi-gamepad",
+            "path": "input/multi-gamepad.js",
+            "title": "Multi Gamepad",
+            "description": "Example: Multi Gamepad.",
+            "backend": "core",
+            "tags": ["multi", "gamepad"]
+        },
+        {
+            "slug": "multitouch",
+            "path": "input/multitouch.js",
+            "title": "Multitouch",
+            "description": "Example: Multitouch.",
+            "backend": "core",
+            "tags": ["multitouch"]
+        },
+        {
+            "slug": "pointer-to-world",
+            "path": "input/pointer-to-world.js",
+            "title": "Pointer To World",
+            "description": "Example: Pointer To World.",
+            "backend": "core",
+            "tags": ["pointer", "to", "world"]
+        }
+    ],
+    "particles": [
+        {
+            "slug": "bonfire",
+            "path": "particles/bonfire.js",
+            "title": "Bonfire",
+            "description": "Example: Bonfire.",
+            "backend": "core",
+            "tags": ["bonfire"]
+        },
+        {
+            "slug": "cursor-attractor-particles",
+            "path": "particles/cursor-attractor-particles.js",
+            "title": "Cursor Attractor Particles",
+            "description": "Example: Cursor Attractor Particles.",
+            "backend": "core",
+            "tags": ["cursor", "attractor", "particles"]
+        },
+        {
+            "slug": "custom-wgsl-module",
+            "path": "particles/custom-wgsl-module.js",
+            "title": "Custom Wgsl Module",
+            "description": "Example: Custom Wgsl Module.",
+            "backend": "core",
+            "tags": ["custom", "wgsl", "module"]
+        },
+        {
+            "slug": "emitter-basics",
+            "path": "particles/emitter-basics.js",
+            "title": "Emitter Basics",
+            "description": "Example: Emitter Basics.",
+            "backend": "core",
+            "tags": ["emitter", "basics"]
+        },
+        {
+            "slug": "fireworks",
+            "path": "particles/fireworks.js",
+            "title": "Fireworks",
+            "description": "Example: Fireworks.",
+            "backend": "core",
+            "tags": ["fireworks"]
+        },
+        {
+            "slug": "gpu-particles",
+            "path": "particles/gpu-particles.js",
+            "title": "Gpu Particles",
+            "description": "Example: Gpu Particles.",
+            "backend": "core",
+            "tags": ["gpu", "particles"]
+        }
+    ],
+    "performance": [
+        {
+            "slug": "backend-comparison",
+            "path": "performance/backend-comparison.js",
+            "title": "Backend Comparison",
+            "description": "Example: Backend Comparison.",
+            "backend": "core",
+            "tags": ["backend", "comparison"]
+        },
+        {
+            "slug": "multi-texture-stress",
+            "path": "performance/multi-texture-stress.js",
+            "title": "Multi Texture Stress",
+            "description": "Example: Multi Texture Stress.",
+            "backend": "core",
+            "tags": ["multi", "texture", "stress"]
+        },
+        {
+            "slug": "particle-stress",
+            "path": "performance/particle-stress.js",
+            "title": "Particle Stress",
+            "description": "Example: Particle Stress.",
+            "backend": "core",
+            "tags": ["particle", "stress"]
+        },
+        {
+            "slug": "sprite-stress",
+            "path": "performance/sprite-stress.js",
+            "title": "Sprite Stress",
+            "description": "Example: Sprite Stress.",
+            "backend": "core",
+            "tags": ["sprite", "stress"]
+        }
+    ],
+    "render-targets": [
+        {
+            "slug": "bloom-lite",
+            "path": "render-targets/bloom-lite.js",
+            "title": "Bloom Lite",
+            "description": "Example: Bloom Lite.",
+            "backend": "core",
+            "tags": ["bloom", "lite"]
+        },
+        {
+            "slug": "mini-map",
+            "path": "render-targets/mini-map.js",
+            "title": "Mini Map",
+            "description": "Example: Mini Map.",
+            "backend": "core",
+            "tags": ["mini", "map"]
+        },
+        {
+            "slug": "post-processing-chain",
+            "path": "render-targets/post-processing-chain.js",
+            "title": "Post Processing Chain",
+            "description": "Example: Post Processing Chain.",
+            "backend": "core",
+            "tags": ["post", "processing", "chain"]
+        },
+        {
+            "slug": "render-to-texture",
+            "path": "render-targets/render-to-texture.js",
+            "title": "Render To Texture",
+            "description": "Example: Render To Texture.",
+            "backend": "core",
+            "tags": ["render", "to", "texture"]
+        },
+        {
+            "slug": "trail-feedback",
+            "path": "render-targets/trail-feedback.js",
+            "title": "Trail Feedback",
+            "description": "Example: Trail Feedback.",
+            "backend": "core",
+            "tags": ["trail", "feedback"]
+        },
+        {
+            "slug": "water-mirror",
+            "path": "render-targets/water-mirror.js",
+            "title": "Water Mirror",
+            "description": "Example: Water Mirror.",
+            "backend": "core",
+            "tags": ["water", "mirror"]
+        }
+    ],
+    "scene-graph": [
+        {
+            "slug": "containers",
+            "path": "scene-graph/containers.js",
+            "title": "Containers",
+            "description": "Example: Containers.",
+            "backend": "core",
+            "tags": ["containers"]
+        },
+        {
+            "slug": "local-vs-global-transform",
+            "path": "scene-graph/local-vs-global-transform.js",
+            "title": "Local Vs Global Transform",
+            "description": "Example: Local Vs Global Transform.",
+            "backend": "core",
+            "tags": ["local", "vs", "global", "transform"]
+        },
+        {
+            "slug": "masks",
+            "path": "scene-graph/masks.js",
+            "title": "Masks",
+            "description": "Example: Masks.",
+            "backend": "core",
+            "tags": ["masks"]
+        },
+        {
+            "slug": "nested-transforms",
+            "path": "scene-graph/nested-transforms.js",
+            "title": "Nested Transforms",
+            "description": "Example: Nested Transforms.",
+            "backend": "core",
+            "tags": ["nested", "transforms"]
+        },
+        {
+            "slug": "parallax-starfield",
+            "path": "scene-graph/parallax-starfield.js",
+            "title": "Parallax Starfield",
+            "description": "Example: Parallax Starfield.",
+            "backend": "core",
+            "tags": ["parallax", "starfield"]
+        },
+        {
+            "slug": "pivot-and-anchor",
+            "path": "scene-graph/pivot-and-anchor.js",
+            "title": "Pivot And Anchor",
+            "description": "Example: Pivot And Anchor.",
+            "backend": "core",
+            "tags": ["pivot", "and", "anchor"]
+        },
+        {
+            "slug": "z-ordering",
+            "path": "scene-graph/z-ordering.js",
+            "title": "Z Ordering",
+            "description": "Example: Z Ordering.",
+            "backend": "core",
+            "tags": ["z", "ordering"]
+        }
+    ],
+    "showcase": [
+        {
+            "slug": "audio-reactive-particles",
+            "path": "showcase/audio-reactive-particles.js",
+            "title": "Audio Reactive Particles",
+            "description": "Example: Audio Reactive Particles.",
+            "backend": "core",
+            "tags": ["audio", "reactive", "particles"]
+        },
+        {
+            "slug": "audio-visualisation",
+            "path": "showcase/audio-visualisation.js",
+            "title": "Audio Visualisation",
+            "description": "Example: Audio Visualisation.",
+            "backend": "core",
+            "tags": ["audio", "visualisation"]
+        },
+        {
+            "slug": "boss-intro-cinematic",
+            "path": "showcase/boss-intro-cinematic.js",
+            "title": "Boss Intro Cinematic",
+            "description": "Example: Boss Intro Cinematic.",
+            "backend": "core",
+            "tags": ["boss", "intro", "cinematic"]
+        },
+        {
+            "slug": "damage-flash",
+            "path": "showcase/damage-flash.js",
+            "title": "Damage Flash",
+            "description": "Example: Damage Flash.",
+            "backend": "core",
+            "tags": ["damage", "flash"]
+        },
+        {
+            "slug": "dialog-system",
+            "path": "showcase/dialog-system.js",
+            "title": "Dialog System",
+            "description": "Example: Dialog System.",
+            "backend": "core",
+            "tags": ["dialog", "system"]
+        },
+        {
+            "slug": "gamepad-spaceship",
+            "path": "showcase/gamepad-spaceship.js",
+            "title": "Gamepad Spaceship",
+            "description": "Example: Gamepad Spaceship.",
+            "backend": "core",
+            "tags": ["gamepad", "spaceship"]
+        },
+        {
+            "slug": "loading-progress-with-shader",
+            "path": "showcase/loading-progress-with-shader.js",
+            "title": "Loading Progress With Shader",
+            "description": "Example: Loading Progress With Shader.",
+            "backend": "core",
+            "tags": ["loading", "progress", "with", "shader"]
+        },
+        {
+            "slug": "low-band-camera-shake",
+            "path": "showcase/low-band-camera-shake.js",
+            "title": "Low Band Camera Shake",
+            "description": "Example: Low Band Camera Shake.",
+            "backend": "core",
+            "tags": ["low", "band", "camera", "shake"]
+        },
+        {
+            "slug": "minimap-with-mask",
+            "path": "showcase/minimap-with-mask.js",
+            "title": "Minimap With Mask",
+            "description": "Example: Minimap With Mask.",
+            "backend": "core",
+            "tags": ["minimap", "with", "mask"]
+        },
+        {
+            "slug": "mouse-parallax",
+            "path": "showcase/mouse-parallax.js",
+            "title": "Mouse Parallax",
+            "description": "Example: Mouse Parallax.",
+            "backend": "core",
+            "tags": ["mouse", "parallax"]
+        },
+        {
+            "slug": "pause-blur",
+            "path": "showcase/pause-blur.js",
+            "title": "Pause Blur",
+            "description": "Example: Pause Blur.",
+            "backend": "core",
+            "tags": ["pause", "blur"]
+        },
+        {
+            "slug": "rectangles-collision",
+            "path": "showcase/rectangles-collision.js",
+            "title": "Rectangles Collision",
+            "description": "Example: Rectangles Collision.",
+            "backend": "core",
+            "tags": ["rectangles", "collision"]
+        },
+        {
+            "slug": "screen-shake-on-explosion",
+            "path": "showcase/screen-shake-on-explosion.js",
+            "title": "Screen Shake On Explosion",
+            "description": "Example: Screen Shake On Explosion.",
+            "backend": "core",
+            "tags": ["screen", "shake", "on", "explosion"]
+        },
+        {
+            "slug": "typewriter-text",
+            "path": "showcase/typewriter-text.js",
+            "title": "Typewriter Text",
+            "description": "Example: Typewriter Text.",
+            "backend": "core",
+            "tags": ["typewriter", "text"]
+        },
+        {
+            "slug": "vinyl-record",
+            "path": "showcase/vinyl-record.js",
+            "title": "Vinyl Record",
+            "description": "Example: Vinyl Record.",
+            "backend": "core",
+            "tags": ["vinyl", "record"]
+        }
+    ],
+    "spatial-audio": [
+        {
+            "slug": "listener-and-source",
+            "path": "spatial-audio/listener-and-source.js",
+            "title": "Listener And Source",
+            "description": "Example: Listener And Source.",
+            "backend": "core",
+            "tags": ["listener", "and", "source"]
+        },
+        {
+            "slug": "moving-source",
+            "path": "spatial-audio/moving-source.js",
+            "title": "Moving Source",
+            "description": "Example: Moving Source.",
+            "backend": "core",
+            "tags": ["moving", "source"]
+        }
+    ],
+    "sprites-textures": [
+        {
+            "slug": "blendmodes",
+            "path": "sprites-textures/blendmodes.js",
+            "title": "Blendmodes",
+            "description": "Example: Blendmodes.",
+            "backend": "core",
+            "tags": ["blendmodes"]
+        },
+        {
+            "slug": "sprite-basics",
+            "path": "sprites-textures/sprite-basics.js",
+            "title": "Sprite Basics",
+            "description": "Example: Sprite Basics.",
+            "backend": "core",
+            "tags": ["sprite", "basics"]
+        },
+        {
+            "slug": "spritesheet-frames",
+            "path": "sprites-textures/spritesheet-frames.js",
+            "title": "Spritesheet Frames",
+            "description": "Example: Spritesheet Frames.",
+            "backend": "core",
+            "tags": ["spritesheet", "frames"]
+        },
+        {
+            "slug": "svg-drawable",
+            "path": "sprites-textures/svg-drawable.js",
+            "title": "Svg Drawable",
+            "description": "Example: Svg Drawable.",
+            "backend": "core",
+            "tags": ["svg", "drawable"]
+        },
+        {
+            "slug": "texture-loader",
+            "path": "sprites-textures/texture-loader.js",
+            "title": "Texture Loader",
+            "description": "Example: Texture Loader.",
+            "backend": "core",
+            "tags": ["texture", "loader"]
+        },
+        {
+            "slug": "video-drawable",
+            "path": "sprites-textures/video-drawable.js",
+            "title": "Video Drawable",
+            "description": "Example: Video Drawable.",
+            "backend": "core",
+            "tags": ["video", "drawable"]
+        }
+    ],
+    "text-fonts": [
+        {
+            "slug": "basic-text",
+            "path": "text-fonts/basic-text.js",
+            "title": "Basic Text",
+            "description": "Example: Basic Text.",
+            "backend": "core",
+            "tags": ["basic", "text"]
+        },
+        {
+            "slug": "multiline-and-wrap",
+            "path": "text-fonts/multiline-and-wrap.js",
+            "title": "Multiline And Wrap",
+            "description": "Example: Multiline And Wrap.",
+            "backend": "core",
+            "tags": ["multiline", "and", "wrap"]
+        },
+        {
+            "slug": "stroke-and-shadow",
+            "path": "text-fonts/stroke-and-shadow.js",
+            "title": "Stroke And Shadow",
+            "description": "Example: Stroke And Shadow.",
+            "backend": "core",
+            "tags": ["stroke", "and", "shadow"]
+        },
+        {
+            "slug": "text-glitch",
+            "path": "text-fonts/text-glitch.js",
+            "title": "Text Glitch",
+            "description": "Example: Text Glitch.",
+            "backend": "core",
+            "tags": ["text", "glitch"]
+        },
+        {
+            "slug": "web-fonts",
+            "path": "text-fonts/web-fonts.js",
+            "title": "Web Fonts",
+            "description": "Example: Web Fonts.",
+            "backend": "core",
+            "tags": ["web", "fonts"]
+        }
+    ],
+    "tweens-animation": [
+        {
+            "slug": "easing-curves",
+            "path": "tweens-animation/easing-curves.js",
+            "title": "Easing Curves",
+            "description": "Example: Easing Curves.",
+            "backend": "core",
+            "tags": ["easing", "curves"]
+        },
+        {
+            "slug": "frame-animation",
+            "path": "tweens-animation/frame-animation.js",
+            "title": "Frame Animation",
+            "description": "Example: Frame Animation.",
+            "backend": "core",
+            "tags": ["frame", "animation"]
+        },
+        {
+            "slug": "interrupt-and-replace",
+            "path": "tweens-animation/interrupt-and-replace.js",
+            "title": "Interrupt And Replace",
+            "description": "Example: Interrupt And Replace.",
+            "backend": "core",
+            "tags": ["interrupt", "and", "replace"]
+        },
+        {
+            "slug": "tween-basics",
+            "path": "tweens-animation/tween-basics.js",
+            "title": "Tween Basics",
+            "description": "Example: Tween Basics.",
+            "backend": "core",
+            "tags": ["tween", "basics"]
+        },
+        {
+            "slug": "tween-chains",
+            "path": "tweens-animation/tween-chains.js",
+            "title": "Tween Chains",
+            "description": "Example: Tween Chains.",
+            "backend": "core",
+            "tags": ["tween", "chains"]
+        },
+        {
+            "slug": "tween-from-array",
+            "path": "tweens-animation/tween-from-array.js",
+            "title": "Tween From Array",
+            "description": "Example: Tween From Array.",
+            "backend": "core",
+            "tags": ["tween", "from", "array"]
+        },
+        {
+            "slug": "tween-with-yoyo",
+            "path": "tweens-animation/tween-with-yoyo.js",
+            "title": "Tween With Yoyo",
+            "description": "Example: Tween With Yoyo.",
+            "backend": "core",
+            "tags": ["tween", "with", "yoyo"]
+        }
+    ]
 }

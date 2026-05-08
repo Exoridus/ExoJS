@@ -1,9 +1,9 @@
 import { Color } from '@/core/Color';
-import { Container } from '@/rendering/Container';
-import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '@/math/utils';
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
 import type { MeshGeometryData } from '@/math/geometry';
+import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildStar } from '@/math/geometry';
+import { bezierCurveTo, clamp, quadraticCurveTo, tau } from '@/math/utils';
 import { Vector } from '@/math/Vector';
+import { Container } from '@/rendering/Container';
 import { Mesh } from '@/rendering/mesh/Mesh';
 import type { RenderNode } from '@/rendering/RenderNode';
 
@@ -21,311 +21,307 @@ import type { RenderNode } from '@/rendering/RenderNode';
  * tint, and mask support from {@link Container}.
  */
 export class Graphics extends Container {
+  private _lineWidth = 0;
+  private _lineColor: Color = new Color();
+  private _fillColor: Color = new Color();
+  private _currentPoint: Vector = new Vector(0, 0);
 
-    private _lineWidth = 0;
-    private _lineColor: Color = new Color();
-    private _fillColor: Color = new Color();
-    private _currentPoint: Vector = new Vector(0, 0);
+  public get lineWidth(): number {
+    return this._lineWidth;
+  }
 
-    public get lineWidth(): number {
-        return this._lineWidth;
+  public set lineWidth(lineWidth: number) {
+    this._lineWidth = lineWidth;
+  }
+
+  public get lineColor(): Color {
+    return this._lineColor;
+  }
+
+  public set lineColor(lineColor: Color) {
+    this._lineColor.copy(lineColor);
+  }
+
+  public get fillColor(): Color {
+    return this._fillColor;
+  }
+
+  public set fillColor(fillColor: Color) {
+    this._fillColor.copy(fillColor);
+  }
+
+  public get currentPoint(): Vector {
+    return this._currentPoint;
+  }
+
+  public override getChildAt(index: number): Mesh {
+    return super.getChildAt(index) as Mesh;
+  }
+
+  public override addChild(child: RenderNode): this {
+    if (!(child instanceof Mesh)) {
+      throw new Error('Graphics can only contain Mesh children.');
     }
 
-    public set lineWidth(lineWidth: number) {
-        this._lineWidth = lineWidth;
+    return super.addChild(child);
+  }
+
+  public override addChildAt(child: RenderNode, index: number): this {
+    if (!(child instanceof Mesh)) {
+      throw new Error('Graphics can only contain Mesh children.');
     }
 
-    public get lineColor(): Color {
-        return this._lineColor;
+    return super.addChildAt(child, index);
+  }
+
+  /** Move the current pen position to (`x`, `y`) without drawing anything. */
+  public moveTo(x: number, y: number): this {
+    this._currentPoint.set(x, y);
+
+    return this;
+  }
+
+  /** Draw a stroked line segment from the current point to (`toX`, `toY`) and advance the pen. */
+  public lineTo(toX: number, toY: number): this {
+    const { x: fromX, y: fromY } = this._currentPoint;
+
+    this.drawPath([fromX, fromY, toX, toY]);
+    this.moveTo(toX, toY);
+
+    return this;
+  }
+
+  /** Draw a quadratic Bézier curve from the current point to (`toX`, `toY`) via control point (`cpX`, `cpY`). */
+  public quadraticCurveTo(cpX: number, cpY: number, toX: number, toY: number): this {
+    const { x: fromX, y: fromY } = this._currentPoint;
+
+    this.drawPath(quadraticCurveTo(fromX, fromY, cpX, cpY, toX, toY));
+    this.moveTo(toX, toY);
+
+    return this;
+  }
+
+  /** Draw a cubic Bézier curve from the current point to (`toX`, `toY`) via two control points. */
+  public bezierCurveTo(cpX1: number, cpY1: number, cpX2: number, cpY2: number, toX: number, toY: number): this {
+    const { x: fromX, y: fromY } = this._currentPoint;
+
+    this.drawPath(bezierCurveTo(fromX, fromY, cpX1, cpY1, cpX2, cpY2, toX, toY));
+    this.moveTo(toX, toY);
+
+    return this;
+  }
+
+  /**
+   * Draw a circular arc tangent to the two lines defined by the current point→(x1,y1)
+   * and (x1,y1)→(x2,y2), with the given `radius`. Falls back to `lineTo(x1,y1)`
+   * when the geometry is degenerate.
+   */
+  public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
+    const { x: fromX, y: fromY } = this._currentPoint;
+    const r = Math.abs(radius);
+
+    if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
+      return this.lineTo(x1, y1);
     }
 
-    public set lineColor(lineColor: Color) {
-        this._lineColor.copy(lineColor);
+    const inX = x1 - fromX;
+    const inY = y1 - fromY;
+    const outX = x2 - x1;
+    const outY = y2 - y1;
+    const inLen = Math.hypot(inX, inY);
+    const outLen = Math.hypot(outX, outY);
+
+    if (inLen === 0 || outLen === 0) {
+      return this.lineTo(x1, y1);
     }
 
-    public get fillColor(): Color {
-        return this._fillColor;
+    const inDirX = inX / inLen;
+    const inDirY = inY / inLen;
+    const outDirX = outX / outLen;
+    const outDirY = outY / outLen;
+    const dot = clamp(inDirX * outDirX + inDirY * outDirY, -1, 1);
+    const angle = Math.acos(dot);
+
+    if (angle === 0 || angle === Math.PI) {
+      return this.lineTo(x1, y1);
     }
 
-    public set fillColor(fillColor: Color) {
-        this._fillColor.copy(fillColor);
+    const distanceToTangent = r / Math.tan(angle / 2);
+
+    if (!Number.isFinite(distanceToTangent) || distanceToTangent > inLen || distanceToTangent > outLen) {
+      return this.lineTo(x1, y1);
     }
 
-    public get currentPoint(): Vector {
-        return this._currentPoint;
+    const startX = x1 - inDirX * distanceToTangent;
+    const startY = y1 - inDirY * distanceToTangent;
+    const endX = x1 + outDirX * distanceToTangent;
+    const endY = y1 + outDirY * distanceToTangent;
+    const cross = inDirX * outDirY - inDirY * outDirX;
+    const leftTurn = cross > 0;
+    const normalX = leftTurn ? -inDirY : inDirY;
+    const normalY = leftTurn ? inDirX : -inDirX;
+    const centerX = startX + normalX * r;
+    const centerY = startY + normalY * r;
+    const startAngle = Math.atan2(startY - centerY, startX - centerX);
+    const endAngle = Math.atan2(endY - centerY, endX - centerX);
+
+    this.lineTo(startX, startY);
+
+    return this.drawArc(centerX, centerY, r, startAngle, endAngle, leftTurn);
+  }
+
+  /** Draw a stroked arc centered at (`x`, `y`) with the given `radius` from `startAngle` to `endAngle` (radians). */
+  public drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise = false): this {
+    const r = Math.abs(radius);
+
+    if (r === 0) {
+      return this;
     }
 
-    public override getChildAt(index: number): Mesh {
-        return super.getChildAt(index) as Mesh;
+    let sweep = endAngle - startAngle;
+
+    if (!anticlockwise && sweep < 0) {
+      sweep += tau;
+    } else if (anticlockwise && sweep > 0) {
+      sweep -= tau;
     }
 
-    public override addChild(child: RenderNode): this {
-        if (!(child instanceof Mesh)) {
-            throw new Error('Graphics can only contain Mesh children.');
-        }
-
-        return super.addChild(child);
+    if (sweep === 0) {
+      return this;
     }
 
-    public override addChildAt(child: RenderNode, index: number): this {
-        if (!(child instanceof Mesh)) {
-            throw new Error('Graphics can only contain Mesh children.');
-        }
+    const segments = Math.max(2, Math.ceil(Math.abs(sweep) / (Math.PI / 16)));
+    const path: number[] = [];
 
-        return super.addChildAt(child, index);
+    for (let i = 0; i <= segments; i++) {
+      const ratio = i / segments;
+      const angle = startAngle + sweep * ratio;
+
+      path.push(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
     }
 
-    /** Move the current pen position to (`x`, `y`) without drawing anything. */
-    public moveTo(x: number, y: number): this {
-        this._currentPoint.set(x, y);
+    this.drawPath(path);
+    this.moveTo(path[path.length - 2], path[path.length - 1]);
 
-        return this;
+    return this;
+  }
+
+  /** Draw a stroked line between two explicit points, independent of the current pen position. */
+  public drawLine(startX: number, startY: number, endX: number, endY: number): this {
+    const data = buildLine(startX, startY, endX, endY, this._lineWidth);
+
+    this.addChild(this._createMesh(data, this._lineColor));
+
+    return this;
+  }
+
+  /** Draw a stroked polyline from a flat `[x0,y0, x1,y1, ...]` coordinate array. */
+  public drawPath(path: number[]): this {
+    const data = buildPath(path, this._lineWidth);
+
+    this.addChild(this._createMesh(data, this._lineColor));
+
+    return this;
+  }
+
+  /** Fill a closed polygon defined by `[x0,y0, x1,y1, ...]` and optionally stroke its outline. */
+  public drawPolygon(path: number[]): this {
+    const data = buildPolygon(path);
+
+    this.addChild(this._createMesh(data, this._fillColor));
+
+    if (this._lineWidth > 0) {
+      this.drawPath(data.points);
     }
 
-    /** Draw a stroked line segment from the current point to (`toX`, `toY`) and advance the pen. */
-    public lineTo(toX: number, toY: number): this {
-        const { x: fromX, y: fromY } = this._currentPoint;
+    return this;
+  }
 
-        this.drawPath([fromX, fromY, toX, toY]);
-        this.moveTo(toX, toY);
+  /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. */
+  public drawCircle(centerX: number, centerY: number, radius: number): this {
+    const data = buildCircle(centerX, centerY, radius);
 
-        return this;
+    this.addChild(this._createMesh(data, this._fillColor));
+
+    if (this._lineWidth > 0) {
+      this.drawPath(data.points);
     }
 
-    /** Draw a quadratic Bézier curve from the current point to (`toX`, `toY`) via control point (`cpX`, `cpY`). */
-    public quadraticCurveTo(cpX: number, cpY: number, toX: number, toY: number): this {
-        const { x: fromX, y: fromY } = this._currentPoint;
+    return this;
+  }
 
-        this.drawPath(quadraticCurveTo(fromX, fromY, cpX, cpY, toX, toY));
-        this.moveTo(toX, toY);
+  /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. */
+  public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
+    const data = buildEllipse(centerX, centerY, radiusX, radiusY);
 
-        return this;
+    this.addChild(this._createMesh(data, this._fillColor));
+
+    if (this._lineWidth > 0) {
+      this.drawPath(data.points);
     }
 
-    /** Draw a cubic Bézier curve from the current point to (`toX`, `toY`) via two control points. */
-    public bezierCurveTo(cpX1: number, cpY1: number, cpX2: number, cpY2: number, toX: number, toY: number): this {
-        const { x: fromX, y: fromY } = this._currentPoint;
+    return this;
+  }
 
-        this.drawPath(bezierCurveTo(fromX, fromY, cpX1, cpY1, cpX2, cpY2, toX, toY));
-        this.moveTo(toX, toY);
+  /** Fill a rectangle and optionally stroke its outline if `lineWidth > 0`. */
+  public drawRectangle(x: number, y: number, width: number, height: number): this {
+    const data = buildRectangle(x, y, width, height);
 
-        return this;
+    this.addChild(this._createMesh(data, this._fillColor));
+
+    if (this._lineWidth > 0) {
+      this.drawPath(data.points);
     }
 
-    /**
-     * Draw a circular arc tangent to the two lines defined by the current point→(x1,y1)
-     * and (x1,y1)→(x2,y2), with the given `radius`. Falls back to `lineTo(x1,y1)`
-     * when the geometry is degenerate.
-     */
-    public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
-        const { x: fromX, y: fromY } = this._currentPoint;
-        const r = Math.abs(radius);
+    return this;
+  }
 
-        if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
-            return this.lineTo(x1, y1);
-        }
+  /**
+   * Fill a regular star polygon and optionally stroke its outline.
+   * `innerRadius` defaults to half of `radius`.
+   */
+  public drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
+    const data = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
 
-        const inX = x1 - fromX;
-        const inY = y1 - fromY;
-        const outX = x2 - x1;
-        const outY = y2 - y1;
-        const inLen = Math.hypot(inX, inY);
-        const outLen = Math.hypot(outX, outY);
+    this.addChild(this._createMesh(data, this._fillColor));
 
-        if (inLen === 0 || outLen === 0) {
-            return this.lineTo(x1, y1);
-        }
-
-        const inDirX = inX / inLen;
-        const inDirY = inY / inLen;
-        const outDirX = outX / outLen;
-        const outDirY = outY / outLen;
-        const dot = clamp((inDirX * outDirX) + (inDirY * outDirY), -1, 1);
-        const angle = Math.acos(dot);
-
-        if (angle === 0 || angle === Math.PI) {
-            return this.lineTo(x1, y1);
-        }
-
-        const distanceToTangent = r / Math.tan(angle / 2);
-
-        if (!Number.isFinite(distanceToTangent) || distanceToTangent > inLen || distanceToTangent > outLen) {
-            return this.lineTo(x1, y1);
-        }
-
-        const startX = x1 - (inDirX * distanceToTangent);
-        const startY = y1 - (inDirY * distanceToTangent);
-        const endX = x1 + (outDirX * distanceToTangent);
-        const endY = y1 + (outDirY * distanceToTangent);
-        const cross = (inDirX * outDirY) - (inDirY * outDirX);
-        const leftTurn = cross > 0;
-        const normalX = leftTurn ? -inDirY : inDirY;
-        const normalY = leftTurn ? inDirX : -inDirX;
-        const centerX = startX + (normalX * r);
-        const centerY = startY + (normalY * r);
-        const startAngle = Math.atan2(startY - centerY, startX - centerX);
-        const endAngle = Math.atan2(endY - centerY, endX - centerX);
-
-        this.lineTo(startX, startY);
-
-        return this.drawArc(centerX, centerY, r, startAngle, endAngle, leftTurn);
+    if (this._lineWidth > 0) {
+      this.drawPath(data.points);
     }
 
-    /** Draw a stroked arc centered at (`x`, `y`) with the given `radius` from `startAngle` to `endAngle` (radians). */
-    public drawArc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise = false): this {
-        const r = Math.abs(radius);
+    return this;
+  }
 
-        if (r === 0) {
-            return this;
-        }
+  /** Remove all child meshes and reset pen state (position, colors, line width). */
+  public clear(): this {
+    this.removeChildren();
 
-        let sweep = endAngle - startAngle;
+    this._lineWidth = 0;
+    this._lineColor.copy(Color.black);
+    this._fillColor.copy(Color.black);
+    this._currentPoint.set(0, 0);
 
-        if (!anticlockwise && sweep < 0) {
-            sweep += tau;
-        } else if (anticlockwise && sweep > 0) {
-            sweep -= tau;
-        }
+    return this;
+  }
 
-        if (sweep === 0) {
-            return this;
-        }
+  public override destroy(): void {
+    super.destroy();
 
-        const segments = Math.max(2, Math.ceil(Math.abs(sweep) / (Math.PI / 16)));
-        const path: Array<number> = [];
+    this.clear();
 
-        for (let i = 0; i <= segments; i++) {
-            const ratio = i / segments;
-            const angle = startAngle + (sweep * ratio);
+    this._lineColor.destroy();
+    this._fillColor.destroy();
+    this._currentPoint.destroy();
+  }
 
-            path.push(
-                x + (Math.cos(angle) * r),
-                y + (Math.sin(angle) * r)
-            );
-        }
+  private _createMesh(data: MeshGeometryData, color: Color): Mesh {
+    const mesh = new Mesh({
+      vertices: data.vertices,
+      indices: data.indices,
+    });
 
-        this.drawPath(path);
-        this.moveTo(path[path.length - 2], path[path.length - 1]);
+    mesh.tint = color;
 
-        return this;
-    }
-
-    /** Draw a stroked line between two explicit points, independent of the current pen position. */
-    public drawLine(startX: number, startY: number, endX: number, endY: number): this {
-        const data = buildLine(startX, startY, endX, endY, this._lineWidth);
-
-        this.addChild(this._createMesh(data, this._lineColor));
-
-        return this;
-    }
-
-    /** Draw a stroked polyline from a flat `[x0,y0, x1,y1, ...]` coordinate array. */
-    public drawPath(path: Array<number>): this {
-        const data = buildPath(path, this._lineWidth);
-
-        this.addChild(this._createMesh(data, this._lineColor));
-
-        return this;
-    }
-
-    /** Fill a closed polygon defined by `[x0,y0, x1,y1, ...]` and optionally stroke its outline. */
-    public drawPolygon(path: Array<number>): this {
-        const data = buildPolygon(path);
-
-        this.addChild(this._createMesh(data, this._fillColor));
-
-        if (this._lineWidth > 0) {
-            this.drawPath(data.points);
-        }
-
-        return this;
-    }
-
-    /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. */
-    public drawCircle(centerX: number, centerY: number, radius: number): this {
-        const data = buildCircle(centerX, centerY, radius);
-
-        this.addChild(this._createMesh(data, this._fillColor));
-
-        if (this._lineWidth > 0) {
-            this.drawPath(data.points);
-        }
-
-        return this;
-    }
-
-    /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. */
-    public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
-        const data = buildEllipse(centerX, centerY, radiusX, radiusY);
-
-        this.addChild(this._createMesh(data, this._fillColor));
-
-        if (this._lineWidth > 0) {
-            this.drawPath(data.points);
-        }
-
-        return this;
-    }
-
-    /** Fill a rectangle and optionally stroke its outline if `lineWidth > 0`. */
-    public drawRectangle(x: number, y: number, width: number, height: number): this {
-        const data = buildRectangle(x, y, width, height);
-
-        this.addChild(this._createMesh(data, this._fillColor));
-
-        if (this._lineWidth > 0) {
-            this.drawPath(data.points);
-        }
-
-        return this;
-    }
-
-    /**
-     * Fill a regular star polygon and optionally stroke its outline.
-     * `innerRadius` defaults to half of `radius`.
-     */
-    public drawStar(centerX: number, centerY: number, points: number, radius: number, innerRadius: number = radius / 2, rotation = 0): this {
-        const data = buildStar(centerX, centerY, points, radius, innerRadius, rotation);
-
-        this.addChild(this._createMesh(data, this._fillColor));
-
-        if (this._lineWidth > 0) {
-            this.drawPath(data.points);
-        }
-
-        return this;
-    }
-
-    /** Remove all child meshes and reset pen state (position, colors, line width). */
-    public clear(): this {
-        this.removeChildren();
-
-        this._lineWidth = 0;
-        this._lineColor.copy(Color.black);
-        this._fillColor.copy(Color.black);
-        this._currentPoint.set(0, 0);
-
-        return this;
-    }
-
-    public override destroy(): void {
-        super.destroy();
-
-        this.clear();
-
-        this._lineColor.destroy();
-        this._fillColor.destroy();
-        this._currentPoint.destroy();
-    }
-
-    private _createMesh(data: MeshGeometryData, color: Color): Mesh {
-        const mesh = new Mesh({
-            vertices: data.vertices,
-            indices: data.indices,
-        });
-
-        mesh.tint = color;
-
-        return mesh;
-    }
+    return mesh;
+  }
 }

@@ -1,29 +1,29 @@
-import { Drawable } from '@/rendering/Drawable';
-import { Container } from '@/rendering/Container';
-import { SceneNode } from '@/core/SceneNode';
 import type { Color } from '@/core/Color';
+import { SceneNode } from '@/core/SceneNode';
+import { Container } from '@/rendering/Container';
+import { Drawable } from '@/rendering/Drawable';
 import type { RenderBackend } from '@/rendering/RenderBackend';
 
 class DummyDrawable extends Drawable {
-    public override render(_backend: RenderBackend): this {
-        return this;
-    }
+  public override render(_backend: RenderBackend): this {
+    return this;
+  }
 }
 
 describe('Drawable', () => {
-    test('is the renderable specialization on top of SceneNode, not Container', () => {
-        const drawable = new DummyDrawable();
+  test('is the renderable specialization on top of SceneNode, not Container', () => {
+    const drawable = new DummyDrawable();
 
-        expect(drawable).toBeInstanceOf(SceneNode);
-        expect(drawable).not.toBeInstanceOf(Container);
-    });
+    expect(drawable).toBeInstanceOf(SceneNode);
+    expect(drawable).not.toBeInstanceOf(Container);
+  });
 
-    test('setTint ignores undefined payloads', () => {
-        const drawable = new DummyDrawable();
-        const before = drawable.tint.clone();
+  test('setTint ignores undefined payloads', () => {
+    const drawable = new DummyDrawable();
+    const before = drawable.tint.clone();
 
-        drawable.setTint(undefined as unknown as Color);
+    drawable.setTint(undefined as unknown as Color);
 
-        expect(drawable.tint.equals(before)).toBe(true);
-    });
+    expect(drawable.tint.equals(before)).toBe(true);
+  });
 });

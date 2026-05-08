@@ -1,5 +1,5 @@
-import type { CacheRequest, CacheStrategy } from './CacheStrategy';
 import type { CacheStore } from './CacheStore';
+import type { CacheRequest, CacheStrategy } from './CacheStrategy';
 
 /**
  * {@link CacheStrategy} that checks every provided {@link CacheStore} before
@@ -17,39 +17,38 @@ import type { CacheStore } from './CacheStore';
  * {@link AssetFactory.create} again.
  */
 export class CacheFirstStrategy implements CacheStrategy {
+  public async resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown> {
+    const { storageName, key, url, requestOptions, factory, options } = request;
 
-    public async resolve(request: CacheRequest, stores: ReadonlyArray<CacheStore>): Promise<unknown> {
-        const { storageName, key, url, requestOptions, factory, options } = request;
+    for (const store of stores) {
+      const cached = await store.load(storageName, key);
 
-        for (const store of stores) {
-            const cached = await store.load(storageName, key);
-
-            if (cached !== null && cached !== undefined) {
-                try {
-                    return await factory.create(cached, options);
-                } catch {
-                    await store.delete(storageName, key);
-                }
-            }
+      if (cached !== null && cached !== undefined) {
+        try {
+          return await factory.create(cached, options);
+        } catch {
+          await store.delete(storageName, key);
         }
-
-        const response = await fetch(url, requestOptions);
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch "${url}" (${response.status} ${response.statusText}).`);
-        }
-
-        const source = await factory.process(response);
-        const resource = await factory.create(source, options);
-
-        for (const store of stores) {
-            try {
-                await store.save(storageName, key, source);
-            } catch {
-                // Quota exceeded or non-cloneable value — continue without caching.
-            }
-        }
-
-        return resource;
+      }
     }
+
+    const response = await fetch(url, requestOptions);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch "${url}" (${response.status} ${response.statusText}).`);
+    }
+
+    const source = await factory.process(response);
+    const resource = await factory.create(source, options);
+
+    for (const store of stores) {
+      try {
+        await store.save(storageName, key, source);
+      } catch {
+        // Quota exceeded or non-cloneable value — continue without caching.
+      }
+    }
+
+    return resource;
+  }
 }

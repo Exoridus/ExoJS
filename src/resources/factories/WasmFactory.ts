@@ -9,22 +9,21 @@ import { AbstractAssetFactory } from '@/resources/AbstractAssetFactory';
  * import objects via `new WebAssembly.Instance(module, imports)`.
  */
 export class WasmFactory extends AbstractAssetFactory<WebAssembly.Module> {
+  public readonly storageName = 'wasm';
 
-    public readonly storageName = 'wasm';
+  /**
+   * Reads the full response body as an {@link ArrayBuffer} containing the
+   * raw Wasm binary.
+   */
+  public async process(response: Response): Promise<ArrayBuffer> {
+    return response.arrayBuffer();
+  }
 
-    /**
-     * Reads the full response body as an {@link ArrayBuffer} containing the
-     * raw Wasm binary.
-     */
-    public async process(response: Response): Promise<ArrayBuffer> {
-        return response.arrayBuffer();
-    }
-
-    /**
-     * Compiles the Wasm binary asynchronously via {@link WebAssembly.compile}
-     * and returns the resulting module.
-     */
-    public async create(source: ArrayBuffer): Promise<WebAssembly.Module> {
-        return WebAssembly.compile(source);
-    }
+  /**
+   * Compiles the Wasm binary asynchronously via {@link WebAssembly.compile}
+   * and returns the resulting module.
+   */
+  public async create(source: ArrayBuffer): Promise<WebAssembly.Module> {
+    return WebAssembly.compile(source);
+  }
 }

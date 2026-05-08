@@ -1,14 +1,14 @@
 import type { DynamicGlyphAtlas } from './DynamicGlyphAtlas';
-import type { GlyphInfo, GlyphPlacement } from './types';
 import type { TextStyle } from './TextStyle';
+import type { GlyphInfo, GlyphPlacement } from './types';
 
 interface LinePlacement {
-    placements: Array<{
-        info: GlyphInfo;
-        x: number;
-        y: number;
-    }>;
-    width: number;
+  placements: Array<{
+    info: GlyphInfo;
+    x: number;
+    y: number;
+  }>;
+  width: number;
 }
 
 /**
@@ -20,70 +20,66 @@ interface LinePlacement {
  *
  * Returns an empty array for empty text.
  */
-export function layoutText(
-    text: string,
-    style: TextStyle,
-    atlas: DynamicGlyphAtlas,
-): ReadonlyArray<GlyphPlacement> {
-    if (text.length === 0) {
-        return [];
+export function layoutText(text: string, style: TextStyle, atlas: DynamicGlyphAtlas): readonly GlyphPlacement[] {
+  if (text.length === 0) {
+    return [];
+  }
+
+  const { fontSize, fontFamily, fontWeight, fontStyle, lineHeight, align } = style;
+  const computedLineHeight = fontSize * lineHeight;
+  const lines = text.split('\n');
+
+  // Pass 1: gather glyph info per line, track line widths
+  const linePlacements: LinePlacement[] = [];
+  let maxLineWidth = 0;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    const y = lineIndex * computedLineHeight;
+    let cursorX = 0;
+    const placements: LinePlacement['placements'] = [];
+
+    for (const char of line) {
+      const info = atlas.getGlyph(char, fontFamily, fontSize, fontWeight, fontStyle);
+
+      placements.push({ info, x: cursorX, y });
+      cursorX += info.advance;
     }
 
-    const { fontSize, fontFamily, fontWeight, fontStyle, lineHeight, align } = style;
-    const computedLineHeight = fontSize * lineHeight;
-    const lines = text.split('\n');
+    const lineWidth = cursorX;
 
-    // Pass 1: gather glyph info per line, track line widths
-    const linePlacements: Array<LinePlacement> = [];
-    let maxLineWidth = 0;
-
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        const line = lines[lineIndex];
-        const y = lineIndex * computedLineHeight;
-        let cursorX = 0;
-        const placements: LinePlacement['placements'] = [];
-
-        for (const char of line) {
-            const info = atlas.getGlyph(char, fontFamily, fontSize, fontWeight, fontStyle);
-
-            placements.push({ info, x: cursorX, y });
-            cursorX += info.advance;
-        }
-
-        const lineWidth = cursorX;
-
-        if (lineWidth > maxLineWidth) {
-            maxLineWidth = lineWidth;
-        }
-
-        linePlacements.push({ placements, width: lineWidth });
+    if (lineWidth > maxLineWidth) {
+      maxLineWidth = lineWidth;
     }
 
-    // Pass 2: apply alignment and build final GlyphPlacement array
-    const result: Array<GlyphPlacement> = [];
+    linePlacements.push({ placements, width: lineWidth });
+  }
 
-    for (const line of linePlacements) {
-        let offsetX = 0;
+  // Pass 2: apply alignment and build final GlyphPlacement array
+  const result: GlyphPlacement[] = [];
 
-        if (align === 'right') {
-            offsetX = maxLineWidth - line.width;
-        } else if (align === 'center') {
-            offsetX = (maxLineWidth - line.width) / 2;
-        }
+  for (const line of linePlacements) {
+    let offsetX = 0;
 
-        for (const { info, x, y } of line.placements) {
-            result.push({
-                x: x + offsetX,
-                y,
-                width: info.width,
-                height: info.height,
-                uvLeft: info.uvLeft,
-                uvTop: info.uvTop,
-                uvRight: info.uvRight,
-                uvBottom: info.uvBottom,
-            });
-        }
+    if (align === 'right') {
+      offsetX = maxLineWidth - line.width;
+    } else if (align === 'center') {
+      offsetX = (maxLineWidth - line.width) / 2;
     }
 
-    return result;
+    for (const { info, x, y } of line.placements) {
+      result.push({
+        x: x + offsetX,
+        y,
+        width: info.width,
+        height: info.height,
+        uvLeft: info.uvLeft,
+        uvTop: info.uvTop,
+        uvRight: info.uvRight,
+        uvBottom: info.uvBottom,
+      });
+    }
+  }
+
+  return result;
 }

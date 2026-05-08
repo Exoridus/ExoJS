@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
@@ -14,7 +14,7 @@ updates:
           - minor
 
   - package-ecosystem: npm
-    directory: "/examples"
+    directory: '/examples'
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
@@ -28,7 +28,7 @@ updates:
           - minor
 
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
     labels:
