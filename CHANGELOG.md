@@ -4,6 +4,59 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-05-08
+
+Three small additive features that close the remaining examples-driven API gaps from
+the 0.8.0 audit, plus a long-overdue lint/format tooling consolidation and a 19-chapter
+examples reorganisation.
+
+### Added
+
+- **`Sound` spatial falloff configuration.** `DistanceModel` type (`'linear' | 'inverse'
+| 'exponential'`), plus optional `distanceModel`, `refDistance`, `maxDistance`, and
+  `rolloffFactor` fields on `SoundOptions`. The four are also exposed as live property
+  setters that lazy-forward to the attached `PannerNode`. New public `Sound.audioBuffer`
+  getter to share one decoded buffer across multiple `Sound` instances.
+- **`LutFilter`** — new colour-pipeline primitive that maps every pixel through a
+  Look-Up Table texture. Supports both 1D LUTs (`N×1`, indexed by red channel — palette
+  cycling, indexed-colour effects) and 3D LUTs (`N²×N` unwrapped cube with trilinear
+  slice interpolation — cinematic colour grading, tone mapping, film stock emulation,
+  accessibility filters). Backend selection is automatic. Static helpers
+  `LutFilter.identityLut1D(size)`, `LutFilter.identityLut3D(size)`,
+  `LutFilter.fromImage(image)` cover the standard DaVinci/OBS/Photoshop LUT-export
+  workflows.
+- **`CompressorFilter.reduction`** — public getter forwarding the live gain reduction
+  in dB from the underlying `DynamicsCompressorNode`. Use as a meter source for
+  visualisations or sidechain triggers.
+
+### Examples
+
+- Migrated `examples/public/examples/` to a 19-chapter pedagogical structure: getting
+  started, application & scenes, sprites & textures, tweens & animation, input, scene
+  graph, audio basics, spatial audio, filters, particles, text & fonts, geometry &
+  graphics, render targets, performance, audio FX, beat detection, debug layer, custom
+  renderers, showcase. Old chapter directories (`collision-detection`, `extras`,
+  `particle-system`, `rendering`, `webgpu`) removed.
+- New examples: `spatial-audio/falloff-curves.js`, `filters/palette-cycling.js`,
+  `showcase/color-grading.js`. The compressor demo gained a live gain-reduction meter.
+
+### Tooling
+
+- ESLint config consolidated into a single `eslint.config.ts` driven by ESLint 10 +
+  `typescript-eslint`'s type-aware checks plus `simple-import-sort`,
+  `unused-imports`, `unicorn`, and `security` plugins. `lint:strict` is the
+  release-gate variant, scoped to `src/**/*.ts` and run with `--max-warnings=0` (warnings
+  fail the build); `lint` is the broader development view across `src`, `test`, and
+  examples. Per-subsystem override blocks are documented as known deviations to tighten
+  over time.
+- Tightened to error: `eqeqeq`, `no-floating-promises`, `no-base-to-string`,
+  `only-throw-error`, `switch-exhaustiveness-check`, `no-non-null-assertion`,
+  `complexity` (cap 20). Added: `no-self-compare`, `no-unreachable-loop`,
+  `default-case-last`, `prefer-promise-reject-errors`, `no-promise-executor-return`,
+  `no-unmodified-loop-condition`, plus six TypeScript and six Unicorn correctness rules.
+- Prettier `printWidth: 160`, `.editorconfig` matched. Engine code reformatted to
+  2-space indent.
+
 ## [0.8.0] - 2026-05-07
 
 Wholesale rewrite of the particle subsystem around a data-oriented core
