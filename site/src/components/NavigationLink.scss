@@ -1,7 +1,7 @@
 .link {
     transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
     padding: 0.5rem 0.85rem 0.5rem 1.4rem;
-    min-height: 36px;
+    min-height: 38px;
     color: var(--fg-muted);
     text-decoration: none;
     position: relative;
@@ -62,4 +62,10 @@
     font-weight: 600;
     border: 1px solid color-mix(in oklab, var(--accent-line), transparent 25%);
     color: var(--fg-faint);
+}
+
+@media (max-width: 1119px) {
+    .link {
+        min-height: 44px;
+    }
 }

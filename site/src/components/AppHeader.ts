@@ -11,6 +11,7 @@ export class AppHeader extends LitElement {
 
     @property({ attribute: false }) public activeExample: Example | null = null;
     @property({ type: Boolean }) public sidebarOpen = true;
+    @property({ type: String }) public sidebarControls = '';
     @property({ attribute: false }) public versions: ReadonlyArray<VersionInfo> = [];
     @property({ attribute: false }) public selectedVersion: VersionInfo | null = null;
 
@@ -20,6 +21,7 @@ export class AppHeader extends LitElement {
                 class="menu-button"
                 aria-label=${this.sidebarOpen ? 'Close navigation' : 'Open navigation'}
                 aria-expanded=${String(this.sidebarOpen)}
+                aria-controls=${this.sidebarControls}
                 @click=${this._onToggleSidebar}
             >
                 <svg class="menu-icon" viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true">
@@ -31,6 +33,11 @@ export class AppHeader extends LitElement {
             <span class="title">${this.activeExample ? this.activeExample.title : 'Playground'}</span>
             <exo-version-pill .selectedVersion=${this.selectedVersion} .versions=${this.versions}></exo-version-pill>
         `;
+    }
+
+    public focusMenuButton(): void {
+        const button = this.renderRoot.querySelector('.menu-button');
+        if (button instanceof HTMLButtonElement) button.focus();
     }
 
     private _onToggleSidebar(): void {

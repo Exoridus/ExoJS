@@ -14,8 +14,8 @@
 
 .theme-toggle button {
     border: 0;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 4px;
     display: inline-grid;
     place-items: center;
@@ -33,4 +33,11 @@
 .theme-toggle button:focus-visible {
     outline: 2px solid var(--accent-line);
     outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+    .theme-toggle button {
+        width: 44px;
+        height: 44px;
+    }
 }

@@ -57,7 +57,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 30px;
+    min-height: 32px;
     padding: 0 0.65rem;
     border-radius: var(--r-2);
     border: 1px solid var(--line-soft);
@@ -94,5 +94,10 @@
 
     .dimensions {
         display: none;
+    }
+
+    .button {
+        min-height: 44px;
+        padding: 0 0.78rem;
     }
 }

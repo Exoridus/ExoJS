@@ -44,6 +44,7 @@ export class ExampleBrowser extends LitElement {
     private _popstateHandler = (): void => this._onPopState();
     private _desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
     private _breakpointChangeHandler = (event: MediaQueryListEvent): void => this._onBreakpointChange(event);
+    private _documentKeydownHandler = (event: KeyboardEvent): void => this._onDocumentKeyDown(event);
     private _selectExampleHandler = (event: Event): void => this._onSelectExample(event as CustomEvent<SelectExampleEvent>);
     private _selectVersionHandler = (event: Event): void => this._onSelectVersion(event as CustomEvent<SelectVersionEvent>);
 
@@ -57,6 +58,7 @@ export class ExampleBrowser extends LitElement {
     // by the next _resolveActiveExample run and then cleared. Initial loads
     // and back/forward navigation do not set this — they fall back silently.
     private _missingExampleToastEnabled = false;
+    private _bodyOverflowBeforeDrawerOpen: string | null = null;
 
     public override connectedCallback(): void {
         super.connectedCallback();
@@ -76,6 +78,7 @@ export class ExampleBrowser extends LitElement {
         this._unsubscribeRuntime = onRuntimeDetected(() => this.requestUpdate());
 
         window.addEventListener('popstate', this._popstateHandler);
+        document.addEventListener('keydown', this._documentKeydownHandler);
         this.addEventListener('select-example', this._selectExampleHandler);
         this.addEventListener('select-version', this._selectVersionHandler);
 
@@ -93,18 +96,20 @@ export class ExampleBrowser extends LitElement {
         this._unsubscribeVersions?.();
         this._unsubscribeRuntime?.();
         window.removeEventListener('popstate', this._popstateHandler);
+        document.removeEventListener('keydown', this._documentKeydownHandler);
         this.removeEventListener('select-example', this._selectExampleHandler);
         this.removeEventListener('select-version', this._selectVersionHandler);
         this._desktopMediaQuery.removeEventListener('change', this._breakpointChangeHandler);
+        this._unlockBodyScroll();
     }
 
     private _onBreakpointChange(event: MediaQueryListEvent): void {
         this.setAttribute('data-resizing', '');
 
         if (event.matches) {
-            this._sidebarOpen = true;
+            this._setSidebarOpen(true, { restoreFocus: false });
         } else {
-            this._sidebarOpen = false;
+            this._setSidebarOpen(false, { restoreFocus: false });
         }
 
         requestAnimationFrame(() => {
@@ -292,7 +297,7 @@ export class ExampleBrowser extends LitElement {
         });
 
         if (!this._desktopMediaQuery.matches) {
-            this._sidebarOpen = false;
+            this._setSidebarOpen(false, { restoreFocus: false });
         }
     }
 
@@ -317,12 +322,142 @@ export class ExampleBrowser extends LitElement {
     }
 
     private _onToggleSidebar(): void {
-        this._sidebarOpen = !this._sidebarOpen;
+        this._setSidebarOpen(!this._sidebarOpen, { restoreFocus: this._sidebarOpen });
+    }
+
+    private _onDocumentKeyDown(event: KeyboardEvent): void {
+        if (!this._sidebarOpen || this._desktopMediaQuery.matches) return;
+        const sidebar = this._getSidebarElement();
+        if (!sidebar) return;
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this._setSidebarOpen(false, { restoreFocus: true });
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusables = this._getFocusableInSidebar();
+        if (focusables.length === 0) {
+            event.preventDefault();
+            return;
+        }
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+
+        if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+            return;
+        }
+
+        if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    private _setSidebarOpen(nextOpen: boolean, options: { restoreFocus: boolean }): void {
+        if (this._sidebarOpen === nextOpen) return;
+        this._sidebarOpen = nextOpen;
+        this._syncDrawerAccessibility(nextOpen, options);
+    }
+
+    private _syncDrawerAccessibility(open: boolean, options: { restoreFocus: boolean }): void {
+        const sidebar = this._getSidebarElement();
+        const content = this._getMainColumnElement();
+        if (!sidebar || !content) return;
+
+        const isMobile = !this._desktopMediaQuery.matches;
+
+        if (!isMobile) {
+            this._unlockBodyScroll();
+            content.removeAttribute('inert');
+            sidebar.removeAttribute('role');
+            sidebar.removeAttribute('aria-modal');
+            sidebar.removeAttribute('aria-label');
+            return;
+        }
+
+        if (open) {
+            this._lockBodyScroll();
+            content.setAttribute('inert', '');
+            sidebar.setAttribute('role', 'dialog');
+            sidebar.setAttribute('aria-modal', 'true');
+            sidebar.setAttribute('aria-label', 'Examples navigation');
+            requestAnimationFrame(() => {
+                const focusables = this._getFocusableInSidebar();
+                focusables[0]?.focus();
+            });
+            return;
+        }
+
+        this._unlockBodyScroll();
+        content.removeAttribute('inert');
+        sidebar.removeAttribute('role');
+        sidebar.removeAttribute('aria-modal');
+        sidebar.removeAttribute('aria-label');
+
+        if (options.restoreFocus) {
+            requestAnimationFrame(() => this._focusMenuButton());
+        }
+    }
+
+    private _lockBodyScroll(): void {
+        if (this._bodyOverflowBeforeDrawerOpen === null) {
+            this._bodyOverflowBeforeDrawerOpen = document.body.style.overflow;
+        }
+        document.body.style.overflow = 'hidden';
+    }
+
+    private _unlockBodyScroll(): void {
+        if (this._bodyOverflowBeforeDrawerOpen !== null) {
+            document.body.style.overflow = this._bodyOverflowBeforeDrawerOpen;
+            this._bodyOverflowBeforeDrawerOpen = null;
+        }
+    }
+
+    private _focusMenuButton(): void {
+        const header = this.renderRoot.querySelector('exo-app-header');
+        if (header instanceof HTMLElement && 'focusMenuButton' in header) {
+            (header as { focusMenuButton: () => void }).focusMenuButton();
+        }
+    }
+
+    private _getSidebarElement(): HTMLElement | null {
+        const sidebar = this.renderRoot.querySelector('.side-content');
+        return sidebar instanceof HTMLElement ? sidebar : null;
+    }
+
+    private _getMainColumnElement(): HTMLElement | null {
+        const column = this.renderRoot.querySelector('.right-column');
+        return column instanceof HTMLElement ? column : null;
+    }
+
+    private _getFocusableInSidebar(): Array<HTMLElement> {
+        const sidebar = this._getSidebarElement();
+        if (!sidebar) return [];
+
+        const selector = [
+            'a[href]',
+            'button:not([disabled])',
+            'input:not([disabled])',
+            'select:not([disabled])',
+            'textarea:not([disabled])',
+            '[tabindex]:not([tabindex="-1"])',
+        ].join(',');
+
+        return Array.from(sidebar.querySelectorAll(selector)).filter(
+            (node): node is HTMLElement => node instanceof HTMLElement && !node.hidden
+        );
     }
 
     public render(): ReturnType<LitElement['render']> {
         return html`
-            <aside class="side-content" ?data-open=${this._sidebarOpen}>
+            <aside id="playground-navigation" class="side-content" ?data-open=${this._sidebarOpen} aria-hidden=${String(!this._sidebarOpen)}>
                 <exo-navigation
                     .examples=${this._examples}
                     .activeExample=${this._activeExample}
@@ -337,6 +472,7 @@ export class ExampleBrowser extends LitElement {
                     role="banner"
                     .activeExample=${this._activeExample}
                     .sidebarOpen=${this._sidebarOpen}
+                    sidebarControls="playground-navigation"
                     .versions=${this._versions}
                     .selectedVersion=${this._selectedVersion}
                     @toggle-sidebar=${this._onToggleSidebar}

@@ -12,9 +12,172 @@ const hasSidebar = Astro.slots.has('sidebar');
 
 <AppShell title={title} description={description}>
     <section class:list={['docs-shell', !hasSidebar && 'docs-shell--full']}>
-        <aside class="docs-shell__sidebar"><slot name="sidebar" /></aside>
-        <article class="docs-shell__content"><slot /></article>
+        {hasSidebar && (
+            <button
+                class="docs-shell__sidebar-toggle"
+                type="button"
+                data-docs-toggle
+                aria-controls="docs-sidebar-panel"
+                aria-expanded="false"
+            >
+                Browse chapters
+            </button>
+        )}
+        <aside
+            id="docs-sidebar-panel"
+            class="docs-shell__sidebar"
+            data-docs-sidebar
+            aria-hidden={hasSidebar ? 'true' : 'false'}
+        >
+            {hasSidebar && (
+                <div class="docs-shell__sidebar-header">
+                    <p>Guide navigation</p>
+                    <button type="button" data-docs-close aria-label="Close navigation">Close</button>
+                </div>
+            )}
+            <slot name="sidebar" />
+        </aside>
+        <article class="docs-shell__content" data-docs-content><slot /></article>
+        {hasSidebar && <div class="docs-shell__backdrop" data-docs-backdrop hidden></div>}
     </section>
+
+    {
+        hasSidebar && (
+            <script is:inline>
+                (() => {
+                    const root = document.querySelector('.docs-shell');
+                    const toggle = root?.querySelector('[data-docs-toggle]');
+                    const sidebar = root?.querySelector('[data-docs-sidebar]');
+                    const close = root?.querySelector('[data-docs-close]');
+                    const content = root?.querySelector('[data-docs-content]');
+                    const backdrop = root?.querySelector('[data-docs-backdrop]');
+                    const header = document.querySelector('exo-header');
+
+                    if (!(root instanceof HTMLElement)) return;
+                    if (!(toggle instanceof HTMLButtonElement)) return;
+                    if (!(sidebar instanceof HTMLElement)) return;
+                    if (!(content instanceof HTMLElement)) return;
+                    if (!(backdrop instanceof HTMLElement)) return;
+
+                    const mediaQuery = window.matchMedia('(max-width: 960px)');
+                    let restoreFocusTo = null;
+
+                    const focusableSelector = [
+                        'a[href]',
+                        'button:not([disabled])',
+                        'input:not([disabled])',
+                        'select:not([disabled])',
+                        'textarea:not([disabled])',
+                        '[tabindex]:not([tabindex="-1"])',
+                    ].join(',');
+
+                    const listFocusable = () =>
+                        Array.from(sidebar.querySelectorAll(focusableSelector)).filter(
+                            node => node instanceof HTMLElement && !node.hasAttribute('inert') && !node.hasAttribute('hidden')
+                        );
+
+                    const isOpen = () => root.dataset.sidebarOpen === 'true';
+
+                    const setInert = (value) => {
+                        if (value) {
+                            content.setAttribute('inert', '');
+                            header?.setAttribute('inert', '');
+                        } else {
+                            content.removeAttribute('inert');
+                            header?.removeAttribute('inert');
+                        }
+                    };
+
+                    const closeDrawer = ({ restore = true } = {}) => {
+                        root.dataset.sidebarOpen = 'false';
+                        sidebar.setAttribute('aria-hidden', 'true');
+                        toggle.setAttribute('aria-expanded', 'false');
+                        backdrop.hidden = true;
+                        document.body.style.overflow = '';
+                        setInert(false);
+
+                        if (restore && restoreFocusTo instanceof HTMLElement) {
+                            restoreFocusTo.focus();
+                        }
+                    };
+
+                    const openDrawer = () => {
+                        if (!mediaQuery.matches) return;
+                        restoreFocusTo = document.activeElement;
+                        root.dataset.sidebarOpen = 'true';
+                        sidebar.setAttribute('aria-hidden', 'false');
+                        toggle.setAttribute('aria-expanded', 'true');
+                        backdrop.hidden = false;
+                        document.body.style.overflow = 'hidden';
+                        setInert(true);
+
+                        const focusables = listFocusable();
+                        const target = focusables[0] ?? close;
+                        if (target instanceof HTMLElement) target.focus();
+                    };
+
+                    const onKeyDown = (event) => {
+                        if (!isOpen()) return;
+                        if (!mediaQuery.matches) return;
+
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            closeDrawer();
+                            return;
+                        }
+
+                        if (event.key !== 'Tab') return;
+
+                        const focusables = listFocusable();
+                        if (focusables.length === 0) {
+                            event.preventDefault();
+                            return;
+                        }
+
+                        const first = focusables[0];
+                        const last = focusables[focusables.length - 1];
+                        const active = document.activeElement;
+
+                        if (event.shiftKey && active === first) {
+                            event.preventDefault();
+                            last.focus();
+                            return;
+                        }
+
+                        if (!event.shiftKey && active === last) {
+                            event.preventDefault();
+                            first.focus();
+                        }
+                    };
+
+                    toggle.addEventListener('click', () => {
+                        if (isOpen()) {
+                            closeDrawer();
+                        } else {
+                            openDrawer();
+                        }
+                    });
+
+                    close?.addEventListener('click', () => closeDrawer());
+                    backdrop.addEventListener('click', () => closeDrawer());
+
+                    mediaQuery.addEventListener('change', event => {
+                        if (!event.matches) {
+                            closeDrawer({ restore: false });
+                            root.removeAttribute('data-sidebar-open');
+                            sidebar.setAttribute('aria-hidden', 'false');
+                            toggle.setAttribute('aria-expanded', 'true');
+                            backdrop.hidden = true;
+                            return;
+                        }
+                        closeDrawer({ restore: false });
+                    });
+
+                    document.addEventListener('keydown', onKeyDown);
+                })();
+            </script>
+        )
+    }
 </AppShell>
 
 <style>
@@ -42,10 +205,111 @@ const hasSidebar = Astro.slots.has('sidebar');
         min-width: 0;
     }
 
+    .docs-shell__sidebar-toggle {
+        display: none;
+        min-height: 44px;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        color: var(--fg);
+        padding: 0.5rem 0.9rem;
+        font-weight: 600;
+        justify-self: start;
+        cursor: pointer;
+    }
+
+    .docs-shell__sidebar-toggle:focus-visible {
+        outline: 2px solid var(--accent-line);
+        outline-offset: 2px;
+    }
+
+    .docs-shell__sidebar-header {
+        display: none;
+    }
+
+    .docs-shell__backdrop {
+        display: none;
+    }
+
+    .docs-shell__sidebar :global(.docs-sidebar) {
+        position: static;
+        top: auto;
+        max-height: none;
+    }
+
     @media (max-width: 960px) {
         .docs-shell {
             grid-template-columns: 1fr;
             width: min(1280px, 100% - 1rem);
+        }
+
+        .docs-shell__sidebar-toggle {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .docs-shell__sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: min(90vw, 360px);
+            z-index: 220;
+            transform: translateX(-102%);
+            transition: transform var(--transition-fast);
+            border-right: 1px solid var(--line-soft);
+            background: var(--bg-elevated);
+            padding: 0.75rem 0.7rem;
+            overflow: auto;
+        }
+
+        .docs-shell__sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.7rem;
+            padding: 0 0.2rem;
+        }
+
+        .docs-shell__sidebar-header p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--fg-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .docs-shell__sidebar-header button {
+            min-height: 38px;
+            padding: 0 0.7rem;
+            border: 1px solid var(--line-soft);
+            border-radius: var(--r-2);
+            background: transparent;
+            color: var(--fg);
+        }
+
+        .docs-shell__sidebar-header button:focus-visible {
+            outline: 2px solid var(--accent-line);
+            outline-offset: 2px;
+        }
+
+        .docs-shell[data-sidebar-open='true'] .docs-shell__sidebar {
+            transform: translateX(0);
+        }
+
+        .docs-shell__backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 210;
+            background: rgba(0, 0, 0, 0.45);
+        }
+
+        .docs-shell[data-sidebar-open='true'] .docs-shell__backdrop {
+            display: block;
+        }
+
+        .docs-shell:not([data-sidebar-open='true']) .docs-shell__sidebar {
+            visibility: hidden;
         }
     }
 </style>

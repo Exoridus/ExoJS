@@ -67,6 +67,7 @@
 
     .side-content:not([data-open]) {
         transform: translateX(-102%);
+        visibility: hidden;
     }
 
     .main-content {

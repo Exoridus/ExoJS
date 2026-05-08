@@ -10,7 +10,7 @@ section {
 .toggle {
     appearance: none;
     width: 100%;
-    min-height: 38px;
+    min-height: 40px;
     padding: 0 0.8rem;
     margin: 0;
     border: 0;
@@ -36,7 +36,7 @@ section {
 .title {
     flex: 1 1 auto;
     min-width: 0;
-    min-height: 36px;
+    min-height: 38px;
     display: flex;
     align-items: center;
     font-size: 0.74rem;
@@ -83,4 +83,14 @@ section {
 
 .content {
     display: block;
+}
+
+@media (max-width: 1119px) {
+    .toggle {
+        min-height: 44px;
+    }
+
+    .title {
+        min-height: 44px;
+    }
 }
