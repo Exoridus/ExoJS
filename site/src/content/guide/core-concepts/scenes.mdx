@@ -1,6 +1,6 @@
 ---
 title: '2.2 Scenes'
-description: 'How scenes split responsibilities and keep projects composable.'
+description: 'How scenes split runtime work, hold game state, and compose into a stack via the scene manager.'
 part: 2
 chapter: 2
 examples:
@@ -9,15 +9,93 @@ examples:
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 2.2 Scenes
+# Scenes
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Scenes gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A [`Scene`](/ExoJS/en/api/scene/) is the unit of runtime work. It loads the resources it needs, builds the objects it draws, advances state each frame, and renders the result. Most game code lives inside scene subclasses.
+
+The split between application and scene matters: the application is the long-lived host that owns the canvas, the renderer, the input system, and the frame loop. Scenes are the changeable layer on top — menus, levels, cutscenes, pause overlays. The application keeps running as you push, pop, and replace scenes.
+
+## Defining a scene
+
+A scene is a class that extends `Scene`. Override the hooks you need; leave the rest at their defaults:
+
+```js
+import { Scene } from '@codexo/exojs';
+
+class TitleScene extends Scene {
+    init() {
+        // build state
+    }
+
+    update(delta) {
+        // per-frame logic
+    }
+
+    draw(backend) {
+        // per-frame rendering
+        backend.clear();
+    }
+}
+```
+
+The application calls these hooks for you. You don't wire up `requestAnimationFrame` or manage your own loop — the scene tells the engine what to do at each phase, the engine schedules it.
+
+Scene structure stays in your code. State lives on `this`, organized however your project prefers — fields on the scene class for top-level state, helper objects for subsystems, or composition with your own classes. ExoJS does not impose a particular pattern.
+
+## Running a scene
+
+Hand a scene instance to `app.start` and the application takes over:
+
+```js
+const app = new Application();
+app.start(new TitleScene());
+```
+
+From this point on, the application runs the scene's `update` and `draw` once per frame.
+
+## Switching scenes
+
+Most non-trivial projects have more than one scene. The application owns a scene manager (`app.sceneManager`) that drives the active stack. Three operations cover the common cases:
+
+```js
+// Replace the active scene with a new one
+await app.sceneManager.setScene(new GameScene());
+
+// Stack a new scene on top (pause menu, dialog, modal)
+await app.sceneManager.pushScene(new PauseScene());
+
+// Remove the top scene and return to the one below
+await app.sceneManager.popScene();
+```
+
+Calling `setScene` ends the current scene and starts the new one. `pushScene` keeps the underlying scene loaded and overlays the new one. `popScene` removes the top scene and resumes the one below.
+
+For a typical app: a `MenuScene` calls `setScene(new GameScene())` when the player clicks Start. The game pushes `new PauseScene()` when Esc is hit, and pops it when the player resumes.
+
+## How stacked scenes interact
+
+When more than one scene is on the stack, each scene declares how it composes with the scenes below it:
+
+- `'overlay'` (default) — both render and update; the scene below stays active.
+- `'modal'` — the scene below renders but does not update. Use for dialog boxes that should pause world physics.
+- `'opaque'` — the scene below neither renders nor updates. Use when the top scene fully covers the viewport.
+
+Set the policy when you push a scene, or change it later via `scene.stackMode`:
+
+```js
+const pause = new PauseScene();
+pause.stackMode = 'modal';
+await app.sceneManager.pushScene(pause);
+```
+
+A parallel setting controls input routing (`scene.inputMode` — `'capture'`, `'passthrough'`, or `'transparent'`). A modal pause scene typically captures input so the underlying game doesn't react to keystrokes meant for the menu.
 
 ## Examples
 
-<a id="multiple-scenes"></a>
 <ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
-Multiple Scenes isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Switching between two scenes — a menu and a game — using the scene manager.
 
+## Where to go next
+
+Scene hooks fire in a specific order during the lifetime of a scene. The next chapter, [Scene lifecycle](/ExoJS/en/guide/core-concepts/scene-lifecycle/), covers each hook in detail and when to use which.

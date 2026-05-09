@@ -1,6 +1,6 @@
 ---
 title: '2.4 Scene graph'
-description: 'How transforms, hierarchy, masks, and draw order shape what you see.'
+description: 'Parent-child structure, transform inheritance, render order, masks, and how the tree stays composable.'
 part: 2
 chapter: 4
 examples:
@@ -14,35 +14,140 @@ examples:
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 2.4 Scene graph
+# Scene graph
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Scene graph gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A scene's drawables form a tree: every renderable node has zero or one parent and zero or more children. Transforms cascade down the tree, drawing follows the tree's order, and you compose larger groups by nesting smaller ones. The result is that "this object follows that object" stops being a special case — it's the default.
+
+## Containers and nodes
+
+Two key types: [`RenderNode`](/ExoJS/en/api/rendernode/) is the abstract base for everything that can be drawn. [`Container`](/ExoJS/en/api/container/) is a `RenderNode` that holds children. Sprites, text, graphics, and meshes are all render nodes; containers are how you group them.
+
+Every scene starts with one container already in place — `this.root`. Adding a node via `this.addChild(...)` is shorthand for `this.root.addChild(...)`:
+
+```js
+init(loader) {
+    this.hero = new Sprite(loader.get(Texture, 'hero'));
+    this.coin = new Sprite(loader.get(Texture, 'coin'));
+
+    this.addChild(this.hero);
+    this.addChild(this.coin);
+}
+```
+
+For larger scenes, build sub-containers and add nodes to them instead:
+
+```js
+init(loader) {
+    this.world = new Container();
+    this.hud = new Container();
+
+    this.world.addChild(new Sprite(loader.get(Texture, 'level')));
+    this.hud.addChild(new Sprite(loader.get(Texture, 'health-bar')));
+
+    this.addChild(this.world);
+    this.addChild(this.hud);
+}
+```
+
+Containers can be added, removed, and moved between parents at any time. The hierarchy is your scene's structure.
+
+## Transforms cascade
+
+When a parent transforms, its children move with it. If you set the parent's position to `(100, 0)` and a child's position to `(20, 0)`, the child renders at world position `(120, 0)`:
+
+```js
+this.player = new Container();
+this.player.setPosition(100, 0);
+
+const body = new Sprite(loader.get(Texture, 'body'));
+const head = new Sprite(loader.get(Texture, 'head'));
+head.setPosition(0, -32);
+
+this.player.addChild(body);
+this.player.addChild(head);
+this.addChild(this.player);
+```
+
+Now moving `this.player` moves the head and body together. Rotating the player rotates them around the player's pivot. The same applies to scale.
+
+Each node carries its own transform — helpers such as `setPosition`, `setRotation`, `setScale`, and `setOrigin` describe where the node lives relative to its parent (positions are pixels, rotations are degrees). Sprites add `setAnchor(...)` on top of that, which controls which point of the texture is placed at the sprite's position. Local transforms are what you set; the global transform is the local one composed with every ancestor up the tree, which is what the renderer uses.
+
+## Render order
+
+Children render in the order they were added. The first child drawn ends up at the back; the last child drawn ends up on top. To put a sprite in front of another, add it later — or change its position in the parent's child list:
+
+```js
+this.world.addChild(this.background);
+this.world.addChild(this.player);    // drawn over background
+this.world.addChild(this.foreground); // drawn over player
+```
+
+For dynamic z-order — characters that need to layer correctly based on their y position — set `container.sortableChildren = true` and assign a `zIndex` to each child; the container then sorts before drawing.
+
+## Adding, removing, and rearranging
+
+The container API covers the common cases:
+
+```js
+parent.addChild(child);              // append (variadic — pass multiple)
+parent.addChildAt(child, index);     // insert at a specific index
+parent.removeChild(child);           // remove by reference
+parent.removeChildAt(index);         // remove by index
+parent.removeChildren();             // clear all children
+parent.swapChildren(a, b);           // swap two children's positions
+parent.setChildIndex(child, index);  // move a child to a new position
+```
+
+Removing a child doesn't destroy it — you can keep the reference and re-add it later. Destroy the node separately when it should no longer own resources or participate in the scene at all.
+
+## Why this stays composable
+
+Because transforms cascade and children render in order, large scenes are built by nesting smaller scenes. A `Player` container groups body, weapon, hat, and effects. A `World` container groups player, enemies, and tiles. A `Game` scene groups world and HUD.
+
+Each level is independent: rotating the player rotates everything inside it without the scene knowing how the player is structured internally. Replacing the player's hat doesn't touch any other code. Adding a "shake the world" effect is one rotation tween on the world container.
+
+## Masks
+
+Each render node has a `mask` property that clips its rendering to a shape. The mask source can be a `Rectangle`, a `Texture`, another `RenderNode`, or `null` (no mask). Masks are applied during render, not during transform — children of a masked container are still positioned normally, but only the visible region is drawn.
+
+```js
+import { Rectangle } from '@codexo/exojs';
+
+this.viewport = new Container();
+this.viewport.mask = new Rectangle(0, 0, 400, 300);
+
+this.viewport.addChild(this.world);
+this.addChild(this.viewport);
+```
+
+This pattern is useful for HUD windows, minimaps, and any area where you want to clip a complex subtree to a simple shape.
 
 ## Examples
 
-<a id="containers"></a>
 <ExamplePreview chapter="scene-graph" slug="containers" />
-Containers isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="nested-transforms"></a>
+Two containers, each holding several sprites. Rotating the parent moves the whole group.
+
 <ExamplePreview chapter="scene-graph" slug="nested-transforms" />
-Nested Transforms isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="local-vs-global-transform"></a>
+A solar-system style hierarchy: planet rotates around sun, moon rotates around planet.
+
 <ExamplePreview chapter="scene-graph" slug="local-vs-global-transform" />
-Local Vs Global Transform isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="pivot-and-anchor"></a>
+The same drawable shown twice — once inside a transformed parent, once at root — to make the difference between local and global transforms visible.
+
 <ExamplePreview chapter="scene-graph" slug="pivot-and-anchor" />
-Pivot And Anchor isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="z-ordering"></a>
+How `setOrigin` and `setAnchor` change where a node rotates and where its position points.
+
 <ExamplePreview chapter="scene-graph" slug="z-ordering" />
-Z Ordering isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="masks"></a>
+Using `sortableChildren` and `zIndex` for dynamic depth ordering.
+
 <ExamplePreview chapter="scene-graph" slug="masks" />
-Masks isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+A `Rectangle` mask animates across a sprite to reveal it progressively.
 
+## Where to go next
+
+The next chapter, [Coordinates and views](/ExoJS/en/guide/core-concepts/coordinates-and-views/), covers world-vs-screen coordinates, the camera (`View`), and how to handle different canvas sizes without breaking layout assumptions.

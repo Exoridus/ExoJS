@@ -1,6 +1,6 @@
 ---
 title: '2.1 Application'
-description: 'How the application owns canvas lifecycle, sizing, and startup.'
+description: 'How the application owns canvas, render backend, resources, input, scene management, and the frame loop.'
 part: 2
 chapter: 1
 examples:
@@ -10,19 +10,128 @@ examples:
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 2.1 Application
+# Application
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Application gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+The [`Application`](/ExoJS/en/api/application/) is the runtime host. One instance per browser tab owns the canvas, the render backend, the asset loader, the input manager, the scene manager, the tween manager, and the per-frame loop. Everything else in your project plugs into it.
+
+## Construction
+
+Every option is optional. If you pass nothing, ExoJS picks reasonable defaults — an 800×600 canvas it created itself, a `cornflowerBlue` clear color, and an auto-selected render backend (WebGPU when available, WebGL2 otherwise).
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application();
+```
+
+When you need to control the configuration — and most real projects do — pass an options object:
+
+```js
+import { Application, Color } from '@codexo/exojs';
+
+const app = new Application({
+    width: 1280,
+    height: 720,
+    clearColor: Color.black,
+    resourcePath: 'assets/',
+});
+```
+
+The most common options:
+
+- `width` / `height` — internal render resolution. Independent of CSS size.
+- `clearColor` — what `backend.clear()` paints each frame.
+- `resourcePath` — prefix the [`Loader`](/ExoJS/en/api/loader/) prepends to every asset URL.
+- `backend` — `{ type: 'auto' }` (default), or pin to `'webgl2'` / `'webgpu'`.
+- `canvas` — an existing `HTMLCanvasElement` to render into. See below.
+
+## Choosing the canvas
+
+By default the application creates its own canvas. Read it from `app.canvas` and place it in your page wherever your layout needs it:
+
+```js
+const app = new Application({ width: 800, height: 600 });
+document.body.append(app.canvas);
+```
+
+If your page already has a canvas — for example because the layout is owned by a framework that renders the element for you — pass it in:
+
+```js
+const canvas = document.querySelector('canvas');
+const app = new Application({ canvas });
+```
+
+Either way, `app.canvas` is the active `HTMLCanvasElement`. CSS rules, ResizeObserver, event listeners, and `getBoundingClientRect()` all work as expected.
+
+## Starting the frame loop
+
+The frame loop only runs once you give the application a scene to run:
+
+```js
+import { Application, Scene } from '@codexo/exojs';
+
+class HelloScene extends Scene {
+    draw(backend) {
+        backend.clear();
+    }
+}
+
+const app = new Application();
+app.start(new HelloScene());
+```
+
+The `app.start(scene)` call is asynchronous — it initializes the render backend, runs the scene's `load` hook, then `init`, then drives the frame loop until you stop it. You normally don't need to await the returned promise; fire-and-forget is the common pattern.
+
+To stop the loop, call `app.stop()`. To release the canvas and all GPU resources, call `app.destroy()`.
+
+## Subsystems on the application
+
+Once an application exists, its subsystems are accessible as properties:
+
+- `app.canvas` — the render target.
+- `app.loader` — the [`Loader`](/ExoJS/en/api/loader/) used by every scene to register and resolve assets.
+- `app.input` — the `InputManager` for keyboard, pointer, and gamepad routing.
+- `app.sceneManager` — the scene stack controller (push/pop/replace).
+- `app.tweens` — the global `TweenManager`.
+
+Most code reaches these through the active scene (`this.app.input`, `this.app.tweens`) rather than holding a top-level reference, but both work.
+
+## Per-frame signals
+
+The application emits a small set of signals you can subscribe to without subclassing:
+
+```js
+app.onFrame.add(time => {
+    console.log(`Frame at ${time.seconds.toFixed(3)}s`);
+});
+
+app.onResize.add((width, height) => {
+    // canvas resolution changed
+});
+```
+
+For most projects the scene's `update` and `draw` hooks are enough; reach for these signals when you need to coordinate work that lives outside the scene.
+
+## Pausing while the tab is hidden
+
+Browsers throttle background tabs to roughly 1 fps. For games this usually shows up as motion artifacts when the user comes back. Toggle `pauseOnHidden` to skip update + render entirely while the tab is hidden:
+
+```js
+app.pauseOnHidden = true;
+```
+
+Tools and background-active simulations should leave it off; games and animated demos should turn it on.
 
 ## Examples
 
-<a id="hello-world"></a>
 <ExamplePreview chapter="getting-started" slug="hello-world" />
-Hello World isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="resize-and-dpr"></a>
+The minimum complete application: construct, start one scene, draw a single sprite.
+
 <ExamplePreview chapter="getting-started" slug="resize-and-dpr" />
-Resize And Dpr isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Same shape, with the canvas auto-resizing to the window and rendering at the device's pixel ratio for sharp output on high-DPI displays.
 
+## Where to go next
+
+Scenes are where actual game logic lives. The next chapter, [Scenes](/ExoJS/en/guide/core-concepts/scenes/), covers what a scene is and how it differs from the application.

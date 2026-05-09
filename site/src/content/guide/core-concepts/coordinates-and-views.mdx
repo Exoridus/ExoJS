@@ -1,6 +1,6 @@
 ---
 title: '2.5 Coordinates and views'
-description: 'How world space, screen space, and camera views map onto each other.'
+description: 'World space, canvas space, and how the active view maps between them — plus camera movement, zoom, and split rendering.'
 part: 2
 chapter: 5
 examples:
@@ -12,27 +12,130 @@ examples:
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 2.5 Coordinates and views
+# Coordinates and views
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Coordinates and views gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS keeps two coordinate systems in mind at once. Drawables are positioned in **world space** — the coordinate system you write game logic in. The renderer paints into **canvas space** — pixels on the actual canvas the user sees. A [`View`](/ExoJS/en/api/view/) sits between the two and handles the mapping.
+
+Understanding this split makes camera follow, zoom, split-screen, and HUD overlays straightforward. Confusing them is the source of most "the position is wrong" bugs.
+
+## World space
+
+When you call `sprite.setPosition(400, 300)`, you're setting a position in world space. The numbers you choose are the same numbers your game logic operates on — distances, velocities, hit boxes. They have nothing to do with the user's screen.
+
+In a typical 2D project, world space has the X axis pointing right and the Y axis pointing down (matching browser conventions). The origin is wherever you put it; many projects use `(0, 0)` as the world's center, others put it at the top-left of the playable area.
+
+## Canvas space
+
+Canvas space is what the GPU paints into: pixels of the application's canvas. `(0, 0)` is the top-left, `(canvas.width, canvas.height)` is the bottom-right. Mouse events arrive in canvas space — when the user clicks at pixel `(245, 110)`, that's a canvas-space coordinate.
+
+If you placed every sprite at its world position and the camera never moved, world space and canvas space would line up exactly. The moment you move the camera, scale the canvas, or render to a sub-region, the two diverge.
+
+## The active view
+
+Every render backend exposes a `view` property. The view defines how world space maps onto the canvas:
+
+- `view.center` — the world-space point at the center of the canvas.
+- `view.size` — how much world space fits inside the canvas.
+- `view.rotation` — the camera's rotation in degrees.
+- `view.viewport` — which sub-region of the canvas the view paints into (default: the whole canvas).
+
+Set the center to `(400, 300)` and the size to `(800, 600)`, and the canvas shows the world from `(0, 0)` to `(800, 600)`. Move the center to `(400, 600)` and the camera scrolls down by 300 pixels' worth of world.
+
+```js
+draw(backend) {
+    backend.view.setCenter(400, 300);
+    backend.view.resize(800, 600);
+
+    backend.clear();
+    this.world.render(backend);
+}
+```
+
+You don't usually configure the view by hand — it tracks the canvas size automatically. Reach for `setCenter`, `move`, `setZoom`, and `setRotation` when you need camera behavior. Configure the view through the `backend` passed to `draw`, which is the public rendering surface already available to the scene.
+
+## Following an object
+
+The view supports following a target. The target can be any object with `x` and `y` properties — typically a scene node, but a plain `{x, y}` object works too:
+
+```js
+draw(backend) {
+    backend.view.follow(this.player);
+
+    backend.clear();
+    this.world.render(backend);
+}
+```
+
+Following keeps the view centered on the target while the scene renders. Call `view.clearFollow()` to detach. If you want smoothing, keep a small camera target object and move it toward the player in `update`, then follow that target instead of the player directly.
+
+## Zooming
+
+The `setZoom(z)` method scales how much world fits inside the view. `setZoom(2)` means the view shows half as much world as it normally would (everything looks twice as big). `setZoom(0.5)` does the opposite (everything looks zoomed out). The `zoomIn(amount)` and `zoomOut(amount)` helpers adjust relative to the current zoom.
+
+```js
+init() {
+    this.zoom = 1;
+
+    this.inputs.onTrigger(Keyboard.Plus, () => {
+        this.zoom += 0.1;
+    });
+}
+
+draw(backend) {
+    backend.view.setZoom(this.zoom);
+
+    backend.clear();
+    this.world.render(backend);
+}
+```
+
+## Common pitfalls
+
+A handful of misalignments come up regularly:
+
+- **Hardcoded canvas-relative positions.** Setting a sprite to `(400, 300)` because that "looks centered for an 800×600 canvas" breaks the moment the canvas resizes. Use the active view's center, the canvas size at runtime, or anchor-aware containers instead.
+- **Anchor confusion.** A sprite's position is the world-space location of its anchor. The default anchor is the top-left, so `setPosition(400, 300)` puts the top-left of the sprite at `(400, 300)`, not its middle. Call `setAnchor(0.5)` to pivot at the center.
+- **Pointer events without view conversion.** Pointer events arrive in canvas space. If your camera has moved, you need to convert them back to world space before testing whether the click hit a world-space object. The world-vs-screen-coords example below shows the conversion.
+- **HUD inside the world.** A health bar should not move when the camera moves. Put HUD elements in a separate container that you render *after* `world.render(backend)`, with their positions in canvas space.
+
+## Multiple views
+
+The active view can be swapped on every frame. Used together with viewports, this gives you split-screen, picture-in-picture, and minimap rendering — render the world once with one view configuration into one viewport, then again with a different configuration into another:
+
+```js
+draw(backend) {
+    backend.clear();
+
+    backend.view.viewport = this.leftHalf;
+    backend.view.setCenter(this.player1.x, this.player1.y);
+    this.world.render(backend);
+
+    backend.view.viewport = this.rightHalf;
+    backend.view.setCenter(this.player2.x, this.player2.y);
+    this.world.render(backend);
+}
+```
+
+The same scene graph rendered with two different views, into two halves of the canvas — one tree, two cameras. If you continue rendering HUD elements or additional scenes afterward, reset the viewport/view state before those passes so later rendering does not inherit the split-screen configuration.
 
 ## Examples
 
-<a id="camera-and-view"></a>
 <ExamplePreview chapter="application-scenes" slug="camera-and-view" />
-Camera And View isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="multi-view-split-screen"></a>
+Pan and zoom the view across a scene that's larger than the canvas.
+
 <ExamplePreview chapter="application-scenes" slug="multi-view-split-screen" />
-Multi View Split Screen isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="picture-in-picture"></a>
+Two players, one world, two viewports.
+
 <ExamplePreview chapter="application-scenes" slug="picture-in-picture" />
-Picture In Picture isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="world-vs-screen-coords"></a>
+A second view rendered into a small region of the canvas — useful for minimaps and replay overlays.
+
 <ExamplePreview chapter="application-scenes" slug="world-vs-screen-coords" />
-World Vs Screen Coords isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Click anywhere on the canvas; the example shows the same point in both coordinate systems and how to convert between them.
 
+## Where to go next
+
+The next chapter, [Loading and resources](/ExoJS/en/guide/core-concepts/loading-and-resources/), covers the asset pipeline — how the loader gets textures, audio, and JSON into your scene before `init` runs.

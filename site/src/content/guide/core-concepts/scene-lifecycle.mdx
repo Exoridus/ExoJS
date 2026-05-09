@@ -1,6 +1,6 @@
 ---
 title: '2.3 Scene lifecycle'
-description: 'How load, init, update, and draw work together as one repeatable loop.'
+description: 'The order scene hooks run in, what each one is for, and the rule about explicit drawing.'
 part: 2
 chapter: 3
 examples:
@@ -11,23 +11,156 @@ examples:
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 2.3 Scene lifecycle
+# Scene lifecycle
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Scene lifecycle gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A scene has a small set of hooks the engine calls in a defined order. Knowing which hook runs when keeps state setup clean and avoids subtle "this object is undefined here" bugs.
+
+## The hooks, in order
+
+The first time a scene starts:
+
+1. `async load(loader)` — declare assets you need. Resolves before `init`.
+2. `init(loader)` — build state. Loaded assets are available via `loader.get(...)`.
+
+Then, every frame while the scene is active:
+
+3. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
+4. `draw(backend)` — render the current state.
+
+In between frames, when input arrives:
+
+5. `handleInput(event)` — react to keyboard, pointer, or wheel events. Return `true` to consume the event so it doesn't propagate to scenes below.
+
+When the scene is removed from the stack:
+
+6. `async unload(loader)` — release scene-private assets that aren't shared with another active scene.
+7. `destroy()` — drop scene-graph references and cancel input bindings.
+
+You override the hooks you need. Empty hooks like `update` and `draw` do nothing by default, so there is no setup ceremony for scenes that only need one or two phases. Cleanup hooks are different: if you override `destroy`, keep the built-in cleanup path intact unless the API reference for your version says otherwise.
+
+## load: declare assets
+
+The `load` hook is the async setup hook. Use it to register everything the scene needs and await the loader:
+
+```js
+import { Scene, Texture } from '@codexo/exojs';
+
+class GameScene extends Scene {
+    async load(loader) {
+        await loader.load(Texture, {
+            hero: 'image/hero.png',
+            ground: 'image/ground.png',
+        });
+    }
+}
+```
+
+The application doesn't call `init` until this promise resolves, so by the time you reach `init` everything you declared is ready.
+
+## init: build state
+
+The `init` hook is where you create the scene's actual objects. The same `loader` instance is passed in; calling `loader.get(...)` returns the already-loaded asset:
+
+```js
+init(loader) {
+    this.hero = new Sprite(loader.get(Texture, 'hero'));
+    this.hero.setAnchor(0.5);
+    this.hero.setPosition(400, 300);
+    this.addChild(this.hero);
+}
+```
+
+The `init` hook runs once per scene-start. If you push the scene again later it runs again on the new instance, not on the old one.
+
+## update: per-frame logic
+
+The `update` hook runs once per frame, before `draw`. The argument carries the elapsed time since the previous frame:
+
+```js
+update(delta) {
+    this.hero.rotate(120 * delta.seconds);
+}
+```
+
+Multiplying by `delta.seconds` keeps motion frame-rate independent. The same code runs identically at 60 fps and 144 fps.
+
+## draw: explicit rendering
+
+This is the hook with the most surprising default: **`draw` does nothing if you don't override it.** The engine never auto-traverses the scene graph for you.
+
+```js
+draw(backend) {
+    backend.clear();
+    this.root.render(backend);
+}
+```
+
+The `this.root` container is the scene's structural anchor — every node you add via `this.addChild(...)` is reachable from there. Calling `this.root.render(backend)` walks the tree and draws every visible node in order.
+
+The trade-off is that you can render selectively when you need to:
+
+```js
+draw(backend) {
+    backend.clear();
+    this.world.render(backend);
+
+    if (this.showHud) {
+        this.hud.render(backend);
+    }
+}
+```
+
+For most scenes, one `this.root.render(backend)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
+
+## handleInput: event-driven input
+
+The `handleInput` hook is called between frames whenever an input event reaches the scene. Unlike `update`, it doesn't run every frame and doesn't carry a time delta:
+
+```js
+handleInput(event) {
+    if (event.type === 'keyDown' && event.channel === Keyboard.Escape) {
+        this.app.sceneManager.pushScene(new PauseScene());
+        return true;
+    }
+}
+```
+
+Return `true` to consume the event; any other return value lets it propagate to scenes below in the stack (subject to those scenes' input modes).
+
+For most projects, `this.inputs.onTrigger(...)` from inside `init` is more ergonomic than `handleInput`:
+
+```js
+init() {
+    this.inputs.onTrigger(Keyboard.Space, () => {
+        this.player.jump();
+    });
+}
+```
+
+Bindings created on `this.inputs` are automatically disposed when the scene is destroyed. The `handleInput` hook is the lower-level escape hatch when the binding API isn't expressive enough.
+
+## unload and destroy
+
+The `unload` hook runs when the scene leaves the stack permanently. Use it to release assets the scene was holding that no other active scene needs.
+
+The `destroy` hook is the synchronous final step after `unload`. The default cleanup path disposes scene-owned bindings and graph references. Override only when you have additional cleanup, and keep the built-in cleanup behavior intact.
+
+For overlay scenes (pause menus, dialogs) that you push and pop repeatedly, the default cleanup keeps things lean: you don't need to manually unload textures shared with the underlying game scene.
 
 ## Examples
 
-<a id="scene-lifecycle"></a>
 <ExamplePreview chapter="application-scenes" slug="scene-lifecycle" />
-Scene Lifecycle isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="pause-and-resume"></a>
+A walkthrough of every hook firing, in order, with on-screen logging.
+
 <ExamplePreview chapter="application-scenes" slug="pause-and-resume" />
-Pause And Resume isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="game-loop"></a>
+The `update` hook is gated; `draw` keeps running. Demonstrates that the loop continues even when scene state freezes.
+
 <ExamplePreview chapter="getting-started" slug="game-loop" />
-Game Loop isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+The minimum lifecycle that produces motion: `init` builds the sprite, `update` rotates it, `draw` renders.
 
+## Where to go next
+
+The next chapter, [Scene graph](/ExoJS/en/guide/core-concepts/scene-graph/), covers how parent-child relationships work — what `this.addChild(...)` actually does, how transforms cascade, and how to keep the tree composable.

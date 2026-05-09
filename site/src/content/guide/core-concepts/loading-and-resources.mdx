@@ -1,6 +1,6 @@
 ---
 title: '2.6 Loading and resources'
-description: 'How to load resources predictably and keep asset access consistent.'
+description: 'The asset pipeline — how the loader registers, fetches, and resolves resources before your scene starts updating.'
 part: 2
 chapter: 6
 examples:
@@ -9,15 +9,146 @@ examples:
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# 2.6 Loading and resources
+# Loading and resources
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Loading and resources gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Most non-trivial scenes need assets — textures, audio, fonts, JSON, video — before they can render. The [`Loader`](/ExoJS/en/api/loader/) handles fetching, decoding, and caching those assets, then makes them available to your scene by name.
+
+The contract is simple: declare what you need during `load`, await the loader, and read the resolved instances out during `init`. Everything before `init` runs has finished by the time `init` is called.
+
+## The loader instance
+
+Every application owns one loader, available as `app.loader`. The same instance is passed into a scene's `load(loader)` and `init(loader)` hooks. You can also access it directly from any scene as `this.app.loader` once the scene has been registered.
+
+For most scenes you don't need to think about ownership — just use the `loader` argument in `load` and `init`.
+
+## Loading a texture
+
+The standard pattern: declare a name-to-path mapping for the assets you need, await the loader, and read instances back by name:
+
+```js
+async load(loader) {
+    await loader.load(Texture, {
+        hero: 'image/hero.png',
+        ground: 'image/ground.png',
+        coin: 'image/coin.png',
+    });
+}
+
+init(loader) {
+    this.hero = new Sprite(loader.get(Texture, 'hero'));
+    this.ground = new Sprite(loader.get(Texture, 'ground'));
+}
+```
+
+The keys (`hero`, `ground`, `coin`) are aliases — names you choose. Paths can change later without touching anywhere else in the code, because everything else references the alias. The application's `resourcePath` option (set during construction) prepends a base prefix to every asset URL, so the keys above resolve to e.g. `assets/image/hero.png`.
+
+Calling `loader.get(Texture, 'hero')` returns the loaded `Texture` instance. It's synchronous — the promise from `loader.load(...)` already settled before `init` ran.
+
+## Multiple resource types
+
+The loader handles many asset types, not just textures. Each type is loaded the same way, with its constructor as the first argument:
+
+```js
+import { Texture, Music, Sound, Json } from '@codexo/exojs';
+
+async load(loader) {
+    await Promise.all([
+        loader.load(Texture, { sky: 'image/sky.png' }),
+        loader.load(Music, { ambient: 'audio/ambient.ogg' }),
+        loader.load(Sound, { coin: 'audio/coin.wav', jump: 'audio/jump.wav' }),
+        loader.load(Json, { levels: 'data/levels.json' }),
+    ]);
+}
+
+init(loader) {
+    this.sky = new Sprite(loader.get(Texture, 'sky'));
+    this.music = loader.get(Music, 'ambient');
+    this.levels = loader.get(Json, 'levels');
+}
+```
+
+Wrapping the calls in `Promise.all` lets unrelated asset categories load in parallel.
+
+## Single-asset shorthand
+
+When a hook only needs one asset, the path-string form is shorter:
+
+```js
+async load(loader) {
+    const texture = await loader.load(Texture, 'image/hero.png');
+    this.hero = new Sprite(texture);
+}
+```
+
+The trade-off is no alias — the texture isn't registered for retrieval by name later. Use the object form when you'll need to call `loader.get(...)` after `load` resolves.
+
+## When are resources available?
+
+The lifecycle guarantees that:
+
+- Inside `load`, you can `await loader.load(...)` to register and fetch assets.
+- After `load` resolves, every alias you registered is available via `loader.get(...)`.
+- `init` runs once `load` is complete — it's safe to read assets there.
+- After `init`, the same `loader` is still around. Subsequent calls to `loader.get(...)` from `update`, `draw`, or other places work as long as the asset was loaded.
+
+If you call `loader.get(SomeType, 'unknown-alias')`, the loader throws — there's no silent fallback. This is deliberate: a missing asset usually means you forgot to register it in `load`, and you'd rather catch that immediately than render a missing-texture pink square.
+
+## Loading on demand
+
+Sometimes you want to defer loading until well after `init` — a level loaded from a level select screen, an asset that depends on the player's choices. `loader.load(...)` works any time, not just inside the `load` hook:
+
+```js
+async _changeLevel(levelName) {
+    await this.app.loader.load(Texture, {
+        [`level-${levelName}`]: `image/levels/${levelName}.png`,
+    });
+
+    this.background.setTexture(this.app.loader.get(Texture, `level-${levelName}`));
+}
+```
+
+The frame loop continues running while the promise is pending. The scene stays interactive; the new texture pops in when it's ready.
+
+## Manifests and bundles
+
+For larger projects with many assets, declaring everything inline becomes noisy. The loader supports declarative asset manifests — a JSON-like description of every asset in the project, optionally grouped into bundles you can load on demand:
+
+```js
+init() {
+    this.app.loader.registerManifest({
+        bundles: [
+            {
+                name: 'menu',
+                assets: [
+                    { type: Texture, alias: 'logo', src: 'image/logo.png' },
+                    { type: Music, alias: 'theme', src: 'audio/theme.ogg' },
+                ],
+            },
+            {
+                name: 'level-1',
+                assets: [
+                    { type: Texture, alias: 'tiles', src: 'image/level-1/tiles.png' },
+                    { type: Json, alias: 'map', src: 'data/level-1.json' },
+                ],
+            },
+        ],
+    });
+}
+
+async _enterLevel() {
+    await this.app.loader.loadBundle('level-1');
+    // assets in level-1 are now available via loader.get(...)
+}
+```
+
+Bundles are useful when scene loads should be granular — you can load the menu bundle once and keep it resident, then load level bundles as the player progresses. Treat bundle names and aliases as part of your project's asset contract, just like normal loader aliases.
 
 ## Examples
 
-<a id="texture-loader"></a>
 <ExamplePreview chapter="sprites-textures" slug="texture-loader" />
-Texture Loader isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+The minimum loader workflow — register a texture during `load`, retrieve it during `init`, render the sprite.
 
+## Where to go next
+
+That closes Part 2. The next part, [Drawing](/ExoJS/en/guide/drawing/), covers what you can put on screen — graphics primitives, sprites, text, animation, and render targets.
