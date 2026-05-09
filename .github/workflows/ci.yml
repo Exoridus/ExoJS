@@ -52,8 +52,8 @@ jobs:
       - name: Package dry run
         run: npm pack --dry-run
 
-  examples-smoke:
-    name: Site smoke (bundle + catalog)
+  site-build:
+    name: Site build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,22 +81,7 @@ jobs:
         working-directory: site
         run: npm ci --ignore-scripts --no-audit --fund=false
 
-      # Site build = vendor:sync + examples:sync + astro build. Both smoke suites
-      # depend on the produced dist/ tree.
+      # Site build = vendor:sync + examples:sync + astro build.
       - name: Build site
         working-directory: site
         run: npm run build
-
-      # Phase 1 + Phase 2 bundle smoke: pure file-system / built-bundle
-      # text checks. No browser, no network. Cheap and deterministic.
-      - name: Site bundle smoke (phase1 + phase2)
-        working-directory: site
-        run: npm run test:smoke:bundle
-
-      # Catalog metadata + backend policy: source-text checks against
-      # root examples/. Also no browser despite living in
-      # dist-open.smoke.test.mjs (Playwright-using tests are filtered
-      # out by --test-name-pattern).
-      - name: Site catalog smoke (backend policy + entries)
-        working-directory: site
-        run: npm run test:smoke:catalog

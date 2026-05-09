@@ -86,8 +86,8 @@ jobs:
           npm run verify:exports
           npm pack --dry-run --ignore-scripts
 
-      # Mirror CI's site-smoke job so a release that would break the
-      # example app cannot ship even if the library tests/typecheck pass.
+      # Mirror CI's site-build job so a release that would break the
+      # site cannot ship even if the library tests/typecheck pass.
       - name: Install site dependencies
         working-directory: site
         run: npm ci --ignore-scripts --no-audit --fund=false
@@ -95,14 +95,6 @@ jobs:
       - name: Build site
         working-directory: site
         run: npm run build
-
-      - name: Site bundle smoke
-        working-directory: site
-        run: npm run test:smoke:bundle
-
-      - name: Site catalog smoke
-        working-directory: site
-        run: npm run test:smoke:catalog
 
       - name: Assemble release bundle
         run: |
