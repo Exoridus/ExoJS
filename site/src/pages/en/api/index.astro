@@ -3,253 +3,623 @@ import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../../components/DocsSidebar.astro';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, FEATURED_SYMBOLS, compactDescription, parseMemberCounts, toApiHref } from '../../../lib/api-reference';
 
-const subsystemOrder = ['animation', 'audio', 'core', 'debug', 'input', 'math', 'particles', 'rendering', 'resources'] as const;
-const subsystemDescriptions: Record<(typeof subsystemOrder)[number], string> = {
-    animation: 'Tweens, timing helpers, and scene motion systems.',
-    audio: 'Playback, analysis, spatialization, and effect chains.',
-    core: 'Application lifecycle, scenes, and runtime coordination.',
-    debug: 'Debug overlays, hit-testing views, and profiling layers.',
-    input: 'Keyboard, pointer, touch, and gamepad abstractions.',
-    math: 'Vectors, bounds, collision, geometry, and utility math.',
-    particles: 'Emitters, modules, distributions, and GPU-backed systems.',
-    rendering: 'Drawables, renderer backends, views, and filters.',
-    resources: 'Loader, manifest, asset factories, and caching.',
+type ApiListItem = {
+    entry: CollectionEntry<'api'>;
+    href: string;
+    kind: string;
+    shortDescription: string;
+    counts: ReturnType<typeof parseMemberCounts>;
 };
-type ApiEntry = CollectionEntry<'api'>;
 
-const apiEntries = (await getCollection('api')).sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title));
-const grouped: Array<{ subsystem: (typeof subsystemOrder)[number]; entries: Array<ApiEntry> }> = subsystemOrder.map(subsystem => ({
+const apiEntries = await getCollection('api');
+const sortedEntries = [...apiEntries].sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const items: ApiListItem[] = sortedEntries.map(entry => ({
+    entry,
+    href: toApiHref(import.meta.env.BASE_URL, entry.id),
+    kind: entry.data.kind.toLowerCase(),
+    shortDescription: compactDescription(entry.data.description ?? '', 138),
+    counts: parseMemberCounts(entry.body ?? ''),
+}));
+
+const grouped = API_SUBSYSTEM_ORDER.map(subsystem => ({
     subsystem,
-    entries: apiEntries
-        .filter((entry: ApiEntry) => entry.data.subsystem === subsystem)
-        .sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title)),
+    label: API_SUBSYSTEM_META[subsystem].label,
+    description: API_SUBSYSTEM_META[subsystem].description,
+    entries: items.filter(item => item.entry.data.subsystem === subsystem),
 }));
-const totalSymbols = apiEntries.length;
 
-const sidebarGroups = grouped.map(group => ({
-    title: group.subsystem,
-    items: group.entries.map(entry => ({
-        href: `${import.meta.env.BASE_URL}en/api/${entry.id}/`,
-        label: entry.data.title,
-    })),
-}));
+const featured = FEATURED_SYMBOLS.map(id => items.find(item => item.entry.id === id)).filter((item): item is ApiListItem => Boolean(item));
+
+const totalSymbols = items.length;
+const classCount = items.filter(item => item.kind === 'class').length;
+const enumCount = items.filter(item => item.kind === 'enum').length;
+
+const sidebarGroups = [
+    {
+        title: 'Getting Started',
+        items: featured.map(item => ({
+            href: item.href,
+            label: item.entry.data.title,
+        })),
+    },
+    {
+        title: 'Subsystems',
+        items: [
+            ...grouped.map(group => ({
+                href: `#subsystem-${group.subsystem}`,
+                label: `${group.label} (${group.entries.length})`,
+            })),
+            {
+                href: `${import.meta.env.BASE_URL}en/api/all/`,
+                label: 'All symbols A-Z',
+            },
+        ],
+    },
+];
 ---
 
-<DocsLayout title="ExoJS API" description="Public API reference grouped by subsystem.">
+<DocsLayout title="ExoJS API" description="Public API for @codexo/exojs, organized by subsystem." variant="api">
     <DocsSidebar slot="sidebar" groups={sidebarGroups} />
 
-    <section class="api-hero">
-        <h1>API reference</h1>
-        <p>Use the subsystem cards to navigate the public surface. Filter when you already know part of a symbol name.</p>
-        <div class="api-stats">
-            <span>{totalSymbols} public symbols</span>
-            <span>9 subsystems</span>
+    <aside slot="rail" class="toc" aria-label="API overview table of contents">
+        <h6>On this page</h6>
+        <ul>
+            <li><a href="#featured" data-active="true">Featured</a></li>
+            <li><a href="#subsystems">Subsystems</a></li>
+            <li><a href="#all-symbols">All symbols</a></li>
+        </ul>
+        <div class="toc__resources">
+            <h6>Tools</h6>
+            <ul>
+                <li><a href={`${import.meta.env.BASE_URL}en/api/all/`}>All symbols A-Z</a></li>
+                <li><a href={`${import.meta.env.BASE_URL}en/guide/`}>Read Guide</a></li>
+                <li><a href={`${import.meta.env.BASE_URL}en/playground/`}>Try Playground</a></li>
+            </ul>
         </div>
-    </section>
+    </aside>
 
-    <label class="api-filter">
-        <span>Filter symbols</span>
-        <input id="api-filter-input" type="search" placeholder="Example: Application, Tween, Sprite..." data-api-filter autocomplete="off" />
-    </label>
+    <div class="prose api-prose">
+        <header class="api-head">
+            <div>
+                <h1>API reference</h1>
+                <p>Public API for <code class="inline">@codexo/exojs</code>, organized by subsystem.</p>
+            </div>
+            <form class="api-search" action={`${import.meta.env.BASE_URL}en/api/all/`} method="get" role="search">
+                <span class="api-search__icon" aria-hidden="true">/</span>
+                <input type="search" name="q" placeholder="Find Application, Scene, Sprite..." autocomplete="off" />
+                <button type="submit">Search</button>
+            </form>
+        </header>
 
-    <section class="api-grid">
-        {
-            grouped.map(group => (
-                <article class="api-card" data-api-subsystem={group.subsystem}>
-                    <header>
-                        <h2>{group.subsystem}</h2>
-                        <p>{subsystemDescriptions[group.subsystem]}</p>
-                        <div class="api-card__meta">
-                            <span>{group.entries.length} symbols</span>
+        <div class="api-counts" aria-label="API totals">
+            <span>Symbols <strong>{totalSymbols}</strong></span>
+            <span>Classes <strong>{classCount}</strong></span>
+            <span>Enums <strong>{enumCount}</strong></span>
+            <span>Subsystems <strong>{grouped.length}</strong></span>
+        </div>
+
+        <section id="featured" class="api-featured">
+            <div class="api-section-head">
+                <span>Featured</span>
+                <span class="line"></span>
+                <span>{featured.length}</span>
+            </div>
+            <div class="api-featured-grid">
+                {featured.map(item => (
+                    <a class="api-feature-card" href={item.href}>
+                        <div class="api-feature-card__head">
+                            <span class:list={['api-kind', `kind-${item.kind}`]}>{item.kind}</span>
+                            <code>{item.entry.data.title}</code>
                         </div>
-                    </header>
+                        <div class="api-feature-card__import">{item.entry.data.importPath}</div>
+                        <p>{item.shortDescription}</p>
+                    </a>
+                ))}
+            </div>
+        </section>
 
-                    <ul class="api-card__top-list">
-                        {group.entries.slice(0, 6).map(entry => (
-                            <li data-api-item data-api-name={entry.data.title.toLowerCase()} data-api-system={entry.data.subsystem}>
-                                <a href={`${import.meta.env.BASE_URL}en/api/${entry.id}/`}>{entry.data.title}</a>
-                            </li>
-                        ))}
-                    </ul>
+        <section id="subsystems" class="api-subsystems">
+            <div class="api-section-head">
+                <span>Subsystems</span>
+                <span class="line"></span>
+                <span>{grouped.length}</span>
+            </div>
 
-                    {group.entries.length > 6 && (
-                        <details class="api-card__all">
-                            <summary>Show all</summary>
+            <div class="api-subsystem-grid">
+                {grouped.map(group => {
+                    const preview = group.entries.slice(0, 5);
+                    return (
+                        <article id={`subsystem-${group.subsystem}`} class="api-subsystem-card">
+                            <header>
+                                <h2>{group.label}</h2>
+                                <span class="count">{group.entries.length} symbols</span>
+                            </header>
+                            <p>{group.description}</p>
                             <ul>
-                                {group.entries.slice(6).map(entry => (
-                                    <li data-api-item data-api-name={entry.data.title.toLowerCase()} data-api-system={entry.data.subsystem}>
-                                        <a href={`${import.meta.env.BASE_URL}en/api/${entry.id}/`}>{entry.data.title}</a>
+                                {preview.map(item => (
+                                    <li>
+                                        <a href={item.href}>
+                                            <code>{item.entry.data.title}</code>
+                                            <span>{item.kind}</span>
+                                        </a>
                                     </li>
                                 ))}
                             </ul>
-                        </details>
-                    )}
-                </article>
-            ))
-        }
-    </section>
+                            <a class="view-all" href={`${import.meta.env.BASE_URL}en/api/all/?subsystem=${group.subsystem}`}>View all in {group.label}</a>
+                        </article>
+                    );
+                })}
+            </div>
+        </section>
 
-    <script is:inline>
-        (() => {
-            const input = document.querySelector('[data-api-filter]');
-            if (!(input instanceof HTMLInputElement)) return;
-
-            const cards = [...document.querySelectorAll('[data-api-subsystem]')];
-            const items = [...document.querySelectorAll('[data-api-item]')];
-
-            const applyFilter = () => {
-                const raw = input.value.trim().toLowerCase();
-                let visibleCount = 0;
-
-                for (const item of items) {
-                    if (!(item instanceof HTMLElement)) continue;
-                    const name = item.dataset.apiName ?? '';
-                    const subsystem = item.dataset.apiSystem ?? '';
-                    const matches = raw.length === 0 || name.includes(raw) || subsystem.includes(raw);
-                    item.hidden = !matches;
-                    if (matches) visibleCount += 1;
-                }
-
-                for (const card of cards) {
-                    if (!(card instanceof HTMLElement)) continue;
-                    const hasVisibleItem = [...card.querySelectorAll('[data-api-item]')].some(node => node instanceof HTMLElement && !node.hidden);
-                    card.hidden = !hasVisibleItem && raw.length > 0;
-                }
-
-                input.setAttribute('aria-label', `${visibleCount} matching symbols`);
-            };
-
-            input.addEventListener('input', applyFilter);
-        })();
-    </script>
+        <section id="all-symbols" class="api-all-link">
+            <div class="api-section-head">
+                <span>All symbols</span>
+                <span class="line"></span>
+                <span>A-Z</span>
+            </div>
+            <p>Use the full lookup page for alphabetical browsing and filters.</p>
+            <a class="api-all-link__cta" href={`${import.meta.env.BASE_URL}en/api/all/`}>Open all symbols A-Z</a>
+        </section>
+    </div>
 </DocsLayout>
 
 <style>
-    .api-hero {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        background: var(--bg-panel);
-        padding: 1rem;
-        margin-bottom: 0.8rem;
+    .api-prose {
+        max-width: none;
     }
 
-    .api-hero h1 {
-        margin: 0;
-        font-size: clamp(1.7rem, 3.6vw, 2.4rem);
-    }
-
-    .api-hero p {
-        margin: 0.6rem 0 0;
-        color: var(--fg-muted);
-        max-width: 72ch;
-    }
-
-    .api-stats {
-        margin-top: 0.8rem;
+    .api-head {
         display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: var(--s-5);
+        margin-bottom: var(--s-4);
         flex-wrap: wrap;
-        gap: 0.5rem;
     }
 
-    .api-stats span {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-pill);
-        padding: 0.22rem 0.6rem;
-        font-size: 0.8rem;
-        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
+    .api-head h1 {
+        margin: 0 0 4px;
+        font-size: 32px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
     }
 
-    .api-filter {
-        display: grid;
-        gap: 0.42rem;
-        margin-bottom: 0.9rem;
-    }
-
-    .api-filter span {
-        font-size: 0.82rem;
-        color: var(--fg-faint);
-    }
-
-    .api-filter input {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        background: var(--bg-input);
-        color: var(--fg);
-        padding: 0.56rem 0.72rem;
-    }
-
-    .api-grid {
-        display: grid;
-        gap: 0.75rem;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    }
-
-    .api-card {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
-        padding: 0.9rem;
-    }
-
-    .api-card h2 {
+    .api-head p {
         margin: 0;
-        text-transform: capitalize;
-        font-size: 1.05rem;
-    }
-
-    .api-card p {
-        margin: 0.42rem 0 0;
         color: var(--fg-muted);
-        font-size: 0.9rem;
+        max-width: 68ch;
     }
 
-    .api-card__meta {
-        margin-top: 0.52rem;
+    .api-search {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        width: 420px;
+        max-width: 100%;
+        padding: 8px 10px;
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        border: 1px solid var(--line);
     }
 
-    .api-card__meta span {
-        display: inline-block;
-        font-size: 0.78rem;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-pill);
-        padding: 0.18rem 0.5rem;
+    .api-search__icon {
         color: var(--fg-faint);
+        font-family: var(--f-mono);
+        font-size: 12px;
     }
 
-    .api-card__top-list,
-    .api-card__all ul {
-        margin: 0.7rem 0 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
-        gap: 0.35rem;
+    .api-search input {
+        background: transparent;
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 14px;
+        color: var(--fg);
+        min-width: 0;
     }
 
-    .api-card a {
-        display: block;
-        border-radius: var(--r-2);
-        border: 1px solid transparent;
-        padding: 0.35rem 0.45rem;
-        text-decoration: none;
+    .api-search button {
+        border: 1px solid var(--line-soft);
+        background: var(--bg-canvas);
+        color: var(--fg-muted);
+        border-radius: var(--r-pill);
+        font-family: var(--f-mono);
+        font-size: 11px;
+        padding: 4px 9px;
     }
 
-    .api-card a:hover,
-    .api-card a:focus-visible {
+    .api-search button:hover,
+    .api-search button:focus-visible {
+        color: var(--fg);
         border-color: var(--accent-line);
         background: var(--accent-soft);
         outline: none;
     }
 
-    .api-card__all {
-        margin-top: 0.62rem;
-        border-top: 1px solid var(--line-soft);
-        padding-top: 0.56rem;
+    .api-counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: var(--s-6);
     }
 
-    .api-card__all summary {
-        cursor: pointer;
-        font-size: 0.82rem;
+    .api-counts span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: var(--r-pill);
+        background: var(--bg-elevated);
+        border: 1px solid var(--line-soft);
+        font-size: 12px;
+        color: var(--fg-muted);
+        font-family: var(--f-mono);
+    }
+
+    .api-counts strong {
+        color: var(--fg);
+        font-weight: 600;
+    }
+
+    .api-section-head {
+        margin-bottom: var(--s-3);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
         color: var(--fg-faint);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
+
+    .api-section-head .line {
+        flex: 1;
+        height: 1px;
+        background: var(--line-soft);
+    }
+
+    .api-featured {
+        margin-bottom: var(--s-7);
+    }
+
+    .api-featured-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s-3);
+    }
+
+    .api-feature-card {
+        display: block;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        padding: 0.75rem;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .api-feature-card:hover,
+    .api-feature-card:focus-visible {
+        border-color: var(--accent-line);
+        background: color-mix(in oklab, var(--bg-canvas), transparent 55%);
+        outline: none;
+    }
+
+    .api-feature-card__head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .api-feature-card__head code {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        color: var(--fg);
+    }
+
+    .api-feature-card__import {
+        margin-top: 0.3rem;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        color: var(--sky);
+    }
+
+    .api-feature-card p {
+        margin: 0.4rem 0 0;
+        font-size: 12.5px;
+        color: var(--fg-muted);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .api-subsystem-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s-4);
+    }
+
+    .api-subsystem-card {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        padding: 0.9rem;
+    }
+
+    .api-subsystem-card header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--s-3);
+        margin-bottom: 0.3rem;
+    }
+
+    .api-subsystem-card h2 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: -0.01em;
+    }
+
+    .api-subsystem-card .count {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        color: var(--fg-faint);
+    }
+
+    .api-subsystem-card > p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--fg-muted);
+    }
+
+    .api-subsystem-card ul {
+        list-style: none;
+        margin: 0.7rem 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .api-subsystem-card li a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0.3rem 0.45rem;
+        border-radius: var(--r-2);
+        color: var(--fg-muted);
+        text-decoration: none;
+    }
+
+    .api-subsystem-card li a:hover,
+    .api-subsystem-card li a:focus-visible {
+        background: var(--bg-canvas);
+        color: var(--fg);
+        outline: none;
+    }
+
+    .api-subsystem-card li code {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: inherit;
+    }
+
+    .api-subsystem-card li span {
+        font-size: 11px;
+        font-family: var(--f-mono);
+        color: var(--fg-faint);
+        text-transform: uppercase;
+    }
+
+    .api-subsystem-card .view-all {
+        margin-top: 0.7rem;
+        display: inline-flex;
+        font-size: 12px;
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid var(--accent-line);
+    }
+
+    .api-all-link {
+        margin-top: var(--s-7);
+    }
+
+    .api-all-link p {
+        margin: 0;
+        color: var(--fg-muted);
+    }
+
+    .api-all-link__cta {
+        margin-top: var(--s-3);
+        display: inline-flex;
+        padding: 8px 12px;
+        border-radius: var(--r-2);
+        border: 1px solid var(--line-soft);
+        background: var(--bg-elevated);
+        color: var(--fg);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .api-all-link__cta:hover,
+    .api-all-link__cta:focus-visible {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+        outline: none;
+    }
+
+    .api-kind {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid var(--line-soft);
+        padding: 1px 6px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        line-height: 1.3;
+    }
+
+    .api-kind.kind-class {
+        color: var(--accent);
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+    }
+
+    .api-kind.kind-enum {
+        color: var(--rose);
+        border-color: color-mix(in oklab, var(--rose), transparent 65%);
+        background: color-mix(in oklab, var(--rose), transparent 88%);
+    }
+
+    .toc h6 {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .toc ul {
+        list-style: none;
+        margin: var(--s-3) 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toc a {
+        display: block;
+        border-left: 2px solid transparent;
+        padding: 4px 0 4px var(--s-3);
+        margin-left: -10px;
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .toc a:hover,
+    .toc a:focus-visible {
+        color: var(--fg);
+        outline: none;
+    }
+
+    .toc li:first-child a,
+    .toc a[data-active='true'] {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+
+    .toc__resources {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--line-soft);
+    }
+
+    @media (max-width: 1120px) {
+        .api-featured-grid,
+        .api-subsystem-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .api-head {
+            gap: var(--s-3);
+            margin-bottom: var(--s-3);
+        }
+
+        .api-head h1 {
+            font-size: 1.75rem;
+            line-height: 1.15;
+        }
+
+        .api-head p {
+            line-height: 1.58;
+        }
+
+        .api-search {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.55rem 0.62rem;
+        }
+
+        .api-search input {
+            min-height: 32px;
+        }
+
+        .api-search button {
+            min-height: 32px;
+            white-space: nowrap;
+        }
+
+        .api-counts {
+            margin-bottom: var(--s-4);
+        }
+
+        .api-featured {
+            margin-bottom: var(--s-5);
+        }
+
+        .api-feature-card {
+            padding: 0.72rem;
+        }
+
+        .api-feature-card p {
+            line-height: 1.58;
+        }
+
+        .api-subsystem-grid {
+            grid-template-columns: 1fr;
+            gap: var(--s-3);
+        }
+
+        .api-subsystem-card {
+            padding: 0.75rem;
+        }
+
+        .api-subsystem-card h2 {
+            font-size: 0.92rem;
+        }
+
+        .api-subsystem-card .count {
+            font-size: 0.65rem;
+        }
+
+        .api-subsystem-card li a {
+            min-height: 44px;
+            padding: 0.45rem 0.52rem;
+        }
+
+        .api-subsystem-card li code {
+            overflow-wrap: anywhere;
+            min-width: 0;
+        }
+
+        .api-subsystem-card .view-all {
+            min-height: 44px;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .api-all-link {
+            margin-top: var(--s-5);
+        }
+
+        .api-all-link__cta {
+            min-height: 44px;
+            align-items: center;
+        }
     }
 </style>

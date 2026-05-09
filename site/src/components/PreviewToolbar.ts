@@ -11,6 +11,7 @@ export class PreviewToolbar extends LitElement {
     @property({ type: Number }) public canvasWidth = 0;
     @property({ type: Number }) public canvasHeight = 0;
     @property({ type: Number }) public zoom = 1;
+    @property({ type: String }) public selectedVersionId = '';
     @property({ type: Boolean }) public disabled = false;
     @property({ attribute: false }) public capabilities: Array<Capability> = [];
 
@@ -21,7 +22,7 @@ export class PreviewToolbar extends LitElement {
         return html`
             <div class="meta">
                 ${this.exampleTitle ? html`<span class="title" title=${this.exampleTitle}>${this.exampleTitle}</span>` : nothing}
-                ${this.capabilities.map(capability => html`<span class="cap">${capability}</span>`)}
+                ${hasDimensions ? html`<span class="dot-sep" aria-hidden="true">·</span>` : nothing}
                 ${hasDimensions
                     ? html`
                           <span class="dimensions" title="Preview canvas size">
@@ -29,6 +30,8 @@ export class PreviewToolbar extends LitElement {
                           </span>
                       `
                     : nothing}
+                ${this.selectedVersionId ? html`<span class="dot-sep" aria-hidden="true">·</span><span class="version">exojs@${this.selectedVersionId}</span>` : nothing}
+                ${this.capabilities.slice(0, 2).map(capability => html`<span class="cap">${capability}</span>`)}
             </div>
             <div class="actions">
                 <button
@@ -39,7 +42,7 @@ export class PreviewToolbar extends LitElement {
                     ?disabled=${this.disabled}
                     @click=${this._onOpenInTab}
                 >
-                    Open in new tab
+                    Open
                 </button>
                 <button
                     class="button button--primary"

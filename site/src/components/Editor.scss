@@ -1,8 +1,8 @@
 :host {
     display: block;
-    width: min(100%, 1180px);
+    width: min(100%, 1160px);
     margin: 0 auto;
-    padding: 0.2rem 0 0.8rem;
+    padding: 0.08rem 0 0.8rem;
     box-sizing: border-box;
 }
 
@@ -11,14 +11,15 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    background: var(--bg-elevated);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--r-4);
+    background: var(--bg-code);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
     overflow: hidden;
 }
 
 .preview-frame {
-    margin: 0 auto 0.85rem;
+    margin: 0 auto 0.75rem;
+    box-shadow: var(--shadow-2);
 }
 
 .preview-surface {
@@ -26,8 +27,10 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    min-height: 200px;
+    min-height: 240px;
     background: var(--bg-code);
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .unavailable-overlay {
@@ -57,7 +60,7 @@
 }
 
 .error-panel {
-    margin: 0 0 0.8rem;
+    margin: 0 0 0.7rem;
     overflow: hidden;
     border-radius: var(--r-3);
     border: 1px solid color-mix(in oklab, oklch(76% 0.15 27), transparent 45%);
@@ -141,6 +144,18 @@
     }
 
     .preview-frame {
-        margin: 0 0 0.75rem;
+        margin: 0 0 0.62rem;
+    }
+}
+
+@media (max-width: 760px) {
+    .preview-surface {
+        min-height: 180px;
+        max-height: min(44dvh, 330px);
+    }
+
+    exo-preview {
+        max-width: 100%;
+        margin: 0 auto;
     }
 }

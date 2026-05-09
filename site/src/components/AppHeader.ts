@@ -14,23 +14,28 @@ export class AppHeader extends LitElement {
     @property({ type: String }) public sidebarControls = '';
     @property({ attribute: false }) public versions: ReadonlyArray<VersionInfo> = [];
     @property({ attribute: false }) public selectedVersion: VersionInfo | null = null;
+    @property({ type: Boolean }) public showSidebarToggle = true;
 
     public render(): ReturnType<LitElement['render']> {
         return html`
-            <button
-                class="menu-button"
-                aria-label=${this.sidebarOpen ? 'Close navigation' : 'Open navigation'}
-                aria-expanded=${String(this.sidebarOpen)}
-                aria-controls=${this.sidebarControls}
-                @click=${this._onToggleSidebar}
-            >
-                <svg class="menu-icon" viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true">
-                    <rect x="2" y="4" width="16" height="2" rx="1" />
-                    <rect x="2" y="9" width="16" height="2" rx="1" />
-                    <rect x="2" y="14" width="16" height="2" rx="1" />
-                </svg>
-            </button>
-            <span class="title">${this.activeExample ? this.activeExample.title : 'Playground'}</span>
+            ${this.showSidebarToggle
+                ? html`
+                      <button
+                          class="menu-button"
+                          aria-label=${this.sidebarOpen ? 'Close navigation' : 'Open navigation'}
+                          aria-expanded=${String(this.sidebarOpen)}
+                          aria-controls=${this.sidebarControls}
+                          @click=${this._onToggleSidebar}
+                      >
+                          <svg class="menu-icon" viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true">
+                              <rect x="2" y="4" width="16" height="2" rx="1" />
+                              <rect x="2" y="9" width="16" height="2" rx="1" />
+                              <rect x="2" y="14" width="16" height="2" rx="1" />
+                          </svg>
+                      </button>
+                  `
+                : null}
+            <span class="spacer"></span>
             <exo-version-pill .selectedVersion=${this.selectedVersion} .versions=${this.versions}></exo-version-pill>
         `;
     }

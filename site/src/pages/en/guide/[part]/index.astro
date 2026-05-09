@@ -1,6 +1,4 @@
 ---
-import DocsLayout from '../../../../layouts/DocsLayout.astro';
-import DocsSidebar from '../../../../components/DocsSidebar.astro';
 import { GUIDE_PARTS } from '../../../../lib/guide-structure';
 
 export function getStaticPaths() {
@@ -14,83 +12,28 @@ if (!part) {
     throw new Error(`Unknown guide part: ${partSlug}`);
 }
 
-const sidebarParts = GUIDE_PARTS.map(entry => ({
-    slug: entry.slug,
-    title: entry.title,
-    href: `${import.meta.env.BASE_URL}en/guide/${entry.slug}/`,
-    chapters: entry.chapters.map(chapter => ({
-        slug: chapter.slug,
-        title: chapter.title,
-        href: `${import.meta.env.BASE_URL}en/guide/${entry.slug}/${chapter.slug}/`,
-    })),
-}));
+const firstChapter = part.chapters[0];
+if (!firstChapter) {
+    throw new Error(`Guide part has no chapters: ${partSlug}`);
+}
+
+const targetHref = `${import.meta.env.BASE_URL}en/guide/${part.slug}/${firstChapter.slug}/`;
 ---
 
-<DocsLayout title={`${part.title} | ExoJS Guide`} description={part.description}>
-    <DocsSidebar slot="sidebar" parts={sidebarParts} />
-
-    <section class="part-hero">
-        <h1>{part.title}</h1>
-        <p>{part.description}</p>
-    </section>
-
-    <section class="chapter-list">
-        {part.chapters.map(chapter => (
-            <article>
-                <h2>
-                    <a href={`${import.meta.env.BASE_URL}en/guide/${part.slug}/${chapter.slug}/`}>{chapter.title}</a>
-                </h2>
-                <p>{chapter.description}</p>
-                <p>{chapter.examples.length} examples</p>
-            </article>
-        ))}
-    </section>
-</DocsLayout>
-
-<style>
-    .part-hero {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        padding: 1rem;
-        background: var(--bg-panel);
-        margin-bottom: 0.9rem;
-    }
-
-    .part-hero h1 {
-        margin: 0;
-        font-size: clamp(1.6rem, 3.2vw, 2.3rem);
-    }
-
-    .part-hero p {
-        margin: 0.65rem 0 0;
-        color: var(--fg-muted);
-        max-width: 70ch;
-    }
-
-    .chapter-list {
-        display: grid;
-        gap: 0.7rem;
-    }
-
-    .chapter-list article {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        padding: 0.9rem;
-        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
-    }
-
-    .chapter-list h2 {
-        margin: 0 0 0.4rem;
-        font-size: 1rem;
-    }
-
-    .chapter-list h2 a {
-        color: inherit;
-        text-decoration: none;
-    }
-
-    .chapter-list p {
-        margin: 0.3rem 0;
-        color: var(--fg-muted);
-    }
-</style>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{part.title} | ExoJS Guide</title>
+        <script is:inline define:vars={{ targetHref }}>
+            window.location.replace(targetHref);
+        </script>
+        <noscript>
+            <meta http-equiv="refresh" content={`0;url=${targetHref}`} />
+        </noscript>
+    </head>
+    <body>
+        <p>Redirecting to <a href={targetHref}>{firstChapter.title}</a>...</p>
+    </body>
+</html>

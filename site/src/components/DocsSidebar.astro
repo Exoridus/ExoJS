@@ -12,6 +12,7 @@ interface Props {
         slug: string;
         title: string;
         href: string;
+        baseHref?: string;
         chapters: Array<{
             slug: string;
             title: string;
@@ -23,62 +24,80 @@ interface Props {
 
 const { parts = [], groups = [] } = Astro.props;
 const currentPath = Astro.url.pathname;
+const isGuideSidebar = parts.length > 0;
+const isGroupedSidebar = groups.length > 0 && !isGuideSidebar;
+
+const parseIndexedLabel = (value: string) => {
+    const match = /^([0-9]+(?:\.[0-9]+)?)\s+(.+)$/.exec(value.trim());
+    if (!match) return { index: null, label: value };
+    return { index: match[1], label: match[2] };
+};
 ---
 
-<aside class="docs-sidebar">
+<aside class:list={['docs-sidebar', isGuideSidebar && 'docs-sidebar--guide', isGroupedSidebar && 'docs-sidebar--grouped']}>
     {
         groups.length > 0 &&
             groups.map(group => (
-                <section>
-                    <h2>{group.title}</h2>
+                <section class="side-section" data-open="true">
+                    <h6>
+                        <span>{group.title}</span>
+                    </h6>
                     <ul>
-                        {group.items.map(item => (
+                        {group.items.map((item, itemIndex) => {
+                            const itemLabel = parseIndexedLabel(item.label);
+                            return (
                             <li>
-                                <a href={item.href} class={currentPath === item.href ? 'active' : ''}>
-                                    {item.label}
+                                <a href={item.href} class="side-link" data-active={currentPath === item.href ? 'true' : 'false'}>
+                                    <span class="num">{itemLabel.index ?? String(itemIndex + 1).padStart(2, '0')}</span>
+                                    <span>{itemLabel.label}</span>
                                 </a>
                             </li>
-                        ))}
+                            );
+                        })}
                     </ul>
                 </section>
             ))
     }
-    {parts.map(part => (
-        <details open={currentPath.startsWith(part.href)}>
-            <summary>
-                <a href={part.href} class={currentPath === part.href ? 'active' : ''}>{part.title}</a>
-            </summary>
-            <ul>
-                {part.chapters.map(chapter => (
-                    <li>
-                        <a href={chapter.href} class={currentPath === chapter.href ? 'active' : ''}>
-                            {chapter.title}
-                        </a>
-                    </li>
-                ))}
-            </ul>
-        </details>
-    ))}
+    {isGuideSidebar &&
+        parts.map(part => {
+            const partLabel = parseIndexedLabel(part.title);
+            const partActive = currentPath.startsWith(part.baseHref ?? part.href);
+            return (
+                <section class="side-section" data-open={partActive ? 'true' : 'false'}>
+                    <h6>
+                        {partLabel.index && <span class="num">{partLabel.index}</span>}
+                        <span>{partLabel.label}</span>
+                    </h6>
+                    <ul>
+                        {part.chapters.map((chapter, chapterIndex) => {
+                            const chapterLabel = parseIndexedLabel(chapter.title);
+                            const chapterActive = currentPath === chapter.href;
+                            return (
+                                <li>
+                                    <a href={chapter.href} class="side-link" data-active={chapterActive ? 'true' : 'false'}>
+                                        <span class="num">{chapterIndex + 1}</span>
+                                        <span>{chapterLabel.label}</span>
+                                    </a>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </section>
+            );
+        })}
 </aside>
 
 <style>
     .docs-sidebar {
         position: sticky;
-        top: 70px;
-        max-height: calc(100vh - 82px);
+        top: 76px;
+        max-height: calc(100vh - 88px);
         overflow: auto;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        background: var(--bg-elevated);
-        padding: 0.85rem;
-    }
-
-    .docs-sidebar details + details {
-        margin-top: 0.9rem;
+        padding-right: var(--s-3);
     }
 
     .docs-sidebar section + section {
-        margin-top: 0.9rem;
+        margin-top: var(--s-5);
     }
 
     .docs-sidebar h2 {
@@ -86,57 +105,178 @@ const currentPath = Astro.url.pathname;
         font-size: 0.78rem;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: var(--fg-faint);
-    }
-
-    .docs-sidebar details {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        padding: 0.35rem 0.45rem;
-        background: color-mix(in oklab, var(--bg-panel), transparent 12%);
-    }
-
-    .docs-sidebar summary {
-        cursor: pointer;
-        list-style: none;
-    }
-
-    .docs-sidebar summary::-webkit-details-marker {
-        display: none;
-    }
-
-    .docs-sidebar summary a {
-        display: inline-block;
-        width: 100%;
-        border-radius: 8px;
-        padding: 0.3rem 0.45rem;
-        text-decoration: none;
-        font-size: 0.85rem;
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-        color: var(--fg);
-        font-weight: 600;
+        color: var(--color-text-faint);
     }
 
     .docs-sidebar ul {
-        list-style: none;
-        margin: 0.35rem 0 0;
+        margin: 0;
         padding: 0;
-        display: grid;
-        gap: 0.3rem;
+        list-style: none;
     }
 
     .docs-sidebar a {
         display: block;
-        border-radius: 8px;
-        padding: 0.36rem 0.5rem;
-        font-size: 0.85rem;
-        color: var(--fg-muted);
+        border-radius: var(--r-2);
+        padding: 0.36rem var(--s-3);
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
         text-decoration: none;
+        transition:
+            background var(--transition-fast),
+            color var(--transition-fast),
+            border-color var(--transition-fast),
+            border-left-color var(--transition-fast);
+        border-left: 2px solid transparent;
     }
 
-    .docs-sidebar a.active {
-        background: var(--accent-soft);
-        color: var(--fg);
+    .docs-sidebar a:hover {
+        color: var(--color-text);
+        background: var(--color-surface);
+    }
+
+    .docs-sidebar a.active,
+    .docs-sidebar a[data-active='true'] {
+        background: var(--color-accent-soft);
+        color: var(--color-text);
+        border-left-color: var(--color-accent);
+    }
+
+    .docs-sidebar a:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+    }
+
+    .part-label__index,
+    .chapter-label__index,
+    .side-section .num,
+    .side-link .num {
+        font-family: var(--f-mono);
+        color: var(--color-accent);
+        font-size: 0.7rem;
+        line-height: 1;
+        min-width: 18px;
+        text-align: left;
+        opacity: 0.95;
+    }
+
+    .part-label__title {
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.73rem;
+        color: var(--color-text-faint);
+    }
+
+    .chapter-label__title {
+        line-height: 1.34;
+    }
+
+    .docs-sidebar--guide .side-section {
+        margin-bottom: var(--s-5);
+    }
+
+    .docs-sidebar--guide .side-section h6 {
+        margin: 0 0 var(--s-2);
+        padding: 0 var(--s-3);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+        color: var(--color-text-faint);
+    }
+
+    .docs-sidebar--guide .side-section[data-open='true'] h6 {
+        color: var(--color-text-muted);
+    }
+
+    .docs-sidebar--guide .side-section ul {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .docs-sidebar--guide .side-link {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        font-size: 13.5px;
+        color: var(--color-text-muted);
+        transition: all var(--transition-fast);
+    }
+
+    .docs-sidebar--guide .side-link:hover {
+        color: var(--color-text);
+        background: var(--color-surface);
+    }
+
+    .docs-sidebar--guide .side-link[data-active='true'] {
+        background: var(--color-accent-soft);
+        color: var(--color-text);
+        border-left-color: var(--color-accent);
+    }
+
+    .docs-sidebar--guide .side-link .num {
+        color: var(--color-text-faint);
+    }
+
+    .docs-sidebar--guide .side-link[data-active='true'] .num {
+        color: var(--color-accent);
+        font-weight: 600;
+    }
+
+    .docs-sidebar--grouped .side-section {
+        margin-bottom: var(--s-5);
+    }
+
+    .docs-sidebar--grouped .side-section h6 {
+        margin: 0 0 var(--s-2);
+        padding: 0 var(--s-3);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+        color: var(--color-text-faint);
+    }
+
+    .docs-sidebar--grouped .side-section ul {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .docs-sidebar--grouped .side-link {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        font-size: 13.5px;
+        color: var(--color-text-muted);
+        transition: all var(--transition-fast);
+    }
+
+    .docs-sidebar--grouped .side-link:hover {
+        color: var(--color-text);
+        background: var(--color-surface);
+    }
+
+    .docs-sidebar--grouped .side-link[data-active='true'] {
+        background: var(--color-accent-soft);
+        color: var(--color-text);
+        border-left-color: var(--color-accent);
+    }
+
+    .docs-sidebar--grouped .side-link .num {
+        color: var(--color-text-faint);
+    }
+
+    .docs-sidebar--grouped .side-link[data-active='true'] .num {
+        color: var(--color-accent);
+        font-weight: 600;
     }
 </style>

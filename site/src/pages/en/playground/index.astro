@@ -8,6 +8,6 @@ import { ExampleBrowser } from '../../../components/ExampleBrowser';
          actually lands on something keyboard-traversable. Focus then tabs into the
          shadow tree of <example-browser> as normal. -->
     <div class="playground-main">
-        <ExampleBrowser client:only="lit" />
+        <ExampleBrowser client:only="lit" base-url={import.meta.env.BASE_URL} />
     </div>
 </Layout>

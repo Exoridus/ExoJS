@@ -11,15 +11,15 @@ export class GuideExamplePreview extends LitElement {
             display: block;
             border-radius: var(--r-3);
             overflow: hidden;
-            border: 1px solid var(--line-soft);
-            background: var(--bg-code);
-            max-height: 480px;
+            border: 0;
+            background: var(--color-code-bg);
+            max-height: 420px;
         }
 
         exo-preview {
             display: block;
-            min-height: 320px;
-            max-height: 480px;
+            min-height: 280px;
+            max-height: 420px;
         }
     `;
 

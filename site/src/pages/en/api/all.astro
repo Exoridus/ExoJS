@@ -1,0 +1,583 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import DocsSidebar from '../../../components/DocsSidebar.astro';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, compactDescription, parseMemberCounts, toApiHref } from '../../../lib/api-reference';
+
+type ApiListItem = {
+    entry: CollectionEntry<'api'>;
+    href: string;
+    kind: string;
+    shortDescription: string;
+    searchText: string;
+    subsystemKey: keyof typeof API_SUBSYSTEM_META;
+    subsystemLabel: string;
+    counts: ReturnType<typeof parseMemberCounts>;
+};
+
+const apiEntries = await getCollection('api');
+const sortedEntries = [...apiEntries].sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const items: ApiListItem[] = sortedEntries.map(entry => {
+    const counts = parseMemberCounts(entry.body ?? '');
+    return {
+        entry,
+        href: toApiHref(import.meta.env.BASE_URL, entry.id),
+        kind: entry.data.kind.toLowerCase(),
+        shortDescription: compactDescription(entry.data.description ?? '', 126),
+        searchText: `${entry.data.title} ${entry.data.symbol} ${entry.data.subsystem} ${entry.data.importPath} ${entry.data.description}`.toLowerCase(),
+        subsystemKey: entry.data.subsystem as keyof typeof API_SUBSYSTEM_META,
+        subsystemLabel: API_SUBSYSTEM_META[entry.data.subsystem as keyof typeof API_SUBSYSTEM_META].label,
+        counts,
+    };
+});
+
+const letterBuckets = new Map<string, ApiListItem[]>();
+for (const item of items) {
+    const first = item.entry.data.title.trim().charAt(0).toUpperCase();
+    const letter = /^[A-Z]$/.test(first) ? first : '#';
+    if (!letterBuckets.has(letter)) letterBuckets.set(letter, []);
+    letterBuckets.get(letter)!.push(item);
+}
+
+const letters = [...letterBuckets.keys()].sort((a, b) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)));
+
+const groupedSubsystems = API_SUBSYSTEM_ORDER.map(subsystem => ({
+    subsystem,
+    label: API_SUBSYSTEM_META[subsystem].label,
+    count: items.filter(item => item.entry.data.subsystem === subsystem).length,
+}));
+
+const totalSymbols = items.length;
+const classCount = items.filter(item => item.kind === 'class').length;
+const enumCount = items.filter(item => item.kind === 'enum').length;
+const hasMethodsCount = items.filter(item => item.counts.methods > 0).length;
+const hasPropertiesCount = items.filter(item => item.counts.properties > 0).length;
+const hasEventsCount = items.filter(item => item.counts.events > 0).length;
+
+const sidebarGroups = [
+    {
+        title: 'API',
+        items: [
+            { href: `${import.meta.env.BASE_URL}en/api/`, label: 'Overview' },
+            { href: `${import.meta.env.BASE_URL}en/api/all/`, label: 'All symbols A-Z' },
+        ],
+    },
+    {
+        title: 'Subsystems',
+        items: groupedSubsystems.map(group => ({
+            href: `${import.meta.env.BASE_URL}en/api/all/?subsystem=${group.subsystem}`,
+            label: `${group.label} (${group.count})`,
+        })),
+    },
+];
+---
+
+<DocsLayout title="All API symbols | ExoJS API" description="Alphabetical index of all public ExoJS API symbols." variant="api">
+    <DocsSidebar slot="sidebar" groups={sidebarGroups} />
+
+    <aside slot="rail" class="toc" aria-label="API all-symbol index table of contents">
+        <h6>On this page</h6>
+        <ul>
+            {letters.map((letter, index) => (
+                <li><a href={`#letter-${letter}`} data-active={index === 0 ? 'true' : 'false'}>{letter}</a></li>
+            ))}
+        </ul>
+    </aside>
+
+    <div class="prose api-all-prose">
+        <div class="api-all-controls">
+            <header class="api-head">
+                <div>
+                    <h1>All symbols A-Z</h1>
+                    <p>Alphabetical lookup for the full public API surface.</p>
+                </div>
+                <form class="api-search" data-api-filter-form>
+                    <span class="api-search__icon" aria-hidden="true">/</span>
+                    <input type="search" name="q" placeholder="Search symbols..." autocomplete="off" data-api-filter />
+                </form>
+            </header>
+
+            <div class="api-filters" role="toolbar" aria-label="Symbol filters">
+                <button type="button" data-api-kind-filter="all" data-active="true">All <span class="n">{totalSymbols}</span></button>
+                <button type="button" data-api-kind-filter="class">Classes <span class="n">{classCount}</span></button>
+                <button type="button" data-api-kind-filter="enum">Enums <span class="n">{enumCount}</span></button>
+                <button type="button" data-api-kind-filter="has-methods">Has methods <span class="n">{hasMethodsCount}</span></button>
+                <button type="button" data-api-kind-filter="has-properties">Has properties <span class="n">{hasPropertiesCount}</span></button>
+                <button type="button" data-api-kind-filter="has-events">Has events <span class="n">{hasEventsCount}</span></button>
+            </div>
+        </div>
+
+        {letters.map(letter => (
+            <section id={`letter-${letter}`} class="api-letter-section" data-api-letter-section>
+                <div class="api-section-head">
+                    <span>{letter}</span>
+                    <span class="line"></span>
+                </div>
+                <ul class="api-rows" data-api-rows>
+                    {letterBuckets.get(letter)?.map(item => (
+                        <li
+                            class="api-row-item"
+                            data-api-item
+                            data-api-name={item.searchText}
+                            data-api-kind={item.kind}
+                            data-api-subsystem={item.subsystemKey}
+                            data-api-has-methods={item.counts.methods > 0 ? 'true' : 'false'}
+                            data-api-has-properties={item.counts.properties > 0 ? 'true' : 'false'}
+                            data-api-has-events={item.counts.events > 0 ? 'true' : 'false'}
+                        >
+                            <a href={item.href}>
+                                <div class="main">
+                                    <div class="name">
+                                        <span class:list={['api-kind', `kind-${item.kind}`]}>{item.kind}</span>
+                                        <code>{item.entry.data.title}</code>
+                                    </div>
+                                    <p>{item.shortDescription}</p>
+                                </div>
+                                <div class="meta">
+                                    <span>{item.subsystemLabel}</span>
+                                    <code>{item.entry.data.importPath}</code>
+                                </div>
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </section>
+        ))}
+    </div>
+
+    <script is:inline>
+        (() => {
+            const input = document.querySelector('[data-api-filter]');
+            if (!(input instanceof HTMLInputElement)) return;
+
+            const filterButtons = Array.from(document.querySelectorAll('[data-api-kind-filter]'));
+            const items = Array.from(document.querySelectorAll('[data-api-item]'));
+            const sections = Array.from(document.querySelectorAll('[data-api-letter-section]'));
+            let activeFilter = 'all';
+
+            const setQueryParam = (key, value) => {
+                const url = new URL(window.location.href);
+                if (value && value.length > 0) url.searchParams.set(key, value);
+                else url.searchParams.delete(key);
+                window.history.replaceState({}, '', url.toString());
+            };
+
+            const matchesKindFilter = item => {
+                const kind = item.dataset.apiKind ?? '';
+                if (activeFilter === 'all') return true;
+                if (activeFilter === 'class') return kind === 'class';
+                if (activeFilter === 'enum') return kind === 'enum';
+                if (activeFilter === 'has-methods') return item.dataset.apiHasMethods === 'true';
+                if (activeFilter === 'has-properties') return item.dataset.apiHasProperties === 'true';
+                if (activeFilter === 'has-events') return item.dataset.apiHasEvents === 'true';
+                return true;
+            };
+
+            const applyFilters = () => {
+                const query = input.value.trim().toLowerCase();
+                const url = new URL(window.location.href);
+                const subsystem = (url.searchParams.get('subsystem') || '').toLowerCase();
+
+                for (const item of items) {
+                    if (!(item instanceof HTMLElement)) continue;
+                    const name = item.dataset.apiName ?? '';
+                    const matchesQuery = query.length === 0 || name.includes(query);
+                    const matchesSubsystem = subsystem.length === 0 || (item.dataset.apiSubsystem ?? '').toLowerCase() === subsystem;
+                    const matchesFilter = matchesKindFilter(item);
+                    item.hidden = !(matchesQuery && matchesSubsystem && matchesFilter);
+                }
+
+                for (const section of sections) {
+                    if (!(section instanceof HTMLElement)) continue;
+                    const visibleItems = Array.from(section.querySelectorAll('[data-api-item]')).filter(node => node instanceof HTMLElement && !node.hidden);
+                    section.hidden = visibleItems.length === 0;
+                }
+            };
+
+            const params = new URLSearchParams(window.location.search);
+            const initialQuery = params.get('q') ?? '';
+            const initialKind = params.get('kind') ?? 'all';
+
+            input.value = initialQuery;
+            activeFilter = ['all', 'class', 'enum', 'has-methods', 'has-properties', 'has-events'].includes(initialKind) ? initialKind : 'all';
+
+            for (const button of filterButtons) {
+                if (!(button instanceof HTMLButtonElement)) continue;
+                const kind = button.dataset.apiKindFilter ?? 'all';
+                button.setAttribute('data-active', kind === activeFilter ? 'true' : 'false');
+                button.addEventListener('click', () => {
+                    activeFilter = kind;
+                    for (const node of filterButtons) {
+                        if (node instanceof HTMLButtonElement) node.setAttribute('data-active', node === button ? 'true' : 'false');
+                    }
+                    setQueryParam('kind', activeFilter === 'all' ? '' : activeFilter);
+                    applyFilters();
+                });
+            }
+
+            input.addEventListener('input', () => {
+                setQueryParam('q', input.value.trim());
+                applyFilters();
+            });
+
+            applyFilters();
+        })();
+    </script>
+</DocsLayout>
+
+<style>
+    .api-all-prose {
+        max-width: none;
+    }
+
+    .api-all-controls {
+        margin-bottom: var(--s-5);
+    }
+
+    .api-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: var(--s-5);
+        margin-bottom: var(--s-5);
+        flex-wrap: wrap;
+    }
+
+    .api-head h1 {
+        margin: 0 0 4px;
+        font-size: 32px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+    }
+
+    .api-head p {
+        margin: 0;
+        color: var(--fg-muted);
+        max-width: 64ch;
+    }
+
+    .api-search {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        width: 360px;
+        max-width: 100%;
+        padding: 8px 12px;
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        border: 1px solid var(--line);
+    }
+
+    .api-search__icon {
+        color: var(--fg-faint);
+        font-family: var(--f-mono);
+        font-size: 12px;
+    }
+
+    .api-search input {
+        background: transparent;
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 14px;
+        color: var(--fg);
+    }
+
+    .api-filters {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .api-filters button {
+        padding: 5px 10px;
+        border-radius: var(--r-pill);
+        background: var(--bg-elevated);
+        border: 1px solid var(--line-soft);
+        font-size: 12px;
+        color: var(--fg-muted);
+        font-family: var(--f-mono);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .api-filters button .n {
+        color: var(--fg-faint);
+    }
+
+    .api-filters button[data-active='true'] {
+        background: var(--accent-soft);
+        border-color: var(--accent-line);
+        color: var(--accent);
+    }
+
+    .api-filters button[data-active='true'] .n {
+        color: var(--accent);
+    }
+
+    .api-letter-section + .api-letter-section {
+        margin-top: var(--s-6);
+    }
+
+    .api-section-head {
+        margin-bottom: var(--s-2);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--fg-faint);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
+
+    .api-section-head .line {
+        flex: 1;
+        height: 1px;
+        background: var(--line-soft);
+    }
+
+    .api-rows {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        overflow: hidden;
+        background: var(--bg-elevated);
+    }
+
+    .api-row-item + .api-row-item {
+        border-top: 1px dashed var(--line-soft);
+    }
+
+    .api-row-item a {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: var(--s-4);
+        padding: 0.66rem 0.78rem;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .api-row-item a:hover,
+    .api-row-item a:focus-visible {
+        background: color-mix(in oklab, var(--bg-canvas), transparent 52%);
+        outline: none;
+    }
+
+    .api-row-item .name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .api-row-item .main {
+        min-width: 0;
+    }
+
+    .api-row-item .name code {
+        font-family: var(--f-mono);
+        font-size: 12.8px;
+        color: var(--fg);
+        overflow-wrap: anywhere;
+    }
+
+    .api-row-item p {
+        margin: 0.25rem 0 0;
+        font-size: 12.4px;
+        color: var(--fg-muted);
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .api-row-item .meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .api-row-item .meta span {
+        color: var(--fg-faint);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-family: var(--f-mono);
+    }
+
+    .api-row-item .meta code {
+        color: var(--sky);
+        font-size: 11px;
+        font-family: var(--f-mono);
+        overflow-wrap: anywhere;
+        text-align: right;
+    }
+
+    .api-kind {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid var(--line-soft);
+        padding: 1px 6px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        line-height: 1.3;
+    }
+
+    .api-kind.kind-class {
+        color: var(--accent);
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+    }
+
+    .api-kind.kind-enum {
+        color: var(--rose);
+        border-color: color-mix(in oklab, var(--rose), transparent 65%);
+        background: color-mix(in oklab, var(--rose), transparent 88%);
+    }
+
+    .toc h6 {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .toc ul {
+        list-style: none;
+        margin: var(--s-3) 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toc a {
+        display: block;
+        border-left: 2px solid transparent;
+        padding: 4px 0 4px var(--s-3);
+        margin-left: -10px;
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .toc a:hover,
+    .toc a:focus-visible {
+        color: var(--fg);
+        outline: none;
+    }
+
+    .toc li:first-child a,
+    .toc a[data-active='true'] {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+
+    @media (max-width: 1120px) {
+        .api-row-item a {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+
+        .api-row-item .meta {
+            align-items: flex-start;
+        }
+
+        .api-row-item .meta code {
+            text-align: left;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .api-all-controls {
+            position: sticky;
+            top: calc(3.2rem + env(safe-area-inset-top));
+            z-index: 8;
+            padding: 0.45rem 0;
+            margin: -0.2rem 0 var(--s-4);
+            background: color-mix(in oklab, var(--bg-canvas), transparent 8%);
+            backdrop-filter: blur(6px);
+        }
+
+        .api-head {
+            gap: var(--s-3);
+            margin-bottom: var(--s-3);
+        }
+
+        .api-head h1 {
+            font-size: 1.7rem;
+            line-height: 1.14;
+        }
+
+        .api-head p {
+            line-height: 1.58;
+        }
+
+        .api-search {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.55rem 0.62rem;
+        }
+
+        .api-search input {
+            min-width: 0;
+            min-height: 32px;
+        }
+
+        .api-filters {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            padding-bottom: 2px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .api-filters button {
+            flex: 0 0 auto;
+            min-height: 38px;
+            white-space: nowrap;
+        }
+
+        .api-letter-section + .api-letter-section {
+            margin-top: var(--s-4);
+        }
+
+        .api-row-item a {
+            padding: 0.62rem 0.62rem;
+            gap: 0.38rem;
+        }
+
+        .api-row-item .name {
+            align-items: flex-start;
+        }
+
+        .api-row-item .name code {
+            font-size: 0.79rem;
+            line-height: 1.45;
+        }
+
+        .api-row-item p {
+            font-size: 0.77rem;
+            -webkit-line-clamp: 2;
+        }
+
+        .api-row-item .meta span,
+        .api-row-item .meta code {
+            font-size: 0.66rem;
+        }
+    }
+</style>

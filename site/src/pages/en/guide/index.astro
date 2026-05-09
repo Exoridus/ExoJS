@@ -5,10 +5,23 @@ import { GUIDE_PARTS } from '../../../lib/guide-structure';
 
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const exampleCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.reduce((inner, chapter) => inner + chapter.examples.length, 0), 0);
+const chapterTopics = (chapterSlug: string) =>
+    chapterSlug
+        .replace(/-/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2);
+const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
+    const firstChapter = part.chapters[0];
+    return firstChapter
+        ? `${import.meta.env.BASE_URL}en/guide/${part.slug}/${firstChapter.slug}/`
+        : `${import.meta.env.BASE_URL}en/guide/${part.slug}/`;
+};
 const sidebarParts = GUIDE_PARTS.map(part => ({
     slug: part.slug,
     title: part.title,
-    href: `${import.meta.env.BASE_URL}en/guide/${part.slug}/`,
+    href: getFirstChapterHref(part),
+    baseHref: `${import.meta.env.BASE_URL}en/guide/${part.slug}/`,
     chapters: part.chapters.map(chapter => ({
         slug: chapter.slug,
         title: chapter.title,
@@ -17,92 +30,311 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 }));
 ---
 
-<DocsLayout title="ExoJS Guide" description="Structured ExoJS guide from introduction to advanced recipes.">
+<DocsLayout title="ExoJS Guide" description="Structured ExoJS guide from introduction to advanced recipes." variant="guide">
     <DocsSidebar slot="sidebar" parts={sidebarParts} />
+    <aside slot="rail" class="toc" aria-label="Guide index shortcuts">
+        <h6>On this page</h6>
+        <ul>
+            {GUIDE_PARTS.map(part => (
+                <li>
+                    <a href={`#part-${part.slug}`}>{part.title.replace(/^[0-9]+\s+/, '')}</a>
+                </li>
+            ))}
+        </ul>
+        <div class="toc__resources">
+            <h6>Resources</h6>
+            <ul>
+                <li>
+                    <a href={`${import.meta.env.BASE_URL}en/api/`}>API reference</a>
+                </li>
+                <li>
+                    <a href={`${import.meta.env.BASE_URL}en/playground/`}>Playground</a>
+                </li>
+            </ul>
+        </div>
+    </aside>
 
-    <section class="overview-hero">
+    <div class="prose guide-index-prose">
+    <section class="guide-hero">
         <h1>Guide</h1>
-        <p>Start with Introduction if you are new to ExoJS. Jump into Core Concepts when you need the runtime model, and use Recipes when you want production-oriented patterns.</p>
-        <div class="overview-stats">
-            <span>{chapterCount} chapters</span>
-            <span>{exampleCount} example links</span>
-            <span>Estimated read path: 3 to 5 sessions</span>
+        <p>
+            Start with Introduction if you are new to ExoJS. Move into Core Concepts for the runtime model, then jump by topic for drawing, input, audio, effects, and production recipes.
+        </p>
+        <div class="stats">
+            <div class="stat">
+                <div class="n">{chapterCount}</div>
+                <div class="l">chapters</div>
+            </div>
+            <div class="stat">
+                <div class="n">{exampleCount}</div>
+                <div class="l">examples</div>
+            </div>
+            <div class="stat">
+                <div class="n">~3h</div>
+                <div class="l">read time</div>
+            </div>
         </div>
     </section>
 
-    <section class="parts-grid">
+    <section aria-label="Guide parts">
         {GUIDE_PARTS.map(part => (
-            <article>
-                <h2>
-                    <a href={`${import.meta.env.BASE_URL}en/guide/${part.slug}/`}>{part.title}</a>
+            <section id={`part-${part.slug}`}>
+                <h2 class="guide-index-section-title">
+                    <span>{String(part.part).padStart(2, '0')}</span>
+                    <span>{part.title.replace(/^[0-9]+\s+/, '').toUpperCase()}</span>
                 </h2>
-                <p>{part.description}</p>
-                <p>{part.chapters.length} sub-chapters</p>
-            </article>
+                <div class="chapter-grid">
+                    {part.chapters.map(chapter => (
+                        <a class="chapter-card" href={`${import.meta.env.BASE_URL}en/guide/${part.slug}/${chapter.slug}/`}>
+                            <div class="head">
+                                <span class="num">{String(part.part).padStart(2, '0')}</span>
+                                <h3>{chapter.title.replace(/^[0-9]+\.[0-9]+\s+/, '')}</h3>
+                            </div>
+                            <p>{chapter.description}</p>
+                            <div class="topics">
+                                {chapterTopics(chapter.slug).map(topic => (
+                                    <span class="topic">{topic}</span>
+                                ))}
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
         ))}
     </section>
+    </div>
 </DocsLayout>
 
 <style>
-    .overview-hero {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        padding: 1rem;
-        background: var(--bg-panel);
-        margin-bottom: 0.95rem;
+    .guide-index-prose {
+        max-width: none;
     }
 
-    .overview-hero h1 {
+    .guide-hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-5);
+        padding: var(--s-9) var(--s-7);
+        background: var(--bg-elevated);
+        margin-bottom: var(--s-7);
+    }
+
+    .guide-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(var(--grid-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+        background-size: 32px 32px;
+        opacity: 0.6;
+        mask-image: radial-gradient(60% 100% at 100% 0%, #000, transparent 70%);
+        pointer-events: none;
+    }
+
+    .guide-hero > * {
+        position: relative;
+    }
+
+    .guide-hero h1 {
         margin: 0;
-        font-size: clamp(1.8rem, 3.6vw, 2.4rem);
+        font-size: 36px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
     }
 
-    .overview-hero p {
-        margin: 0.65rem 0 0;
+    .guide-hero p {
+        margin: 0.75rem 0 0;
+        max-width: 580px;
         color: var(--fg-muted);
-        max-width: 68ch;
     }
 
-    .overview-stats {
-        margin-top: 0.85rem;
+    .guide-hero .stats {
+        margin-top: var(--s-6);
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: var(--s-7);
     }
 
-    .overview-stats span {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-pill);
-        padding: 0.25rem 0.6rem;
-        background: color-mix(in oklab, var(--bg-elevated), transparent 10%);
-        font-size: 0.8rem;
+    .guide-hero .stat .n {
+        font-family: var(--f-mono);
+        font-size: 22px;
+        color: var(--accent);
+        font-weight: 600;
     }
 
-    .parts-grid {
+    .guide-hero .stat .l {
+        font-size: 12px;
+        color: var(--fg-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .guide-index-prose > section + section {
+        margin-top: 2rem;
+    }
+
+    .guide-index-section-title {
+        margin: 0 0 1rem;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        font-size: 18px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 0;
+        padding: 0;
+    }
+
+    .guide-index-section-title span:first-child {
+        font-family: var(--f-mono);
+        font-size: 18px;
+        color: var(--accent);
+    }
+
+    .guide-index-section-title span:last-child {
+        font-family: var(--f-mono);
+        font-size: 18px;
+        color: var(--fg-muted);
+    }
+
+    .chapter-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s-4);
     }
 
-    .parts-grid article {
+    .chapter-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-3);
+        padding: var(--s-5);
         border: 1px solid var(--line-soft);
         border-radius: var(--r-4);
-        padding: 0.9rem;
-        background: color-mix(in oklab, var(--bg-elevated), transparent 8%);
-    }
-
-    .parts-grid h2 {
-        margin: 0 0 0.45rem;
-        font-size: 1rem;
-    }
-
-    .parts-grid h2 a {
-        color: inherit;
+        background: var(--bg-elevated);
         text-decoration: none;
+        color: inherit;
+        transition:
+            border-color var(--transition-fast),
+            transform var(--transition-fast);
     }
 
-    .parts-grid p {
-        margin: 0.35rem 0;
+    .chapter-card:hover {
+        border-color: var(--accent-line);
+        transform: translateY(-2px);
+    }
+
+    .chapter-card:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+    }
+
+    .chapter-card .head {
+        display: flex;
+        align-items: center;
+        gap: var(--s-3);
+    }
+
+    .chapter-card .num {
+        display: inline-grid;
+        place-items: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 0.46rem;
+        border-radius: var(--r-2);
+        border: 1px solid var(--line-soft);
+        background: var(--bg-canvas);
+        font-family: var(--f-mono);
+        font-size: 12px;
         color: var(--fg-muted);
+        white-space: nowrap;
+    }
+
+    .chapter-card h3 {
+        margin: 0;
+        font-size: 16px;
+        color: var(--fg);
+    }
+
+    .chapter-card p {
+        margin: 0;
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: var(--fg-muted);
+        max-width: none;
+    }
+
+    .chapter-card .topics {
+        margin-top: auto;
+        padding-top: var(--s-2);
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .chapter-card .topic {
+        display: inline-flex;
+        align-items: center;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--line-soft);
+        background: var(--bg-canvas);
+        padding: 0.12rem 0.45rem;
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+        color: var(--fg-muted);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .toc h6 {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .toc ul {
+        list-style: none;
+        margin: var(--s-3) 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toc a {
+        display: block;
+        border-left: 2px solid transparent;
+        padding: 4px 0 4px var(--s-3);
+        margin-left: -10px;
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .toc a:hover,
+    .toc a:focus-visible {
+        color: var(--fg);
+        outline: none;
+    }
+
+    .toc ul li:first-child a {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+
+    .toc__resources {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--line-soft);
+    }
+
+    @media (max-width: 1100px) {
+        .chapter-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>

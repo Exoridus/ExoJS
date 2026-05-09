@@ -22,6 +22,16 @@ interface PartGroup {
     chapters: Array<ChapterGroup>;
 }
 
+const TAG_PRIORITY = ['scene', 'input', 'audio', 'fx', 'effects', 'particles', 'rendering', 'debug', 'advanced'] as const;
+const MAX_DEFAULT_TAGS = 9;
+
+function normalizeExampleRef(value: string): string {
+    return value
+        .trim()
+        .replace(/^\/+/, '')
+        .replace(/\.js$/i, '');
+}
+
 @customElement('exo-navigation')
 export class Navigation extends LitElement {
     static styles = unsafeCSS(componentStyles);
@@ -33,8 +43,9 @@ export class Navigation extends LitElement {
     @property({ type: String }) public loadError: string | null = null;
     @property({ type: Boolean }) public loaded = false;
 
-    @state() private _tagInputValue = '';
+    @state() private _searchQuery = '';
     @state() private _activeTagFilter: string | null = null;
+    @state() private _showAllTags = false;
     @state() private _overriddenParts: Map<string, boolean> = new Map();
     @state() private _overriddenChapters: Map<string, boolean> = new Map();
 
@@ -43,32 +54,112 @@ export class Navigation extends LitElement {
             this._overriddenParts = new Map();
             this._overriddenChapters = new Map();
         }
+
+        if (changedProperties.has('availableTags')) {
+            this._showAllTags = false;
+        }
     }
 
     public render(): ReturnType<LitElement['render']> {
+        const allTags = this._buildAllTags();
+        const defaultTags = this._buildDefaultTags(allTags);
+        const activeTag = this._activeTagFilter ?? 'all';
+        const visibleTags =
+            this._showAllTags || allTags.length <= defaultTags.length
+                ? allTags
+                : defaultTags.includes(activeTag)
+                  ? defaultTags
+                  : [...defaultTags, activeTag];
+        const canToggleTags = allTags.length > defaultTags.length;
+        const hiddenCount = Math.max(0, allTags.length - defaultTags.length);
+
         return html`
-            <header class="header">
-                <h1 class="heading">Examples</h1>
-            </header>
-            <section class="filter-bar">
-                <label class="filter-label" for="tag-filter">Filter by tag</label>
-                <div class="filter-controls">
+            <section class="side-head">
+                <label class="search" for="example-search">
+                    <svg class="search-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+                        <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"></circle>
+                        <path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+                    </svg>
                     <input
-                        id="tag-filter"
-                        class="filter-input"
-                        list="tag-filter-options"
-                        .value=${this._tagInputValue}
-                        placeholder="Pick a tag"
-                        @input=${this._onTagInput}
-                        @change=${this._onTagChange}
-                        @keydown=${this._onTagKeyDown}
+                        id="example-search"
+                        class="search-input"
+                        .value=${this._searchQuery}
+                        placeholder="Find an example..."
+                        @input=${this._onSearchInput}
                     />
-                    <datalist id="tag-filter-options">${this.availableTags.map(tag => html`<option value=${tag}></option>`)}</datalist>
-                    ${this._activeTagFilter ? html`<button class="clear-button" @click=${this._onClearFilter}>Clear</button>` : nothing}
+                    <kbd>Ctrl+K</kbd>
+                </label>
+                <div class="tag-row" ?data-expanded=${this._showAllTags} aria-label="Filter examples by tag">
+                    ${visibleTags.map(tag => {
+                        const selected = activeTag === tag;
+                        return html`
+                            <button
+                                class="tag-button"
+                                type="button"
+                                ?data-active=${selected}
+                                aria-pressed=${String(selected)}
+                                @click=${() => this._onSelectTag(tag)}
+                            >
+                                ${tag}
+                            </button>
+                        `;
+                    })}
                 </div>
+                ${canToggleTags
+                    ? html`
+                          <button
+                              class="tag-toggle"
+                              type="button"
+                              aria-expanded=${String(this._showAllTags)}
+                              @click=${this._onToggleTags}
+                          >
+                              ${this._showAllTags ? 'Show fewer tags' : `Show all tags (${hiddenCount} more)`}
+                          </button>
+                      `
+                    : nothing}
             </section>
             <nav>${this._renderContent()}</nav>
         `;
+    }
+
+    private _buildAllTags(): Array<string> {
+        return ['all', ...this.availableTags];
+    }
+
+    private _buildDefaultTags(allTags: Array<string>): Array<string> {
+        const available = new Set(allTags);
+        const counts = this._getTagCounts();
+        const ordered: string[] = ['all'];
+
+        for (const priorityTag of TAG_PRIORITY) {
+            if (available.has(priorityTag)) ordered.push(priorityTag);
+        }
+
+        const remaining = allTags
+            .filter(tag => tag !== 'all' && !ordered.includes(tag))
+            .sort((a, b) => {
+                const countDiff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+                if (countDiff !== 0) return countDiff;
+                return a.localeCompare(b);
+            });
+
+        for (const tag of remaining) {
+            if (ordered.length > MAX_DEFAULT_TAGS) break;
+            ordered.push(tag);
+        }
+
+        return ordered;
+    }
+
+    private _getTagCounts(): Map<string, number> {
+        const counts = new Map<string, number>();
+        const allExamples = Array.from(this.examples.values()).flat();
+        for (const example of allExamples) {
+            for (const tag of example.tags ?? []) {
+                counts.set(tag, (counts.get(tag) ?? 0) + 1);
+            }
+        }
+        return counts;
     }
 
     private _renderContent(): ReturnType<LitElement['render']> {
@@ -81,15 +172,29 @@ export class Navigation extends LitElement {
 
     private _buildGroups(): Array<PartGroup> {
         const allExamples = Array.from(this.examples.values()).flat();
-        const examplesByPath = new Map(allExamples.map(example => [example.path, example]));
+        const examplesByPath = new Map<string, Example>();
+
+        for (const example of allExamples) {
+            examplesByPath.set(normalizeExampleRef(example.path), example);
+            examplesByPath.set(normalizeExampleRef(example.slug), example);
+        }
 
         return GUIDE_PARTS.map(part => {
             const chapters: Array<ChapterGroup> = part.chapters
                 .map(chapter => {
                     const mapped = chapter.examples
-                        .map(path => examplesByPath.get(path))
+                        .map(path => examplesByPath.get(normalizeExampleRef(path)))
                         .filter((example): example is Example => Boolean(example))
-                        .filter(example => (this._activeTagFilter ? (example.tags ?? []).includes(this._activeTagFilter) : true));
+                        .filter(example => (this._activeTagFilter ? (example.tags ?? []).includes(this._activeTagFilter) : true))
+                        .filter(example => {
+                            if (!this._searchQuery.trim()) return true;
+                            const query = this._searchQuery.trim().toLowerCase();
+                            return (
+                                example.title.toLowerCase().includes(query) ||
+                                example.path.toLowerCase().includes(query) ||
+                                example.description.toLowerCase().includes(query)
+                            );
+                        });
 
                     return {
                         key: chapter.path,
@@ -171,41 +276,16 @@ export class Navigation extends LitElement {
         `;
     }
 
-    private _onTagInput(event: Event): void {
-        this._tagInputValue = (event.currentTarget as HTMLInputElement).value;
+    private _onSearchInput(event: Event): void {
+        this._searchQuery = (event.currentTarget as HTMLInputElement).value;
     }
 
-    private _onTagChange(event: Event): void {
-        this._applyTagFilter((event.currentTarget as HTMLInputElement).value);
+    private _onSelectTag(tag: string): void {
+        this._activeTagFilter = tag === 'all' ? null : tag;
     }
 
-    private _onTagKeyDown(event: KeyboardEvent): void {
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        this._applyTagFilter((event.currentTarget as HTMLInputElement).value);
-    }
-
-    private _onClearFilter(): void {
-        this._tagInputValue = '';
-        this._activeTagFilter = null;
-    }
-
-    private _applyTagFilter(value: string): void {
-        const normalized = value.trim();
-        if (normalized === '') {
-            this._tagInputValue = '';
-            this._activeTagFilter = null;
-            return;
-        }
-
-        const matched = this.availableTags.find(tag => tag === normalized);
-        if (!matched) {
-            this._tagInputValue = this._activeTagFilter ?? '';
-            return;
-        }
-
-        this._tagInputValue = matched;
-        this._activeTagFilter = matched;
+    private _onToggleTags(): void {
+        this._showAllTags = !this._showAllTags;
     }
 
     private _onTogglePart(key: string): void {

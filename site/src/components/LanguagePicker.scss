@@ -5,10 +5,10 @@
 .lang {
     display: inline-flex;
     align-items: center;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--r-2);
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-control);
     padding: 2px;
-    background: var(--bg-elevated);
+    background: var(--color-surface);
 }
 
 .lang button {
@@ -20,19 +20,26 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     font-family: var(--f-mono);
-    color: var(--fg-faint);
+    color: var(--color-text-faint);
     background: transparent;
     cursor: pointer;
+    transition:
+        background var(--transition-fast),
+        color var(--transition-fast);
+}
+
+.lang button:hover {
+    color: var(--color-text);
 }
 
 .lang button[data-active='true'] {
-    background: var(--bg-canvas);
-    color: var(--fg);
-    box-shadow: var(--shadow-1);
+    background: var(--color-bg);
+    color: var(--color-text);
+    box-shadow: var(--shadow-sm);
 }
 
 .lang button:focus-visible {
-    outline: 2px solid var(--accent-line);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
 

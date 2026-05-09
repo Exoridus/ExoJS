@@ -23,8 +23,7 @@ export class DiagnosticsStrip extends LitElement {
 
     // Reflected so :host([has-diagnostics]) in SCSS can flip the host between
     // display:none and display:block without an extra wrapper. This keeps the
-    // host from occupying layout space (and applying its negative top margin)
-    // when there's nothing to render.
+    // host from occupying layout space when there's nothing to render.
     @property({ type: Boolean, reflect: true, attribute: 'has-diagnostics' })
     public hasDiagnostics = false;
 

@@ -4,21 +4,21 @@
 
 :host([has-diagnostics]) {
     display: block;
-    width: min(100%, 1180px);
-    margin: -0.82rem auto 0.75rem;
+    width: min(100%, 1160px);
+    margin: 0 auto 0.62rem;
 }
 
 .strip {
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    min-height: 34px;
-    padding: 0.38rem 0.62rem;
+    min-height: 30px;
+    padding: 0.3rem 0.56rem;
     border-radius: var(--r-2);
-    border: 1px solid var(--line-soft);
-    background: var(--bg-panel);
+    border: 1px solid oklch(30% 0.014 245);
+    background: oklch(18% 0.012 245);
     color: var(--fg-muted);
-    font-size: 0.74rem;
+    font-size: 0.69rem;
     line-height: 1.35;
 }
 

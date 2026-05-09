@@ -44,10 +44,10 @@ const PARTS: ReadonlyArray<GuidePartMeta> = [
                 partSlug: "introduction",
                 partTitle: "01 Introduction",
                 partDescription: "Start here to understand what ExoJS is and how to move through this guide.",
-                slug: "how-to-use-this-guide",
-                title: "1.2 How to use this guide",
-                description: "Learn how this guide is organized so you can choose a path that fits your goal.",
-                path: "introduction/how-to-use-this-guide",
+                slug: "setup",
+                title: "1.2 Setup",
+                description: "Install ExoJS, create an application, choose a canvas, and verify the runtime before writing scene code.",
+                path: "introduction/setup",
                 examples: []
             },
             {

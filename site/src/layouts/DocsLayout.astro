@@ -4,15 +4,28 @@ import AppShell from './AppShell.astro';
 interface Props {
     title: string;
     description?: string;
+    variant?: 'default' | 'guide' | 'api';
 }
 
-const { title, description = 'ExoJS documentation' } = Astro.props;
+const { title, description = 'ExoJS documentation', variant = 'default' } = Astro.props;
 const hasSidebar = Astro.slots.has('sidebar');
+const hasRail = Astro.slots.has('rail');
+const sidebarToggleLabel = variant === 'api' ? 'Browse API' : 'Browse chapters';
+const isGuideVariant = variant === 'guide';
+const isApiVariant = variant === 'api';
 ---
 
 <AppShell title={title} description={description}>
-    <section class:list={['docs-shell', !hasSidebar && 'docs-shell--full']}>
-        {hasSidebar && (
+    <section
+        class:list={[
+            'docs-shell',
+            !hasSidebar && 'docs-shell--full',
+            isGuideVariant && 'docs-shell--guide',
+            isApiVariant && 'docs-shell--api',
+            hasRail && 'docs-shell--with-rail',
+        ]}
+    >
+        {hasSidebar && !isGuideVariant && (
             <button
                 class="docs-shell__sidebar-toggle"
                 type="button"
@@ -20,14 +33,14 @@ const hasSidebar = Astro.slots.has('sidebar');
                 aria-controls="docs-sidebar-panel"
                 aria-expanded="false"
             >
-                Browse chapters
+                {sidebarToggleLabel}
             </button>
         )}
         <aside
             id="docs-sidebar-panel"
             class="docs-shell__sidebar"
             data-docs-sidebar
-            aria-hidden={hasSidebar ? 'true' : 'false'}
+            aria-hidden={hasSidebar && !isGuideVariant ? 'true' : 'false'}
         >
             {hasSidebar && (
                 <div class="docs-shell__sidebar-header">
@@ -37,12 +50,65 @@ const hasSidebar = Astro.slots.has('sidebar');
             )}
             <slot name="sidebar" />
         </aside>
+        {isGuideVariant && hasSidebar && (
+            <div class="guide-mobile-control" data-guide-mobile-control>
+                <p class="guide-mobile-control__context" data-guide-mobile-context>Guide</p>
+                <button
+                    type="button"
+                    class="guide-mobile-control__open"
+                    data-guide-mobile-open
+                    aria-haspopup="dialog"
+                    aria-controls="guide-mobile-sheet"
+                >
+                    Contents
+                </button>
+            </div>
+        )}
         <article class="docs-shell__content" data-docs-content><slot /></article>
-        {hasSidebar && <div class="docs-shell__backdrop" data-docs-backdrop hidden></div>}
+        {hasRail && (
+            <aside class="docs-shell__rail" data-docs-rail>
+                <slot name="rail" />
+            </aside>
+        )}
+        {hasSidebar && !isGuideVariant && <div class="docs-shell__backdrop" data-docs-backdrop hidden></div>}
+        {isGuideVariant && hasSidebar && (
+            <exo-bottom-sheet id="guide-mobile-sheet" title="Guide">
+                <div class="guide-mobile-sheet">
+                    <div class="guide-mobile-sheet__tabs" role="tablist" aria-label="Guide navigation mode">
+                        <button
+                            type="button"
+                            role="tab"
+                            class="guide-mobile-sheet__tab"
+                            data-guide-tab="contents"
+                            aria-controls="guide-mobile-panel-contents"
+                            aria-selected="true"
+                        >
+                            Contents
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            class="guide-mobile-sheet__tab"
+                            data-guide-tab="onpage"
+                            aria-controls="guide-mobile-panel-onpage"
+                            aria-selected="false"
+                        >
+                            On this page
+                        </button>
+                    </div>
+                    <section id="guide-mobile-panel-contents" class="guide-mobile-sheet__panel" data-guide-panel="contents" role="tabpanel">
+                        <div data-guide-mobile-contents></div>
+                    </section>
+                    <section id="guide-mobile-panel-onpage" class="guide-mobile-sheet__panel" data-guide-panel="onpage" role="tabpanel" hidden>
+                        <div data-guide-mobile-onpage></div>
+                    </section>
+                </div>
+            </exo-bottom-sheet>
+        )}
     </section>
 
     {
-        hasSidebar && (
+        hasSidebar && !isGuideVariant && (
             <script is:inline>
                 (() => {
                     const root = document.querySelector('.docs-shell');
@@ -50,6 +116,7 @@ const hasSidebar = Astro.slots.has('sidebar');
                     const sidebar = root?.querySelector('[data-docs-sidebar]');
                     const close = root?.querySelector('[data-docs-close]');
                     const content = root?.querySelector('[data-docs-content]');
+                    const rail = root?.querySelector('[data-docs-rail]');
                     const backdrop = root?.querySelector('[data-docs-backdrop]');
                     const header = document.querySelector('exo-header');
 
@@ -82,9 +149,11 @@ const hasSidebar = Astro.slots.has('sidebar');
                         if (value) {
                             content.setAttribute('inert', '');
                             header?.setAttribute('inert', '');
+                            rail?.setAttribute('inert', '');
                         } else {
                             content.removeAttribute('inert');
                             header?.removeAttribute('inert');
+                            rail?.removeAttribute('inert');
                         }
                     };
 
@@ -178,14 +247,212 @@ const hasSidebar = Astro.slots.has('sidebar');
             </script>
         )
     }
+    {
+        isGuideVariant && hasSidebar && (
+            <script is:inline>
+                (() => {
+                    const root = document.querySelector('.docs-shell--guide');
+                    if (!(root instanceof HTMLElement)) return;
+
+                    const mobileOpen = root.querySelector('[data-guide-mobile-open]');
+                    const mobileContext = root.querySelector('[data-guide-mobile-context]');
+                    const sheet = root.querySelector('#guide-mobile-sheet');
+                    const sidebar = root.querySelector('[data-docs-sidebar]');
+                    const rail = root.querySelector('[data-docs-rail]');
+                    const tabButtons = Array.from(root.querySelectorAll('[data-guide-tab]'));
+                    const contentsHost = root.querySelector('[data-guide-mobile-contents]');
+                    const onPageHost = root.querySelector('[data-guide-mobile-onpage]');
+                    const panelContents = root.querySelector('[data-guide-panel="contents"]');
+                    const panelOnPage = root.querySelector('[data-guide-panel="onpage"]');
+
+                    if (!(mobileOpen instanceof HTMLButtonElement)) return;
+                    if (!(mobileContext instanceof HTMLElement)) return;
+                    if (!(sheet instanceof HTMLElement)) return;
+                    if (!(sidebar instanceof HTMLElement)) return;
+                    if (!(contentsHost instanceof HTMLElement)) return;
+                    if (!(onPageHost instanceof HTMLElement)) return;
+                    if (!(panelContents instanceof HTMLElement)) return;
+                    if (!(panelOnPage instanceof HTMLElement)) return;
+
+                    const mediaQuery = window.matchMedia('(max-width: 760px)');
+                    const SOURCE_TOC_SELECTOR = '[data-guide-toc-link], [data-guide-toc] a[href^="#"], .toc ul a[href^="#"]';
+                    let sourceTocLinks = [];
+                    let clonedTocLinks = [];
+                    let observer = null;
+
+                    const setContext = () => {
+                        const active = sidebar.querySelector('.side-link[data-active="true"]');
+                        if (!(active instanceof HTMLAnchorElement)) {
+                            mobileContext.textContent = 'Guide';
+                            return;
+                        }
+                        const section = active.closest('.side-section');
+                        const sectionTitle = section?.querySelector('h6 span:last-child')?.textContent?.trim();
+                        const chapterTitle = active.querySelector('span:last-child')?.textContent?.trim() ?? active.textContent?.trim() ?? 'Guide';
+                        mobileContext.textContent = sectionTitle ? `${sectionTitle} / ${chapterTitle}` : chapterTitle;
+                    };
+
+                    const buildContentsList = () => {
+                        const groups = Array.from(sidebar.querySelectorAll('.side-section'));
+                        const fragment = document.createDocumentFragment();
+
+                        groups.forEach(group => {
+                            const section = document.createElement('section');
+                            section.className = 'guide-mobile-list__section';
+                            const titleNode = group.querySelector('h6 span:last-child');
+                            const title = titleNode?.textContent?.trim();
+                            if (title) {
+                                const heading = document.createElement('h4');
+                                heading.className = 'guide-mobile-list__heading';
+                                heading.textContent = title;
+                                section.appendChild(heading);
+                            }
+
+                            const list = document.createElement('ul');
+                            list.className = 'guide-mobile-list';
+                            const links = Array.from(group.querySelectorAll('.side-link'));
+                            links.forEach(link => {
+                                if (!(link instanceof HTMLAnchorElement)) return;
+                                const item = document.createElement('li');
+                                const anchor = document.createElement('a');
+                                anchor.href = link.href;
+                                anchor.className = 'guide-mobile-list__link';
+                                if (link.getAttribute('data-active') === 'true') {
+                                    anchor.setAttribute('data-active', 'true');
+                                }
+
+                                const number = link.querySelector('.num')?.textContent?.trim();
+                                const label = link.querySelector('span:last-child')?.textContent?.trim() ?? link.textContent?.trim() ?? '';
+
+                                if (number) {
+                                    const numberNode = document.createElement('span');
+                                    numberNode.className = 'guide-mobile-list__num';
+                                    numberNode.textContent = number;
+                                    anchor.appendChild(numberNode);
+                                }
+
+                                const labelNode = document.createElement('span');
+                                labelNode.className = 'guide-mobile-list__label';
+                                labelNode.textContent = label;
+                                anchor.appendChild(labelNode);
+
+                                anchor.addEventListener('click', () => {
+                                    sheet.hide?.();
+                                });
+                                item.appendChild(anchor);
+                                list.appendChild(item);
+                            });
+
+                            section.appendChild(list);
+                            fragment.appendChild(section);
+                        });
+
+                        contentsHost.replaceChildren(fragment);
+                    };
+
+                    const syncActiveOnPageLink = () => {
+                        clonedTocLinks.forEach(link => link.removeAttribute('data-active'));
+                        const activeSource = sourceTocLinks.find(link => link.getAttribute('data-active') === 'true');
+                        if (!(activeSource instanceof HTMLAnchorElement)) return;
+
+                        const activeHref = activeSource.getAttribute('href');
+                        if (!activeHref) return;
+                        const target = clonedTocLinks.find(link => link.getAttribute('href') === activeHref);
+                        if (target) target.setAttribute('data-active', 'true');
+                    };
+
+                    const buildOnPageList = () => {
+                        sourceTocLinks = Array.from(rail.querySelectorAll(SOURCE_TOC_SELECTOR)).filter(
+                            node => node instanceof HTMLAnchorElement
+                        );
+                        const deduped = [];
+                        const seen = new Set();
+                        sourceTocLinks.forEach(link => {
+                            const href = link.getAttribute('href');
+                            if (!href || seen.has(href)) return;
+                            seen.add(href);
+                            deduped.push(link);
+                        });
+                        sourceTocLinks = deduped;
+
+                        if (observer) observer.disconnect();
+                        if (sourceTocLinks.length === 0) {
+                            const empty = document.createElement('p');
+                            empty.className = 'guide-mobile-sheet__empty';
+                            empty.textContent = 'No headings on this page yet.';
+                            onPageHost.replaceChildren(empty);
+                            clonedTocLinks = [];
+                            return;
+                        }
+
+                        const list = document.createElement('ul');
+                        list.className = 'guide-mobile-onpage';
+                        clonedTocLinks = sourceTocLinks.map(link => {
+                            const item = document.createElement('li');
+                            const anchor = document.createElement('a');
+                            anchor.href = link.getAttribute('href') ?? '#';
+                            anchor.className = 'guide-mobile-onpage__link';
+                            const text = link.textContent?.trim() ?? '';
+                            anchor.textContent = text;
+                            if (link.classList.contains('lvl-3')) {
+                                anchor.setAttribute('data-level', '3');
+                            }
+                            anchor.addEventListener('click', () => {
+                                sheet.hide?.();
+                            });
+                            item.appendChild(anchor);
+                            list.appendChild(item);
+                            return anchor;
+                        });
+                        onPageHost.replaceChildren(list);
+                        syncActiveOnPageLink();
+
+                        observer = new MutationObserver(() => syncActiveOnPageLink());
+                        sourceTocLinks.forEach(link => observer?.observe(link, { attributes: true, attributeFilter: ['data-active'] }));
+                    };
+
+                    const setTab = tab => {
+                        const isContents = tab === 'contents';
+                        panelContents.hidden = !isContents;
+                        panelOnPage.hidden = isContents;
+                        tabButtons.forEach(button => {
+                            if (!(button instanceof HTMLButtonElement)) return;
+                            const selected = button.getAttribute('data-guide-tab') === tab;
+                            button.setAttribute('aria-selected', selected ? 'true' : 'false');
+                        });
+                    };
+
+                    buildContentsList();
+                    buildOnPageList();
+                    setContext();
+
+                    tabButtons.forEach(button => {
+                        if (!(button instanceof HTMLButtonElement)) return;
+                        button.addEventListener('click', () => {
+                            const tab = button.getAttribute('data-guide-tab') === 'onpage' ? 'onpage' : 'contents';
+                            setTab(tab);
+                        });
+                    });
+
+                    mobileOpen.addEventListener('click', () => {
+                        if (!mediaQuery.matches) return;
+                        setTab('contents');
+                        sheet.show?.(mobileOpen);
+                    });
+
+                    document.addEventListener('hashchange', () => syncActiveOnPageLink());
+                })();
+            </script>
+        )
+    }
 </AppShell>
 
 <style>
     .docs-shell {
-        width: min(1280px, 100% - 2rem);
-        margin: 1.25rem auto 2rem;
+        width: min(1260px, 100% - 2.5rem);
+        margin: 1.4rem auto 2.2rem;
         display: grid;
-        gap: 1rem;
+        gap: 1.1rem;
         grid-template-columns: 300px minmax(0, 1fr);
     }
 
@@ -198,20 +465,93 @@ const hasSidebar = Astro.slots.has('sidebar');
     }
 
     .docs-shell__content {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        padding: 1.25rem;
-        background: var(--bg-elevated);
+        border: 1px solid var(--color-border-soft);
+        border-radius: var(--radius-card);
+        padding: 1.3rem;
+        background: var(--color-card);
+        box-shadow: var(--shadow-sm);
+        min-width: 0;
+    }
+
+    .docs-shell__rail {
+        display: none;
+    }
+
+    .docs-shell--guide {
+        width: min(1280px, 100% - 2.5rem);
+        margin: 0 auto;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: var(--s-7);
+        padding: var(--s-7) 0 var(--s-11);
+        align-items: start;
+    }
+
+    .docs-shell--guide.docs-shell--with-rail {
+        grid-template-columns: 280px minmax(0, 1fr) 240px;
+    }
+
+    .docs-shell--guide .docs-shell__content {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        padding: 0;
+        max-width: none;
+    }
+
+    .docs-shell--guide .docs-shell__rail {
+        display: block;
+        position: sticky;
+        top: 76px;
+        align-self: start;
+        border-left: 1px solid var(--color-border-soft);
+        padding-left: var(--s-3);
+        max-height: calc(100vh - 88px);
+        overflow: auto;
+        min-width: 0;
+    }
+
+    .docs-shell--api {
+        width: min(1320px, 100% - 2.5rem);
+        margin: 0 auto;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: var(--s-6);
+        padding: var(--s-6) 0 var(--s-10);
+        align-items: start;
+    }
+
+    .docs-shell--api.docs-shell--with-rail {
+        grid-template-columns: 280px minmax(0, 1fr) 240px;
+    }
+
+    .docs-shell--api .docs-shell__content {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        padding: 0;
+        max-width: none;
+    }
+
+    .docs-shell--api .docs-shell__rail {
+        display: block;
+        position: sticky;
+        top: 76px;
+        align-self: start;
+        border-left: 1px solid var(--line-soft);
+        padding-left: var(--s-3);
+        max-height: calc(100vh - 88px);
+        overflow: auto;
         min-width: 0;
     }
 
     .docs-shell__sidebar-toggle {
         display: none;
         min-height: 44px;
-        border: 1px solid var(--line-soft);
+        border: 1px solid var(--color-border-soft);
         border-radius: var(--r-3);
-        background: var(--bg-elevated);
-        color: var(--fg);
+        background: var(--color-surface);
+        color: var(--color-text);
         padding: 0.5rem 0.9rem;
         font-weight: 600;
         justify-self: start;
@@ -219,7 +559,7 @@ const hasSidebar = Astro.slots.has('sidebar');
     }
 
     .docs-shell__sidebar-toggle:focus-visible {
-        outline: 2px solid var(--accent-line);
+        outline: 2px solid var(--focus-ring);
         outline-offset: 2px;
     }
 
@@ -235,6 +575,111 @@ const hasSidebar = Astro.slots.has('sidebar');
         position: static;
         top: auto;
         max-height: none;
+    }
+
+    .guide-mobile-control {
+        display: none;
+    }
+
+    .guide-mobile-sheet {
+        display: grid;
+        gap: var(--s-3);
+    }
+
+    .guide-mobile-sheet__tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--s-2);
+    }
+
+    .guide-mobile-sheet__tab {
+        min-height: 44px;
+        border: 1px solid var(--color-border-soft);
+        border-radius: var(--radius-control);
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .guide-mobile-sheet__tab[aria-selected='true'] {
+        border-color: var(--color-accent-border);
+        color: var(--color-text);
+        background: var(--color-accent-soft);
+    }
+
+    .guide-mobile-sheet__tab:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+    }
+
+    .guide-mobile-sheet__panel {
+        min-height: 0;
+    }
+
+    .guide-mobile-sheet__empty {
+        margin: 0;
+        color: var(--color-text-muted);
+    }
+
+    .guide-mobile-list__section + .guide-mobile-list__section {
+        margin-top: var(--s-4);
+        padding-top: var(--s-4);
+        border-top: 1px solid var(--color-border-soft);
+    }
+
+    .guide-mobile-list__heading {
+        margin: 0 0 var(--s-2);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-faint);
+        font-family: var(--f-mono);
+    }
+
+    .guide-mobile-list,
+    .guide-mobile-onpage {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .guide-mobile-list__link,
+    .guide-mobile-onpage__link {
+        min-height: 44px;
+        border: 1px solid var(--color-border-soft);
+        border-radius: var(--radius-control);
+        background: var(--color-surface);
+        color: var(--color-text);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.58rem 0.72rem;
+    }
+
+    .guide-mobile-list__link[data-active='true'],
+    .guide-mobile-onpage__link[data-active='true'] {
+        border-color: var(--color-accent-border);
+        background: var(--color-accent-soft);
+    }
+
+    .guide-mobile-list__num {
+        color: var(--color-text-faint);
+        min-width: 1.6rem;
+        font-family: var(--f-mono);
+        font-size: 0.75rem;
+    }
+
+    .guide-mobile-list__label {
+        line-height: 1.35;
+    }
+
+    .guide-mobile-onpage__link[data-level='3'] {
+        padding-left: 1.5rem;
+        color: var(--color-text-muted);
     }
 
     @media (max-width: 960px) {
@@ -310,6 +755,98 @@ const hasSidebar = Astro.slots.has('sidebar');
 
         .docs-shell:not([data-sidebar-open='true']) .docs-shell__sidebar {
             visibility: hidden;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .docs-shell--guide {
+            grid-template-columns: 1fr;
+            width: min(1280px, 100% - 1rem);
+            gap: var(--s-4);
+            padding: var(--s-4) 0 var(--s-8);
+        }
+
+        .docs-shell--guide.docs-shell--with-rail {
+            grid-template-columns: 1fr;
+        }
+
+        .docs-shell--guide .docs-shell__sidebar,
+        .docs-shell--guide .docs-shell__rail {
+            display: none;
+        }
+
+        .guide-mobile-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--s-3);
+            border: 1px solid var(--color-border-soft);
+            border-radius: var(--radius-control);
+            background: var(--color-surface);
+            padding: 0.55rem 0.65rem;
+        }
+
+        .guide-mobile-control__context {
+            margin: 0;
+            min-width: 0;
+            color: var(--color-text-muted);
+            font-size: 0.82rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .guide-mobile-control__open {
+            min-height: 44px;
+            border: 1px solid var(--color-border-soft);
+            border-radius: var(--radius-control);
+            background: var(--color-panel);
+            color: var(--color-text);
+            padding: 0 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .guide-mobile-control__open:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+
+        .docs-shell--api {
+            grid-template-columns: 1fr;
+            width: min(1320px, 100% - 1rem);
+            gap: var(--s-4);
+            padding: var(--s-4) 0 var(--s-8);
+        }
+
+        .docs-shell--api.docs-shell--with-rail {
+            grid-template-columns: 1fr;
+        }
+
+        .docs-shell--api .docs-shell__sidebar,
+        .docs-shell--api .docs-shell__rail,
+        .docs-shell--api .docs-shell__sidebar-toggle,
+        .docs-shell--api .docs-shell__backdrop {
+            display: none;
+        }
+    }
+
+    @media (min-width: 761px) and (max-width: 1180px) {
+        .docs-shell--guide.docs-shell--with-rail {
+            grid-template-columns: 280px minmax(0, 1fr);
+        }
+
+        .docs-shell--guide .docs-shell__rail {
+            display: none;
+        }
+
+        .docs-shell--api.docs-shell--with-rail {
+            grid-template-columns: 280px minmax(0, 1fr);
+        }
+
+        .docs-shell--api .docs-shell__rail {
+            display: none;
         }
     }
 </style>

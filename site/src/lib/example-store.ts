@@ -88,11 +88,25 @@ export async function loadExampleSource(versionId: string, filePath: string): Pr
     const request = createUniqueRequest(url);
     const response = await request.getText();
 
-    if (response === null) {
-        throw new Error(`Could not fetch example source at ${url}!`);
+    if (response !== null) {
+        return response;
     }
 
-    return response;
+    // Fallback for release-tag sources that are unavailable: keep the playground
+    // usable by loading the local "current" source served from the site base path.
+    if (!isCurrentVersion(versionId)) {
+        const fallbackUrl = buildSourceUrl('current', filePath);
+        const fallbackRequest = createUniqueRequest(fallbackUrl);
+        const fallbackResponse = await fallbackRequest.getText();
+
+        if (fallbackResponse !== null) {
+            return fallbackResponse;
+        }
+
+        throw new Error(`Could not fetch example source at ${url} (fallback also failed at ${fallbackUrl}).`);
+    }
+
+    throw new Error(`Could not fetch example source at ${url}!`);
 }
 
 export async function loadExamples(versionId: string): Promise<void> {
@@ -105,12 +119,33 @@ export async function loadExamples(versionId: string): Promise<void> {
         const request = createUniqueRequest(url);
         const data = await request.getJson<ExamplesResponse>();
 
-        if (data === null) {
-            throw new Error(`Could not load the examples catalog from ${url}.`);
+        if (data !== null) {
+            entry.response = data;
+            entry.error = null;
+            for (const listener of _loadListeners) {
+                listener(versionId);
+            }
+            return;
         }
 
-        entry.response = data;
-        entry.error = null;
+        if (!isCurrentVersion(versionId)) {
+            const fallbackUrl = buildSourceUrl('current', 'examples.json');
+            const fallbackRequest = createUniqueRequest(fallbackUrl);
+            const fallbackData = await fallbackRequest.getJson<ExamplesResponse>();
+
+            if (fallbackData !== null) {
+                entry.response = fallbackData;
+                entry.error = null;
+                for (const listener of _loadListeners) {
+                    listener(versionId);
+                }
+                return;
+            }
+
+            throw new Error(`Could not load the examples catalog from ${url} (fallback also failed at ${fallbackUrl}).`);
+        }
+
+        throw new Error(`Could not load the examples catalog from ${url}.`);
     } catch (error) {
         entry.response = null;
         entry.error = error instanceof Error ? error.message : String(error);

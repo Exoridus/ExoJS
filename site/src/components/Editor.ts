@@ -114,6 +114,7 @@ export class Editor extends LitElement {
                     .canvasWidth=${this._canvasWidth}
                     .canvasHeight=${this._canvasHeight}
                     .zoom=${this._previewZoom}
+                    .selectedVersionId=${this.selectedVersionId}
                     .disabled=${!this._sourceCode}
                     @request-reload=${this._onRequestReload}
                     @request-open-tab=${this._onRequestOpenTab}
@@ -194,6 +195,14 @@ export class Editor extends LitElement {
     }
 
     private _onRequestOpenTab(): void {
+        this._previewElement?.openPreviewInTab();
+    }
+
+    public triggerReload(): void {
+        this._codeEditor?.triggerRefresh();
+    }
+
+    public openPreviewInTab(): void {
         this._previewElement?.openPreviewInTab();
     }
 

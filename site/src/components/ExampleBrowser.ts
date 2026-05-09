@@ -1,5 +1,5 @@
 import { LitElement, html, unsafeCSS } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import type { Example, ExamplesMap } from '../lib/types';
 import { configureUrls } from '../lib/url-builder';
 import {
@@ -13,22 +13,26 @@ import {
     onExamplesLoaded,
 } from '../lib/example-store';
 import type { VersionInfo } from '../lib/versions';
-import { getLatestStableId, getVersionById, getVersionLoadError, getVersions, hasVersions, loadVersionCatalog, onVersionsLoaded } from '../lib/versions';
+import { CURRENT_VERSION_ID, getLatestStableId, getVersionById, getVersionLoadError, getVersions, hasVersions, loadVersionCatalog, onVersionsLoaded } from '../lib/versions';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import { loadStoredVersion, readUrlState, storeSelectedVersion, writeUrlState } from '../lib/url-state';
 import { showToast } from '../lib/toast-store';
 import type { SelectExampleEvent } from './NavigationLink';
 import type { SelectVersionEvent } from './VersionPill';
 import componentStyles from './ExampleBrowser.scss?inline';
+import type { BottomSheet } from './BottomSheet';
+import type { Editor } from './Editor';
 import './AppHeader';
 import './Navigation';
 import './Editor';
 import './ToastStack';
+import './BottomSheet';
 
 @customElement('example-browser')
 export class ExampleBrowser extends LitElement {
     static styles = unsafeCSS(componentStyles);
 
+    @property({ type: String, attribute: 'base-url' }) public baseUrl = '/';
     @state() private _examples: ExamplesMap = new Map();
     @state() private _activeExample: Example | null = null;
     @state() private _availableTags: Array<string> = [];
@@ -37,13 +41,17 @@ export class ExampleBrowser extends LitElement {
     @state() private _loaded = false;
     @state() private _loadError: string | null = null;
     @state() private _sidebarOpen = window.matchMedia('(min-width: 1120px)').matches;
+    @state() private _isCompactMobile = window.matchMedia('(max-width: 760px)').matches;
+    @state() private _mobileExamplesSheetOpen = false;
 
     private _unsubscribeExamples?: () => void;
     private _unsubscribeVersions?: () => void;
     private _unsubscribeRuntime?: () => void;
     private _popstateHandler = (): void => this._onPopState();
     private _desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
+    private _compactMobileMediaQuery = window.matchMedia('(max-width: 760px)');
     private _breakpointChangeHandler = (event: MediaQueryListEvent): void => this._onBreakpointChange(event);
+    private _compactMobileBreakpointChangeHandler = (event: MediaQueryListEvent): void => this._onCompactMobileBreakpointChange(event);
     private _documentKeydownHandler = (event: KeyboardEvent): void => this._onDocumentKeyDown(event);
     private _selectExampleHandler = (event: Event): void => this._onSelectExample(event as CustomEvent<SelectExampleEvent>);
     private _selectVersionHandler = (event: Event): void => this._onSelectVersion(event as CustomEvent<SelectVersionEvent>);
@@ -59,14 +67,34 @@ export class ExampleBrowser extends LitElement {
     // and back/forward navigation do not set this — they fall back silently.
     private _missingExampleToastEnabled = false;
     private _bodyOverflowBeforeDrawerOpen: string | null = null;
+    @query('#playground-examples-sheet') private _examplesSheet?: BottomSheet;
+    @query('exo-editor') private _editor?: Editor;
+    @query('.mobile-action--examples') private _mobileExamplesButton?: HTMLButtonElement;
+
+    private _resolveSiteBaseUrl(): string {
+        const pathSegments = window.location.pathname.split('/').filter(Boolean);
+        const localeIndex = pathSegments.findIndex(segment => segment === 'en' || segment === 'de');
+
+        if (localeIndex >= 0) {
+            const baseSegments = pathSegments.slice(0, localeIndex);
+            const basePath = baseSegments.length > 0 ? `/${baseSegments.join('/')}/` : '/';
+            return new URL(basePath, window.location.origin).toString();
+        }
+
+        return new URL(this.baseUrl || '/', window.location.origin).toString();
+    }
 
     public override connectedCallback(): void {
         super.connectedCallback();
 
         this._desktopMediaQuery.addEventListener('change', this._breakpointChangeHandler);
+        this._compactMobileMediaQuery.addEventListener('change', this._compactMobileBreakpointChangeHandler);
+        this._isCompactMobile = this._compactMobileMediaQuery.matches;
+
+        const resolvedBaseUrl = this._resolveSiteBaseUrl();
 
         configureUrls({
-            baseUrl: new URL('../', document.baseURI).toString(),
+            baseUrl: resolvedBaseUrl,
             iframeUrl: 'preview.html',
             assetsDir: 'assets',
             examplesDir: 'examples',
@@ -88,6 +116,10 @@ export class ExampleBrowser extends LitElement {
         // fired from _syncVersionState once a version is known.
         void loadVersionCatalog();
         void detectRuntimeSupport();
+
+        if (this._isCompactMobile) {
+            this._setSidebarOpen(false, { restoreFocus: false });
+        }
     }
 
     public override disconnectedCallback(): void {
@@ -100,6 +132,7 @@ export class ExampleBrowser extends LitElement {
         this.removeEventListener('select-example', this._selectExampleHandler);
         this.removeEventListener('select-version', this._selectVersionHandler);
         this._desktopMediaQuery.removeEventListener('change', this._breakpointChangeHandler);
+        this._compactMobileMediaQuery.removeEventListener('change', this._compactMobileBreakpointChangeHandler);
         this._unlockBodyScroll();
     }
 
@@ -115,6 +148,17 @@ export class ExampleBrowser extends LitElement {
         requestAnimationFrame(() => {
             this.removeAttribute('data-resizing');
         });
+    }
+
+    private _onCompactMobileBreakpointChange(event: MediaQueryListEvent): void {
+        this._isCompactMobile = event.matches;
+
+        if (event.matches) {
+            this._setSidebarOpen(false, { restoreFocus: false });
+            return;
+        }
+
+        this._hideExamplesSheet();
     }
 
     private _syncExampleState(): void {
@@ -169,6 +213,9 @@ export class ExampleBrowser extends LitElement {
         const stored = loadStoredVersion();
         const fromStored = getVersionById(stored);
         if (fromStored) return fromStored;
+
+        const current = getVersionById(CURRENT_VERSION_ID);
+        if (current) return current;
 
         const latest = getVersionById(getLatestStableId());
         if (latest) return latest;
@@ -296,7 +343,9 @@ export class ExampleBrowser extends LitElement {
             example: example.path,
         });
 
-        if (!this._desktopMediaQuery.matches) {
+        if (this._isCompactMobile) {
+            this._hideExamplesSheet();
+        } else if (!this._desktopMediaQuery.matches) {
             this._setSidebarOpen(false, { restoreFocus: false });
         }
     }
@@ -455,23 +504,47 @@ export class ExampleBrowser extends LitElement {
         );
     }
 
+    private _showExamplesSheet(): void {
+        if (!this._isCompactMobile) return;
+        this._examplesSheet?.show(this._mobileExamplesButton);
+    }
+
+    private _hideExamplesSheet(): void {
+        this._examplesSheet?.hide();
+    }
+
+    private _onExamplesSheetToggle(event: CustomEvent<{ open: boolean }>): void {
+        this._mobileExamplesSheetOpen = event.detail.open;
+    }
+
+    private _onMobileRun(): void {
+        this._editor?.triggerReload();
+    }
+
     public render(): ReturnType<LitElement['render']> {
+        const hasActiveExample = this._activeExample !== null;
+
         return html`
-            <aside id="playground-navigation" class="side-content" ?data-open=${this._sidebarOpen} aria-hidden=${String(!this._sidebarOpen)}>
-                <exo-navigation
-                    .examples=${this._examples}
-                    .activeExample=${this._activeExample}
-                    .availableTags=${this._availableTags}
-                    .selectedVersion=${this._selectedVersion}
-                    .loadError=${this._loadError}
-                    .loaded=${this._loaded}
-                ></exo-navigation>
-            </aside>
+            ${!this._isCompactMobile
+                ? html`
+                      <aside id="playground-navigation" class="side-content" ?data-open=${this._sidebarOpen} aria-hidden=${String(!this._sidebarOpen)}>
+                          <exo-navigation
+                              .examples=${this._examples}
+                              .activeExample=${this._activeExample}
+                              .availableTags=${this._availableTags}
+                              .selectedVersion=${this._selectedVersion}
+                              .loadError=${this._loadError}
+                              .loaded=${this._loaded}
+                          ></exo-navigation>
+                      </aside>
+                  `
+                : null}
             <div class="right-column">
                 <exo-app-header
                     role="banner"
                     .activeExample=${this._activeExample}
                     .sidebarOpen=${this._sidebarOpen}
+                    .showSidebarToggle=${!this._isCompactMobile}
                     sidebarControls="playground-navigation"
                     .versions=${this._versions}
                     .selectedVersion=${this._selectedVersion}
@@ -484,8 +557,41 @@ export class ExampleBrowser extends LitElement {
                         .selectedVersionId=${this._selectedVersion?.id ?? ''}
                     ></exo-editor>
                 </main>
+                ${this._isCompactMobile
+                    ? html`
+                          <nav class="mobile-actions" aria-label="Playground actions">
+                              <button
+                                  class="mobile-action mobile-action--examples"
+                                  type="button"
+                                  aria-haspopup="dialog"
+                                  aria-expanded=${String(this._mobileExamplesSheetOpen)}
+                                  @click=${this._showExamplesSheet}
+                              >
+                                  Examples
+                              </button>
+                              <button class="mobile-action mobile-action--run" type="button" ?disabled=${!hasActiveExample} @click=${this._onMobileRun}>
+                                  Run
+                              </button>
+                          </nav>
+                      `
+                    : null}
             </div>
-            ${this._sidebarOpen ? html`<div class="backdrop" @click=${this._onToggleSidebar}></div>` : ''}
+            ${!this._isCompactMobile && this._sidebarOpen ? html`<div class="backdrop" @click=${this._onToggleSidebar}></div>` : ''}
+            ${this._isCompactMobile
+                ? html`
+                      <exo-bottom-sheet id="playground-examples-sheet" title="Examples" @sheet-toggle=${this._onExamplesSheetToggle}>
+                          <exo-navigation
+                              class="sheet-navigation"
+                              .examples=${this._examples}
+                              .activeExample=${this._activeExample}
+                              .availableTags=${this._availableTags}
+                              .selectedVersion=${this._selectedVersion}
+                              .loadError=${this._loadError}
+                              .loaded=${this._loaded}
+                          ></exo-navigation>
+                      </exo-bottom-sheet>
+                  `
+                : null}
             <exo-toast-stack></exo-toast-stack>
         `;
     }

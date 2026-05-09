@@ -249,12 +249,18 @@ export class EditorCode extends LitElement {
                         title="Auto-refresh the preview on every code change (800ms debounce)"
                         @click=${this._toggleAutoRefresh}
                     >
-                        Auto
+                        auto-run
                     </button>
                     <button class="more-button" data-action="refresh" title="Refresh preview (Ctrl+Enter)" @click=${this._triggerRefreshPreview}>
                         <svg viewBox="0 0 16 16" width="1em" height="1em" style="display:block" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                        </svg>
+                    </button>
+                    <button class="more-button" data-action="reset" title="Reset to original source" ?disabled=${!this.canReset} @click=${this._resetCode}>
+                        <svg viewBox="0 0 16 16" width="1em" height="1em" style="display:block" fill="currentColor" aria-hidden="true">
+                            <path d="M2.2 8a5.8 5.8 0 1 0 1.4-3.8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" />
+                            <path d="M2.1 2.8v2.8h2.8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </button>
                     <button

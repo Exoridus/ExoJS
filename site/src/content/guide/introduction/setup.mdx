@@ -1,0 +1,91 @@
+---
+title: 'Setup'
+description: 'Install ExoJS, create an application, choose a canvas, and verify the runtime before writing scene code.'
+part: 1
+chapter: 2
+examples: []
+---
+
+# Setup
+
+This page covers the practical setup before writing scene code: installing the runtime, creating an app, choosing a canvas, and confirming everything works.
+
+## Install
+
+```sh
+npm install @codexo/exojs
+```
+
+The package ships as ESM with TypeScript declarations. Any modern bundler (Vite, esbuild, Rollup, webpack, Parcel, …) picks both up automatically.
+
+## A minimal HTML page
+
+ExoJS renders into a regular `HTMLCanvasElement`. For a small test page, defining one canvas in the page is enough:
+
+```html
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>ExoJS</title>
+        <style>
+            body { margin: 0; }
+            #scene { display: block; }
+        </style>
+    </head>
+    <body>
+        <canvas id="scene" width="800" height="600"></canvas>
+        <script type="module" src="./main.js"></script>
+    </body>
+</html>
+```
+
+## Create the application
+
+The `Application` can create a canvas automatically:
+
+```js
+import { Application } from '@codexo/exojs';
+
+const app = new Application();
+```
+
+If your page already has a canvas, pass it into `Application` when you create the app:
+
+```ts
+import { Application } from '@codexo/exojs';
+
+const canvas = document.querySelector<HTMLCanvasElement>('canvas')!;
+const app = new Application({ canvas });
+```
+
+The `app.canvas` property is the active `HTMLCanvasElement` the runtime renders into.
+
+## Verify the runtime
+
+Before adding game logic, confirm the runtime starts cleanly:
+
+```js
+import { Application, Color, Scene } from '@codexo/exojs';
+
+const canvas = document.querySelector('#scene');
+
+if (!(canvas instanceof HTMLCanvasElement)) {
+    throw new Error('Expected #scene canvas element.');
+}
+
+class BlankScene extends Scene {
+    draw(backend) {
+        backend.clear();
+    }
+}
+
+const app = new Application({ canvas, clearColor: Color.midnightBlue });
+app.start(new BlankScene());
+```
+
+Open the page; the canvas paints solid midnight blue every frame. If you see that, the runtime is wired correctly.
+
+## Where to go next
+
+You have a working page with a running app. The next chapter, [Your first scene](/ExoJS/en/guide/introduction/your-first-scene/), builds on this scaffold to load assets, position a sprite, and animate it.

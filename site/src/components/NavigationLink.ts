@@ -31,6 +31,7 @@ export class NavigationLink extends LitElement {
                 aria-current=${this.active ? 'page' : 'false'}
                 @click=${this._onClick}
             >
+                <span class="glyph" aria-hidden="true">▸</span>
                 <span class="title">${this.title}</span>
                 ${this.unavailable ? html`<span class="badge">Unavailable</span>` : ''}
             </a>

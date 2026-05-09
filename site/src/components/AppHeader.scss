@@ -1,10 +1,10 @@
 :host {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    min-height: 52px;
-    padding: 0.5rem 0.8rem;
-    background: var(--bg-elevated);
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.4rem 0.78rem;
+    background: color-mix(in oklab, var(--bg-canvas), transparent 6%);
     border-bottom: 1px solid var(--line-soft);
 }
 
@@ -15,11 +15,11 @@ exo-version-pill {
 .menu-button {
     appearance: none;
     flex: 0 0 auto;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     border: 1px solid var(--line-soft);
     border-radius: var(--r-2);
@@ -38,13 +38,13 @@ exo-version-pill {
     outline-offset: 2px;
 }
 
-.title {
+.spacer {
     flex: 1 1 auto;
     min-width: 0;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: var(--fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+@media (max-width: 1119px) {
+    .menu-button {
+        display: inline-flex;
+    }
 }

@@ -1,16 +1,58 @@
 ---
 title: '1.1 What is ExoJS?'
-description: 'Understand where ExoJS fits and what kind of projects it is built for.'
+description: 'A short tour of what ExoJS is, where it fits, how a project is shaped, and how to read this guide.'
 part: 1
 chapter: 1
 examples: []
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
+# What is ExoJS?
 
-# 1.1 What is ExoJS?
+ExoJS is a TypeScript-first, zero-dependency 2D runtime for browser games and interactive apps.
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. What is ExoJS? gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+It gives you the core pieces of a small engine — scenes, sprites, graphics, input, audio, effects, render targets, and a frame loop — while staying close to regular web development. You can use it from JavaScript or TypeScript, render into a canvas, and keep project structure in code.
 
-{/* TODO: prose */}
+## Where ExoJS fits
 
+Use ExoJS when you want to build a browser-based 2D game, visualization, toy, editor, or interactive scene with code.
+
+It gives you engine-level building blocks without forcing a particular app framework or editor workflow. If you're building a mostly DOM-based interface, keep using your UI framework of choice. If you're building an interactive canvas surface, ExoJS can own that part.
+
+## How a project is shaped
+
+A typical ExoJS project starts with two pieces: an [`Application`](/ExoJS/en/api/application/) and a [`Scene`](/ExoJS/en/api/scene/).
+
+The application owns the runtime configuration — render backend, canvas size, asset path, frame loop. The scene loads resources, updates state, and draws each frame.
+
+```js
+import { Application, Scene } from '@codexo/exojs';
+
+class MyScene extends Scene {
+    draw(backend) {
+        backend.clear();
+    }
+}
+
+const app = new Application();
+app.start(new MyScene());
+```
+
+From there, the same shape scales up: add sprites, split logic across multiple scenes, attach input, play audio, render effects, and move code into reusable objects as the project grows.
+
+## Distribution
+
+ExoJS ships as ESM with TypeScript declarations. JavaScript projects can use the runtime directly; TypeScript users get typed APIs out of the box. A standalone browser bundle for `<script>`-tag use is on the roadmap.
+
+## Browser support
+
+ExoJS targets evergreen browsers: current Chrome, Firefox, Edge, and Safari. On startup, the runtime auto-selects the strongest available render backend (WebGPU when present, WebGL2 otherwise).
+
+Some examples in this guide require browser features beyond rendering, such as audio playback, gamepad APIs, or multi-touch input. Capability badges above each example list what it expects; when a feature is missing, the embedded preview shows a clear overlay instead of failing silently.
+
+## How to read this guide
+
+Read the first two parts in order — Introduction and Core Concepts. They build the mental model the rest of the guide assumes. After that, jump by topic.
+
+The [API reference](/ExoJS/en/api/) covers exact constructor options, method signatures, and return types. The [playground](/ExoJS/en/playground/) lets you change any embedded example and see what happens.
+
+Capability badges over each example show which browser features it expects (audio, gamepad, WebGPU, …). When a feature is unavailable in the current browser, the preview shows an overlay listing what's missing rather than silently breaking.

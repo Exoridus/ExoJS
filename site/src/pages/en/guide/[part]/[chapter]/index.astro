@@ -20,6 +20,11 @@ const partSlug = (Astro.params as Record<string, string | undefined>).part ?? ''
 const chapterSlug = (Astro.params as Record<string, string | undefined>).chapter ?? '';
 const chapterPath = `${partSlug}/${chapterSlug}`;
 const chapterMeta = GUIDE_CHAPTER_BY_PATH.get(chapterPath);
+const parseIndexedLabel = (value: string) => {
+    const match = /^([0-9]+(?:\.[0-9]+)?)\s+(.+)$/.exec(value.trim());
+    if (!match) return { index: null, label: value };
+    return { index: match[1], label: match[2] };
+};
 
 if (!chapterMeta) {
     throw new Error(`Unknown guide chapter: ${chapterPath}`);
@@ -35,12 +40,24 @@ if (!entry) {
     throw new Error(`Missing guide content entry: ${chapterPath}`);
 }
 
-const { Content } = await render(entry);
+type TocHeading = { depth: number; slug: string; text: string };
+const { Content, headings } = await render(entry);
+const tocItems = (headings as TocHeading[]).filter((heading: TocHeading) => heading.depth >= 2 && heading.depth <= 3);
+const primaryExample = chapterMeta.examples[0] ?? null;
+const partLabel = parseIndexedLabel(chapterMeta.partTitle).label;
+const chapterLabel = parseIndexedLabel(chapterMeta.title).label;
 
+const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
+    const firstChapter = part.chapters[0];
+    return firstChapter
+        ? `${import.meta.env.BASE_URL}en/guide/${part.slug}/${firstChapter.slug}/`
+        : `${import.meta.env.BASE_URL}en/guide/${part.slug}/`;
+};
 const sidebarParts = GUIDE_PARTS.map(part => ({
     slug: part.slug,
     title: part.title,
-    href: `${import.meta.env.BASE_URL}en/guide/${part.slug}/`,
+    href: getFirstChapterHref(part),
+    baseHref: `${import.meta.env.BASE_URL}en/guide/${part.slug}/`,
     chapters: part.chapters.map(chapter => ({
         slug: chapter.slug,
         title: chapter.title,
@@ -49,24 +66,252 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
 }));
 ---
 
-<DocsLayout title={`${chapterMeta.title} | ExoJS Guide`} description={chapterMeta.description}>
+<DocsLayout title={`${chapterLabel} | ExoJS Guide`} description={chapterMeta.description} variant="guide">
     <DocsSidebar slot="sidebar" parts={sidebarParts} />
-    <div class="chapter-content">
+    <aside slot="rail" class="toc" aria-label="On this page">
+        <h6>On this page</h6>
+        {tocItems.length > 0 && (
+            <ul data-guide-toc>
+                {tocItems.map((item: TocHeading) => (
+                    <li>
+                        <a href={`#${item.slug}`} data-guide-toc-link class:list={[item.depth === 3 && 'lvl-3']}>
+                            {item.text}
+                        </a>
+                    </li>
+                ))}
+            </ul>
+        )}
+        <div class="toc__resources">
+            <h6>Open in</h6>
+            <ul>
+                {primaryExample && (
+                    <li>
+                        <a href={`${import.meta.env.BASE_URL}en/playground/?example=${encodeURIComponent(primaryExample)}`}>↗ Playground</a>
+                    </li>
+                )}
+                <li>
+                    <a href={`${import.meta.env.BASE_URL}en/api/`}>↗ API reference</a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <article class="prose chapter-prose">
+        <div class="crumbs">
+                <a href={`${import.meta.env.BASE_URL}en/guide/`}>Guide</a>
+                <span class="sep" aria-hidden="true">/</span>
+                <a href={`${import.meta.env.BASE_URL}en/guide/${chapterMeta.partSlug}/`}>{partLabel}</a>
+                <span class="sep" aria-hidden="true">/</span>
+                <span>{chapterLabel}</span>
+        </div>
+        <h1>{chapterLabel}</h1>
+        <p class="lead">{chapterMeta.description}</p>
+
         <Content />
-    </div>
+    </article>
 </DocsLayout>
 
+<script is:inline>
+    (() => {
+        const toc = document.querySelector('[data-guide-toc]');
+        if (!(toc instanceof HTMLElement)) return;
+        const links = Array.from(toc.querySelectorAll('[data-guide-toc-link]'));
+        if (links.length === 0) return;
+
+        const map = new Map();
+        for (const link of links) {
+            if (!(link instanceof HTMLAnchorElement)) continue;
+            const id = link.getAttribute('href')?.replace(/^#/, '');
+            if (!id) continue;
+            const target = document.getElementById(id);
+            if (target) map.set(target, link);
+        }
+        if (map.size === 0) return;
+
+        const setActive = (link) => {
+            links.forEach(node => node.setAttribute('data-active', 'false'));
+            link.setAttribute('data-active', 'true');
+        };
+
+        const observer = new IntersectionObserver(
+            entries => {
+                const visible = entries
+                    .filter(entry => entry.isIntersecting)
+                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+                const top = visible[0];
+                if (!top) return;
+                const link = map.get(top.target);
+                if (link) setActive(link);
+            },
+            { rootMargin: '-20% 0px -65% 0px', threshold: [0, 1] },
+        );
+
+        for (const heading of map.keys()) observer.observe(heading);
+
+        const firstLink = links[0];
+        if (firstLink instanceof HTMLAnchorElement) setActive(firstLink);
+    })();
+</script>
+
 <style>
-    .chapter-content :global(h1) {
-        margin-top: 0;
-        font-size: clamp(1.5rem, 3vw, 2.2rem);
+    .chapter-prose {
+        max-width: 720px;
     }
 
-    .chapter-content :global(p) {
-        max-width: 74ch;
+    .chapter-prose .crumbs {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        margin-bottom: var(--s-4);
+        font-size: 12.5px;
+        color: var(--fg-faint);
+        font-family: var(--f-mono);
     }
 
-    .chapter-content :global(h2) {
-        margin-top: 1.2rem;
+    .chapter-prose .crumbs .sep {
+        opacity: 0.5;
+    }
+
+    .chapter-prose .crumbs a:hover {
+        color: var(--fg);
+    }
+
+    .chapter-prose h1 {
+        margin: 0 0 var(--s-4);
+        font-size: 36px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+    }
+
+    .chapter-prose .lead {
+        margin: 0 0 var(--s-7);
+        font-size: 17px;
+        color: var(--fg-muted);
+        line-height: 1.55;
+        text-wrap: pretty;
+    }
+
+    .chapter-prose :global(h1:first-child) {
+        display: none;
+    }
+
+    .chapter-prose :global(h2) {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: var(--s-9) 0 var(--s-3);
+        padding-top: var(--s-3);
+        border: 0;
+        position: relative;
+    }
+
+    .chapter-prose :global(h2)::before {
+        content: '#';
+        font-family: var(--f-mono);
+        color: var(--fg-faint);
+        font-weight: 400;
+        font-size: 14px;
+        margin-right: 8px;
+    }
+
+    .chapter-prose :global(h3) {
+        font-size: 16px;
+        font-weight: 600;
+        margin: var(--s-7) 0 var(--s-3);
+    }
+
+    .chapter-prose :global(p) {
+        margin: var(--s-3) 0;
+        line-height: 1.65;
+        color: var(--fg);
+        text-wrap: pretty;
+    }
+
+    .chapter-prose :global(li) {
+        margin: 4px 0;
+        line-height: 1.65;
+    }
+
+    .chapter-prose :global(ul, ol) {
+        margin: var(--s-3) 0;
+        padding-left: var(--s-5);
+        line-height: 1.65;
+    }
+
+    .chapter-prose :global(p.muted) {
+        color: var(--fg-muted);
+    }
+
+    .chapter-prose :global(pre.astro-code) {
+        margin: var(--s-4) 0;
+        border-color: var(--line-soft);
+    }
+
+    .chapter-prose :global(hr) {
+        border: none;
+        border-top: 1px solid var(--line-soft);
+        margin: var(--s-9) 0;
+    }
+
+    .chapter-prose :global(a) {
+        color: var(--fg);
+        text-decoration: none;
+    }
+
+    .chapter-prose :global(a:hover) {
+        color: var(--accent);
+    }
+
+    .toc h6 {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .toc ul {
+        list-style: none;
+        margin: var(--s-3) 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toc a {
+        display: block;
+        border-left: 2px solid transparent;
+        padding: 4px 0 4px var(--s-3);
+        margin-left: -10px;
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .toc a.lvl-3 {
+        padding-left: var(--s-5);
+        font-size: 12.5px;
+        color: var(--fg-faint);
+    }
+
+    .toc a:hover,
+    .toc a:focus-visible {
+        color: var(--fg);
+        outline: none;
+    }
+
+    .toc a[data-active='true'] {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+
+    .toc__resources {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--line-soft);
     }
 </style>

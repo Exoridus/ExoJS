@@ -33,26 +33,29 @@ const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
 ---
 
 <section class="example-preview">
-    <header class="example-preview__header">
-        <h3>{exampleTitle}</h3>
-        <div class="example-preview__actions">
-            <a class="example-preview__action" href={`${import.meta.env.BASE_URL}${locale}/playground/?example=${chapter}/${slug}`}>Open in Playground</a>
-            <a class="example-preview__action example-preview__action--quiet" href={sourceHref}>View source</a>
-        </div>
-    </header>
-    {
-        capabilities.length > 0 && (
-            <ul class="example-preview__caps" aria-label="Required browser capabilities">
+    <header class="embed-head">
+        <span class="title">{exampleTitle}</span>
+        {capabilities.length > 0 && (
+            <span class="badges" aria-label="Required browser capabilities">
                 {capabilities.map(cap => (
-                    <li class="example-preview__cap" title={`Required: ${cap}`}>
+                    <span class="cap" title={`Required: ${cap}`}>
                         {CAPABILITY_LABELS[cap]}
-                    </li>
+                    </span>
                 ))}
-            </ul>
-        )
-    }
-    <div class="example-preview__live">
-        <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode} capabilities={capabilitiesAttr}></guide-example-preview>
+            </span>
+        )}
+        <span class="actions">
+            <a class="action action--primary" href={`${import.meta.env.BASE_URL}${locale}/playground/?example=${chapter}/${slug}`}>Open in Playground</a>
+            <a class="action action--quiet" href={sourceHref}>View source</a>
+        </span>
+    </header>
+    <div class="embed-body">
+        <div class="embed-preview">
+            <guide-example-preview chapter={chapter} slug={slug} title={exampleTitle} sourcecode={sourceCode} capabilities={capabilitiesAttr}></guide-example-preview>
+        </div>
+        <div class="embed-source">
+            <pre><code>{sourceCode}</code></pre>
+        </div>
     </div>
 </section>
 
@@ -62,69 +65,115 @@ const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
 
 <style>
     .example-preview {
+        margin: var(--s-5) 0;
         border: 1px solid var(--line-soft);
         border-radius: var(--r-4);
-        padding: 1rem;
-        margin: 1rem 0 1.4rem;
-        background: var(--bg-panel);
+        overflow: hidden;
+        background: var(--bg-elevated);
     }
 
-    .example-preview__header {
+    .embed-head {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.8rem;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 0.8rem;
+        gap: var(--s-2);
+        padding: 10px var(--s-4);
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 12.5px;
     }
 
-    .example-preview__header h3 {
-        margin: 0;
-        font-size: 1rem;
-        color: var(--fg);
+    .embed-head .title {
+        font-weight: 600;
     }
 
-    .example-preview__actions {
+    .embed-head .badges {
         display: inline-flex;
-        gap: 0.5rem;
-    }
-
-    .example-preview__action {
-        font-size: 0.82rem;
-        text-decoration: none;
-        border-radius: var(--r-2);
-        padding: 0.4rem 0.65rem;
-        border: 1px solid var(--accent-line);
-        background: var(--accent-soft);
-        color: var(--fg);
-    }
-
-    .example-preview__action--quiet {
-        border-color: var(--line-soft);
-        background: transparent;
-        color: var(--fg-muted);
-    }
-
-    .example-preview__live {
-        margin-top: 0.35rem;
-    }
-
-    .example-preview__caps {
-        list-style: none;
-        margin: 0 0 0.65rem;
-        padding: 0;
-        display: flex;
+        gap: 4px;
         flex-wrap: wrap;
-        gap: 0.4rem;
+        margin-left: var(--s-2);
     }
 
-    .example-preview__cap {
-        font-size: 0.72rem;
+    .embed-head .actions {
+        margin-left: auto;
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    .embed-head .cap {
+        display: inline-flex;
+        align-items: center;
+        border-radius: var(--r-pill);
+        border: 1px solid var(--line-soft);
+        background: var(--bg-canvas);
+        color: var(--fg-muted);
+        padding: 2px 8px;
         font-family: var(--f-mono);
-        padding: 0.18rem 0.55rem;
-        border-radius: 999px;
+        font-size: 11px;
+    }
+
+    .embed-head .action {
+        display: inline-flex;
+        align-items: center;
+        border-radius: var(--r-2);
+        text-decoration: none;
+        font-size: 11.5px;
+        padding: 5px 9px;
+        border: 1px solid var(--line-soft);
+        color: var(--fg-muted);
+        background: var(--bg-canvas);
+    }
+
+    .embed-head .action--primary {
+        border-color: var(--accent-line);
         background: var(--accent-soft);
-        border: 1px solid var(--accent-line);
         color: var(--fg);
+    }
+
+    .embed-head .action:hover {
+        color: var(--fg);
+    }
+
+    .embed-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: 200px;
+    }
+
+    .embed-preview {
+        min-height: 200px;
+        background: var(--bg-code);
+    }
+
+    .embed-source {
+        border-left: 1px solid var(--line-soft);
+        background: var(--bg-code);
+        max-height: 260px;
+        overflow: auto;
+    }
+
+    .embed-source pre {
+        margin: 0;
+        padding: 12px 14px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: oklch(92% 0.02 245);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        line-height: 1.65;
+    }
+
+    .embed-source code {
+        white-space: pre;
+    }
+
+    @media (max-width: 760px) {
+        .embed-body {
+            grid-template-columns: 1fr;
+        }
+
+        .embed-source {
+            border-left: 0;
+            border-top: 1px solid var(--line-soft);
+        }
     }
 </style>
