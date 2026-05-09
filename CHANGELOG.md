@@ -4,6 +4,36 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-05-09
+
+### Engine
+
+- **`Mesh` accepts custom WebGL2 shaders.** New `MeshShaderConfig` + `MeshShaderUniformValue`
+  exports. Supply `shader: { vertexSource, fragmentSource, uniforms }` in `MeshOptions` to
+  bind a custom GLSL ES 3.00 program against the standard mesh vertex layout. Auto-bound
+  uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`) are set only when the
+  shader declares them, so Shadertoy-style fullscreen passes can ignore them entirely.
+  Texture uniforms claim slots 1–7. WebGL2 only in this release; the WebGPU mesh
+  renderer throws a clear error pointing to the WebGL2 backend if `mesh.shader` is set.
+
+- **Filter chain memory: ping-pong RT reuse.** `RenderNode._renderContentToTexture` now
+  releases the previous step's RenderTexture immediately after each `filter.apply`, so
+  the pool can hand the same memory back to the next step. Multi-filter chains drop from
+  N+1 simultaneously-allocated RTs to a steady-state of 2. ~60% RT-memory reduction on
+  4-filter 1080p chains. Behaviour-identical; no public API change.
+
+### Site / Docs
+
+- Part 2 "Core Concepts" guide section published (6 chapters, source-verified):
+  Application, Scenes, Scene lifecycle, Scene graph, Coordinates and views,
+  Loading and resources.
+- Astro `6.3.0 → 6.3.1`, `@types/node 25.6.0 → 25.6.2` in site/.
+
+### Verification
+
+- Engine: 100/100 suites, 1266/1266 tests, lint:strict 0/0, typecheck clean.
+- Site: build green (488 pages), check-ts 0/0, screenshot smoke 36/36.
+
 ## [0.8.1] - 2026-05-08
 
 Three small additive features that close the remaining examples-driven API gaps from
