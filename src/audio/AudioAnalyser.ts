@@ -1,5 +1,6 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '@/audio/audio-context';
 import type { AudioBus } from '@/audio/AudioBus';
+import { buildMelFilterbank, type MelBand } from '@/audio/dsp/mel';
 import type { Music } from '@/audio/Music';
 import type { Sound } from '@/audio/Sound';
 
@@ -15,6 +16,22 @@ export interface AudioAnalyserOptions {
   minDecibels?: number;
   /** Maximum dBFS rendered by the byte-domain spectrum getters. Default -30. */
   maxDecibels?: number;
+  /**
+   * Optional initial source. Equivalent to `analyser.source = value` after
+   * construction; provided for ergonomic one-shot construction. The setter
+   * remains usable for runtime source switches.
+   */
+  source?: AudioAnalyserSource;
+}
+
+/** Mapping options for {@link AudioAnalyser.getSpectrumMel} and {@link AudioAnalyser.getSpectrumLog}. */
+export interface SpectrumMappingOptions {
+  /** Number of output bands. Default 32. */
+  bands?: number;
+  /** Lower frequency bound in Hz. Default 20. */
+  fMin?: number;
+  /** Upper frequency bound in Hz. Default 20000 (clamped to nyquist at runtime). */
+  fMax?: number;
 }
 
 type RequiredAnalyserOptions = Required<AudioAnalyserOptions>;
@@ -41,6 +58,11 @@ export class AudioAnalyser {
   private _byteWaveform: Uint8Array<ArrayBuffer>;
   private _floatWaveform: Float32Array<ArrayBuffer>;
 
+  // Cached mel/log filterbanks. Key: `${bands}|${fMin}|${fMax}|${fftSize}`.
+  // Filterbank construction is non-trivial; caching avoids per-frame allocation.
+  private _melCache = new Map<string, MelBand[]>();
+  private _logCache = new Map<string, LogBandRange[]>();
+
   /**
    * Create an `AudioAnalyser` with the given options. The underlying
    * `AnalyserNode` is created immediately if the `AudioContext` is already
@@ -52,6 +74,7 @@ export class AudioAnalyser {
       smoothingTimeConstant: options?.smoothingTimeConstant ?? 0.8,
       minDecibels: options?.minDecibels ?? -100,
       maxDecibels: options?.maxDecibels ?? -30,
+      source: options?.source ?? null,
     };
 
     const binCount = this._options.fftSize >> 1;
@@ -64,6 +87,10 @@ export class AudioAnalyser {
       this._setupAnalyser(getAudioContext());
     } else {
       onAudioContextReady.once(this._setupAnalyser, this);
+    }
+
+    if (options?.source !== undefined && options.source !== null) {
+      this.source = options.source;
     }
   }
 
@@ -236,6 +263,98 @@ export class AudioAnalyser {
   }
 
   // -----------------------------------------------------------------------
+  // Spectrum mapping (mel / log scaling)
+  //
+  // The raw FFT bins from AnalyserNode are linearly distributed across
+  // 0..nyquist, which gives bass a few bins and treble hundreds. For
+  // visualisations you typically want perceptually-weighted spacing.
+  //
+  // Both `getSpectrumMel` and `getSpectrumLog` operate on the byte-domain
+  // spectrum (0..255) and produce byte output by default. The float
+  // variants operate on dBFS values and produce float output.
+  //
+  // Filterbanks are cached on the analyser; they only rebuild when fftSize
+  // or the (bands, fMin, fMax) parameters change.
+  // -----------------------------------------------------------------------
+
+  /**
+   * Mel-scaled spectrum, byte domain (0..255). Output length = `bands`.
+   * Each output bin is a triangular-weighted sum of the linear FFT bins
+   * underneath it, mel-spaced from `fMin` to `fMax`.
+   */
+  public getSpectrumMel(into?: Uint8Array<ArrayBuffer>, options?: SpectrumMappingOptions): Uint8Array<ArrayBuffer> {
+    const bandCount = options?.bands ?? 32;
+    const out = into ?? new Uint8Array(bandCount);
+    const filterbank = this._getMelFilterbank(bandCount, options?.fMin ?? 20, options?.fMax ?? 20000);
+
+    if (!this._analyser || filterbank === null) {
+      out.fill(0);
+      return out;
+    }
+
+    this._analyser.getByteFrequencyData(this._byteSpectrum);
+    applyFilterbank(this._byteSpectrum, filterbank, out);
+
+    return out;
+  }
+
+  /** Mel-scaled spectrum, float domain (dBFS values). Output length = `bands`. */
+  public getSpectrumMelFloat(into?: Float32Array<ArrayBuffer>, options?: SpectrumMappingOptions): Float32Array<ArrayBuffer> {
+    const bandCount = options?.bands ?? 32;
+    const out = into ?? new Float32Array(bandCount);
+    const filterbank = this._getMelFilterbank(bandCount, options?.fMin ?? 20, options?.fMax ?? 20000);
+
+    if (!this._analyser || filterbank === null) {
+      out.fill(0);
+      return out;
+    }
+
+    this._analyser.getFloatFrequencyData(this._floatSpectrum);
+    applyFilterbank(this._floatSpectrum, filterbank, out);
+
+    return out;
+  }
+
+  /**
+   * Log-scaled spectrum, byte domain (0..255). Output length = `bands`.
+   * Bins are spaced so each output covers an equal fraction of the
+   * `log2(fMax / fMin)` octave range — useful when you want a
+   * frequency-axis visualization where each octave gets the same width.
+   */
+  public getSpectrumLog(into?: Uint8Array<ArrayBuffer>, options?: SpectrumMappingOptions): Uint8Array<ArrayBuffer> {
+    const bandCount = options?.bands ?? 32;
+    const out = into ?? new Uint8Array(bandCount);
+    const ranges = this._getLogRanges(bandCount, options?.fMin ?? 20, options?.fMax ?? 20000);
+
+    if (!this._analyser || ranges === null) {
+      out.fill(0);
+      return out;
+    }
+
+    this._analyser.getByteFrequencyData(this._byteSpectrum);
+    applyLogRanges(this._byteSpectrum, ranges, out);
+
+    return out;
+  }
+
+  /** Log-scaled spectrum, float domain (dBFS values). Output length = `bands`. */
+  public getSpectrumLogFloat(into?: Float32Array<ArrayBuffer>, options?: SpectrumMappingOptions): Float32Array<ArrayBuffer> {
+    const bandCount = options?.bands ?? 32;
+    const out = into ?? new Float32Array(bandCount);
+    const ranges = this._getLogRanges(bandCount, options?.fMin ?? 20, options?.fMax ?? 20000);
+
+    if (!this._analyser || ranges === null) {
+      out.fill(0);
+      return out;
+    }
+
+    this._analyser.getFloatFrequencyData(this._floatSpectrum);
+    applyLogRanges(this._floatSpectrum, ranges, out);
+
+    return out;
+  }
+
+  // -----------------------------------------------------------------------
   // Lifecycle
   // -----------------------------------------------------------------------
 
@@ -255,6 +374,36 @@ export class AudioAnalyser {
   // -----------------------------------------------------------------------
   // Private helpers
   // -----------------------------------------------------------------------
+
+  private _getMelFilterbank(bands: number, fMin: number, fMax: number): MelBand[] | null {
+    if (!this._analyser) return null;
+    const ctx = getAudioContext();
+    const fftSize = this._options.fftSize;
+    const clampedFmax = Math.min(fMax, ctx.sampleRate / 2);
+    const key = `${bands}|${fMin}|${clampedFmax}|${fftSize}`;
+
+    let cached = this._melCache.get(key);
+    if (cached === undefined) {
+      cached = buildMelFilterbank(bands, fMin, clampedFmax, fftSize, ctx.sampleRate);
+      this._melCache.set(key, cached);
+    }
+    return cached;
+  }
+
+  private _getLogRanges(bands: number, fMin: number, fMax: number): LogBandRange[] | null {
+    if (!this._analyser) return null;
+    const ctx = getAudioContext();
+    const fftSize = this._options.fftSize;
+    const clampedFmax = Math.min(fMax, ctx.sampleRate / 2);
+    const key = `${bands}|${fMin}|${clampedFmax}|${fftSize}`;
+
+    let cached = this._logCache.get(key);
+    if (cached === undefined) {
+      cached = buildLogRanges(bands, fMin, clampedFmax, fftSize, ctx.sampleRate);
+      this._logCache.set(key, cached);
+    }
+    return cached;
+  }
 
   private _setupAnalyser(audioContext: AudioContext): void {
     const node = audioContext.createAnalyser();
@@ -355,5 +504,57 @@ export class AudioAnalyser {
       this._streamSource.disconnect();
       this._streamSource = null;
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Filterbank helpers — module-private, shared between byte and float variants.
+// ---------------------------------------------------------------------------
+
+interface LogBandRange {
+  /** Inclusive start FFT bin. */
+  readonly startBin: number;
+  /** Inclusive end FFT bin. */
+  readonly endBin: number;
+}
+
+function buildLogRanges(bandCount: number, fMin: number, fMax: number, fftSize: number, sampleRate: number): LogBandRange[] {
+  const binCount = fftSize >> 1;
+  const nyquist = sampleRate / 2;
+  const logMin = Math.log(fMin);
+  const logMax = Math.log(fMax);
+  const ranges: LogBandRange[] = [];
+
+  for (let b = 0; b < bandCount; b++) {
+    const lowHz = Math.exp(logMin + ((logMax - logMin) * b) / bandCount);
+    const highHz = Math.exp(logMin + ((logMax - logMin) * (b + 1)) / bandCount);
+    const startBin = Math.max(0, Math.min(binCount - 1, Math.floor((lowHz / nyquist) * binCount)));
+    const endBin = Math.max(startBin, Math.min(binCount - 1, Math.ceil((highHz / nyquist) * binCount) - 1));
+    ranges.push({ startBin, endBin });
+  }
+
+  return ranges;
+}
+
+function applyFilterbank(spectrum: Uint8Array | Float32Array, bands: MelBand[], out: Uint8Array | Float32Array): void {
+  for (let b = 0; b < bands.length; b++) {
+    const { startBin, weights } = bands[b];
+    let sum = 0;
+    for (let i = 0; i < weights.length; i++) {
+      sum += spectrum[startBin + i] * weights[i];
+    }
+    out[b] = sum;
+  }
+}
+
+function applyLogRanges(spectrum: Uint8Array | Float32Array, ranges: LogBandRange[], out: Uint8Array | Float32Array): void {
+  for (let b = 0; b < ranges.length; b++) {
+    const { startBin, endBin } = ranges[b];
+    let sum = 0;
+    const count = endBin - startBin + 1;
+    for (let i = startBin; i <= endBin; i++) {
+      sum += spectrum[i];
+    }
+    out[b] = sum / count;
   }
 }

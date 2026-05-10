@@ -31,6 +31,27 @@ export interface BeatDetectorOptions {
    * switches active time signature via hysteresis. Set false to lock to 4/4.
    */
   enableTimeSignatureDetection?: boolean;
+  /**
+   * Optional initial source. Equivalent to constructing then assigning
+   * `detector.source = value`; provided for ergonomic one-shot construction.
+   * The setter remains usable for runtime source switches.
+   */
+  source?: BeatDetectorSource;
+  /**
+   * Half-life in seconds for the {@link BeatDetector.pulse} envelope.
+   * Default 0.15 — `pulse` halves every 150ms after each beat.
+   */
+  pulseHalfLife?: number;
+  /**
+   * Half-life in seconds for the {@link BeatDetector.barPulse} envelope.
+   * Default 0.3 — slower than beat pulse for downbeat-emphasized visuals.
+   */
+  barPulseHalfLife?: number;
+  /**
+   * Time window in seconds for {@link BeatDetector.justBeat}. Default 0.03
+   * — true for the visual frame(s) within 30ms of a beat onset.
+   */
+  justBeatWindow?: number;
 }
 
 export interface BeatInfo {
@@ -793,6 +814,18 @@ export class BeatDetector {
   private _nextDownbeatTime = 0;
   private _lookahead: readonly UpcomingBeat[] = Object.freeze([]);
 
+  /**
+   * Half-life in seconds for the {@link pulse} envelope. Mutable; default 0.15.
+   * Smaller values give a snappier pulse, larger values a longer afterglow.
+   */
+  public pulseHalfLife: number;
+
+  /** Half-life for the {@link barPulse} envelope. Mutable; default 0.3. */
+  public barPulseHalfLife: number;
+
+  /** Time window for {@link justBeat}. Mutable; default 0.03 (30ms). */
+  public justBeatWindow: number;
+
   public constructor(options?: BeatDetectorOptions) {
     this._options = {
       minBpm: options?.minBpm ?? 50,
@@ -803,12 +836,26 @@ export class BeatDetector {
       settlingMs: options?.settlingMs ?? 1500,
       melBands: options?.melBands ?? 24,
       enableTimeSignatureDetection: options?.enableTimeSignatureDetection ?? true,
+      // Visual-state options aren't part of worklet config; cached in the public
+      // fields below but kept in the Required<> shape for type completeness.
+      source: options?.source ?? null,
+      pulseHalfLife: options?.pulseHalfLife ?? 0.15,
+      barPulseHalfLife: options?.barPulseHalfLife ?? 0.3,
+      justBeatWindow: options?.justBeatWindow ?? 0.03,
     };
+
+    this.pulseHalfLife = this._options.pulseHalfLife;
+    this.barPulseHalfLife = this._options.barPulseHalfLife;
+    this.justBeatWindow = this._options.justBeatWindow;
 
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
       onAudioContextReady.once(this._setup, this);
+    }
+
+    if (options?.source !== undefined && options.source !== null) {
+      this.source = options.source;
     }
   }
 
@@ -899,6 +946,64 @@ export class BeatDetector {
 
   public get lookahead(): readonly UpcomingBeat[] {
     return this._lookahead;
+  }
+
+  // -----------------------------------------------------------------------
+  // Visual derived state — pure getters for per-frame polling
+  // -----------------------------------------------------------------------
+
+  /**
+   * Seconds elapsed since the most recent beat, derived from {@link beatPhase}
+   * and {@link tempo}. Returns 0 when the detector hasn't locked yet.
+   */
+  public get secondsSinceLastBeat(): number {
+    if (this._tempo === 0) return 0;
+    return this._beatPhase * (60 / this._tempo);
+  }
+
+  /**
+   * 0..1 envelope, peaks at 1.0 the moment a beat fires and halves every
+   * {@link pulseHalfLife} seconds. Drives "pulse on the beat" visuals
+   * with a single multiplication: `sprite.scale = 1 + clock.pulse * 0.3`.
+   */
+  public get pulse(): number {
+    if (this._tempo === 0) return 0;
+    return Math.pow(0.5, this.secondsSinceLastBeat / this.pulseHalfLife);
+  }
+
+  /**
+   * Like {@link pulse} but resets on downbeats and decays per
+   * {@link barPulseHalfLife}. Useful for emphasizing the first beat of
+   * each bar (e.g. brighter flash on "1" vs "2,3,4").
+   */
+  public get barPulse(): number {
+    if (this._tempo === 0 || this._barLength === 0) return 0;
+    const secondsPerBeat = 60 / this._tempo;
+    const lastDownbeat = this._nextDownbeatTime - this._barLength * secondsPerBeat;
+    const elapsed = Math.max(0, getAudioContext().currentTime - lastDownbeat);
+    return Math.pow(0.5, elapsed / this.barPulseHalfLife);
+  }
+
+  /**
+   * True for the visual frame(s) within {@link justBeatWindow} seconds of
+   * a beat onset. Use for one-shot triggers (strobe flash, particle burst,
+   * sample retrigger). Default window 30ms covers a typical 60fps frame.
+   */
+  public get justBeat(): boolean {
+    return this._tempo > 0 && this.secondsSinceLastBeat < this.justBeatWindow;
+  }
+
+  /**
+   * Phase 0..1 within a subdivision of the current beat. `division` is the
+   * number of subdivisions per beat: 2 for 8th notes, 4 for 16th notes,
+   * 3 for triplets. Use to drive sub-beat-resolution effects:
+   *
+   *   const sixteenth = clock.subdivisionPhase(4);
+   *   if (sixteenth < 0.05) flash();
+   */
+  public subdivisionPhase(division: number): number {
+    if (!Number.isFinite(division) || division <= 0) return 0;
+    return (this._beatPhase * division) % 1;
   }
 
   // -----------------------------------------------------------------------

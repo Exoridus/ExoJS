@@ -264,6 +264,7 @@ exports[`root index type-level export inventory all exported symbols with kind a
   "SoundPoolStrategy: enum",
   "SpawnModule: class",
   "SpawnOnDeath: class",
+  "SpectrumMappingOptions: interface",
   "Sprite: class",
   "SpriteFlags: enum",
   "Spritesheet: class",

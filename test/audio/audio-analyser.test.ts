@@ -329,4 +329,116 @@ describe('AudioAnalyser', () => {
       expect(a.source).toBeNull();
     });
   });
+
+  // ---- Constructor source option (additive ergonomic) ----
+
+  describe('constructor source option', () => {
+    it('accepts an AudioNode at construction', () => {
+      const node = makeAudioNode();
+      const a = new AudioAnalyser({ source: node });
+      expect(a.source).toBe(node);
+      a.destroy();
+    });
+
+    it('accepts an AudioBus at construction', () => {
+      const bus = new AudioBus('ctor-bus');
+      const a = new AudioAnalyser({ source: bus });
+      expect(a.source).toBe(bus);
+      a.destroy();
+    });
+
+    it('source remains null when option is omitted', () => {
+      const a = new AudioAnalyser();
+      expect(a.source).toBeNull();
+      a.destroy();
+    });
+  });
+
+  // ---- Spectrum mapping (mel/log) ----
+
+  describe('getSpectrumMel', () => {
+    it('returns a Uint8Array of the requested band count', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const result = a.getSpectrumMel(undefined, { bands: 16 });
+      expect(result).toBeInstanceOf(Uint8Array);
+      expect(result.length).toBe(16);
+      a.destroy();
+    });
+
+    it('writes into the supplied buffer when given', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const buf = new Uint8Array(8);
+      const result = a.getSpectrumMel(buf, { bands: 8 });
+      expect(result).toBe(buf);
+      a.destroy();
+    });
+
+    it('default band count is 32', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const result = a.getSpectrumMel();
+      expect(result.length).toBe(32);
+      a.destroy();
+    });
+
+    it('caches the filterbank — repeated calls do not rebuild', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      a.getSpectrumMel(undefined, { bands: 16 });
+      const cacheBefore = (a as unknown as { _melCache: Map<string, unknown> })._melCache.size;
+      a.getSpectrumMel(undefined, { bands: 16 });
+      a.getSpectrumMel(undefined, { bands: 16 });
+      const cacheAfter = (a as unknown as { _melCache: Map<string, unknown> })._melCache.size;
+      expect(cacheBefore).toBe(1);
+      expect(cacheAfter).toBe(1);
+      a.destroy();
+    });
+
+    it('caches separately per (bands, fMin, fMax) combination', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      a.getSpectrumMel(undefined, { bands: 16 });
+      a.getSpectrumMel(undefined, { bands: 32 });
+      a.getSpectrumMel(undefined, { bands: 16, fMin: 100 });
+      const cache = (a as unknown as { _melCache: Map<string, unknown> })._melCache;
+      expect(cache.size).toBe(3);
+      a.destroy();
+    });
+  });
+
+  describe('getSpectrumMelFloat', () => {
+    it('returns a Float32Array of the requested band count', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const result = a.getSpectrumMelFloat(undefined, { bands: 16 });
+      expect(result).toBeInstanceOf(Float32Array);
+      expect(result.length).toBe(16);
+      a.destroy();
+    });
+  });
+
+  describe('getSpectrumLog', () => {
+    it('returns a Uint8Array of the requested band count', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const result = a.getSpectrumLog(undefined, { bands: 24 });
+      expect(result).toBeInstanceOf(Uint8Array);
+      expect(result.length).toBe(24);
+      a.destroy();
+    });
+
+    it('caches the log ranges separately from the mel filterbank', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      a.getSpectrumMel(undefined, { bands: 16 });
+      a.getSpectrumLog(undefined, { bands: 16 });
+      expect((a as unknown as { _melCache: Map<string, unknown> })._melCache.size).toBe(1);
+      expect((a as unknown as { _logCache: Map<string, unknown> })._logCache.size).toBe(1);
+      a.destroy();
+    });
+  });
+
+  describe('getSpectrumLogFloat', () => {
+    it('returns a Float32Array of the requested band count', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const result = a.getSpectrumLogFloat(undefined, { bands: 24 });
+      expect(result).toBeInstanceOf(Float32Array);
+      expect(result.length).toBe(24);
+      a.destroy();
+    });
+  });
 });
