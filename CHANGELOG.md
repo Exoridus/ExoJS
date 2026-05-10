@@ -4,6 +4,78 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-05-10
+
+### Engine — Rendering
+
+- **`MeshShader` class with dual GLSL + WGSL support.** The 0.8.2
+  `MeshShaderConfig` plain interface is replaced by a `MeshShader` class
+  accepting `glsl: { vertex, fragment }` and/or `wgsl` source. The WebGPU
+  mesh renderer now has a parallel render path for custom-shader meshes
+  inside the same render pass, switching pipeline + bind groups between
+  batched default draws and per-shader custom draws. New methods
+  `getDeclaredUniforms()` and `detectUniformDrift()` parse uniform
+  declarations from both languages for CI-style drift checking. **Breaking
+  change against the 0.8.2 plain-interface shape; clean break, no
+  backwards-compat shim — the 0.8.x series is pre-1.0.**
+
+- **`DataTexture` for CPU-uploaded GPU textures.** New primitive whose
+  pixels live in a CPU-side typed array. Mutate the `buffer` directly and
+  call `commit()` to upload the whole array, or `commitRect(x, y, w, h)`
+  for partial uploads (cheaper for ring-buffer patterns like
+  spectrograms). Formats: `r8` / `r32f` / `rgba8` / `rgba32f`; TypeScript
+  narrows the buffer typed-array kind from the format. Bring-your-own
+  buffer via `options.data` (`Uint8Array | Float32Array | ArrayBuffer`)
+  for SharedArrayBuffer / Worker / pool scenarios. Extends `Texture` so
+  it's accepted everywhere a `Texture` is.
+
+### Engine — Audio
+
+- **`BeatDetector` visual getters for per-frame polling.** New derived
+  getters `pulse`, `barPulse`, `justBeat`, `secondsSinceLastBeat` and
+  method `subdivisionPhase(division)`. All pure derivations from existing
+  state — no new event-handling glue required for typical "pulse on the
+  beat" / "trigger on every 16th note" visuals. Mutable fields
+  `pulseHalfLife` (default 0.15s), `barPulseHalfLife` (0.3s), and
+  `justBeatWindow` (0.03s) tune the envelopes.
+
+- **`AudioAnalyser` mel and log spectrum mapping.** New methods
+  `getSpectrumMel` / `getSpectrumMelFloat` / `getSpectrumLog` /
+  `getSpectrumLogFloat` produce perceptually-weighted or octave-uniform
+  band sequences from the linear FFT bins. Filterbanks are built from
+  the previously-orphaned `dsp/mel.ts` utilities and cached per
+  `(bands, fMin, fMax)` combination — rebuild only on parameter change.
+  Default 32 bands, 20 Hz to 20 kHz (clamped to nyquist).
+
+- **`source` as constructor option for `AudioAnalyser` and `BeatDetector`.**
+  Additive ergonomic for one-shot construction:
+  `new AudioAnalyser({ source: music, fftSize: 1024 })`. The setter
+  remains usable for runtime source switches.
+
+### Engine — Debug
+
+- **`RenderPassInspectorLayer`.** New debug layer (in the
+  `@codexo/exojs/debug` subpath) that lists every `RenderNode` with an
+  active filter chain each frame, showing total pass count, per-drawable
+  filter sequence, bounding-box dimensions, and mask/cache flags. For
+  deep per-pass inspection (intermediate render-target contents, shader
+  source, uniform values), use Spector.js or Chrome DevTools' WebGPU
+  panel — the engine now emits debug-group labels around filter and
+  mesh-custom-shader passes (`WebGpuShaderFilter pass`,
+  `MeshShader (custom)`, `WebGpuMaskCompositor pass`) so external capture
+  tools display meaningful pass names.
+
+### Site / Docs
+
+- New guide chapter stubs: `6.4 Custom mesh shaders`,
+  `5.5 Audio-reactive visualization`, `7.6 Render pipeline debugging`.
+- API doc auto-regenerated for `MeshShader` and `DataTexture`.
+
+### Verification
+
+- Engine: 103/103 suites, 1338/1338 tests, lint:strict 0/0, typecheck clean.
+- Site: build green (494 pages), check-ts 0/0.
+
 ## [0.8.2] - 2026-05-09
 
 ### Engine
