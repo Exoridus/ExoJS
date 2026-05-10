@@ -1,5 +1,6 @@
 import { Drawable } from '@/rendering/Drawable';
 import { Mesh } from '@/rendering/mesh/Mesh';
+import { MeshShader } from '@/rendering/mesh/MeshShader';
 
 const validVertices = (): Float32Array => new Float32Array([0, 0, 100, 0, 50, 100]);
 
@@ -132,16 +133,18 @@ describe('Mesh', () => {
     expect(mesh.shader).toBeNull();
   });
 
-  test('shader config is exposed read-only on the instance', () => {
-    const config = {
-      vertexSource: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
-      fragmentSource: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
-      uniforms: { uTime: 0 } as Record<string, number>,
-    };
-    const mesh = new Mesh({ vertices: validVertices(), shader: config });
+  test('shader instance is exposed on the mesh', () => {
+    const shader = new MeshShader({
+      glsl: {
+        vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+        fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
+      },
+      uniforms: { uTime: 0 },
+    });
+    const mesh = new Mesh({ vertices: validVertices(), shader });
 
-    expect(mesh.shader).toBe(config);
-    expect(mesh.shader?.vertexSource).toContain('#version 300 es');
-    expect(mesh.shader?.uniforms?.uTime).toBe(0);
+    expect(mesh.shader).toBe(shader);
+    expect(mesh.shader?.glsl?.vertex).toContain('#version 300 es');
+    expect(mesh.shader?.uniforms.uTime).toBe(0);
   });
 });

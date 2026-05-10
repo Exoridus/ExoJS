@@ -1,6 +1,7 @@
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@/rendering/types';
 
-import type { Mesh, MeshShaderConfig, MeshShaderUniformValue } from '../mesh/Mesh';
+import type { Mesh } from '../mesh/Mesh';
+import type { MeshShader, MeshShaderUniformValue } from '../mesh/MeshShader';
 import { Shader } from '../shader/Shader';
 import { RenderTexture } from '../texture/RenderTexture';
 import { Texture } from '../texture/Texture';
@@ -32,7 +33,7 @@ interface MeshRendererConnection {
 
 export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
-  private readonly _customShaders = new Map<MeshShaderConfig, Shader>();
+  private readonly _customShaders = new Map<MeshShader, Shader>();
   private readonly _tintScratch: Float32Array = new Float32Array(4);
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
   // Pre-built texture-unit indices used for custom-shader sampler bindings;
@@ -330,18 +331,32 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     };
   }
 
-  private _getOrCreateCustomShader(config: MeshShaderConfig, gl: WebGL2RenderingContext): Shader {
+  private _getOrCreateCustomShader(config: MeshShader, gl: WebGL2RenderingContext): Shader {
     const cached = this._customShaders.get(config);
     if (cached !== undefined) {
       return cached;
     }
 
-    const shader = new Shader(config.vertexSource, config.fragmentSource);
+    if (config.glsl === null) {
+      throw new Error('MeshShader has no `glsl` source; cannot render through the WebGL2 backend.');
+    }
+
+    const shader = new Shader(config.glsl.vertex, config.glsl.fragment);
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force first finalize so getUniform()/uniforms.has() are usable below.
     shader.sync();
 
     this._customShaders.set(config, shader);
+
+    // Wire shader.destroy() through to evict + dispose the cached program.
+    config._onDispose(() => {
+      const stored = this._customShaders.get(config);
+      if (stored !== undefined) {
+        stored.destroy();
+        this._customShaders.delete(config);
+      }
+    });
+
     return shader;
   }
 

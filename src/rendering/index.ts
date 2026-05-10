@@ -10,6 +10,7 @@ export * from './filters/LutFilter';
 export * from './filters/WebGl2ShaderFilter';
 export * from './filters/WebGpuShaderFilter';
 export * from './mesh/Mesh';
+export * from './mesh/MeshShader';
 export * from './primitives/Graphics';
 export * from './RenderBackend';
 export * from './RenderBackendType';

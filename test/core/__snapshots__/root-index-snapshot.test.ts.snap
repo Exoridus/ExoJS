@@ -92,6 +92,7 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "LutFilter",
   "Matrix",
   "Mesh",
+  "MeshShader",
   "Music",
   "MusicFactory",
   "NetworkOnlyStrategy",
