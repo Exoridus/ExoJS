@@ -1,0 +1,81 @@
+---
+title: "DataTexture"
+description: "A 2D texture whose pixels live in a CPU-side typed array. Mutate the `buffer` directly and call commit to upload the whole array, or commitRect to upload a sub-region (cheaper for ring-buffer patterns like spectrograms). `DataTexture` extends Texture, so any API that accepts a `Texture` (filter uniforms, mesh textures, custom shader uniforms) accepts a `DataTexture` unchanged. # Default sampler `DataTexture` defaults to nearest filtering, clamp-to-edge wrap, no mip generation, and no premultiply. These match the typical \"raw data lookup\" use case where bilinear filtering would corrupt sampled values (e.g. spectrum bins sampled by index). # Bring-your-own buffer Pass `data` in options to share an external buffer. Useful for: - SharedArrayBuffer + Worker pipelines (audio DSP off the main thread) - Buffer pooling across many small textures - Interop with WebAssembly memory or other APIs that produce typed-array views The buffer reference is fixed for the lifetime of the texture (the `buffer` property is `readonly`); only its contents may be mutated. # Format / buffer correspondence The TypeScript type system narrows `buffer` based on `format`: const r8 = new DataTexture({ width: 256, height: 1, format: 'r8' }); r8.buffer // Uint8Array const r32f = new DataTexture({ width: 256, height: 1, format: 'r32f' }); r32f.buffer // Float32Array"
+symbol: "DataTexture"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 17
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/texture/DataTexture.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts#L109"
+---
+## Import
+
+`import { DataTexture } from '@codexo/exojs'`
+
+A 2D texture whose pixels live in a CPU-side typed array. Mutate the
+`buffer` directly and call commit to upload the whole array, or
+commitRect to upload a sub-region (cheaper for ring-buffer
+patterns like spectrograms).
+
+`DataTexture` extends Texture, so any API that accepts a
+`Texture` (filter uniforms, mesh textures, custom shader uniforms)
+accepts a `DataTexture` unchanged.
+
+# Default sampler
+
+`DataTexture` defaults to nearest filtering, clamp-to-edge wrap, no mip
+generation, and no premultiply. These match the typical "raw data
+lookup" use case where bilinear filtering would corrupt sampled values
+(e.g. spectrum bins sampled by index).
+
+# Bring-your-own buffer
+
+Pass `data` in options to share an external buffer. Useful for:
+- SharedArrayBuffer + Worker pipelines (audio DSP off the main thread)
+- Buffer pooling across many small textures
+- Interop with WebAssembly memory or other APIs that produce typed-array views
+
+The buffer reference is fixed for the lifetime of the texture (the
+`buffer` property is `readonly`); only its contents may be mutated.
+
+# Format / buffer correspondence
+
+The TypeScript type system narrows `buffer` based on `format`:
+
+  const r8 = new DataTexture(\{ width: 256, height: 1, format: 'r8' \});
+  r8.buffer  // Uint8Array
+
+  const r32f = new DataTexture(\{ width: 256, height: 1, format: 'r32f' \});
+  r32f.buffer  // Float32Array
+
+## Constructors
+
+- `new(options: DataTextureOptions & object): DataTexture<F>`
+
+## Methods
+
+- `_consumeDirtyRegion(): DataTextureDirtyRegion | null`
+- `addDestroyListener(listener: object): this`
+- `commit(): this`
+- `commitRect(x: number, y: number, width: number, height: number): this`
+- `destroy(): void`
+- `removeDestroyListener(listener: object): this`
+- `setPremultiplyAlpha(premultiplyAlpha: boolean): this`
+- `setScaleMode(scaleMode: ScaleModes): this`
+- `setSize(width: number, height: number): this`
+- `setSource(source: TextureSource): this`
+- `setWrapMode(wrapMode: WrapModes): this`
+- `updateSource(): this`
+
+## Properties
+
+- `buffer: DataTextureBuffer<F>`
+- `format: F`
+- `defaultSamplerOptions: SamplerOptions`
+- `empty: Texture`
+
+## Source
+
+[src/rendering/texture/DataTexture.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts#L109)

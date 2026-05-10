@@ -1,0 +1,111 @@
+---
+title: "MeshShader"
+description: "Custom shader pair attached to a Mesh. One `MeshShader` instance can be shared across many meshes; renderers cache compiled programs/pipelines on the instance reference. Call destroy when the shader is no longer needed to release the cached GPU resources on every backend the shader was used on. # Vertex layout The vertex layout is fixed and shared with the default mesh shader, so custom vertex shaders MUST pin the standard attribute locations: ## GLSL (location-qualified) ```glsl layout(location = 0) in vec2 a_position; layout(location = 1) in vec2 a_texcoord; layout(location = 2) in vec4 a_color; ``` ## WGSL (location-qualified) ```wgsl struct VertexInput { @location(0) position: vec2<f32>, @location(1) texcoord: vec2<f32>, @location(2) color: vec4<f32>, }; ``` # Auto-bound uniforms The renderer auto-binds these when the shader declares them. Declared but unused is fine; absent is fine too. Both backends carry the same logical uniforms, only the binding scheme differs. ## GLSL ```glsl uniform mat3 u_projection; // active view's projection uniform mat3 u_translation; // mesh's global transform uniform vec4 u_tint; // mesh.tint as RGBA in 0..1 uniform sampler2D u_texture; // bound to texture slot 0 ``` ## WGSL ```wgsl struct MeshUniforms { projection: mat3x3<f32>, translation: mat3x3<f32>, tint: vec4<f32>, }; @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms; @group(1) @binding(0) var u_texture: texture_2d<f32>; @group(1) @binding(1) var u_sampler: sampler; ``` # User uniforms Anything in uniforms is set after the auto-binds. `Texture`/ `RenderTexture` values claim slots 1..N (slot 0 belongs to the mesh). ## WGSL user-uniform contract User uniforms live in `@group(2)`: - `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`."
+symbol: "MeshShader"
+kind: "class"
+subsystem: "rendering"
+importPath: "@codexo/exojs"
+memberCount: 9
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/rendering/mesh/MeshShader.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/MeshShader.ts#L124"
+---
+## Import
+
+`import { MeshShader } from '@codexo/exojs'`
+
+Custom shader pair attached to a Mesh.
+
+One `MeshShader` instance can be shared across many meshes; renderers
+cache compiled programs/pipelines on the instance reference. Call
+destroy when the shader is no longer needed to release the
+cached GPU resources on every backend the shader was used on.
+
+# Vertex layout
+
+The vertex layout is fixed and shared with the default mesh shader,
+so custom vertex shaders MUST pin the standard attribute locations:
+
+## GLSL (location-qualified)
+
+```glsl
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_texcoord;
+layout(location = 2) in vec4 a_color;
+```
+
+## WGSL (location-qualified)
+
+```wgsl
+struct VertexInput \{
+    @location(0) position: vec2\<f32>,
+    @location(1) texcoord: vec2\<f32>,
+    @location(2) color: vec4\<f32>,
+\};
+```
+
+# Auto-bound uniforms
+
+The renderer auto-binds these when the shader declares them. Declared
+but unused is fine; absent is fine too. Both backends carry the same
+logical uniforms, only the binding scheme differs.
+
+## GLSL
+
+```glsl
+uniform mat3 u_projection;   // active view's projection
+uniform mat3 u_translation;  // mesh's global transform
+uniform vec4 u_tint;         // mesh.tint as RGBA in 0..1
+uniform sampler2D u_texture; // bound to texture slot 0
+```
+
+## WGSL
+
+```wgsl
+struct MeshUniforms \{
+    projection: mat3x3\<f32>,
+    translation: mat3x3\<f32>,
+    tint: vec4\<f32>,
+\};
+
+@group(0) @binding(0) var\<uniform> u_mesh: MeshUniforms;
+
+@group(1) @binding(0) var u_texture: texture_2d\<f32>;
+@group(1) @binding(1) var u_sampler: sampler;
+```
+
+# User uniforms
+
+Anything in uniforms is set after the auto-binds. `Texture`/
+`RenderTexture` values claim slots 1..N (slot 0 belongs to the mesh).
+
+## WGSL user-uniform contract
+
+User uniforms live in `@group(2)`:
+
+- `@group(2) @binding(0) var\<uniform> u_user: \<UserUniformsStruct>;`
+  for the packed scalar/vector/matrix uniforms.
+- `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform,
+  in declaration order, alongside its sampler at `@binding(N+1)`.
+
+## Constructors
+
+- `new(options: MeshShaderOptions): MeshShader`
+
+## Methods
+
+- `_onDispose(callback: object): void`
+- `destroy(): void`
+- `detectUniformDrift(): object`
+- `getDeclaredUniforms(): object`
+- `setUniform(name: string, value: MeshShaderUniformValue): void`
+
+## Properties
+
+- `glsl: object | null`
+- `uniforms: Record<string, MeshShaderUniformValue>`
+- `wgsl: string | null`
+
+## Source
+
+[src/rendering/mesh/MeshShader.ts](https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/MeshShader.ts#L124)

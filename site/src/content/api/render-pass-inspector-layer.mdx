@@ -1,0 +1,49 @@
+---
+title: "RenderPassInspectorLayer"
+description: "Debug layer that lists every RenderNode with an active filter chain each frame. Renders a compact text panel with per-drawable rows showing the filter sequence, bounding-box dimensions, and mask/cache status. Use during development to answer: - \"Is my filter actually attached?\" → it appears in the list - \"Why does my frame have N render passes?\" → see total pass count - \"Is this drawable being re-rendered or cached?\" → `[cached]` flag For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel — the engine emits debug-group labels around filter and mesh-custom-shader passes so those tools show meaningful pass names."
+symbol: "RenderPassInspectorLayer"
+kind: "class"
+subsystem: "debug"
+importPath: "@codexo/exojs/debug"
+memberCount: 6
+sections: ["Import", "Constructors", "Methods", "Properties", "Source"]
+sourcePath: "src/debug/RenderPassInspectorLayer.ts"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts#L63"
+---
+## Import
+
+`import { RenderPassInspectorLayer } from '@codexo/exojs/debug'`
+
+Debug layer that lists every RenderNode with an active filter chain
+each frame. Renders a compact text panel with per-drawable rows showing
+the filter sequence, bounding-box dimensions, and mask/cache status.
+
+Use during development to answer:
+
+  - "Is my filter actually attached?" → it appears in the list
+  - "Why does my frame have N render passes?" → see total pass count
+  - "Is this drawable being re-rendered or cached?" → `[cached]` flag
+
+For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL
+source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel —
+the engine emits debug-group labels around filter and mesh-custom-shader
+passes so those tools show meaningful pass names.
+
+## Constructors
+
+- `new(app: Application): RenderPassInspectorLayer`
+
+## Methods
+
+- `destroy(): void`
+- `render(backend: RenderBackend): void`
+- `update(_delta: Time): void`
+
+## Properties
+
+- `_app: Application`
+- `visible: boolean`
+
+## Source
+
+[src/debug/RenderPassInspectorLayer.ts](https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts#L63)
