@@ -765,17 +765,7 @@ export class WebGl2Backend implements RenderBackend {
         const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
 
         if (needsAlloc || region === null || region.full) {
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            formatInfo.internalFormat,
-            texture.width,
-            texture.height,
-            0,
-            formatInfo.format,
-            formatInfo.type,
-            texture.buffer,
-          );
+          gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
         } else {
           // Partial upload: pack a contiguous sub-region from the row-major
           // buffer into a temporary view that gl.texSubImage2D can read.
@@ -793,17 +783,7 @@ export class WebGl2Backend implements RenderBackend {
             subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
           }
 
-          gl.texSubImage2D(
-            gl.TEXTURE_2D,
-            0,
-            region.x,
-            region.y,
-            region.width,
-            region.height,
-            formatInfo.format,
-            formatInfo.type,
-            subView,
-          );
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView);
         }
       } else if (texture instanceof RenderTexture) {
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {

@@ -35,15 +35,11 @@ describe('MeshShader', () => {
     });
 
     test('throws when glsl.vertex is empty', () => {
-      expect(() => new MeshShader({ glsl: { vertex: '', fragment: minimalGlsl.fragment } })).toThrow(
-        'MeshShader.glsl.vertex must be a non-empty string.',
-      );
+      expect(() => new MeshShader({ glsl: { vertex: '', fragment: minimalGlsl.fragment } })).toThrow('MeshShader.glsl.vertex must be a non-empty string.');
     });
 
     test('throws when glsl.fragment is empty', () => {
-      expect(() => new MeshShader({ glsl: { vertex: minimalGlsl.vertex, fragment: '' } })).toThrow(
-        'MeshShader.glsl.fragment must be a non-empty string.',
-      );
+      expect(() => new MeshShader({ glsl: { vertex: minimalGlsl.vertex, fragment: '' } })).toThrow('MeshShader.glsl.fragment must be a non-empty string.');
     });
 
     test('throws when wgsl source is empty', () => {

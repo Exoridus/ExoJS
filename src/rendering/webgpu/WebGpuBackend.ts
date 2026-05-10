@@ -874,8 +874,7 @@ export class WebGpuBackend implements RenderBackend {
           const channels = formatInfo.channels;
           const bytesPerPixel = formatInfo.bytesPerPixel;
           const subBytes = region.width * region.height * bytesPerPixel;
-          const subBuffer =
-            texture.buffer instanceof Float32Array ? new Float32Array(subBytes / 4) : new Uint8Array(subBytes);
+          const subBuffer = texture.buffer instanceof Float32Array ? new Float32Array(subBytes / 4) : new Uint8Array(subBytes);
           const rowChannels = texture.width * channels;
           const subRowChannels = region.width * channels;
 

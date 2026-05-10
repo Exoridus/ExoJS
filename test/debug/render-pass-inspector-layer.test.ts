@@ -47,16 +47,18 @@ interface FakeNode {
   constructor: { name: string };
 }
 
-function makeNode(opts: {
-  visible?: boolean;
-  filters?: FakeFilter[];
-  mask?: object | null;
-  cacheAsBitmap?: boolean;
-  width?: number;
-  height?: number;
-  children?: FakeNode[];
-  className?: string;
-} = {}): FakeNode {
+function makeNode(
+  opts: {
+    visible?: boolean;
+    filters?: FakeFilter[];
+    mask?: object | null;
+    cacheAsBitmap?: boolean;
+    width?: number;
+    height?: number;
+    children?: FakeNode[];
+    className?: string;
+  } = {},
+): FakeNode {
   const { visible = true, filters = [], mask = null, cacheAsBitmap = false, width = 100, height = 50, children = [], className = 'Sprite' } = opts;
   class NamedClass {
     public static get name(): string {

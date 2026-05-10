@@ -954,13 +954,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
   }
 
-  private _writeCustomMeshUniform(
-    _shader: MeshShader,
-    resources: CustomShaderResources,
-    drawCursor: number,
-    mesh: Mesh,
-    backend: WebGpuBackend,
-  ): void {
+  private _writeCustomMeshUniform(_shader: MeshShader, resources: CustomShaderResources, drawCursor: number, mesh: Mesh, backend: WebGpuBackend): void {
     // Layout: mat3x3 projection (48B) + mat3x3 translation (48B) + vec4 tint (16B) = 112B.
     // WGSL mat3x3 stores 3 vec3 columns padded to vec4 alignment.
     const slotBytes = meshUniformAlignment;
@@ -1064,11 +1058,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     return pipeline;
   }
 
-  private _getOrCreateCustomMeshTextureBindGroup(
-    resources: CustomShaderResources,
-    backend: WebGpuBackend,
-    texture: Texture | RenderTexture,
-  ): GPUBindGroup {
+  private _getOrCreateCustomMeshTextureBindGroup(resources: CustomShaderResources, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
     let group = resources.meshTextureBindGroups.get(texture);
 
     if (group === undefined) {
