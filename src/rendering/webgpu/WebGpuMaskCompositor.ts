@@ -205,9 +205,10 @@ export class WebGpuMaskCompositor {
     const targetFormat = manager.renderTargetFormat;
     const pipeline = this._getOrCreatePipeline(targetFormat, blendMode);
 
-    const encoder = device.createCommandEncoder();
+    const encoder = device.createCommandEncoder({ label: 'WebGpuMaskCompositor' });
     const pass = encoder.beginRenderPass({
       colorAttachments: [manager.createColorAttachment()],
+      label: 'WebGpuMaskCompositor pass',
     });
 
     manager.stats.renderPasses++;

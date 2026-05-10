@@ -389,9 +389,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
     // Phase 5: single render pass with one drawIndexed per mesh, switching
     // pipeline+bind groups between default and custom paths as needed.
-    const encoder = device.createCommandEncoder();
+    const encoder = device.createCommandEncoder({ label: 'WebGpuMeshRenderer' });
     const pass = encoder.beginRenderPass({
       colorAttachments: [backend.createColorAttachment()],
+      label: 'WebGpuMeshRenderer pass',
     });
 
     backend.stats.renderPasses++;
@@ -442,6 +443,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         const resources = this._customShaders.get(dc.customShader)!;
         const needsPipeline = lastShader !== dc.customShader || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
+        // Wrap each custom-shader draw in a debug group so capture tools
+        // (Spector.js, Chrome DevTools' WebGPU panel) show meaningful
+        // labels for the otherwise-anonymous mesh draws inside the
+        // batched render pass.
+        pass.pushDebugGroup('MeshShader (custom)');
+
         if (needsPipeline) {
           pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, renderTargetFormat));
           lastShader = dc.customShader;
@@ -463,6 +470,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
         pass.setIndexBuffer(resources.indexBuffer!, 'uint16', dc.indexByteOffset);
         pass.drawIndexed(dc.indexCount);
+
+        pass.popDebugGroup();
 
         customDrawCursors.set(dc.customShader, cursor + 1);
       }
