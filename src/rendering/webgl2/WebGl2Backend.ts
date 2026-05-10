@@ -19,6 +19,7 @@ import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
 import type { Shader } from '../shader/Shader';
 import { Sprite } from '../sprite/Sprite';
+import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
 import { RenderTexture } from '../texture/RenderTexture';
 import type { Texture } from '../texture/Texture';
 import type { View } from '../View';
@@ -758,7 +759,53 @@ export class WebGl2Backend implements RenderBackend {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
-      if (texture instanceof RenderTexture) {
+      if (texture instanceof DataTexture) {
+        const formatInfo = webgl2DataTextureFormat(texture.format);
+        const region = texture._consumeDirtyRegion();
+        const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
+
+        if (needsAlloc || region === null || region.full) {
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            formatInfo.internalFormat,
+            texture.width,
+            texture.height,
+            0,
+            formatInfo.format,
+            formatInfo.type,
+            texture.buffer,
+          );
+        } else {
+          // Partial upload: pack a contiguous sub-region from the row-major
+          // buffer into a temporary view that gl.texSubImage2D can read.
+          const channels = formatInfo.channels;
+          const rowFloats = texture.width * channels;
+          const subFloats = region.width * channels;
+          const subView =
+            texture.buffer instanceof Float32Array
+              ? new Float32Array(region.width * region.height * channels)
+              : new Uint8Array(region.width * region.height * channels);
+
+          for (let row = 0; row < region.height; row++) {
+            const sourceStart = (region.y + row) * rowFloats + region.x * channels;
+            const targetStart = row * subFloats;
+            subView.set(texture.buffer.subarray(sourceStart, sourceStart + subFloats), targetStart);
+          }
+
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            region.x,
+            region.y,
+            region.width,
+            region.height,
+            formatInfo.format,
+            formatInfo.type,
+            subView,
+          );
+        }
+      } else if (texture instanceof RenderTexture) {
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
         } else {
@@ -836,5 +883,29 @@ export class WebGl2Backend implements RenderBackend {
 
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(clip.x, clip.y, clip.width, clip.height);
+  }
+}
+
+interface WebGl2DataTextureFormatInfo {
+  readonly internalFormat: number; // gl.R8 / gl.R32F / gl.RGBA8 / gl.RGBA32F
+  readonly format: number; // gl.RED / gl.RGBA
+  readonly type: number; // gl.UNSIGNED_BYTE / gl.FLOAT
+  readonly channels: number;
+}
+
+// WebGL2RenderingContext is not defined in jsdom; resolve constants from
+// the live gl context instead of the global class so test environments
+// without WebGL2 still load this module.
+function webgl2DataTextureFormat(format: DataTextureFormat): WebGl2DataTextureFormatInfo {
+  const gl = WebGL2RenderingContext;
+  switch (format) {
+    case 'r8':
+      return { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1 };
+    case 'r32f':
+      return { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1 };
+    case 'rgba8':
+      return { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4 };
+    case 'rgba32f':
+      return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4 };
   }
 }

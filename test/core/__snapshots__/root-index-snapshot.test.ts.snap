@@ -46,6 +46,7 @@ exports[`root index export surface snapshot sorted runtime export names match co
   "Constant",
   "Container",
   "Curve",
+  "DataTexture",
   "DeathModule",
   "DelayFilter",
   "Drag",

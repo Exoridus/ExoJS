@@ -20,6 +20,7 @@ import type { RenderStats } from '../RenderStats';
 import { createRenderStats, resetRenderStats } from '../RenderStats';
 import { RenderTarget } from '../RenderTarget';
 import { Sprite } from '../sprite/Sprite';
+import { DataTexture, type DataTextureFormat } from '../texture/DataTexture';
 import { RenderTexture } from '../texture/RenderTexture';
 import type { Texture } from '../texture/Texture';
 import type { View } from '../View';
@@ -792,7 +793,7 @@ export class WebGpuBackend implements RenderBackend {
           width: Math.max(texture.width, 1),
           height: Math.max(texture.height, 1),
         },
-        format: managedTextureFormat,
+        format: this._getGpuTextureFormat(texture),
         mipLevelCount: this._getMipLevelCount(texture),
         usage: this._getTextureUsage(texture),
       });
@@ -821,7 +822,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
-    if (!(texture instanceof RenderTexture) && (texture.source === null || texture.width === 0 || texture.height === 0)) {
+    if (!(texture instanceof RenderTexture) && !(texture instanceof DataTexture) && (texture.source === null || texture.width === 0 || texture.height === 0)) {
       throw new Error('WebGPU sprite rendering requires a texture with a valid source and non-zero dimensions.');
     }
 
@@ -838,7 +839,7 @@ export class WebGpuBackend implements RenderBackend {
             width: texture.width,
             height: texture.height,
           },
-          format: managedTextureFormat,
+          format: this._getGpuTextureFormat(texture),
           mipLevelCount,
           usage: this._getTextureUsage(texture),
         });
@@ -853,7 +854,47 @@ export class WebGpuBackend implements RenderBackend {
 
       state.sampler = this._createSampler(texture);
 
-      if (!(texture instanceof RenderTexture)) {
+      if (texture instanceof DataTexture) {
+        const formatInfo = webgpuDataTextureFormat(texture.format);
+        const region = texture._consumeDirtyRegion();
+        const isFullUpload = region === null || region.full || !state.hasContent;
+
+        if (isFullUpload) {
+          this.device.queue.writeTexture(
+            { texture: state.texture },
+            texture.buffer,
+            {
+              bytesPerRow: texture.width * formatInfo.bytesPerPixel,
+              rowsPerImage: texture.height,
+            },
+            { width: texture.width, height: texture.height },
+          );
+        } else {
+          // Partial upload: pack the dirty region into a contiguous buffer.
+          const channels = formatInfo.channels;
+          const bytesPerPixel = formatInfo.bytesPerPixel;
+          const subBytes = region.width * region.height * bytesPerPixel;
+          const subBuffer =
+            texture.buffer instanceof Float32Array ? new Float32Array(subBytes / 4) : new Uint8Array(subBytes);
+          const rowChannels = texture.width * channels;
+          const subRowChannels = region.width * channels;
+
+          for (let row = 0; row < region.height; row++) {
+            const sourceStart = (region.y + row) * rowChannels + region.x * channels;
+            const targetStart = row * subRowChannels;
+            subBuffer.set(texture.buffer.subarray(sourceStart, sourceStart + subRowChannels), targetStart);
+          }
+
+          this.device.queue.writeTexture(
+            { texture: state.texture, origin: { x: region.x, y: region.y } },
+            subBuffer,
+            { bytesPerRow: region.width * bytesPerPixel, rowsPerImage: region.height },
+            { width: region.width, height: region.height },
+          );
+        }
+
+        state.hasContent = true;
+      } else if (!(texture instanceof RenderTexture)) {
         const source = texture.source!;
 
         this.device.queue.copyExternalImageToTexture(
@@ -958,13 +999,28 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _createSampler(texture: Texture | RenderTexture): GPUSampler {
+    // Float32 textures (r32float, rgba32float) are non-filterable by default
+    // in WebGPU; force nearest filtering to avoid validation errors. Apps
+    // that need linear filtering on floats can opt into the
+    // 'float32-filterable' device feature and pass linear via samplerOptions
+    // (not yet exposed).
+    const isFloatData = texture instanceof DataTexture && (texture.format === 'r32f' || texture.format === 'rgba32f');
+    const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(texture.scaleMode);
+
     return this.device.createSampler({
       addressModeU: this._getAddressMode(texture.wrapMode),
       addressModeV: this._getAddressMode(texture.wrapMode),
-      magFilter: this._getFilterMode(texture.scaleMode),
-      minFilter: this._getFilterMode(texture.scaleMode),
-      mipmapFilter: this._getMipmapFilterMode(texture.scaleMode),
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(texture.scaleMode),
     });
+  }
+
+  private _getGpuTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {
+    if (texture instanceof DataTexture) {
+      return webgpuDataTextureFormat(texture.format).gpuFormat;
+    }
+    return managedTextureFormat;
   }
 
   private _getTextureUsage(texture: Texture | RenderTexture): number {
@@ -1180,5 +1236,24 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       pipeline: this._mipmapPipeline,
       sampler: this._mipmapSampler,
     };
+  }
+}
+
+interface WebGpuDataTextureFormatInfo {
+  readonly gpuFormat: GPUTextureFormat;
+  readonly bytesPerPixel: number;
+  readonly channels: number;
+}
+
+function webgpuDataTextureFormat(format: DataTextureFormat): WebGpuDataTextureFormatInfo {
+  switch (format) {
+    case 'r8':
+      return { gpuFormat: 'r8unorm', bytesPerPixel: 1, channels: 1 };
+    case 'r32f':
+      return { gpuFormat: 'r32float', bytesPerPixel: 4, channels: 1 };
+    case 'rgba8':
+      return { gpuFormat: 'rgba8unorm', bytesPerPixel: 4, channels: 4 };
+    case 'rgba32f':
+      return { gpuFormat: 'rgba32float', bytesPerPixel: 16, channels: 4 };
   }
 }

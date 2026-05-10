@@ -33,6 +33,7 @@ export * from './text/Text';
 export * from './text/TextLayout';
 export * from './text/TextStyle';
 export * from './text/types';
+export * from './texture/DataTexture';
 export * from './texture/RenderTexture';
 export * from './texture/Sampler';
 export * from './texture/Texture';
