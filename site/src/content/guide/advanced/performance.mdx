@@ -46,11 +46,7 @@ import { RenderPassInspectorLayer } from '@codexo/exojs/debug';
 // See 7.6 Render pipeline debugging for setup
 ```
 
-Pass-reduction strategies in order of impact:
-1. Remove filters you don't need.
-2. Set `cacheAsBitmap = true` on filtered containers that don't change every frame.
-3. Consolidate filter chains — two `ColorFilter` instances cost two passes; one `WebGpuShaderFilter` can apply both in one pass.
-4. Keep filtered drawables small. A 2048×2048 blur costs dramatically more than a 256×256 one.
+The two highest-impact reductions: remove filters you don't need, and set `cacheAsBitmap = true` on filtered containers that don't change every frame. For the full set of strategies with examples, see [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/).
 
 ## Particle system throughput
 

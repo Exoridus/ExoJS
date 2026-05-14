@@ -129,7 +129,7 @@ DOM UI (HTML/CSS rendered as overlays on top of the canvas) is better for:
 - Text-heavy content with accessibility requirements (screen readers, selection, copy-paste).
 - Static UI that doesn't need per-frame updates.
 
-The two can coexist: the canvas handles the game, a DOM layer on top handles menus. Coordinate the two by listening to `app.input.onCanvasFocusChange` and toggling `pointer-events: none` on the DOM overlay when the game needs the pointer.
+The two can coexist: the canvas handles the game, a DOM layer on top handles menus. Coordinate the two by listening to `app.input.onCanvasFocusChange` and toggling `pointer-events: none` on the DOM overlay when the game needs the pointer. For a purely in-canvas overlay (score bar, health ring, mini-map) that avoids DOM coordination entirely, see [HUD overlay](/ExoJS/en/guide/recipes/hud-overlay/).
 
 ## Examples
 

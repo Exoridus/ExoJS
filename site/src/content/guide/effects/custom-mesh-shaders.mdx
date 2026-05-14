@@ -238,33 +238,6 @@ assert.deepStrictEqual(drift.onlyInWgsl, [], 'WGSL-only uniforms found');
 
 Reflection is best-effort regex parsing, not a full GLSL/WGSL grammar — it serves CI and editor tooling, not runtime binding decisions.
 
-## Migration from 0.8.2
-
-In 0.8.2, custom mesh shaders used a plain `MeshShaderConfig` interface passed directly into `MeshOptions`:
-
-```js
-// 0.8.2 — removed in 0.8.3
-new Mesh({
-    vertices: ...,
-    shader: {
-        vertexSource: '...',
-        fragmentSource: '...',
-        uniforms: { ... },
-    },
-});
-```
-
-In 0.8.3, `MeshShader` is a class. The old `vertexSource` / `fragmentSource` flat properties become `glsl: { vertex, fragment }`. WGSL support is new. No backwards-compatibility shim exists — the 0.8.x series is pre-1.0:
-
-```js
-// 0.8.3
-const shader = new MeshShader({
-    glsl: { vertex: '...', fragment: '...' },
-    uniforms: { ... },
-});
-new Mesh({ vertices: ..., shader });
-```
-
 ## Where to go next
 
-The previous chapter, [Post-processing](/ExoJS/en/guide/effects/post-processing/), covers render-target chains for bloom, trails, and mirror effects — the complement to custom geometry shaders. If you need a screen-space shader effect rather than a geometry-space one, see [Filters](/ExoJS/en/guide/effects/filters/), which covers `WebGl2ShaderFilter` and `WebGpuShaderFilter` for custom fragment shaders applied as post-processing passes.
+For screen-space shader effects — blur, color grade, CRT scanlines, vignette — the complementary approach is [Filters](/ExoJS/en/guide/effects/filters/), which covers `WebGl2ShaderFilter` and `WebGpuShaderFilter` as post-processing passes. To build the multi-pass render chain those filters fit into, see [Post-processing](/ExoJS/en/guide/effects/post-processing/).

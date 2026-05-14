@@ -39,7 +39,7 @@ Where differences exist, they are performance characteristics or rendering-path 
 | Area | WebGL2 | WebGPU |
 |------|--------|--------|
 | Sprite batching | Multi-texture batched (up to 8) | Multi-texture batched (up to 8) |
-| Particle rendering | Instanced draw calls | Instanced draw calls (CPU simulation on both) |
+| Particle simulation | CPU | CPU (default); GPU compute path if all modules implement `wgsl()` |
 | MeshShader | GLSL ES 3.00 | WGSL |
 | ShaderFilter | `WebGl2ShaderFilter` (GLSL) | `WebGpuShaderFilter` (WGSL) |
 | GPU compute | Not available | Raw `backend.device` access for compute + custom pipelines |
