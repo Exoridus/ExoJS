@@ -42,6 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           ref: ${{ env.TARGET_TAG }}
 
       - name: Setup Node
@@ -106,9 +107,17 @@ jobs:
           cp -R site/dist/. "${BUNDLE_DIR}/site/"
           zip -r "${BUNDLE_DIR}.zip" "${BUNDLE_DIR}"
 
+      - name: Generate release notes
+        run: |
+          npm run release:notes -- \
+            --tag "${TARGET_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --out ".release/release-notes.md"
+
       - name: Attach release bundle
         uses: softprops/action-gh-release@v2
         with:
+          body_path: .release/release-notes.md
           tag_name: ${{ env.TARGET_TAG }}
           files: exojs-${{ env.TARGET_TAG }}.zip
 
