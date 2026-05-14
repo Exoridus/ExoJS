@@ -11,13 +11,104 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.4 Split screen
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Split screen gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Split screen renders the same scene from two (or more) camera viewpoints into separate regions of the canvas. The recipe uses multiple `View` instances with different viewport rectangles, renders the shared scene contents once per view, and draws a divider between the regions.
+
+## Approach
+
+Create two `View` objects. Each gets its own viewport rectangle — the left view covers the left half of the canvas, the right view covers the right half. In `draw`, set the backend's active view, render the shared world, swap views, render again:
+
+```js
+init(loader) {
+    const { width, height } = this.app.canvas;
+
+    // Left player view — left half of screen
+    this._leftView = new View(0, 0, width / 2, height);
+    this._leftView.viewport.set(0, 0, 0.5, 1);
+
+    // Right player view — right half of screen
+    this._rightView = new View(0, 0, width / 2, height);
+    this._rightView.viewport.set(0.5, 0, 0.5, 1);
+
+    // White divider line between views
+    this._divider = new Graphics();
+    this._divider.fillColor = Color.white;
+    this._divider.drawRectangle(width / 2 - 1, 0, 2, height);
+
+    // Shared world objects — both views see these
+    this._leftPlayer = new Sprite(loader.get(Texture, 'hero'))
+        .setAnchor(0.5)
+        .setTint(new Color(120, 190, 255));
+    this._rightPlayer = new Sprite(loader.get(Texture, 'hero'))
+        .setAnchor(0.5)
+        .setTint(new Color(255, 180, 120));
+}
+
+update(delta) {
+    // Move players independently...
+    this._leftPlayer.move(/* WASD */);
+    this._rightPlayer.move(/* Arrows */);
+
+    // Each view follows its player
+    this._leftView.setCenter(this._leftPlayer.position.x, this._leftPlayer.position.y);
+    this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
+}
+
+draw(backend) {
+    backend.clear();
+
+    // Render left view
+    backend.setView(this._leftView);
+    this._leftPlayer.render(backend);
+    this._rightPlayer.render(backend);
+    // ... world objects ...
+
+    // Render right view
+    backend.setView(this._rightView);
+    this._leftPlayer.render(backend);
+    this._rightPlayer.render(backend);
+    // ... same world objects ...
+
+    // Restore default view for the divider (screen space)
+    backend.setView(null);
+    this._divider.render(backend);
+}
+```
+
+The viewport values are normalised 0..1 fractions of the render target size. `viewport.set(0, 0, 0.5, 1)` means the left view occupies `x: 0..50%`, `y: 0..100%` of the canvas. `viewport.set(0.5, 0, 0.5, 1)` means the right view occupies `x: 50%..100%`, `y: 0..100%`.
+
+## Shared scene, multiple views
+
+The scene renders twice — once per view. Sprite positions are in world space; changing the view changes which portion of world space is visible on screen. The same `this._leftPlayer.render(backend)` call produces different on-screen positions in each view because the view transform differs.
+
+This means you can have objects visible in both views (a shared flag, a power-up both players compete for) or objects only rendered in one view (a minimap as a child of one player's container). The choice is per-object and per-draw call.
+
+## Input per player
+
+Two players on one keyboard means binding different key sets to each player — WASD for player 1, arrow keys for player 2 — both registered via the same scene's `this.inputs`. For gamepad co-op, bind each pad slot to a different player:
+
+```js
+const pad0 = this.app.input.getGamepad(0);
+pad0.onActive(GamepadAxis.LeftStickX, v => { this._player1.move.x = v; });
+
+const pad1 = this.app.input.getGamepad(1);
+pad1.onActive(GamepadAxis.LeftStickX, v => { this._player2.move.x = v; });
+```
+
+Four split-screen views with four gamepad slots is the same pattern extended — one view per player, one pad per slot, one shared scene rendered four times.
+
+## Constraints
+
+- Each additional view doubles the per-frame render cost for the shared scene. Two views = two full scene renders. Four views = four. The viewport scissor prevents pixel work outside each region, but the draw calls and vertex processing still happen.
+- Scissor rects are set automatically from the view's viewport. Objects partially crossing the divider line are clipped correctly — the left view clips its right edge, the right view clips its left edge.
+- The divider is drawn after `backend.setView(null)` to render in screen space, not world space.
 
 ## Examples
 
 <a id="multi-view-split-screen"></a>
 <ExamplePreview chapter="application-scenes" slug="multi-view-split-screen" />
-Multi View Split Screen isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Two players on one keyboard — WASD controls the blue bunny (left view), arrow keys control the orange bunny (right view). Each view follows its player.
 
+## Where to go next
+
+The next recipe, [Audio-reactive scene](/ExoJS/en/guide/recipes/audio-reactive-scene/), covers how to drive visuals, particles, and camera effects from live audio analysis.

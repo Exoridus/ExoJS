@@ -12,17 +12,137 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.7 UI patterns
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. UI patterns gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+In-canvas UI means text boxes, dialog panels, progress indicators, and interactive elements built from ExoJS primitives — `Text`, `Graphics`, `Sprite`, `Container` — and rendered inside the scene. This recipe covers two patterns (dialog system with typewriter reveal, tween-driven progress) and explains when DOM UI is a better choice.
+
+## Dialog system with typewriter reveal
+
+A dialog system shows text one character at a time, accompanied by a subtle sound. It's built from three primitives: a `Text` node for the dialog text, a `Sound` for the character tick, and a timer (or tween) to drive the reveal:
+
+```js
+init(loader) {
+    this.lines = [
+        'Commander, the anomaly has entered low orbit.',
+        'All wings hold formation and await my signal.',
+    ];
+
+    this.portrait = new Sprite(loader.get(Texture, 'portrait'))
+        .setAnchor(0.5).setScale(1.7).setPosition(170, 420);
+
+    this.box = new Text('', {
+        fill: 'white', fontSize: 30,
+        wordWrap: true, wordWrapWidth: 600,
+        lineHeight: 40,
+    });
+    this.box.setPosition(270, 360);
+
+    this.beep = loader.get(Sound, 'beep');
+
+    this.lineIndex = 0;
+    this.chars = 0;
+    this.timer = 0;
+    this.done = false;
+}
+
+update(delta) {
+    if (this.done) return;
+
+    this.timer += delta.seconds;
+    const line = this.lines[this.lineIndex];
+
+    while (this.timer > 0.035 && this.chars < line.length) {
+        this.timer -= 0.035;
+        this.chars++;
+        this.beep.play({ playbackRate: 1.9, volume: 0.14 });
+    }
+
+    this.box.setText(line.slice(0, this.chars));
+
+    if (this.chars >= line.length) {
+        this.done = true;
+    }
+}
+```
+
+A click advances to the next line or skips the current reveal to show the full line immediately:
+
+```js
+this.app.input.onPointerTap.add(() => {
+    const line = this.lines[this.lineIndex];
+
+    if (!this.done) {
+        // Skip reveal — show full line
+        this.chars = line.length;
+        this.done = true;
+        return;
+    }
+
+    // Advance to next line
+    this.lineIndex = (this.lineIndex + 1) % this.lines.length;
+    this.chars = 0;
+    this.done = false;
+});
+```
+
+The pattern is self-contained: the scene owns the dialog state, `update` drives the reveal, input handles progression. No modal state manager, no scene-stack push — just a flag and a counter.
+
+## Tween-driven progress indicator
+
+A radial progress ring using a custom shader filter and a tween. The shader draws a circular arc — a `uProgress` uniform controls how much of the circle is filled. A tween drives `uProgress` from 0 to 1:
+
+```js
+init(loader) {
+    this.progress = { v: 0 };
+    this.label = new Text('0%', { fill: 'white', fontSize: 42 });
+    this.label.setPosition(360, 410);
+
+    this.ring = new Sprite(loader.get(Texture, 'uv')).setScale(2.2);
+    this.filter = new WebGl2ShaderFilter({
+        fragmentSource: progressGlsl,
+        uniforms: { uProgress: 0 },
+    });
+    this.ring.filters = [this.filter];
+
+    this.app.tweens.create(this.progress)
+        .to({ v: 1 }, 2.4)
+        .start();
+}
+
+update() {
+    this.filter.uniforms.uProgress = this.progress.v;
+    this.label.setText(`${(this.progress.v * 100) | 0}%`);
+}
+```
+
+The tween interpolates `{ v: 0 }` → `{ v: 1 }` over 2.4 seconds. Each frame, `update` reads `this.progress.v` and pushes it into the shader uniform. The text label updates to show a percentage. When progress reaches 1, the tween completes.
+
+This pattern generalises: any uniform-driven visual can be tweened by creating a plain object as the tween target and forwarding its values to the shader in `update`.
+
+## When DOM UI is a better fit
+
+In-canvas UI is right for:
+- Game-coupled elements that move, animate, or react to game state in real time (dialog boxes that follow characters, health bars that flash on hit).
+- Simple text and shape overlays that don't need complex layout (score text, pause indicators, progress rings).
+
+DOM UI (HTML/CSS rendered as overlays on top of the canvas) is better for:
+- Complex layouts with CSS grid/flexbox (inventory grids, settings panels).
+- Form elements (text inputs, dropdowns, sliders) — these don't exist in ExoJS's canvas rendering.
+- Text-heavy content with accessibility requirements (screen readers, selection, copy-paste).
+- Static UI that doesn't need per-frame updates.
+
+The two can coexist: the canvas handles the game, a DOM layer on top handles menus. Coordinate the two by listening to `app.input.onCanvasFocusChange` and toggling `pointer-events: none` on the DOM overlay when the game needs the pointer.
 
 ## Examples
 
 <a id="dialog-system"></a>
 <ExamplePreview chapter="showcase" slug="dialog-system" />
-Dialog System isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+A dialog box with character-by-character reveal, portrait sprite, and a beep on each character. Click to advance or skip.
 
 <a id="typewriter-text"></a>
 <ExamplePreview chapter="showcase" slug="typewriter-text" />
-Typewriter Text isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+A single text block revealed character-by-character via a tween — the simplest version of the pattern.
 
+## Where to go next
+
+The next recipe, [Cinematics](/ExoJS/en/guide/recipes/cinematics/), covers scripted sequences — how to choreograph tweens, camera moves, audio, and overlays into a cutscene using the tween chain and timer primitives.

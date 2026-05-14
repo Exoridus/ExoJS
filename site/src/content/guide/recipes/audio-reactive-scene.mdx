@@ -5,34 +5,156 @@ part: 8
 chapter: 5
 examples:
   - showcase/audio-reactive-particles
-  - showcase/audio-visualisation
   - showcase/low-band-camera-shake
-  - showcase/vinyl-record
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.5 Audio reactive scene
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Audio reactive scene gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+This recipe combines `BeatDetector`, `ParticleSystem`, tween-driven camera shake, and audio-triggered visual effects into one scene. It builds on [Beat detection](/ExoJS/en/guide/audio/beat-detection/) for analysis and [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/) for the visual patterns — this chapter is about orchestration, not re-teaching the individual APIs.
+
+## Approach
+
+Three systems run in parallel, each driven by a different facet of the audio analysis:
+
+1. **Beat → particle burst**: `onBeat` fires a `BurstSpawn` and triggers camera shake.
+2. **Bar → tween chain**: `onBarStart` triggers a timed sequence of scale/rotation tweens on a central element.
+3. **Frequency → continuous motion**: Low-band energy from `AudioAnalyser.getLowMidHigh()` drives the background tint or a sprite's idle animation.
+
+## Setup
+
+One analyser for frequency data, one beat detector for rhythm, one particle system for visual feedback:
+
+```js
+import {
+    AlphaFadeOverLifetime, AudioAnalyser, BeatDetector,
+    BurstSpawn, ConeDirection, Constant, Music,
+    ParticleSystem, Scene, View,
+} from '@codexo/exojs';
+
+class AudioReactiveScene extends Scene {
+    async load(loader) {
+        await loader.load(Music, { track: 'audio/track.ogg' });
+        await loader.load(Texture, { particle: 'image/particle.png' });
+    }
+
+    init(loader) {
+        const music = loader.get(Music, 'track').setLoop(true).setVolume(0.8).play();
+
+        // Analysis
+        this.analyser = new AudioAnalyser({ source: music, fftSize: 512 });
+        this.detector = new BeatDetector({ source: music });
+
+        // Particles — burst on beat
+        this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
+        this.burst = new BurstSpawn({
+            schedule: [{ time: 0, count: 120 }],
+            lifetime: new Constant(0.8),
+            velocity: ConeDirection.omni(100, 360),
+            scale: new Constant(new Vector(0.2, 0.2)),
+        });
+        this.particles.addSpawnModule(this.burst);
+        this.particles.addUpdateModule(new AlphaFadeOverLifetime());
+
+        // Camera shake
+        this.view = new View(400, 300, 800, 600);
+
+        // Beat → burst + shake
+        this.detector.onBeat.add(() => {
+            this.burst.reset();
+            this.view.shake(14, 200, { frequency: 30, decay: true });
+        });
+    }
+
+    update(delta) {
+        this.particles.update(delta);
+
+        // Continuous frequency → background tint
+        const { low } = this.analyser.getLowMidHigh();
+        const bg = new Color(
+            0.05 + low * 0.1,
+            0.06 + low * 0.06,
+            0.12 + low * 0.2,
+            1,
+        );
+        this.app.clearColor = bg;
+    }
+
+    draw(backend) {
+        backend.clear();
+        backend.setView(this.view);
+        this.particles.render(backend);
+        backend.setView(null);
+    }
+}
+```
+
+## Layering effects
+
+The pattern scales by adding more independent listeners, each reacting to a different audio facet:
+
+```js
+// Bar start → tween chain on a central logo
+this.detector.onBarStart.add(() => {
+    this.app.tweens.create(this.logo.scale)
+        .to({ x: 1.3, y: 1.3 }, 0.15)
+        .easing(Ease.cubicOut)
+        .yoyo()
+        .repeat(1)
+        .start();
+});
+
+// Mid-band → particle tint cycling
+this.detector.onBeat.add(info => {
+    if (info.beatInBar === 2 || info.beatInBar === 4) {
+        this.burst.config.tint = new Constant(
+            info.beatInBar === 2 ? Color.orange : Color.skyBlue
+        );
+        this.burst.reset();
+    }
+});
+```
+
+## Camera shake from audio
+
+`View.shake(intensity, durationMs, { frequency, decay })` displaces the view center by a decaying sinusoidal offset for `durationMs` milliseconds. `decay: true` reduces the shake intensity over the duration; `frequency` controls the oscillation rate. Call `view.shake()` inside `onBeat` for a bass hit, or `onDownbeat` for a stronger effect on the first beat of each bar.
+
+For frequency-driven shake (low-end rumble instead of discrete hits), lerp the view center by the low-band energy in `update`:
+
+```js
+update(delta) {
+    const { low } = this.analyser.getLowMidHigh();
+    const shakeX = (Math.random() - 0.5) * low * 20;
+    const shakeY = (Math.random() - 0.5) * low * 20;
+    this.view.setCenter(
+        400 + shakeX,
+        300 + shakeY,
+    );
+}
+```
+
+This produces a continuous subtle shake proportional to bass energy, suitable for engine rumble, earthquake effects, or low-frequency ambience.
+
+## Orchestration principles
+
+- **One source, many listeners**: One `BeatDetector` can feed particle bursts, camera shake, HUD flash, and tween triggers simultaneously — each subscriber acts independently.
+- **Separate analyser for continuous data**: `AudioAnalyser.getLowMidHigh()` gives band energies every frame without event overhead. Use it for smooth, continuous visuals like tint shifts, bar graphs, or procedural animation.
+- **Beat detector for discrete events**: `onBeat`/`onDownbeat`/`onBarStart` are for one-shot triggers. They fire at discrete moments and carry timing metadata (`isDownbeat`, `beatInBar`) for per-beat variation.
+- **Keep the per-frame work bounded**: A particle system at 120 particles per beat with 120 BPM spawns 240 particles/second — well within a 5000-capacity system. Check `system.aliveCount` occasionally to confirm you're not overrunning capacity.
 
 ## Examples
 
 <a id="audio-reactive-particles"></a>
 <ExamplePreview chapter="showcase" slug="audio-reactive-particles" />
-Audio Reactive Particles isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="audio-visualisation"></a>
-<ExamplePreview chapter="showcase" slug="audio-visualisation" />
-Audio Visualisation isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Particles burst on every beat with alpha fade — the canonical beat → particles pattern.
 
 <a id="low-band-camera-shake"></a>
 <ExamplePreview chapter="showcase" slug="low-band-camera-shake" />
-Low Band Camera Shake isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="vinyl-record"></a>
-<ExamplePreview chapter="showcase" slug="vinyl-record" />
-Vinyl Record isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Bass-frequency energy drives continuous camera shake — low-end rumble as visual motion.
 
-{/* TODO: prose */}
+## Where to go next
 
+The next recipe, [Game feel](/ExoJS/en/guide/recipes/game-feel/), covers general feedback techniques — damage flashes, screen shake, audio cues, and tween-driven response that make interaction feel responsive.

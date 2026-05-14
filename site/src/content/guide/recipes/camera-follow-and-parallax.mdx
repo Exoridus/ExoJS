@@ -4,25 +4,142 @@ description: 'Create depth and motion parallax from camera and pointer movement.
 part: 8
 chapter: 2
 examples:
-  - showcase/mouse-parallax
   - scene-graph/parallax-starfield
+  - showcase/mouse-parallax
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.2 Camera follow & parallax
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Camera follow & parallax gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Parallax means layers at different depths move at different rates relative to the camera. In 2D, you create it by moving background layers slower than foreground layers when the camera or pointer shifts. No depth buffer, no z-axis — just scaled position offsets applied per layer each frame.
+
+## Camera follow
+
+A `View` controls what portion of the world is visible. To make the camera follow a player, update `view.setCenter(player.x, player.y)` each frame in `update` before `draw`:
+
+```js
+init(loader) {
+    this._view = new View(400, 300, 800, 600);
+    this.player = new Sprite(loader.get(Texture, 'hero'));
+}
+
+update(delta) {
+    // ... move player based on input ...
+
+    // Camera follows player
+    this._view.setCenter(this.player.position.x, this.player.position.y);
+}
+
+draw(backend) {
+    backend.clear();
+    backend.setView(this._view);
+    this.worldLayer.render(backend);
+    backend.setView(null);
+}
+```
+
+For smooth following, lerp the camera center instead of snapping:
+
+```js
+this._cameraX += (this.player.x - this._cameraX) * 5 * delta.seconds;
+this._cameraY += (this.player.y - this._cameraY) * 5 * delta.seconds;
+this._view.setCenter(this._cameraX, this._cameraY);
+```
+
+The multiplier controls how quickly the camera catches up. Higher values = snappier. This is a simple exponential ease — no tween needed.
+
+## Pointer-driven parallax
+
+For menu screens, background effects, or mouse-driven depth, offset layers proportionally to the pointer position relative to the screen center:
+
+```js
+init(loader) {
+    // Three layers at different depths
+    this._layers = [0.15, 0.35, 0.6].map(speed => {
+        const g = new Graphics();
+        // ... draw layer content ...
+        return { graphics: g, speed };
+    });
+
+    this._pointer = { x: 400, y: 300 };
+    this.app.input.onPointerMove.add(p => {
+        this._pointer = { x: p.x, y: p.y };
+    });
+}
+
+draw(backend) {
+    backend.clear();
+    for (const layer of this._layers) {
+        const offsetX = (400 - this._pointer.x) * layer.speed;
+        const offsetY = (300 - this._pointer.y) * layer.speed;
+        layer.graphics.setPosition(offsetX, offsetY);
+        layer.graphics.render(backend);
+    }
+}
+```
+
+The speed multiplier per layer creates the illusion of depth. A background layer with `speed = 0.15` moves slowly — it feels far away. A foreground layer with `speed = 0.6` moves quickly — it feels close. The pointer offset from center (`(400 - x)`) gives direction: moving the mouse right shifts layers left, as if the "camera" moved right.
+
+## Scrolling parallax
+
+For side-scrolling games, offset background layers relative to the camera position rather than the pointer:
+
+```js
+draw(backend) {
+    backend.clear();
+    backend.setView(this._view);
+
+    // Background — moves at 30% of camera speed
+    this._skyLayer.setPosition(
+        this._view.center.x * 0.3,
+        0
+    );
+    this._skyLayer.render(backend);
+
+    // Midground — moves at 60%
+    this._hillsLayer.setPosition(
+        this._view.center.x * 0.6,
+        0
+    );
+    this._hillsLayer.render(backend);
+
+    // Foreground — moves 1:1 with camera (no parallax)
+    this._worldLayer.render(backend);
+
+    backend.setView(null);
+}
+```
+
+The layer position is set relative to the camera center *before* rendering. Since the camera view is already active, the layer position offsets add to the camera transform, producing the parallax effect. The foreground layer at 1:1 has no parallax — it moves exactly with the camera.
+
+## Wide layers
+
+Parallax layers need to be wider than the viewport, or you see edges when the camera shifts. For tiled backgrounds, draw the tile pattern across a range that extends beyond the viewport boundaries by at least the maximum parallax offset:
+
+```js
+const viewW = 800;
+const maxOffset = viewW * 0.3; // 30% for the slowest layer
+const totalW = viewW + maxOffset * 2;
+
+// Tile the pattern across [(-maxOffset), (viewW + maxOffset)]
+for (let x = -maxOffset; x < viewW + maxOffset; x += tileWidth) {
+    g.drawRectangle(x, 0, tileWidth, tileHeight);
+}
+```
 
 ## Examples
 
-<a id="mouse-parallax"></a>
-<ExamplePreview chapter="showcase" slug="mouse-parallax" />
-Mouse Parallax isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
-
 <a id="parallax-starfield"></a>
 <ExamplePreview chapter="scene-graph" slug="parallax-starfield" />
-Parallax Starfield isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Three layers of procedurally drawn stars, each moving at a different speed relative to the pointer — depth from motion alone.
 
+<a id="mouse-parallax"></a>
+<ExamplePreview chapter="showcase" slug="mouse-parallax" />
+
+Three layers of colored circles with pointer-driven parallax offsets, demonstrating the speed-multiplier technique.
+
+## Where to go next
+
+The next recipe, [Pause menu](/ExoJS/en/guide/recipes/pause-menu/), covers how to freeze gameplay and overlay a menu using the scene stack.

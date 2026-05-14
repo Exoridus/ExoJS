@@ -6,28 +6,138 @@ chapter: 6
 examples:
   - showcase/damage-flash
   - showcase/screen-shake-on-explosion
-  - showcase/gamepad-spaceship
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.6 Game feel
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Game feel gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Game feel is the layer of feedback that makes actions feel tangible: a flash when the player takes damage, a shake when something explodes, a sound that clicks with each tween step, particles that trail behind a moving object. In ExoJS, these effects are compositions of primitives you already know — tweens, filters, particles, view manipulation, audio — applied at the moment of an event.
+
+## Damage flash
+
+When the player takes damage, flash the sprite red for a fraction of a second and tween back to normal. Use a `ColorFilter` on the sprite and animate its color with a tween:
+
+```js
+import { ColorFilter, Signal } from '@codexo/exojs';
+
+init(loader) {
+    this.player = new Sprite(loader.get(Texture, 'hero'));
+    this.flashColor = new Color(255, 255, 255, 1);
+    this.flash = new ColorFilter(this.flashColor);
+    this.player.filters = [this.flash];
+
+    this.onDamage = new Signal();
+    this.onDamage.add(() => {
+        // Flash red instantly
+        this.flashColor.set(255, 80, 80, 1);
+        // Tween back to white over 200ms
+        this.app.tweens.create(this.flashColor)
+            .to({ r: 255, g: 255, b: 255 }, 0.2)
+            .start();
+    });
+}
+```
+
+The key insight: the `ColorFilter` multiplies the sprite's rendered output by the filter color. White (`[255, 255, 255, 1]`) is identity — no tint. Red mutes green and blue. The tween interpolates the `r`, `g`, `b` components of the `Color` object back to 255 over 200ms, producing a smooth recovery. Since `ColorFilter` exposes its internal `Color` object as a live getter, you can tween or mutate it directly — no filter reconstruction needed.
+
+## Screen shake on explosion
+
+`View.shake(intensity, durationMs, { frequency, decay })` is the simplest feedback effect in ExoJS. Fire it on any dramatic event:
+
+```js
+this.app.input.onPointerTap.add(pointer => {
+    // Position the burst at the click location (relative to system position)
+    this.burstPos.set(pointer.x - this.particles.position.x, pointer.y - this.particles.position.y);
+    this.burst.reset();
+    // Shake the view: 22px intensity, 280ms, 26Hz oscillation, with decay
+    this.view.shake(22, 280, { frequency: 26, decay: true });
+});
+```
+
+Combine it with a particle burst for a complete explosion feel — particles provide the visual debris, the shake provides the impact. The shake displaces the view center; the particles render inside that view, so they move with the shake. The effect is coherent: the whole scene rattles.
+
+## Tween-heavy feedback
+
+Tweens are the workhorse of game feel. A few reusable patterns:
+
+```js
+// Scale punch — grow on hit, settle back
+this.app.tweens.create(this.sprite.scale)
+    .to({ x: 1.4, y: 1.4 }, 0.08)
+    .yoyo()
+    .repeat(1)
+    .easing(Ease.cubicOut)
+    .start();
+
+// Tilt wobble — oscillate rotation
+this.app.tweens.create(this.sprite)
+    .to({ rotation: 8 }, 0.06)
+    .easing(Ease.cubicOut)
+    .yoyo()
+    .repeat(2)
+    .start();
+
+// Fade flash — full white overlay that fades out
+this.overlay.alpha = 1;
+this.app.tweens.create(this.overlay)
+    .to({ alpha: 0 }, 0.3)
+    .start();
+```
+
+Each pattern is fire-and-forget — call `.start()` inside an event handler and the tween runs to completion. No per-frame tracking, no cleanup. The existing tween manager handles all active tweens each frame.
+
+## Continuous feedback: particles + audio
+
+For held actions — thrust, charging, spinning up — continuous feedback creates presence:
+
+```js
+update(delta) {
+    const thrustMag = Math.hypot(this.thrust.x, this.thrust.y);
+
+    if (thrustMag > 0.05) {
+        // Particles trail behind the ship
+        this.rate.value = 900 * thrustMag;
+        this.particles.setPosition(
+            this.ship.x - Math.cos(this.angle) * 28,
+            this.ship.y - Math.sin(this.angle) * 28,
+        );
+
+        // Audio hum scales with thrust
+        this.engine.volume = 0.08 + thrustMag * 0.32;
+    } else {
+        this.rate.value = 0;
+        this.engine.volume = 0;
+    }
+
+    this.particles.update(delta);
+}
+```
+
+A `RateSpawn` with a `Constant` rate lets you dynamically change `rate.value` each frame — the spawn module reads the current value, not a snapshot. The engine hum uses an `OscillatorSound` with volume tied to thrust magnitude. The combined effect: moving produces particles and sound; stopping kills both. The player *feels* the connection between input and response.
+
+## Layering timing
+
+The best feedback combines immediate and gradual responses. When an event fires:
+
+1. **Frame 0**: Screen shake starts (instant displacement). Particle burst spawns (instant visual). Filter flash fires (instant color change).
+2. **Next 200ms**: Tween recovers the filter back to white. Shake decays.
+3. **Next 500ms**: Particles fade out via `AlphaFadeOverLifetime`.
+
+The player experiences a sharp impact followed by a smooth settle — contrast makes the impact feel stronger. No orchestration framework needed: just call `.start()` on each effect from the same event handler.
 
 ## Examples
 
 <a id="damage-flash"></a>
 <ExamplePreview chapter="showcase" slug="damage-flash" />
-Damage Flash isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+Click to trigger a red flash on a sprite — `ColorFilter` animated via tween.
 
 <a id="screen-shake-on-explosion"></a>
 <ExamplePreview chapter="showcase" slug="screen-shake-on-explosion" />
-Screen Shake On Explosion isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="gamepad-spaceship"></a>
-<ExamplePreview chapter="showcase" slug="gamepad-spaceship" />
-Gamepad Spaceship isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+Click anywhere to spawn particles and shake the view — the one-two punch of visual debris and camera impact.
 
-{/* TODO: prose */}
+## Where to go next
 
+The next recipe, [UI patterns](/ExoJS/en/guide/recipes/ui-patterns/), covers in-canvas UI construction — dialog systems, typewriter text, progress indicators, and when to use DOM instead.

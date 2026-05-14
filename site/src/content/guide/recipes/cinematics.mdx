@@ -11,13 +11,171 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.8 Cinematics
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Cinematics gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `Music` (for audio), and scene-stack management (for input gating).
+
+## Approach
+
+A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. The cinematic scene pushes itself onto the stack with `input: 'capture'` so the player can't interfere, and pops itself when the sequence ends.
+
+The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
+
+```js
+class CinematicScene extends Scene {
+    async load(loader) {
+        await loader.load(Texture, { boss: 'image/boss.png' });
+        await loader.load(Music, { track: 'audio/track.ogg' });
+    }
+
+    init(loader) {
+        // Camera — pans from title position to boss reveal
+        this.view = new View(220, 300, 800, 600);
+
+        // Boss — starts small, scales up during the pan
+        this.boss = new Sprite(loader.get(Texture, 'boss'))
+            .setAnchor(0.5)
+            .setScale(0.4)
+            .setPosition(560, 320)
+            .setTint(new Color(255, 130, 130));
+
+        // Music — fades in over the sequence
+        this.music = loader.get(Music, 'track').setLoop(true).setVolume(0.2).play();
+
+        // Shutter bars — open at the very start
+        this.barSize = { v: 0 };
+        this.app.tweens.create(this.barSize).to({ v: 70 }, 0.6).start();
+
+        // Camera pan — 2 seconds, starts immediately
+        this.app.tweens.create(this.view.center)
+            .to({ x: 520, y: 300 }, 2.0)
+            .start();
+
+        // Boss scale-in — 1.8 seconds, starts after 1.1s delay
+        this.app.tweens.create(this.boss.scale)
+            .to({ x: 2.1, y: 2.1 }, 1.8)
+            .delay(1.1)
+            .start();
+
+        // Title reveal — 1 second, starts after 1.6s delay
+        this.titleState = { count: 0 };
+        this.titleText = new Text('', { fill: 'white', fontSize: 56 });
+        this.titleText.setPosition(150, 120);
+
+        this.app.tweens.create(this.titleState)
+            .to({ count: TITLE.length }, 1.0)
+            .delay(1.6)
+            .onUpdate(() => {
+                this.titleText.setText(TITLE.slice(0, this.titleState.count | 0));
+            })
+            .start();
+
+        // Music fade — reaches full volume over 2 seconds
+        this.app.tweens.create(this.music)
+            .to({ volume: 0.85 }, 2.0)
+            .start();
+    }
+
+    draw(backend) {
+        backend.clear(new Color(16, 16, 24));
+
+        backend.setView(this.view);
+        this.boss.render(backend);
+        backend.setView(null);
+
+        this.titleText.render(backend);
+
+        // Screen-space shutter bars
+        this.bars.clear();
+        this.bars.fillColor = Color.black;
+        this.bars.drawRectangle(0, 0, 800, this.barSize.v);
+        this.bars.drawRectangle(0, 600 - this.barSize.v, 800, this.barSize.v);
+        this.bars.render(backend);
+    }
+}
+```
+
+## The timeline
+
+The sequence above runs as follows:
+
+| Time | Event |
+|------|-------|
+| 0.0s | Shutter bars start opening. Camera begins panning. Music starts fading in. |
+| 1.1s | Boss begins scaling up from 0.4x to 2.1x. |
+| 1.6s | Title text begins revealing character-by-character. |
+| 2.0s | Camera pan completes. Music reaches full volume. |
+
+Each tween operates independently — they don't need to know about each other. The `delay()` method offsets the start time. The `.onUpdate()` callback on the title tween drives the character reveal, mirroring the typewriter pattern from [UI patterns](/ExoJS/en/guide/recipes/ui-patterns/).
+
+## Gating input
+
+Push the cinematic scene with `input: 'capture'` to prevent the player from interacting during the cutscene:
+
+```js
+// From the game scene:
+this.app.sceneManager.pushScene(new CinematicScene(), {
+    mode: 'opaque',   // hide the game behind the cinematic
+    input: 'capture', // consume all input events
+});
+```
+
+`mode: 'opaque'` means the underlying game scene neither renders nor updates — a clean separation. When the cinematic ends, pop the scene:
+
+```js
+// At the end of the sequence — chain a tween to pop the scene:
+this.app.tweens.create(this.barSize)
+    .to({ v: 70 }, 0.6)
+    .delay(3.5) // start closing bars after the sequence plays
+    .onComplete(() => {
+        this.app.sceneManager.popScene();
+    })
+    .start();
+```
+
+The closing shutter bars animate over the scene, then `popScene()` returns to the game.
+
+## Skip support
+
+Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to jump to the end and pop:
+
+```js
+init(loader) {
+    // ... cinematic setup ...
+
+    this.inputs.onTrigger(Keyboard.Space, () => {
+        this.app.sceneManager.popScene();
+    });
+
+    const pad = this.app.input.getGamepad(0);
+    pad.onTrigger(GamepadButton.Start, () => {
+        this.app.sceneManager.popScene();
+    });
+}
+```
+
+For a smoother skip, fast-forward remaining tweens to completion rather than cutting hard:
+
+```js
+this.inputs.onTrigger(Keyboard.Space, () => {
+    // Jump all tweens to their end state
+    this.app.tweens.clear(); // stops all active tweens
+    this.music.setVolume(0.85);
+    this.boss.setScale(2.1, 2.1);
+    // ... snap other properties ...
+    this.app.sceneManager.popScene();
+});
+```
+
+## When not to build a cinematic system
+
+For a single boss intro, the flat approach above — one scene, many tweens with delays — is sufficient. For a game with many cutscenes, you might wrap the pattern in a `Sequence` class that accepts an array of `{ time, tween }` entries and starts them at the right moments. ExoJS does not ship this abstraction — it's a few dozen lines of your own code on top of `Tween.delay()` and `TweenManager.create()`.
 
 ## Examples
 
 <a id="boss-intro-cinematic"></a>
 <ExamplePreview chapter="showcase" slug="boss-intro-cinematic" />
-Boss Intro Cinematic isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+A boss-intro cutscene: shutter bars open, camera pans, boss scales up, title reveals character-by-character, music swells. All driven by parallel tweens with staggered delays.
 
+## Where to go next
+
+This is the final recipe. For the complete reference of every ExoJS API, see the [API reference](/ExoJS/en/api/). To experiment with any pattern from the Guide, open the [Playground](/ExoJS/en/playground/) and edit the examples directly.

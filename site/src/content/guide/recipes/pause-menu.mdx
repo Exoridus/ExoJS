@@ -11,13 +11,120 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.3 Pause menu
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Pause menu gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A pause menu freezes the game, displays a menu overlay, and resumes cleanly when dismissed. In ExoJS, this is a scene-stack operation: push a `PauseScene` on top of the game scene with `'overlay'` mode (so the game remains visible) and `'capture'` input (so the pause menu consumes all events).
+
+## Approach
+
+Two scenes, one reference. The game scene holds a reference so the pause scene can apply visual effects (like a blur) to the game scene's root before pushing itself. The pause scene pops itself on Esc to resume.
+
+```js
+class GameScene extends Scene {
+    init(loader) {
+        this.player = new Sprite(loader.get(Texture, 'hero'));
+        // ... game setup ...
+
+        this.inputs.onTrigger(Keyboard.Escape, async () => {
+            if (pauseScene.app !== null) return; // already paused
+            await this.app.sceneManager.pushScene(pauseScene, {
+                mode: 'overlay',
+                input: 'capture',
+            });
+        });
+    }
+
+    update(delta) {
+        // Game logic — this runs even while the pause scene is up,
+        // but you can gate it on a flag if you prefer to freeze.
+    }
+
+    draw(backend) {
+        backend.clear(new Color(20, 24, 34));
+        this.root.render(backend);
+    }
+}
+
+class PauseScene extends Scene {
+    init() {
+        // Apply blur to the game scene for visual separation
+        this._blur = new BlurFilter({ radius: 5, quality: 2 });
+        gameScene.root.filters = [this._blur];
+
+        this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
+        this._text.setPosition(280, 250);
+
+        this.inputs.onTrigger(Keyboard.Escape, async () => {
+            await this.app.sceneManager.popScene();
+        });
+    }
+
+    destroy() {
+        gameScene.root.clearFilters(); // remove blur on resume
+        super.destroy();
+    }
+}
+
+const gameScene = new GameScene();
+const pauseScene = new PauseScene();
+await app.start(gameScene);
+```
+
+## Stack semantics
+
+`pushScene(pauseScene, { mode: 'overlay', input: 'capture' })`:
+
+- `mode: 'overlay'` — the game scene below continues to render. The player can see the frozen game behind the pause text. If you prefer the game to stop rendering, use `'opaque'` instead (but then the blur effect on the game root becomes invisible — you'd apply the blur to a captured `RenderTexture` of the last frame instead).
+- `input: 'capture'` — the pause scene consumes all input events. The game scene's `update` still runs (by default with `'overlay'`), but its input bindings don't fire because the pause scene captures the event stream.
+
+If you want the game to truly freeze (no `update` calls), set the game scene's own `stackMode` or use a flag:
+
+```js
+// In GameScene.update:
+update(delta) {
+    if (pauseScene.app !== null) return; // freeze when paused
+    // ... normal update logic ...
+}
+```
+
+This is simpler than changing stack semantics at runtime and gives you explicit control.
+
+## Cleanup
+
+The `destroy` hook on `PauseScene` removes the blur filter. Without this, the game scene would remain blurred after resume. `popScene()` calls `destroy` on the popped scene automatically.
+
+If you need to capture the last game frame and blur it without leaving the game scene's filter array polluted, render the game scene root into a `RenderTexture` during `PopScene.init`, apply the blur as a post-process pass, and display the result:
+
+```js
+// Alternative: capture + blur without touching game scene's own filters
+init() {
+    this._capture = new RenderTexture(800, 600);
+    this._blurred = new RenderTexture(800, 600);
+    this._blur = new BlurFilter({ radius: 5, quality: 2 });
+
+    // Capture game's last frame
+    const backend = this.app.backend;
+    backend.execute(new RenderTargetPass(
+        () => {
+            backend.clear();
+            gameScene.root.render(backend);
+        },
+        { target: this._capture, view: this._capture.view }
+    ));
+    this._blur.apply(backend, this._capture, this._blurred);
+
+    this._bg = new Sprite(this._blurred);
+    this._text = new Text('PAUSED', { fill: 'white', fontSize: 64 });
+}
+```
+
+This approach leaves the game scene's filters untouched and is more robust if multiple systems may add or remove filters from the game root.
 
 ## Examples
 
 <a id="pause-blur"></a>
 <ExamplePreview chapter="showcase" slug="pause-blur" />
-Pause Blur isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+A rotating sprite with a pause overlay — press Esc to freeze the game under a blurred snapshot, Esc again to resume.
 
+## Where to go next
+
+The next recipe, [Split screen](/ExoJS/en/guide/recipes/split-screen/), covers rendering the same scene from multiple viewpoints into viewport regions.

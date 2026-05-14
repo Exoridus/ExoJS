@@ -5,24 +5,112 @@ part: 8
 chapter: 1
 examples:
   - application-scenes/hud-overlay-scene
-  - showcase/minimap-with-mask
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.1 HUD overlay
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. HUD overlay gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+A HUD (heads-up display) renders UI elements on top of the game world — health bars, score text, mini-maps, debug readouts — without those elements moving or scaling with the game camera. The recipe separates world-space content from screen-space content by using two scenes on the stack.
+
+## Approach
+
+Push a second scene on top of the game scene. The game scene renders the world. The HUD scene renders only UI elements — positioned in screen-pixel coordinates, independent of any camera view. The HUD scene uses `'overlay'` mode (both scenes render and update) with `'transparent'` input (HUD doesn't steal clicks meant for the game).
+
+```js
+class GameScene extends Scene {
+    init() {
+        this._angle = 0;
+    }
+
+    update(delta) {
+        this._angle += delta.seconds * 90;
+    }
+
+    draw(backend) {
+        backend.clear(new Color(20, 32, 58));
+        // ... draw game world ...
+    }
+}
+
+class HudScene extends Scene {
+    init() {
+        this._bar = new Graphics();
+        this._text = new Text('SCORE 1240', { fill: 'white', fontSize: 22 });
+        this._text.setPosition(18, 14);
+    }
+
+    draw(backend) {
+        this._bar.clear();
+        this._bar.fillColor = new Color(0, 0, 0, 0.45);
+        this._bar.drawRectangle(0, 0, 800, 56);
+        this._bar.drawRectangle(18, 40, 220, 8); // health bar
+        this._bar.render(backend);
+        this._text.render(backend);
+    }
+}
+```
+
+Push the HUD scene after the game scene starts:
+
+```js
+const game = new GameScene();
+const hud = new HudScene();
+
+await app.start(game);
+await app.sceneManager.pushScene(hud, {
+    mode: 'overlay',
+    input: 'transparent',
+});
+```
+
+The key is `input: 'transparent'` — the HUD scene is visible but pointer events pass through to the game scene below. If your HUD has clickable buttons (pause, inventory), use `input: 'passthrough'` instead so both scenes receive events. See [Scenes](/ExoJS/en/guide/core-concepts/scenes/) for the full stack-mode and input-mode semantics.
+
+## Why two scenes, not draw-order
+
+The alternative — rendering HUD elements after the world in a single scene's `draw` method — works for simple cases. The two-scene approach gives you:
+- Independent `init`/`destroy` lifecycles — the HUD can be pushed, popped, and replaced without touching game code.
+- Input isolation — the HUD's input mode controls whether clicks reach the game.
+- Camera independence — the HUD scene's root is always in screen space, never affected by the game view.
+
+## Mini-map with a mask
+
+A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD scene:
+
+```js
+// In GameScene.init or draw:
+const miniRt = new RenderTexture(260, 260);
+backend.execute(new RenderTargetPass(
+    () => {
+        backend.clear();
+        // Render world from a wide view into miniRt
+        this.drawWorld(backend);
+    },
+    { target: miniRt, view: miniRt.view }
+));
+
+// In HudScene:
+const miniSprite = new Sprite(miniRt).setPosition(530, 20);
+// Clamp to a circle with a mask
+const mask = new Graphics();
+mask.fillColor = Color.white;
+mask.drawCircle(660, 150, 120);
+miniSprite.mask = mask;
+```
+
+The [`RenderTargetPass`](/ExoJS/en/api/render-target-pass/) redirects drawing into the texture. The mask clips the mini-map to a circle. See [Render targets](/ExoJS/en/guide/drawing/render-targets/) and [Masks](/ExoJS/en/guide/core-concepts/scene-graph/#masks) for details.
+
+## When DOM UI is a better fit
+
+In-canvas HUD works well when the UI is tightly coupled to game state — health bars that react to damage, score text that animates, mini-maps that track player position. For static UI with complex layout (settings menus, inventory grids, text-heavy dialogs), standard HTML/CSS rendered as DOM overlays on top of the canvas is often simpler. The two approaches coexist: the canvas handles the game, DOM handles the menus. Focus and event routing between them requires coordination (`pointer-events: none` on the DOM when the game needs the pointer), but the architectural separation is clean.
 
 ## Examples
 
 <a id="hud-overlay-scene"></a>
 <ExamplePreview chapter="application-scenes" slug="hud-overlay-scene" />
-Hud Overlay Scene isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="minimap-with-mask"></a>
-<ExamplePreview chapter="showcase" slug="minimap-with-mask" />
-Minimap With Mask isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A game scene with a rotating ring, a HUD scene with a top-bar overlay, and transparent input so the HUD is visible but doesn't block interaction.
 
-{/* TODO: prose */}
+## Where to go next
 
+The next recipe, [Camera follow & parallax](/ExoJS/en/guide/recipes/camera-follow-and-parallax/), covers how to move the camera and create depth with layered parallax.
