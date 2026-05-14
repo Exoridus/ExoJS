@@ -6,33 +6,96 @@ chapter: 2
 examples:
   - debug-layer/bounding-boxes
   - debug-layer/performance-overlay
-  - debug-layer/pointer-and-hittest
-  - debug-layer/signal-bus-inspector
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.2 Debug layer
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Debug layer gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS ships six diagnostic layers in the `@codexo/exojs/debug` subpath. They render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags. Enable one during development to see bounding boxes, frame timing, hit-test state, or filter-chain pass counts overlaid on the canvas.
+
+## DebugOverlay
+
+The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) is the entry point. Create one against your application, toggle individual layers by setting their `visible` flag:
+
+```js
+import { DebugOverlay } from '@codexo/exojs/debug';
+
+const debug = new DebugOverlay(app);
+
+// During development — just flip a flag
+debug.layers.performance.visible = true;
+debug.layers.boundingBoxes.visible = true;
+
+// Toggle with keyboard shortcuts (F1–F4 while canvas has focus)
+```
+
+The overlay subscribes to `app.onFrame` and renders each visible layer. World-space layers (`boundingBoxes`, `hitTest`) render first under screen-space panels (`performance`, `pointerStack`). The overlay's `visible` flag suppresses all layers without changing individual visibility.
+
+## Performance layer
+
+The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) shows four real-time metrics in a compact panel (top-left):
+
+| Metric | Source |
+|--------|--------|
+| **FPS** | Rolling 60-sample average of frame times |
+| **Frame** | Current frame duration in milliseconds |
+| **Draws** | GPU draw calls issued this frame (`backend.stats.drawCalls`) |
+| **Nodes** | Total `RenderNode` count in the scene |
+
+A sparkline below the text shows the last 120 frames of frame-time history — a quick visual of frame-rate stability. The sparkline maxes out at 33ms (~30 FPS), so any frame that hits the top boundary is below 30 FPS.
+
+Press F1 or set `debug.layers.performance.visible = true` to enable it.
+
+## Bounding-boxes layer
+
+The [`BoundingBoxesLayer`](/ExoJS/en/api/bounding-boxes-layer/) draws colored rectangle outlines around every visible `RenderNode` with non-zero bounds. Each node's outline hue cycles by its `zIndex` — adjacent z-indices get visually distinct colors. This layer renders in world space, so boxes move and rotate with the scene:
+
+```js
+debug.layers.boundingBoxes.visible = true;  // or F2
+```
+
+Use this to debug layout issues, verify sprite bounds match expectations, or spot invisible nodes taking up space. It is the fastest way to answer "where does the engine think this node is?"
+
+## Hit-test layer
+
+The [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) color-codes interactive nodes based on their pointer state:
+
+- **Magenta**: interactive but idle (not hovered)
+- **Yellow**: currently hovered
+- **Cyan**: pointer-captured (being dragged or pressed)
+
+This layer renders in world space. Combined with `debug.layers.pointerStack.visible` (F4), which lists which nodes are under the cursor in a screen-space panel, you can trace the full hit-test path from pointer position to interactive node:
+
+```js
+debug.layers.hitTest.visible = true;       // or F3
+debug.layers.pointerStack.visible = true;  // or F4
+```
+
+The pointer-stack panel shows up to 10 nodes under the cursor sorted by `zIndex` (topmost first), with canvas coordinates, constructor names, and an `— interactive` flag for nodes that participate in hit testing.
+
+## Render-pass inspector
+
+The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) (added in v0.8.3) is covered in detail in [7.6 Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/). It lists every `RenderNode` with an active filter chain each frame, showing total pass count, per-drawable filter sequences, bounding-box dimensions, and mask/cache flags.
+
+## Lifecycle
+
+All debug layers live on `DebugOverlay.layers`. The overlay subscribes to application events (`onFrame`, `onKeyDown`, `onResize`) and drives layer updates and rendering. Call `debug.destroy()` when you no longer need the overlay — it unsubscribes from all events and destroys every layer.
+
+Debug layers have zero overhead when their `visible` flag is `false` — `DebugOverlay._onFrame` skips invisible layers entirely. You can leave the overlay constructed for a full development session without worrying about perf impact on profiling.
 
 ## Examples
 
 <a id="bounding-boxes"></a>
 <ExamplePreview chapter="debug-layer" slug="bounding-boxes" />
-Bounding Boxes isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+
+Rotating sprites with bounding-box outlines — the fastest way to check that transforms and bounds match.
 
 <a id="performance-overlay"></a>
 <ExamplePreview chapter="debug-layer" slug="performance-overlay" />
-Performance Overlay isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="pointer-and-hittest"></a>
-<ExamplePreview chapter="debug-layer" slug="pointer-and-hittest" />
-Pointer And Hittest isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+1600 bouncing sprites with live FPS, frame time, draw-call count, and sparkline.
 
-<a id="signal-bus-inspector"></a>
-<ExamplePreview chapter="debug-layer" slug="signal-bus-inspector" />
-Signal Bus Inspector isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+## Where to go next
 
-{/* TODO: prose */}
-
+The next chapter, [Performance](/ExoJS/en/guide/advanced/performance/), covers scene measurement — sprite stress tests, particle throughput, and how to use the performance layer to identify bottlenecks.

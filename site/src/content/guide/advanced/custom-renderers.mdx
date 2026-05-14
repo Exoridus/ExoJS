@@ -5,24 +5,117 @@ part: 7
 chapter: 1
 examples:
   - custom-renderers/custom-render-pass
-  - custom-renderers/custom-triangle-renderer
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.1 Custom renderers
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Custom renderers gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+"Custom rendering" in ExoJS means inserting your own draw logic into the frame — either as a pass between normal draws, or as direct GPU work that bypasses the engine's renderer system entirely. The extension surface is intentionally small: two public mechanisms, plus the existing `Mesh`/`MeshShader`/custom shader filter primitives covered in earlier chapters.
+
+The distinction: a custom renderer controls *when* and *how* things are drawn. A [`MeshShader`](/ExoJS/en/api/mesh-shader/) controls *what shader* an existing `Mesh` uses. A custom shader filter ([`WebGl2ShaderFilter`](/ExoJS/en/api/web-gl2-shader-filter/) or [`WebGpuShaderFilter`](/ExoJS/en/api/web-gpu-shader-filter/)) controls a screen-space post-render effect on a drawable's output. You reach for custom renderers when none of those primitives fit — you need to issue draw calls at a specific point in the frame, or you need to bypass ExoJS drawable types entirely.
+
+## CallbackRenderPass
+
+[`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) wraps an arbitrary draw callback and lets you execute it via `backend.execute()`. The callback receives the active `RenderBackend`, same as your scene's `draw` method:
+
+```js
+import { CallbackRenderPass } from '@codexo/exojs';
+
+init(loader) {
+    this._angle = 0;
+    this._between = new Graphics();
+
+    this._pass = new CallbackRenderPass(backend => {
+        this._between.clear();
+        this._between.lineWidth = 8;
+        this._between.lineColor = new Color(130, 240, 170);
+        this._between.drawArc(400, 300, 120, this._angle, this._angle + Math.PI * 1.3);
+        this._between.render(backend);
+    });
+}
+
+update(delta) {
+    this._angle += delta.seconds * 2.2;
+}
+
+draw(backend) {
+    backend.clear();
+    this._backSprite.render(backend);    // draws behind the pass
+    backend.execute(this._pass);          // draws between sprites
+    this._frontSprite.render(backend);   // draws on top
+}
+```
+
+The pass's callback runs at the point you call `backend.execute()`, so you control render order relative to other draws. Use `CallbackRenderPass` for procedural geometry (arcs, connectors, debug lines between objects), for rendering non-scene-graph content, or for inserting a filter step at a specific point in the frame.
+
+## Direct backend access
+
+When you need full GPU control — raw pipeline creation, custom vertex buffers, compute dispatches — access the [`WebGpuBackend`](/ExoJS/en/api/web-gpu-backend/) directly through `app.backend`. This is the escape hatch: you bypass ExoJS drawable types and renderer pipelines entirely, working at the WebGPU API level:
+
+```js
+import { WebGpuBackend } from '@codexo/exojs';
+
+class CustomTriangleRenderer {
+    constructor(backend) {
+        if (!(backend instanceof WebGpuBackend)) {
+            throw new Error('This requires a WebGPU backend.');
+        }
+        this._device = backend.device;     // GPUDevice
+        this._format = backend.format;     // GPUTextureFormat
+        this._context = backend.context;   // GPUCanvasContext
+
+        // Create your own pipeline, vertex buffers, command encoders...
+        this._pipeline = this._device.createRenderPipeline({ /* ... */ });
+        this._vertexBuffer = this._device.createBuffer({ /* ... */ });
+    }
+
+    draw() {
+        const encoder = this._device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: this._context.getCurrentTexture().createView(),
+                clearValue: { r: 0, g: 0, b: 0, a: 1 },
+                loadOp: 'clear',
+                storeOp: 'store',
+            }],
+        });
+        pass.setPipeline(this._pipeline);
+        pass.setVertexBuffer(0, this._vertexBuffer);
+        pass.draw(3);
+        pass.end();
+        this._device.queue.submit([encoder.finish()]);
+    }
+}
+```
+
+The scene's `draw` method would call `this._triangleRenderer.draw()` instead of `backend.clear()` / `sprite.render()`. The custom renderer owns the entire render pass and does not interact with ExoJS drawables.
+
+Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use the WebGL2 context through `backend` (check `backend.backendType` to branch). For most projects, `MeshShader` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
+
+## Renderer registration
+
+ExoJS resolves a renderer for each drawable type through the [`RendererRegistry`](/ExoJS/en/api/renderer-registry/). You can register a custom [`Renderer`](/ExoJS/en/api/renderer/) for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A `Renderer` implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
+
+Registering a custom renderer is an advanced extension point. For most custom rendering needs — procedural geometry between draws, a single custom shape that doesn't fit `Mesh` — `CallbackRenderPass` is the simpler and more intentional path.
+
+## When to use which
+
+| Mechanism | Use when |
+|---|---|
+| [`Mesh`](/ExoJS/en/api/mesh/) | You need custom vertex geometry with the standard pipeline |
+| [`MeshShader`](/ExoJS/en/api/mesh-shader/) | You need a custom vertex/fragment shader on a `Mesh` |
+| Custom shader filter (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) | You need a screen-space post-render effect on a drawable |
+| `CallbackRenderPass` | You need to issue draw calls at a specific point in the frame between other draws |
+| Direct backend access | You need to bypass ExoJS entirely and work at the GPU API level |
 
 ## Examples
 
 <a id="custom-render-pass"></a>
 <ExamplePreview chapter="custom-renderers" slug="custom-render-pass" />
-Custom Render Pass isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="custom-triangle-renderer"></a>
-<ExamplePreview chapter="custom-renderers" slug="custom-triangle-renderer" />
-Custom Triangle Renderer isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+An arc drawn between two sprites via `CallbackRenderPass` — procedural geometry in the render graph.
 
-{/* TODO: prose */}
+## Where to go next
 
+The next chapter, [Debug layer](/ExoJS/en/guide/advanced/debug-layer/), covers the built-in diagnostic tooling — bounding-box, performance, and hit-test overlays that help during development.

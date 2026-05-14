@@ -5,7 +5,6 @@ part: 7
 chapter: 3
 examples:
   - performance/sprite-stress
-  - performance/multi-texture-stress
   - performance/particle-stress
 ---
 
@@ -13,21 +12,90 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.3 Performance
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Performance gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+Performance in ExoJS is about three things: how many drawables you push per frame, how many render passes they cost, and how much state change happens between draws. The engine does a lot automatically — batching sprites that share a texture, reusing render-target memory across filter passes, culling nodes outside the view — but the decisions that matter most are yours: how many sprites, how many textures, how many filters, how many particle systems.
+
+## Measuring with the performance layer
+
+Before making changes, measure. The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) from `@codexo/exojs/debug` gives you FPS, frame time, draw-call count, and node count in real time:
+
+```js
+import { DebugOverlay } from '@codexo/exojs/debug';
+
+const debug = new DebugOverlay(app);
+debug.layers.performance.visible = true;
+```
+
+Watch the FPS number while you add sprites, enable filters, or spawn particles. The sparkline shows frame-time stability — a flat line is good, spikes indicate intermittent work. The draw-call count tells you how many GPU-level draw calls the renderer issued this frame.
+
+## Sprite batching
+
+Sprites that share the same texture are batched into a single draw call on WebGPU backends. On WebGL2, single-texture batching also applies. The practical consequence: 600 sprites all using one texture atlas cost far less than 600 sprites each using a different texture.
+
+The [`multi-texture-stress`](/ExoJS/en/playground/?slug=performance/multi-texture-stress) example demonstrates this — a grid of sprites spread across 4 textures vs. a grid using 1 texture. The draw-call count difference is visible in the performance layer.
+
+For texture-atlas workflows, use a single `Spritesheet`-sliced `Texture` and select frames via `sprite.setTextureFrame()` rather than loading separate images per sprite.
+
+## Render passes
+
+Every filter on a drawable adds one render pass for that drawable. A container with three filters costs three passes beyond the main batch draw. The cost scales with the drawable's bounding-box area (in pixels), not the canvas size, so occluding a filtered sprite behind a solid overlay doesn't prevent the filter passes from running.
+
+The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) shows exactly who is adding passes. Enable it during development when frame time rises and you suspect filter overhead:
+
+```js
+import { RenderPassInspectorLayer } from '@codexo/exojs/debug';
+// See 7.6 Render pipeline debugging for setup
+```
+
+Pass-reduction strategies in order of impact:
+1. Remove filters you don't need.
+2. Set `cacheAsBitmap = true` on filtered containers that don't change every frame.
+3. Consolidate filter chains — two `ColorFilter` instances cost two passes; one `WebGpuShaderFilter` can apply both in one pass.
+4. Keep filtered drawables small. A 2048×2048 blur costs dramatically more than a 256×256 one.
+
+## Particle system throughput
+
+The [`ParticleSystem`](/ExoJS/en/api/particle-system/) is designed for throughput — SoA storage, no per-particle allocations, instanced rendering. The practical limits depend on whether you're on CPU or GPU path:
+
+- **CPU path** (WebGL2, or any non-GPU-eligible update module): Suitable for moderate particle counts — performance drops roughly linearly with particle count. The per-frame update cost is proportional to `aliveCount` × number of update modules.
+- **GPU path** (WebGPU, all modules GPU-eligible): The composite WGSL compute shader runs update logic on the GPU in one dispatch, writing directly into the renderer's instance buffer — no CPU readback. This path becomes attractive for large systems with many particles and GPU-eligible modules.
+
+Check `system.gpuMode` at runtime to know which path is active. Measure with the [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) to find the right capacity target for your scene — the optimal number depends on your module count, particle lifetime, and target frame rate.
+
+## Scene-graph churn
+
+Adding and removing many children from a container each frame triggers transform-dirty propagation and bounds recomputation. For dynamic scenes where objects appear and disappear frequently, prefer:
+
+- `sprite.visible = false` over `container.removeChild(sprite)` — keeps the node in the tree, skips rendering.
+- Pre-allocate a pool of sprites and recycle them by toggling visibility rather than constructing/destroying.
+- Use `Container.sortableChildren` only when you actually need z-ordering — the sort step runs before every render.
+
+## Texture updates
+
+Uploading a new texture source (e.g. a canvas, video frame, or `DataTexture` buffer) triggers GPU re-allocation. For per-frame updates:
+- Use `DataTexture.commitRect()` for partial uploads (cheaper than full `commit()`).
+- Avoid creating new `Texture` instances per frame — reuse one texture and update its source.
+- Keep `RenderTexture` dimensions stable — `resize()` triggers framebuffer recreation.
+
+## View culling
+
+Nodes that fall entirely outside the current `View`'s viewport are skipped by the renderer. This is automatic and per-node. The culling check is AABB-based rather than exact shape, so nodes near the viewport edge may still be rendered even if partially outside. For large scrolling worlds, this is a significant performance multiplier — only the visible subset of your scene graph incurs draw cost.
+
+## Not a checklist
+
+The most useful performance practice is measurement. Turn on the performance layer, watch the numbers, change one thing, measure again. The engine's behavior under your specific scene — your sprite counts, your texture layout, your filter stacks — matters more than any general guideline.
 
 ## Examples
 
 <a id="sprite-stress"></a>
 <ExamplePreview chapter="performance" slug="sprite-stress" />
-Sprite Stress isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-<a id="multi-texture-stress"></a>
-<ExamplePreview chapter="performance" slug="multi-texture-stress" />
-Multi Texture Stress isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
+A 34×20 grid of sprites (680 total) from a single texture atlas, each with animated position, scale, and rotation. Demonstrates sprite batching throughput.
 
 <a id="particle-stress"></a>
 <ExamplePreview chapter="performance" slug="particle-stress" />
-Particle Stress isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Three particle systems emitting 240–320 particles per second each, with custom tint-cycling, scale-over-lifetime, alpha-fade, and force-based velocity. Demonstrates particle system throughput with a non-GPU-eligible custom update module.
 
+## Where to go next
+
+The next chapter, [Backend comparison](/ExoJS/en/guide/advanced/backend-comparison/), covers the WebGL2 vs. WebGPU decision — how backends are selected, where feature parity exists, and where backend-specific differences remain.

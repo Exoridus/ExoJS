@@ -11,13 +11,143 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.5 Collision detection
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Collision detection gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS provides a geometry-based collision system built on shape primitives and the Separating Axis Theorem (SAT). Every shape implements the [`Collidable`](/ExoJS/en/api/collidable/) interface, giving you three levels of collision query: boolean overlap (`intersectsWith`), penetration response (`collidesWith`), and point containment (`contains`). A [`Quadtree`](/ExoJS/en/api/quadtree/) provides spatial partitioning for broad-phase culling when you have many objects.
+
+This is not a physics engine — there are no rigid bodies, no friction, no constraint solvers. It answers "are these two things touching?" and "how far do I push them apart?" You build physics, overlap triggers, and hit detection on top.
+
+## The shape primitives
+
+Five concrete shapes implement `Collidable`:
+
+| Shape | Constructor | Collision type |
+|-------|-------------|----------------|
+| [`Rectangle`](/ExoJS/en/api/rectangle/) | `new Rectangle(x, y, width, height)` | AABB |
+| [`Circle`](/ExoJS/en/api/circle/) | `new Circle(x, y, radius)` | Center + radius |
+| [`Polygon`](/ExoJS/en/api/polygon/) | `new Polygon(points, x?, y?)` | Convex polygon (SAT) |
+| [`Ellipse`](/ExoJS/en/api/ellipse/) | `new Ellipse(x, y, rx, ry?)` | Radius pair |
+| [`Line`](/ExoJS/en/api/line/) | `new Line(x1, y1, x2, y2)` | Segment |
+
+All shapes carry a `position` (`Vector`) and expose `collisionType` for dispatch. Each can be queried against any other via `intersectsWith` and `collidesWith`.
+
+## Boolean overlap: intersectsWith
+
+`shapeA.intersectsWith(shapeB)` returns `true` if the shapes overlap. This is the cheapest query — no penetration depth, no contact normal, just a boolean:
+
+```js
+import { Circle, Rectangle } from '@codexo/exojs';
+
+const player = new Circle(400, 300, 20);
+const wall = new Rectangle(100, 200, 80, 160);
+
+if (player.intersectsWith(wall)) {
+    // prevent movement into the wall
+}
+```
+
+All shape-pair combinations are supported — rectangle-rectangle, circle-circle, polygon-circle, ellipse-rectangle, etc. Ellipse and polygon shapes are converted to polygon approximations for SAT-based tests (ellipses use configurable segment approximations).
+
+## Penetration response: collidesWith
+
+`shapeA.collidesWith(shapeB)` returns a [`CollisionResponse`](/ExoJS/en/api/collision-response/) or `null` if no overlap:
+
+```js
+const response = shapeA.collidesWith(shapeB);
+
+if (response) {
+    console.log(response.overlap);       // penetration depth (positive number)
+    console.log(response.projectionN);   // unit normal of minimum translation axis
+    console.log(response.projectionV);   // MTV = projectionN * overlap (push-out vector)
+    console.log(response.shapeAinB);     // true if A is fully inside B
+    console.log(response.shapeBinA);     // true if B is fully inside A
+
+    // Push shapeA out of shapeB
+    shapeA.position.add(response.projectionV);
+}
+```
+
+The minimum translation vector (MTV) is the smallest displacement that separates the two shapes. Adding it to `shapeA.position` pushes A out of B. For one-way collisions (player pushed out of wall), move the player by the MTV. For two-way collisions, split the MTV proportionally.
+
+Collision response is supported for these shape pairs: rectangle-rectangle, circle-circle, circle-rectangle, ellipse-rectangle, ellipse-circle, polygon-circle. The full SAT solver handles generic `Collidable` pairs. Pairs not listed above (`collidesWith` returns `null`) can still be tested with `intersectsWith` for boolean overlap.
+
+## Point containment: contains
+
+`shape.contains(x, y)` returns `true` if the world-space point is inside the shape. Every shape implements it:
+
+```js
+if (enemyHitbox.contains(pointer.x, pointer.y)) {
+    selectEnemy();
+}
+```
+
+A `Sprite`'s `contains()` works on the rotated quad — fast AABB check when rotation is a multiple of 90°, exact dot-product test for arbitrary angles.
+
+## Scene-node collision
+
+Every `SceneNode` (Sprites, Containers, etc.) implements `Collidable` with `CollisionType.SceneNode`. This means you can collision-test drawables directly without wrapping them in shape primitives:
+
+```js
+const hero = new Sprite(texture);
+hero.setPosition(400, 300);
+
+const box = new Sprite(texture);
+box.setPosition(200, 200);
+
+if (hero.intersectsWith(box)) {
+    const response = hero.collidesWith(box);
+    if (response) {
+        box.position.add(response.projectionV);
+    }
+}
+```
+
+`SceneNode.intersectsWith` dispatches based on whether the node's rotation is axis-aligned (fast AABB path) or rotated (SAT path). `SceneNode.collidesWith` returns a response for AABB pairs and delegates to SAT for rotated pairs.
+
+`SceneNode.getBounds()` returns the axis-aligned bounding box — a `Rectangle`. Use this for broad-phase checks before expensive SAT tests.
+
+## Spatial partitioning with Quadtree
+
+For scenes with many objects, pair-wise collision checks against every other object are O(n²). A [`Quadtree`](/ExoJS/en/api/quadtree/) reduces the search space:
+
+```js
+import { Quadtree } from '@codexo/exojs';
+
+const tree = new Quadtree(new Rectangle(0, 0, 800, 600), 8, 5);
+
+// Insert objects each frame
+for (const enemy of this.enemies) {
+    tree.insert({ bounds: enemy.getBounds(), payload: enemy });
+}
+
+// Query nearby objects
+const nearby = tree.queryRect(player.getBounds());
+for (const item of nearby) {
+    if (player.intersectsWith(item.payload)) {
+        resolveCollision(player, item.payload);
+    }
+}
+```
+
+`Quadtree.insert(item)` auto-subdivides when a quadrant exceeds `maxItems` (default 8). `queryRect(rect)` returns all items whose bounds overlap the query rectangle. `queryPoint(x, y)` returns items containing the point. The `maxDepth` parameter (default 5) limits subdivision depth.
+
+The engine's hit-test system uses a quadtree internally. You can visualise the quadtree partitions through the [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) debug overlay — quadrant boundaries are drawn as faint gray lines.
+
+## When the built-in system fits
+
+ExoJS collision is the right choice for:
+- Top-down or side-view 2D games with simple push-out physics
+- Overlap-based triggers (pickups, zone entries, sensor volumes)
+- Hit testing smarter than simple AABB
+- Tile-grid or quadtree-spatial broad-phase narrowing
+
+It is not a replacement for a full physics engine. If you need joints, continuous collision detection, swept volumes, or complex constraint chains, integrate a dedicated physics library and feed ExoJS drawable transforms from the physics step.
 
 ## Examples
 
 <a id="rectangles-collision"></a>
 <ExamplePreview chapter="showcase" slug="rectangles-collision" />
-Rectangles Collision isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+Two animated sprites with collision detection — rotation, scale, and containment feedback with cyan (contained) and red (overlapping) tinting.
 
+## Where to go next
+
+The next chapter, [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/), covers the in-engine pass-count inspector — how to see which drawables are adding render passes and how many your frame costs.

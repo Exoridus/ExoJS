@@ -11,13 +11,77 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.4 Backend comparison
 
-When this part of a project becomes important, you need a pattern that stays predictable while your scene grows. Backend comparison gives you that baseline so you can avoid one-off fixes later. We'll keep the focus on concrete runtime behavior and connect each idea to a runnable preview. Use these examples as reference slices, then open them in the playground when you want to adjust values and test variations in context.
+ExoJS renders through one of two backends: WebGL2 or WebGPU. The choice is automatic by default — the engine picks WebGPU when `navigator.gpu` is available, WebGL2 otherwise. You can override this with `backend: { type: 'webgpu' }` or `backend: { type: 'webgl2' }` in `ApplicationOptions`.
+
+## Selection
+
+```js
+import { Application } from '@codexo/exojs';
+
+// Auto-select (prefers WebGPU, falls back to WebGL2)
+const app = new Application();
+
+// Pin to WebGPU — throws if unavailable
+const gpuApp = new Application({ backend: { type: 'webgpu' } });
+
+// Pin to WebGL2
+const glApp = new Application({ backend: { type: 'webgl2' } });
+```
+
+At any point, check `app.backend.backendType` (a [`RenderBackendType`](/ExoJS/en/api/render-backend-type/) enum with values `WebGl2` and `WebGpu`) to branch backend-specific code.
+
+## Feature parity
+
+The core rendering pipeline — sprites, meshes, graphics, text, containers, masks, filters, render-targets, views, culling — works identically on both backends. The API is the same. You write one scene and it renders on both.
+
+Where differences exist, they are performance characteristics or rendering-path specifics, not API gaps:
+
+| Area | WebGL2 | WebGPU |
+|------|--------|--------|
+| Sprite batching | Multi-texture batched (up to 8) | Multi-texture batched (up to 8) |
+| Particle rendering | Instanced draw calls | Instanced draw calls (CPU simulation on both) |
+| MeshShader | GLSL ES 3.00 | WGSL |
+| ShaderFilter | `WebGl2ShaderFilter` (GLSL) | `WebGpuShaderFilter` (WGSL) |
+| GPU compute | Not available | Raw `backend.device` access for compute + custom pipelines |
+| Debug labels | `pushGroupMarker`/`popGroupMarker` | `pushDebugGroup`/`popDebugGroup` |
+
+Both backends batch sprites from up to 8 different textures into a single draw call. For most projects with a single texture atlas, the batching difference is irrelevant — the practical distinction is only visible in multi-atlas scenes.
+
+## Particles and GPU
+
+Particle simulation (spawn, integration, module updates) runs on the CPU on both backends. On WebGPU, when every registered update module is GPU-eligible (implements `wgsl()`), the system compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in one dispatch. This is the GPU path: simulation moves to the GPU, and the renderer reads instance data from a shared buffer — no CPU readback.
+
+On WebGL2, or when any update module lacks `wgsl()`, the system runs on CPU. The particle rendering path (instanced draw calls) is the same on both backends. Check `system.gpuMode` to know which path is active.
+
+## Custom shaders
+
+`MeshShader` accepts both `glsl: { vertex, fragment }` and `wgsl` source. The renderer picks the appropriate language for the active backend. Provide both for cross-backend portability. [`detectUniformDrift()`](/ExoJS/en/api/mesh-shader/#detectuniformdrift) compares declared uniforms across languages for CI-style verification.
+
+For screen-space effects, use `WebGl2ShaderFilter` on WebGL2 and `WebGpuShaderFilter` on WebGPU. Both accept the same uniform-value types — only the shader language differs. For cross-backend filters, construct the appropriate variant based on `app.backend.backendType` at init time.
+
+## Direct GPU access
+
+The WebGPU backend exposes `backend.device` (`GPUDevice`), `backend.context` (`GPUCanvasContext`), and `backend.format` (`GPUTextureFormat`). You can create custom pipelines, vertex buffers, and command encoders directly — the [`custom-triangle-renderer`](/ExoJS/en/playground/?slug=custom-renderers/custom-triangle-renderer) example demonstrates this. On WebGL2, the GL context is available through backend internals but is not exposed as a public API — the intended extension point for raw GPU work is WebGPU only.
+
+## Device loss
+
+Both backends handle context-loss events. On WebGL2, the engine attempts to recover the context automatically. On WebGPU, device loss is currently unrecoverable — the application should detect it and offer a reload. This is a platform constraint, not an ExoJS limitation.
+
+## Choosing for production
+
+- **Ship with `auto`** (the default). Most users get WebGPU, older browsers get WebGL2. You write one codebase, both paths work.
+- **Pin to `webgpu`** if you depend on features only available through direct backend access (compute shaders, raw GPU pipelines) and can accept the browser-support trade-off.
+- **Pin to `webgl2`** if you are targeting a specific environment where WebGPU is unreliable or unavailable. This is uncommon — auto-selection covers this case.
+
+The [`backend-comparison`](/ExoJS/en/playground/?slug=performance/backend-comparison) example lets you toggle backends at runtime (press B) to compare performance and visual output with the same scene.
 
 ## Examples
 
 <a id="backend-comparison"></a>
 <ExamplePreview chapter="performance" slug="backend-comparison" />
-Backend Comparison isolates one practical pattern you can copy into your own scene and adapt with minimal wiring.
 
-{/* TODO: prose */}
+2200 bouncing sprites with a performance overlay. Press B to toggle between WebGL2 and WebGPU backends and compare frame rates.
 
+## Where to go next
+
+The next chapter, [Collision detection](/ExoJS/en/guide/advanced/collision-detection/), covers the built-in geometry and collision system — shape intersection, SAT-based overlap response, containment tests, and quadtree spatial indexing.
