@@ -29,12 +29,14 @@ const label = new Text('Hello', {
 });
 ```
 
-The second argument is a `TextStyleOptions` object — all properties are optional, all have defaults. The `TextStyle` is stored as `text.style` and can be replaced wholesale with `setStyle()` or mutated property-by-property:
+The second argument is a `TextStyleOptions` object — all properties are optional, all have defaults. The `TextStyle` is stored as `text.style`. Replace it with `setStyle()` to rebuild the mesh; mutating style fields alone does not rebuild:
 
 ```js
+import { Color } from '@codexo/exojs';
+
 label.style.fontSize = 32;
 label.style.fillColor = Color.tomato;
-label.setText('Updated'); // triggers mesh rebuild
+label.setStyle(label.style); // apply style changes and rebuild
 ```
 
 ## Font loading
@@ -69,22 +71,24 @@ The `FontFace` asset is registered with the document's `document.fonts` set. Onc
 | `fontSize` | `number` | `20` | Font size in pixels |
 | `fontWeight` | `string` | `'bold'` | CSS font weight |
 | `fontStyle` | `'normal' \| 'italic'` | `'normal'` | Font style |
-| `fill` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Glyph rasterization fill |
-| `fillColor` | `Color` | `Color.white` | Mesh tint multiplier (avoid re-rasterization) |
-| `stroke` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Glyph rasterization stroke |
-| `strokeThickness` | `number` | `1` | Stroke width in pixels |
+| `fill` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Stored style property (not currently applied by the renderer) |
+| `fillColor` | `Color` | `Color.white` | Tint used when building the text mesh |
+| `stroke` | `string \| CanvasGradient \| CanvasPattern` | `'black'` | Stored style property (not currently applied by the renderer) |
+| `strokeThickness` | `number` | `1` | Stored style property (not currently applied by the renderer) |
 | `align` | `'left' \| 'center' \| 'right'` | `'left'` | Text alignment |
 | `lineHeight` | `number` | `1.2` | Multiplier on `fontSize` for vertical spacing |
-| `wordWrap` | `boolean` | `false` | Enable word-wrap |
-| `wordWrapWidth` | `number` | `100` | Max width in pixels before wrapping |
-| `baseline` | `CanvasTextBaseline` | `'alphabetic'` | Canvas text baseline |
-| `lineJoin` | `CanvasLineJoin` | `'miter'` | Stroke line join style |
-| `miterLimit` | `number` | `10` | Stroke miter limit |
-| `padding` | `number` | `0` | Extra padding around glyph bounding boxes |
+| `wordWrap` | `boolean` | `false` | Style flag (currently not applied by the layout engine) |
+| `wordWrapWidth` | `number` | `100` | Style width hint (currently not applied by the layout engine) |
+| `baseline` | `CanvasTextBaseline` | `'alphabetic'` | Stored style property (not currently applied by the renderer) |
+| `lineJoin` | `CanvasLineJoin` | `'miter'` | Stored style property (not currently applied by the renderer) |
+| `miterLimit` | `number` | `10` | Stored style property (not currently applied by the renderer) |
+| `padding` | `number` | `0` | Stored style property (not currently applied by the renderer) |
 
-Glyphs are always rasterized in white. The `fillColor` property multiplies the mesh at draw time via `Mesh.tint`, so changing it is free — no atlas re-rasterization. The canvas `fill` and `stroke` properties only matter during initial glyph rasterization.
+Current renderer path applies `fontFamily`, `fontSize`, `fontWeight`, `fontStyle`, `align`, `lineHeight`, and `fillColor`. Other `TextStyle` fields are currently stored but not applied.
 
-## Multiline text and word-wrap
+Glyphs are rasterized in white, and the mesh tint is initialized from `fillColor` when the mesh is rebuilt.
+
+## Multiline text and wrap settings
 
 Multiline text works by embedding `\n` characters in the string:
 
@@ -96,7 +100,7 @@ const dialog = new Text('Line one\nLine two\nLine three', {
 });
 ```
 
-Enable word-wrap to break lines at a fixed pixel width:
+`wordWrap` and `wordWrapWidth` are available on `TextStyle`, but the current text layout only applies explicit line breaks (`\n`) and alignment:
 
 ```js
 const wrapped = new Text(longString, {
@@ -136,15 +140,15 @@ this.addChild(this.ui);
 
 The text node's internal mesh is a `Container` child. `setText()` destroys the previous mesh and builds a new one. This means:
 - Changing text every frame is fine — the old mesh is discarded and a fresh one is built.
-- Updating `style.fillColor` alone does not rebuild the mesh; it only changes the mesh tint.
-- Changing any other style property (font size, family, etc.) requires a call to `setStyle()` or `style` assignment, which rebuilds the mesh.
+- Mutating `style` fields alone does not rebuild the mesh.
+- To apply style changes, call `setStyle(...)` (or assign `text.style = ...`) so the mesh is rebuilt.
 
 ## Text constraints
 
-- The glyph atlas is shared across all `Text` instances. Very long strings with many unique glyphs may cause atlas fragmentation; the atlas auto-expands to accommodate.
+- The glyph atlas is shared across all `Text` instances and has a fixed default size. Large sets of unique glyph/style combinations can exhaust atlas space.
 - `Text` does not expose per-character styling. Use separate `Text` instances for mixed-style strings.
 - `Text` does not measure or report its pixel dimensions through the public API — the mesh bounds reflect the glyph quad size but measured width/height in pixels is not exposed as a public getter.
-- Custom fonts must be loaded through the `Loader` and registered via `FontFace` — inline `@font-face` CSS rules in the page are not automatically visible to the text system.
+- Loader-based `FontFace` loading is the built-in path for custom fonts; any font family available to the browser's canvas text engine can be used once loaded.
 
 ## Examples
 
@@ -156,7 +160,7 @@ A text node with a custom web font, updating its string each frame.
 <a id="multiline-and-wrap"></a>
 <ExamplePreview chapter="text-fonts" slug="multiline-and-wrap" />
 
-Multiline text with alignment, line-height, and word-wrap control.
+Multiline text with alignment and line-height control.
 
 ## Where to go next
 

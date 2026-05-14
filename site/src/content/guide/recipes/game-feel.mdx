@@ -23,16 +23,15 @@ import { ColorFilter, Signal } from '@codexo/exojs';
 
 init(loader) {
     this.player = new Sprite(loader.get(Texture, 'hero'));
-    this.flashColor = new Color(255, 255, 255, 1);
-    this.flash = new ColorFilter(this.flashColor);
+    this.flash = new ColorFilter(new Color(255, 255, 255, 1));
     this.player.filters = [this.flash];
 
     this.onDamage = new Signal();
     this.onDamage.add(() => {
         // Flash red instantly
-        this.flashColor.set(255, 80, 80, 1);
+        this.flash.color.set(255, 80, 80, 1);
         // Tween back to white over 200ms
-        this.app.tweens.create(this.flashColor)
+        this.app.tweens.create(this.flash.color)
             .to({ r: 255, g: 255, b: 255 }, 0.2)
             .start();
     });

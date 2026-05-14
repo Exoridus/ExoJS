@@ -55,7 +55,7 @@ detector.onTempoChange.add((newBpm, oldBpm) => {
 });
 ```
 
-The `settlingMs` option (default 1500) suppresses beat and tempo events for an initial period after the source starts, giving the worklet time to build a reliable estimate.
+The `settlingMs` option (default 1500) gates beat-phase output during initial warm-up so beat timing only starts after enough analysis history is available.
 
 ## Event signals
 
@@ -133,7 +133,7 @@ const detector = new BeatDetector({
 
 `BeatDetector` uses an `AudioWorkletProcessor` that runs entirely in the Web Audio rendering thread. It applies a Hann window, runs a radix-2 FFT, computes mel-band energies, detects onsets via spectral flux, builds a tempogram with autocorrelation, and tracks beat phase with a dynamic-programming grid. All of this is internal — the public API is the events and getters listed above.
 
-The first call to `update(delta)` in your scene fires after the worklet message handler has processed the most recent state update. Beat events (`onBeat`, `onDownbeat`, etc.) are dispatched during the SceneManager's update loop alongside your scene's `update`. They arrive asynchronously — the worklet's temporal resolution is finer than `requestAnimationFrame`, so a beat event may arrive slightly before or after the visual frame that should react to it. For precise per-frame timing, prefer the polling getters (see [5.5 Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/)).
+Beat/state messages are posted from the worklet and handled asynchronously on the main thread. They are not locked to your scene's `update` timing, and worklet timing can be finer than `requestAnimationFrame`. For frame-stable visual animation, prefer polling getters in `update` (see [5.5 Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/)).
 
 ## Configuring the detector
 

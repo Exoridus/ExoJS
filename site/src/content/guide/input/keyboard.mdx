@@ -12,7 +12,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 4.1 Keyboard
 
-ExoJS maps every physical key to a stable numeric channel via the [`Keyboard`](/ExoJS/en/api/keyboard/) enum. `Keyboard.Space` is channel 288, `Keyboard.A` is 321, `Keyboard.Left` is 293 — the mapping derives from browser key codes so it is consistent across layouts and operating systems. Keys only fire while the canvas has focus; when focus leaves, all held keys are released automatically.
+ExoJS maps keys to numeric channels via the [`Keyboard`](/ExoJS/en/api/keyboard/) enum. `Keyboard.Space` is channel 32, `Keyboard.A` is 65, `Keyboard.Left` is 37. Values follow the browser's legacy `KeyboardEvent.keyCode` mapping. Keys only fire while the canvas has focus; when focus leaves, all held keys are released automatically.
 
 ## Scene-scoped bindings
 
@@ -69,7 +69,7 @@ update(delta) {
 
 ## Application-level signals
 
-`app.input` exposes two lower-level signals that fire on every key transition, regardless of the current scene:
+`app.input` exposes two lower-level signals that fire on raw keydown/keyup events, regardless of the current scene:
 
 ```js
 app.input.onKeyDown.add(channel => {
@@ -140,7 +140,7 @@ Keyboard.F1 .. Keyboard.F12
 Keyboard.NumPad0 .. Keyboard.NumPad9
 ```
 
-The full list includes punctuation, brackets, and navigation keys. All values match the browser's legacy `KeyboardEvent.keyCode` map so the constants are stable regardless of keyboard layout.
+The full list includes punctuation, brackets, and navigation keys. All values match the browser's legacy `KeyboardEvent.keyCode` map used by ExoJS.
 
 ## Canvas focus
 

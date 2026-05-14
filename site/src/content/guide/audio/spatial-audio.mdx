@@ -43,6 +43,8 @@ Valid target types are:
 A `Sound` becomes spatial the moment you assign a `position`:
 
 ```js
+import { Sound } from '@codexo/exojs';
+
 const pickup = loader.get(Sound, 'pickup-sfx');
 pickup.position = { x: 320, y: 180 };
 pickup.play();
@@ -65,6 +67,8 @@ Three attenuation curves control how volume drops with distance:
 Configure per-sound via constructor options or live setters:
 
 ```js
+import { Sound } from '@codexo/exojs';
+
 const ambient = new Sound(audioBuffer, {
     distanceModel: 'exponential',
     refDistance: 100,      // pixels — full volume within this radius
@@ -125,7 +129,7 @@ Spatial updates happen automatically — the `AudioManager` runs `listener._tick
 
 The Web Audio `PannerNode` maps to 3D space. ExoJS sets Z=0 for both listener and sources and uses forward=-Z with up=+Y, which produces correct left/right panning for 2D scenes. The elevation axis (up/down) is unused — all audio is co-planar with the listener.
 
-Stereo pan is achieved through interaural time difference and attenuation, not a simple balance knob. The result is that a source placed to the listener's right sounds subtly different from one placed to the left at the same distance — this is the Web Audio panner's intended behavior and can't be disabled. If you need precise channel-level control without spatial effects, route through a bus with `pan` rather than using spatial positioning.
+ExoJS uses the panner's `equalpower` model for 2D spatialisation. If you need deterministic non-spatial left/right balance, keep sounds non-spatial (`position = null`) and use bus-level `pan` instead.
 
 ## Examples
 

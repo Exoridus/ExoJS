@@ -109,6 +109,8 @@ For continuous animation — something that smoothly decays between beats rather
 These are all pure derivations from the detector's internal state — they do not allocate, do not fire events, and are safe to call every frame:
 
 ```js
+import { Color } from '@codexo/exojs';
+
 update(delta) {
     const beat = this.detector.pulse;
     const downbeat = this.detector.barPulse;
@@ -117,16 +119,12 @@ update(delta) {
     this.sprite.setScale(1 + beat * 0.25);
 
     // Brighter tint on the downbeat
-    this.sprite.tint = [
-        1,
-        1 - 0.4 * downbeat,
-        1 - 0.4 * downbeat,
-        1,
-    ];
+    const greenBlue = Math.round(255 * (1 - 0.4 * downbeat));
+    this.sprite.tint = new Color(255, greenBlue, greenBlue, 1);
 
     // Flash white exactly on beat
     if (this.detector.justBeat) {
-        this.sprite.tint = [1, 1, 1, 1];
+        this.sprite.tint = Color.white;
     }
 
     // Animate something on 16th notes
@@ -146,7 +144,7 @@ When you want a scrolling spectrogram — a 2D texture that updates each frame w
 A simple scrolling spectrogram:
 
 ```js
-import { DataTexture } from '@codexo/exojs';
+import { DataTexture, Sprite } from '@codexo/exojs';
 
 init(loader) {
     this.analyser = new AudioAnalyser({ fftSize: 512 });
@@ -171,14 +169,11 @@ update(delta) {
 
     // Write one column of spectrum data
     for (let row = 0; row < 64; row++) {
-        buf[this.col * 64 + row] = bands[row];
+        buf[row * 256 + this.col] = bands[row];
     }
 
+    this.specTex.commitRect(this.col, 0, 1, 64);
     this.col = (this.col + 1) % 256;
-    this.specTex.commit();
-
-    // Shift the visible region so the newest column is at the right edge
-    this.specSprite.setSize(256, 64);
 }
 ```
 
@@ -222,8 +217,13 @@ class AudioReactiveScene extends Scene {
         this.bars.clear();
         for (let i = 0; i < bands.length; i++) {
             const h = (bands[i] / 255) * height;
-            const hue = (i / bands.length) * 360;
-            this.bars.fillColor = Color.fromHSL(hue, 0.8, 0.55);
+            const t = i / Math.max(1, bands.length - 1);
+            this.bars.fillColor = new Color(
+                Math.round(255 * t),
+                Math.round(200 - 120 * t),
+                Math.round(255 - 180 * t),
+                1,
+            );
             this.bars.drawRectangle(
                 i * barW, height - h,
                 barW - 1, h,
@@ -231,7 +231,7 @@ class AudioReactiveScene extends Scene {
         }
 
         // Pulse the background on beat
-        const bg = Color.fromHSL(240, 0.3, 0.1 + this.detector.pulse * 0.15);
+        const bg = new Color(20, 24, Math.round(30 + this.detector.pulse * 60), 1);
         this.app.clearColor = bg;
     }
 
@@ -250,7 +250,7 @@ A few things to keep in mind when working with audio-driven visuals:
 
 - The analyser spectrum reflects the current frame's audio buffer. You sample it once per `update` call; the `AnalyserNode`'s `smoothingTimeConstant` (default 0.8) smooths between consecutive analyses.
 - Beat detector events are dispatched from the worklet processor to the main thread. They arrive asynchronously and may be arbitrarily close to or slightly behind the visual frame; the worklet's internal temporal resolution is finer than `requestAnimationFrame` cadence. The polling getters (`pulse`, `justBeat`, `subdivisionPhase`) sample the detector's most recent cached state on the main thread.
-- `justBeat` is `true` for at most one or two visual frames per beat (with the default 30ms window at 60fps). If your frame rate drops below ~30fps, you may miss a `justBeat` window. For critical beat-triggered effects, prefer the `onBeat` signal — it is dispatched per-beat and consumed on the main thread alongside the next update cycle.
+- `justBeat` is `true` for at most one or two visual frames per beat (with the default 30ms window at 60fps). If your frame rate drops below ~30fps, you may miss a `justBeat` window. For critical beat-triggered effects, prefer the `onBeat` signal — it is dispatched per beat and delivered on the main thread.
 
 ## Examples
 

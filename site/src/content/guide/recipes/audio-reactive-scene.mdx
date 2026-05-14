@@ -30,7 +30,7 @@ One analyser for frequency data, one beat detector for rhythm, one particle syst
 import {
     AlphaFadeOverLifetime, AudioAnalyser, BeatDetector,
     BurstSpawn, ConeDirection, Constant, Music,
-    ParticleSystem, Scene, View,
+    ParticleSystem, Scene, View, Texture, Vector, Color, Ease,
 } from '@codexo/exojs';
 
 class AudioReactiveScene extends Scene {
@@ -45,6 +45,7 @@ class AudioReactiveScene extends Scene {
         // Analysis
         this.analyser = new AudioAnalyser({ source: music, fftSize: 512 });
         this.detector = new BeatDetector({ source: music });
+        this._bg = new Color(20, 24, 40, 1);
 
         // Particles — burst on beat
         this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
@@ -68,21 +69,21 @@ class AudioReactiveScene extends Scene {
     }
 
     update(delta) {
+        this.view.update(delta.milliseconds);
         this.particles.update(delta);
 
         // Continuous frequency → background tint
         const { low } = this.analyser.getLowMidHigh();
-        const bg = new Color(
-            0.05 + low * 0.1,
-            0.06 + low * 0.06,
-            0.12 + low * 0.2,
+        this._bg.set(
+            20 + low * 26,
+            24 + low * 15,
+            40 + low * 52,
             1,
         );
-        this.app.clearColor = bg;
     }
 
     draw(backend) {
-        backend.clear();
+        backend.clear(this._bg);
         backend.setView(this.view);
         this.particles.render(backend);
         backend.setView(null);

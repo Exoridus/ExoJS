@@ -75,11 +75,13 @@ this.hero.height = 64; // scale.y becomes 64 / textureFrame.height
 
 ## Tinting
 
-`sprite.tint` is a `Color` or an `[r, g, b, a]` tuple that multiplies the sprite's pixel colors at draw time. White tint `([1, 1, 1, 1])` leaves the texture unchanged. A red tint mutes green and blue channels. Tinting does not allocate or create new textures:
+`sprite.tint` is a `Color` that multiplies the sprite's pixel colors at draw time. White tint (`Color.white`) leaves the texture unchanged. A red tint mutes green and blue channels. Tinting does not allocate or create new textures:
 
 ```js
-this.hero.tint = [1, 0.5, 0.5, 1];   // reddish tint
-this.hero.tint = [0.5, 0.5, 1, 0.8]; // blue tint, 80% opacity
+import { Color } from '@codexo/exojs';
+
+this.hero.tint = new Color(255, 128, 128, 1); // reddish tint
+this.hero.tint = new Color(128, 128, 255, 0.8); // blue tint, 80% opacity
 ```
 
 ## Texture frames
@@ -103,12 +105,12 @@ Call `resetTextureFrame()` to restore the full texture.
 
 ## Blend modes
 
-`sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is normal alpha blending. Alternative modes (`add`, `multiply`, `screen`, `erase`) are available via `BlendModes`:
+`sprite.blendMode` controls how the sprite composites with pixels already in the framebuffer. The default is normal alpha blending. Alternative modes (`additive`, `subtract`, `multiply`, `screen`) are available via `BlendModes`:
 
 ```js
 import { BlendModes } from '@codexo/exojs';
 
-this.glow.blendMode = BlendModes.Add;
+this.glow.blendMode = BlendModes.Additive;
 ```
 
 Blend modes are per-sprite. Combined with tinting they cover common glow, shadow, and knock-out compositing without needing custom shaders.
@@ -147,7 +149,7 @@ The `animations` map feeds into `AnimatedSprite.fromSpritesheet()`, covered in t
 
 ```js
 // Video as a sprite texture
-import { Texture, Video } from '@codexo/exojs';
+import { RenderTexture, Sprite, Video } from '@codexo/exojs';
 
 const video = loader.get(Video, 'intro');
 const sprite = new Sprite(video.texture);
@@ -155,7 +157,7 @@ const sprite = new Sprite(video.texture);
 // A RenderTexture (offscreen render) as a sprite texture
 const rt = new RenderTexture(256, 256);
 // ... render something into rt ...
-const sprite = new Sprite(rt);
+const offscreenSprite = new Sprite(rt);
 ```
 
 ## Sprite transforms in the graph

@@ -15,7 +15,7 @@ A HUD (heads-up display) renders UI elements on top of the game world — health
 
 ## Approach
 
-Push a second scene on top of the game scene. The game scene renders the world. The HUD scene renders only UI elements — positioned in screen-pixel coordinates, independent of any camera view. The HUD scene uses `'overlay'` mode (both scenes render and update) with `'transparent'` input (HUD doesn't steal clicks meant for the game).
+Push a second scene on top of the game scene. The game scene renders the world. The HUD scene renders only UI elements — positioned in screen-pixel coordinates, independent of any camera view. The HUD scene uses `'overlay'` mode (both scenes render and update) with `'transparent'` input (HUD stays out of scene-level `handleInput` routing).
 
 ```js
 class GameScene extends Scene {
@@ -64,13 +64,13 @@ await app.sceneManager.pushScene(hud, {
 });
 ```
 
-The key is `input: 'transparent'` — the HUD scene is visible but pointer events pass through to the game scene below. If your HUD has clickable buttons (pause, inventory), use `input: 'passthrough'` instead so both scenes receive events. See [Scenes](/ExoJS/en/guide/core-concepts/scenes/) for the full stack-mode and input-mode semantics.
+The key is `input: 'transparent'` — the HUD scene opts out of scene-level `handleInput` routing, so lower scenes continue to receive scene-routed events. If your HUD should also receive scene-level input while still forwarding, use `input: 'passthrough'` instead. See [Scenes](/ExoJS/en/guide/core-concepts/scenes/) for full stack-mode and input-mode semantics.
 
 ## Why two scenes, not draw-order
 
 The alternative — rendering HUD elements after the world in a single scene's `draw` method — works for simple cases. The two-scene approach gives you:
 - Independent `init`/`destroy` lifecycles — the HUD can be pushed, popped, and replaced without touching game code.
-- Input isolation — the HUD's input mode controls whether clicks reach the game.
+- Input isolation — the HUD's input mode controls scene-level input routing.
 - Camera independence — the HUD scene's root is always in screen space, never affected by the game view.
 
 ## Mini-map with a mask

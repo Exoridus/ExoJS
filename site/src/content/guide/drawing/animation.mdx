@@ -59,7 +59,7 @@ Start values are captured lazily on the first update after `start()`, so you can
 | `.stop()` | Halt without finishing. `onComplete` does not fire. |
 | `.chain(nextTween)` | Automatically start `nextTween` when this one completes. |
 
-State is readable at `tween.state`: `Idle`, `Active`, `Paused`, `Stopped`, or `Complete`. Progress is readable at `tween.progress` (0–1, already eased).
+State is readable at `tween.state`: `'idle'`, `'active'`, `'paused'`, `'stopped'`, or `'complete'`. Progress is readable at `tween.progress` (0–1, already eased).
 
 ### Callbacks
 
@@ -81,7 +81,7 @@ this.app.tweens.create(sprite)
 
 ### Easing functions
 
-`Ease` provides 30 standard Penner easing functions. All accept normalized time `t` in [0, 1] and return an eased value that starts at 0 and ends at 1:
+`Ease` provides 31 standard Penner easing functions (including `linear`). All accept normalized time `t` in [0, 1] and return an eased value that starts at 0 and ends at 1:
 
 ```js
 import { Ease } from '@codexo/exojs';
@@ -117,26 +117,26 @@ const moveDown = this.app.tweens.create(sprite.position)
 const fadeOut = this.app.tweens.create(sprite)
     .to({ alpha: 0 }, 0.5);
 
-moveRight
-    .chain(moveDown)
-    .chain(fadeOut)
-    .start();
+moveRight.chain(moveDown);
+moveDown.chain(fadeOut);
+moveRight.start();
 ```
 
-`chain()` returns the next tween, so you can build sequences in a single expression:
+Because `chain()` returns the next tween, keep a reference to the first tween and start that first tween:
 
 ```js
-this.app.tweens.create(sprite.position)
+const first = this.app.tweens.create(sprite.position)
     .to({ x: 700 }, 1.0)
-    .chain(
-        this.app.tweens.create(sprite.position)
-            .to({ y: 500 }, 0.8)
-    )
-    .chain(
-        this.app.tweens.create(sprite)
-            .to({ alpha: 0 }, 0.5)
-    )
-    .start();
+
+const second = this.app.tweens.create(sprite.position)
+    .to({ y: 500 }, 0.8);
+
+const third = this.app.tweens.create(sprite)
+    .to({ alpha: 0 }, 0.5);
+
+first.chain(second);
+second.chain(third);
+first.start();
 ```
 
 Only the first tween in the chain needs a `start()` call — each chained tween automatically starts when its predecessor completes.
@@ -156,7 +156,7 @@ this._activeTween = this.app.tweens.create(sprite.position)
 
 ### Only numeric properties interpolate
 
-Tween interpolation is purely numeric. Attempting to tween a non-number property logs a warning and skips it. Vector properties must be accessed by their numeric fields (`sprite.position.x`, `sprite.position.y`). `Color`, `Vector`, and `Matrix` objects cannot be tweened directly — tween their individual number components instead.
+Tween interpolation is purely numeric. Attempting to tween a non-number property logs a warning and skips it. Use tween targets whose properties are numbers (for example `sprite.position` with `{ x, y }`), and animate complex objects by their numeric fields.
 
 ## Animated sprites
 
@@ -185,7 +185,7 @@ Multiple clips can be registered on the same `AnimatedSprite`:
 
 ```js
 player.defineClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1, loop: true });
-player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 0, loop: false });
+player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 1, loop: false });
 ```
 
 Call `setClips()` to replace all clips at once with a map.
@@ -214,7 +214,7 @@ player.onComplete.add(clip => {
 });
 ```
 
-Call `player.update(delta)` each frame. The delta can be a `Time` object (from the scene's `update`) or a number in seconds:
+Call `player.update(delta)` each frame. The delta can be a `Time` object (from the scene's `update`) or a number in milliseconds:
 
 ```js
 update(delta) {

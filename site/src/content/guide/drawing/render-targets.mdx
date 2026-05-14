@@ -29,6 +29,8 @@ const rt = new RenderTexture(256, 256);
 The constructor accepts an optional `SamplerOptions` object to control how the texture is sampled when used on a sprite:
 
 ```js
+import { RenderTexture, ScaleModes, WrapModes } from '@codexo/exojs';
+
 const rt = new RenderTexture(512, 512, {
     scaleMode: ScaleModes.Nearest,  // default Linear
     wrapMode: WrapModes.Repeat,     // default ClampToEdge
@@ -93,13 +95,15 @@ draw(backend) {
 }
 ```
 
-The `updateSource()` method on `RenderTexture` signals the GPU backend that the texture contents have changed. This is called automatically by the backend when the render target is released — you do not need to call it manually after `setRenderTarget(null)`.
+When a `RenderTexture` is used as the active render target, draw calls write into it directly. You do not need to call `updateSource()` after `setRenderTarget(null)`.
 
 ## RenderTexture as a RenderTarget
 
 `RenderTexture` extends [`RenderTarget`](/ExoJS/en/api/render-target/), which carries a `View` for camera control, size management, and viewport configuration. When drawing into a `RenderTexture`, the render target's view determines the coordinate system. By default it uses a pixel-aligned view matching the texture dimensions:
 
 ```js
+import { RenderTexture, View } from '@codexo/exojs';
+
 const rt = new RenderTexture(400, 300);
 
 // Optionally set a custom view (camera)
@@ -107,7 +111,7 @@ const customView = new View(200, 150, 400, 300);
 rt.setView(customView);
 ```
 
-The `resize()` method changes the texture dimensions. `powerOfTwo` reports whether both dimensions are powers of two — relevant for some mipmap and tiling scenarios.
+The `setSize()` method changes the texture dimensions. `powerOfTwo` reports whether both dimensions are powers of two — relevant for some mipmap and tiling scenarios.
 
 ## Use cases
 

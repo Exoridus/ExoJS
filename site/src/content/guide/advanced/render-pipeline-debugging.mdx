@@ -26,7 +26,7 @@ The panel does not show drawables with zero filters — they are invisible to th
 
 ## Enabling the layer
 
-`RenderPassInspectorLayer` extends `DebugLayer` (which extends `Scene`), but it is designed to be driven via `app.onFrame` — the same pattern used by `DebugOverlay` for the other debug layers. It is not pushed onto the scene stack. The inspector walks `sceneManager.scene?.root` each frame, so it sees whichever scene is currently active.
+`RenderPassInspectorLayer` extends `DebugLayer` and is designed to be driven via `app.onFrame` — the same pattern used by `DebugOverlay` for the other debug layers. It is not pushed onto the scene stack. The inspector walks `sceneManager.scene?.root` each frame, so it sees whichever scene is currently active.
 
 Import from the debug subpath, construct against the application, subscribe to `app.onFrame`, and toggle visibility:
 
@@ -128,13 +128,13 @@ For that level of detail, use external capture tools:
 - **[Spector.js](https://spector.babylonjs.com/)** — WebGL2 frame capture. Shows every draw call, shader source, uniform values, and render-target contents for a captured frame.
 - **Chrome DevTools WebGPU panel** — WebGPU frame capture. Shows compute and render passes, pipeline state, bind groups, and buffer contents.
 
-The ExoJS engine emits debug-group labels around filter and mesh-custom-shader passes so these tools display meaningful pass names rather than generic WebGL/WebGPU calls. Look for these labels in capture tools:
+On WebGPU, ExoJS emits labels on key passes so capture tools display meaningful names rather than generic calls. Look for labels such as:
 
 - `WebGpuShaderFilter pass` — a `WebGpuShaderFilter` executing
 - `MeshShader (custom)` — a `Mesh` with an attached `MeshShader` drawing inside the main render pass
 - `WebGpuMaskCompositor pass` — mask composition for a drawable with an active `mask`
 
-These labels are set via the backend's debug group API (`pushDebugGroup`/`popDebugGroup` in WebGPU, `pushGroupMarker`/`popGroupMarker` in WebGL2) and are visible in any tool that respects the debug group protocol.
+These labels are visible in tools that surface WebGPU pass labels (for example, Chrome's WebGPU tooling).
 
 ## When to use this layer
 

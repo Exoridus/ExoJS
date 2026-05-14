@@ -69,9 +69,9 @@ g.drawEllipse(centerX, centerY, radiusX, radiusY);
 g.drawPolygon([0, -30, 30, 30, -30, 30]); // triangle
 ```
 
-**Stars** with configurable points, inner radius, and rotation (default inner radius is half the outer radius):
+**Stars** with configurable points, inner radius, and rotation in radians (default inner radius is half the outer radius):
 ```js
-g.drawStar(centerX, centerY, points, radius, innerRadius, rotationDegrees);
+g.drawStar(centerX, centerY, points, radius, innerRadius, rotationRadians);
 ```
 
 **Lines** between two explicit points (does not use or affect the pen position):

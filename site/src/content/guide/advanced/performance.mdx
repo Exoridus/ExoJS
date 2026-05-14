@@ -67,7 +67,7 @@ Adding and removing many children from a container each frame triggers transform
 
 ## Texture updates
 
-Uploading a new texture source (e.g. a canvas, video frame, or `DataTexture` buffer) triggers GPU re-allocation. For per-frame updates:
+Updating a texture source (e.g. a canvas, video frame, or `DataTexture` buffer) incurs GPU upload work each frame, and may also trigger GPU re-allocation when dimensions/format change. For per-frame updates:
 - Use `DataTexture.commitRect()` for partial uploads (cheaper than full `commit()`).
 - Avoid creating new `Texture` instances per frame — reuse one texture and update its source.
 - Keep `RenderTexture` dimensions stable — `resize()` triggers framebuffer recreation.

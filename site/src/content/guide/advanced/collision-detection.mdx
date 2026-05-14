@@ -11,7 +11,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.5 Collision detection
 
-ExoJS provides a geometry-based collision system built on shape primitives and the Separating Axis Theorem (SAT). Every shape implements the [`Collidable`](/ExoJS/en/api/collidable/) interface, giving you three levels of collision query: boolean overlap (`intersectsWith`), penetration response (`collidesWith`), and point containment (`contains`). A [`Quadtree`](/ExoJS/en/api/quadtree/) provides spatial partitioning for broad-phase culling when you have many objects.
+ExoJS provides a geometry-based collision system built on shape primitives and the Separating Axis Theorem (SAT). Every shape implements the `Collidable` interface, giving you three levels of collision query: boolean overlap (`intersectsWith`), penetration response (`collidesWith`), and point containment (`contains`). A [`Quadtree`](/ExoJS/en/api/quadtree/) provides spatial partitioning for broad-phase culling when you have many objects.
 
 This is not a physics engine — there are no rigid bodies, no friction, no constraint solvers. It answers "are these two things touching?" and "how far do I push them apart?" You build physics, overlap triggers, and hit detection on top.
 
@@ -27,7 +27,7 @@ Five concrete shapes implement `Collidable`:
 | [`Ellipse`](/ExoJS/en/api/ellipse/) | `new Ellipse(x, y, rx, ry?)` | Radius pair |
 | [`Line`](/ExoJS/en/api/line/) | `new Line(x1, y1, x2, y2)` | Segment |
 
-All shapes carry a `position` (`Vector`) and expose `collisionType` for dispatch. Each can be queried against any other via `intersectsWith` and `collidesWith`.
+All shapes carry a `position` (`Vector`) and expose `collisionType` for dispatch. `intersectsWith` is broadly available across shape pairs; `collidesWith` (penetration response) is implemented for a subset of pairs.
 
 ## Boolean overlap: intersectsWith
 
@@ -44,11 +44,11 @@ if (player.intersectsWith(wall)) {
 }
 ```
 
-All shape-pair combinations are supported — rectangle-rectangle, circle-circle, polygon-circle, ellipse-rectangle, etc. Ellipse and polygon shapes are converted to polygon approximations for SAT-based tests (ellipses use configurable segment approximations).
+All shape-pair combinations are supported for boolean overlap — rectangle-rectangle, circle-circle, polygon-circle, ellipse-rectangle, etc. (ellipse/poly intersections use internal polygon approximations).
 
 ## Penetration response: collidesWith
 
-`shapeA.collidesWith(shapeB)` returns a [`CollisionResponse`](/ExoJS/en/api/collision-response/) or `null` if no overlap:
+`shapeA.collidesWith(shapeB)` returns a `CollisionResponse` or `null` if no overlap:
 
 ```js
 const response = shapeA.collidesWith(shapeB);
@@ -67,7 +67,14 @@ if (response) {
 
 The minimum translation vector (MTV) is the smallest displacement that separates the two shapes. Adding it to `shapeA.position` pushes A out of B. For one-way collisions (player pushed out of wall), move the player by the MTV. For two-way collisions, split the MTV proportionally.
 
-Collision response is supported for these shape pairs: rectangle-rectangle, circle-circle, circle-rectangle, ellipse-rectangle, ellipse-circle, polygon-circle. The full SAT solver handles generic `Collidable` pairs. Pairs not listed above (`collidesWith` returns `null`) can still be tested with `intersectsWith` for boolean overlap.
+Collision response is not universal across all shape pairs. In the current public implementation:
+- `Rectangle.collidesWith` supports SceneNode/Rectangle/Polygon/Circle/Ellipse.
+- `Circle.collidesWith` supports SceneNode/Rectangle/Polygon/Circle/Ellipse.
+- `Polygon.collidesWith` supports SceneNode/Rectangle/Polygon/Circle.
+- `Ellipse.collidesWith` supports SceneNode/Rectangle/Circle.
+- `Line.collidesWith` and point (`Vector`) `collidesWith` return `null`.
+
+Pairs outside these combinations return `null` from `collidesWith` and should use `intersectsWith` for boolean overlap.
 
 ## Point containment: contains
 
@@ -100,7 +107,7 @@ if (hero.intersectsWith(box)) {
 }
 ```
 
-`SceneNode.intersectsWith` dispatches based on whether the node's rotation is axis-aligned (fast AABB path) or rotated (SAT path). `SceneNode.collidesWith` returns a response for AABB pairs and delegates to SAT for rotated pairs.
+`SceneNode.intersectsWith` dispatches based on whether the node's rotation is axis-aligned (fast AABB path) or rotated (SAT path). `SceneNode.collidesWith` returns a response for AABB pairs and, on the rotated path, currently returns responses for SceneNode/Rectangle/Polygon/Circle targets.
 
 `SceneNode.getBounds()` returns the axis-aligned bounding box — a `Rectangle`. Use this for broad-phase checks before expensive SAT tests.
 

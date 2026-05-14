@@ -12,7 +12,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 7.2 Debug layer
 
-ExoJS ships six diagnostic layers in the `@codexo/exojs/debug` subpath. They render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags. Enable one during development to see bounding boxes, frame timing, hit-test state, or filter-chain pass counts overlaid on the canvas.
+ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` subpath. Four are managed by `DebugOverlay` (performance, bounding boxes, hit-test, pointer stack), and `RenderPassInspectorLayer` is a standalone layer covered below. These tools render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags.
 
 ## DebugOverlay
 

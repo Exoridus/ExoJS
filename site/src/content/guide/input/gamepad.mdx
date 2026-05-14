@@ -161,7 +161,7 @@ Not every controller has every button or axis. A detached Joy-Con has no right s
 ```js
 if (pad.hasChannel(GamepadAxis.RightStickX)) {
     pad.onActive(GamepadAxis.RightStickX, value => {
-        this.camera.rotate(value * delta.seconds * 90);
+        this.camera.rotate(value * 2);
     });
 }
 

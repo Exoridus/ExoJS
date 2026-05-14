@@ -51,7 +51,7 @@ The pass's callback runs at the point you call `backend.execute()`, so you contr
 
 ## Direct backend access
 
-When you need full GPU control — raw pipeline creation, custom vertex buffers, compute dispatches — access the [`WebGpuBackend`](/ExoJS/en/api/web-gpu-backend/) directly through `app.backend`. This is the escape hatch: you bypass ExoJS drawable types and renderer pipelines entirely, working at the WebGPU API level:
+When you need full GPU control — raw pipeline creation, custom vertex buffers, compute dispatches — access `WebGpuBackend` directly through `app.backend`. This is the escape hatch: you bypass ExoJS drawable types and renderer pipelines entirely, working at the WebGPU API level:
 
 ```js
 import { WebGpuBackend } from '@codexo/exojs';
@@ -91,11 +91,11 @@ class CustomTriangleRenderer {
 
 The scene's `draw` method would call `this._triangleRenderer.draw()` instead of `backend.clear()` / `sprite.render()`. The custom renderer owns the entire render pass and does not interact with ExoJS drawables.
 
-Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use the WebGL2 context through `backend` (check `backend.backendType` to branch). For most projects, `MeshShader` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
+Direct backend access is deliberately unabstracted — you are writing raw WebGPU code. On WebGL2 backends, a different renderer class would use `backend.context` (`WebGL2RenderingContext`) and branch by `backend.backendType`. For most projects, `MeshShader` + `CallbackRenderPass` + custom shader filters (`WebGl2ShaderFilter` / `WebGpuShaderFilter`) cover custom rendering needs without reaching for raw GPU APIs.
 
 ## Renderer registration
 
-ExoJS resolves a renderer for each drawable type through the [`RendererRegistry`](/ExoJS/en/api/renderer-registry/). You can register a custom [`Renderer`](/ExoJS/en/api/renderer/) for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A `Renderer` implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
+ExoJS resolves a renderer for each drawable type through the [`RendererRegistry`](/ExoJS/en/api/renderer-registry/). You can register a custom renderer for an existing drawable type via `backend.rendererRegistry.registerRenderer(drawableConstructor, renderer)`. A renderer implements `connect(backend)`, `disconnect()`, `render(drawable)`, and `flush()` — these map to GPU resource acquisition, release, per-drawable recording, and batch submission respectively.
 
 Registering a custom renderer is an advanced extension point. For most custom rendering needs — procedural geometry between draws, a single custom shape that doesn't fit `Mesh` — `CallbackRenderPass` is the simpler and more intentional path.
 

@@ -11,7 +11,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # 8.3 Pause menu
 
-A pause menu freezes the game, displays a menu overlay, and resumes cleanly when dismissed. In ExoJS, this is a scene-stack operation: push a `PauseScene` on top of the game scene with `'overlay'` mode (so the game remains visible) and `'capture'` input (so the pause menu consumes all events).
+A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is a scene-stack operation: push a `PauseScene` on top of the game scene with `'overlay'` mode (so the game remains visible) and `'capture'` input mode for scene-level `handleInput` routing.
 
 ## Approach
 
@@ -72,8 +72,8 @@ await app.start(gameScene);
 
 `pushScene(pauseScene, { mode: 'overlay', input: 'capture' })`:
 
-- `mode: 'overlay'` — the game scene below continues to render. The player can see the frozen game behind the pause text. If you prefer the game to stop rendering, use `'opaque'` instead (but then the blur effect on the game root becomes invisible — you'd apply the blur to a captured `RenderTexture` of the last frame instead).
-- `input: 'capture'` — the pause scene consumes all input events. The game scene's `update` still runs (by default with `'overlay'`), but its input bindings don't fire because the pause scene captures the event stream.
+- `mode: 'overlay'` — the game scene below continues to render, so the player sees gameplay behind the pause text. If you prefer the game to stop rendering, use `'opaque'` instead (but then the blur effect on the game root becomes invisible — you'd apply the blur to a captured `RenderTexture` of the last frame instead).
+- `input: 'capture'` — scene-level `handleInput` events stop at the pause scene. (`this.inputs` bindings are registered on `app.input`, so gate gameplay actions explicitly while paused.)
 
 If you want the game to truly freeze (no `update` calls), set the game scene's own `stackMode` or use a flag:
 
@@ -91,7 +91,7 @@ This is simpler than changing stack semantics at runtime and gives you explicit 
 
 The `destroy` hook on `PauseScene` removes the blur filter. Without this, the game scene would remain blurred after resume. `popScene()` calls `destroy` on the popped scene automatically.
 
-If you need to capture the last game frame and blur it without leaving the game scene's filter array polluted, render the game scene root into a `RenderTexture` during `PopScene.init`, apply the blur as a post-process pass, and display the result:
+If you need to capture the last game frame and blur it without leaving the game scene's filter array polluted, render the game scene root into a `RenderTexture` during `PauseScene.init`, apply the blur as a post-process pass, and display the result:
 
 ```js
 // Alternative: capture + blur without touching game scene's own filters

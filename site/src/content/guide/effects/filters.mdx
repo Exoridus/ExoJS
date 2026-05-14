@@ -21,7 +21,7 @@ Filters are the right tool for per-node visual effects: soften an avatar with bl
 Filters go on the drawable. The array is processed in order — filter 0 receives the node's raw render, filter 1 receives filter 0's output, and so on:
 
 ```js
-import { BlurFilter, ColorFilter } from '@codexo/exojs';
+import { BlurFilter, Color, ColorFilter } from '@codexo/exojs';
 
 const blur = new BlurFilter({ radius: 3, quality: 2 });
 const tint = new ColorFilter(new Color(140, 210, 255));
@@ -29,7 +29,7 @@ const tint = new ColorFilter(new Color(140, 210, 255));
 sprite.filters = [blur, tint];
 ```
 
-Set `filters` to an empty array to clear the chain. Assigning a new array replaces the old one — you don't need to manually remove individual filters. A null or empty array means no extra render passes.
+Set `filters` to an empty array to clear the chain. Assigning a new array replaces the old one — you don't need to manually remove individual filters. An empty array means no extra render passes.
 
 Each filter in the chain costs one additional render pass per frame for that drawable. Three filters on a container means three extra passes. The [Render pipeline debugging](/ExoJS/en/guide/advanced/render-pipeline-debugging/) chapter covers pass-count inspection and reduction strategies.
 
@@ -81,7 +81,7 @@ sprite.filters = [filter];
 filter.setLut(differentLutTexture);
 ```
 
-`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with the correct sampling parameters (nearest, clamp, no mip). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
+`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
 
 ## Custom shader filters
 

@@ -21,7 +21,7 @@ The mental model: you register modules that describe how particles *spawn*, what
 A particle system needs a texture and a capacity:
 
 ```js
-import { ParticleSystem, Texture } from '@codexo/exojs';
+import { BlendModes, ParticleSystem, Texture } from '@codexo/exojs';
 
 const system = new ParticleSystem(loader.get(Texture, 'spark'), {
     capacity: 4000,
@@ -59,17 +59,18 @@ system.addSpawnModule(new RateSpawn({
 **`BurstSpawn`** — named bursts at scheduled times, with optional looping:
 
 ```js
-import { BurstSpawn } from '@codexo/exojs';
+import { BurstSpawn, ConeDirection, Constant, Range, Vector } from '@codexo/exojs';
 
-system.addSpawnModule(new BurstSpawn({
+const burst = new BurstSpawn({
     schedule: [{ time: 0, count: 100 }],  // 100 particles at t=0
     lifetime: new Range(0.5, 1.2),
     velocity: new ConeDirection.omni(80, 240),  // full 360° spread
     scale: new Constant(new Vector(0.4, 0.4)),
-}));
+});
+system.addSpawnModule(burst);
 
 // Re-trigger the burst schedule from t=0
-myBurst.reset();
+burst.reset();
 ```
 
 Every spawn config property that takes a value — `lifetime`, `position`, `velocity`, `scale`, `rotation`, `rotationSpeed`, `tint`, `textureIndex` — accepts a `Distribution<T>` rather than a fixed value. Distributions are sampled per-particle at spawn time.
@@ -100,8 +101,11 @@ The frequently-used update modules:
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
+    Color,
     ColorOverLifetime,
+    Curve,
     Drag,
+    Gradient,
     ScaleOverLifetime,
     Turbulence,
 } from '@codexo/exojs';

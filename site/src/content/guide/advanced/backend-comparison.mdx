@@ -39,17 +39,17 @@ Where differences exist, they are performance characteristics or rendering-path 
 | Area | WebGL2 | WebGPU |
 |------|--------|--------|
 | Sprite batching | Multi-texture batched (up to 8) | Multi-texture batched (up to 8) |
-| Particle simulation | CPU | CPU (default); GPU compute path if all modules implement `wgsl()` |
+| Particle simulation | CPU | CPU (default); optional GPU compute update path when all update modules implement `wgsl()` |
 | MeshShader | GLSL ES 3.00 | WGSL |
 | ShaderFilter | `WebGl2ShaderFilter` (GLSL) | `WebGpuShaderFilter` (WGSL) |
 | GPU compute | Not available | Raw `backend.device` access for compute + custom pipelines |
-| Debug labels | `pushGroupMarker`/`popGroupMarker` | `pushDebugGroup`/`popDebugGroup` |
+| Engine-emitted debug pass labels | Not currently emitted | Emitted on key passes (e.g. `WebGpuShaderFilter pass`) |
 
 Both backends batch sprites from up to 8 different textures into a single draw call. For most projects with a single texture atlas, the batching difference is irrelevant — the practical distinction is only visible in multi-atlas scenes.
 
 ## Particles and GPU
 
-Particle simulation (spawn, integration, module updates) runs on the CPU on both backends. On WebGPU, when every registered update module is GPU-eligible (implements `wgsl()`), the system compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in one dispatch. This is the GPU path: simulation moves to the GPU, and the renderer reads instance data from a shared buffer — no CPU readback.
+Particle simulation (spawn, integration, module updates) runs on the CPU by default on both backends. On WebGPU, when every registered update module is GPU-eligible (implements `wgsl()`), the system compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in one dispatch. This is the GPU path: simulation moves to the GPU, and the renderer reads instance data from a shared buffer — no CPU readback.
 
 On WebGL2, or when any update module lacks `wgsl()`, the system runs on CPU. The particle rendering path (instanced draw calls) is the same on both backends. Check `system.gpuMode` to know which path is active.
 
@@ -61,11 +61,11 @@ For screen-space effects, use `WebGl2ShaderFilter` on WebGL2 and `WebGpuShaderFi
 
 ## Direct GPU access
 
-The WebGPU backend exposes `backend.device` (`GPUDevice`), `backend.context` (`GPUCanvasContext`), and `backend.format` (`GPUTextureFormat`). You can create custom pipelines, vertex buffers, and command encoders directly — the [`custom-triangle-renderer`](/ExoJS/en/playground/?slug=custom-renderers/custom-triangle-renderer) example demonstrates this. On WebGL2, the GL context is available through backend internals but is not exposed as a public API — the intended extension point for raw GPU work is WebGPU only.
+The WebGPU backend exposes `backend.device` (`GPUDevice`), `backend.context` (`GPUCanvasContext`), and `backend.format` (`GPUTextureFormat`). You can create custom pipelines, vertex buffers, and command encoders directly — the [`custom-triangle-renderer`](/ExoJS/en/playground/?slug=custom-renderers/custom-triangle-renderer) example demonstrates this. On WebGL2, `backend.context` is also publicly available as a `WebGL2RenderingContext`, but the direct compute-style escape hatch exists only on WebGPU.
 
 ## Device loss
 
-Both backends handle context-loss events. On WebGL2, the engine attempts to recover the context automatically. On WebGPU, device loss is currently unrecoverable — the application should detect it and offer a reload. This is a platform constraint, not an ExoJS limitation.
+Both backends handle loss events. On WebGL2, the engine attempts context restore automatically. On WebGPU, ExoJS also attempts automatic device recovery and emits `onBackendLost` / `onBackendRestored` on the `Application`.
 
 ## Choosing for production
 

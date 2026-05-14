@@ -52,9 +52,11 @@ A `Sound` instance is a single object that pools multiple underlying `AudioBuffe
 
 ## AudioContext auto-unlock
 
-Browsers require a user gesture before audio playback starts. ExoJS handles this automatically: the `AudioContext` is created on first use and resumed (un-suspended) on the first `mousedown`, `touchstart`, or `touchend` event that reaches the canvas. You call `music.play()` at any point — the engine defers actual playback until the context is unlocked.
+Browsers require a user gesture before Web Audio starts. ExoJS handles this automatically: the `AudioContext` is created on first use and resumed (un-suspended) on the first `mousedown`, `touchstart`, or `touchend` event observed on `document`.
 
-The auto-unlock is transparent for most projects. If you need to know when the context is ready, import `isAudioContextReady` from `@codexo/exojs` and poll it.
+For `Sound`, `play()` requests queue until the context is ready. `Music` uses `HTMLAudioElement` playback and is still subject to browser autoplay policy, so starting music from a user gesture remains the safest pattern.
+
+If you need to know when the context is ready, import `isAudioContextReady` from `@codexo/exojs` and poll it.
 
 ## Playback controls
 
@@ -87,7 +89,7 @@ The engine exposes linear gain (0..2, where 1 is "as authored"). dB conversion i
 `fadeIn(ms)` and `fadeOut(ms)` ramp the output gain over a duration in milliseconds:
 
 ```js
-// Fade out over 800ms, then stop
+// Fade out over 800ms, then pause
 music.fadeOut(800, { stopAfter: true });
 
 // Fade in over 500ms
@@ -100,7 +102,7 @@ The `crossFade` utility fades from one media instance to another in parallel:
 import { crossFade } from '@codexo/exojs';
 
 await crossFade(this.trackA, this.trackB, 2000);
-// trackA is now silent (and stopped by default), trackB is at full volume
+// trackA is now silent (and paused by default), trackB is at full volume
 ```
 
 ## The sound pool
@@ -108,8 +110,8 @@ await crossFade(this.trackA, this.trackB, 2000);
 `Sound` instances are pooled. `poolSize` (default 8) controls the maximum number of simultaneous `AudioBufferSourceNode` instances. When the pool is full and you call `play()` again, the oldest active source is evicted based on `poolStrategy`:
 
 - `'fifo'` (default) — first-in, first-out. Steady-state playback.
-- `'lru'` — least-recently-used. Keeps the most recent sounds alive.
-- `'priority'` — evicts the lowest-priority source. Assign `priority` per `play()` call.
+- `'lru'` — evicts the source closest to its natural end.
+- `'priority'` — uses `Sound.priority` (current single-sound behavior is equivalent to FIFO).
 
 For rapid-fire SFX (gunshots, footsteps, UI clicks), set `poolSize` higher and use the default FIFO strategy:
 
@@ -135,7 +137,10 @@ The audio manager exposes three built-in buses: `app.audio.master`, `app.audio.m
 Set a media instance's bus explicitly:
 
 ```js
-const voiceBus = app.audio.getBus('voice-over');
+import { AudioBus } from '@codexo/exojs';
+
+const voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
+app.audio.registerBus(voiceBus);
 sound.bus = voiceBus;
 ```
 
@@ -146,8 +151,8 @@ Buses have independent `volume`, `muted`, and `pan` controls, plus a filter chai
 A `Sound` can define named sub-regions ("sprites") for one-shot playback from specific offsets:
 
 ```js
-sound.defineSprite('impact', { start: 0.5, duration: 0.3 });
-sound.defineSprite('whoosh', { start: 1.2, duration: 0.4 });
+sound.defineSprite('impact', { start: 0.5, end: 0.8 });
+sound.defineSprite('whoosh', { start: 1.2, end: 1.6 });
 
 sound.playSprite('impact');
 sound.playSprite('whoosh', { volume: 0.7 });

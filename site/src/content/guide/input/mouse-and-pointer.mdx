@@ -21,9 +21,9 @@ The application's input manager emits these pointer signals:
 | Signal | Fires when |
 |--------|------------|
 | `onPointerDown` | A pointer presses (mouse button down, finger touches, pen contacts) |
-| `onPointerMove` | A pointer moves while active |
+| `onPointerMove` | A pointer moves |
 | `onPointerUp` | A pointer releases |
-| `onPointerTap` | A pointer releases within 500 ms without significant movement |
+| `onPointerTap` | A pointer releases without significant movement |
 | `onPointerSwipe` | A pointer releases after moving beyond the distance threshold |
 | `onPointerEnter` | A pointer enters the canvas boundary |
 | `onPointerLeave` | A pointer leaves the canvas boundary |
@@ -139,6 +139,8 @@ _toWorld(screenX, screenY) {
     );
 }
 ```
+
+`getInverseTransform()` returns an ExoJS `Matrix`, and that matrix exposes the fields used above: `.a`, `.b`, `.c`, `.d`, `.x`, `.y`.
 
 If the default view is active (no camera transform), the canvas-pixel position is already the world position and no mapping is needed.
 
